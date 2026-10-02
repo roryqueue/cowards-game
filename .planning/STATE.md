@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 single v7 entry95758/PID86474 active at09:16:59.737UTC; static validation before fresh capacity
+stopped_at: Phase265 v7 entry95758 active; fresh capacity passed09:31:58.384UTC, first Match process-valid, second charged
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: reviewed allocation1fdbc6ae committed744e50a2 and pushed; single entry95758 started; no duplicate or competing heavy work
+last_activity_desc: actual receipt4ee8fa52 passed; cell69e06096 success/process_valid at6810c797; second8bfbe467 running
 progress:
   total_phases: 9
   completed_phases: 3
@@ -35,8 +35,13 @@ these are inherited static sizing, not a live receipt. ONE canonical allocation
 publication95556 completes allocation1fdbc6ae/raw451daddf/24097bytes. Never
 repeat these steps. Allocation committed744e50a2 and pushed to origin/main.
 Root's ONE entry95758/PID86474 started2026-10-02T09:16:59.737Z; actual marker
-reports static validation before fresh same-process capacity. No capacity pass
-or charged Match is yet observed. Result-v7 is reserved empty, not evidence;
+initially reported static validation before fresh same-process capacity.
+Actual fresh receipt4ee8fa52 passed2026-10-02T09:31:58.384Z, available memory
+12884901888bytes/free filesystem213972484096bytes/device16777222. Bounded
+parent-linked run-start metadata is observed, not a concurrent retained check.
+First cell69e06096 has success/process_valid terminal6810c797; second8bfbe467
+is charged/running. This is prefix evidence only, not complete matrix/league.
+Result-v7 is reserved empty, not evidence;
 do not stage it. Never duplicate entry or start retained verification while
 active. Keep source fixed and hold all competing heavy work through terminal
 and its ONE ordinary retained check.

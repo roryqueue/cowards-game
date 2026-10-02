@@ -9,7 +9,9 @@ ONE data-only prepare65328 completes exit0, not a producer or Match run.
 Static capacity83608 passes without live observation; canonical publication95556
 completes1fdbc6ae/raw451daddf, committed744e50a2/pushed. ONE entry95758/PID86474
 started09:16:59.737UTC in static validation before fresh same-process capacity.
-No observed capacity pass/charged Match yet. Heavy work held; no duplicate
+Actual fresh receipt4ee8fa52 passes09:31:58.384UTC; first cell69e06096 has
+success/process_valid terminal6810c797 and second8bfbe467 is charged/running.
+This prefix gives no complete league/freeze credit. Heavy work held; no duplicate
 entry/concurrent verifier. Keep634b0e84/f942c33f/ae9b47ba fixed and do not
 duplicate preparation. No LEAG/freeze/formation/holdout credit. Standing approval
 applies without another literal. See preparation-v11 and PACKET-REVIEW-v10.

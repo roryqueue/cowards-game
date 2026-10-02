@@ -7,7 +7,9 @@ creates45inert records and allocation-input3094 completes23edce70. ONE data-only
 prepare65328 completes exit0; do not duplicate. Static capacity83608 passes,
 canonical publication95556 yields1fdbc6ae/raw451daddf, committed744e50a2/pushed.
 ONE entry95758/PID86474 started09:16:59.737UTC before fresh same-process capacity.
-No observed capacity pass/charged Match yet; source fixed/heavy work held.
+Fresh capacity receipt4ee8fa52 passes09:31:58.384UTC; first cell69e06096
+success/process_valid at6810c797, second8bfbe467 charged/running. Prefix only,
+not complete matrix/league. Source fixed/heavy work held.
 No duplicate entry or concurrent retained verifier. No
 plan/phase/LEAG/freeze credit. Standing approval applies at
 fixed634b0e84; every technical gate and frozen bound remains. See preparation-v11

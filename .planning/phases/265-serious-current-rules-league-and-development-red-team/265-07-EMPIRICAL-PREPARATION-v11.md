@@ -58,6 +58,21 @@ verifier concurrently, or run competing heavy work. Fixed main source remains
 through actual terminal and its ONE ordinary retained verification. Earlier
 entry-next snapshots are historical. No LEAG/freeze/formation/holdout credit.
 
+## Subsequent actual capacity and first valid prefix
+
+Fresh same-process receipt4ee8fa52ac1c935b6a78bdfc0696024642f69a822eb87f133b4d6cd76f864afe
+passes2026-10-02T09:31:58.384Z with12884901888available-memory bytes,
+213972484096free-filesystem bytes/device16777222 and unchanged1GiBheadroom.
+Bounded read-only parent-linked metadata observes the exact receipt in
+run-start payloadc03f0757/51149bytes under descriptorfe6a5ff4; raw payload
+hash/declared length match. This is not a second admission or retained verifier.
+First charged cell69e06096aa13a5a3f1e82128439634448cb3d88e42dfa323b3d4dce0e718f567
+has actual success/process_valid terminal6810c797f4f3933fedda08ab345d41b59de3e0ed579f16fb9dab6e7766b5397b.
+Second8bfbe467c85d87d631bd5001ccff3f994e0dd1b3fc858ac8b91754b0e1e15d29
+is charged/running. Entry95758 remains active. No completed matrix/league,
+response/model job, LEAG/freeze/formation/holdout credit follows this prefix.
+No duplicate entry/verifier and all competing heavy work remain held.
+
 The new namespace is `.strategy-lab/league-265-prospective-v7-20261002-a`. The helpers bind source commit `634b0e84896132a1a9ac5d855763b0793abfe1bc`, implementation root `sha256:f942c33fc577b1cca8b1742b73f2e31637f431abecf6b69b70001cc03b6a0744`, and source root `sha256:ae9b47ba2c607fd54baee4fee8ac24291524877d5f60b954192f6aaa0ff69a06`. They carry the six raw source/test pins and bounded review-v4 identity for the asynchronous dependency repair. The data-only profile result is identified as such; it provides no whole-Match claim. The proof document records the active root gate as pending, not passed.
 
 The preparation structure inherits only the frozen non-authorizing request/config/prompt material and historical static capacity sizing. New v7 output locations are distinct. No earlier route, job identity, review timing, packet, allocation, capacity receipt, model output, runtime result, or Match result is adopted. The historical sizing sample is not a live observation.
