@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 V11 unique root entry17028/PID21728 active; first durable cell start observed, no terminal yet
+stopped_at: Phase265 V11 entry closed process-invalid after four charged cells; unique retained verifier72861 active at fixed source
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: V11 live evidence observed one durable cell start and zero terminal cells; same root entry17028 active, no result or LEAG credit
+last_activity_desc: V11 terminal21:26:52.754UTC, three success terminals and one system-failure terminal; unique read-only verification72861 active, no LEAG credit
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,20 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+V11 root entry17028/PID21728 CLOSED exit0 returning a NONPASS at
+2026-10-02T21:26:52.754UTC: empirical/process_invalid, requirementsComplete=false.
+Actual headsha256:f572bd4f17e7863f2f79c4993a193c352b5fa51a3386544585665bd07d547a79;
+canonical result rawc18dee62f1774d378b73a80373e82e3e0a709cf06cc4b06dc19fb68d479b9964.
+Bounded live terminal metadata showed four durable starts/terminals: three
+success, one system_failure. Failure code/cause not yet inspected or asserted.
+ONE ordinary retained verifier72861 ACTIVE at unchangedsource63/d42/e542 with
+exact allocation69b5cd84/head/private directories. Poll ONLY existing verifier;
+hold source and consumed artifacts immutable until its actual completion.
+No retry/refund/recredit/new route/competing heavy work. Safe source-only
+diagnosis after unique verification closes; no human decision inferred yet.
+No LEAG/freeze/formation/holdout/public/counting/production credit. Earlier
+entry-active observations below are history.
 
 V11 first actual durable cell start OBSERVED at allocation69b5cd84: start-file
 league-cell-562e167642faf2f2f88593be86d74ba6c187cfae37b00196ab7aa96262e32433.started.json,
