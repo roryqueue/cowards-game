@@ -9,7 +9,6 @@ import { createHash } from "node:crypto"
 import { admitFactory, authorizeFactorySupervision } from "../../packages/strategy-lab/src/factory/admission.js"
 import { factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../../packages/strategy-lab/src/factory/contracts.js"
 import { deriveFactoryOraclePacketRoot } from "../../packages/strategy-lab/src/factory/identity.js"
-import { buildFeasibilityCorpus } from "../../packages/strategy-lab/src/feasibility-protocol.js"
 
 const root = labRoot("probe-test", "identity")
 const soldiers = [1, 2].map((x) => ({ id: `soldier-${x}`, ownerPlayerId: "player", status: "ACTIVE", position: { x, y: 1 }, facing: "LEFT", lastSuccessfulMoveDirection: "LEFT" }))
@@ -39,7 +38,7 @@ describe("private IPC diagnostics injected retention", () => {
         const q = JSON.parse(frame), input = JSON.parse(Buffer.from(q.payloadBase64, "base64").toString()).input
         return Buffer.from(JSON.stringify({ requestId: fault === "correlation" ? 99 : q.requestId, status: 0, signal: null, stdoutBase64: Buffer.from(JSON.stringify({ ok: true, value: { activationOrders: [], strategyMemory: input.strategyMemory } })).toString("base64"), stderrBase64: "" }) + "\n")
       }, close() { return { status: 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) } } }) }) })
-    return { host, req: { ...request, semanticTupleId: host.identity.tupleId, input: buildFeasibilityCorpus().selectActivations[0]!.input } as never, calls: () => calls }
+    return { host, req: { ...request, semanticTupleId: host.identity.tupleId, input: structuredClone(request.input) } as never, calls: () => calls }
   }
   it.each([undefined, "horizontal_symmetry"] as const)("joins diagnostic to original, not projected evidence for %s", async (family) => {
     const { host, req } = privateHost(), rows: any[] = [], wrapper = wrapLeagueProbeProvider(host, family, { minX: 0, maxX: 11 }, (row) => { rows.push(row) })

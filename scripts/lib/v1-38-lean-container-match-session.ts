@@ -57,7 +57,7 @@ export type LeanPrivateFailureOrigin =
   | { readonly stage: "executor"; readonly reason: "unknown" }
 const originReasons = { stream_exchange: ["wait_timeout", "non_success_state", "unknown"], outer_frame: ["single_frame_invalid", "frame_cap_exceeded", "json_invalid", "object_invalid", "correlation_invalid"], inner_response: ["json_invalid", "object_invalid", "keys_invalid", "schema_invalid"], executor: ["unknown"] } as const
 /** Data validation only; no issuance follows from a matching pair. */
-export const isLeanPrivateFailureOrigin = (value: unknown): value is LeanPrivateFailureOrigin => {
+export const isLeanPrivateFailureOrigin = (value: unknown): boolean => {
   if (!value || typeof value !== "object") return false
   const pair = value as LeanPrivateFailureOrigin
   return typeof pair.stage === "string" && typeof pair.reason === "string" && Object.hasOwn(originReasons, pair.stage) && (originReasons[pair.stage] as readonly string[]).includes(pair.reason)

@@ -17,11 +17,10 @@ import { prospectiveLifetimeFixture } from "../../packages/strategy-lab/src/leag
 import { createProspectiveLeagueExecutionAllocationV2 } from "../../packages/strategy-lab/src/league/allocation.js"
 import * as allocationApi from "../../packages/strategy-lab/src/league/allocation.js"
 import { issueProspectiveLeagueLifetimeAuthority, claimProspectiveLeagueLifetimeAuthority, prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
-import { defaultRuntimeMetadata } from "@cowards/spec"
+import { defaultRuntimeMetadata, StrategyInputV119Schema } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { wrapLeagueProbeProvider } from "./v1-38-league-response-runtime.js"
-import { buildFeasibilityCorpus } from "../../packages/strategy-lab/src/feasibility-protocol.js"
 // Only module-level unit injection; no caller constructor override is supplied
 // to v4 and no guest/container or real assessment operation is performed.
 vi.mock("./v1-38-planner-supervised-runtime.js", async (original) => ({ ...await original<typeof import("./v1-38-planner-supervised-runtime.js")>(), createPlannerSupervisedRuntime: vi.fn(() => { throw Error("unit container construction forbidden") }) }))
@@ -53,6 +52,10 @@ const admitted = () => {
   return { packet, proposal, validation, admission: authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet, proposal, sourceBytes }), validation }) }
 }
 describe("private IPC diagnostics injected factory", () => {
+  // This unit checks private failure plumbing, not the mission corpus. Keep
+  // its valid snapshot local so the strict script gate has no new planner seam.
+  const diagnosticSoldiers = [{ id: "diagnostic-soldier", ownerPlayerId: "bottom", status: "ACTIVE", position: { x: 2, y: 11 }, facing: "UP", lastSuccessfulMoveDirection: null }]
+  const diagnosticInput = StrategyInputV119Schema.parse({ phaseNumber: 1, roundNumber: 1, activationCount: 1, board: { bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 }, soldiers: diagnosticSoldiers, terrainStones: [] }, mySoldiers: diagnosticSoldiers, enemySoldiers: [], strategyMemory: {}, initialInitiativePlayerId: "bottom", hasInitialInitiative: true, roundInitiativePlayerId: "bottom", hasRoundInitiative: true })
   const injected = async (fault = true) => {
     const actual = await vi.importActual<typeof import("./v1-38-planner-supervised-runtime.js")>("./v1-38-planner-supervised-runtime.js")
     const { admission } = admitted(); let exists = false, calls = 0
@@ -64,7 +67,7 @@ describe("private IPC diagnostics injected factory", () => {
         return { status: 0, signal: null, stdout: Buffer.from(args[0] === "create" ? "id\n" : ""), stderr: Buffer.alloc(0) }
       }, streamFactory: () => ({ exchange(frame: string) { calls++; const q = JSON.parse(frame), input = JSON.parse(Buffer.from(q.payloadBase64, "base64").toString()).input; return Buffer.from(JSON.stringify({ requestId: fault ? 99 : q.requestId, status: 0, signal: null, stdoutBase64: Buffer.from(JSON.stringify({ ok: true, value: { activationOrders: [], strategyMemory: input.strategyMemory } })).toString("base64"), stderrBase64: "" }) + "\n") }, close() { return { status: 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) } } }) })
     const host = createFactorySupervisedRuntime({ admission, sourceBytes, budgetRoot: root("a"), attemptRoot: root("b"), matchId: "diag-factory", containerName: "diag-factory", ownershipLabel: "owner:diag-factory", createRuntime })
-    const req = { kind: "selectActivations", requestId: "diagnostic", semanticTupleId: host.identity.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input: buildFeasibilityCorpus().selectActivations[0]!.input } as never
+    const req = { kind: "selectActivations", requestId: "diagnostic", semanticTupleId: host.identity.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input: structuredClone(diagnosticInput) } as never
     return { host, req, calls: () => calls }
   }
   it("joins exact selected evidence and refuses clones, another provider and structural capabilities", async () => {
