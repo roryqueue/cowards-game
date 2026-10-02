@@ -9,8 +9,8 @@ overrides_applied: 0
 empirical_authority: false
 latest_follow_up: 2026-10-02
 latest_diagnostic_source: e440763a75c0e66beb402548681a9acfddad9b24
-latest_source_gate: dbf5daa24b0764f68124af2e475b9aa6135dc8ae
-active_source_gate: unique-async28406-pending
+latest_source_gate: 634b0e84896132a1a9ac5d855763b0793abfe1bc
+active_source_gate: none-unique-async28406-complete
 latest_source_review: 634b0e84896132a1a9ac5d855763b0793abfe1bc
 gaps:
   - truth: "Every frozen population has a complete condition-balanced payoff matrix, with process-invalid cells blocking meta-solving."
@@ -60,6 +60,12 @@ gaps:
 # Phase 265: Serious Current-Rules League and Development Red Team — Verification
 
 ## Current main-observed follow-up — 2026-10-02
+
+Gate28406 now COMPLETE atfixed634b0e84:448league+3tactical tests/build/types/
+scans pass, engine149/runtime277/core/private-helper types pass. Original phase
+verdict remains gaps_found0/5; no LEAG/freeze truth closes. Freshv7 request
+preparation follows, no capacity/entry yet. See ASYNC-DEPENDENCY-SOURCE-GATE-v1.
+Active-gate snapshots below are historical.
 
 Current async source634b0e84 has clean independent reviewv4 after three bounded
 fix passes. Final9public failure-path tests/types pass; unique reviewed data-only

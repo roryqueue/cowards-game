@@ -2,6 +2,13 @@
 
 ## Current verified progress — Phases262–264 complete
 
+ONE final async source gate28406 is COMPLETE:448league+3tactical tests,
+build/types/three clean scans/service strict0; engine149/runtime277 and core/
+private-helper types pass. Source634b0e84 stays fixed. Freshv7 source-only
+request/allocation preparation follows under standing approval, no entry yet.
+No plan/phase/LEAG/freeze credit is added. See ASYNC-DEPENDENCY-SOURCE-GATE-v1.
+All active-gate snapshots below are historical.
+
 Async dependency repair634b0e84 has clean independent reviewv4 and focused
 fault proof. Unique data-only profile78928 preserves exact bytes/150file100DIR
 syncs:mean98.885ms (~8.05%observational reduction), ownedcleanupcomplete.

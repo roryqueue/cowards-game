@@ -31,6 +31,11 @@ updated: 2026-10-02
 
 ## Current Focus
 
+- current_gate: unique28406 COMPLETED all8unchanged CI commands,448league plus
+  3tactical tests/build/types/scans; engine149/runtime277/core/private-helper
+  types pass. Source634b0e84/f942c33f/ae9b47ba staysfixed for freshv7 preparation.
+  Profile78928 and gate are closed. No whole-Match gain or LEAG outcome yet;
+  source-only diagnosis remains investigating. Earlier active snapshots history.
 - current_repair: independently reviewed async source634b0e84, implementation
   f942c33f/sourceae9b47ba, is clean after three bounded correction passes. Final
   public runner9tests/39.98s and strict types pass. ONE reviewed data-only profile

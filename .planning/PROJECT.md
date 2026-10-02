@@ -2,6 +2,13 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+Final async source gate28406 is now COMPLETE:448league+3tactical tests,
+build/types/scans pass; engine149/runtime277/core/private-helper types pass.
+Source634b0e84 stays fixed for fresh reviewedv7 request/allocation preparation.
+No new route/capacity/Match yet; standing approval covers later distinct entry.
+LEAG/freeze/formation/holdout remain open/closed as before. See
+ASYNC-DEPENDENCY-SOURCE-GATE-v1. All active-gate snapshots below are historical.
+
 Reviewed async dependency repair634b0e84 is clean after three bounded fix passes.
 Unique data-only profile78928 completes/cleanuptrue:50fresh exact-record writers,
 mean98.885ms vs historical107.548ms (~8.05%observational mean reduction).

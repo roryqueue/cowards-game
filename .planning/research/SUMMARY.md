@@ -2,6 +2,14 @@
 
 ## Current approved handoff — 2026-10-02
 
+Final async source gate28406 completes all8 unchanged commands atfixed634b0e84:
+448league+3tactical tests, build/types/scans pass; engine149/runtime277/core and
+private-helper types pass. The gate and data-only profile78928 are closed.
+Root may prepare freshv7 requests/allocation under standing approval, then
+actual fresh same-process capacity; no Match/route has started. Source-only
+acceptance and modest fixed-slice timing never imply LEAG/freeze completion.
+See ASYNC-DEPENDENCY-SOURCE-GATE-v1; active-gate snapshots below are history.
+
 Reviewed source634b0e84 retains all barriers and now overlaps only two dependency
 file-sync waits. Final independent reviewv4 is clean; nine public failure-boundary
 tests/types pass. Unique data-only profile78928 preserves exact record hashes,

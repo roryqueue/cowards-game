@@ -7,13 +7,19 @@ wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-02
 source_reviewed: 634b0e84896132a1a9ac5d855763b0793abfe1bc
-source_gate: active-unique-async-source-gate28406-not-yet-complete
+source_gate: complete-unique-async28406-448league-plus3tactical-engine149-runtime277-types-boundaries-pass
 empirical_validation: v6-consumed-process-invalid-five-cells-unique-retained-verifier-complete
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+Final gate28406 is COMPLETE atfixed634b0e84:448league+3tactical tests,
+build/types/scans pass; correct-cwd engine149/runtime277, core and private-helper
+types pass. No empirical requirement is closed; Nyquist stays partial/false.
+Freshv7 request preparation follows, no capacity/entry yet. See
+ASYNC-DEPENDENCY-SOURCE-GATE-v1. Active-gate notes below are historical.
 
 Current async repair634b0e84 has clean independent source reviewv4 and helper
 reviewv1. Final public-failure selection9tests/39.98s and strict types pass.

@@ -2,6 +2,16 @@
 
 Status: helper source draft; pending independent helper review and root-owned source gate. This note is not execution authority, an allocation, a capacity receipt, or empirical evidence.
 
+## Subsequent root source acceptance
+
+Independent helper reviewv13 is clean after root corrected the historical
+template path before execution. Actual helper raws are0555e09e/baa59f57.
+ONE final source gate28406 passes all8unchanged commands,448league+3tactical
+tests, build/types/scans; engine149/runtime277/core/private-helper types pass.
+See ASYNC-DEPENDENCY-SOURCE-GATE-v1. The original helper's pending-gate metadata
+and proof document are construction-time snapshots, not current gate status.
+Fresh draft/review/compile/allocation/capacity have not yet been invoked.
+
 The new namespace is `.strategy-lab/league-265-prospective-v7-20261002-a`. The helpers bind source commit `634b0e84896132a1a9ac5d855763b0793abfe1bc`, implementation root `sha256:f942c33fc577b1cca8b1742b73f2e31637f431abecf6b69b70001cc03b6a0744`, and source root `sha256:ae9b47ba2c607fd54baee4fee8ac24291524877d5f60b954192f6aaa0ff69a06`. They carry the six raw source/test pins and bounded review-v4 identity for the asynchronous dependency repair. The data-only profile result is identified as such; it provides no whole-Match claim. The proof document records the active root gate as pending, not passed.
 
 The preparation structure inherits only the frozen non-authorizing request/config/prompt material and historical static capacity sizing. New v7 output locations are distinct. No earlier route, job identity, review timing, packet, allocation, capacity receipt, model output, runtime result, or Match result is adopted. The historical sizing sample is not a live observation.
