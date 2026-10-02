@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 unique v5 entry91384 active; source fixed6bd77247
+stopped_at: Phase265 v5 terminal; unique retained verifier14069 active; source fixed6bd77247
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: fresh v5 allocation20077381 published; unique guarded entry62291 started static checks before capacity
+last_activity_desc: v5 process-invalid after3charges with2valid results; unique read-only verifier14069 active
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,20 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — reviewed canonical-literal repair
+
+Fresh v5 ended process-invalid at2026-10-02T02:54:19.876Z after three charged
+cells: two process-valid success journals and one system-failure journal.
+Actual published result raw42d571b9/279bytes,headace91c56,allocation20077381.
+Teacher soldierBrain exhausted the unchanged120-second lifetime at transition
+1469,Phase3/Round2/Cycle11. No authoring job completed. All six exact route
+containers are absent by read-only Docker inspection. Root's ONE ordinary
+retained verifier14069 is active with exact roots/repos and no capacity flags.
+Do not duplicate it. Main source6bd stays fixed until it finishes; other heavy
+tests remain held. See265-07-EMPIRICAL-RESULT-v5.md. No LEAG completion or freeze
+is claimed; standing approval covers future distinct same-bounds routes after
+review/gates/new allocation/fresh capacity. No new human checkpoint identified.
+
+The entry-active v5 and prior v4 snapshots below are historical.
 
 Fresh league-v4 ended process-invalid at2026-10-02T00:58:56.405Z after
 exactly one charged cell. Its actual result is published at

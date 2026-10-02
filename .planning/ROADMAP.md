@@ -2,6 +2,16 @@
 
 ## Current verified progress — Phases262–264 complete
 
+Current outcome: fresh v5 ended process-invalid after three charged cells,
+including two process-valid results. One unique read-only retained verifier14069
+is active; main source6bd stays fixed until it finishes. Source-only reviewed
+repair may continue without reviving this consumed route. No LEAG completion,
+freeze, formation or holdout opening is claimed. Standing approval already
+covers future distinct same-bounds routes after review/gates/new allocation/
+fresh capacity. See STATE.md and265-07-EMPIRICAL-RESULT-v5.md.
+
+The v3 dispatch and source snapshots immediately below are historical.
+
 Latest outcome: allocation-v3 passed fresh capacity, then ended process-invalid
 after one charged cell at the frozen120-second runtime lifetime. Preserve it;
 unique read-only retained verification and source-only GSD Debug cost diagnosis

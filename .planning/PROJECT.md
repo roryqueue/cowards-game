@@ -2,6 +2,16 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+Current v5 outcome: process-invalid after three charged cells at
+2026-10-02T02:54:19.876Z, with two process-valid successes and one teacher
+soldierBrain120-second lifetime failure. Unique ordinary retained verifier14069
+is active; keep main source6bd fixed and do not repeat entry or verifier.
+All six exact route containers are absent by read-only inspection. No LEAG
+completion, freeze or formation/holdout opening follows. Standing approval
+covers future distinct same-bounds routes after review/gates/new allocation/
+fresh capacity. See STATE.md and265-07-EMPIRICAL-RESULT-v5.md.
+The earlier entry-active and source snapshots below are historical.
+
 Current continuation: reviewed repair source `e28f29a0` preserves artifact
 bytes, hashes and accounting while grouping only small runtime-invocation
 dependency directory barriers. Independent deep review is clean; 19 focused

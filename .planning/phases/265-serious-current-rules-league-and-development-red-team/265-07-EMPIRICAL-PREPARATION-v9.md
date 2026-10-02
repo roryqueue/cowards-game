@@ -1,5 +1,9 @@
 # Plan265-07 — fresh league-v5 preparation
 
+The route is now terminal after three charged cells; its unique retained
+verifier14069 is active. See265-07-EMPIRICAL-RESULT-v5.md. Preparation and
+entry-active descriptions below are historical, not permission to repeat them.
+
 Standing human approval applies; no repeated literal or external custody gate.
 This is fresh data-only preparation, not an allocation, host observation,
 capacity receipt, live dispatch or empirical/LEAG/freeze completion.

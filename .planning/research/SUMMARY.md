@@ -2,6 +2,15 @@
 
 ## Current approved handoff — 2026-10-01
 
+Current v5 route ended process-invalid after three charged cells at
+2026-10-02T02:54:19.876Z. Two cells report process-valid success; the third
+teacher soldierBrain exhausted the unchanged120-second lifetime. One unique
+ordinary read-only verifier14069 is active, with main source6bd fixed. No LEAG
+or freeze credit follows. No repeat operator checkpoint is required for a
+future distinct same-bounds route after reviewed repair, applicable gates,
+new allocation and fresh capacity. See265-07-EMPIRICAL-RESULT-v5.md.
+Earlier entry-active and source-only snapshots below are historical.
+
 Current source-only repair `e28f29a0` is independently reviewed with zero
 findings; complete unchanged source gate53203 passes382main+3tactical tests,
 build/types/boundaries. Identical retained-record hashes and approximately
