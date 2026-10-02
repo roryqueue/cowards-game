@@ -968,11 +968,13 @@ Independent review accepts small-invocation durability repair e28f29a0 with
 complete source gate53203 passes382main+3tactical tests/types/build/boundaries.
 Fresh v4 has reviewed/compiled inert packets,prepare57563 passed and canonical
 allocationrootf7968e1e published with typed capacity input. Unique v4entry6814
-is active,static validation before fresh capacity/dispatch; no capacity pass
-or empirical result yet. Standing human approval
+passed fresh capacity then ended process-invalid after one charged cell and
+485 completed invocations on the unchanged120-second lifetime. Unique read-only
+verifier26421 is active; source-only serialization repair continues. Standing human approval
 covers distinct same-bounds private routes
 after their technical gates, never consumed-route retries or bound changes.
-See265-07-EMPIRICAL-PREPARATION-v8.md. No LEAG completion or freeze follows.
+See265-07-EMPIRICAL-PREPARATION-v8.md and265-07-EMPIRICAL-RESULT-v4.md.
+No LEAG completion or freeze follows.
 
 **Wave1 — private contracts**
 - [x] 265-01-PLAN.md — Strict rooted contracts, canonical entrant-relative payoff projection and identities.

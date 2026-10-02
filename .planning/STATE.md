@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 unique v4 entry6814 PID53834 active; static validation before fresh capacity
+stopped_at: Phase265 v4 terminal process-invalid; unique read-only verifier26421 active
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Root started unique v4entry6814 at00:34:55UTC after complete gate and published allocation; no capacity pass yet
+last_activity_desc: v4 charged one cell and exhausted unchanged120s lifetime after485invocations; read-only verification and source-only repair continue
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,26 @@ total_plans_in_phase: 14
 
 # State: Coward's Game
 
-## Current continuation — consumed league-v3 diagnosis
+## Current continuation — consumed league-v4 diagnosis
+
+Fresh league-v4 ended process-invalid at2026-10-02T00:58:56.405Z after
+exactly one charged cell. Its actual result is published at
+.planning/artifacts/v1.38-phase-265-run-result-v4.json,raw1529a0ed/279bytes,
+headf5d62d78,allocationf7968e1e. It never resumes or refunds its charge.
+Root's ONE ordinary read-only retained verifier26421 is ACTIVE with exact
+allocation/head/repositories and no capacity flags. Do not duplicate it or
+change main source until it finishes. The metadata-only closed-store inspection
+found485 completed runtime-invocation descriptors and a next soldierBrain
+FACTORY_RUNTIME_LIFETIME_EXHAUSTED at transition1430,Phase3/Round2/Cycle4.
+Both providers' cleanup records say complete/no orphan. Full retained
+authentication is still pending; this is not a Strategy loss or LEAG credit.
+Capacity admitted at00:56:51.711UTC,receipt43b5b16e,available memory
+11,854,109,736bytes/free filesystem216,613,175,296bytes. No thresholds changed.
+No authoring job completed or model turn started. Source-only serialization
+cost diagnosis and an isolated fixed-literal encoder review continue under
+standing approval. LEAG/Phase265 completion and freeze remain pending.
+
+The previously active v4 preparation/entry text below is historical.
 
 Repair source e28f29a0 is committed/pushed with independent deep review
 (zero findings).19 focused tests and build pass;50 source-only benchmark
@@ -41,14 +60,13 @@ Namespace league-265-prospective-v4-20261001-a; source0496bca7 /implementation
 Root's unique data-only prepare57563 completed exit0. Canonical allocation-v4
 rootf7968e1e is published,rawbytesd2987672/22144bytes. Typed capacity input
 5b54faef is prepared with truthful inherited quantities/format review; it is
-not a host observation or receipt. Root's unique entry is ACTIVE as session6814,
+not a host observation or receipt. Root's unique entry was session6814,
 PID53834,started2026-10-02T00:34:55.373Z. Static admission and fresh passing
 same-process capacity must precede reservation/dispatch. No capacity pass,
 Match/model call or empirical result is established by entry. External result-v4
 is reserved empty; do not stage it until actual terminal publication.
-Do not repeat prepare/entry, start a retained verifier, change main source or
-run heavy fixtures during this active route. Root preserves the actual outcome
-then runs one read-only retained verification before source changes.
+Do not repeat prepare/entry. The route is now terminal as recorded above;
+one read-only retained verification must finish before source changes.
 See265-07-EMPIRICAL-PREPARATION-v8.md and265-07-PACKET-REVIEW-v8.md.
 Complete gate proof:265-07-REPAIRED-SOURCE-GATE-v1.md. Data-only prepare does
 not observe capacity or authorize a Match before fresh same-process admission.

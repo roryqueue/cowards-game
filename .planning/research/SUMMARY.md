@@ -9,11 +9,12 @@ build/types/boundaries. Identical retained-record hashes and approximately
 not proof that a Match fits the 120-second lifetime. Fresh v4 packets are
 independently reviewed and compiled into inert records; unique data-only
 prepare57563 passed and canonical allocation-v4 rootf7968e1e is published.
-Typed capacity input exists, not a host receipt. Unique v4entry6814/PID53834
-is active since00:34:55UTC,static checks before fresh capacity/dispatch. No
-capacity pass or empirical result yet. See
+Typed capacity input was not itself a host receipt. Unique v4entry6814 passed
+fresh capacity then ended process-invalid after one charged cell/485 completed
+invocations at00:58:56UTC. Unique read-only retained verifier26421 is active;
+source-only serialization repair continues. No LEAG/freeze credit. See
 265-07-DEPENDENCY-BARRIER-PROOF-v1.md,265-07-REPAIRED-SOURCE-GATE-v1.md and
-265-07-EMPIRICAL-PREPARATION-v8.md.
+265-07-EMPIRICAL-PREPARATION-v8.md and265-07-EMPIRICAL-RESULT-v4.md.
 
 The unique v3 retained verifier completed with process_invalid/issued=false;
 source-only diagnosis completed. The following v3 entry/diagnosis text is
