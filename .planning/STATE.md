@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 repaired-source full gate passes; fresh v4 data-only allocation preparation next
+stopped_at: Phase265 repaired-source full gate passes; unique fresh v4 data-only prepare57563 active
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Complete source gate382plus3tests types and boundaries passes; prepare fresh v4 under standing approval
+last_activity_desc: Source gate passes; unique data-only prepare57563 validates historical bases; no capacity or live entry
 progress:
   total_phases: 9
   completed_phases: 3
@@ -37,8 +37,11 @@ the eventual distinct same-bounds route, but every technical gate still applies.
 Fresh league-v4 drafts/helpers are independently reviewed: all11jobs accepted,
 canonical actual review timings; root compiled45 inert packet/disclosure rows.
 Namespace league-265-prospective-v4-20261001-a; source0496bca7 /implementation
-879aaa9b. No v4 allocation, capacity input/receipt or live entry exists yet.
-Root now prepares/publishes the distinct source-bound
+879aaa9b. Fresh unrooted input was created once at raw rootd1a3f5d3,22002bytes.
+Root's unique data-only prepare is ACTIVE as session57563; do not duplicate
+the historical reader or change main source. It does not measure capacity.
+No v4 rooted allocation, capacity input/receipt or live entry exists yet.
+After prepare completes root publishes the distinct source-bound
 allocation and fresh same-process capacity chain under standing approval.
 See265-07-EMPIRICAL-PREPARATION-v8.md and265-07-PACKET-REVIEW-v8.md.
 Complete gate proof:265-07-REPAIRED-SOURCE-GATE-v1.md. Data-only prepare does
@@ -51,8 +54,8 @@ Head root82b6929c; allocation root80e2409f. The actual external result-v3 is
 published and must remain immutable. Root's unique read-only retained verifier
 session73144 completed exit0, returning process_invalid / issued=false /
 empiricalRequirementsComplete=false. Do not repeat it. No live executor is active.
-GSD Debug source-only lifetime diagnosis/profiling is complete; isolated
-dependency-barrier repair and fault tests are active. No deadline,
+GSD Debug source-only lifetime diagnosis/profiling and reviewed dependency-
+barrier repair/fault tests are complete. No deadline,
 durability, capacity, resource, gameplay or privacy bound changes. See
 265-07-EMPIRICAL-RESULT-v3.md and debug/phase265-league-lifetime-v3.md.
 
@@ -63,9 +66,11 @@ immutable allocation with fresh passing capacity before a further Match.
 No human-only checkpoint has been identified by diagnosis yet. LEAG remains
 pending and Phase265 stays12/14plans complete; formation/holdout stay closed.
 
-The isolated Phase266 fixture-only draft is checkpointed locally ataccae66f;
-untested/unmerged/unpushed, still missing full positive derive/check joins.
-Its executor released ownership to root. It is not a freeze or phase completion.
+The isolated Phase266 fixture-only draft is checkpointed locally ataccae66f
+with untested/unmerged/unpushed additions, still missing full positive derive/
+check joins. The executor continues a no-emit typecheck and source-only input
+construction; no tests/generation or real operations. It is not a freeze or
+phase completion and main source remains fixed during prepare/live entry.
 
 ## Historical fresh entry — now consumed as recorded above
 

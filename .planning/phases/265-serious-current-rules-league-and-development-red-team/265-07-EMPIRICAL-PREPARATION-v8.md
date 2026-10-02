@@ -11,8 +11,9 @@ Current reviewed source commit `e28f29a06664059cc9f495f1030581ea7835504a`:
 - source `sha256:0496bca72863339ae91007031729e5b605fe2a1d5b9e9216148581906492f591`
 
 Both were independently rederived by packet review and root. Source is unchanged
-while the full existing CI gate runs as session53203. Deep source review is clean;
-19 focused tests/build pass. The full-gate pass is NOT yet established.
+through the complete existing CI gate53203, which completed exit0. Deep source
+review is clean;29suites/382tests plus3tactical tests/build/stricttypes/allboundary
+checks pass. See265-07-REPAIRED-SOURCE-GATE-v1.md; hashed proof/review unchanged.
 
 ## Fresh private preparation
 
@@ -53,10 +54,12 @@ later full-gate results in a separate document rather than changing those bytes.
 
 ## Remaining technical gates, not an operator checkpoint
 
-1. Await unique source gate53203; fix any actual failure before allocation.
-2. Construct fresh unrooted input from reviewed packets, then run root's
-   existing data-only prepare-prospective selector. No rooted allocation exists
-   yet. Never duplicate an active historical reader or source gate.
+1. Complete source gate53203 passed; do not repeat it without source changes.
+2. Fresh unrooted input was created once at raw
+   sha256:d1a3f5d37b1fe107156f14a1cb468fd55fbfd603d3aa9f94997d32966123fb33,
+   22002bytes. Root's existing data-only prepare-prospective selector is ACTIVE
+   as unique session57563; no rooted allocation exists yet. Never duplicate
+   this historical reader. It creates no host observation or capacity receipt.
 3. Construct/admit truthful fresh capacity input, publish the unique canonical
    `.planning/artifacts/v1.38-phase-265-allocation-v4.json` exclusively, and
    invoke the guarded entry exactly once. Same-process static admission precedes

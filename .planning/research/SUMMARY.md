@@ -3,13 +3,14 @@
 ## Current approved handoff — 2026-10-01
 
 Current source-only repair `e28f29a0` is independently reviewed with zero
-findings; 19 focused tests and build pass. The complete unchanged source gate
-is active as session53203. Identical retained-record hashes and approximately
+findings; complete unchanged source gate53203 passes382main+3tactical tests,
+build/types/boundaries. Identical retained-record hashes and approximately
 12 percent sampled write-time savings are bounded source-only measurements,
 not proof that a Match fits the 120-second lifetime. Fresh v4 packets are
-independently reviewed and compiled into inert records; allocation, fresh
-capacity and live entry remain unperformed until the gate passes. See
-265-07-DEPENDENCY-BARRIER-PROOF-v1.md and265-07-EMPIRICAL-PREPARATION-v8.md.
+independently reviewed and compiled into inert records; unique data-only
+prepare57563 is active before rooted allocation,fresh capacity and live entry. See
+265-07-DEPENDENCY-BARRIER-PROOF-v1.md,265-07-REPAIRED-SOURCE-GATE-v1.md and
+265-07-EMPIRICAL-PREPARATION-v8.md.
 
 The unique v3 retained verifier completed with process_invalid/issued=false;
 source-only diagnosis completed. The following v3 entry/diagnosis text is
