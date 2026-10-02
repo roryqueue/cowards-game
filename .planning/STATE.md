@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 prospective lifetime source implemented and focused-tested; independent review then full fixed-source gates
+stopped_at: Phase265 lifetime review found two blockers and one test gap; bounded source fixes before re-review/full gates
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: source commits502af0d6/6b0e7a85/2d0462fb and summary5c7e2315 pushed;23focusedmocktests and productiontypes pass, review/fullgates pending
+last_activity_desc: independent lifetime review2d0462fb finds stale tacticalv1 predicate, inheritedconstructor bypass and missingactualresponsewiring test; fixing all under approvedscope
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,15 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+Independent source reviewv1 of2d0462fb found two BLOCKERs and one WARNING:
+tactical corpus selector recognizes only prospective-v1, inherited factory
+constructor override evades empirical guard, response tests do not traverse
+actual v2 production wiring. Fix all before re-review/full gates. The tactical
+dependency and its tests are a necessary transitive technical scope correction,
+not a new product/rules/resource decision or numbered plan. No other stale
+production discriminator consumer was found in the review's global scan.
+No live run/capacity/retained verifier is active; no source acceptance yet.
 
 The source-only supplement is implemented at2d0462fb (summary5c7e2315),
 committed/pushed. Genuine RED98481 failed; final mock GREEN40355 passes23tests
