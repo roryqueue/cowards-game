@@ -9,6 +9,7 @@ import { factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidatio
 import { deriveFactoryOraclePacketRoot } from "../../packages/strategy-lab/src/factory/identity.js"
 import { DIAGNOSTIC_ONE_CELL_STORE, createDiagnosticOneCellAllocation, createDiagnosticOneCellCell, createDiagnosticOneCellStart, createDiagnosticOneCellLifetimeGrant, diagnosticOneCellContainerIdentity, openDiagnosticOneCellLedger } from "../../packages/strategy-lab/src/league/diagnostic-one-cell.js"
 import { admitFactorySupervisorLifetime, createFactorySupervisedRuntime } from "./v1-38-factory-supervised-runtime.js"
+import * as factoryApi from "./v1-38-factory-supervised-runtime.js"
 import { admitPlannerSupervisorLifetime, createPlannerSupervisedRuntime } from "./v1-38-planner-supervised-runtime.js"
 import { createDiagnosticRetryV4Allocation, createDiagnosticRetryV4Cell, createDiagnosticRetryV4Start, openDiagnosticRetryV4Ledger } from "./v1-38-diagnostic-retry-v4.js"
 import { issueDiagnosticRetryV4ProviderFromFactoryCandidate, closeDiagnosticRetryV4IssuedProvider } from "./v1-38-diagnostic-retry-v4-bridge.js"
@@ -51,6 +52,51 @@ const admitted = () => {
   const proposal = factoryProposalFromPacket(packet), validation = factoryValidationFixture(proposal)
   return { packet, proposal, validation, admission: authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet, proposal, sourceBytes }), validation }) }
 }
+describe("private IPC diagnostics injected factory", () => {
+  const injected = async (fault = true) => {
+    const actual = await vi.importActual<typeof import("./v1-38-planner-supervised-runtime.js")>("./v1-38-planner-supervised-runtime.js")
+    const { admission } = admitted(); let exists = false, calls = 0
+    const createRuntime = (opts: any) => actual.createPlannerSupervisedRuntime({ ...opts,
+      transport(_command: string, args: string[]) {
+        if (args[0] === "inspect") return { status: exists ? 0 : 1, signal: null, stdout: Buffer.from(exists ? "owner:diag-factory\n" : ""), stderr: Buffer.from(exists ? "" : "Error: No such object: diag-factory\n") }
+        if (args[0] === "create") exists = true
+        if (args[0] === "rm") exists = false
+        return { status: 0, signal: null, stdout: Buffer.from(args[0] === "create" ? "id\n" : ""), stderr: Buffer.alloc(0) }
+      }, streamFactory: () => ({ exchange(frame: string) { calls++; const q = JSON.parse(frame), input = JSON.parse(Buffer.from(q.payloadBase64, "base64").toString()).input; return Buffer.from(JSON.stringify({ requestId: fault ? 99 : q.requestId, status: 0, signal: null, stdoutBase64: Buffer.from(JSON.stringify({ ok: true, value: { activationOrders: [], strategyMemory: input.strategyMemory } })).toString("base64"), stderrBase64: "" }) + "\n") }, close() { return { status: 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) } } }) })
+    const host = createFactorySupervisedRuntime({ admission, sourceBytes, budgetRoot: root("a"), attemptRoot: root("b"), matchId: "diag-factory", containerName: "diag-factory", ownershipLabel: "owner:diag-factory", createRuntime })
+    const req = { kind: "selectActivations", requestId: "diagnostic", semanticTupleId: host.identity.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input: buildFeasibilityCorpus().selectActivations[0]!.input } as never
+    return { host, req, calls: () => calls }
+  }
+  it("joins exact selected evidence and refuses clones, another provider and structural capabilities", async () => {
+    const first = await injected(), second = await injected(), e = await first.host.invoke(first.req, first.host.identity), other = await second.host.invoke(second.req, second.host.identity)
+    const api = factoryApi as any, d = api.getFactoryPrivateDiagnostic?.(first.host, e)
+    expect(d).toEqual({ stage: "outer_frame", reason: "correlation_invalid", identity: e.identity, invocationRoot: e.invocationRoot, requestId: e.requestId, method: e.method, inputRoot: e.inputRoot, ordinal: e.ordinal })
+    expect(Object.isFrozen(d)).toBe(true); expect(api.verifyFactoryPrivateDiagnostic?.(first.host, e, d)).toBe(true)
+    expect(api.verifyFactoryPrivateDiagnostic?.(first.host, e, structuredClone(d))).toBe(false)
+    expect(api.verifyFactoryPrivateDiagnostic?.(second.host, other, d)).toBe(false)
+    expect(api.getFactoryPrivateDiagnostic?.(first.host, structuredClone(e))).toBeUndefined()
+    expect(api.getFactoryPrivateDiagnostic?.({ ...first.host, privateDiagnostic: () => d }, e)).toBeUndefined()
+    expect(e).toMatchObject({ charged: true, completed: false, outputBytes: 0, result: { ok: false, systemFailure: { code: "MALFORMED_IPC", retryable: false } } })
+    expect(e).not.toHaveProperty("privateDiagnostic"); expect(first.host.verify(e)).toBe(true)
+    await expect(Promise.resolve().then(() => first.host.invoke(first.req, first.host.identity))).rejects.toThrow("LAB_RUNTIME_STOPPED")
+    expect(first.calls()).toBe(1); expect(first.host.close()).toEqual({ cleanupComplete: true, orphanedChild: false })
+  })
+  it("does not decorate a successful constructor-issued result", async () => {
+    const { host, req } = await injected(false), e = await host.invoke(req, host.identity)
+    expect(e.result.ok).toBe(true); expect((factoryApi as any).getFactoryPrivateDiagnostic?.(host, e)).toBeUndefined()
+    expect(e).not.toHaveProperty("privateDiagnostic"); host.close()
+  })
+  it("ignores optional-looking metadata on historical injected providers", () => {
+    const { admission } = admitted(), close = vi.fn(() => ({ cleanupComplete: true, orphanedChild: false }))
+    const createRuntime = (opts: any) => {
+      const identity = { revisionId: opts.revision.id, sourceRoot, executableRoot: root("a"), tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: opts.image, harnessRoot: root("a"), budgetRoot: opts.budgetRoot, attemptRoot: opts.attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot }
+      return { identity, close, accounting: [], timing() {}, verifyTiming() { return false }, verify() { return true }, privateDiagnostic() { return { stage: "stream_exchange", reason: "wait_timeout", source: "PRIVATE_CANARY" } }, invoke(req: any) { return { identity, requestId: req.requestId, method: req.kind, inputRoot: root("a"), invocationRoot: root("b"), ordinal: 0, charged: true, completed: false, outputBytes: 0, result: { ok: false, violation: { type: "INVALID_OUTPUT", message: "Runtime system failure" }, systemFailure: { code: "MALFORMED_IPC", retryable: false } } } } } as never
+    }
+    const host = createFactorySupervisedRuntime({ admission, sourceBytes, budgetRoot: root("a"), attemptRoot: root("b"), matchId: "diag-factory", containerName: "diag-factory", ownershipLabel: "owner:diag-factory", createRuntime })
+    const e = host.invoke({ kind: "selectActivations", requestId: "legacy" } as never, host.identity)
+    expect((factoryApi as any).getFactoryPrivateDiagnostic?.(host, e)).toBeUndefined(); host.close()
+  })
+})
 let prospectiveOrdinal = 0
 const lifetimeGrant = () => {
   const allocation = createProspectiveLeagueExecutionAllocationV2(prospectiveLifetimeFixture()), { admission } = admitted(), defaults = defaultRuntimeMetadata("typescript")

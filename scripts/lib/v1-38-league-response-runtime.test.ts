@@ -2,6 +2,14 @@ import { describe, expect, it } from "vitest"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import type { FactorySupervisionProvider } from "../../packages/strategy-lab/src/factory/admission.js"
 import { wrapLeagueProbeProvider, verifyRetainedLeagueProbeInvocations } from "./v1-38-league-response-runtime.js"
+import { createFactorySupervisedRuntime } from "./v1-38-factory-supervised-runtime.js"
+import * as factoryApi from "./v1-38-factory-supervised-runtime.js"
+import { createPlannerSupervisedRuntime } from "./v1-38-planner-supervised-runtime.js"
+import { createHash } from "node:crypto"
+import { admitFactory, authorizeFactorySupervision } from "../../packages/strategy-lab/src/factory/admission.js"
+import { factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../../packages/strategy-lab/src/factory/contracts.js"
+import { deriveFactoryOraclePacketRoot } from "../../packages/strategy-lab/src/factory/identity.js"
+import { buildFeasibilityCorpus } from "../../packages/strategy-lab/src/feasibility-protocol.js"
 
 const root = labRoot("probe-test", "identity")
 const soldiers = [1, 2].map((x) => ({ id: `soldier-${x}`, ownerPlayerId: "player", status: "ACTIVE", position: { x, y: 1 }, facing: "LEFT", lastSuccessfulMoveDirection: "LEFT" }))
@@ -12,6 +20,85 @@ const fixture = () => {
   const provider: FactorySupervisionProvider = { identity, invoke(input) { seen.push(input); const evidence = { identity, requestId: input.requestId, method: input.kind, inputRoot: labRoot("runtime-input", input.input), ordinal: 0, invocationRoot: root, charged: true, completed: true, outputBytes: 2, result: { ok: true as const, value: { activationOrders: [], strategyMemory: input.kind === "selectActivations" ? input.input.strategyMemory : null } } }; identities.add(evidence); return evidence }, verify(value) { return identities.has(value) }, close() { return { cleanupComplete: true, orphanedChild: false } } }
   return { provider, seen }
 }
+describe("private IPC diagnostics injected retention", () => {
+  const privateHost = (fault = "correlation") => {
+    const sourceBytes = new TextEncoder().encode("export default {selectActivations(){return {activationOrders:[],strategyMemory:{}}},soldierBrain(){return {action:{type:'TURN_TO_STONE'},soldierMemory:{}}}}")
+    const sourceRoot = `sha256:${createHash("sha256").update(sourceBytes).digest("hex")}` as LabRoot
+    const value = { ...factoryOraclePacketFixture(), source: { root: sourceRoot, sha256: sourceRoot, byteLength: sourceBytes.byteLength, encoding: "utf8" as const } }, packet = { ...value, root: deriveFactoryOraclePacketRoot(value) }, proposal = factoryProposalFromPacket(packet)
+    const admission = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet, proposal, sourceBytes }), validation: factoryValidationFixture(proposal) })
+    let exists = false, calls = 0
+    const host = createFactorySupervisedRuntime({ admission, sourceBytes, budgetRoot: root, attemptRoot: root, matchId: "diag-retain", containerName: "diag-retain", ownershipLabel: "owner:diag-retain", createRuntime: (options) => createPlannerSupervisedRuntime({ ...options,
+      transport(_command, args) {
+        if (args[0] === "inspect") return { status: exists ? 0 : 1, signal: null, stdout: Buffer.from(exists ? "owner:diag-retain\n" : ""), stderr: Buffer.from(exists ? "" : "Error: No such object: diag-retain\n") }
+        if (args[0] === "create") exists = true
+        if (args[0] === "rm") exists = false
+        return { status: 0, signal: null, stdout: Buffer.from(args[0] === "create" ? "id\n" : ""), stderr: Buffer.alloc(0) }
+      }, streamFactory: () => ({ exchange(frame) {
+        calls++
+        if (fault === "canary") throw Object.assign(Error("PRIVATE_CANARY"), Object.fromEntries(["name", "code", "details", "stack", "stdout", "stderr", "source", "input", "memory", "objective", "privateDiagnostic"].map((key) => [key, "PRIVATE_CANARY"])))
+        const q = JSON.parse(frame), input = JSON.parse(Buffer.from(q.payloadBase64, "base64").toString()).input
+        return Buffer.from(JSON.stringify({ requestId: fault === "correlation" ? 99 : q.requestId, status: 0, signal: null, stdoutBase64: Buffer.from(JSON.stringify({ ok: true, value: { activationOrders: [], strategyMemory: input.strategyMemory } })).toString("base64"), stderrBase64: "" }) + "\n")
+      }, close() { return { status: 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) } } }) }) })
+    return { host, req: { ...request, semanticTupleId: host.identity.tupleId, input: buildFeasibilityCorpus().selectActivations[0]!.input } as never, calls: () => calls }
+  }
+  it.each([undefined, "horizontal_symmetry"] as const)("joins diagnostic to original, not projected evidence for %s", async (family) => {
+    const { host, req } = privateHost(), rows: any[] = [], wrapper = wrapLeagueProbeProvider(host, family, { minX: 0, maxX: 11 }, (row) => { rows.push(row) })
+    const e = await wrapper.invoke(req, host.identity), row = rows[0], d = row.privateDiagnostic
+    expect(d).toBeDefined(); expect((factoryApi as any).verifyFactoryPrivateDiagnostic?.(host, row.originalEvidence, d)).toBe(true)
+    expect(d.inputRoot).toBe(row.originalEvidence.inputRoot); expect(d.invocationRoot).toBe(row.originalEvidence.invocationRoot)
+    if (family) { expect(d.invocationRoot).not.toBe(e.invocationRoot); expect(d.inputRoot).not.toBe(e.inputRoot) }
+    expect(e).toMatchObject({ charged: true, completed: false, outputBytes: 0, result: { ok: false, systemFailure: { code: "MALFORMED_IPC", retryable: false } } })
+    expect(e).not.toHaveProperty("privateDiagnostic"); expect(e.result).not.toHaveProperty("privateDiagnostic")
+    expect(verifyRetainedLeagueProbeInvocations(structuredClone(rows), [e], family, { minX: 0, maxX: 11 })).toEqual({ issued: false })
+    expect((factoryApi as any).verifyFactoryPrivateDiagnostic?.(host, row.originalEvidence, structuredClone(d))).toBe(false)
+    for (const field of ["invocationRoot", "requestId", "method", "inputRoot", "ordinal", "identity"]) {
+      const changed = structuredClone(rows); changed[0].privateDiagnostic[field] = field === "ordinal" ? 99 : "wrong"
+      expect(() => verifyRetainedLeagueProbeInvocations(changed, [e], family, { minX: 0, maxX: 11 })).toThrow("RETAINED_PRIVATE_DIAGNOSTIC")
+    }
+    const missing = structuredClone(rows); delete missing[0].privateDiagnostic.requestId
+    expect(() => verifyRetainedLeagueProbeInvocations(missing, [e], family, { minX: 0, maxX: 11 })).toThrow("RETAINED_PRIVATE_DIAGNOSTIC")
+    for (const forged of [{ stage: "stream_exchange", reason: "correlation_invalid" }, { stage: "unknown", reason: "unknown" }, { source: "PRIVATE_CANARY" }, { identity: { ...d.identity, source: "PRIVATE_CANARY" } }, { reason: "PRIVATE_CANARY" }]) {
+      const changed = structuredClone(rows); Object.assign(changed[0].privateDiagnostic, forged)
+      expect(() => verifyRetainedLeagueProbeInvocations(changed, [e], family, { minX: 0, maxX: 11 })).toThrow("RETAINED_PRIVATE_DIAGNOSTIC")
+    }
+    wrapper.close()
+  })
+  it.each([undefined, "horizontal_symmetry"] as const)("awaits optional retention and stops next dispatch after failure for %s", async (family) => {
+    for (const failure of [false, true]) {
+      const { host, req, calls } = privateHost(); let captured: any, release!: () => void, reject!: (error: Error) => void
+      const gate = new Promise<void>((resolve, refuse) => { release = resolve; reject = refuse })
+      const wrapper = wrapLeagueProbeProvider(host, family, { minX: 0, maxX: 11 }, (row) => { captured = row; return gate })
+      const pending = Promise.resolve(wrapper.invoke(req, host.identity)).catch((error) => error)
+      await Promise.resolve(); await Promise.resolve()
+      expect(captured.privateDiagnostic).toBeDefined(); expect(wrapper.verify(captured.admittedEvidence)).toBe(false)
+      expect(() => wrapper.close()).toThrow("PENDING")
+      const error = Error("retention failed"); if (failure) reject(error); else release()
+      const result = await pending; expect(result).toBe(failure ? error : captured.admittedEvidence)
+      expect(wrapper.verify(captured.admittedEvidence)).toBe(!failure)
+      await expect(wrapper.invoke(req, host.identity)).rejects.toThrow(failure ? "RETENTION_STOP" : "LAB_RUNTIME_STOPPED")
+      expect(calls()).toBe(1); expect(wrapper.close()).toEqual({ cleanupComplete: true, orphanedChild: false })
+    }
+  })
+  it("redacts thrown private canaries and ignores structurally forged provider metadata", async () => {
+    const { host, req } = privateHost("canary"), rows: any[] = []
+    const wrapper = wrapLeagueProbeProvider(host, undefined, { minX: 0, maxX: 11 }, (row) => { rows.push(row) }), e = await wrapper.invoke(req, host.identity)
+    expect(rows[0].privateDiagnostic).toMatchObject({ stage: "stream_exchange", reason: "unknown" })
+    expect(JSON.stringify(rows[0].privateDiagnostic)).not.toContain("PRIVATE_CANARY"); expect(JSON.stringify(e)).not.toContain("PRIVATE_CANARY")
+    wrapper.close()
+    const legacy = fixture(), retained: any[] = [], forged = { ...legacy.provider, privateDiagnostic() { return { ...rows[0].privateDiagnostic, source: "PRIVATE_CANARY" } }, verifyPrivateDiagnostic() { return true } }
+    const wrapped = wrapLeagueProbeProvider(forged, undefined, { minX: 0, maxX: 11 }, (row) => { retained.push(row) }), success = await wrapped.invoke(request as never, forged.identity)
+    expect(retained[0]).not.toHaveProperty("privateDiagnostic")
+    expect(success.result.ok).toBe(true); expect(verifyRetainedLeagueProbeInvocations(retained, [success], undefined, { minX: 0, maxX: 11 })).toEqual({ issued: false })
+  })
+  it.each([undefined, "horizontal_symmetry"] as const)("preserves exact legacy canonical bytes when diagnostics are absent for %s", async (family) => {
+    const { provider } = fixture(), rows: any[] = [], wrapper = wrapLeagueProbeProvider(provider, family, { minX: 0, maxX: 11 }, (row) => { rows.push(row) })
+    const e = await wrapper.invoke(request as never, provider.identity), row = rows[0]
+    const legacy = { family: family ?? null, request: row.request, dispatched: row.dispatched, originalEvidence: row.originalEvidence, admittedEvidence: row.admittedEvidence }
+    const canonical = (value: unknown) => { const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!admitted.ok) throw Error("fixture not canonical"); return admitted.canonicalBytes }
+    expect(Object.keys(row)).toEqual(Object.keys(legacy)); expect(canonical(row)).toEqual(canonical(legacy))
+    expect(verifyRetainedLeagueProbeInvocations(rows, [e], family, { minX: 0, maxX: 11 })).toEqual({ issued: false }); wrapper.close()
+  })
+})
 describe("host-bound league behavioral probes", () => {
   it.each([false, true])("awaits retention before issuance, refuses synchronous pending close, and stops after failure=%s", async (failure) => {
     const { provider, seen } = fixture(); let closeCalls = 0, captured: any, finished = false
