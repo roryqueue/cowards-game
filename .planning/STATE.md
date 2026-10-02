@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 v5 preparation; canonical-literal source gate accepted
+stopped_at: Phase265 unique v5 entry91384 active; source fixed6bd77247
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: reviewed source6bd77247 passes league gate and corrected engine/runtime checks; v5 packet review accepted
+last_activity_desc: fresh v5 allocation20077381 published; unique guarded entry62291 started static checks before capacity
 progress:
   total_phases: 9
   completed_phases: 3
@@ -56,7 +56,12 @@ strict no-emit types pass. Compile64800 published45inert records, and fresh
 unrooted input46436 is prepared at rawea9f8ef2. Unique data-only
 prepare46814 completed exit0: rooted v5 allocation20077381,raw90816b7c/22037bytes.
 Typed capacity input39739 is prepared, not a host receipt. Do not repeat prepare.
-No v5 capacity receipt or execution exists. See canonical-literal
+Unique v5 entry91384/PID62291 started at2026-10-02T02:29:11.688Z, performing
+static checks before fresh same-process capacity. No capacity pass or Match
+is established by entry. External result-v5 is reserved empty, not evidence;
+do not stage it until actual terminal publication. Do not repeat entry or start
+a retained verifier while it is active. All other CPU-heavy testing is held.
+See canonical-literal
 proof/review. Standing approval covers a distinct same-bounds route after gates.
 LEAG/Phase265 completion and freeze remain pending.
 

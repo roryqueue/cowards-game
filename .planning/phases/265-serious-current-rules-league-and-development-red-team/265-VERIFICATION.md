@@ -66,7 +66,9 @@ zero findings and focused44/44tests pass. All eight exact CI commands pass,
 including382league+3tactical tests; correctly scoped engine149/runtime277tests,
 core types and formatting pass. Independent v5 packets/helpers are accepted;
 compile64800 published45inert records, unrooted input46436 exists, and unique
-data-only prepare46814 is active without rooted allocation/capacity/Match.
+data-only prepare46814 passed, rooted allocation20077381 is published and
+unique entry91384 is in static checks before fresh capacity. No Match/capacity
+pass is claimed.
 The independent goal-backward verdict remains gaps_found,0/5. This main-observed
 follow-up is not a new independent phase verification or empirical promotion.
 The older preparation-active paragraph below is historical.

@@ -82,3 +82,15 @@ Its numeric samples are explicitly inherited, not freshly measured. The fresh
 private league directory is created empty. No host receipt exists yet.
 
 No provider/model/Match call, LEAG completion or freeze follows from preparation.
+
+## Unique guarded entry
+
+Canonical allocation publication10784 passed with the exact allocation/raw roots
+above; committed/pushed76311fc1. Root invoked run once in session91384,
+PID62291,started2026-10-02T02:29:11.688Z. Its create-only entry marker binds
+exact argv, source and standing approval. Static historical/candidate/packet
+checks precede fresh same-process host capacity and once-only reservation.
+Entry is not a capacity pass or a dispatched Match. External result-v5 is
+reserved empty and cannot be staged as evidence before actual publication.
+Do not duplicate entry or start retained verification while it is active.
+Keep main source6bd fixed; other CPU-heavy tests are held.

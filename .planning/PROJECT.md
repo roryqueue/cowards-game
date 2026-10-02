@@ -17,7 +17,9 @@ canonical-literal optimization6bd77247 is integrated with zero independent
 findings and44/44 focused tests; complete source gate44285 passes382league and
 3tactical tests/types/build/boundaries. Correctly scoped additional engine149
 and runtime277tests pass, as do core types and formatting. No
-v5 allocation/capacity/execution exists. See STATE.md,
+capacity pass/Match is established by entry. Fresh v5 allocation20077381 is
+published; unique entry91384/PID62291 is performing static checks before capacity.
+See STATE.md,
 265-07-REPAIRED-SOURCE-GATE-v1.md,265-07-DEPENDENCY-BARRIER-PROOF-v1.md and
 265-07-EMPIRICAL-PREPARATION-v8.md and265-07-EMPIRICAL-RESULT-v4.md. Standing approval removes repeat operator
 questions for distinct same-bounds private routes, not technical gates.
