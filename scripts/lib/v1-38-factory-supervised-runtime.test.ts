@@ -14,6 +14,7 @@ import { createDiagnosticRetryV4Allocation, createDiagnosticRetryV4Cell, createD
 import { issueDiagnosticRetryV4ProviderFromFactoryCandidate, closeDiagnosticRetryV4IssuedProvider } from "./v1-38-diagnostic-retry-v4-bridge.js"
 import { prospectiveLifetimeFixture } from "../../packages/strategy-lab/src/league/allocation.test.js"
 import { createProspectiveLeagueExecutionAllocationV2 } from "../../packages/strategy-lab/src/league/allocation.js"
+import * as allocationApi from "../../packages/strategy-lab/src/league/allocation.js"
 import { issueProspectiveLeagueLifetimeAuthority, claimProspectiveLeagueLifetimeAuthority, prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
@@ -60,6 +61,23 @@ const lifetimeGrant = () => {
   return { allocation, admission, binding, charge, authority: issueProspectiveLeagueLifetimeAuthority(allocation, charge, binding) }
 }
 describe("prospective lifetime issued factory authority", () => {
+  it.each(["function", "undefined", "accessor"])("prospective lifetime empirical authority rejects inherited constructor %s before source, accessor, construction or claims", (kind) => {
+    // Admission is mocked ONLY while issuing a test-only empirical handle.
+    // Real WeakMap issuance and both once-only claims remain under test.
+    const admit = allocationApi.admitProspectiveLeagueExecutionAllocationV2
+    const admissionMock = vi.spyOn(allocationApi, "admitProspectiveLeagueExecutionAllocationV2").mockImplementation((value) => ({ ...admit(value), evidenceClass: "empirical" }))
+    const { authority, admission, binding } = lifetimeGrant()
+    admissionMock.mockRestore()
+    const touched = vi.fn(() => { throw Error("forbidden getter") }), injected = vi.fn(), planner = vi.mocked(createPlannerSupervisedRuntime)
+    planner.mockClear()
+    const prototype = kind === "accessor" ? Object.defineProperty({}, "createRuntime", { get: touched }) : { createRuntime: kind === "function" ? injected : undefined }
+    const options = Object.assign(Object.create(prototype), { admission, ...binding, prospectiveLifetimeAuthority: authority, prospectiveLifetimeMs: 600000 })
+    Object.defineProperty(options, "sourceBytes", { get: touched })
+    expect(() => createFactorySupervisedRuntime(options)).toThrow("PROSPECTIVE_CONSTRUCTOR_OVERRIDE")
+    expect(touched).not.toHaveBeenCalled(); expect(injected).not.toHaveBeenCalled(); expect(planner).not.toHaveBeenCalled()
+    expect(claimProspectiveLeagueLifetimeAuthority(authority, binding, 600000, "factory")).toBe(600000)
+    expect(claimProspectiveLeagueLifetimeAuthority(authority, binding, 600000, "planner")).toBe(600000)
+  })
   it("rejects forged, copied, crossed and reused nested layer claims", () => {
     const { authority, binding } = lifetimeGrant()
     const claim = (handle: any, changed = binding, layer: "factory" | "planner" = "factory") => claimProspectiveLeagueLifetimeAuthority(handle, changed, 600000, layer)

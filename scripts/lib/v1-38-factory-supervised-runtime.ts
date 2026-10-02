@@ -57,7 +57,7 @@ export const admitFactorySupervisorLifetime = (options: Pick<FactorySupervisedRu
 export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntimeOptions): FactorySupervisionProvider => {
   rejectRetiredDiagnosticLifetimeOptions(options)
   const supplied = options as unknown as Record<string, unknown>
-  if (("prospectiveLifetimeAuthority" in options || "prospectiveLifetimeMs" in options) && (Object.prototype.hasOwnProperty.call(supplied, "createRuntime") && (!options.prospectiveLifetimeAuthority || !isProspectiveLeagueLifetimeFixture(options.prospectiveLifetimeAuthority)) || ["retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "benchmarkLifetimeMs", "observerHarness", "transport", "streamFactory"].some((key) => key in supplied))) return fail("PROSPECTIVE_CONSTRUCTOR_OVERRIDE")
+  if (("prospectiveLifetimeAuthority" in options || "prospectiveLifetimeMs" in options) && ("createRuntime" in supplied && (!options.prospectiveLifetimeAuthority || !isProspectiveLeagueLifetimeFixture(options.prospectiveLifetimeAuthority)) || ["retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "benchmarkLifetimeMs", "observerHarness", "transport", "streamFactory"].some((key) => key in supplied))) return fail("PROSPECTIVE_CONSTRUCTOR_OVERRIDE")
   if (options.retryV4LifetimeGrant !== undefined && Object.prototype.hasOwnProperty.call(supplied, "createRuntime")) return fail("RETRY_V4_CONSTRUCTOR_OVERRIDE")
   if (["benchmarkLifetimeMs", "observerHarness", "transport", "streamFactory"].some((key) => Object.prototype.hasOwnProperty.call(supplied, key))) return fail("UNSUPPORTED_OPTION")
   const admission = options.admission
