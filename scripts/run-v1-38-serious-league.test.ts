@@ -2,7 +2,7 @@ import { fsync, mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync, cp
 import { createHash, randomUUID } from "node:crypto"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MATCH_KERNEL } from "../packages/engine/src/index.js"
 import { defaultRuntimeMetadata, admitCanonicalJsonValue } from "@cowards/spec"
 import { buildStrategyRevision } from "../packages/runtime-js/src/revision.js"
@@ -23,6 +23,7 @@ import { executeLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
 import { countLinkedResponseIterations } from "../packages/strategy-lab/src/league/selection.js"
 import { runCanonicalLabMatch, type LabRuntimeEvidence } from "../packages/strategy-lab/src/runtime-bridge.js"
 import { advanceLeagueRound } from "../packages/strategy-lab/src/league/psro.js"
+import * as redTeamModule from "../packages/strategy-lab/src/league/red-team.js"
 import { prepareProspectiveSeriousLeague, preflightProspectiveSeriousLeague, validateProspectiveLeagueInitialCandidates, leagueCurrentSourceIdentity, leagueEffectiveAvailableMemoryBytes, observeLeagueAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
 
 const directories: string[] = []
@@ -384,6 +385,97 @@ const host: LeagueFixtureSeams["host"] = { createFactorySupervisedRuntime({ admi
   testRevisions.set(admission.sourceRoot, revision)
   return { identity: { revisionId: revision.id, sourceRoot: admission.sourceRoot, executableRoot, tupleId: "candidate-kernel-v1.19", tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: LAB_ADMITTED_ROOTS.image, harnessRoot: labRoot("test-harness", 1), budgetRoot, attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, nativeLane: admission.nativeLane, factoryPacketRoot: admission.packetRoot, factoryProposalRoot: admission.proposalRoot, factoryValidationRoot: admission.validationRoot }, invoke() { throw new Error("No guest or source execution is allowed in the injected command test") }, verify() { return false }, close() { return { cleanupComplete: true, orphanedChild: false } } }
 } }
+
+describe("CR-03 public runner initiating-error handoff", () => {
+  let candidates: LeagueCandidateInput[]
+  beforeEach(async () => { candidates = [await candidate(1), await candidate(3)] })
+  it.each([
+    { path: "ordinary", fault: "persistent" }, { path: "ordinary", fault: "run-failure" }, { path: "ordinary", fault: "none" },
+    { path: "development", fault: "red-team-process-failure" }, { path: "development", fault: "red-team-terminal" },
+    { path: "independent", fault: "red-team-process-failure" }, { path: "independent", fault: "red-team-terminal" },
+    { path: "development", fault: "persistent" }, { path: "independent", fault: "persistent" },
+  ])("$path public boundary preserves the initiating error with $fault secondary faults", async ({ path, fault }) => {
+    const base = allocationFixture(), syncs = controlledGraphSyncs()
+    const primary = Error("primary CR-03 dependency error"), secondary = Error("secondary CR-03 publication error")
+    let ready!: () => void, graph!: LeagueRecordGraph, secondaryActive = false, faults = 0, guestCalls = 0, closes = 0, producerCalls = 0
+    const syncing = new Promise<void>((resolve) => { ready = resolve })
+    const repository = createLeagueRepository(temporary(), { syncFile(fd) { const work = syncs.syncFile(fd); if (syncs.pending.length === 2) ready(); return work } })
+    const responseDirectory = realpathSync(mkdtempSync(join(tmpdir(), "factory-public-handoff-test-"))); directories.push(responseDirectory)
+    const responseFactoryRepository = createFactoryRepository(responseDirectory), r = (value: unknown) => labRoot("CR-03-fixture", value)
+    const put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw Error("fixture canonical"); return publishFactoryArtifact(responseFactoryRepository, encoded.canonicalBytes) }
+    const producerInput = { split: "development", doctrineFamily: "source-only-public-handoff", provider: { providerId: "source-fixture", modelId: "local", modelVersion: "test", settingsRoot: r("settings"), promptRoot: r("prompt"), contextRoot: r("context") }, build: { buildRoot: r("build"), toolchainRoot: r("toolchain") }, lineage: { predecessorRoot: LAB_ADMITTED_ROOTS.currentStartRoot, correctionRoot: null, retryParentRoot: null } }
+    const producerRequestArtifactRoot = put({ producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", producerInput }), disclosureArtifactRoot = put({ participantId: "author", requestArtifactRoot: producerRequestArtifactRoot, sourceAndBuildDisclosed: true, dependencyArtifactRoots: [] }), provenanceArtifactRoot = put({ participantId: "author", priorExposure: "none", conflicts: "none", origin: "tactical-oracle", deterministicDataOnly: true }), reviewArtifactRoot = put({ reviewerId: "reviewer", participantId: "author", disclosureArtifactRoot, provenanceArtifactRoot, disposition: "accepted", reviewMilliseconds: 0 })
+    const reservation = { ...base.channels[0]!.perAttempt, matches: 48, effortMilliseconds: 180000 }, response = path !== "ordinary"
+    const job = { id: "public-handoff", channel: "automated" as const, evaluationRole: path === "independent" ? "independent_probe_opponent" as const : "development_response" as const, operation: "produce" as const, producerRequestArtifactRoot, disclosureArtifactRoot, provenanceArtifactRoot, reviewArtifactRoot, participantId: "author", reviewerId: "reviewer", reservation, retryParentJobId: null }
+    const allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: repository.directory, responseFactory: response ? responseDirectory : null }, implementationRoot: factoryAssessmentImplementationRoot(), initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot,
+      opportunities: { ...base.opportunities, attemptedCandidates: response ? 1 : 0, matches: 300 }, operations: { ...base.operations, wallClockMilliseconds: 60000, perAttemptMilliseconds: 180000 },
+      channels: base.channels.map((channel) => response && channel.channel === "automated" ? { ...channel, disposition: "allocated", opportunities: 1, ceilings: reservation, perAttempt: reservation, participants: ["author"], reviewers: ["reviewer"] } : channel),
+      rounds: [{ ordinal: 0, acceptedSlots: 0, jobs: response && path === "development" ? [job] : [] }, { ordinal: 1, acceptedSlots: 0, jobs: response && path === "independent" ? [job] : [] }],
+    })
+    const append = LeagueRecordGraph.prototype.append, appendKinds: string[] = []
+    let fixtureEvidence: typeof allocation.root | null = null
+    // This test targets failure handoff, not prerequisite probe validation or
+    // retained-history generation. Keep those synthetic prerequisites inert.
+    if (response) vi.spyOn(redTeamModule, "recordLeagueProbe").mockImplementation(({ ledger }) => ledger)
+    vi.spyOn(LeagueRecordGraph.prototype, "append").mockImplementation(function (this: LeagueRecordGraph, kind, ...args) {
+      appendKinds.push(kind)
+      if (response && ["complete-matrix", "declared-round", "probe-ledger", "layout-verification", "round-advance"].includes(kind)) return fixtureEvidence!
+      const failWrite = secondaryActive && (fault === "persistent" || fault === kind && (kind === "run-failure" || faults === 0))
+      if (failWrite) { faults++; descriptorSyncFailure.active = true; descriptorSyncFailure.error = secondary }
+      try { return append.call(this, kind, ...args) } finally { descriptorSyncFailure.active = false; descriptorSyncFailure.error = null }
+    })
+    const execute = LeagueConnectedSession.prototype.execute
+    vi.spyOn(LeagueConnectedSession.prototype, "execute").mockImplementation(async function (this: LeagueConnectedSession, cell, bottom, top, seed, options) {
+      graph = this.graph
+      if (!response) return execute.call(this, cell, bottom, top, seed, options)
+      // Bound the prerequisite matrix/probes to pure synthetic DRAW terminals;
+      // do not run their provider schedule or retain full execution histories.
+      fixtureEvidence ??= this.graph.append("source-only-prerequisite", { synthetic: true })
+      const body = { schemaVersion: "league-payoff-projection-v1" as const, privacy: "private_offline" as const, cellRoot: cell.root, outcomeRoot: r("draw"), resultEventRoot: r("event"), entrantCandidateRoot: cell.entrantCandidateRoot, conditionRoot: cell.conditionRoot, semanticGeometryHash: cell.semanticGeometryHash, halfPoints: 1 as const }
+      const projection = LeaguePayoffProjectionSchema.parse({ ...body, root: labRoot("league-payoff-projection-v1", body) }), terminal = createLeagueCellTerminal({ cellRoot: cell.root, disposition: "success", processValidity: "process_valid", evidenceRoot: fixtureEvidence, projection })
+      return { cell, startRoot: r(cell.root), terminal, recordRoot: fixtureEvidence, canonicalBytes: r("same-synthetic-draw"), bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root }
+    })
+    const productionFixture = positiveResponseFixture(new Set(candidates.map((row) => row.admission.candidate.proposal.source.root)))
+    const fixtureHost: LeagueFixtureSeams["host"] = { createFactorySupervisedRuntime(request) {
+      const provider = productionFixture.host.createFactorySupervisedRuntime(request)
+      return { ...provider, invoke(...args) { guestCalls++; return provider.invoke(...args) }, close() { closes++; return provider.close() } }
+    } }
+    const fixture: LeagueFixtureSeams = { candidates, host: fixtureHost, run: async ({ match, providers }) => {
+      const state = MATCH_KERNEL.createMachineV119(match).initialState, [playerId, provider] = Object.entries(providers)[0]!
+      const request = { kind: "selectActivations", requestId: "public-handoff-ordinary", semanticTupleId: "candidate-kernel-v1.19", coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0, actingPlayerId: playerId }, input: { phaseNumber: 1, roundNumber: 1, activationCount: 1, board: { bounds: state.bounds, soldiers: state.soldiers, terrainStones: [] }, mySoldiers: state.soldiers.filter((row) => row.ownerPlayerId === playerId), enemySoldiers: state.soldiers.filter((row) => row.ownerPlayerId !== playerId), strategyMemory: {}, initialInitiativePlayerId: match.initialInitiativePlayerId, hasInitialInitiative: true, roundInitiativePlayerId: match.initialInitiativePlayerId, hasRoundInitiative: true } } as const
+      await provider.invoke(request as never, provider.identity)
+      throw Error("fixture must stop at the first failed retention")
+    }, produce: (input) => { producerCalls++; return produceLeagueResponse({ ...input, fixture: { ...productionFixture, host: fixtureHost } }) } }
+    const pending = runSeriousLeague({ allocation, allocationRoot: allocation.root, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: response ? responseFactoryRepository : null, fixture }).then((result) => ({ result }), (error: unknown) => ({ error }))
+    await syncing
+    const prior = graph.latestRoot!, before = appendKinds.length, usage = { ...graph.budget!.usage }, files = { league: readdirSync(repository.directory).sort(), factory: readdirSync(responseDirectory).sort() }
+    expect(syncs.pending).toHaveLength(2); expect(graph.invocationPending).toBe(true); expect(guestCalls).toBe(1); expect(closes).toBe(0); expect(producerCalls).toBe(response ? 1 : 0)
+    secondaryActive = true
+    await syncs.pending[0]!(primary); await Promise.resolve()
+    expect(graph.latestRoot).toBe(prior); expect(graph.invocationPending).toBe(true); expect(closes).toBe(0); expect(appendKinds).toHaveLength(before); expect(faults).toBe(0)
+    expect({ league: readdirSync(repository.directory).sort(), factory: readdirSync(responseDirectory).sort() }).toEqual(files)
+    await syncs.pending[1]!()
+    const outcome = await pending
+    expect(guestCalls).toBe(1); expect(closes).toBe(2); expect(graph.invocationPending).toBe(false)
+    expect(graph.budget!.usage.workBytes).toBeGreaterThanOrEqual(usage.workBytes); expect(graph.budget!.usage.workRecords).toBeGreaterThanOrEqual(usage.workRecords)
+    expect(() => graph.beforeInvocation({})).toThrow("RETENTION_DISPATCH_STOP")
+    if (["persistent", "run-failure"].includes(fault)) {
+      expect(outcome).toEqual({ error: primary }); expect("error" in outcome && outcome.error).toBe(primary)
+      const retained = readLeagueRecordGraph(repository, graph.latestRoot!, allocation.operations)
+      expect(retained.roots("run-failure")).toEqual([])
+      if (fault === "persistent") { expect(graph.latestRoot).toBe(prior); expect(retained.roots("red-team-terminal")).toEqual([]) }
+    } else {
+      if (!("result" in outcome)) throw outcome.error
+      expect(outcome.result.processValidity).toBe("process_invalid")
+      const retained = readLeagueRecordGraph(repository, outcome.result.headRoot, allocation.operations)
+      expect(retained.get(outcome.result.headRoot)).toMatchObject({ kind: "run-failure", value: { error: primary.message, processValidity: "process_invalid" } })
+    }
+    const retained = readLeagueRecordGraph(repository, graph.latestRoot!, allocation.operations)
+    expect(retained.roots(response ? "response-runtime-invocation" : "runtime-invocation")).toEqual([])
+    if (fault === "persistent") expect(faults).toBeGreaterThan(0)
+    else expect(faults).toBe(fault === "none" ? 0 : 1)
+  })
+})
 
 describe("Darwin league available-memory observation", () => {
   const result = (percentage: number) => ({ stdout: new TextEncoder().encode(`The system has 17179869184 (4194304 pages with a page size of 4096).\nSystem-wide memory free percentage: ${percentage}%\n`), stderr: new Uint8Array(), exitCode: 0, signal: null, timedOut: false })

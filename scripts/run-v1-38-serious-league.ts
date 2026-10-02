@@ -737,9 +737,11 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
           }
           catch (error) {
             await session.graph.settlePending()
-            const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot)
-            ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null })
-            roots.push(session.graph.append("red-team-terminal", { jobId: job.id, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
+            try {
+              const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot)
+              ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null })
+              roots.push(session.graph.append("red-team-terminal", { jobId: job.id, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
+            } catch { /* Secondary failure evidence cannot replace the initiating error. */ }
             throw error
           }
           roots.push(produced.recordRoot); production.push(produced)
@@ -783,9 +785,11 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
           ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "accepted", usage: { ...zeroUsage(), matches: produced.matchCount, modelTokens: produced.author.modelTokens ?? 0, effortMilliseconds: Math.max(0, Date.now() - before), reviewMilliseconds: job.reservation.reviewMilliseconds, searchNodes: job.reservation.searchNodes, teacherNodes: job.reservation.teacherNodes, distillationUnits: job.reservation.distillationUnits }, evidenceRoots: [produced.recordRoot, evidenceRoot], candidateAdmissionRoot: null })
         } catch (error) {
           await session.graph.settlePending()
-          const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot)
-          ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null })
-          roots.push(session.graph.append("red-team-terminal", { jobId: job.id, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
+          try {
+            const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot)
+            ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null })
+            roots.push(session.graph.append("red-team-terminal", { jobId: job.id, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
+          } catch { /* Secondary failure evidence cannot replace the initiating error. */ }
           throw error
         }
       }
@@ -807,12 +811,14 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
     return { ...value, headRoot, empiricalRequirementsComplete: false }
   } catch (error) {
     await session.graph.settlePending()
-    for (const start of ledger.starts.filter((start) => !ledger.terminals.some((terminal) => terminal.startRoot === start.root))) {
-      const evidenceRoot = session.graph.append("red-team-process-failure", { startRoot: start.root, error: error instanceof Error ? error.message : "unknown" }); roots.push(evidenceRoot)
-      ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null }); roots.push(session.graph.append("red-team-terminal", { startRoot: start.root, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
-    }
-    const headRoot = session.graph.append("run-failure", { allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid", completedJobs, ledgerRoot: ledger.root, matrixRoots: currentMatrices.map((matrix) => matrix.recordRoot), error: error instanceof Error ? error.message.slice(0, 512) : "unknown", executedCells: session.executedCells, reservedResponseMatches: ledger.starts.reduce((sum, start) => sum + start.reservation.matches, 0), retentionUsage: budget.usage })
-    return { headRoot, allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid" as const, empiricalRequirementsComplete: false }
+    try {
+      for (const start of ledger.starts.filter((start) => !ledger.terminals.some((terminal) => terminal.startRoot === start.root))) {
+        const evidenceRoot = session.graph.append("red-team-process-failure", { startRoot: start.root, error: error instanceof Error ? error.message : "unknown" }); roots.push(evidenceRoot)
+        ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null }); roots.push(session.graph.append("red-team-terminal", { startRoot: start.root, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
+      }
+      const headRoot = session.graph.append("run-failure", { allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid", completedJobs, ledgerRoot: ledger.root, matrixRoots: currentMatrices.map((matrix) => matrix.recordRoot), error: error instanceof Error ? error.message.slice(0, 512) : "unknown", executedCells: session.executedCells, reservedResponseMatches: ledger.starts.reduce((sum, start) => sum + start.reservation.matches, 0), retentionUsage: budget.usage })
+      return { headRoot, allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid" as const, empiricalRequirementsComplete: false }
+    } catch { throw error } // No durable failure head: preserve the initiating object, not a secondary storage fault.
   }
 }
 
