@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 v7 entry95758 active; fresh capacity passed09:31:58.384UTC, first Match process-valid, second charged
+stopped_at: Phase265 v7 consumed process-invalid3charged2valid; ONE retained verifier66301 active, source fixed
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: actual receipt4ee8fa52 passed; cell69e06096 success/process_valid at6810c797; second8bfbe467 running
+last_activity_desc: v7 terminal09:36:53.101UTC/head a29c0522; all6ownedcontainers absent; first-request MALFORMED_IPC source-only trace active
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,22 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current terminal continuation — v7 and active unique retained verifier
+
+ONE entry95758 ended09:36:53.101UTC process-invalid after3charged cells:
+2success/process_valid then1system_failure/process_invalid. Actual result
+cc4521c5/head a29c0522 is published; all6exactownedcontainers absent.
+Bounded parent-linked metadata names first ordinal0 selectActivations
+MALFORMED_IPC/retryablefalse/LAB_SUPERVISOR_FAILURE, not a lifetime-limit
+failure. Exact cause remains unproven. A smaller-model read-only source trace
+may proceed, with no runtime/test/source edit. ONE ordinary retained verifier
+66301 is ACTIVE at exact allocation/head/repositories and no capacity flags;
+never duplicate it. Fixed634b0e84/f942c33f/ae9b47ba stays until actual outcome;
+all competing heavy work held. This route is consumed, never reused/refunded.
+No LEAG/freeze/formation/holdout credit. Standing approval applies to later
+distinct same-bounds routes, no repeat human literal. See EMPIRICAL-RESULT-v7.
+All entry-active snapshots below are historical.
 
 ## Current continuation — fresh v7 preparation active
 

@@ -2,6 +2,13 @@
 
 ## Current verified progress — Phases262–264 complete
 
+V7 consumed process-invalid after3charged cells,2validsuccesses then1first-request
+MALFORMED_IPC systemfailure. Resultcc4521c5/head a29c0522 published09:36:53UTC;
+all6ownedcontainers absent. ONE ordinary retained verifier66301 ACTIVE; source
+fixed/heavy work held, no duplicate. Source-only trace may proceed, exactcause
+unproven. No phase/LEAG/freeze credit. See EMPIRICAL-RESULT-v7. Earlier entry
+snapshots below are historical.
+
 Freshv7 eleven-job review2e909f7a accepts static requests; unique compile21989
 creates45inert records and allocation-input3094 completes23edce70. ONE data-only
 prepare65328 completes exit0; do not duplicate. Static capacity83608 passes,

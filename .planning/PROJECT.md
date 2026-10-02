@@ -2,6 +2,14 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+V7 ended09:36:53UTC process-invalid after3charged cells,2validsuccesses then
+1systemfailure on first-request MALFORMED_IPC (not the prior lifetime error).
+Actual resultcc4521c5/head a29c0522 published; all6ownedcontainers absent.
+ONE retained verifier66301 ACTIVE; source fixed/heavy work held. Smaller-model
+read-only source trace may proceed, no runtime/source changes. No LEAG/freeze
+credit, consumed route never reused. See EMPIRICAL-RESULT-v7. Earlier entry
+snapshots below are historical.
+
 Freshv7 draft64409 completed; actual independent eleven-job review2e909f7a
 accepts unexecuted requests. Unique compile21989 creates45inert records;
 allocation-input3094 completes, data-only prepare65328 completes exit0. Static

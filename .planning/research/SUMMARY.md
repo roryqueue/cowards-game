@@ -2,6 +2,15 @@
 
 ## Current approved handoff — 2026-10-02
 
+V7 ended09:36:53UTC process-invalid after3charged cells,2validsuccesses and
+1first-request MALFORMED_IPC/retryablefalse systemfailure. Unlike earlier
+routes, this is not a reported lifetime-limit failure; exacttransportcause
+remains unproven. Resultcc4521c5/head a29c0522 published, all6ownedcontainers
+absent. ONE ordinary retained verifier66301 ACTIVE, sourcefixed/heavyworkheld.
+Small-model read-only source trace may proceed; no tests/runtime/source edit.
+No LEAG/freeze/formation/holdout credit. See EMPIRICAL-RESULT-v7. Earlier active
+entry snapshots below are historical.
+
 Freshv7 draft64409 and actual independent eleven-job review2e909f7a complete;
 all requests accepted for static compilation only, real241578ms review total.
 ONE compile21989 produces45inert records, allocation-input3094 completes.
