@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 current v6 data-only profile complete; asynchronous durable-dependency repair planning
+stopped_at: Phase265 async dependency repair plan checked; bounded six-file source implementation next
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: fixed-source writer profile completes with cleanup; sync dominates sampled retention; same-bounds repair planning
+last_activity_desc: async dependency repair plan check v2 passes after race and synchronous-close guard corrections
 progress:
   total_phases: 9
   completed_phases: 3
@@ -31,9 +31,11 @@ ONE separate reviewed observation-only pressure profile20757 completes ten
 calls,mean2.865ms. No capacity admission/receipt/Strategy/Match/model occurred.
 Both probes and unique ordinary retained verifier65319 are closed, never rerun.
 This is data-only cost evidence, not full live timing or LEAG completion.
-Next: source-only plan for async dependency-file sync retaining all barriers,
-exact evidence bytes, awaited evidence issuance and conservative no-refund
-accounting. No implementation or new route yet. Standing approval covers
+The supplemental async dependency-file sync plan is now checked: v1 caught
+racing failure/cleanup and synchronous-close ordering gaps; corrected v2 check
+passes. Next: bounded six-file sequential source implementation, retaining all
+barriers, exact evidence bytes, awaited evidence issuance and conservative
+no-refund accounting. No new route yet. Standing approval covers
 later distinct same-bounds routes after review/source/capacity gates; no
 human-only checkpoint is presently identified. See265-07-V6-COST-PROFILE-RESULT-v1.md.
 Snapshots below are historical.
