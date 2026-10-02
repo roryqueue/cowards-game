@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 v5 retained closeout complete; reviewed key-encoder source gate16883 active
+stopped_at: Phase265 reviewed v6 helpers ready; key-encoder source gate16883 active
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: v5 retained/geometry checks pass for failedprefix; new reviewed dbf5daa2 source gate16883 active
+last_activity_desc: reviewed dbf5daa2 gate16883 active; v6 helpers reviewed without invocation
 progress:
   total_phases: 9
   completed_phases: 3
@@ -32,12 +32,19 @@ Only after source-fixed closeout, reviewed key-encoder repairdbf5daa2 was
 integrated: implementation70430463/source2f008952. Root's final focused six
 suites pass46/46; exact independent main review is clean. ONE complete CI
 source gate16883 is active; keep main source fixed and do not duplicate it.
-Fresh v6 helper drafting is private/source-only; no new allocation, receipt,
+Fresh v6 helpers c1b9fb47/b84e2416 pass independent source review and worker
+strict types, without any mode invocation. New namespace is
+league-265-prospective-v6-20261002-a. No new request draft, allocation, receipt,
 Match or model call exists. Standing approval applies after all technical gates.
+Corrected source rereview KEY-ENCODER-REVIEW-v2 records actual03:46UTC timing;
+the inaccurate v1 timestamp is preserved and not used for fresh preparation.
 The isolated Phase266 bounded injected-context test18430 timed out at600seconds
 after two early setup failures, with no context summary or positive result.
-Source-only stage/cost diagnosis precedes another test; it is not real league/
-freeze evidence and stays unmerged. Do not repeat a blind long fixture run.
+Source-only stage/cost diagnosis and reviewed history-only mode are isolated
+at e1874bb5. The corrected initial-population scenario is1536 injected Matches,
+not3120 or a universal lower bound. A120-second history-only diagnostic is
+drafted but not invoked; it cannot produce complete-context/freeze evidence.
+No blind long fixture run is repeated. This WIP stays unmerged.
 No human-only checkpoint has been identified. See KEY-ENCODER-PROOF-v1 and
 EMPIRICAL-RESULT-v5. Entry/verifier-active snapshots below are historical.
 
