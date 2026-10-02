@@ -1,4 +1,4 @@
-import { mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync, cpSync, writeFileSync } from "node:fs"
+import { fsync, mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync, cpSync, writeFileSync } from "node:fs"
 import { createHash, randomUUID } from "node:crypto"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -28,6 +28,79 @@ import { prepareProspectiveSeriousLeague, preflightProspectiveSeriousLeague, val
 const directories: string[] = []
 afterEach(() => { vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 const temporary = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-command-test-"))); directories.push(directory); return directory }
+const controlledGraphSyncs = () => {
+  const pending: Array<(error?: Error) => Promise<void>> = []
+  const syncFile = (fd: number) => new Promise<void>((resolve, reject) => {
+    pending.push((error) => new Promise<void>((done) => fsync(fd, (actual) => { if (error || actual) reject(error ?? actual); else resolve(); done() })))
+  })
+  return { pending, syncFile }
+}
+describe("asynchronous invocation graph retention", () => {
+  const limits = { maxArtifactBytes: 2_000_000, maxArtifactRecords: 100 }
+  const snapshot = (directory: string) => readdirSync(directory).sort().map((name) => [name, readFileSync(join(directory, name)).toString("hex")])
+  it.each(["runtime-invocation", "response-runtime-invocation"])("retains exact sync bytes/roots/charges for %s including prior links", async (kind) => {
+    const syncBase = createLeagueRepository(temporary()), asyncBase = createLeagueRepository(temporary())
+    const syncCharges: number[] = [], asyncCharges: number[] = [], sync = new LeagueRecordGraph(createLeagueRepository(syncBase.directory, { beforePublication: ({ byteLength }) => { syncCharges.push(byteLength) } }), limits)
+    const syncs = controlledGraphSyncs(), barriers: number[] = []
+    const graph = new LeagueRecordGraph(createLeagueRepository(asyncBase.directory, { syncFile: syncs.syncFile, beforePublication: ({ byteLength }) => { asyncCharges.push(byteLength) }, syncDirectory(directory) { barriers.push(readdirSync(directory).length); asyncBase.durability.syncDirectory(directory) } }), limits)
+    const prior = sync.append("prior", { prior: true }); expect(graph.append("prior", { prior: true })).toBe(prior)
+    barriers.length = 0
+    const expected = sync.append(kind, { ordinal: 1 }, [prior, prior]), work = graph.appendInvocation(kind, { ordinal: 1 }, [prior, prior])
+    expect(syncs.pending).toHaveLength(2); expect(graph.latestRoot).toBe(prior)
+    const before = snapshot(asyncBase.directory)
+    expect(() => graph.append("failure", {})).toThrow("PENDING")
+    await expect(graph.appendInvocation(kind, {})).rejects.toThrow("PENDING")
+    expect(() => graph.beforeDispatch()).toThrow("PENDING"); expect(() => graph.beforeInvocation({})).toThrow("PENDING")
+    expect(snapshot(asyncBase.directory)).toEqual(before)
+    await syncs.pending[1]!(); expect(barriers).toEqual([]); expect(graph.latestRoot).toBe(prior)
+    await syncs.pending[0]!(); expect(await work).toBe(expected)
+    expect(barriers).toEqual([5, 6]); expect(snapshot(asyncBase.directory)).toEqual(snapshot(syncBase.directory)); expect(asyncCharges).toEqual(syncCharges)
+    expect(readLeagueRecordGraph(asyncBase, expected, limits).get(expected)?.kind).toBe(kind)
+  })
+  it("waits through sibling failure before gate/cleanup and stops dispatch without claiming budget exhaustion", async () => {
+    const base = createLeagueRepository(temporary()), syncs = controlledGraphSyncs(), error = Error("dependency failed"), allocation = createLeagueExecutionAllocation(allocationFixture()), budget = new LeagueRetentionBudget(allocation)
+    const graph = new LeagueRecordGraph(createLeagueRepository(base.directory, { syncFile: syncs.syncFile, beforePublication: budget.beforePublication }), limits, budget)
+    const prior = graph.append("prior", { value: true }); let rejected = false, gated = false
+    const work = graph.appendInvocation("runtime-invocation", { ordinal: 1 }).catch((caught) => { rejected = true; return caught })
+    const gate = graph.settlePending().then(() => { gated = true })
+    await syncs.pending[0]!(error); await Promise.resolve()
+    expect(rejected).toBe(false); expect(gated).toBe(false); expect(graph.latestRoot).toBe(prior)
+    await syncs.pending[1]!(); expect(await work).toBe(error); await gate
+    expect(budget.usage).toMatchObject({ workRecords: 5, exhausted: false })
+    expect(() => graph.beforeDispatch()).toThrow("RETENTION_DISPATCH_STOP")
+    expect(() => graph.beforeInvocation({})).toThrow("RETENTION_DISPATCH_STOP")
+    expect(() => graph.append("runtime-invocation-failure", { failed: true })).not.toThrow()
+  })
+  it.each([1, 2])("does not credit a head on directory barrier %i failure", async (boundary) => {
+    const base = createLeagueRepository(temporary()); let barriers = 0
+    const graph = new LeagueRecordGraph(createLeagueRepository(base.directory, { syncDirectory(directory) { if (++barriers === boundary) throw Error("barrier failed"); base.durability.syncDirectory(directory) } }), limits)
+    await expect(graph.appendInvocation("response-runtime-invocation", {})).rejects.toThrow("barrier failed")
+    expect(graph.latestRoot).toBeNull(); expect(readdirSync(base.directory)).toHaveLength(boundary === 1 ? 2 : 3)
+  })
+  it("prechecks complete-group byte/record/reserve caps before writing", async () => {
+    for (const constrained of [{ maxArtifactBytes: 1, maxArtifactRecords: 100 }, { maxArtifactBytes: 2_000_000, maxArtifactRecords: 2 }]) {
+      const base = createLeagueRepository(temporary()), graph = new LeagueRecordGraph(base, constrained)
+      await expect(graph.appendInvocation("runtime-invocation", {})).rejects.toThrow("RETENTION_BUDGET")
+      expect(readdirSync(base.directory)).toEqual([])
+    }
+    const base = createLeagueRepository(temporary()), graph = new LeagueRecordGraph(base, limits)
+    await expect(graph.appendInvocation("runtime-invocation", {}, [], { bytes: limits.maxArtifactBytes, records: 0 })).rejects.toThrow("RETENTION_BUDGET")
+    expect(readdirSync(base.directory)).toEqual([])
+  })
+  it("retains partial charge on callback refusal, refuses uncertain republication and leaves sync fallback intact", async () => {
+    const base = createLeagueRepository(temporary()), budget = new LeagueRetentionBudget(createLeagueExecutionAllocation(allocationFixture())); let calls = 0
+    const graph = new LeagueRecordGraph(createLeagueRepository(base.directory, { beforePublication(value) { if (++calls === 2) throw Error("refused"); budget.beforePublication(value) } }), limits, budget)
+    await expect(graph.appendInvocation("runtime-invocation", {})).rejects.toThrow("refused")
+    expect(budget.usage.workRecords).toBe(1); expect(readdirSync(base.directory)).toEqual([])
+    expect(() => graph.append("runtime-invocation", {})).toThrow("UNCERTAIN_REPUBLICATION")
+    for (const [kind, value, expected] of [["runtime-invocation", { text: "A".repeat(140000) }, 5], ["runtime-cleanup", { closed: true }, 3]] as const) {
+      const fallback = createLeagueRepository(temporary()); let barriers = 0, syncs = 0
+      const writer = new LeagueRecordGraph(createLeagueRepository(fallback.directory, { syncFile: async () => { syncs++ }, syncDirectory(directory) { barriers++; fallback.durability.syncDirectory(directory) } }), limits)
+      const root = await writer.appendInvocation(kind, value)
+      expect(barriers).toBe(expected); expect(syncs).toBe(0); expect(readLeagueRecordGraph(fallback, root, limits).get(root)?.value).toEqual(value)
+    }
+  })
+})
 describe("graph dependency durability", () => {
   const limits = { maxArtifactBytes: 2_000_000, maxArtifactRecords: 100 }
   const digest = (bytes: Uint8Array) => `sha256:${createHash("sha256").update(bytes).digest("hex")}` as const
