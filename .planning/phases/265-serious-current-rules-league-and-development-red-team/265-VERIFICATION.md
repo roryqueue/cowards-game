@@ -59,6 +59,15 @@ gaps:
 
 ## Latest main-observed follow-up — 2026-10-01
 
+Current follow-up: v4 is consumed and its unique retained verifier26421 completed
+exit0 authenticating process_invalid/issued=false/empiricalRequirementsComplete=false.
+Reviewed canonical-literal repair6bd77247 is integrated, exact independent review
+zero findings and focused44/44tests pass. Unique complete source gate44285 is
+active; private v5 preparation is draft-only, without allocation/capacity/Match.
+The independent goal-backward verdict remains gaps_found,0/5. This main-observed
+follow-up is not a new independent phase verification or empirical promotion.
+The older preparation-active paragraph below is historical.
+
 Newest main-observed continuation: full-league v3 is consumed process_invalid
 after one charged cell; unique read-only verification73144 authenticates the
 failure with issuedfalse/empiricalRequirementsCompletefalse. Repair e28f29a0

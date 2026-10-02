@@ -11,8 +11,13 @@ independently reviewed and compiled into inert records; unique data-only
 prepare57563 passed and canonical allocation-v4 rootf7968e1e is published.
 Typed capacity input was not itself a host receipt. Unique v4entry6814 passed
 fresh capacity then ended process-invalid after one charged cell/485 completed
-invocations at00:58:56UTC. Unique read-only retained verifier26421 is active;
-source-only serialization repair continues. No LEAG/freeze credit. See
+invocations at00:58:56UTC. Unique read-only retained verifier26421 completed exit0
+authenticating process_invalid/issued=false/empiricalRequirementsComplete=false.
+Reviewed canonical-literal repair6bd77247 is integrated, independent review
+zero findings and focused44/44tests pass; unique full source gate44285 is active.
+Its bounded~29percent encoder-component saving is not a whole-Match prediction.
+V5 helpers remain draft-only; no fresh allocation/capacity/execution yet.
+No LEAG/freeze credit. See
 265-07-DEPENDENCY-BARRIER-PROOF-v1.md,265-07-REPAIRED-SOURCE-GATE-v1.md and
 265-07-EMPIRICAL-PREPARATION-v8.md and265-07-EMPIRICAL-RESULT-v4.md.
 

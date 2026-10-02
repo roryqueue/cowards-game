@@ -11,8 +11,11 @@ packets compiled into45inert records; unique data-only prepare57563 passed.
 Canonical allocation-v4 rootf7968e1e is published with typed capacity input,
 not itself a host receipt. Unique v4entry6814 ended process-invalid at00:58:56UTC,
 after passing capacity and charging one cell:485 completed invocations, then
-the unchanged120-second lifetime failure. Unique read-only verifier26421 is
-active; source-only serialization repair continues. No LEAG credit. See STATE.md,
+the unchanged120-second lifetime failure. Unique read-only verifier26421 completed
+exit0 authenticating process_invalid/issued=false, not LEAG credit. Reviewed
+canonical-literal optimization6bd77247 is integrated with zero independent
+findings and44/44 focused tests; unique full source gate44285 is active. No
+v5 allocation/capacity/execution exists. See STATE.md,
 265-07-REPAIRED-SOURCE-GATE-v1.md,265-07-DEPENDENCY-BARRIER-PROOF-v1.md and
 265-07-EMPIRICAL-PREPARATION-v8.md and265-07-EMPIRICAL-RESULT-v4.md. Standing approval removes repeat operator
 questions for distinct same-bounds private routes, not technical gates.
@@ -66,7 +69,7 @@ The operator approved `lean_runner_feasibility_v1` as the active ADMIT-03 prereq
 
 **Shipped version:** v1.37 Rules Integrity and Strategy Evaluation Foundations on 2026-07-22
 **Release target:** v1.38 Competitive Strategy Factory and Adversarial League
-**Status:** Phases262–264 independently complete; Phase265 is12/14plans complete and empirically incomplete. Full-league allocation-v3 is consumed process-invalid after one charged cell and its retained verification is complete. Repair e28f29a0 is independently reviewed; its unique full source gate is active before distinct v4 allocation/capacity/entry. All consumed routes and the terminal successful diagnostic remain immutable; six of nine milestone phases remain.
+**Status:** Phases262–264 independently complete; Phase265 is12/14plans complete and empirically incomplete. Full-league v3/v4 are consumed process-invalid after one charged cell each and their unique retained verifications are complete. Reviewed canonical-literal repair6bd77247 passes focused44/44; its unique complete source gate44285 is active before distinct v5 preparation/allocation/capacity/entry. All consumed routes and the terminal successful diagnostic remain immutable; six of nine milestone phases remain.
 **Last phase verification:** Phase 264 passed 5/5 truths and 11/11 requirements with no gaps. The milestone audit, archive, and tag remain pending.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.

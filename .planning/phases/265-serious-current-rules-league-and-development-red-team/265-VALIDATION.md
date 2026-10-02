@@ -8,12 +8,23 @@ created: 2026-09-14
 updated: 2026-10-01
 source_reviewed: e28f29a06664059cc9f495f1030581ea7835504a
 source_gate: complete29suite382test-plus3tactical-existing-types-and-boundaries-pass
-empirical_validation: full-league-v3-consumed-process-invalid-v4-data-only-preparation-active
+empirical_validation: full-league-v3-v4-consumed-process-invalid-retained-verification-complete
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+### Integrated canonical-literal repair — full gate pending
+
+Source6bd77247 has an exact final-main two-file independent review with zero
+findings and root's six focused canonical/identity suites pass44/44 in8.00s.
+Unique fail-fast full gate44285 is active, not a captured pass. It includes the
+exact eight Phase265 CI commands plus engine/runtime tests, core types and
+two-file formatting. The accepted prior e28 source gate below remains historical.
+Unique v4 retained verification26421 finished exit0 authenticating process_invalid,
+issued=false/empiricalRequirementsComplete=false. No v5 allocation or Match ran.
+Phase-wide Nyquist remains partial/false; all LEAG requirements remain open.
 
 ### Repaired current-source complete gate and immutable v3 failure
 

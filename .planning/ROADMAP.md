@@ -970,7 +970,10 @@ Fresh v4 has reviewed/compiled inert packets,prepare57563 passed and canonical
 allocationrootf7968e1e published with typed capacity input. Unique v4entry6814
 passed fresh capacity then ended process-invalid after one charged cell and
 485 completed invocations on the unchanged120-second lifetime. Unique read-only
-verifier26421 is active; source-only serialization repair continues. Standing human approval
+verifier26421 completed exit0 authenticating the failed prefix, issued=false.
+Reviewed canonical-literal repair6bd77247 is integrated with independent zero
+findings and focused44/44tests. Unique complete source gate44285 is active;
+v5 helpers are drafts only, without allocation/capacity/execution. Standing human approval
 covers distinct same-bounds private routes
 after their technical gates, never consumed-route retries or bound changes.
 See265-07-EMPIRICAL-PREPARATION-v8.md and265-07-EMPIRICAL-RESULT-v4.md.

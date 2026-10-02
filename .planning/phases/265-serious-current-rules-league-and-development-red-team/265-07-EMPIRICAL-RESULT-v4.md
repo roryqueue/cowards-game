@@ -30,7 +30,11 @@ not a controlled per-component timing comparison. No lifetime extension,
 capacity-observation cache, durability deferral or accounting relaxation follows.
 
 Root started exactly one ordinary read-only `verify-retained`,session26421,
-with these exact roots/repositories and no capacity flags. It is ACTIVE;
-full retained authentication is not yet claimed. Source remains fixed through
-that verification. Isolated source-only fixture/serialization work may continue.
+with these exact roots/repositories and no capacity flags. It completed exit0,
+returning processValidity=process_invalid, issued=false and
+empiricalRequirementsComplete=false. The failed prefix is authenticated, not
+promoted to competitive success. Do not repeat this verifier. Source remained
+fixed throughout verification; canonical-literal repair was integrated only
+after it finished. Both exact container names also returned NoSuchObject to
+read-only Docker inspection; no lifecycle operation was performed.
 No empirical closure, finalist, league freeze, formation or holdout opening follows.

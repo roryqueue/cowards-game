@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 v4 terminal process-invalid; unique read-only verifier26421 active
+stopped_at: Phase265 v4 retained verification closed; canonical-literal source gate44285 active
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: v4 charged one cell and exhausted unchanged120s lifetime after485invocations; read-only verification and source-only repair continue
+last_activity_desc: v4 failed prefix authenticated; reviewed canonical-literal source6bd77247 integrated with full source gate pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,24 +21,34 @@ total_plans_in_phase: 14
 
 # State: Coward's Game
 
-## Current continuation — consumed league-v4 diagnosis
+## Current continuation — reviewed canonical-literal repair
 
 Fresh league-v4 ended process-invalid at2026-10-02T00:58:56.405Z after
 exactly one charged cell. Its actual result is published at
 .planning/artifacts/v1.38-phase-265-run-result-v4.json,raw1529a0ed/279bytes,
 headf5d62d78,allocationf7968e1e. It never resumes or refunds its charge.
-Root's ONE ordinary read-only retained verifier26421 is ACTIVE with exact
-allocation/head/repositories and no capacity flags. Do not duplicate it or
-change main source until it finishes. The metadata-only closed-store inspection
+Root's ONE ordinary read-only retained verifier26421 completed exit0 with exact
+allocation/head/repositories and no capacity flags: processValidity=process_invalid,
+issued=false, empiricalRequirementsComplete=false. Do not repeat it. The closed-store inspection
 found485 completed runtime-invocation descriptors and a next soldierBrain
 FACTORY_RUNTIME_LIFETIME_EXHAUSTED at transition1430,Phase3/Round2/Cycle4.
-Both providers' cleanup records say complete/no orphan. Full retained
-authentication is still pending; this is not a Strategy loss or LEAG credit.
+Both providers' cleanup records say complete/no orphan; exact read-only Docker
+inspection found both containers absent. Retained authentication is complete
+for this failed prefix; this is not a Strategy loss or LEAG credit.
 Capacity admitted at00:56:51.711UTC,receipt43b5b16e,available memory
 11,854,109,736bytes/free filesystem216,613,175,296bytes. No thresholds changed.
-No authoring job completed or model turn started. Source-only serialization
-cost diagnosis and an isolated fixed-literal encoder review continue under
-standing approval. LEAG/Phase265 completion and freeze remain pending.
+No authoring job completed or model turn started. Reviewed fixed-literal encoder
+source6bd772477c3a4617dbef05018be45a95de980bc8 is now integrated: implementation
+4879ecc4/source2d49db5c. Exact two-file independent final-main review has zero
+findings. Root's six focused suites pass44/44; the earlier source-only comparison
+preserves40 corpus vectors and16 retained-row bytes and measures~29percent
+encoder-component savings, not whole-Match timing. ONE fail-fast complete source
+gate44285 is ACTIVE: exact eight Phase265 CI commands, then engine/runtime suites,
+core types and two-file format check. Keep main source fixed; do not duplicate it.
+Private v5 preparation helpers are drafts only and must be corrected/reviewed;
+no v5 allocation, capacity receipt or execution exists. See canonical-literal
+proof/review. Standing approval covers a distinct same-bounds route after gates.
+LEAG/Phase265 completion and freeze remain pending.
 
 The previously active v4 preparation/entry text below is historical.
 
@@ -66,7 +76,7 @@ same-process capacity must precede reservation/dispatch. No capacity pass,
 Match/model call or empirical result is established by entry. External result-v4
 is reserved empty; do not stage it until actual terminal publication.
 Do not repeat prepare/entry. The route is now terminal as recorded above;
-one read-only retained verification must finish before source changes.
+its one read-only retained verification finished before source changes.
 See265-07-EMPIRICAL-PREPARATION-v8.md and265-07-PACKET-REVIEW-v8.md.
 Complete gate proof:265-07-REPAIRED-SOURCE-GATE-v1.md. Data-only prepare does
 not observe capacity or authorize a Match before fresh same-process admission.
