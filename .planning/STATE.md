@@ -36,8 +36,10 @@ helper d221416d is independently reviewed clean at e971e1c2. ONE unchanged
 eight-command gate95810/PID91648 started2026-10-02T10:52:45.658Z, actual exclusive
 start marker, command1 active. Keep source FIXED; no competing heavy work or
 duplicate gate. Completion marker absent, no full-gate pass claimed.
-Current implementation ea34d793/source2bf94999. A smaller-model worker drafts
-distinct freshv8 helper SOURCE ONLY; no helper mode or route is invoked.
+Current implementation ea34d793/source2bf94999. A smaller-model worker completed
+distinct freshv8 helper SOURCE ONLY, independently reviewed clean v14/v15
+(final prepare531d4dae/entryfa54f60b); private helper types remain pending.
+No helper mode or route is invoked.
 No fresh route starts before
 applicable gates. Closed v7/retained66301 remain immutable failures, never rerun
 or credited by this repair. Standing same-bounds fresh-route approval remains;
