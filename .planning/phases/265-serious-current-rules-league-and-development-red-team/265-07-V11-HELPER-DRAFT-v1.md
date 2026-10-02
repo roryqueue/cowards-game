@@ -1,5 +1,19 @@
 # Prospective v11 private helpers — unexecuted draft
 
+## Current gate-v3 rebinding — reviewed, still unexecuted
+
+After v2 gate failure and test-only source correction63f1a1a, the same two
+owned ignored helpers were adapted to current REVIEW-v3/gate-v3/start pins.
+Independent helper REVIEW-v3 is clean (zero findings). Current reviewed hashes:
+prepare-data.ts87e558b825cc0bb91fd8889be7cc82e8b986d70aab295ab25bf42ed85686340e;
+run-entry.ts4be3f43272b5d69e561b739b4579d78506a988c6f7eb67ab319d06319b45c1c7.
+Fixed production/source roots d42a6cf1/e5428d3c unchanged. Whole flow, v4 approved
+template input and fresh entry/terminal/failure guards retained. No helper mode,
+typecheck/import/record/allocation/capacity/provider/model/Match has run. Gate59346
+ACTIVE; actual final completion/report pins PENDING/fail-closed. V2 failed gate
+is not a source-pass prerequisite and cannot unlock entry. Earlier hashes/pins
+below are historical. Reviewed drafting does not admit or consume a route.
+
 ## Current reviewed correction — 2026-10-02T19:23:31Z
 
 Independent helper reviewv1 found a stale terminal/failure-marker collision.
