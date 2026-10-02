@@ -2,10 +2,12 @@
 
 ## Current verified progress — Phases262–264 complete
 
-Current continuation: reviewed key-encoder sourcedbf5daa2 passes46focused tests;
-unique complete source gate16883 is active at implementation70430463/source2f008952.
-Keep source fixed. V6 helper drafts are private/source-only; no new allocation
-or live entry exists. See265-07-KEY-ENCODER-PROOF-v1.md.
+Current continuation: reviewed key-encoder sourcedbf5daa2 passes46focused tests,
+all8commands of completed gate16883,149engine/277runtime tests and core types.
+Keep implementation70430463/source2f008952 fixed; do not repeat this gate.
+Reviewed v6 helpers produced fresh data-only requests in unique draft74721;
+actual eleven-job review is active. No new allocation, capacity receipt or live
+entry exists. See265-07-KEY-ENCODER-SOURCE-GATE-v1.md.
 
 Current outcome: fresh v5 ended process-invalid after three charged cells,
 including two process-valid results. Its one unique read-only retained verifier14069

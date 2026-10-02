@@ -1,15 +1,17 @@
 # Project Research Summary
 
-## Current approved handoff — 2026-10-01
+## Current approved handoff — 2026-10-02
 
 Current v5 route ended process-invalid after three charged cells at
 2026-10-02T02:54:19.876Z. Two cells report process-valid success; the third
 teacher soldierBrain exhausted the unchanged120-second lifetime. Its one unique
 ordinary read-only verifier14069 completed exit0 at fixed6bd; separate geometry
 check passes5,747stateviews/zero bounds violations. Only afterward reviewed
-key-encoder sourcedbf5daa2 was integrated:46focused tests pass, independent review
-clean, unique full source gate16883 active. Keep70430463/2f008952 source fixed.
-Private v6 helper drafting is non-operational; no new allocation exists. No LEAG
+key-encoder sourcedbf5daa2 was integrated:46focused tests, all8commands of
+unique gate16883,149engine/277runtime tests and core types pass. Independent
+corrected source reviewv2 is clean. Keep70430463/2f008952 source fixed.
+Reviewed v6 helpers produced fresh data-only requests in unique draft74721;
+actual eleven-job review is active. No new allocation/capacity receipt exists. No LEAG
 or freeze credit follows. No repeat operator checkpoint is required for a
 future distinct same-bounds route after reviewed repair, applicable gates,
 new allocation and fresh capacity. See265-07-EMPIRICAL-RESULT-v5.md.
