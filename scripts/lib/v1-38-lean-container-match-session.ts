@@ -48,7 +48,28 @@ export const validateLeanTimingObservation = (value: unknown, expected: LeanTimi
   return Object.freeze({ ...r, binding: Object.freeze({ ...r.binding }) })
 }
 export interface LeanContainerSessionCloseResult { readonly cleanupComplete: boolean; readonly orphanedChild: boolean }
-export interface LeanContainerMatchSession { readonly matchId: string; readonly containerId: string; readonly adapter: StrategyExecutionAdapterV117; readonly state: "active" | "poisoned" | "closed"; close(): LeanContainerSessionCloseResult }
+export interface LeanContainerMatchSession { readonly matchId: string; readonly containerId: string; readonly adapter: StrategyExecutionAdapterV117; readonly state: "active" | "poisoned" | "closed"; close(): LeanContainerSessionCloseResult; failureOrigin(error: unknown): LeanPrivateFailureOrigin | undefined }
+
+export type LeanPrivateFailureOrigin =
+  | { readonly stage: "stream_exchange"; readonly reason: "wait_timeout" | "non_success_state" | "unknown" }
+  | { readonly stage: "outer_frame"; readonly reason: "single_frame_invalid" | "frame_cap_exceeded" | "json_invalid" | "object_invalid" | "correlation_invalid" }
+  | { readonly stage: "inner_response"; readonly reason: "json_invalid" | "object_invalid" | "keys_invalid" | "schema_invalid" }
+  | { readonly stage: "executor"; readonly reason: "unknown" }
+const originReasons = { stream_exchange: ["wait_timeout", "non_success_state", "unknown"], outer_frame: ["single_frame_invalid", "frame_cap_exceeded", "json_invalid", "object_invalid", "correlation_invalid"], inner_response: ["json_invalid", "object_invalid", "keys_invalid", "schema_invalid"], executor: ["unknown"] } as const
+/** Data validation only; no issuance follows from a matching pair. */
+export const isLeanPrivateFailureOrigin = (value: unknown): value is LeanPrivateFailureOrigin => {
+  if (!value || typeof value !== "object") return false
+  const pair = value as LeanPrivateFailureOrigin
+  return Object.hasOwn(originReasons, pair.stage) && (originReasons[pair.stage] as readonly string[]).includes(pair.reason)
+}
+const objectKey = (value: unknown): value is object => value !== null && (typeof value === "object" || typeof value === "function")
+const observeFailure = <T>(origins: WeakMap<object, LeanPrivateFailureOrigin>, error: T, origin: LeanPrivateFailureOrigin): T => {
+  if (objectKey(error)) origins.set(error, Object.freeze(origin))
+  return error
+}
+// Only default-stream constructor objects participate. Injected streams cannot
+// mint a detailed native origin by adding methods or ETIMEDOUT-shaped errors.
+const streamOrigins = new WeakMap<LeanContainerPersistentStream, WeakMap<object, LeanPrivateFailureOrigin>>()
 
 const INERT_CONTAINER_SOURCE = "process.stdin.resume();setInterval(()=>{},2147483647)"
 const DEFAULT_CONTROL_TIMEOUT_MS = 5_000
@@ -160,6 +181,7 @@ parentPort.on("message",m=>{if(m.type==="exchange"){const occupied=pending!==nul
 `
 
 const defaultStreamFactory: LeanContainerPersistentStreamFactory = (command, args, options) => {
+  const origins = new WeakMap<object, LeanPrivateFailureOrigin>()
   const start = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)
   const worker = new Worker(STREAM_WORKER_SOURCE, { eval: true, workerData: { command, args: [...args], path: process.env.PATH ?? "", start, max: options.maxBufferBytes } })
   const started = new Int32Array(start)
@@ -174,12 +196,12 @@ const defaultStreamFactory: LeanContainerPersistentStreamFactory = (command, arg
     const response = new SharedArrayBuffer(Math.min(maxBufferBytes, STREAM_FRAME_LIMIT_BYTES))
     worker.postMessage({ ...message, control, response })
     const view = new Int32Array(control)
-    if (Atomics.wait(view, 0, 0, timeoutMilliseconds) === "timed-out") throw Object.assign(new Error("persistent stream timeout"), { code: "ETIMEDOUT" })
+    if (Atomics.wait(view, 0, 0, timeoutMilliseconds) === "timed-out") throw observeFailure(origins, Object.assign(new Error("persistent stream timeout"), { code: "ETIMEDOUT" }), { stage: "stream_exchange", reason: "wait_timeout" })
     const state = Atomics.load(view, 0); const length = Atomics.load(view, 1)
-    if (state !== 1 || length < 0 || length > response.byteLength) throw new TypeError(`LEAN_CONTAINER_SESSION_STREAM_FAILURE:${state}`)
+    if (state !== 1 || length < 0 || length > response.byteLength) throw observeFailure(origins, new TypeError(`LEAN_CONTAINER_SESSION_STREAM_FAILURE:${state}`), { stage: "stream_exchange", reason: "non_success_state" })
     return Buffer.from(new Uint8Array(response, 0, length))
   }
-  return {
+  const stream: LeanContainerPersistentStream = {
     exchange(frame, exchangeOptions) { return transact({ type: "exchange", request: Buffer.from(frame) }, exchangeOptions.timeoutMilliseconds, exchangeOptions.maxBufferBytes) },
     close(timeoutMilliseconds) {
       if (closed) return { status: 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) }
@@ -187,6 +209,8 @@ const defaultStreamFactory: LeanContainerPersistentStreamFactory = (command, arg
       catch (error) { closed = true; void worker.terminate(); return { status: null, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0), error: error as Error } }
     },
   }
+  streamOrigins.set(stream, origins)
+  return stream
 }
 
 const exactKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean => Object.keys(value).sort().join("\0") === [...keys].sort().join("\0")
@@ -198,9 +222,18 @@ const exactAbsent = (result: LeanContainerTransportResult, name: string): boolea
   (result.stdout.byteLength === 0 && result.stderr.equals(Buffer.from(`Error: No such object: ${name}\n`, "utf8")))
   || (result.stdout.equals(Buffer.from("\n", "utf8")) && result.stderr.equals(Buffer.from(`error: no such object: ${name}\n`, "utf8")))
 )
-const strictJsonResponse = (stdout: Buffer, byteLimit: number): RuntimeResult<unknown> => { const text = stdout.toString("utf8"); assertWithinByteCap("stdout", text, byteLimit); let parsed: unknown; try { parsed = JSON.parse(text) } catch { throw new SubprocessSystemFailure("MALFORMED_IPC", "Container session response was not one JSON frame") }; if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw new SubprocessSystemFailure("MALFORMED_IPC", "Container session response frame is invalid"); const record = parsed as Record<string, unknown>; if (!exactKeys(record, record.ok === true ? ["ok", "value"] : ["ok", "violation"])) throw new SubprocessSystemFailure("MALFORMED_IPC", "Container session response frame has surplus fields"); return parseSubprocessIpcResponse(text, byteLimit) }
+const strictJsonResponse = (stdout: Buffer, byteLimit: number, origins: WeakMap<object, LeanPrivateFailureOrigin>): RuntimeResult<unknown> => {
+  const text = stdout.toString("utf8"); assertWithinByteCap("stdout", text, byteLimit)
+  let parsed: unknown
+  try { parsed = JSON.parse(text) } catch { throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Container session response was not one JSON frame"), { stage: "inner_response", reason: "json_invalid" }) }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Container session response frame is invalid"), { stage: "inner_response", reason: "object_invalid" })
+  const record = parsed as Record<string, unknown>
+  if (!exactKeys(record, record.ok === true ? ["ok", "value"] : ["ok", "violation"])) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Container session response frame has surplus fields"), { stage: "inner_response", reason: "keys_invalid" })
+  try { return parseSubprocessIpcResponse(text, byteLimit) } catch (error) { throw observeFailure(origins, error, { stage: "inner_response", reason: "schema_invalid" }) }
+}
 
 export const createLeanContainerMatchSession = (options: LeanContainerMatchSessionOptions): LeanContainerMatchSession => {
+  const origins = new WeakMap<object, LeanPrivateFailureOrigin>()
   assertLeanInfrastructureProfile(options.infrastructureProfile)
   assertSafeIdentity("MATCH_ID", options.matchId); assertSafeIdentity("CONTAINER_NAME", options.containerName); assertSafeIdentity("OWNERSHIP_LABEL", options.ownershipLabel); assertSafeIdentity("IMAGE", options.image)
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$/u.test(options.containerName)) throw new TypeError("LEAN_CONTAINER_SESSION_CONTAINER_NAME_INVALID")
@@ -241,13 +274,16 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
     if (Buffer.byteLength(frame) > STREAM_FRAME_LIMIT_BYTES) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded frame cap") }
     try {
       const transportStart = observer ? process.hrtime.bigint() : undefined
-      const raw = stream!.exchange(frame, { timeoutMilliseconds, maxBufferBytes: Math.min(STREAM_FRAME_LIMIT_BYTES, Math.max(stdoutLimit, stderrLimit) * 2 + CONTROL_BUFFER_BYTES) })
+      let raw: Buffer
+      try { raw = stream!.exchange(frame, { timeoutMilliseconds, maxBufferBytes: Math.min(STREAM_FRAME_LIMIT_BYTES, Math.max(stdoutLimit, stderrLimit) * 2 + CONTROL_BUFFER_BYTES) }) }
+      catch (error) { throw observeFailure(origins, error, objectKey(error) ? streamOrigins.get(stream!)?.get(error) ?? { stage: "stream_exchange", reason: "unknown" } : { stage: "stream_exchange", reason: "unknown" }) }
       const transportMs = transportStart === undefined ? 0 : Number(process.hrtime.bigint() - transportStart) / 1e6
-      if (raw.byteLength > STREAM_FRAME_LIMIT_BYTES || raw.at(-1) !== 10 || raw.subarray(0, -1).includes(10)) throw new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was not one frame")
-      let parsed: unknown; try { parsed = JSON.parse(raw.subarray(0, -1).toString("utf8")) } catch { throw new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was malformed") }
-      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was invalid")
+      if (raw.byteLength > STREAM_FRAME_LIMIT_BYTES) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was not one frame"), { stage: "outer_frame", reason: "frame_cap_exceeded" })
+      if (raw.at(-1) !== 10 || raw.subarray(0, -1).includes(10)) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was not one frame"), { stage: "outer_frame", reason: "single_frame_invalid" })
+      let parsed: unknown; try { parsed = JSON.parse(raw.subarray(0, -1).toString("utf8")) } catch { throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was malformed"), { stage: "outer_frame", reason: "json_invalid" }) }
+      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was invalid"), { stage: "outer_frame", reason: "object_invalid" })
       const value = parsed as Record<string, unknown>
-      if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64", ...(observer ? ["timing"] : [])]) || value.requestId !== requestId || !(value.status === null || Number.isSafeInteger(value.status)) || !(value.signal === null || typeof value.signal === "string") || typeof value.stdoutBase64 !== "string" || typeof value.stderrBase64 !== "string" || !canonicalBase64(value.stdoutBase64) || !canonicalBase64(value.stderrBase64)) throw new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response correlation failed")
+      if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64", ...(observer ? ["timing"] : [])]) || value.requestId !== requestId || !(value.status === null || Number.isSafeInteger(value.status)) || !(value.signal === null || typeof value.signal === "string") || typeof value.stdoutBase64 !== "string" || typeof value.stderrBase64 !== "string" || !canonicalBase64(value.stdoutBase64) || !canonicalBase64(value.stderrBase64)) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response correlation failed"), { stage: "outer_frame", reason: "correlation_invalid" })
       const stdout = Buffer.from(value.stdoutBase64, "base64"); const stderr = Buffer.from(value.stderrBase64, "base64")
       if (stdout.byteLength > stdoutLimit || stderr.byteLength > stderrLimit || stderr.byteLength !== 0) throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Persistent response exceeded cap or emitted stderr")
       if (value.signal !== null) throw new SubprocessSystemFailure("SUBPROCESS_SIGNAL", "Container method was signalled")
@@ -261,7 +297,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   }
   const adapter: StrategyExecutionAdapterV117 = {
     metadata: containerSubprocessStrategyExecutionAdapterMetadata,
-    execute(request) { const stdoutLimit = request.outputByteLimit ?? SUBPROCESS_STDOUT_BYTES; const encoded = encodeSubprocessIpcRequest({ source: request.source, methodName: request.methodName, input: request.input, outputByteLimit: request.outputByteLimit }); return strictJsonResponse(runMethod(request, "legacy", request.timeoutMs ?? RUNTIME_TIMEOUT_MS, stdoutLimit, SUBPROCESS_STDERR_BYTES, encoded).stdout, stdoutLimit) },
+    execute(request) { const stdoutLimit = request.outputByteLimit ?? SUBPROCESS_STDOUT_BYTES; const encoded = encodeSubprocessIpcRequest({ source: request.source, methodName: request.methodName, input: request.input, outputByteLimit: request.outputByteLimit }); return strictJsonResponse(runMethod(request, "legacy", request.timeoutMs ?? RUNTIME_TIMEOUT_MS, stdoutLimit, SUBPROCESS_STDERR_BYTES, encoded).stdout, stdoutLimit, origins) },
     executeV117(request) { return executeStrategyRuntimeAbiV117({ requestBytes: request.requestBytes, executableSource: request.executableSource, signingIdentity: request.signingIdentity, invokeGuest(guest) {
       const observed = (observation: RuntimeGuestObservationV117) => createRuntimeGuestExecutionV117(observation, consumeCandidateEvidenceFixture(request, observeRuntimeGuestAccountingV117(observation, guest.outputByteLimit)))
       const input = JSON.stringify({ source: guest.executableSource, methodName: guest.methodName, input: guest.input, outputByteLimit: guest.outputByteLimit, methodWallMilliseconds: guest.timeoutMs, startupTimeoutMilliseconds: guest.startupTimeoutMs, cancellationGraceMilliseconds: guest.cancellationGraceMilliseconds })
@@ -271,5 +307,5 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
       if (observation.kind === "system_failure" || (observation.kind === "raw_frame" && String.fromCharCode(observation.bytes[0] ?? 0) === "D")) poison(); return observed(observation)
     } }) },
   }
-  return { matchId: options.matchId, containerId, adapter, get state() { return state }, close() { if (state !== "poisoned") state = "closed"; return remove() } }
+  return { matchId: options.matchId, containerId, adapter, get state() { return state }, close() { if (state !== "poisoned") state = "closed"; return remove() }, failureOrigin(error) { return objectKey(error) ? origins.get(error) : undefined } }
 }

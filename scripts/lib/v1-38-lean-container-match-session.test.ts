@@ -59,8 +59,8 @@ describe("private IPC diagnostics injected session", () => {
     const error = capture(session), origin = (session as any).failureOrigin?.(error)
     expect(origin).toEqual({ stage, reason }); expect(Object.isFrozen(origin)).toBe(true)
     expect((session as any).failureOrigin?.({ ...(error as object) })).toBeUndefined()
-    expect(() => invoke(session)).toThrow(); expect(persistent.frames).toHaveLength(1)
     expect(session.close()).toEqual({ cleanupComplete: true, orphanedChild: false })
+    expect(() => invoke(session)).toThrow(); expect(persistent.frames).toHaveLength(1)
     expect(control.calls.some((call) => call[1][0] === "rm")).toBe(true)
   })
   it.each(["timeout", "state"])("records actual native %s branch without a Worker or child", (fault) => {

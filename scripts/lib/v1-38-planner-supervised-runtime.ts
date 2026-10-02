@@ -12,7 +12,13 @@ import type { DiagnosticPilotLifetimeGrant } from "../../packages/strategy-lab/s
 import type { DiagnosticOneCellLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-one-cell.js"
 import { claimDiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4RuntimeBinding } from "./v1-38-diagnostic-retry-v4.js"
 import type { LabKernelRequest, LabRuntimeEvidence, LabRuntimeIdentity, LabSupervisedProvider } from "../../packages/strategy-lab/src/runtime-bridge.js"
-import { buildLeanAuthenticatedHarnessSource, createLeanContainerMatchSession, type LeanContainerMatchSessionOptions, type LeanTimingBinding, type LeanTimingObservation } from "./v1-38-lean-container-match-session.js"
+import { buildLeanAuthenticatedHarnessSource, createLeanContainerMatchSession, type LeanContainerMatchSessionOptions, type LeanTimingBinding, type LeanTimingObservation, type LeanPrivateFailureOrigin } from "./v1-38-lean-container-match-session.js"
+
+export type PlannerPrivateDiagnostic = LeanPrivateFailureOrigin & Readonly<Pick<LabRuntimeEvidence, "identity" | "invocationRoot" | "requestId" | "method" | "inputRoot" | "ordinal">>
+// Constructor identity, not structural capabilities, grants private lookup.
+const privateDiagnostics = new WeakMap<object, WeakMap<object, PlannerPrivateDiagnostic>>()
+export const getPlannerPrivateDiagnostic = (provider: object, evidence: LabRuntimeEvidence): PlannerPrivateDiagnostic | undefined => privateDiagnostics.get(provider)?.get(evidence)
+export const verifyPlannerPrivateDiagnostic = (provider: object, evidence: LabRuntimeEvidence, diagnostic: unknown): boolean => diagnostic !== undefined && getPlannerPrivateDiagnostic(provider, evidence) === diagnostic
 
 const rawRoot = (value: string | Uint8Array): LabRoot => `sha256:${createHash("sha256").update(value).digest("hex")}`
 const rejectRetiredDiagnosticLifetimeOptions = (options: object): void => {
@@ -86,6 +92,7 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   if (observerHarness && (harnessRoot !== observerHarness.expectedRoot || !/^sha256:[a-f0-9]{64}$/.test(observerHarness.machineRoot))) throw new TypeError("LAB_HARNESS_IDENTITY")
   const identity: LabRuntimeIdentity = freezeLabValue({ revisionId: revision.id, sourceRoot: rawRoot(revision.source), executableRoot: `sha256:${artifact.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: options.image, harnessRoot, budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot })
   const issued = new WeakSet<object>(); const timings = new WeakMap<object, PlannerTimingEvidence>(); const issuedTiming = new WeakSet<object>()
+  const diagnostics = new WeakMap<object, PlannerPrivateDiagnostic>()
   const accounting: LabRuntimeEvidence[] = []; const seen = new Set<string>()
   let stopped = false; let pending: LeanTimingBinding | undefined; let observed: LeanTimingObservation | undefined; let observedTransportMs = 0
   const began = performance.now()
@@ -109,7 +116,7 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   const close = () => { stopped = true; options.signal?.removeEventListener("abort", abort); return session.close() }
   const abort = () => { close() }
   options.signal?.addEventListener("abort", abort, { once: true })
-  return {
+  const runtime: PlannerSupervisedRuntime = {
     identity, get accounting() { return [...accounting] }, close,
     verify(e) { return issued.has(e) }, timing(e) { return timings.get(e) }, verifyTiming(e) { return issuedTiming.has(e) },
     invoke(request, admitted) {
@@ -134,6 +141,8 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
         if (observerHarness && !observed) throw new TypeError("LAB_TIMING_MISSING")
         if (!e.result.ok && "systemFailure" in e.result) close()
       } catch (error) {
+        const origin = session.failureOrigin(error) ?? { stage: "executor", reason: "unknown" } as const
+        diagnostics.set(e, freezeLabValue({ stage: origin.stage, reason: origin.reason, identity, invocationRoot: e.invocationRoot, requestId: e.requestId, method: e.method, inputRoot: e.inputRoot, ordinal: e.ordinal }) as PlannerPrivateDiagnostic)
         const code = error instanceof SubprocessSystemFailure && SUBPROCESS_SYSTEM_FAILURE_CODES.includes(error.code) ? error.code : "MALFORMED_IPC"
         e.result = { ok: false, violation: { type: "INVALID_OUTPUT", message: "Runtime system failure" }, systemFailure: { code, retryable: false } }; close()
       }
@@ -148,5 +157,7 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
       return e
     },
   }
+  privateDiagnostics.set(runtime, diagnostics)
+  return runtime
 }
 export const closePlannerRuntime = (runtime: PlannerSupervisedRuntime) => runtime.close()

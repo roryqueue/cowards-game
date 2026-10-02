@@ -44,6 +44,8 @@ const fixture = (fault?: string) => {
     const q = JSON.parse(frame); frames.push(q)
     if (fault === "timeout") throw Error("synthetic timeout")
     if (fault === "unknown") throw Error("private source objective memory stderr stack")
+    if (fault === "primitive") throw 42
+    if (fault === "null") throw null
     if (fault === "forged-code") throw { code: "SUBPROCESS_EXIT", name: "SubprocessSystemFailure", message: "private source objective memory stderr stack" }
     if (fault === "forged-name") throw Object.assign(Error("private source objective memory stderr stack"), { name: "SubprocessSystemFailure", code: "SUBPROCESS_SIGNAL" })
     if (fault === "unknown-typed-code") throw new SubprocessSystemFailure("UNRECOGNIZED" as never, "private source objective memory stderr stack")
@@ -60,10 +62,10 @@ const fixture = (fault?: string) => {
 const options = (fault?: string) => ({ revision: revision(), attemptRoot: root, budgetRoot: root, matchId: "phase263:match", containerName: "phase263-test", ownershipLabel: "owner:phase263-test", image: LAB_ADMITTED_ROOTS.image, ...fixture(fault) })
 const request = (method: "selectActivations" | "soldierBrain", id = "kernel:1") => ({ kind: method, requestId: id, semanticTupleId: MATCH_KERNEL.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input: corpus[method][0]!.input }) as Parameters<ReturnType<typeof createPlannerSupervisedRuntime>["invoke"]>[0]
 describe("private IPC diagnostics injected planner", () => {
-  it.each(["request", "inner-surplus", "inner-malformed", "unknown", "forged-code", "forged-name", "unknown-typed-code", "typed-spawn"])("binds %s without changing failure accounting or classification", (fault) => {
+  it.each(["request", "inner-surplus", "inner-malformed", "unknown", "primitive", "null", "forged-code", "forged-name", "unknown-typed-code", "typed-spawn"])("binds %s without changing failure accounting or classification", (fault) => {
     const opts = options(fault), host = createPlannerSupervisedRuntime(opts), e = host.invoke(request("selectActivations"), host.identity)
     const api = plannerApi as any, diagnostic = api.getPlannerPrivateDiagnostic?.(host, e)
-    const origin = fault === "request" ? ["outer_frame", "correlation_invalid"] : fault === "inner-surplus" ? ["inner_response", "keys_invalid"] : fault === "inner-malformed" ? ["inner_response", "object_invalid"] : ["stream_exchange", "unknown"]
+    const origin = fault === "request" ? ["outer_frame", "correlation_invalid"] : fault === "inner-surplus" ? ["inner_response", "keys_invalid"] : fault === "inner-malformed" ? ["inner_response", "object_invalid"] : ["primitive", "null"].includes(fault) ? ["executor", "unknown"] : ["stream_exchange", "unknown"]
     expect(diagnostic).toEqual({ stage: origin[0], reason: origin[1], identity: e.identity, invocationRoot: e.invocationRoot, requestId: e.requestId, method: e.method, inputRoot: e.inputRoot, ordinal: e.ordinal })
     expect(Object.isFrozen(diagnostic)).toBe(true); expect(JSON.stringify(diagnostic)).not.toContain("private")
     expect(api.verifyPlannerPrivateDiagnostic?.(host, e, diagnostic)).toBe(true)
