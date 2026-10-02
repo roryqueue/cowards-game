@@ -2,10 +2,17 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+Current source continuation: independently reviewed key-encoder repairdbf5daa2
+passes six focused suites46/46 and formatting; unique complete source gate16883
+is active. Implementation70430463/source2f008952 must stay fixed. No fresh v6
+allocation or live entry exists; helper drafting is private/source-only. See
+265-07-KEY-ENCODER-PROOF-v1.md.
+
 Current v5 outcome: process-invalid after three charged cells at
 2026-10-02T02:54:19.876Z, with two process-valid successes and one teacher
-soldierBrain120-second lifetime failure. Unique ordinary retained verifier14069
-is active; keep main source6bd fixed and do not repeat entry or verifier.
+soldierBrain120-second lifetime failure. Its unique ordinary retained verifier14069
+completed exit0, authenticating process_invalid/issued=false, not league success.
+Do not repeat it. Read-only geometry passes5,747stateviews/zero bounds violations.
 All six exact route containers are absent by read-only inspection. No LEAG
 completion, freeze or formation/holdout opening follows. Standing approval
 covers future distinct same-bounds routes after review/gates/new allocation/

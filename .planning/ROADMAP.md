@@ -2,9 +2,15 @@
 
 ## Current verified progress — Phases262–264 complete
 
+Current continuation: reviewed key-encoder sourcedbf5daa2 passes46focused tests;
+unique complete source gate16883 is active at implementation70430463/source2f008952.
+Keep source fixed. V6 helper drafts are private/source-only; no new allocation
+or live entry exists. See265-07-KEY-ENCODER-PROOF-v1.md.
+
 Current outcome: fresh v5 ended process-invalid after three charged cells,
-including two process-valid results. One unique read-only retained verifier14069
-is active; main source6bd stays fixed until it finishes. Source-only reviewed
+including two process-valid results. Its one unique read-only retained verifier14069
+completed exit0, authenticating process_invalid/issued=false; geometry check
+passes5,747stateviews/zero bounds violations. Never repeat the entry/verifier. Reviewed
 repair may continue without reviving this consumed route. No LEAG completion,
 freeze, formation or holdout opening is claimed. Standing approval already
 covers future distinct same-bounds routes after review/gates/new allocation/

@@ -30,9 +30,20 @@ All six exact route container names returned NoSuchContainer to read-only
 Docker inspection against the live daemon; no lifecycle command was issued.
 
 Root started exactly ONE ordinary read-only retained verification in session
-14069, using these allocation/head/repositories and no capacity flags. It is
-currently active; no verification pass is claimed yet. Do not repeat it.
-Keep main source fixed until it terminates. Other heavy testing is held.
+14069, using these allocation/head/repositories and no capacity flags. It
+completed exit0, returning process_invalid/issued=false and
+empiricalRequirementsComplete=false. This authenticates the failed prefix,
+not league success. Do not repeat it. Source stayed fixed throughout.
+
+Root's separate read-only geometry check29023 completed exit0 at the same
+source/head. It reopened three cell-results: two completed executions and one
+failure with unchanged initial state;2,871 retained transitions/5,747 state
+views/65,366 visible ACTIVE-or-STONE Soldier positions. All three initial states
+have16ACTIVE Soldiers in the exact current edge ranks on the12×12 board.
+Bounds violations=0; terrain positions=0 (the observed Smoke cells have none).
+This is retained-data validation, not browser rendering or LEAG completion.
+Private helper raw:f6a3ae8d3b7ff5def516d55a14bc3b07b37f448debbd40486b74e91d6a157bf9.
+No Strategy, runtime, model, capacity or Match was executed by either check.
 
 The encoder change permitted two valid cells where v3/v4 stopped on their first
 cell, but this is not a controlled component-to-Match timing comparison. No

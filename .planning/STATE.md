@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 v5 terminal; unique retained verifier14069 active; source fixed6bd77247
+stopped_at: Phase265 v5 retained closeout complete; reviewed key-encoder source gate16883 active
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: v5 process-invalid after3charges with2valid results; unique read-only verifier14069 active
+last_activity_desc: v5 retained/geometry checks pass for failedprefix; new reviewed dbf5daa2 source gate16883 active
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,25 @@ total_plans_in_phase: 14
 
 # State: Coward's Game
 
-## Current continuation — reviewed canonical-literal repair
+## Current continuation — reviewed Unicode key encoder repair
+
+V5's ONE ordinary retained verifier14069 completed exit0 with process_invalid/
+issued=false/empiricalRequirementsComplete=false; do not repeat it. Separate
+read-only geometry check29023 passes2,871transitions/5,747stateviews, all three
+complete current-edge starts and zero visibleSoldier/terrain bounds violations.
+This validates a failed prefix, not LEAG completion or browser rendering.
+Only after source-fixed closeout, reviewed key-encoder repairdbf5daa2 was
+integrated: implementation70430463/source2f008952. Root's final focused six
+suites pass46/46; exact independent main review is clean. ONE complete CI
+source gate16883 is active; keep main source fixed and do not duplicate it.
+Fresh v6 helper drafting is private/source-only; no new allocation, receipt,
+Match or model call exists. Standing approval applies after all technical gates.
+The isolated Phase266 bounded injected-context test18430 timed out at600seconds
+after two early setup failures, with no context summary or positive result.
+Source-only stage/cost diagnosis precedes another test; it is not real league/
+freeze evidence and stays unmerged. Do not repeat a blind long fixture run.
+No human-only checkpoint has been identified. See KEY-ENCODER-PROOF-v1 and
+EMPIRICAL-RESULT-v5. Entry/verifier-active snapshots below are historical.
 
 Fresh v5 ended process-invalid at2026-10-02T02:54:19.876Z after three charged
 cells: two process-valid success journals and one system-failure journal.
