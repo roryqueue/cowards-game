@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 lifetime source re-review clean; ONE full fixed-source gate43923/PID7438 active, sourcebb98878e held
+stopped_at: Phase265 lifetime full/scoped source gates closed; goal-backward supplement verification and v10 helper final pins/re-review next
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: clean13file lifetime re-review; CIbuild/scripttypes pass, full29file suite active in unique8-command gate; no liveleague/capacity/verifier
+last_activity_desc: lifetime CI8gate plus planner48-engine149-runtime277 and actualcore build passed; no active test/live/verifier; v10 inert helper guard fixes await final pins/re-review
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,29 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+All source-only gates are CLOSED. CI43923 passed493league+20tactical tests,
+all8exactcommands, unchangedsource/CIpins; extras36354 passed48planner,
+149engine and277runtime-js tests. Root corrected its nonexistentpackages/core
+build target to actualcore spec/engine/runtime-js, which passesexit0 without
+source changes (firstchainexit1 preserved). Validation updated honestly;
+whole Phase265 Nyquist/LEAG stayspartial/false. Next goal-backward supplement
+verification, finalprivatev10 helper gatepins/re-review/types, then new actual
+requestreview/data-onlypreparation before new allocation/entry. Allconsumed
+routes immutable; no live route/capacity/retainedverifier or human checkpoint.
+Earlier active-test and pending-source snapshots below are historical.
+
+Gate43923 is CLOSED exit0 at2026-10-02T16:52:34.179Z: all8exactCIcommands
+pass,493league/runtime/factory+20tactical tests,1354file boundary scans,
+zero strict/ownership offenses. Fixedsourcebb98878e implementationd6872b16/
+sourcee64686c2 unchanged through every command. ONE scoped regressions entry
+36354 is ACTIVE (planner whole mock suite, package-cwd engine/runtime-js,
+spec/engine/runtime-js/core build), no duplicate gate or competing heavywork.
+Coverage map exists; source supplement acceptance awaits scoped results and
+verification. NEWv10 private helpers are inert; two helper guard findings
+corrected, final completion/report pins and independent re-review pending.
+No helper mode, allocation, capacity, Match or retained verifier started.
+No LEAG/freeze/phase credit. Active-gate snapshots below are historical.
 
 Independent re-reviewv2 is clean (13files,0BLOCKER/0WARNING) atfixedbb98878e,
 implementationd6872b16/sourcee64686c2. ONE full fixed-source gate43923/PID7438

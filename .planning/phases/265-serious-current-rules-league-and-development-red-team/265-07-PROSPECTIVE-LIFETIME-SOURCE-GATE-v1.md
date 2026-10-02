@@ -1,6 +1,13 @@
 # Phase 265 Plan07 prospective lifetime fixed-source gate
 
-Status: ACTIVE, not source acceptance or empirical completion.
+Status: COMPLETE for the eight-command CI gate and scoped regressions.
+
+Completion marker raw SHA-256: a03bb26f0dce863bb3aad30a4d5187c1ce2112c44e01ea3ed4a0c659e437460d
+Start marker raw SHA-256: de4355f52084f806ff4b984d7398de498ab25ee7372ba84120fcf76fbd77162e
+Gate43923 exited0 at2026-10-02T16:52:34.179Z, elapsed2236803ms.
+No terminal-failure marker exists. All eight commands passed in the recorded
+order3/4/1/2/5/6/7/8; source/test/CI pins and full conservative roots matched
+before and after every command.
 
 Independent re-review v2 is clean: 13 files, zero BLOCKER/WARNING findings.
 It technically verifies the three bounded source fixes; the fix report's generic
@@ -26,13 +33,24 @@ Actual command order is CI ordinals3,4,1,2,5,6,7,8: inexpensive build/types firs
 then the two complete test commands and all boundary scans. Commands themselves
 are unchanged; this source-only ordering changes no empirical runtime policy.
 CI3 lab build and CI4 fourteen-entry strict script/test types pass exit0.
-CI1 full29-file league/runtime/factory suite is currently running. Other
-commands and package-scoped regressions/build remain pending. Previous
+CI1 passed29/29 files and493/493 tests in1981.10s. CI2 passed20/20 tactical
+tests in210.13s. CI5/6/7 each scanned1354files with zero violations. CI8 has
+zero strict/ownership offenses and19 existing report-only entries. Package-
+scoped regressions entry36354 passed48/48 planner tests (16.38s),149/149
+engine tests (14.70s), and277/277 runtime-js tests (22.56s), using each package's
+correct working directory. Its final build command exited1 because root
+mistakenly included a nonexistent packages/core/tsconfig.json. There is no
+separate core package. The corrected repository core build command
+`./node_modules/.bin/tsc -b packages/spec packages/engine packages/runtime-js --pretty false`
+completed exit0 in root's subsequent check, without source changes. The initial
+entry's exit1 is not erased or described as an entirely passing chain.
+These additional checks do not duplicate the completed eight-command gate.
+Previous
 source gate sessions are closed history and are not reused as current proof.
 
-Keep main production source fixed until this gate closes; no competing heavy
-work, allocations, host-capacity observations, Strategy/providers, empirical
-Matches or retained verifier. No LEAG/freeze/phase completion, holdout opening,
+All source-only processes are now closed. No allocation, host-capacity
+observation, Strategy/provider, empirical Match or retained verifier was
+started. No LEAG/freeze/phase completion, holdout opening,
 formation materialization, public/counting/production authority. After all
 gates pass, perform GSD validation/verification of this source supplement and
 conditionally prepare a distinct fresh route under existing standing approval.

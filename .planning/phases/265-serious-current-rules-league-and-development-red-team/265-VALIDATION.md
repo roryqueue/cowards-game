@@ -6,14 +6,42 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-02
-source_reviewed: 634b0e84896132a1a9ac5d855763b0793abfe1bc
-source_gate: complete-unique-async28406-448league-plus3tactical-engine149-runtime277-types-boundaries-pass
-empirical_validation: v6-consumed-process-invalid-five-cells-unique-retained-verifier-complete
+source_reviewed: bb98878ec996ec63529093a45d9e55ed89e64610
+source_gate: lifetime-43923-complete-493league-20tactical-planner48-engine149-runtime277-build-types-boundaries-pass
+empirical_validation: v9-consumed-process-invalid-five-cells-unique-retained-verifier-complete
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+### Prospective private ten-minute supplement — source validation only
+
+At fixedbb98878e, clean independent reviewv2 covers13 cumulative source/test
+files. Root's unique gate43923 passes all8 unchangedCIcommands,493league and
+20tactical tests, build/types, three1354file/zero-violation scans and service
+strict0/ownership0/report-only19. Additional source-only checks pass48planner,
+149engine and277runtime-js tests plus actualcore spec/engine/runtime-js build.
+The first extra-chain build incorrectly referenced nonexistentpackages/core
+and exited1; corrected actualcore command exits0 without source changes.
+Exact completion marker and results are in
+265-07-PROSPECTIVE-LIFETIME-SOURCE-GATE-v1.md. No duplicate gate ran.
+
+| Supplement task | Requirement/threat | Automated coverage | Result |
+|---|---|---|---|
+| 07-LT-T1 | LEAG-01/02/04/05/09; LT-01–03 | Exactv2 policy/authority, forged/crossed claims, fake clocks, preserved defaults/diagnostic/benchmark | Recorded RED then focused/full GREEN |
+| 07-LT-T2 | LEAG-01/02; LT-01–03/SC | Both600000 clocks, once-only allocation/charge/provider provenance, inherited constructor denial, elapsed setup/retention | Full focused/runtime/strict checks GREEN |
+| 07-LT-T3 | LEAG-04/05/09; LT-02/04/05 | Main/response/tactical wiring, versioned capacity/reservation/retained selectors, source closure/boundaries |493league+20tactical tests and source gates GREEN |
+
+Coverage artifact265-07-PROSPECTIVE-LIFETIME-COVERAGE-v1.md is the pre-completion
+snapshot; its gate-pending qualifications are resolved only by these observed
+results. Supplement source goal-backward verification remains separate.
+Whole Phase265 Nyquist remains partial/false: complete actual league evidence
+is still missing; source acceptance does not closeLEAG-01–09, freeze current
+rules, open holdout or permit formation/public/counted/production behavior.
+Standing approval supports only a distinct fresh prospective private route
+with new allocation and fresh passing same-process capacity. Every consumed
+allocation/result/verifier remains immutable. Older snapshots below are history.
 
 Final gate28406 is COMPLETE atfixed634b0e84:448league+3tactical tests,
 build/types/scans pass; correct-cwd engine149/runtime277, core and private-helper
