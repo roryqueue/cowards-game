@@ -6,8 +6,8 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-01
-source_reviewed: e28f29a06664059cc9f495f1030581ea7835504a
-source_gate: complete29suite382test-plus3tactical-existing-types-and-boundaries-pass
+source_reviewed: 6bd772477c3a4617dbef05018be45a95de980bc8
+source_gate: complete29suite382test-plus3tactical-types-boundaries-engine149-runtime277-pass
 empirical_validation: full-league-v3-v4-consumed-process-invalid-retained-verification-complete
 ---
 
@@ -15,13 +15,16 @@ empirical_validation: full-league-v3-v4-consumed-process-invalid-retained-verifi
 
 ## Latest captured results
 
-### Integrated canonical-literal repair — full gate pending
+### Integrated canonical-literal repair — source gates passed
 
 Source6bd77247 has an exact final-main two-file independent review with zero
 findings and root's six focused canonical/identity suites pass44/44 in8.00s.
-Unique fail-fast full gate44285 is active, not a captured pass. It includes the
-exact eight Phase265 CI commands plus engine/runtime tests, core types and
-two-file formatting. The accepted prior e28 source gate below remains historical.
+All eight exact CI commands passed in44285:382league+3tactical tests, build,
+strict affected-script types and boundaries. Its extra repo-root runtime
+invocation failed two cwd-relative filesystem tests; properly scoped runtime
+277tests and separate engine149tests pass without source changes. Core types
+and two-file formatting pass. See265-07-CANONICAL-LITERAL-SOURCE-GATE-v1.md.
+The accepted prior e28 source gate below remains historical.
 Unique v4 retained verification26421 finished exit0 authenticating process_invalid,
 issued=false/empiricalRequirementsComplete=false. No v5 allocation or Match ran.
 Phase-wide Nyquist remains partial/false; all LEAG requirements remain open.

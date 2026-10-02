@@ -9,7 +9,7 @@ overrides_applied: 0
 empirical_authority: false
 latest_follow_up: 2026-10-01
 latest_diagnostic_source: e440763a75c0e66beb402548681a9acfddad9b24
-latest_source_gate: e28f29a06664059cc9f495f1030581ea7835504a
+latest_source_gate: 6bd772477c3a4617dbef05018be45a95de980bc8
 gaps:
   - truth: "Every frozen population has a complete condition-balanced payoff matrix, with process-invalid cells blocking meta-solving."
     status: failed
@@ -62,8 +62,11 @@ gaps:
 Current follow-up: v4 is consumed and its unique retained verifier26421 completed
 exit0 authenticating process_invalid/issued=false/empiricalRequirementsComplete=false.
 Reviewed canonical-literal repair6bd77247 is integrated, exact independent review
-zero findings and focused44/44tests pass. Unique complete source gate44285 is
-active; private v5 preparation is draft-only, without allocation/capacity/Match.
+zero findings and focused44/44tests pass. All eight exact CI commands pass,
+including382league+3tactical tests; correctly scoped engine149/runtime277tests,
+core types and formatting pass. Independent v5 packets/helpers are accepted;
+compile64800 published45inert records, unrooted input46436 exists, and unique
+data-only prepare46814 is active without rooted allocation/capacity/Match.
 The independent goal-backward verdict remains gaps_found,0/5. This main-observed
 follow-up is not a new independent phase verification or empirical promotion.
 The older preparation-active paragraph below is historical.
