@@ -3,6 +3,11 @@
 Status: proposed, awaiting human decision; NOT approved or applied.
 2026-10-02. Existing Plan265-07 supplement, not another numbered plan or route.
 
+Later decision2026-10-02: human answered “approved” to the five-second private
+host response allowance with one-second guest execution unchanged. See
+265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002.md. The original proposal/status
+below is history; implementation/source review/gates remain required.
+
 ## Evidence and smallest proposed change
 
 V11 is closed process-invalid. Its unique retained reader72861 returned
