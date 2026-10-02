@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 all key-encoder source gates pass; fresh v6 job review active
+stopped_at: Phase265 fresh v6 allocation published; static capacity input ready before unique entry
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: gate16883 and engine149/runtime277/types pass; v6 draft74721 completed for fresh review
+last_activity_desc: unique prepare38722/publish51314 passed; new allocation5c59970a ready for fresh same-process capacity
 progress:
   total_phases: 9
   completed_phases: 3
@@ -37,8 +37,15 @@ Fresh v6 helpers c1b9fb47/b84e2416 pass independent source review and worker
 strict types. New namespace is league-265-prospective-v6-20261002-a.
 Root's ONE data-only draft74721 completed exit0 with fresh request99495a39,
 disclosure38d56baf and completion7bdd2369. Actual independent eleven-job review
-is active. No fresh allocation, capacity receipt, Match or model call exists.
+accepted every job at reviewa423653e. Unique compile76576 produced45inert
+records; unique unrooted input62224 passed atb6e2172a. ONE data-only prepare38722
+completed exit0; canonical publication51314 passed atallocation5c59970a,
+rawda81aba8/24020bytes. Typed capacity input29153 passed atc4ae9eeb; its
+historical static samples are not a live host observation or receipt.
+Do not repeat preparation/publication. No Match/model/live-entry has started;
+fresh passing same-process capacity remains required before dispatch.
 Standing approval applies after all technical gates. See KEY-ENCODER-SOURCE-GATE-v1.
+Current preparation details: EMPIRICAL-PREPARATION-v10.md.
 Corrected source rereview KEY-ENCODER-REVIEW-v2 records actual03:46UTC timing;
 the inaccurate v1 timestamp is preserved and not used for fresh preparation.
 The isolated Phase266 bounded injected-context test18430 timed out at600seconds
@@ -46,8 +53,11 @@ after two early setup failures, with no context summary or positive result.
 Source-only stage/cost diagnosis and reviewed history-only mode are isolated
 at e1874bb5. The corrected initial-population scenario is1536 injected Matches,
 not3120 or a universal lower bound. A120-second history-only diagnostic is
-drafted but not invoked; it cannot produce complete-context/freeze evidence.
-No blind long fixture run is repeated. This WIP stays unmerged.
+completed88572 withETIMEDOUT/SIGTERM, onlyhistory-start, stable source/loader
+snapshots and complete owned cleanup. It produced no context and cannot be
+credited as complete-context/freeze evidence. Exact diagnostic stays closed;
+source-only diagnosis may continue. No blind full fixture run is repeated.
+This WIP stays unmerged.
 No human-only checkpoint has been identified. See KEY-ENCODER-PROOF-v1 and
 EMPIRICAL-RESULT-v5. Entry/verifier-active snapshots below are historical.
 

@@ -6,8 +6,10 @@ Current source continuation: reviewed key-encoder repairdbf5daa2 passes46focused
 tests, all8source-gate commands,149engine/277runtime tests and core types.
 Gate16883 is complete; do not repeat it. Implementation70430463/source2f008952
 stays fixed. Reviewed private v6 helpers produced fresh data-only requests in
-unique draft74721; actual eleven-job review is active. No fresh allocation,
-capacity receipt or live entry exists. See KEY-ENCODER-SOURCE-GATE-v1.md.
+unique draft74721; all eleven jobs are accepted and45inert records compiled.
+Unique prepare38722/publish51314 passed at fresh allocation5c59970a; typed
+static capacity input is ready, not a live receipt. No Match/model/live entry
+has started. Fresh same-process capacity precedes dispatch. See preparation-v10.
 
 Current v5 outcome: process-invalid after three charged cells at
 2026-10-02T02:54:19.876Z, with two process-valid successes and one teacher
