@@ -8,6 +8,25 @@ empirical_authority: none
 
 # Phase 265-07 — prospective league-v8 IPC-route preparation draft
 
+## Actual root continuation — reviewed, data-only preparation active
+
+Root's source gate95810 CLOSED pass450+3tests/build/types/scans at11:26:04.572UTC;
+correct-cwd engine149/runtime277,core build and privatehelper types4395 pass.
+See immutable IPC-ERROR-PRESERVATION-SOURCE-GATE-v1 for exact proof/initial
+wrong-cwd failure. Root's ONE data-only draft43883 exits0 atrequest74aff3ca/
+disclosurecf5a3c7b/rolesea0691d7/completion9e2331ae. Actual distinct packet
+reviewer accepts all11 atc7b61c00 with174521ms real post-draft sequential windows,
+no inherited review time. Report-v11 e181c8a0 records independent856entry/fourteen
+output checks and honest initial LF/canonical formatting correction.
+ONE compile63284 completes45inertrecords:packet7691225f/34517B,
+summary3ed3eaeb/6710B,completion637cf79b/521B. ONE input99172 exits0 at
+d1cc3823/23911B,operator standing-approval:20261001-human-blanket-fresh-same-bounds-v8.
+ONE data-only prepare3155 ACTIVE against existing factory264 historical inputs;
+never repeat. Source fixeda98b5c2b. No canonical allocation,live receipt,charge
+or Match exists yet. Old consumedroutes/failedverifier stay immutable. No LEAG/
+freeze/formation/holdout/public/count/production credit. Original construction
+snapshot below is historical, not a claim these checks remain pending now.
+
 This is a source-only handoff record. It is not an allocation, a capacity
 receipt, execution authority, a Match result, or empirical evidence. The v8
 namespace is fresh and distinct: `.strategy-lab/league-265-prospective-v8-20261002-a`.
