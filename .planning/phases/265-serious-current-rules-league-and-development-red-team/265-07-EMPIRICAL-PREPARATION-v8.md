@@ -69,6 +69,18 @@ The hashed proof/review/helper bytes remain unchanged. Source/config paths
 remain identical to reviewed e28f29a0 through documentation-only descendants.
 No v4 live entry, reservation, Match or model call has occurred at publication.
 
+### Unique entry after publication
+
+At2026-10-02T00:34:55.373Z root invoked the guarded entry exactly once,PID53834,
+session6814. Its durable private entry marker binds the exact allocation,
+source/implementation roots,standing operator decision,argv and retries0.
+The external result-v4 destination is exclusively reserved but empty until
+actual terminal publication. Static history/import/packet checks precede fresh
+same-process host capacity and any durable reservation/provider/Match. Entry
+is not a capacity pass or empirical success. Do not duplicate it or start a
+retained verifier while active. Main source stays fixed; isolated fixture
+generation/tests must not compete with actual bounded cells.
+
 ## Remaining technical gates, not an operator checkpoint
 
 1. Complete source gate53203 passed; do not repeat it without source changes.
@@ -76,7 +88,7 @@ No v4 live entry, reservation, Match or model call has occurred at publication.
    sha256:d1a3f5d37b1fe107156f14a1cb468fd55fbfd603d3aa9f94997d32966123fb33,
    22002bytes. Root's data-only prepare57563 completed once, exit0; canonical
    allocation-v4 is published. Do not repeat this completed historical reader.
-3. Invoke the guarded entry exactly once with the source-bound capacity input.
+3. Unique guarded entry6814 is active with the source-bound capacity input.
    Same-process static admission precedes
    fresh actual capacity, durable reservation and any provider/Match.
 4. Preserve the actual unique outcome at

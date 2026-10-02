@@ -9,7 +9,9 @@ build/types/boundaries. Identical retained-record hashes and approximately
 not proof that a Match fits the 120-second lifetime. Fresh v4 packets are
 independently reviewed and compiled into inert records; unique data-only
 prepare57563 passed and canonical allocation-v4 rootf7968e1e is published.
-Typed capacity input exists, not a host receipt or live entry yet. See
+Typed capacity input exists, not a host receipt. Unique v4entry6814/PID53834
+is active since00:34:55UTC,static checks before fresh capacity/dispatch. No
+capacity pass or empirical result yet. See
 265-07-DEPENDENCY-BARRIER-PROOF-v1.md,265-07-REPAIRED-SOURCE-GATE-v1.md and
 265-07-EMPIRICAL-PREPARATION-v8.md.
 

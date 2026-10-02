@@ -9,7 +9,9 @@ tests and build pass. Complete source gate53203 passed382main plus3tactical
 tests,types/build and boundaries. Fresh v4 has eleven independently reviewed
 packets compiled into45inert records; unique data-only prepare57563 passed.
 Canonical allocation-v4 rootf7968e1e is published with typed capacity input,
-not a host receipt or live entry yet. See STATE.md,
+not a host receipt. Unique v4entry6814/PID53834 is active since00:34:55UTC;
+static validation precedes fresh capacity and dispatch. No capacity pass or
+empirical result yet. See STATE.md,
 265-07-REPAIRED-SOURCE-GATE-v1.md,265-07-DEPENDENCY-BARRIER-PROOF-v1.md and
 265-07-EMPIRICAL-PREPARATION-v8.md. Standing approval removes repeat operator
 questions for distinct same-bounds private routes, not technical gates.
