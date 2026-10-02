@@ -1,6 +1,20 @@
 # Plan265-07 v10 prospective private preparation
 
-Status: ONE data-only prepare94959/PID10875 ACTIVE; no live route or capacity.
+Status: data-only preparation COMPLETE; canonical allocation published, not consumed.
+
+Prepare94959 exited0, producing exact prospective-v2 allocation
+sha256:d1116cd6e91b77902812de07f1e5492043e74d35ea3ac5bd37fa5ca69bcc9d81,
+private/canonical raw0b51d7ec914c26bd2bde09b1f804cc7118b728969e121fd7b378f7f197377cae,
+24325bytes. Capacity-input76568 exits0: reconciliation18cf04ed and static
+plan e6502dacc18552f7cb9a911043fe2e851945a0cf1b762a2fe496ee3bf860c704.
+This is inherited historical sizing only; receiptCreated=false, no current
+host observation. Root created only the exactNEW league-evidence directory
+0700; positive read-only guard70326 confirms canonical, nonsymlink, empty.
+Publication15380 exits0 after actualcomplete/start/report/source pin checks,
+writing new .planning/artifacts/v1.38-phase-265-allocation-v10.json exclusively.
+No result, entry, capacityreceipt, provider or Match yet. Commit/push precede
+one root entry; fresh same-process capacity must pass before charge/dispatch.
+Earlier active-preparation statements below are historical snapshots.
 
 Sourcebb98878ec996ec63529093a45d9e55ed89e64610 is fixed, independently
 reviewed and source-goal verified5/5. Implementationd6872b16/sourcee64686c2;

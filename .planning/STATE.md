@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 v10 ONE data-only prepare94959/PID10875 active; no canonical allocation/capacity/Match/live route
+stopped_at: Phase265 v10 preparation complete; NEWd1116cd6 canonical allocation published, commit/push before ONE capacity-gated rootentry
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: v10 helpers clean finalreview and strict;11freshrequests reviewed/45inertrecords compiled; ONEdata-onlyprepare94959 active at fixedbb98878e
+last_activity_desc: v10 prepare94959 pass/staticcapacity76568 notreceipt/empty0700guard70326pass/publish15380pass; no liveentry/Match yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,16 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+V10 data-only preparation is COMPLETE. New canonicalallocationd1116cd6,
+raw0b51d7ec/24325B, published15380exit0 after exactsource/gate/reportpins.
+Static sizing76568passes, receiptCreated=false; NEW0700emptydirectory guard
+70326 passes. No capacityreceipt, runentry/result, provider or Match yet.
+Commit/push this NEWallocation before ONErootentry; fresh passing SAMEprocess
+capacity afterstaticvalidation beforecharge. Sourcebb98878e held through
+futureterminal+unique retainedverification; no competingheavywork. Existing
+standing/600000approval only, everyotherbound/priorartifact immutable.
+Earlier active-prepare snapshots are history. No human-onlycheckpoint.
 
 ONE NEWv10 data-only prepare94959/PID10875 is ACTIVE atfixedbb98878e, never
 duplicate or run competingheavywork. Actualsource/lifetimegoal accepted5/5;
