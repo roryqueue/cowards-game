@@ -1,5 +1,19 @@
 # Plan 265-07 v10 helper draft
 
+## Final type correction
+
+Initial strict helper check75300 exited2: fixed literal reviewer/author
+comparison triggeredTS2367 and the allocation's nullable responseFactory
+type reached the CLI argument list. Root kept the independence check through
+Set<string> uniqueness and added an explicit nonnull response-directory guard
+before publication/reservation. Corrected strict helper check67187 exited0.
+No helper mode or empirical operation was invoked. Final raw hashes:
+
+- prepare-data.ts:ce07af105810d8cdab19b8208a19932b5fbda8a0a6be323f760aa3b351baf3cb
+- run-entry.ts:3c661bb7dc38361e879704a398de17adaabeeac6fe4f43c9023f2913eeabc00b
+
+The earlier root-pins hash snapshot below predates these two type fixes.
+
 ## Root completion pins — 2026-10-02
 
 Root observed gate43923 exit0 and all scoped checks closed. The actual
