@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 v7 consumed; unique retained66301 CLOSED exit1 RETAINED_INVOCATION; source-only repair diagnosis
+stopped_at: Phase265 IPC repair fixed a98b5c2b; independent source/helper reviews clean; owned suite62868 active; root full gate not started
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: retained66301 fails atfixed634b0e84; closedneverrerun; source taxonomy loss proven and incomplete-prefix mirror under diagnosis
+last_activity_desc: both synthetic RED defects repaired; focused and strict proof pass; independent clean review; unique whole owned suite62868 active
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,26 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current continuation — fixed IPC repair, unique owned suite active
+
+Checked Plan07 four-file IPC preservation supplement is implemented at
+a98b5c2be9410b63e944143e1b0b693fc5c303bf after both genuine synthetic RED gates.
+Focused classification, strict incomplete-failure replay and coherent negative
+guards pass; project-matching four-file strict types pass. Independent source
+review a5b7a3f4 is clean. The pre-existing nonempirical completed/all-success
+fixture shortcut is unchanged; strict completion applies when replay runs,
+always for empirical executions. Actual v7 inner transport cause remains unknown.
+ONE author whole owned-file suite62868/PID90594 is ACTIVE from10:26:09UTC.
+Never duplicate it or run a competing heavy gate. Source remains FIXED through
+actual result. Root's NEW private IPC source gate helper d221416d is independently
+reviewed clean at e971e1c2; no start/completion marker exists and it has NOT run.
+Current implementation ea34d793/source2bf94999. Root may start the ONE unchanged
+eight-command gate only after author suite closes. No fresh route starts before
+applicable gates. Closed v7/retained66301 remain immutable failures, never rerun
+or credited by this repair. Standing same-bounds fresh-route approval remains;
+no repeated literal is required. No LEAG/freeze/formation/holdout credit.
+Earlier current-continuation snapshots below are historical.
 
 ## Current terminal continuation — v7 and active unique retained verifier
 

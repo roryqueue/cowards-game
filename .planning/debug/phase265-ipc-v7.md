@@ -1,5 +1,5 @@
 ---
-status: awaiting_independent_plan_check_and_execution_dispatch
+status: fixed_source_independently_reviewed_owned_whole_suite_active
 trigger: fresh v7 third charged Match failed with normalized MALFORMED_IPC
 created: 2026-10-02
 updated: 2026-10-02
@@ -14,8 +14,23 @@ test: two bounded synthetic RED/GREEN regressions only after independent plan
 check and root's specific execution dispatch
 expecting: preserve typed classifications and strictly mirror failed-prefix
 replay, keeping failure/no-retry/accounting/privacy without positive credit
-next_action: independent check of Plan07 IPC error-preservation supplement;
-await separate root execution dispatch; source hold released, no execution yet
+next_action: await ONE author whole suite62868 at fixed a98b5c2b; then root's
+NEW independently reviewed unchanged eight-command gate, never duplicate
+
+## Current proof update
+
+Independent corrected plan check passed; root dispatched the four-file repair.
+Both synthetic RED regressions failed before either production edit. Minimal
+classification and strict failure-prefix mirror fixes plus coherent negative
+guards are committed through a98b5c2b. Focused tests and project-matching strict
+four-file types pass; source review a5b7a3f4 and new gate-helper review e971e1c2
+are clean. ONE author whole owned suite62868 remains active from10:26:09UTC,
+source fixed, no competing heavy work. Root full gate is NOT started.
+Detailed initial failed test/type attempts are retained in EXECUTION-v1.
+The unchanged nonempirical completed/all-success fixture shortcut precedes
+replay; strict completedtrue applies when replay runs (always empirical).
+No old verifier rerun, live Match or new route occurred. The sections below
+record the original diagnosis/dispatch boundary, not current pending execution.
 
 ## Symptoms
 
@@ -105,6 +120,9 @@ debug supplement within existing Phase265 Plan07, not a new numbered plan.
 
 root_cause: planner overwrites typed subprocess codes; retained replay rejects
   the live incomplete charged failure prefix; v7 inner cause remains unproven
-fix: not applied; bounded four-file preservation/mirror repair under Plan07
-verification: unique retained66301 CLOSED exit1; never rerun; TDD/gate not run
-files_changed: debug file and new Plan07 IPC error-preservation supplement only
+fix: applied in four owned source/test files through a98b5c2b under Plan07
+verification: both RED/GREEN and focused guards/types pass; independent reviews
+  clean; ONE whole owned suite62868 active; root full gate not started;
+  historical unique retained66301 CLOSED exit1 and must never rerun
+files_changed: planner supervised runtime/test and serious league runner/test;
+  supplemental planning/review/execution records only beyond that source scope
