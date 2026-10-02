@@ -10,6 +10,12 @@ import { labRoot, LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/con
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { SubprocessSystemFailure } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { admitPlannerSupervisorLifetime, createPlannerSupervisedRuntime, closePlannerRuntime } from "./v1-38-planner-supervised-runtime.js"
+it("prospective lifetime rejects forged and partial authority without changing benchmark admission", () => {
+  const base = { budgetRoot: labRoot("test", "budget"), attemptRoot: labRoot("test", "attempt"), containerName: "test", ownershipLabel: "test" }
+  expect(admitPlannerSupervisorLifetime(base, 24800)).toBe(120000)
+  expect(admitPlannerSupervisorLifetime({ ...base, benchmarkLifetimeMs: 3600000, observerHarness: {} as never }, 2200)).toBe(3600000)
+  for (const options of [{ prospectiveLifetimeAuthority: {}, prospectiveLifetimeMs: 600000 }, { prospectiveLifetimeMs: 600000 }, { prospectiveLifetimeAuthority: {} }]) expect(() => admitPlannerSupervisorLifetime({ ...base, ...options } as never, 24800)).toThrow()
+})
 import type { LeanContainerMatchTransport, LeanContainerPersistentStreamFactory } from "./v1-38-lean-container-match-session.js"
 import { buildLeanAuthenticatedHarnessSource } from "./v1-38-lean-container-match-session.js"
 

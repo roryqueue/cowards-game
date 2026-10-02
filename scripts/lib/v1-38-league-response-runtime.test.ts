@@ -74,7 +74,8 @@ describe("host-bound league behavioral probes", () => {
   })
 })
 import { enumerateLeagueResponseConditions } from "./v1-38-league-response-runtime.js"
-import { allocationFixture } from "../../packages/strategy-lab/src/league/allocation.test.js"
+import { allocationFixture, prospectiveLifetimeFixture } from "../../packages/strategy-lab/src/league/allocation.test.js"
+import * as allocationApi from "../../packages/strategy-lab/src/league/allocation.js"
 import { createLeagueExecutionAllocation } from "../../packages/strategy-lab/src/league/allocation.js"
 import { importedCandidateFixture } from "../../packages/strategy-lab/src/league/contracts.test.js"
 import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact } from "../../packages/strategy-lab/src/factory/repository.js"
@@ -90,6 +91,13 @@ import { createLeagueRepository } from "../../packages/strategy-lab/src/league/r
 import { LeagueRecordGraph, LeagueRetentionBudget } from "../run-v1-38-serious-league.js"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+it("prospective lifetime response enumeration preserves all score and independence arms", () => {
+  const allocation = (allocationApi as any).createProspectiveLeagueExecutionAllocationV2(prospectiveLifetimeFixture())
+  const cells = enumerateLeagueResponseConditions(allocation, allocation.initialCandidatePublicationRoots)
+  expect(cells).toHaveLength(72)
+  for (const purpose of ["score", "independence_left", "independence_right"]) expect(cells.filter((cell) => cell.purpose === purpose)).toHaveLength(24)
+  expect(allocation.operations.perMatchMilliseconds).toBe(600000)
+})
 
 /** Explicitly synthetic favorable response, never an empirical performance claim.
  * Real author/admission/supervision/measurement code consumes these inert records. */

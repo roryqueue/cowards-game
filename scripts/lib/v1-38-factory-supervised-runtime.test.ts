@@ -44,6 +44,13 @@ const admitted = () => {
 }
 
 describe("selected factory supervised runtime adapter", () => {
+  it("prospective lifetime rejects scalar and forged handle before runtime construction", () => {
+    const { admission } = admitted(), createRuntime = vi.fn()
+    const base = { admission, sourceBytes, budgetRoot: root("5"), attemptRoot: root("4"), createRuntime }
+    expect(() => createFactorySupervisedRuntime({ ...base, factoryLifetimeMs: 600000 })).toThrow()
+    expect(() => createFactorySupervisedRuntime({ ...base, prospectiveLifetimeAuthority: {}, prospectiveLifetimeMs: 600000 } as never)).toThrow()
+    expect(createRuntime).not.toHaveBeenCalled()
+  })
   it("rejects fabricated or mixed v4 construction grants before runtime creation", () => {
     const binding = { budgetRoot: root("1"), attemptRoot: root("2"), containerName: "fake", ownershipLabel: "fake" }
     expect(() => admitFactorySupervisorLifetime({ ...binding, factoryLifetimeMs: 240000, retryV4LifetimeGrant: {} as never })).toThrow()

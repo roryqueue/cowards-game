@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import * as allocationApi from "./allocation.js"
 import { execFileSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../contracts.js"
@@ -43,7 +44,33 @@ export const prospectiveFixture = (): ProspectiveLeagueExecutionAllocationInput 
     }),
   }
 }
-export const capacityFixture = (allocation = createProspectiveLeagueExecutionAllocation(prospectiveFixture())): LeagueCapacityReceiptInput => ({
+export const prospectiveLifetimeFixture = () => {
+  const input = prospectiveFixture(), { root: _root, schemaVersion: _schema, ...amendment } = input.amendment
+  const policy = { ...amendment.policy, operations: { ...amendment.policy.operations, perMatchMilliseconds: 600000 } }
+  const create = (allocationApi as any).createLeagueProspectiveAmendmentV2 ?? createLeagueProspectiveAmendment
+  return { ...input, operations: policy.operations, amendment: create({ ...amendment, policy, lifetimeApproval: "265-PROSPECTIVE-LIFETIME-APPROVAL-20261002" }) }
+}
+describe("prospective lifetime allocation", () => {
+  it("admits separately rooted exact ten-minute policy and preserves historical caps", () => {
+    const legacy = allocationFixture()
+    expect(createLeagueExecutionAllocation({ ...legacy, operations: { ...legacy.operations, perMatchMilliseconds: 120000 } }).operations.perMatchMilliseconds).toBe(120000)
+    expect(() => createLeagueExecutionAllocation({ ...legacy, operations: { ...legacy.operations, perMatchMilliseconds: 120001 } })).toThrow()
+    const v1 = createProspectiveLeagueExecutionAllocation(prospectiveFixture()), input = prospectiveLifetimeFixture()
+    const v2 = (allocationApi as any).createProspectiveLeagueExecutionAllocationV2(input)
+    expect(v2.operations.perMatchMilliseconds).toBe(600000); expect(v2.root).not.toBe(v1.root)
+    expect(v1.operations.perMatchMilliseconds).toBe(120000)
+    expect((allocationApi as any).admitAnyLeagueExecutionAllocation(v2)).toEqual(v2)
+    for (const milliseconds of [120000, 599999, 600001, 600000.5]) expect(() => (allocationApi as any).createProspectiveLeagueExecutionAllocationV2({ ...input, operations: { ...input.operations, perMatchMilliseconds: milliseconds } })).toThrow()
+    for (const key of Object.keys(input.operations)) if (key !== "perMatchMilliseconds") {
+      const operations = { ...input.operations, [key]: typeof (input.operations as any)[key] === "number" ? (input.operations as any)[key] + 1 : "drift" }
+      expect(() => (allocationApi as any).createProspectiveLeagueExecutionAllocationV2({ ...input, operations })).toThrow()
+    }
+    expect(() => (allocationApi as any).admitAnyLeagueExecutionAllocation({ ...v2, schemaVersion: v1.schemaVersion })).toThrow()
+    expect(() => (allocationApi as any).admitAnyLeagueExecutionAllocation({ ...v2, root: root("crossed") })).toThrow()
+    expect(() => createProspectiveLeagueExecutionAllocation(input as never)).toThrow()
+  })
+})
+export const capacityFixture = (allocation: any = createProspectiveLeagueExecutionAllocation(prospectiveFixture())): LeagueCapacityReceiptInput => ({
   allocationRoot: allocation.root, amendmentRoot: allocation.amendment.root, implementationRoot: allocation.implementationRoot, sourceRoot: allocation.amendment.sourceRoot, historicalAssessmentRoot: allocation.amendment.historicalAssessment.assessmentRoot,
   measuredAtMilliseconds: 1000, expiresAtMilliseconds: 301000, filesystemDevice: "fixture-device", freeFilesystemBytes: 210 * 2 ** 30, availableMemoryBytes: 4 * 2 ** 30, processHeadroomBytes: 2 ** 30,
   scale: { matrixMatches: 960, probeMatches: 1800, responseMatches: 1872, responseExecutionCopies: 2 },

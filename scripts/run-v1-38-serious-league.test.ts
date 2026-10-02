@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MATCH_KERNEL } from "../packages/engine/src/index.js"
 import { defaultRuntimeMetadata, admitCanonicalJsonValue } from "@cowards/spec"
 import { buildStrategyRevision } from "../packages/runtime-js/src/revision.js"
-import { allocationFixture, prospectiveFixture, capacityFixture } from "../packages/strategy-lab/src/league/allocation.test.js"
+import { allocationFixture, prospectiveFixture, prospectiveLifetimeFixture, capacityFixture } from "../packages/strategy-lab/src/league/allocation.test.js"
 import { importedCandidateFixture } from "../packages/strategy-lab/src/league/contracts.test.js"
 import { createLeagueExecutionAllocation, createLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt } from "../packages/strategy-lab/src/league/allocation.js"
 import { createLeagueRepository, recordLeagueCellStart, publishLeagueCellTerminal, publishLeagueArtifact } from "../packages/strategy-lab/src/league/repository.js"
@@ -34,6 +34,15 @@ vi.mock("node:fs", async (importOriginal) => {
 })
 afterEach(() => { descriptorSyncFailure.active = false; descriptorSyncFailure.error = null; vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 const temporary = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-command-test-"))); directories.push(directory); return directory }
+it("prospective lifetime preparation binds current reviewed roots before candidate reads", () => {
+  const input = prospectiveLifetimeFixture(), source = leagueCurrentSourceIdentity(), readCandidates = vi.fn(() => { throw Error("reached v2 candidate seam") })
+  expect(() => prepareProspectiveSeriousLeague(input, { factoryRepository: {} as never, fixture: { readCandidates } })).toThrow("SOURCE")
+  expect(readCandidates).not.toHaveBeenCalled()
+  const { root: _root, schemaVersion: _schema, ...amendment } = input.amendment
+  const current = { ...input, implementationRoot: source.implementationRoot, amendment: { ...amendment, implementationRoot: source.implementationRoot, sourceRoot: source.sourceRoot } }
+  // The constructor, not a stale precomputed root, must select prospective-v2.
+  expect(() => prepareProspectiveSeriousLeague(current, { factoryRepository: {} as never, fixture: { readCandidates } })).toThrow("reached v2 candidate seam")
+})
 const controlledGraphSyncs = () => {
   const pending: Array<(error?: Error) => Promise<void>> = []
   const syncFile = (fd: number) => new Promise<void>((resolve, reject) => {
