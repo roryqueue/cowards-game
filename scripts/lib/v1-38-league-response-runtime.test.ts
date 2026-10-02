@@ -92,6 +92,9 @@ import { LeagueRecordGraph, LeagueRetentionBudget } from "../run-v1-38-serious-l
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { issueProspectiveLeagueLifetimeAuthority, claimProspectiveLeagueLifetimeAuthority } from "./v1-38-league-prospective-lifetime.js"
+import { prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
+import { ingestNamedFactoryPacket } from "../ingest-v1-38-factory-packet.js"
+import type { FactorySupervisedRuntimeOptions } from "./v1-38-factory-supervised-runtime.js"
 it("prospective lifetime response enumeration preserves all score and independence arms", () => {
   const allocation = (allocationApi as any).createProspectiveLeagueExecutionAllocationV2(prospectiveLifetimeFixture())
   const cells = enumerateLeagueResponseConditions(allocation, allocation.initialCandidatePublicationRoots)
@@ -137,6 +140,68 @@ export const positiveResponseFixture = (initialSources: ReadonlySet<LabRoot>): N
     return { kind: "completed", privacy: "private_offline", transitions: [], accounting, result: { state: { ...state, soldiers: favorable ? state.soldiers : [], outcome }, events: [{ type: "MATCH_ENDED", payload: outcome }] } } as never
   } }
 }
+
+it.each([false, true])("prospective lifetime actual response provider wiring retains charge first, both seats/all arms; refused=%s", async (refused) => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-response-v2-wiring-")))
+  try {
+    const repository = createFactoryRepository(directory), put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw Error("fixture canonical"); return publishFactoryArtifact(repository, encoded.canonicalBytes) }, r = (value: string) => labRoot("response-v2-wiring", value)
+    const initial = [await importedCandidateFixture(1), await importedCandidateFixture(3), await importedCandidateFixture(5)], input = prospectiveLifetimeFixture()
+    const { root: _root, schemaVersion: _schema, ...amendment } = input.amendment
+    const updated = allocationApi.createLeagueProspectiveAmendmentV2({ ...amendment, bases: amendment.bases.map((base, index) => ({ ...base, publicationArtifactRoot: initial[index]!.closure.candidatePublicationArtifactRoot, candidateAdmissionRoot: initial[index]!.candidateAdmission.root, sourceRoot: initial[index]!.candidateAdmission.candidate.proposal.source.root, supervisionArtifactRoot: initial[index]!.input.supervisionArtifactRoot })) })
+    const allocation = allocationApi.createProspectiveLeagueExecutionAllocationV2({ ...input, amendment: updated, initialCandidatePublicationRoots: updated.bases.map((base) => base.publicationArtifactRoot).sort(), independenceReferencePublicationRoot: updated.bases[0]!.publicationArtifactRoot, outputDirectories: { ...input.outputDirectories, responseFactory: directory } }), job = allocation.rounds[0]!.jobs[0]!
+    const ledger = declareRedTeamAllocation({ phase: 265, evidenceClass: allocation.evidenceClass, authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes }), start = startRedTeamAttempt({ ledger, channel: job.channel, roundRoot: r("round"), candidateRoot: initial[0]!.candidateAdmission.candidate.root, participantId: job.participantId, reviewerId: job.reviewerId, disclosureRoot: job.disclosureArtifactRoot, provenanceRoot: job.provenanceArtifactRoot, inputRoot: job.producerRequestArtifactRoot, retryParentRoot: null, reservation: job.reservation }).starts[0]!
+    const records = new Map<LabRoot, { kind: string; value: any }>(), captures: Array<{ chargeRoot: LabRoot; charge: any; options: any; identity: FactorySupervisionProvider["identity"] }> = [], synthetic = positiveResponseFixture(new Set(initial.map((entry) => entry.candidateAdmission.candidate.proposal.source.root)))
+    let retainedCharge: LabRoot | undefined, dispatches = 0, runs = 0, closes = 0
+    const stop = Error("bounded synthetic response stop"), refusal = Error("refused response Match retention")
+    await expect(produceLeagueResponse({ allocation, job, start, startArtifactRoot: put(start), targetArtifactRoot: put({ roundRoot: start.roundRoot, candidateRoot: start.candidateRoot }), remainingWallMilliseconds: allocation.operations.wallClockMilliseconds, repository, opponents: initial.map((entry) => ({ candidateRoot: entry.candidateAdmission.candidate.root, closure: entry.closure })), threshold: { repository: initial[0]!.factoryRepository, artifactRoot: initial[0]!.candidateAdmission.importEvidence!.thresholdArtifactRoot }, retention: {
+      append(kind, value) {
+        if (kind === "response-match-start" && refused) throw refusal
+        const recordRoot = labRoot("response-v2-wiring-record", { kind, value }); records.set(recordRoot, { kind, value })
+        if (kind === "response-match-start") retainedCharge = recordRoot
+        return recordRoot
+      }, beforeDispatch() { if (dispatches++ === 9) throw stop; retainedCharge = undefined }, beforeInvocation() {},
+    }, fixture: {
+      // Inert deterministic packet ingestion only; no author/model or Strategy
+      // execution. The actual response branch builds revision/admission/options.
+      author: async () => {
+        const result = await ingestNamedFactoryPacket({ producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", producerInput: { split: "development", doctrineFamily: "mock-response-wiring", provider: { providerId: "source-fixture", modelId: "local", modelVersion: "test", settingsRoot: r("settings"), promptRoot: r("prompt"), contextRoot: r("context") }, build: { buildRoot: r("build"), toolchainRoot: r("toolchain") }, lineage: { predecessorRoot: LAB_ADMITTED_ROOTS.currentStartRoot, correctionRoot: null, retryParentRoot: null } } }, repository)
+        if (result.disposition !== "accepted") throw Error("fixture ingestion")
+        return { disposition: "produced", startRoot: start.root, ingestionArtifactRoot: result.artifactRoot, evidenceArtifactRoot: put({ fixture: "author" }), modelTokens: 0, elapsedMilliseconds: 0 }
+      }, host: { createFactorySupervisedRuntime(request) {
+        expect(retainedCharge).toBeDefined()
+        const chargeRoot = retainedCharge!, charge = records.get(chargeRoot)!.value, options = request as typeof request & FactorySupervisedRuntimeOptions
+        const measured = captures.length % 2 === 0, seat = measured ? charge.side : charge.side === "bottom" ? "top" : "bottom", matchId = `league-response-${chargeRoot.slice(7, 31)}`
+        expect(options).toMatchObject({ prospectiveLifetimeMs: 600000, factoryLifetimeMs: 600000, budgetRoot: allocation.root, attemptRoot: measured ? start.root : chargeRoot, matchId, containerName: `${matchId}-${measured ? 0 : 1}`, ownershipLabel: `league-${allocation.root.slice(7, 25)}`, image: allocation.operations.image, invocationLimit: allocation.operations.perProviderInvocations })
+        const provider = synthetic.host.createFactorySupervisedRuntime(request), { revisionId, sourceRoot, executableRoot, tupleRoot, runtimeLimitsRoot, image } = provider.identity
+        const runtime = prospectiveLeagueRuntimeBinding(request.admission, { revisionId, sourceRoot, executableRoot, tupleId: MATCH_KERNEL.tupleId, tupleRoot, runtimeLimitsRoot, image })
+        expect(options.prospectiveLifetimeAuthority).toMatchObject({ seat, runtime })
+        const binding = { budgetRoot: request.budgetRoot, attemptRoot: request.attemptRoot, matchId: options.matchId!, containerName: options.containerName!, ownershipLabel: options.ownershipLabel!, seat, runtime }
+        expect(() => claimProspectiveLeagueLifetimeAuthority(options.prospectiveLifetimeAuthority!, { ...binding, attemptRoot: measured ? chargeRoot : start.root }, 600000, "factory")).toThrow("CLAIM_BINDING")
+        for (const layer of ["factory", "planner"] as const) {
+          expect(claimProspectiveLeagueLifetimeAuthority(options.prospectiveLifetimeAuthority!, binding, 600000, layer)).toBe(600000)
+          expect(() => claimProspectiveLeagueLifetimeAuthority(options.prospectiveLifetimeAuthority!, binding, 600000, layer)).toThrow("CLAIM_REUSED")
+        }
+        captures.push({ chargeRoot, charge, options, identity: provider.identity })
+        return { ...provider, close() { closes++; return provider.close() } }
+      } }, run: async (request) => { runs++; return synthetic.run(request) },
+    } })).rejects.toBe(refused ? refusal : stop)
+    if (refused) { expect(captures).toHaveLength(0); expect(runs).toBe(0); expect(closes).toBe(0); return }
+    expect(runs).toBe(9); expect(captures).toHaveLength(18); expect(closes).toBe(18)
+    for (const side of ["bottom", "top"]) for (const purpose of ["score", "independence_left", "independence_right"]) expect(captures.some((row) => row.charge.side === side && row.charge.purpose === purpose)).toBe(true)
+    for (let index = 0; index < captures.length; index += 2) {
+      const measured = captures[index]!, opposing = captures[index + 1]!
+      expect(measured.chargeRoot).toBe(opposing.chargeRoot)
+      expect(measured.charge.parentStartRoot).not.toBe(start.root) // Factory charge is not the red-team charge.
+      expect(records.get(measured.chargeRoot)?.kind).toBe("response-match-start")
+      expect(measured.identity.attemptRoot).toBe(start.root); expect(opposing.identity.attemptRoot).toBe(measured.chargeRoot)
+      expect(measured.options.prospectiveLifetimeAuthority).not.toBe(opposing.options.prospectiveLifetimeAuthority)
+      if (measured.charge.purpose === "independence_right") {
+        expect(measured.identity.sourceRoot).toBe(opposing.identity.sourceRoot)
+        expect(measured.identity).not.toEqual(opposing.identity)
+      }
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }) }
+}, 180000)
 
 it("charges separate common-reference counterfactual cells on the entire multi-seed product", () => {
   const base = allocationFixture(), allocation = createLeagueExecutionAllocation({ ...base, seedBlocks: ["block-one", "block-two"], opportunities: { ...base.opportunities, matches: 400 } })
