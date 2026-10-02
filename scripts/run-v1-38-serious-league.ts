@@ -705,6 +705,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
   let ledger = declareRedTeamAllocation({ phase: 265, evidenceClass: allocation.evidenceClass, authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes })
   const startsByJob = new Map<string, LabRoot>(), completedJobs: string[] = []
   let currentMatrices: CompleteMatrix[] = [], terminalAdvance: ReturnType<typeof advanceLeagueRound> | null = null
+  let failureEvidenceFault = false
   try {
     const initial: CompleteMatrix[] = []
     for (const seed of allocation.seedBlocks) { const matrix = await session.matrix(candidates, seed); initial.push(matrix); roots.push(matrix.recordRoot) }
@@ -741,7 +742,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
               const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot)
               ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null })
               roots.push(session.graph.append("red-team-terminal", { jobId: job.id, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
-            } catch { /* Secondary failure evidence cannot replace the initiating error. */ }
+            } catch { failureEvidenceFault = true } // Incomplete failure evidence cannot support a returned head.
             throw error
           }
           roots.push(produced.recordRoot); production.push(produced)
@@ -789,7 +790,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
             const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot)
             ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null })
             roots.push(session.graph.append("red-team-terminal", { jobId: job.id, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
-          } catch { /* Secondary failure evidence cannot replace the initiating error. */ }
+          } catch { failureEvidenceFault = true } // Incomplete failure evidence cannot support a returned head.
           throw error
         }
       }
@@ -811,6 +812,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
     return { ...value, headRoot, empiricalRequirementsComplete: false }
   } catch (error) {
     await session.graph.settlePending()
+    if (failureEvidenceFault) throw error
     try {
       for (const start of ledger.starts.filter((start) => !ledger.terminals.some((terminal) => terminal.startRoot === start.root))) {
         const evidenceRoot = session.graph.append("red-team-process-failure", { startRoot: start.root, error: error instanceof Error ? error.message : "unknown" }); roots.push(evidenceRoot)

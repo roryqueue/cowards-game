@@ -391,10 +391,10 @@ describe("CR-03 public runner initiating-error handoff", () => {
   beforeEach(async () => { candidates = [await candidate(1), await candidate(3)] })
   it.each([
     { path: "ordinary", fault: "persistent" }, { path: "ordinary", fault: "run-failure" }, { path: "ordinary", fault: "none" },
-    { path: "development", fault: "red-team-process-failure" }, { path: "development", fault: "red-team-terminal" },
-    { path: "independent", fault: "red-team-process-failure" }, { path: "independent", fault: "red-team-terminal" },
+    { path: "development", fault: "red-team-process-failure", regression: "CR-04" }, { path: "development", fault: "red-team-terminal", regression: "CR-04" },
+    { path: "independent", fault: "red-team-process-failure", regression: "CR-04" }, { path: "independent", fault: "red-team-terminal", regression: "CR-04" },
     { path: "development", fault: "persistent" }, { path: "independent", fault: "persistent" },
-  ])("$path public boundary preserves the initiating error with $fault secondary faults", async ({ path, fault }) => {
+  ])("$path public boundary preserves the initiating error with $fault secondary faults $regression", async ({ path, fault }) => {
     const base = allocationFixture(), syncs = controlledGraphSyncs()
     const primary = Error("primary CR-03 dependency error"), secondary = Error("secondary CR-03 publication error")
     let ready!: () => void, graph!: LeagueRecordGraph, secondaryActive = false, faults = 0, guestCalls = 0, closes = 0, producerCalls = 0
@@ -459,16 +459,20 @@ describe("CR-03 public runner initiating-error handoff", () => {
     expect(guestCalls).toBe(1); expect(closes).toBe(2); expect(graph.invocationPending).toBe(false)
     expect(graph.budget!.usage.workBytes).toBeGreaterThanOrEqual(usage.workBytes); expect(graph.budget!.usage.workRecords).toBeGreaterThanOrEqual(usage.workRecords)
     expect(() => graph.beforeInvocation({})).toThrow("RETENTION_DISPATCH_STOP")
-    if (["persistent", "run-failure"].includes(fault)) {
+    if (response || ["persistent", "run-failure"].includes(fault)) {
       expect(outcome).toEqual({ error: primary }); expect("error" in outcome && outcome.error).toBe(primary)
       const retained = readLeagueRecordGraph(repository, graph.latestRoot!, allocation.operations)
       expect(retained.roots("run-failure")).toEqual([])
+      if (response) { expect(appendKinds).not.toContain("run-failure"); expect(retained.roots("red-team-start")).toHaveLength(1); expect(retained.roots("red-team-terminal")).toEqual([]) }
       if (fault === "persistent") { expect(graph.latestRoot).toBe(prior); expect(retained.roots("red-team-terminal")).toEqual([]) }
     } else {
       if (!("result" in outcome)) throw outcome.error
       expect(outcome.result.processValidity).toBe("process_invalid")
       const retained = readLeagueRecordGraph(repository, outcome.result.headRoot, allocation.operations)
       expect(retained.get(outcome.result.headRoot)).toMatchObject({ kind: "run-failure", value: { error: primary.message, processValidity: "process_invalid" } })
+      expect(retained.roots("red-team-start")).toEqual([]); expect(retained.roots("red-team-terminal")).toEqual([])
+      const ledger = redTeamModule.declareRedTeamAllocation({ phase: 265, evidenceClass: allocation.evidenceClass, authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes })
+      expect(ledger.starts).toEqual([]); expect(ledger.terminals).toEqual([]); expect(retained.get(outcome.result.headRoot)!.value.ledgerRoot).toBe(ledger.root)
     }
     const retained = readLeagueRecordGraph(repository, graph.latestRoot!, allocation.operations)
     expect(retained.roots(response ? "response-runtime-invocation" : "runtime-invocation")).toEqual([])
