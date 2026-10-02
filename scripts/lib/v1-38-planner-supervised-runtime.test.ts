@@ -8,12 +8,13 @@ import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js
 import { buildFeasibilityCorpus } from "../../packages/strategy-lab/src/feasibility-protocol.js"
 import { labRoot, LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js"
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
+import { SubprocessSystemFailure } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { admitPlannerSupervisorLifetime, createPlannerSupervisedRuntime, closePlannerRuntime } from "./v1-38-planner-supervised-runtime.js"
 import type { LeanContainerMatchTransport, LeanContainerPersistentStreamFactory } from "./v1-38-lean-container-match-session.js"
 import { buildLeanAuthenticatedHarnessSource } from "./v1-38-lean-container-match-session.js"
 
 const source = "export default { selectActivations(input) { return { activationOrders: [], strategyMemory: input.strategyMemory }; }, soldierBrain(input) { return { action: { type: 'TURN_TO_STONE' }, soldierMemory: input.soldierMemory }; } };"
-const runtime = { ...defaultRuntimeMetadata("typescript"), adapter: { ...defaultRuntimeMetadata("typescript").adapter, id: "runtime-js-container-subprocess" } }
+const runtime = { ...defaultRuntimeMetadata("typescript"), adapter: { ...defaultRuntimeMetadata("typescript").adapter, id: "runtime-js-container-subprocess" as const } }
 const revision = () => buildStrategyRevision({ source, runtime })
 const corpus = buildFeasibilityCorpus()
 const root = labRoot("synthetic-host-test", 1)
@@ -32,11 +33,17 @@ const fixture = (fault?: string) => {
   const streamFactory: LeanContainerPersistentStreamFactory = () => ({ exchange(frame) {
     const q = JSON.parse(frame); frames.push(q)
     if (fault === "timeout") throw Error("synthetic timeout")
+    if (fault === "unknown") throw Error("private source objective memory stderr stack")
+    if (fault === "forged-code") throw { code: "SUBPROCESS_EXIT", name: "SubprocessSystemFailure", message: "private source objective memory stderr stack" }
+    if (fault === "forged-name") throw Object.assign(Error("private source objective memory stderr stack"), { name: "SubprocessSystemFailure", code: "SUBPROCESS_SIGNAL" })
+    if (fault === "unknown-typed-code") throw new SubprocessSystemFailure("UNRECOGNIZED" as never, "private source objective memory stderr stack")
+    if (fault === "typed-spawn") throw new SubprocessSystemFailure("SPAWN_FAILED", "private source objective memory stderr stack", { stderr: "private payload" })
     const r = JSON.parse(Buffer.from(q.payloadBase64, "base64").toString())
     const result = fault === "violation" ? { ok: false, violation: { type: "FORBIDDEN_CAPABILITY", message: "synthetic blocked" } }
       : { ok: true, value: r.methodName === "selectActivations" ? { activationOrders: [], strategyMemory: r.input.strategyMemory } : { action: { type: "TURN_TO_STONE" }, soldierMemory: r.input.soldierMemory } }
     const timing = q.timingBinding && fault !== "missing-timing" ? { binding: { ...q.timingBinding, ...(fault === "forged-timing" ? { inputRoot: "wrong" } : {}) }, durationMs: 2, complete: true } : undefined
-    return Buffer.from(JSON.stringify({ requestId: fault === "request" ? 999 : q.requestId, status: fault === "exit" ? 7 : 0, signal: null, stdoutBase64: Buffer.from(JSON.stringify(result)).toString("base64"), stderrBase64: "", ...(timing ? { timing } : {}) }) + "\n")
+    const inner = fault === "inner-surplus" ? { ...result, private: "private source objective memory stderr stack" } : fault === "inner-malformed" ? null : result
+    return Buffer.from(JSON.stringify({ requestId: fault === "request" ? 999 : q.requestId, status: fault === "exit" ? 7 : 0, signal: fault === "signal" ? "SIGKILL" : null, stdoutBase64: Buffer.from(JSON.stringify(inner)).toString("base64"), stderrBase64: fault === "stdio" ? Buffer.from("private source objective memory stderr stack").toString("base64") : "", ...(timing ? { timing } : {}) }) + "\n")
   }, close() { return { status: fault === "cleanup" ? 1 : 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) } } })
   return { transport, streamFactory, frames, calls }
 }
@@ -48,6 +55,22 @@ describe("planner selected-v1.19 host with injected transport only", () => {
     const opts = options("exit"), host = createPlannerSupervisedRuntime(opts)
     const evidence = host.invoke(request("selectActivations"), host.identity)
     expect(evidence.result).toMatchObject({ ok: false, systemFailure: { code: "SUBPROCESS_EXIT", retryable: false } })
+  })
+  it.each([
+    ["exit", "SUBPROCESS_EXIT"], ["signal", "SUBPROCESS_SIGNAL"], ["stdio", "STDIO_CAP_EXCEEDED"], ["typed-spawn", "SPAWN_FAILED"],
+    ["request", "MALFORMED_IPC"], ["inner-surplus", "MALFORMED_IPC"], ["inner-malformed", "MALFORMED_IPC"],
+    ["unknown", "MALFORMED_IPC"], ["forged-code", "MALFORMED_IPC"], ["forged-name", "MALFORMED_IPC"], ["unknown-typed-code", "MALFORMED_IPC"],
+  ])("keeps %s typed-or-fallback failure private, charged once and closed", (fault, code) => {
+    const opts = options(fault), host = createPlannerSupervisedRuntime(opts)
+    const evidence = host.invoke(request("selectActivations"), host.identity)
+    expect(evidence.result).toEqual({ ok: false, violation: { type: "INVALID_OUTPUT", message: "Runtime system failure" }, systemFailure: { code, retryable: false } })
+    expect(evidence).toMatchObject({ charged: true, completed: false, outputBytes: 0, ordinal: 0 })
+    expect(host.verify(evidence)).toBe(true); expect(host.verify(structuredClone(evidence))).toBe(false)
+    const calls = opts.calls.length
+    expect(() => host.invoke(request("selectActivations", "second"), host.identity)).toThrow("LAB_RUNTIME_STOPPED")
+    expect(host.accounting).toEqual([evidence]); expect(opts.frames).toHaveLength(1)
+    expect(opts.calls).toHaveLength(calls)
+    expect(closePlannerRuntime(host)).toEqual({ cleanupComplete: true, orphanedChild: false })
   })
   it("rejects forged, grantless, and mixed v4 lifetime requests without constructing a container", () => {
     for (const key of ["observerHarness", "transport", "streamFactory", "benchmarkLifetimeMs"]) expect(() => createPlannerSupervisedRuntime({ ...options(), retryV4LifetimeGrant: {} as never, [key]: undefined })).toThrow("RETRY_V4_CONSTRUCTOR_OVERRIDE")
@@ -111,7 +134,7 @@ describe("planner selected-v1.19 host with injected transport only", () => {
   })
   it.each(["image", "abi", "source", "limits"])("rejects wrong %s before container creation", (fault) => {
     const opts = options(); const changed = structuredClone(opts.revision)
-    if (fault === "abi") changed.runtime.abiVersion = "strategy-runtime-abi-v1.18"
+    if (fault === "abi") changed.runtime.abiVersion = "strategy-runtime-abi-v1.18" as typeof changed.runtime.abiVersion
     if (fault === "source") changed.sourceHash = "0".repeat(64)
     if (fault === "limits") changed.runtime.limits.timeoutMs = 50
     expect(() => createPlannerSupervisedRuntime({ ...opts, revision: changed, ...(fault === "image" ? { image: "other" } : {}) })).toThrow()
