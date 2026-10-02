@@ -2,6 +2,11 @@
 
 ## Current verified progress — Phases262–264 complete
 
+ONE freshv9 entry37785/PID95849 ACTIVE from12:40:48.973UTC,static validation
+before fresh same-process capacity. Allocation committed/pushed d1cd76ed.
+Source fixed through terminal/unique retained check; no duplicate or competing
+heavywork. No terminal yet and no LEAG/freeze credit; see STATE currententry.
+
 Freshv9 prepare75014 CLOSED exit0 atcf217782/raw40c6d317. Static capacity85029
 admits sizing only,NOTlive receipt. Root initializes exact NEW empty0700league
 directory after draft+prepare; positiveguard73111 passes before markers.

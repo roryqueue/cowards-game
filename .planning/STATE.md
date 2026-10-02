@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 freshv9 allocation published; new directory guard passed; commit/push before unique live entry
+stopped_at: Phase265 ONE freshv9 entry37785/PID95849 active; static validation before same-process capacity, do not duplicate
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: unique prepare75014 closed; exact new directory initialized and positive guard73111 passed; allocation34172 published, no Match or live receipt yet
+last_activity_desc: freshv9 allocation committed/pushed d1cd76ed; ONE entry starts12:40:48.973UTC at5c8c301b, terminal absent
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,19 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current continuation — ONE v9 main-orchestrator entry active
+
+Entry37785/PID95849 starts2026-10-02T12:40:48.973Z atmarker5c8c301b, allocation
+cf217782. Canonical allocation publication committed/pushed d1cd76ed BEFORE
+entry. Directory guard passed; entry now static validation BEFORE fresh same-
+process capacity. Terminal/failure absent at12:41UTC; do not start/duplicate
+entry, verifier, sourcegate or heavy tests. Maina98b5c2b/ea34d793/2bf94999 stays
+fixed through terminal and ONE unique ordinary retained verification, only if
+a real head exists. No stale/input-only receipt may admit charge/dispatch.
+Standing same-bounds human approval applies; all older consumedroutes immutable.
+No LEAG/freeze/formation/holdout/public/count/production credit. Observe actual
+process/markers, not earlier ready-entry snapshots; no human checkpoint now.
 
 ## Current continuation — fresh v9 canonical allocation, live admission next
 
