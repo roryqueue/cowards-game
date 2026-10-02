@@ -14,9 +14,12 @@ fresh capacity then ended process-invalid after one charged cell/485 completed
 invocations at00:58:56UTC. Unique read-only retained verifier26421 completed exit0
 authenticating process_invalid/issued=false/empiricalRequirementsComplete=false.
 Reviewed canonical-literal repair6bd77247 is integrated, independent review
-zero findings and focused44/44tests pass; unique full source gate44285 is active.
+zero findings and focused44/44tests pass; all eight exact CI commands passed,
+including382league+3tactical tests. Correctly scoped engine149/runtime277tests,
+core types and formatting pass; the earlier wrong-cwd invocation is recorded.
 Its bounded~29percent encoder-component saving is not a whole-Match prediction.
-V5 helpers remain draft-only; no fresh allocation/capacity/execution yet.
+V5 packets and final typed helpers are independently reviewed; no fresh
+allocation/capacity/execution yet. See265-07-CANONICAL-LITERAL-SOURCE-GATE-v1.md.
 No LEAG/freeze credit. See
 265-07-DEPENDENCY-BARRIER-PROOF-v1.md,265-07-REPAIRED-SOURCE-GATE-v1.md and
 265-07-EMPIRICAL-PREPARATION-v8.md and265-07-EMPIRICAL-RESULT-v4.md.

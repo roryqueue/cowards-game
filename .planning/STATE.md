@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 v4 retained verification closed; canonical-literal source gate44285 active
+stopped_at: Phase265 v5 preparation; canonical-literal source gate accepted
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: v4 failed prefix authenticated; reviewed canonical-literal source6bd77247 integrated with full source gate pending
+last_activity_desc: reviewed source6bd77247 passes league gate and corrected engine/runtime checks; v5 packet review accepted
 progress:
   total_phases: 9
   completed_phases: 3
@@ -43,11 +43,19 @@ source6bd772477c3a4617dbef05018be45a95de980bc8 is now integrated: implementation
 findings. Root's six focused suites pass44/44; the earlier source-only comparison
 preserves40 corpus vectors and16 retained-row bytes and measures~29percent
 encoder-component savings, not whole-Match timing. ONE fail-fast complete source
-gate44285 is ACTIVE: exact eight Phase265 CI commands, then engine/runtime suites,
-core types and two-file format check. Keep main source fixed; do not duplicate it.
-Private v5 helpers are corrected and independently rereviewed; root's data-only
-draft27353 completed exit0. Eleven new jobs await actual independent packet
-review. No v5 allocation, capacity receipt or execution exists. See canonical-literal
+gate44285 passed all eight exact Phase265 CI commands. Its additional broad
+repo-root runtime invocation failed two package-relative path tests; correct
+package-cwd runtime277tests and separate engine149tests now pass. Core types
+and two-file format check pass. See265-07-CANONICAL-LITERAL-SOURCE-GATE-v1.md.
+Keep main source fixed; do not duplicate the completed gate.
+Root's data-only draft27353 completed exit0. Actual independent review accepts
+all eleven new jobs. Data-only compile57609 caught a missing-directory bug
+before creating records or consuming an allocation/Match. Root fixed that and
+canonical job/channel ID preparation; final helper rereviewv12 is clean and
+strict no-emit types pass. Compile64800 published45inert records, and fresh
+unrooted input46436 is prepared at rawea9f8ef2. Unique data-only
+prepare46814 is active; do not duplicate it.
+No v5 allocation, capacity receipt or execution exists. See canonical-literal
 proof/review. Standing approval covers a distinct same-bounds route after gates.
 LEAG/Phase265 completion and freeze remain pending.
 
