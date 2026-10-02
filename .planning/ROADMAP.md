@@ -2,6 +2,13 @@
 
 ## Current verified progress — Phases262–264 complete
 
+Freshv8 unique prepare3155 completes atd7366057/raw64bdd513/24053B. Static
+capacity9970 admits inherited size quantities only at19395f1e,NOT a live receipt.
+Canonical publication22725 completes same d7366057 in newv8 allocation path.
+Commit/push precede rootONEentry; fresh same-process capacity before charging.
+Source fixed through terminal/unique retained check; no competing heavy work.
+No Match yet or phase/LEAG/freeze credit. Standing bounds unchanged.
+
 Freshv8 actual eleven-job reviewc7b61c00 accepts all with174521ms real windows;
 unique compile63284 creates45inertrecords/packet7691225f, input99172 completes
 d1cc3823. Root's ONE data-only prepare3155 is active; no Match or receipt yet.

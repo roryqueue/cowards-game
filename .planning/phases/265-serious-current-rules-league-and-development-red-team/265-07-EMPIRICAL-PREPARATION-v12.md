@@ -1,7 +1,7 @@
 ---
 phase: 265-serious-current-rules-league-and-development-red-team
 plan: 07
-status: source-draft-independently-reviewed-pending-types-and-root-source-gate
+status: prepared-static-capacity-admitted-canonical-allocation-published
 date: 2026-10-02
 empirical_authority: none
 ---
@@ -9,6 +9,17 @@ empirical_authority: none
 # Phase 265-07 — prospective league-v8 IPC-route preparation draft
 
 ## Actual root continuation — reviewed, data-only preparation active
+
+Prepare3155 CLOSED exit0 at semantic allocationd7366057/raw64bdd513/24053B.
+Static capacity-input9970 CLOSED exit0:plan19395f1e/6369B,reconciliationdf4f5145/
+4010B,receiptCreatedfalse. Numeric quantities are inherited static sizing,
+not fresh host observations. Canonical publication22725 CLOSED exit0 at new
+.planning/artifacts/v1.38-phase-265-allocation-v8.json, same semantic/rawidentity.
+These steps are CLOSED; never duplicate. Root commits/pushes before uniqueentry;
+no Match/charge/livecapacityreceipt yet. Source stays fixeda98b5c2b through
+entry terminal and unique retained verification. Same-process fresh capacity
+before any charge/dispatch remains mandatory. All frozen scopes/bounds intact.
+The active-prepare paragraph below is a historical snapshot.
 
 Root's source gate95810 CLOSED pass450+3tests/build/types/scans at11:26:04.572UTC;
 correct-cwd engine149/runtime277,core build and privatehelper types4395 pass.

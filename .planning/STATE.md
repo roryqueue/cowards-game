@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 freshv8 review/compile/input complete; ONE data-only prepare3155 active; no capacity receipt or Match
+stopped_at: Phase265 freshv8 preparation complete; allocationd7366057 published; next unique entry with fresh same-process capacity, no Match yet
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: actual independent eleven-job review accepts all; root unique compile63284/input99172 pass; prepare3155 active at fixed source
+last_activity_desc: prepare3155 CLOSED exit0; staticcapacity9970 admitted without receipt; canonicalallocation22725 published d7366057
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,23 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current continuation — fresh v8 allocation published, live admission next
+
+ONE data-only prepare3155 CLOSED exit0 at prospective allocationd7366057,
+raw64bdd513/24053bytes. ONE static capacity-input9970 exits0 at plan19395f1e/
+6369bytes and reconciliationdf4f5145/4010bytes:inherited historical quantities
+only,receiptCreatedfalse,not a current host observation. ONE canonical allocation
+publication22725 exits0 at .planning/artifacts/v1.38-phase-265-allocation-v8.json,
+same semanticd7366057/raw64bdd513. Never repeat any completed preparation step.
+Root commits/pushes this allocation before ONE live entry. Source stays fixed
+a98b5c2b/ea34d793/2bf94999 through entry terminal and its unique retained check.
+No Match/live receipt/charge exists yet. Unique root entry must freshly measure
+and admit same-process capacity before charge/dispatch; existing input is NOT
+a receipt. No competing heavy work during live entry/retained verification.
+Standing same-bounds human approval applies, no repeated literal. Closedv7/
+failed66301 immutable. No LEAG/freeze/formation/holdout/public/count/production
+credit. Earlier active-preparation snapshots below are historical.
 
 ## Current continuation — fresh v8 reviewed preparation active
 
