@@ -154,7 +154,8 @@ describe("prospective lifetime issued factory authority", () => {
     expect(() => createFactorySupervisedRuntime(options)).toThrow("CLAIM_REUSED"); expect(creator).toHaveBeenCalledOnce()
     const wrapper = wrapLeagueProbeProvider(runtime, undefined, { minX: 0, maxX: 11 }, async () => { now = 600000 })
     now = 599999
-    const input = buildFeasibilityCorpus().selectActivations[0]!.input
+    const soldiers = [{ id: "lifetime-soldier", ownerPlayerId: "bottom", status: "ACTIVE", position: { x: 2, y: 11 }, facing: "UP", lastSuccessfulMoveDirection: null }]
+    const input = StrategyInputV119Schema.parse({ phaseNumber: 1, roundNumber: 1, activationCount: 1, board: { bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 }, soldiers, terrainStones: [] }, mySoldiers: soldiers, enemySoldiers: [], strategyMemory: {}, initialInitiativePlayerId: "bottom", hasInitialInitiative: true, roundInitiativePlayerId: "bottom", hasRoundInitiative: true })
     await wrapper.invoke({ kind: "selectActivations", requestId: "unit", input } as never, runtime.identity)
     await expect(wrapper.invoke({ kind: "selectActivations", requestId: "next", input } as never, runtime.identity)).rejects.toThrow("LIFETIME_EXHAUSTED")
     expect(calls).toBe(1); expect(close).toHaveBeenCalledOnce()
