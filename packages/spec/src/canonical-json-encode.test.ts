@@ -1,17 +1,29 @@
 import { Buffer } from "node:buffer"
+import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { encodeCanonicalJson } from "./canonical-json-encode.js"
 import { parseCanonicalJson } from "./canonical-json-parse.js"
-import type { CanonicalJsonLimits, CanonicalJsonScanOptions } from "./canonical-json-scan.js"
+import {
+  CANONICAL_JSON_V1_LIMITS,
+  type CanonicalJsonContext,
+  type CanonicalJsonLimits,
+  type CanonicalJsonScanOptions,
+} from "./canonical-json-scan.js"
 import type { JsonValue } from "./types.js"
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..")
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+)
 const corpus = JSON.parse(
   readFileSync(
-    path.join(repoRoot, "packages/spec/src/fixtures/canonical-json-v1-1-vectors.json"),
+    path.join(
+      repoRoot,
+      "packages/spec/src/fixtures/canonical-json-v1-1-vectors.json",
+    ),
     "utf8",
   ),
 ) as {
@@ -49,7 +61,8 @@ describe("canonical JSON v1 iterative encoder", () => {
     )
     expect(vectors).toHaveLength(40)
     for (const vector of vectors) {
-      if (vector.operation === "host-encode") throw new Error(`unexpected host success ${vector.id}`)
+      if (vector.operation === "host-encode")
+        throw new Error(`unexpected host success ${vector.id}`)
       const raw = readFileSync(path.join(repoRoot, vector.rawPath))
       const parsed = parseCanonicalJson(raw, {
         context: vector.context,
@@ -64,12 +77,98 @@ describe("canonical JSON v1 iterative encoder", () => {
       })
       expect(encoded.ok, `${vector.id} encode`).toBe(true)
       if (!encoded.ok) continue
-      const expected = readFileSync(path.join(repoRoot, vector.expectation.canonicalPath))
+      const expected = readFileSync(
+        path.join(repoRoot, vector.expectation.canonicalPath),
+      )
       const actual = Buffer.from(encoded.bytes)
-      expect(actual.byteLength, `${vector.id} byte length`).toBe(expected.byteLength)
+      expect(actual.byteLength, `${vector.id} byte length`).toBe(
+        expected.byteLength,
+      )
       expect(actual.equals(expected), `${vector.id} canonical bytes`).toBe(true)
+      expect(
+        createHash("sha256").update(actual).digest("hex"),
+        `${vector.id} canonical hash`,
+      ).toBe(vector.expectation.canonicalSha256)
     }
   }, 20_000)
+
+  it("copies private fixed tokens into fresh outputs that cannot poison subsequent encodings", () => {
+    const cases: readonly [JsonValue, string][] = [
+      [null, "null"],
+      [true, "true"],
+      [false, "false"],
+      [[], "[]"],
+      [{}, "{}"],
+      [
+        { z: false, a: [null, true, false, {}, []] },
+        '{"a":[null,true,false,{},[]],"z":false}',
+      ],
+    ]
+    for (const [value, golden] of cases) {
+      const first = encodeCanonicalJson(value, { context: "host-api-value" }),
+        second = encodeCanonicalJson(value, { context: "host-api-value" })
+      expect(first.ok).toBe(true)
+      expect(second.ok).toBe(true)
+      if (!first.ok || !second.ok) continue
+      expect(Buffer.from(first.bytes)).toEqual(Buffer.from(golden))
+      expect(first.bytes).not.toBe(second.bytes)
+      expect(first.bytes.buffer).not.toBe(second.bytes.buffer)
+      first.bytes.fill(0)
+      expect(Buffer.from(second.bytes)).toEqual(Buffer.from(golden))
+      const third = encodeCanonicalJson(value, { context: "host-api-value" })
+      expect(third.ok).toBe(true)
+      if (third.ok) {
+        expect(third.bytes.buffer).not.toBe(first.bytes.buffer)
+        expect(third.bytes.buffer).not.toBe(second.bytes.buffer)
+        expect(Buffer.from(third.bytes)).toEqual(Buffer.from(golden))
+      }
+    }
+  })
+
+  it("preserves exact raw-byte-boundary errors for fixed tokens and every ownership context", () => {
+    const contexts: readonly CanonicalJsonContext[] = [
+      "host-api-value",
+      "decoded-strategy-payload",
+      "canonical-manifest",
+      "authenticated-outer-envelope",
+    ]
+    const cases: readonly [JsonValue, string][] = [
+      [null, "null"],
+      [true, "true"],
+      [false, "false"],
+      [[], "[]"],
+      [{}, "{}"],
+      [[null, true, false], "[null,true,false]"],
+      [{ a: null, b: [true, false] }, '{"a":null,"b":[true,false]}'],
+    ]
+    for (const context of contexts)
+      for (const [value, golden] of cases) {
+        const byteLength = Buffer.byteLength(golden),
+          limits = { ...CANONICAL_JSON_V1_LIMITS, rawUtf8Bytes: byteLength },
+          exact = encodeCanonicalJson(value, { context, limits })
+        expect(exact.ok).toBe(true)
+        if (exact.ok)
+          expect(Buffer.from(exact.bytes)).toEqual(Buffer.from(golden))
+        expect(
+          encodeCanonicalJson(value, {
+            context,
+            limits: { ...limits, rawUtf8Bytes: byteLength - 1 },
+          }),
+        ).toEqual({
+          ok: false,
+          error: {
+            code: "MAX_RAW_UTF8_BYTES_EXCEEDED",
+            path: [],
+            byteOffset: byteLength - 1,
+            owner:
+              context === "host-api-value" ||
+              context === "decoded-strategy-payload"
+                ? "player_violation"
+                : "system_failure",
+          },
+        })
+      }
+  })
 
   it("uses shortest normalized finite binary64 spellings", () => {
     const cases: readonly [number, string][] = [
@@ -84,21 +183,28 @@ describe("canonical JSON v1 iterative encoder", () => {
     for (const [value, expected] of cases) {
       const result = encodeCanonicalJson(value, { context: "host-api-value" })
       expect(result.ok, String(value)).toBe(true)
-      if (result.ok) expect(Buffer.from(result.bytes).toString("utf8")).toBe(expected)
+      if (result.ok)
+        expect(Buffer.from(result.bytes).toString("utf8")).toBe(expected)
     }
   })
 
   it("rejects host non-finite values with the corpus error", () => {
-    for (const value of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
-      expect(encodeCanonicalJson(value, { context: "host-api-value" })).toEqual({
-        ok: false,
-        error: {
-          code: "NON_CANONICAL_NUMBER",
-          path: [],
-          byteOffset: 0,
-          owner: "player_violation",
+    for (const value of [
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+    ]) {
+      expect(encodeCanonicalJson(value, { context: "host-api-value" })).toEqual(
+        {
+          ok: false,
+          error: {
+            code: "NON_CANONICAL_NUMBER",
+            path: [],
+            byteOffset: 0,
+            owner: "player_violation",
+          },
         },
-      })
+      )
     }
   })
 
@@ -129,7 +235,9 @@ describe("canonical JSON v1 iterative encoder", () => {
         '"\\"\\\\\\b\\f\\n\\r\\t\\u0000  é é 😀"',
       )
     }
-    expect(encodeCanonicalJson("\ud800", { context: "host-api-value" })).toEqual({
+    expect(
+      encodeCanonicalJson("\ud800", { context: "host-api-value" }),
+    ).toEqual({
       ok: false,
       error: {
         code: "INVALID_UNICODE_SCALAR",
@@ -150,14 +258,20 @@ describe("canonical JSON v1 iterative encoder", () => {
       objectEntries: 2,
     }
     expect(
-      encodeCanonicalJson([[[null]]], { context: "canonical-manifest", limits }),
+      encodeCanonicalJson([[[null]]], {
+        context: "canonical-manifest",
+        limits,
+      }),
     ).toMatchObject({ ok: false, error: { code: "MAX_DEPTH_EXCEEDED" } })
     expect(
       encodeCanonicalJson([null, null, null], {
         context: "canonical-manifest",
         limits,
       }),
-    ).toMatchObject({ ok: false, error: { code: "MAX_ARRAY_ENTRIES_EXCEEDED" } })
+    ).toMatchObject({
+      ok: false,
+      error: { code: "MAX_ARRAY_ENTRIES_EXCEEDED" },
+    })
     expect(
       encodeCanonicalJson("12345", { context: "canonical-manifest", limits }),
     ).toMatchObject({
@@ -167,7 +281,9 @@ describe("canonical JSON v1 iterative encoder", () => {
     const cyclic: { self?: unknown } = {}
     cyclic.self = cyclic
     expect(
-      encodeCanonicalJson(cyclic as JsonValue, { context: "canonical-manifest" }),
+      encodeCanonicalJson(cyclic as JsonValue, {
+        context: "canonical-manifest",
+      }),
     ).toMatchObject({ ok: false, error: { code: "INVALID_GRAMMAR" } })
   })
 

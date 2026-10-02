@@ -47,6 +47,20 @@ type CurrentValue = { value: JsonValue; path: readonly (string | number)[] }
 
 const textEncoder = new TextEncoder()
 const ascii = (value: string): Uint8Array => textEncoder.encode(value)
+// Private fixed grammar/literal chunks only. They are never mutated or returned:
+// final assembly always copies them into a fresh output array. Caller strings,
+// keys and normalized numbers keep their ordinary per-value encoding path.
+const FIXED_ASCII = {
+  arrayOpen: ascii("["),
+  arrayClose: ascii("]"),
+  objectOpen: ascii("{"),
+  objectClose: ascii("}"),
+  colon: ascii(":"),
+  comma: ascii(","),
+  null: ascii("null"),
+  true: ascii("true"),
+  false: ascii("false"),
+} as const
 
 const ownerFor = (
   context: CanonicalJsonContext,
@@ -196,12 +210,12 @@ export const encodeCanonicalJson = (
       const path: readonly (string | number)[] = active.path
       current = undefined
       if (value === null) {
-        const error = append(ascii("null"))
+        const error = append(FIXED_ASCII.null)
         if (error) return error
         continue
       }
       if (typeof value === "boolean") {
-        const error = append(ascii(value ? "true" : "false"))
+        const error = append(value ? FIXED_ASCII.true : FIXED_ASCII.false)
         if (error) return error
         continue
       }
@@ -231,10 +245,10 @@ export const encodeCanonicalJson = (
           return failure("MAX_ARRAY_ENTRIES_EXCEEDED", path, outputBytes)
         }
         activeContainers.add(value)
-        let error = append(ascii("["))
+        let error = append(FIXED_ASCII.arrayOpen)
         if (error) return error
         if (value.length === 0) {
-          error = append(ascii("]"))
+          error = append(FIXED_ASCII.arrayClose)
           activeContainers.delete(value)
           if (error) return error
           continue
@@ -276,10 +290,10 @@ export const encodeCanonicalJson = (
         compareUnsignedBytes(left.sortBytes, right.sortBytes),
       )
       activeContainers.add(value)
-      let error = append(ascii("{"))
+      let error = append(FIXED_ASCII.objectOpen)
       if (error) return error
       if (entries.length === 0) {
-        error = append(ascii("}"))
+        error = append(FIXED_ASCII.objectClose)
         activeContainers.delete(value)
         if (error) return error
         continue
@@ -294,7 +308,7 @@ export const encodeCanonicalJson = (
       stack.push(frame)
       error = append(entries[0]!.keyBytes)
       if (error) return error
-      error = append(ascii(":"))
+      error = append(FIXED_ASCII.colon)
       if (error) return error
       current = { value: entries[0]!.value, path: [...path, entries[0]!.key] }
       continue
@@ -304,7 +318,7 @@ export const encodeCanonicalJson = (
     frame.index += 1
     if (frame.kind === "array") {
       if (frame.index < frame.value.length) {
-        const error = append(ascii(","))
+        const error = append(FIXED_ASCII.comma)
         if (error) return error
         current = {
           value: frame.value[frame.index] as JsonValue,
@@ -312,24 +326,24 @@ export const encodeCanonicalJson = (
         }
         continue
       }
-      const error = append(ascii("]"))
+      const error = append(FIXED_ASCII.arrayClose)
       if (error) return error
       activeContainers.delete(frame.value)
       stack.pop()
       continue
     }
     if (frame.index < frame.entries.length) {
-      let error = append(ascii(","))
+      let error = append(FIXED_ASCII.comma)
       if (error) return error
       const entry = frame.entries[frame.index]!
       error = append(entry.keyBytes)
       if (error) return error
-      error = append(ascii(":"))
+      error = append(FIXED_ASCII.colon)
       if (error) return error
       current = { value: entry.value, path: [...frame.path, entry.key] }
       continue
     }
-    const error = append(ascii("}"))
+    const error = append(FIXED_ASCII.objectClose)
     if (error) return error
     activeContainers.delete(frame.value)
     stack.pop()
