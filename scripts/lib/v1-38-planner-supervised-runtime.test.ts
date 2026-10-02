@@ -36,7 +36,7 @@ const fixture = (fault?: string) => {
     const result = fault === "violation" ? { ok: false, violation: { type: "FORBIDDEN_CAPABILITY", message: "synthetic blocked" } }
       : { ok: true, value: r.methodName === "selectActivations" ? { activationOrders: [], strategyMemory: r.input.strategyMemory } : { action: { type: "TURN_TO_STONE" }, soldierMemory: r.input.soldierMemory } }
     const timing = q.timingBinding && fault !== "missing-timing" ? { binding: { ...q.timingBinding, ...(fault === "forged-timing" ? { inputRoot: "wrong" } : {}) }, durationMs: 2, complete: true } : undefined
-    return Buffer.from(JSON.stringify({ requestId: fault === "request" ? 999 : q.requestId, status: 0, signal: null, stdoutBase64: Buffer.from(JSON.stringify(result)).toString("base64"), stderrBase64: "", ...(timing ? { timing } : {}) }) + "\n")
+    return Buffer.from(JSON.stringify({ requestId: fault === "request" ? 999 : q.requestId, status: fault === "exit" ? 7 : 0, signal: null, stdoutBase64: Buffer.from(JSON.stringify(result)).toString("base64"), stderrBase64: "", ...(timing ? { timing } : {}) }) + "\n")
   }, close() { return { status: fault === "cleanup" ? 1 : 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) } } })
   return { transport, streamFactory, frames, calls }
 }
@@ -44,6 +44,11 @@ const options = (fault?: string) => ({ revision: revision(), attemptRoot: root, 
 const request = (method: "selectActivations" | "soldierBrain", id = "kernel:1") => ({ kind: method, requestId: id, semanticTupleId: MATCH_KERNEL.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input: corpus[method][0]!.input }) as Parameters<ReturnType<typeof createPlannerSupervisedRuntime>["invoke"]>[0]
 
 describe("planner selected-v1.19 host with injected transport only", () => {
+  it("preserves typed subprocess exit through the real lean-session ABI executor chain", () => {
+    const opts = options("exit"), host = createPlannerSupervisedRuntime(opts)
+    const evidence = host.invoke(request("selectActivations"), host.identity)
+    expect(evidence.result).toMatchObject({ ok: false, systemFailure: { code: "SUBPROCESS_EXIT", retryable: false } })
+  })
   it("rejects forged, grantless, and mixed v4 lifetime requests without constructing a container", () => {
     for (const key of ["observerHarness", "transport", "streamFactory", "benchmarkLifetimeMs"]) expect(() => createPlannerSupervisedRuntime({ ...options(), retryV4LifetimeGrant: {} as never, [key]: undefined })).toThrow("RETRY_V4_CONSTRUCTOR_OVERRIDE")
     const binding = { budgetRoot: root, attemptRoot: root, containerName: "fake", ownershipLabel: "fake" }
