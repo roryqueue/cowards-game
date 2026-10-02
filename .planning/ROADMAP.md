@@ -2,6 +2,13 @@
 
 ## Current verified progress — Phases262–264 complete
 
+V9 unique retained84540 CLOSED exit0, authenticates process_invalid NOTsuccess.
+Bounded payload90d5ccf8 proves FACTORY_RUNTIME_LIFETIME_EXHAUSTED; sourcehold
+released for read-only substantial same-policy optimization assessment. No
+active entry/verifier or newroute; five charged/four success immutable, LEAG
+incomplete. Any changed lifetime/resource/durability needs new human decision.
+See EMPIRICAL-RESULT-v9; earlier active snapshots historical.
+
 V9 entry37785 CLOSED process-invalid after5chargedcells/4success/1systemfailure
 at13:07:19.976UTC; result7e20c31d/head7225de54. All10ownedcontainers absent.
 ONE ordinary retained verifier84540 ACTIVE; maina98 remains fixed, no duplicate

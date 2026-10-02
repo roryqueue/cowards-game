@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 v9 entry37785 CLOSED process-invalid after5charged/4success; ONE retained verifier84540 active, fixed-source hold
+stopped_at: Phase265 v9 unique verifier84540 CLOSED exit0 authenticates process-invalid; actual lifetime exhaustion; read-only same-policy optimization assessment
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: v9 terminal13:07:19.976UTC athead7225de54/result7e20c31d; all10ownedcontainers absent; unique retained verifier84540 active
+last_activity_desc: retained84540 closes issuedfalse/process_invalid; bounded failed payload90d5ccf8 proves FACTORY_RUNTIME_LIFETIME_EXHAUSTED; no route retry
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,23 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current continuation — v9 failure authenticated, lifetime diagnosis
+
+ONE retained verifier84540/PID99281 CLOSED exit0, issuedfalse/process_invalid/
+empiricalRequirementsCompletefalse, exactcf217782/head7225de54/fixeda98 source.
+It authenticates failure, NOT league success; never duplicate. Sourcehold now
+released. Bounded recent metadata scan selects13,845bytes, no second graph or
+verifier: descriptor325c7ac1/payload90d5ccf8/4341B proves actual TypeError +
+FACTORY_RUNTIME_LIFETIME_EXHAUSTED. Five charged cells/four success immutable,
+all10ownedcontainers absent. No complete matrix/LEAG/freeze credit. Existing
+120000ms wallclock includes runtime setup and awaited retention; current async
+durability-preserving repair already active. Read-only source assessment of
+substantial SAMEPOLICY optimization is underway; no changedbound or freshroute
+dispatch presumed. Any materially new lifetime/resource/durability decision
+needs human direction, not same-bounds standing approval. All historicalbytes
+and boundaries preserved. See EMPIRICAL-RESULT-v9. Earlier verifier-active
+snapshots historical; no active entry/verifier now.
 
 ## Current continuation — v9 terminal failure, ONE retained verifier active
 
