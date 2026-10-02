@@ -13,6 +13,38 @@ const fixture = () => {
   return { provider, seen }
 }
 describe("host-bound league behavioral probes", () => {
+  it.each([false, true])("awaits retention before issuance, refuses synchronous pending close, and stops after failure=%s", async (failure) => {
+    const { provider, seen } = fixture(); let closeCalls = 0, captured: any, finished = false
+    provider.close = () => { closeCalls++; return { cleanupComplete: true, orphanedChild: false } }
+    let release!: () => void, reject!: (error: Error) => void
+    const gate = new Promise<void>((resolve, refuse) => { release = resolve; reject = refuse })
+    const wrapper = wrapLeagueProbeProvider(provider, undefined, { minX: 0, maxX: 11 }, (value) => { captured = value; return gate })
+    const result = Promise.resolve(wrapper.invoke(request as never, provider.identity)).then((value) => { finished = true; return value }, (error) => { finished = true; return error })
+    await Promise.resolve(); await Promise.resolve()
+    expect(captured).toBeDefined(); expect(wrapper.verify(captured.admittedEvidence)).toBe(false); expect(finished).toBe(false)
+    expect(() => wrapper.close()).toThrow("PENDING"); expect(closeCalls).toBe(0)
+    const error = Error("retention failed")
+    if (failure) reject(error); else release()
+    const value = await result
+    expect(value).toBe(failure ? error : captured.admittedEvidence)
+    expect(wrapper.verify(captured.admittedEvidence)).toBe(!failure)
+    if (failure) { await expect(wrapper.invoke(request as never, provider.identity)).rejects.toThrow("RETENTION_STOP"); expect(seen).toHaveLength(1) }
+    expect(wrapper.close()).toEqual({ cleanupComplete: true, orphanedChild: false }); expect(closeCalls).toBe(1)
+  })
+  it("tracks the whole invocation and settles a same-wrapper race before rejecting without another guest or capacity call", async () => {
+    const { provider, seen } = fixture(); let release!: () => void, before = 0, retained = 0, closed = 0
+    const guestGate = new Promise<void>((resolve) => { release = resolve }), original = provider.invoke.bind(provider)
+    provider.invoke = async (...args) => { await guestGate; return original(...args) }
+    provider.close = () => { closed++; return { cleanupComplete: true, orphanedChild: false } }
+    const wrapper = wrapLeagueProbeProvider(provider, undefined, { minX: 0, maxX: 11 }, () => { retained++ }, () => { before++ })
+    const first = wrapper.invoke(request as never, provider.identity)
+    let raced = false
+    const second = Promise.resolve(wrapper.invoke(request as never, provider.identity)).catch((error) => { raced = true; return error })
+    await Promise.resolve(); expect(raced).toBe(false); expect(before).toBe(1); expect(retained).toBe(0)
+    expect(() => wrapper.close()).toThrow("PENDING"); expect(closed).toBe(0)
+    release(); await first
+    expect((await second).message).toContain("PENDING"); expect(seen).toHaveLength(1); expect(before).toBe(1); expect(retained).toBe(1)
+  })
   it("retains the invocation-time capacity guard before calling the provider", async () => {
     const { provider, seen } = fixture(), retained: unknown[] = []
     const wrapped = wrapLeagueProbeProvider(provider, undefined, { minX: 0, maxX: 11 }, (value) => retained.push(value), () => { throw Error("injected invocation capacity stop") })
