@@ -5,6 +5,7 @@ import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { createSelectedCurrentRuntimeFromRevisionV119 } from "../../packages/runtime-js/src/executor.js"
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
+import { SubprocessSystemFailure, SUBPROCESS_SYSTEM_FAILURE_CODES } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import type { DiagnosticPilotLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
 import type { DiagnosticOneCellLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-one-cell.js"
@@ -124,7 +125,10 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
         e.outputBytes = Buffer.byteLength(JSON.stringify(e.result))
         if (observerHarness && !observed) throw new TypeError("LAB_TIMING_MISSING")
         if (!e.result.ok && "systemFailure" in e.result) close()
-      } catch { e.result = { ok: false, violation: { type: "INVALID_OUTPUT", message: "Runtime system failure" }, systemFailure: { code: "MALFORMED_IPC", retryable: false } }; close() }
+      } catch (error) {
+        const code = error instanceof SubprocessSystemFailure && SUBPROCESS_SYSTEM_FAILURE_CODES.includes(error.code) ? error.code : "MALFORMED_IPC"
+        e.result = { ok: false, violation: { type: "INVALID_OUTPUT", message: "Runtime system failure" }, systemFailure: { code, retryable: false } }; close()
+      }
       const totalMs = performance.now() - started
       const observation = observed as LeanTimingObservation | undefined
       if (observation && e.completed && e.result.ok) {
