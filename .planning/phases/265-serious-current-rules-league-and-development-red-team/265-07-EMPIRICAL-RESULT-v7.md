@@ -1,7 +1,7 @@
 ---
 phase: 265
 plan: 07
-status: process-invalid-retained-verification-active
+status: process-invalid-retained-verification-failed-closed
 date: 2026-10-02
 empirical_complete: false
 ---
@@ -43,11 +43,26 @@ names absent: league-19433b5128edb1eef4-{0,1},
 league-f2556e819769c22d6d-{0,1}, league-b48ea41b6cc5131054-{0,1}.
 No broad container deletion or replacement is performed.
 
-Root's ONE ordinary verify-retained66301 is ACTIVE with the exact allocation,
-head and three declared repositories, without capacity flags. It is read-only
-and invokes no Strategy, producer, model or runtime. Never duplicate it.
-Main634b0e84/f942c33f/ae9b47ba remains fixed; competing heavy work is held until
-the actual verifier outcome. No retained-verification pass is yet claimed.
+Root's ONE ordinary verify-retained66301 finished exit1, observed
+2026-10-02T09:57:22UTC, with SERIOUS_LEAGUE_RETAINED_INVOCATION at the exact
+allocation/head/three repositories, without capacity flags. It was read-only
+and invoked no Strategy, producer, model or runtime. It is CLOSED; NEVER rerun
+it, including after a source repair. Main634b0e84/f942c33f/ae9b47ba stayed fixed
+through this outcome. The source hold is now released for source-only diagnosis
+and checked repairs. This is a failed retained verification, not a pass or
+authority to reinterpret old evidence. No fresh live route has started.
+
+## Source-proven diagnosis boundaries
+
+Read-only follow-up confirms typed SubprocessSystemFailure exceptions propagate
+through the selected ABI/executor to planner catch, which collapses all codes
+to MALFORMED_IPC. That classification-loss bug is established independently
+of the unknown actual v7 inner transport cause. A bounded synthetic regression
+can test known-code preservation without any guest execution or new schema.
+The failed verifier additionally exposes a potential mismatch between live
+supervisor incomplete-accounting failure handling and retained replay's
+unconditional completed requirement. That separate source-only diagnosis is
+in progress; no verifier gate is weakened or old evidence re-credited.
 
 This route is terminal and consumed. No retry, resume, refund, overwrite or
 success reinterpretation is permitted. Standing approval covers only later

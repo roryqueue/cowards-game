@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 v7 consumed process-invalid3charged2valid; ONE retained verifier66301 active, source fixed
+stopped_at: Phase265 v7 consumed; unique retained66301 CLOSED exit1 RETAINED_INVOCATION; source-only repair diagnosis
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: v7 terminal09:36:53.101UTC/head a29c0522; all6ownedcontainers absent; first-request MALFORMED_IPC source-only trace active
+last_activity_desc: retained66301 fails atfixed634b0e84; closedneverrerun; source taxonomy loss proven and incomplete-prefix mirror under diagnosis
 progress:
   total_phases: 9
   completed_phases: 3
@@ -30,9 +30,15 @@ Bounded parent-linked metadata names first ordinal0 selectActivations
 MALFORMED_IPC/retryablefalse/LAB_SUPERVISOR_FAILURE, not a lifetime-limit
 failure. Exact cause remains unproven. A smaller-model read-only source trace
 may proceed, with no runtime/test/source edit. ONE ordinary retained verifier
-66301 is ACTIVE at exact allocation/head/repositories and no capacity flags;
-never duplicate it. Fixed634b0e84/f942c33f/ae9b47ba stays until actual outcome;
-all competing heavy work held. This route is consumed, never reused/refunded.
+66301 finished exit1, observed09:57:22UTC, SERIOUS_LEAGUE_RETAINED_INVOCATION
+at exact allocation/head/repositories and no capacity flags. It is CLOSED;
+NEVER rerun, including after repair. Fixed634b0e84/f942c33f/ae9b47ba remained
+through outcome; source hold now released. Source-only explorer establishes
+typed internal error classification loss in planner catch; actualv7innercause
+still unknown. Live incomplete-accounting versus retained replay mismatch is
+under diagnosis. Checked repairs must not relax positive completion predicates
+or reinterpret this failed historical verification. No fresh route yet.
+This route is consumed, never reused/refunded.
 No LEAG/freeze/formation/holdout credit. Standing approval applies to later
 distinct same-bounds routes, no repeat human literal. See EMPIRICAL-RESULT-v7.
 All entry-active snapshots below are historical.

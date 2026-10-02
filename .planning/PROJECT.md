@@ -5,8 +5,10 @@
 V7 ended09:36:53UTC process-invalid after3charged cells,2validsuccesses then
 1systemfailure on first-request MALFORMED_IPC (not the prior lifetime error).
 Actual resultcc4521c5/head a29c0522 published; all6ownedcontainers absent.
-ONE retained verifier66301 ACTIVE; source fixed/heavy work held. Smaller-model
-read-only source trace may proceed, no runtime/source changes. No LEAG/freeze
+ONE retained verifier66301 CLOSED exit1 RETAINED_INVOCATION atfixed634b0e84;
+never rerun after repair. Source hold released for checked source-only repairs:
+planner typed-code loss is established, incomplete failure-prefix replay mismatch
+under diagnosis. Actual innercause unknown. No fresh runtime/route. No LEAG/freeze
 credit, consumed route never reused. See EMPIRICAL-RESULT-v7. Earlier entry
 snapshots below are historical.
 

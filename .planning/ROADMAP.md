@@ -4,8 +4,10 @@
 
 V7 consumed process-invalid after3charged cells,2validsuccesses then1first-request
 MALFORMED_IPC systemfailure. Resultcc4521c5/head a29c0522 published09:36:53UTC;
-all6ownedcontainers absent. ONE ordinary retained verifier66301 ACTIVE; source
-fixed/heavy work held, no duplicate. Source-only trace may proceed, exactcause
+all6ownedcontainers absent. ONE ordinary retained verifier66301 CLOSED exit1
+RETAINED_INVOCATION atfixed634b0e84; neverrerun afterrepair. Sourceholdreleased
+for checked source-only repairs; typed-code loss established, strict failure-prefix
+mirror under diagnosis. No positivegate relaxation or oldevidence re-credit. Exactcause
 unproven. No phase/LEAG/freeze credit. See EMPIRICAL-RESULT-v7. Earlier entry
 snapshots below are historical.
 

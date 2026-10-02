@@ -6,8 +6,10 @@ V7 ended09:36:53UTC process-invalid after3charged cells,2validsuccesses and
 1first-request MALFORMED_IPC/retryablefalse systemfailure. Unlike earlier
 routes, this is not a reported lifetime-limit failure; exacttransportcause
 remains unproven. Resultcc4521c5/head a29c0522 published, all6ownedcontainers
-absent. ONE ordinary retained verifier66301 ACTIVE, sourcefixed/heavyworkheld.
-Small-model read-only source trace may proceed; no tests/runtime/source edit.
+absent. ONE ordinary retained verifier66301 CLOSED exit1 RETAINED_INVOCATION
+atfixed634b0e84; neverrerun afterrepair. Sourceholdreleased for checked source-only
+repairs. Typed-code loss established; strict failure-prefix mirror under diagnosis.
+Actualinnercause unknown; no new runtime or positivegate relaxation/oldcredit.
 No LEAG/freeze/formation/holdout credit. See EMPIRICAL-RESULT-v7. Earlier active
 entry snapshots below are historical.
 
