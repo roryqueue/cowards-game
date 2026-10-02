@@ -8,7 +8,7 @@ created: 2026-09-14
 updated: 2026-10-02
 source_reviewed: dbf5daa24b0764f68124af2e475b9aa6135dc8ae
 source_gate: complete29suite382test-plus3tactical-types-boundaries-engine149-runtime277-pass
-empirical_validation: v6-consumed-process-invalid-five-cells-unique-retained-verifier-active
+empirical_validation: v6-consumed-process-invalid-five-cells-unique-retained-verifier-complete
 ---
 
 # Phase265 — Validation Strategy
@@ -18,9 +18,12 @@ empirical_validation: v6-consumed-process-invalid-five-cells-unique-retained-ver
 V6 terminal update: unique entry63193 ended05:04UTC,5charged cells with4valid
 successes then1lifetime system failure. Actual result09002c67/headb21465c7 is
 published; all ten exact expected containers are absent. ONE ordinary retained
-verifier65319 is active, not a captured pass. Main source remains fixed and
-heavy tests/probes held. Full-phase Nyquist remains partial/false and LEAG
-requirements open; the active-prefix source note below is historical.
+verifier65319 completed exit0,issued=false/process_invalid, not league success.
+Subsequent current-source data-only profile56053 completes/cleanuptrue;
+separate pressure observation20757 completes10calls. Both probes are closed.
+Full-phase Nyquist remains partial/false and LEAG requirements open; source-only
+repair planning continues. See265-07-V6-COST-PROFILE-RESULT-v1.md.
+The active-prefix source note below is historical.
 
 ### Reviewed key-encoder repair and unique v6 entry — 2026-10-02
 

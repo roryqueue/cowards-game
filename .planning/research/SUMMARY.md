@@ -2,6 +2,15 @@
 
 ## Current approved handoff — 2026-10-02
 
+ONE current-source v6 profile56053 completes with owned cleanup and exact-source
+snapshots.50fresh durable appends reproduce exact records; mean107.548ms,
+approximately90%file/directory sync. Separate observation-only pressure probe20757
+completes10calls,mean2.865ms, not a capacity receipt/admission. Both probes closed.
+Source-only async dependency-file sync planning follows, preserving every sync,
+dependency-before-descriptor barrier, final barrier, no-refund bound and awaited
+evidence-before-next-dispatch. No live timing forecast or full league credit.
+See265-07-V6-COST-PROFILE-RESULT-v1.md. Snapshots below are historical.
+
 V6 ended05:04UTC process-invalid after5charged cells:4success/process_valid,
 then1system_failure. Actual result09002c67/headb21465c7 is published. All ten
 exact expected route containers are absent. Root's ONE ordinary retained

@@ -61,9 +61,12 @@ gaps:
 
 V6 terminal update: unique entry63193 ended05:04UTC process-invalid after
 5charged cells(4valid,1lifetime system failure), published result09002c67/
-headb21465c7. ONE ordinary retained verifier65319 is active, not a captured
-pass; source remains fixed and heavy tests/probes held. No empirical gap is
-closed by the four-cell prefix. The entry-active paragraph below is historical.
+headb21465c7. ONE ordinary retained verifier65319 completed exit0,
+issued=false/process_invalid, not eligible league success. Subsequent data-only
+profile56053 completes/cleanuptrue; pressure observation20757 completes10calls.
+Both probes are closed; source-only repair planning continues. No empirical gap
+is closed by these costs or the four-cell prefix. Entry-active snapshots below
+are historical. See265-07-V6-COST-PROFILE-RESULT-v1.md.
 
 The original independent verdict remains gaps_found,0/5. Its original absence
 and human-allocation statements below are historical, not current inventory.

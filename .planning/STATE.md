@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 v6 immutable failure and unique verifier65319 closed; bounded cost profile review next
+stopped_at: Phase265 current v6 data-only profile complete; asynchronous durable-dependency repair planning
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: unique verifier65319 exit0 confirms process_invalid/issuedfalse; reviewed data-only profiling next
+last_activity_desc: fixed-source writer profile completes with cleanup; sync dominates sampled retention; same-bounds repair planning
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,23 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current continuation — v6 current-source costs measured
+
+ONE independently reviewed data-only profile56053 completed exit0 in11.718seconds,
+complete=true/cleanupComplete=true; source70430463/2f008952 remained fixed.
+Fifty fresh writer samples exactly reproduce selected v6 records: mean107.548ms,
+150file/100directory syncs; approximately90% sampled append time is sync.
+ONE separate reviewed observation-only pressure profile20757 completes ten
+calls,mean2.865ms. No capacity admission/receipt/Strategy/Match/model occurred.
+Both probes and unique ordinary retained verifier65319 are closed, never rerun.
+This is data-only cost evidence, not full live timing or LEAG completion.
+Next: source-only plan for async dependency-file sync retaining all barriers,
+exact evidence bytes, awaited evidence issuance and conservative no-refund
+accounting. No implementation or new route yet. Standing approval covers
+later distinct same-bounds routes after review/source/capacity gates; no
+human-only checkpoint is presently identified. See265-07-V6-COST-PROFILE-RESULT-v1.md.
+Snapshots below are historical.
 
 ## Current terminal continuation — v6 and unique retained verifier closed
 

@@ -2,6 +2,14 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+Current-source v6 cost profile56053 is complete/cleanuptrue:50fresh writer
+samples mean107.548ms, approximately90% actual sync. Separate pressure observation
+20757 completes10calls,mean2.865ms. No Strategy/Match/capacity admission occurred.
+Both probes are closed. Source-only async dependency-sync repair planning follows,
+with all file syncs/barriers/bytes/charges/evidence-before-next-dispatch retained.
+No new run or LEAG/freeze/formation credit. See265-07-V6-COST-PROFILE-RESULT-v1.md.
+The profiling-next and earlier snapshots below are historical.
+
 V6 is now consumed process-invalid:5charged cells,4valid successes then1system
 failure, actual result09002c67/headb21465c7 published05:04UTC. All ten exact
 expected containers are absent. ONE ordinary retained verifier65319 completed

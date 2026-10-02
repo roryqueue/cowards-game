@@ -2,6 +2,13 @@
 
 ## Current verified progress — Phases262–264 complete
 
+Current v6 data-only profile56053 completed/cleanuptrue atfixed70430463/2f008952:
+50fresh appends mean107.548ms, approximately90%sync. Separate observation-only
+pressure probe20757 completes10calls,mean2.865ms. Both are closed; no new Match
+or capacity admission. Next is source-only async dependency-sync repair planning,
+not phase advancement. All durability/accounting/lifetime/privacy bounds stay.
+See265-07-V6-COST-PROFILE-RESULT-v1.md; profiling-next snapshots below are history.
+
 V6 ended05:04UTC process-invalid after5charged cells,4successes and1system
 failure. Actual result09002c67/headb21465c7 is published; all ten exact expected
 containers are absent. Unique retained verifier65319 completed exit0 with no

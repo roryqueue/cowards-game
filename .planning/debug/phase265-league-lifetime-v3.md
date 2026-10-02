@@ -31,6 +31,18 @@ updated: 2026-10-02
 
 ## Current Focus
 
+- current_measurement: ONE current-source v6 profiler56053 completed exit0,
+  complete/cleanupComplete=true, fixed70430463/2f008952.50fresh append samples
+  reproduce exact retained records; mean107.548ms;150filefsync2931.027ms and
+  100dirfsync1906.276ms (~90% sampled append elapsed). No live runtime issued.
+  Separate ONE reviewed pressure observation20757 passes10calls,mean2.865ms;
+  no capacity admission. Both probes closed. This supersedes unmeasured-cost
+  wording below, not the preserved historical v3 or v6 failure evidence.
+- next_corrective_action: source-only async dependency-sync plan with unchanged
+  individual file syncs/dependency barrier-before-descriptor/final barrier,
+  exact bytes, conservative charges and awaited evidence/next-dispatch gate.
+  Feasibility/partial-failure contracts are not yet proven. No new route starts.
+
 - current_epoch: v6 consumed at reviewed dbf5daa2; v3 evidence below stays
   historical. Unique ordinary retained verifier65319 completed exit0,
   observed05:30:44UTC,issued=false/process_invalid/empiricalRequirementsComplete=false.
