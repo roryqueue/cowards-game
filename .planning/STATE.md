@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 private IPC diagnostics implemented215bd3a6; 38mock tests pass, independent code review next
+stopped_at: Phase265 IPC sourcegate11368 failed strict compile; bounded fix5d898acc mock38/strict14 pass, re-review next
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: two bounded source-only tasks executed with observedRED/GREEN; 28session/planner plus10factory/retention pass; no empirical credit
+last_activity_desc: actual sourcegate11368 closedexit2 at215bd3a6 preserved; 3path correction5d898acc passes38mocktests andunchangedCI4, pendingindependent re-review
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,16 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+Unique private IPC sourcegate11368 CLOSED exit2 at215bd3a6: labbuildCI3 passed,
+strict14scriptCI4 failed; remainingcommands notrun. Failedhelper/start/terminal
+immutable; neverrepeatv1. Root bounded correction5d898acc fixes metadata type
+narrowing and localizes two mockinputs, without changing planner/mission/engine
+or any frozenpolicy/runtime/resource. Corrected38injected tests+exactCI4 pass;
+independent re-review then a NEWfullsourcegate at correctedsource next. No live
+entry/retainedverifier/capacity/Match. V10causeunknown, everyconsumedroute remains
+failure; LEAG/freezeincomplete, holdoutunopened, formation/public/counting/
+productionexcluded. See PRIVATE-IPC-SOURCE-GATE-v1. Earlier notes arehistory.
 
 Private IPC diagnostic supplement is IMPLEMENTED at215bd3a6, summary4eee502c:
 two source-onlytasks/eight existingfiles, observedRED/GREEN. Final exactprefix
