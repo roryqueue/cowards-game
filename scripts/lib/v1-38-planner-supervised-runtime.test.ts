@@ -10,6 +10,7 @@ import { labRoot, LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/con
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { SubprocessSystemFailure } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { admitPlannerSupervisorLifetime, createPlannerSupervisedRuntime, closePlannerRuntime } from "./v1-38-planner-supervised-runtime.js"
+import * as plannerApi from "./v1-38-planner-supervised-runtime.js"
 it("prospective lifetime rejects forged and partial authority without changing benchmark admission", () => {
   const base = { budgetRoot: labRoot("test", "budget"), attemptRoot: labRoot("test", "attempt"), containerName: "test", ownershipLabel: "test" }
   expect(admitPlannerSupervisorLifetime(base, 24800)).toBe(120000)
@@ -58,6 +59,34 @@ const fixture = (fault?: string) => {
 }
 const options = (fault?: string) => ({ revision: revision(), attemptRoot: root, budgetRoot: root, matchId: "phase263:match", containerName: "phase263-test", ownershipLabel: "owner:phase263-test", image: LAB_ADMITTED_ROOTS.image, ...fixture(fault) })
 const request = (method: "selectActivations" | "soldierBrain", id = "kernel:1") => ({ kind: method, requestId: id, semanticTupleId: MATCH_KERNEL.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input: corpus[method][0]!.input }) as Parameters<ReturnType<typeof createPlannerSupervisedRuntime>["invoke"]>[0]
+describe("private IPC diagnostics injected planner", () => {
+  it.each(["request", "inner-surplus", "inner-malformed", "unknown", "forged-code", "forged-name", "unknown-typed-code", "typed-spawn"])("binds %s without changing failure accounting or classification", (fault) => {
+    const opts = options(fault), host = createPlannerSupervisedRuntime(opts), e = host.invoke(request("selectActivations"), host.identity)
+    const api = plannerApi as any, diagnostic = api.getPlannerPrivateDiagnostic?.(host, e)
+    const origin = fault === "request" ? ["outer_frame", "correlation_invalid"] : fault === "inner-surplus" ? ["inner_response", "keys_invalid"] : fault === "inner-malformed" ? ["inner_response", "object_invalid"] : ["stream_exchange", "unknown"]
+    expect(diagnostic).toEqual({ stage: origin[0], reason: origin[1], identity: e.identity, invocationRoot: e.invocationRoot, requestId: e.requestId, method: e.method, inputRoot: e.inputRoot, ordinal: e.ordinal })
+    expect(Object.isFrozen(diagnostic)).toBe(true); expect(JSON.stringify(diagnostic)).not.toContain("private")
+    expect(api.verifyPlannerPrivateDiagnostic?.(host, e, diagnostic)).toBe(true)
+    expect(api.verifyPlannerPrivateDiagnostic?.(host, e, structuredClone(diagnostic))).toBe(false)
+    expect(api.getPlannerPrivateDiagnostic?.(host, structuredClone(e))).toBeUndefined()
+    expect(api.getPlannerPrivateDiagnostic?.({ ...host }, e)).toBeUndefined()
+    const other = createPlannerSupervisedRuntime(options("request")), otherE = other.invoke(request("selectActivations"), other.identity)
+    expect(api.verifyPlannerPrivateDiagnostic?.(other, otherE, diagnostic)).toBe(false)
+    expect(e.result).toEqual({ ok: false, violation: { type: "INVALID_OUTPUT", message: "Runtime system failure" }, systemFailure: { code: fault === "typed-spawn" ? "SPAWN_FAILED" : "MALFORMED_IPC", retryable: false } })
+    expect(e).toMatchObject({ charged: true, completed: false, outputBytes: 0, ordinal: 0 })
+    expect(host.accounting).toEqual([e]); expect(host.verify(e)).toBe(true)
+    expect(() => host.invoke(request("selectActivations", "next"), host.identity)).toThrow("LAB_RUNTIME_STOPPED")
+    expect(opts.frames).toHaveLength(1); expect(opts.frames[0]!.timeoutMilliseconds).toBe(1000)
+    expect(closePlannerRuntime(host)).toEqual({ cleanupComplete: true, orphanedChild: false })
+  })
+  it.each([undefined, "violation"])("keeps normally returned %s evidence unchanged with no diagnostic", (fault) => {
+    const host = createPlannerSupervisedRuntime(options(fault)), e = host.invoke(request("selectActivations"), host.identity)
+    expect(e.completed).toBe(true); expect(e.outputBytes).toBe(Buffer.byteLength(JSON.stringify(e.result)))
+    expect((plannerApi as any).getPlannerPrivateDiagnostic?.(host, e)).toBeUndefined()
+    expect(e).not.toHaveProperty("privateDiagnostic"); expect(e.result).not.toHaveProperty("privateDiagnostic")
+    closePlannerRuntime(host)
+  })
+})
 it("prospective lifetime planner uses issued nested claim and includes synthetic session setup in exact expiry", () => {
   const allocation = createProspectiveLeagueExecutionAllocationV2(prospectiveLifetimeFixture()), opts = options(), selected = opts.revision
   const startValue = { cellRoot: labRoot("planner-lifetime", 1), allocationRoot: allocation.root }, start = { ...startValue, root: labRoot("league-cell-start-v1", startValue) }

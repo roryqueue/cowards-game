@@ -1,7 +1,13 @@
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import ts from "typescript"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+const nativeStreamMock = vi.hoisted(() => ({ worker: undefined as any }))
+vi.mock("node:worker_threads", async (original) => {
+  const actual = await original<typeof import("node:worker_threads")>()
+  return { ...actual, Worker: vi.fn(function (...args: any[]) { return nativeStreamMock.worker ?? Reflect.construct(actual.Worker, args) }) }
+})
+afterEach(() => { nativeStreamMock.worker = undefined; vi.restoreAllMocks() })
 import { buildLeanAuthenticatedHarnessSource, buildLeanObserverBrokerSource, createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, validateLeanTimingObservation, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult, type LeanTimingBinding } from "./v1-38-lean-container-match-session.js"
 import { LEAN_CONTAINER_IMAGE } from "../run-v1-38-lean-runner-feasibility.js"
 import { WORKER_HARNESS_SOURCE, WORKER_HARNESS_V117_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
@@ -34,6 +40,56 @@ const create = (name: string, streamResponses: unknown[]) => {
   const session = createLeanContainerMatchSession({ matchId: `match:${name}`, containerName: name, ownershipLabel: label, image: LEAN_CONTAINER_IMAGE, transport: control.transport, streamFactory: persistent.factory })
   return { control, persistent, session }
 }
+describe("private IPC diagnostics injected session", () => {
+  const invoke = (session: ReturnType<typeof createLeanContainerMatchSession>) => session.adapter.execute({ source: "inert fixture", methodName: "selectActivations", input: {}, timeoutMs: 1000 })
+  const capture = (session: ReturnType<typeof createLeanContainerMatchSession>) => { try { invoke(session) } catch (error) { return error }; throw Error("expected rejection") }
+  it.each([
+    ["no newline", "outer_frame", "single_frame_invalid"],
+    ["{}\n{}\n", "outer_frame", "single_frame_invalid"],
+    ["x".repeat(1048576) + "\n", "outer_frame", "frame_cap_exceeded"],
+    ["{\n", "outer_frame", "json_invalid"],
+    ["null\n", "outer_frame", "object_invalid"],
+    [{ ...response(1, {}), requestId: 99 }, "outer_frame", "correlation_invalid"],
+    [{ ...response(1, {}), stdoutBase64: Buffer.from("{").toString("base64") }, "inner_response", "json_invalid"],
+    [{ ...response(1, {}), stdoutBase64: Buffer.from("null").toString("base64") }, "inner_response", "object_invalid"],
+    [{ ...response(1, {}), stdoutBase64: Buffer.from('{"ok":true,"value":{},"source":"PRIVATE_CANARY"}').toString("base64") }, "inner_response", "keys_invalid"],
+    [{ ...response(1, {}), stdoutBase64: Buffer.from('{"ok":0,"violation":{}}').toString("base64") }, "inner_response", "schema_invalid"],
+  ])("records only host pair", (frame, stage, reason) => {
+    const { session, persistent, control } = create("diag-session", [frame])
+    const error = capture(session), origin = (session as any).failureOrigin?.(error)
+    expect(origin).toEqual({ stage, reason }); expect(Object.isFrozen(origin)).toBe(true)
+    expect((session as any).failureOrigin?.({ ...(error as object) })).toBeUndefined()
+    expect(() => invoke(session)).toThrow(); expect(persistent.frames).toHaveLength(1)
+    expect(session.close()).toEqual({ cleanupComplete: true, orphanedChild: false })
+    expect(control.calls.some((call) => call[1][0] === "rm")).toBe(true)
+  })
+  it.each(["timeout", "state"])("records actual native %s branch without a Worker or child", (fault) => {
+    let exists = false, dispatches = 0
+    nativeStreamMock.worker = { postMessage(message: any) { if (message.type === "exchange") { dispatches++; Atomics.store(new Int32Array(message.control), 0, fault === "state" ? -6 : 0) } else Atomics.store(new Int32Array(message.control), 0, 1) }, terminate: vi.fn(async () => 0) }
+    let waits = 0
+    vi.spyOn(Atomics, "wait").mockImplementation(() => ++waits === 2 && fault === "timeout" ? "timed-out" : "ok")
+    vi.spyOn(Atomics, "load").mockImplementation((view, index) => view.length === 1 ? 1 : view[index]!)
+    const transport: LeanContainerMatchTransport = (_command, args) => {
+      if (args[0] === "inspect") return exists ? owned("owner:diag-native") : absent("diag-native")
+      if (args[0] === "create") { exists = true; return result("id\n") }
+      if (args[0] === "rm") exists = false
+      return result()
+    }
+    const session = createLeanContainerMatchSession({ matchId: "diag-native", containerName: "diag-native", ownershipLabel: "owner:diag-native", image: LEAN_CONTAINER_IMAGE, transport })
+    const error = capture(session)
+    expect((session as any).failureOrigin?.(error)).toEqual({ stage: "stream_exchange", reason: fault === "timeout" ? "wait_timeout" : "non_success_state" })
+    expect(dispatches).toBe(1); expect(session.close().cleanupComplete).toBe(true)
+    expect(nativeStreamMock.worker.terminate).toHaveBeenCalledOnce()
+  })
+  it("refuses ETIMEDOUT/name/code impersonation and does not decorate successful outputs", () => {
+    const fake = Object.assign(Error("PRIVATE_CANARY"), { name: "SubprocessSystemFailure", code: "ETIMEDOUT", details: { stdout: "PRIVATE_CANARY" } })
+    const failed = create("diag-forged", [fake]), error = capture(failed.session)
+    expect((failed.session as any).failureOrigin?.(error)).toEqual({ stage: "stream_exchange", reason: "unknown" })
+    const success = create("diag-success", [response(1, { value: 1 })])
+    expect(invoke(success.session)).toEqual({ ok: true, value: { value: 1 } })
+    expect((success.session as any).failureOrigin?.(error)).toBeUndefined(); success.session.close()
+  })
+})
 const runBroker = (requests: readonly Record<string, unknown>[], brokerSource = LEAN_CONTAINER_BROKER_SOURCE, timeout = 5_000) => {
   const input = requests.map((request) => JSON.stringify(request)).join("\n") + "\n"
   const broker = spawnSync(process.execPath, ["--input-type=module", "--eval", brokerSource], { input, encoding: "utf8", timeout, maxBuffer: 1_048_576 })
