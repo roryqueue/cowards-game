@@ -5,15 +5,36 @@ status: partial
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
-updated: 2026-10-01
-source_reviewed: 6bd772477c3a4617dbef05018be45a95de980bc8
+updated: 2026-10-02
+source_reviewed: dbf5daa24b0764f68124af2e475b9aa6135dc8ae
 source_gate: complete29suite382test-plus3tactical-types-boundaries-engine149-runtime277-pass
-empirical_validation: full-league-v3-v4-consumed-process-invalid-retained-verification-complete
+empirical_validation: prior-routes-consumed-v6-entry-active-before-fresh-capacity
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+### Reviewed key-encoder repair and unique v6 entry — 2026-10-02
+
+Reviewed source dbf5daa2 (implementation70430463/source2f008952) passes all
+eight exact CI commands in root's unique gate16883:382league+3tactical tests,
+build, strict14-path types, three1353-file scans with zero violations and
+service strict0/ownership0/report-only19. Focused canonical46, engine149,
+correct-cwd runtime277 and core types also pass. Corrected independent reviewv2
+records actual timing; inaccurate reviewv1 is preserved and not used.
+See265-07-KEY-ENCODER-SOURCE-GATE-v1.md. Do not duplicate the completed gate.
+
+V5 ended process-invalid after three charged cells; unique retained verifier
+14069 completed exit0 with issued=false/empiricalRequirementsComplete=false.
+Fresh reviewed v6 preparation completed, canonical allocation5c59970a is
+published, and unique entry63193/PID70861 is active in static validation
+before fresh same-process capacity. No capacity receipt or complete empirical
+outcome is claimed. Keep source fixed and all other heavy tests held through
+terminal and its one retained check. Standing human approval needs no repeat
+literal; technical gates and consumed-route stops remain mandatory. Full-phase
+Nyquist remains partial/false and all LEAG requirements remain open. Prior
+source and entry-active paragraphs below are historical snapshots.
 
 ### Integrated canonical-literal repair — source gates passed
 

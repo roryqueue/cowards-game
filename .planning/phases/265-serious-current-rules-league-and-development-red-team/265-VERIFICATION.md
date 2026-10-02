@@ -7,9 +7,9 @@ score: 0/5 roadmap must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 empirical_authority: false
-latest_follow_up: 2026-10-01
+latest_follow_up: 2026-10-02
 latest_diagnostic_source: e440763a75c0e66beb402548681a9acfddad9b24
-latest_source_gate: 6bd772477c3a4617dbef05018be45a95de980bc8
+latest_source_gate: dbf5daa24b0764f68124af2e475b9aa6135dc8ae
 gaps:
   - truth: "Every frozen population has a complete condition-balanced payoff matrix, with process-invalid cells blocking meta-solving."
     status: failed
@@ -56,6 +56,27 @@ gaps:
 ---
 
 # Phase 265: Serious Current-Rules League and Development Red Team — Verification
+
+## Current main-observed follow-up — 2026-10-02
+
+The original independent verdict remains gaps_found,0/5. Its original absence
+and human-allocation statements below are historical, not current inventory.
+V5 is consumed process-invalid after three charged cells; unique ordinary
+retained verifier14069 completed exit0 with issued=false and empirical
+requirements incomplete. Reviewed key-encoder repairdbf5daa2 passes the exact
+eight-command CI gate,382league+3tactical tests,46focused canonical tests,
+engine149/runtime277tests, build/types/boundaries. Corrected independent reviewv2
+has zero findings. See265-07-KEY-ENCODER-SOURCE-GATE-v1.md.
+
+Standing human approval and distinct reviewed canonical v6 allocation5c59970a
+are in place. The one operational entry63193/PID70861 is active in static
+checks before fresh capacity. No capacity pass, eligible complete league,
+solver/response campaign, report, finalist, freeze or formation is claimed.
+Keep source fixed through terminal and its unique retained verification;
+do not duplicate entry or run a verifier in parallel. The remaining blocker
+is complete eligible retained empirical evidence, not another human literal.
+This update is main-observed follow-up, not a new independent full-phase
+verification or an override of any empirical gap.
 
 ## Latest main-observed follow-up — 2026-10-01
 
