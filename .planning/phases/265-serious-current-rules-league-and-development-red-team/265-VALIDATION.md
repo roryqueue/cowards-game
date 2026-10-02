@@ -8,7 +8,7 @@ created: 2026-09-14
 updated: 2026-10-02
 source_reviewed: dbf5daa24b0764f68124af2e475b9aa6135dc8ae
 source_gate: complete29suite382test-plus3tactical-types-boundaries-engine149-runtime277-pass
-empirical_validation: prior-routes-consumed-v6-entry-active-before-fresh-capacity
+empirical_validation: prior-routes-consumed-v6-active-three-process-valid-cells
 ---
 
 # Phase265 — Validation Strategy
@@ -28,9 +28,10 @@ See265-07-KEY-ENCODER-SOURCE-GATE-v1.md. Do not duplicate the completed gate.
 V5 ended process-invalid after three charged cells; unique retained verifier
 14069 completed exit0 with issued=false/empiricalRequirementsComplete=false.
 Fresh reviewed v6 preparation completed, canonical allocation5c59970a is
-published, and unique entry63193/PID70861 is active in static validation
-before fresh same-process capacity. No capacity receipt or complete empirical
-outcome is claimed. Keep source fixed and all other heavy tests held through
+published, and unique entry63193/PID70861 is active. Fresh same-process
+capacitydd6762e0 passed04:52UTC; three cells report success/process_valid and
+the fourth is charged. No complete empirical outcome is claimed. Keep source
+fixed and all other heavy tests held through
 terminal and its one retained check. Standing human approval needs no repeat
 literal; technical gates and consumed-route stops remain mandatory. Full-phase
 Nyquist remains partial/false and all LEAG requirements remain open. Prior

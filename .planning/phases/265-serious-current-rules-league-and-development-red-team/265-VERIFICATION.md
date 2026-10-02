@@ -69,8 +69,9 @@ engine149/runtime277tests, build/types/boundaries. Corrected independent reviewv
 has zero findings. See265-07-KEY-ENCODER-SOURCE-GATE-v1.md.
 
 Standing human approval and distinct reviewed canonical v6 allocation5c59970a
-are in place. The one operational entry63193/PID70861 is active in static
-checks before fresh capacity. No capacity pass, eligible complete league,
+are in place. The one operational entry63193/PID70861 passed fresh same-process
+capacitydd6762e0 at04:52UTC. Three cells report success/process_valid; fourth
+is charged. The run remains active. No eligible complete league,
 solver/response campaign, report, finalist, freeze or formation is claimed.
 Keep source fixed through terminal and its unique retained verification;
 do not duplicate entry or run a verifier in parallel. The remaining blocker

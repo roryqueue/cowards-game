@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 unique v6 entry63193/PID70861 active after fresh capacity and first valid cell
+stopped_at: Phase265 unique v6 entry63193/PID70861 active after three process-valid cells
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: v6 fresh capacity passed04:52UTC; first cell process-valid and second charged; no full league result
+last_activity_desc: v6 fresh capacity passed04:52UTC; three cells process-valid and fourth charged; no full league result
 progress:
   total_phases: 9
   completed_phases: 3
@@ -47,8 +47,9 @@ Do not repeat preparation/publication. Root's ONE entry63193,PID70861,started
 and dispatch. The subsequent fresh same-process capacity receiptdd6762e0
 passed at2026-10-02T04:52:04.906Z with12,541,304,504available-memory bytes,
 215,305,502,720free-filesystem bytes and device16777222. First charged cell
-4e5b6345 completed success/process_valid atterminalae58eaae; second charged
-cellf1cf0231 is active. These are prefix observations, not complete eligible
+4e5b6345 completed success/process_valid atterminalae58eaae; second
+cellf1cf0231 passed atterminal01ebcc6d and third11eb1dbb passed atterminal
+2ee37e7c. Fourth charged cellb95784c5 is active. These are prefix observations, not complete eligible
 league, response, model-job, finalist or freeze evidence.
 External result-v6 is reserved empty, not evidence; do not stage it yet.
 Never duplicate entry or run retained verification while it remains active.

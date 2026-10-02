@@ -89,7 +89,8 @@ Observed available memory12,541,304,504bytes and free filesystem
 run marker8e68153f binds the receipt and allocation. Static quantities in that
 receipt remain explicitly historical projections, not newly measured traces.
 First cell start4e5b6345 has success/process_valid terminalae58eaae; second
-cell startf1cf0231 is charged and active. These observations precede any full
+f1cf0231 passed at01ebcc6d and third11eb1dbb passed at2ee37e7c. Fourth cell
+b95784c5 is charged and active. These observations precede any full
 retained verification, prove no complete matrix/league and grant no freeze.
 Earlier pre-capacity paragraphs are entry-time snapshots, not current state.
 Entry63193 remains active; source stays fixed and heavy tests remain held.

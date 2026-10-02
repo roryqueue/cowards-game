@@ -15,8 +15,10 @@ all eleven jobs are accepted and45inert records compiled. Unique data-only
 prepare38722/publish51314 passed at new allocation5c59970a; typed static capacity
 input is ready, not a host receipt. ONE entry63193/PID70861 started04:37UTC in
 static checks before fresh capacity/dispatch. Source stays fixed; heavy tests
-are held. No capacity pass or Match is established by entry. No LEAG
-or freeze credit follows. No repeat operator checkpoint is required for a
+are held. Fresh same-process capacity subsequently passed04:52:04.906UTC at
+receiptdd6762e0; three cells have success/process_valid terminals and a fourth
+is charged. This prefix is not a complete matrix/league or verified response
+campaign. No LEAG or freeze credit follows. No repeat operator checkpoint is required for a
 future distinct same-bounds route after reviewed repair, applicable gates,
 new allocation and fresh capacity. See265-07-EMPIRICAL-RESULT-v5.md.
 Earlier entry-active and source-only snapshots below are historical.

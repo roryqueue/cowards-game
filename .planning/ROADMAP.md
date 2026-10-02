@@ -11,6 +11,10 @@ prepare38722/publish51314 passed at new allocation5c59970a. Typed static
 capacity input is ready, not a host receipt. ONE entry63193/PID70861 is active
 since04:37UTC, static checks before fresh capacity/dispatch. Never duplicate it
 or start retained verification concurrently. See EMPIRICAL-PREPARATION-v10.
+Subsequent fresh capacity passed04:52:04.906UTC atreceiptdd6762e0. Three charged
+cells now have success/process_valid terminals; fourthb95784c5 is active. This
+clears the third-cell position of v5's failure but is not complete league or
+freeze evidence. Plan/phase/requirement progress stays unchanged.
 
 Current outcome: fresh v5 ended process-invalid after three charged cells,
 including two process-valid results. Its one unique read-only retained verifier14069

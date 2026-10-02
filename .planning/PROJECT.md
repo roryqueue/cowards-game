@@ -10,7 +10,11 @@ unique draft74721; all eleven jobs are accepted and45inert records compiled.
 Unique prepare38722/publish51314 passed at fresh allocation5c59970a; typed
 static capacity input is ready, not a live receipt. ONE entry63193/PID70861
 started04:37UTC; static checks precede fresh same-process capacity/dispatch.
-No capacity pass or Match is established by entry. Source stays fixed.
+Fresh same-process capacity subsequently passed04:52:04.906UTC atreceipt
+dd6762e0; three cells have success/process_valid terminals and a fourth is
+charged. This prefix passes the third cell where v5 failed, but proves no
+complete matrix/league, response campaign, finalist or freeze. Entry remains
+active; do not duplicate it or start retained verification yet. Source stays fixed.
 See preparation-v10; all heavy tests are held.
 
 Current v5 outcome: process-invalid after three charged cells at
