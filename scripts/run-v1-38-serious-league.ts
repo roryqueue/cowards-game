@@ -20,6 +20,7 @@ import { createFactoryRepository, readFactoryArtifact, publishFactoryArtifact, t
 import { validateFactoryAttemptStart, validateFactoryAttemptLedger } from "../packages/strategy-lab/src/factory/ledger.js"
 import { deriveFactoryExecutionCommitment, deriveFactoryOrderedRecordDescriptor } from "../packages/strategy-lab/src/factory/admission.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../packages/strategy-lab/src/runtime-bridge.js"
+import { SUBPROCESS_SYSTEM_FAILURE_CODES } from "../packages/runtime-js/src/subprocess-ipc.js"
 import type { FactorySupervisionProvider } from "../packages/strategy-lab/src/factory/admission.js"
 import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-runtime.js"
 import { factoryAssessmentImplementationRoot, factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
@@ -844,7 +845,19 @@ const replayRetainedKernel = (match: MatchInput, execution: LabMatchExecution, e
       }
       invocation++
       const identity = labRoot("retained-runtime-identity", evidence.identity), expectedOrdinal = ordinals.get(identity) ?? 0
-      if (evidence.requestId !== request.requestId || evidence.method !== request.kind || evidence.inputRoot !== labRoot("runtime-input", request.input) || !evidence.completed || !evidence.charged || evidence.ordinal !== expectedOrdinal || !Number.isSafeInteger(evidence.outputBytes) || evidence.outputBytes < 0 || evidence.outputBytes > 262144 || consumed.has(evidence.invocationRoot)) return fail("RETAINED_INVOCATION")
+      if (evidence.requestId !== request.requestId || evidence.method !== request.kind || evidence.inputRoot !== labRoot("runtime-input", request.input) || !evidence.charged || evidence.ordinal !== expectedOrdinal || !Number.isSafeInteger(evidence.outputBytes) || evidence.outputBytes < 0 || evidence.outputBytes > 262144 || consumed.has(evidence.invocationRoot)) return fail("RETAINED_INVOCATION")
+      if (evidence.completed !== true) {
+        // Live supervision retains the final charged failure before rejecting
+        // incomplete evidence. Never resume it or treat it as a gameplay result.
+        const exact = (value: unknown, keys: readonly string[]): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key))
+        const result: unknown = evidence.result
+        if (execution.kind !== "failure" || invocation !== execution.accounting.length || evidence.charged !== true || evidence.completed !== false || evidence.outputBytes !== 0 ||
+          !exact(result, ["ok", "violation", "systemFailure"]) || result.ok !== false ||
+          !exact(result.violation, ["type", "message"]) || result.violation.type !== "INVALID_OUTPUT" || result.violation.message !== "Runtime system failure" ||
+          !exact(result.systemFailure, ["code", "retryable"]) || typeof result.systemFailure.code !== "string" || !(SUBPROCESS_SYSTEM_FAILURE_CODES as readonly string[]).includes(result.systemFailure.code) || result.systemFailure.retryable !== false) return fail("RETAINED_INVOCATION")
+        consumed.add(evidence.invocationRoot); ordinals.set(identity, expectedOrdinal + 1)
+        failureCode = "LAB_SUPERVISOR_FAILURE"; break
+      }
       consumed.add(evidence.invocationRoot); ordinals.set(identity, expectedOrdinal + 1)
       const base = { kind: "runtime_resume" as const, requestId: request.requestId, effectKind: request.kind }, result = evidence.result
       next = MATCH_KERNEL.stepMatch(next.machine, result.ok ? { ...base, classification: "success", value: result.value } : "systemFailure" in result ? { ...base, classification: "system_failure", failure: result.systemFailure } : { ...base, classification: "player_violation", violation: result.violation })
