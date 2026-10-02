@@ -2,6 +2,15 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+Reviewed async dependency repair634b0e84 is clean after three bounded fix passes.
+Unique data-only profile78928 completes/cleanuptrue:50fresh exact-record writers,
+mean98.885ms vs historical107.548ms (~8.05%observational mean reduction).
+All150file/100DIRsyncs and bytes remain; no whole-Match speedup is proven.
+Unique unchanged full source gate28406 is ACTIVE; no new empirical route yet.
+Source-only newv7 helper drafting may proceed under standing approval, not
+dispatch. LEAG/freeze/formation/holdout stayclosed. See ASYNC-DEPENDENCY-PROOF-v1.
+All profiling/planning-next and earlier snapshots below are historical.
+
 Current-source v6 cost profile56053 is complete/cleanuptrue:50fresh writer
 samples mean107.548ms, approximately90% actual sync. Separate pressure observation
 20757 completes10calls,mean2.865ms. No Strategy/Match/capacity admission occurred.

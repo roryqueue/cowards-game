@@ -2,6 +2,16 @@
 
 ## Current approved handoff — 2026-10-02
 
+Reviewed source634b0e84 retains all barriers and now overlaps only two dependency
+file-sync waits. Final independent reviewv4 is clean; nine public failure-boundary
+tests/types pass. Unique data-only profile78928 preserves exact record hashes,
+150file/100DIRsyncs and owned cleanup; mean98.885ms vs107.548ms (~8.05%mean
+reduction, median~2.36%). This is a modest fixed-slice observation, not full
+live timing or empirical completion. Root's ONE unchanged full source gate28406
+is ACTIVE. Newv7 helper drafting is source-only; no new capacity or Match yet.
+Standing approval needs no repeated literal but all technical gates remain.
+See ASYNC-DEPENDENCY-PROOF-v1; all earlier snapshots below are historical.
+
 ONE current-source v6 profile56053 completes with owned cleanup and exact-source
 snapshots.50fresh durable appends reproduce exact records; mean107.548ms,
 approximately90%file/directory sync. Separate observation-only pressure probe20757

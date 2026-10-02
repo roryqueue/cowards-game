@@ -2,6 +2,14 @@
 
 ## Current verified progress — Phases262–264 complete
 
+Async dependency repair634b0e84 has clean independent reviewv4 and focused
+fault proof. Unique data-only profile78928 preserves exact bytes/150file100DIR
+syncs:mean98.885ms (~8.05%observational reduction), ownedcleanupcomplete.
+Unique unchanged full source gate28406 is ACTIVE; do not duplicate it. New
+privatev7 helpers are being drafted source-only, no route dispatch yet.
+Phase/plan/requirement progress is unchanged; no whole-Match gain or freeze
+is claimed. See ASYNC-DEPENDENCY-PROOF-v1. Earlier snapshots are historical.
+
 Current v6 data-only profile56053 completed/cleanuptrue atfixed70430463/2f008952:
 50fresh appends mean107.548ms, approximately90%sync. Separate observation-only
 pressure probe20757 completes10calls,mean2.865ms. Both are closed; no new Match

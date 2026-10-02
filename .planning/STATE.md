@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 async dependency repair plan checked; bounded six-file source implementation next
+stopped_at: Phase265 async measurement completed with exact bytes; unique unchanged full source gate28406 active
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: async dependency repair plan check v2 passes after race and synchronous-close guard corrections
+last_activity_desc: clean async source review and unique data-only profile78928 complete; eight-command source gate28406 active
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,30 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current continuation — asynchronous dependency source review clean
+
+Source634b0e84 implements the checked six-file async dependency repair.
+Independent reviewv4 is clean after three bounded correction passes: graph-wide
+failure stop, all-owned-provider cleanup and primary-error preservation, public
+runner error handoff, and refusal of heads claiming unretained terminals.
+Final public-boundary fault selection passes9tests/39.98seconds; strict two-file
+types pass. Earlier focused repository32/runner26/response13passes and build
+are prior-stage proof, not rerun final full-gate evidence.
+Current implementationf942c33f/sourceae9b47ba is measured source-only. Root's
+ONE independently reviewed data-only async-cost profile78928 completes exit0,
+complete/cleanuptrue:50fresh appends mean98.885ms vs earlier107.548ms (~8.05%
+observational mean reduction, median~2.36%); all exact bytes/150file/100DIRsyncs
+remain. This is not whole-Match timing. Probe is CLOSED. Root's ONE unchanged
+eight-command source gate28406 is ACTIVE with fresh markers/current pins;
+never duplicate it. A smaller-model source-only agent drafts new privatev7
+helper files; no draft/producer/capacity/Match invocation before gates/review.
+Old profile56053,
+pressure20757, verifier65319 and gate16883 remain closed and never reused.
+No Strategy/Match/model/capacity/formation/holdout was invoked by the repair.
+No whole-Match speedup, full gate, LEAG completion or freeze is yet claimed. Standing human
+approval covers later distinct same-bounds routes after technical gates;
+no new approval checkpoint is identified. Snapshots below are historical.
 
 ## Current continuation — v6 current-source costs measured
 

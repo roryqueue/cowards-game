@@ -31,6 +31,15 @@ updated: 2026-10-02
 
 ## Current Focus
 
+- current_repair: independently reviewed async source634b0e84, implementation
+  f942c33f/sourceae9b47ba, is clean after three bounded correction passes. Final
+  public runner9tests/39.98s and strict types pass. ONE reviewed data-only profile
+  78928 completes/cleanuptrue, all exact hashes/150file100DIRsyncs retained:
+  mean98.885ms vs107.548ms (~8.05%observational mean reduction; median~2.36%).
+  Concurrent fsync sums overlap; do not report additive wall/CPU percentages.
+  No whole-Match benefit is proven. ONE unchanged full source gate28406 is
+  ACTIVE; newv7 helper drafting is inert. Do not duplicate gate/profiles/oldroutes.
+  Diagnosis remains investigating until valid live evidence; no freeze claimed.
 - current_measurement: ONE current-source v6 profiler56053 completed exit0,
   complete/cleanupComplete=true, fixed70430463/2f008952.50fresh append samples
   reproduce exact retained records; mean107.548ms;150filefsync2931.027ms and
