@@ -2,6 +2,12 @@
 
 ## Current verified progress — Phases262–264 complete
 
+V9 entry37785 CLOSED process-invalid after5chargedcells/4success/1systemfailure
+at13:07:19.976UTC; result7e20c31d/head7225de54. All10ownedcontainers absent.
+ONE ordinary retained verifier84540 ACTIVE; maina98 remains fixed, no duplicate
+or heavywork. Source diagnosis/repair only after verifier terminal; closedv9
+never reused/recredited. No complete matrix/LEAG/freeze credit; see STATE.
+
 ONE freshv9 entry37785/PID95849 ACTIVE from12:40:48.973UTC,static validation
 before fresh same-process capacity. Allocation committed/pushed d1cd76ed.
 Source fixed through terminal/unique retained check; no duplicate or competing

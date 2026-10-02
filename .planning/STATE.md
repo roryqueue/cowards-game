@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 ONE freshv9 entry37785/PID95849 active; static validation before same-process capacity, do not duplicate
+stopped_at: Phase265 v9 entry37785 CLOSED process-invalid after5charged/4success; ONE retained verifier84540 active, fixed-source hold
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: freshv9 allocation committed/pushed d1cd76ed; ONE entry starts12:40:48.973UTC at5c8c301b, terminal absent
+last_activity_desc: v9 terminal13:07:19.976UTC athead7225de54/result7e20c31d; all10ownedcontainers absent; unique retained verifier84540 active
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,26 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current continuation — v9 terminal failure, ONE retained verifier active
+
+Entry37785/PID95849 CLOSED exit0, publishes process_invalid at13:07:19.976UTC,
+result7e20c31d/279B, head7225de54, terminal702c943e. Five durable chargedcells:
+four success and one system_failure, no complete matrix/job or LEAG credit.
+Bounded head metadata571ca6ba/483B records97MBordinarywork/8615records,
+retentionexhaustedfalse, terminal411B/1record. ONE ordinary retained verifier
+84540 ACTIVE on exact freshv9/allocationcf217782/head7225de54, read-only; never
+duplicate. Maina98b5c2b/ea34d793/2bf94999 stays FIXED through verifier terminal;
+no competing CPU-heavy work or repair yet. Read-only exact10container inspection
+confirms all ABSENT; initial case-sensitive status classifier was inconclusive,
+corrected readonly classification confirms lowercase no-such-object output.
+No new entry/route may start while retained verification active. Allv9bytes,
+charge/failure and every olderroute remain immutable/no retry/refund/re-credit.
+Next after unique verifier closes: bounded evidence-driven source diagnosis,
+reviewed repair if justified, then distinct prospective route under standing
+same-bounds approval. No repeated human literal or presumed success. No LEAG/
+freeze/formation/holdout/public/count/production credit. Earlier active-entry
+snapshots are historical, not permission to duplicate.
 
 ## Current continuation — ONE v9 main-orchestrator entry active
 
