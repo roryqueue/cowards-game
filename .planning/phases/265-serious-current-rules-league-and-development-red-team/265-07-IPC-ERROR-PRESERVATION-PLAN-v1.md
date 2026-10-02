@@ -2,7 +2,7 @@
 phase: 265
 plan: 07
 type: source-only-repair-supplement
-status: awaiting-independent-plan-check-and-execution-dispatch
+status: corrected-awaiting-independent-plan-recheck-and-execution-dispatch
 date: 2026-10-02
 tdd: true
 empirical_authority: none
@@ -83,10 +83,20 @@ Keep all existing raw-retained joins, unique roots, identity, requestId, method,
 input root, provider ordinal, charge, provenance and outputBytes bounds.
 For COMPLETED executions, `completed === true` remains unconditional.
 For FAILURE executions only, permit ONE incomplete row if it is the FINAL
-accounting row, at the current canonical pending effect, chargedtrue,
-completedfalse, outputBytes exactly0, and result is `systemFailure`, never
-success/oktrue or player_violation. Existing known-code/schema checks still
-apply. Count the consumed row and advance its provider ordinal exactly as the
+accounting row at the current canonical pending effect, `charged === true`,
+`completed === false`, and `outputBytes === 0`. Explicitly validate the exact
+safe serialized result here; do not assume the current replay already has
+these checks. Result has exactly `ok`, `violation`, `systemFailure`, with
+`ok === false`. Violation has exactly `type`, `message`, equal to
+`INVALID_OUTPUT` and `Runtime system failure`. System failure has exactly
+`code`, `retryable`, with a string code belonging to existing
+`SUBPROCESS_SYSTEM_FAILURE_CODES` and `retryable === false`. Reuse that
+existing allowlist through a source-safe import in the owned league file.
+Reject null, arrays, missing/surplus fields, unknown or malformed codes,
+success payloads, player violations and retryable claims. Apply this NEW strict
+result guard only to the incomplete FAILURE branch, never globally to existing
+completed failures or completed/success replay. Count the consumed row and
+advance its provider ordinal exactly as the
 existing replay does for accounting; do NOT `runtime_resume` its failure output.
 Set replay failureCode to `LAB_SUPERVISOR_FAILURE` and break.
 
@@ -129,8 +139,15 @@ completion/admission or new failure success credit.
    a COMPLETED execution; incomplete oktrue/success or player_violation;
    trailing accounting; wrong requestId, method, input root, provider ordinal,
    joined/unique root, or uncharged row; wrong execution failureCode;
-   noninitial failure state or nonempty failure transitions. Preserve existing
-   positive completed fixtures and all strict provenance tests. Each denial
+   noninitial failure state or nonempty failure transitions. Add coherent-join
+   rejection cases for unknown/missing/non-string code;
+   true/missing/non-boolean retryable; malformed/null systemFailure; nonfalse
+   ok; wrong/missing/surplus violation or systemFailure fields; forbidden
+   success payloads; and nonboolean charged/completed. Each case must reach
+   the new explicit safe-result/incomplete guard rather than incidental schema
+   or raw-join rejection. Existing completed failure fixtures retain their
+   existing behavior; do not apply the new allowlist restriction globally.
+   Preserve existing positive completed fixtures and all strict provenance tests. Each denial
    must reach and exercise its intended guard rather than fail incidentally at
    fixture admission. No malformed failure may create positive payoff/credit.
 6. Focused verification — run both entire owned test files, adjacent
@@ -169,3 +186,12 @@ applicable review/gate and fresh allocation/capacity conditions; consumed routes
 cannot be reused. Never rerun closed retained verifier66301. Stop and report
 if the fix requires more than these four files
 or any prohibited behavior.
+
+## Independent plan-check correction
+
+PLAN-CHECK-v1 records one BLOCKER against original plan raw24739f7a: it correctly
+found that the proposed incomplete branch assumed code/schema checks absent
+from current replay. This unexecuted amendment adds the exact safe-result,
+closed-code/non-retryable/strict-boolean guard and guard-reaching negatives
+above. Source remains unchanged. A clean independent recheck is required
+before execution. The original finding is preserved, not reinterpreted.
