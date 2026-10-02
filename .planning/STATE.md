@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 v10 ONErootentry27069/PID11414 ACTIVE, staticvalidation beforecapacity; sourcebb98878e held
+stopped_at: Phase265 v10 consumedprocess-invalid1charged MALFORMED_IPC; ONEretainedverifier28015/PID11915 active, sourcebb98878e held
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: committed/pushedd2db9f85 freshv10allocation; ONErootentry27069 started17:45:05UTC; no capacitypass/chargedMatch claimed yet
+last_activity_desc: v10terminal17:59:29UTC1chargedfailure resultd72c8a2e; uniqueordinaryretained28015 active; GSDreadonlyIPCdiagnosis, no sourcechange/newroute
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,18 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+V10entry27069 is CLOSED: consumedprocess-invalid,1chargedcell systemfailure,
+no completedjobs. Actualretained original/admitted runtimecode MALFORMED_IPC,
+not observedlifetimeexhaustion. Canonicalresultd72c8a2e/head69494f8f immutable,
+noLEAG/freezecredit. ONEordinaryretainedverifier28015/PID11915 ACTIVE at
+UNCHANGEDbb98878e; neverduplicate/modify source orruncompetingheavywork.
+Read-onlyGSDdebugsession265-v10-malformed-ipc tracescausefromsaved evidence;
+no codefix/tests/Match/newroute yet. Afteruniqueverification closes and
+causeidentified, boundedsource-onlyrepair/review/validation maycontinue
+underexistingapproval; everyconsumedroute staysimmutable. No assumednew
+resource/ruleschange or repeatliteral. Currententry-active snapshots below
+arehistorical. See265-07-EMPIRICAL-RESULT-v10.md andactual28015/processmarkers.
 
 ONE v10 rootentry27069/PID11414 ACTIVE from2026-10-02T17:45:05.684Z, actual
 entry_started_static_validation_before_capacity. Newallocationd1116cd6 was
