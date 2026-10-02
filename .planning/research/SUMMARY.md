@@ -2,6 +2,20 @@
 
 ## Current approved handoff — 2026-10-01
 
+Current source-only repair `e28f29a0` is independently reviewed with zero
+findings; 19 focused tests and build pass. The complete unchanged source gate
+is active as session53203. Identical retained-record hashes and approximately
+12 percent sampled write-time savings are bounded source-only measurements,
+not proof that a Match fits the 120-second lifetime. Fresh v4 packets are
+independently reviewed and compiled into inert records; allocation, fresh
+capacity and live entry remain unperformed until the gate passes. See
+265-07-DEPENDENCY-BARRIER-PROOF-v1.md and265-07-EMPIRICAL-PREPARATION-v8.md.
+
+The unique v3 retained verifier completed with process_invalid/issued=false;
+source-only diagnosis completed. The following v3 entry/diagnosis text is
+historical. Standing approval covers separately prepared same-bounds routes
+without another literal; no consumed route resumes and no bound changes.
+
 Latest outcome: fresh league-v3 passed capacity and stopped process-invalid
 after one charged cell with FACTORY_RUNTIME_LIFETIME_EXHAUSTED (120seconds).
 Unique retained verification and source-only GSD Debug cost diagnosis continue.

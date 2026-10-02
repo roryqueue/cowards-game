@@ -2,6 +2,22 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+Current continuation: reviewed repair source `e28f29a0` preserves artifact
+bytes, hashes and accounting while grouping only small runtime-invocation
+dependency directory barriers. Independent deep review is clean; 19 focused
+tests and build pass. The complete source gate remains active as session53203;
+no full-gate pass is claimed yet. Fresh v4 has eleven independently reviewed
+packets compiled into 45 inert records, but no allocation, capacity receipt or
+live entry. See STATE.md,265-07-DEPENDENCY-BARRIER-PROOF-v1.md and
+265-07-EMPIRICAL-PREPARATION-v8.md. Standing approval removes repeat operator
+questions for distinct same-bounds private routes, not technical gates.
+
+Consumed v3 is closed: its unique retained verification completed successfully
+as a verification of `process_invalid`, not empirical success. It charged one
+cell and exhausted the unchanged 120-second runtime lifetime. LEAG completion
+and the current baseline freeze remain pending; formation and holdout stay
+closed. The entry/diagnosis snapshots below are historical, not active sessions.
+
 Latest outcome: fresh allocation-v3 passed capacity then stopped process-invalid
 after one charged cell on the unchanged120-second runtime lifetime. It is
 terminal; root's unique retained verifier and GSD Debug source-only cost
@@ -45,7 +61,7 @@ The operator approved `lean_runner_feasibility_v1` as the active ADMIT-03 prereq
 
 **Shipped version:** v1.37 Rules Integrity and Strategy Evaluation Foundations on 2026-07-22
 **Release target:** v1.38 Competitive Strategy Factory and Adversarial League
-**Status:** Phases262–264 independently complete; Phase265 is12/14plans complete and empirically incomplete. Fresh full-league allocation-v3 is consumed process-invalid after one charged cell; unique retained verification and source-only lifetime diagnosis are active. All consumed routes and the terminal successful diagnostic remain immutable; six of nine milestone phases remain.
+**Status:** Phases262–264 independently complete; Phase265 is12/14plans complete and empirically incomplete. Full-league allocation-v3 is consumed process-invalid after one charged cell and its retained verification is complete. Repair e28f29a0 is independently reviewed; its unique full source gate is active before distinct v4 allocation/capacity/entry. All consumed routes and the terminal successful diagnostic remain immutable; six of nine milestone phases remain.
 **Last phase verification:** Phase 264 passed 5/5 truths and 11/11 requirements with no gaps. The milestone audit, archive, and tag remain pending.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.
