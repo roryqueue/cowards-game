@@ -1,5 +1,19 @@
 # Prospective v11 private helpers — unexecuted draft
 
+## Current reviewed correction — 2026-10-02T19:23:31Z
+
+Independent helper reviewv1 found a stale terminal/failure-marker collision.
+Root added all three entry markers to preparation freshness and rejects entry,
+terminal, failure and result before result open or entry publication. Re-reviewv2
+is clean (zero blockers/warnings); root confirmed its exact helper raw hashes:
+prepare-data.ts 697598af8a4c8a1edbb03de900e9858df669fc8239eb26f9a38579be3bbb160d;
+run-entry.ts fe6d2283a0dc7b002318608a660a60d94c515b0514d209b30133719650519d38.
+Reviewv1's displayed 19:30 time was not an observed execution time; actual
+re-review time above is clock-observed. Both reports preserve their observations.
+Gate58270 remains active; no helper was executed/typechecked/imported and final
+gate pins remain PENDING/fail-closed. Whole source, bounds and consumed evidence
+unchanged. Earlier draft hashes below are historical, not current reviewed bytes.
+
 Two NEW ignored helpers exist in league-265-prospective-v11-20261002-a:
 prepare-data.ts raw6b65218b2891b6644d62ae3a9afafcb82ffc07a1ffa528622ee19edb86dd6c4f;
 run-entry.ts rawf0924ce03dff04a68bd734058cfc3fd5c2670951628b042bdb87f50f9b436d5b.
