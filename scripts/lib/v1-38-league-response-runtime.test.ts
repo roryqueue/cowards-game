@@ -91,12 +91,31 @@ import { createLeagueRepository } from "../../packages/strategy-lab/src/league/r
 import { LeagueRecordGraph, LeagueRetentionBudget } from "../run-v1-38-serious-league.js"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { issueProspectiveLeagueLifetimeAuthority, claimProspectiveLeagueLifetimeAuthority } from "./v1-38-league-prospective-lifetime.js"
 it("prospective lifetime response enumeration preserves all score and independence arms", () => {
   const allocation = (allocationApi as any).createProspectiveLeagueExecutionAllocationV2(prospectiveLifetimeFixture())
   const cells = enumerateLeagueResponseConditions(allocation, allocation.initialCandidatePublicationRoots)
   expect(cells).toHaveLength(72)
   for (const purpose of ["score", "independence_left", "independence_right"]) expect(cells.filter((cell) => cell.purpose === purpose)).toHaveLength(24)
   expect(allocation.operations.perMatchMilliseconds).toBe(600000)
+})
+it("prospective lifetime response score/self-play arms keep Match charge distinct from measured attempt", () => {
+  const allocation = allocationApi.createProspectiveLeagueExecutionAllocationV2(prospectiveLifetimeFixture()), measuredAttemptRoot = labRoot("response-lifetime-measured", 1)
+  const conditions = enumerateLeagueResponseConditions(allocation, allocation.initialCandidatePublicationRoots)
+  for (const condition of conditions.filter((row) => row.arenaIndex === 0 && row.opponentRoot === allocation.initialCandidatePublicationRoots[0] && row.initial === "candidate")) {
+    const { arenaIndex: _index, ...rest } = condition, value = { parentStartRoot: labRoot("response-factory-start", 1), ...rest }, chargeRoot = labRoot("response-lifetime-retained-charge", value)
+    const runtime = { revisionId: "unit-source", sourceRoot: root, executableRoot: root, tupleId: MATCH_KERNEL.tupleId, tupleRoot: allocation.tupleRoot, runtimeLimitsRoot: allocation.runtimeRoot, image: allocation.operations.image, factoryAuthorizationRoot: root, factoryPacketRoot: root, factoryProposalRoot: root, factoryValidationRoot: root }
+    // Equal-source self-play still has two disjoint charged provider identities.
+    for (const seat of ["bottom", "top"] as const) {
+      const attemptRoot = seat === value.side ? measuredAttemptRoot : chargeRoot
+      const binding = { budgetRoot: allocation.root, attemptRoot, matchId: `league-response-${chargeRoot.slice(7, 31)}`, seat, containerName: `unit-${condition.ordinal}-${seat}`, ownershipLabel: "unit-response", runtime }
+      const charge = { kind: "response-match-start" as const, root: chargeRoot, value, measuredAttemptRoot }
+      expect(() => issueProspectiveLeagueLifetimeAuthority(allocation, charge, { ...binding, attemptRoot: seat === value.side ? chargeRoot : measuredAttemptRoot })).toThrow("CHARGE_BINDING")
+      const authority = issueProspectiveLeagueLifetimeAuthority(allocation, charge, binding)
+      for (const layer of ["factory", "planner"] as const) expect(claimProspectiveLeagueLifetimeAuthority(authority, binding, 600000, layer)).toBe(600000)
+      expect(() => issueProspectiveLeagueLifetimeAuthority(allocation, charge, binding)).toThrow("PROVIDER_REUSED")
+    }
+  }
 })
 
 /** Explicitly synthetic favorable response, never an empirical performance claim.

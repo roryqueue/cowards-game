@@ -9,10 +9,12 @@ import { buildStrategyRevision } from "../packages/runtime-js/src/revision.js"
 import { allocationFixture, prospectiveFixture, prospectiveLifetimeFixture, capacityFixture } from "../packages/strategy-lab/src/league/allocation.test.js"
 import { importedCandidateFixture } from "../packages/strategy-lab/src/league/contracts.test.js"
 import { createLeagueExecutionAllocation, createLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt } from "../packages/strategy-lab/src/league/allocation.js"
+import { createLeagueProspectiveAmendmentV2, createProspectiveLeagueExecutionAllocationV2 } from "../packages/strategy-lab/src/league/allocation.js"
 import { createLeagueRepository, recordLeagueCellStart, publishLeagueCellTerminal, publishLeagueArtifact } from "../packages/strategy-lab/src/league/repository.js"
 import { createLeagueCellTerminal, deriveLeagueResultEventRoot, LeaguePayoffProjectionSchema } from "../packages/strategy-lab/src/league/contracts.js"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../packages/strategy-lab/src/contracts.js"
-import { factoryAssessmentImplementationRoot } from "./v1-38-factory-implementation.js"
+import { factoryAssessmentImplementationRoot, factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
+import { claimProspectiveLeagueLifetimeAuthority } from "./lib/v1-38-league-prospective-lifetime.js"
 import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRetainedSeriousLeague, verifyRetainedCellJournalBijection, LeagueConnectedSession, LeagueRecordGraph, LeagueRetentionBudget, normalizedGameplayRoot, sameLargeExecution, sameLargeResult, diagnoseLeagueExecutionStorage, seriousLeagueMain, retainedSupervisorFailureDiagnostic, type LeagueCandidateInput, type LeagueFixtureSeams } from "./run-v1-38-serious-league.js"
 import { prepareLeagueExecutionStream, readLeagueExecutionStream } from "./lib/v1-38-league-execution-stream.js"
 import { createFactoryRepository, publishFactoryArtifact, recordFactoryAttemptStart, publishFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/repository.js"
@@ -36,12 +38,22 @@ afterEach(() => { descriptorSyncFailure.active = false; descriptorSyncFailure.er
 const temporary = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-command-test-"))); directories.push(directory); return directory }
 it("prospective lifetime preparation binds current reviewed roots before candidate reads", () => {
   const input = prospectiveLifetimeFixture(), source = leagueCurrentSourceIdentity(), readCandidates = vi.fn(() => { throw Error("reached v2 candidate seam") })
-  expect(() => prepareProspectiveSeriousLeague(input, { factoryRepository: {} as never, fixture: { readCandidates } })).toThrow("SOURCE")
+  expect(() => prepareProspectiveSeriousLeague(input, { factoryRepository: {} as never, fixture: { readCandidates } })).toThrow("STALE_IMPLEMENTATION")
   expect(readCandidates).not.toHaveBeenCalled()
   const { root: _root, schemaVersion: _schema, ...amendment } = input.amendment
-  const current = { ...input, implementationRoot: source.implementationRoot, amendment: { ...amendment, implementationRoot: source.implementationRoot, sourceRoot: source.sourceRoot } }
+  const current = { ...input, implementationRoot: source.implementationRoot, amendment: createLeagueProspectiveAmendmentV2({ ...amendment, implementationRoot: source.implementationRoot, sourceRoot: source.sourceRoot }) }
   // The constructor, not a stale precomputed root, must select prospective-v2.
   expect(() => prepareProspectiveSeriousLeague(current, { factoryRepository: {} as never, fixture: { readCandidates } })).toThrow("reached v2 candidate seam")
+})
+it("prospective lifetime source closure inventories each changed production byte", () => {
+  const manifest = factoryAssessmentImplementationManifest(), current = leagueCurrentSourceIdentity()
+  for (const path of ["packages/strategy-lab/src/league/allocation.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-planner-supervised-runtime.ts", "scripts/run-v1-38-serious-league.ts", "scripts/lib/v1-38-league-response-runtime.ts"]) {
+    const entry = manifest.entries.find((entry) => entry.path === path)
+    expect(entry?.root).toBe(`sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`)
+    const changed = manifest.entries.map((entry) => entry.path === path ? { ...entry, root: labRoot("modified-production-byte", path) } : entry)
+    expect(labRoot("factory-reviewed-implementation-v2", changed)).not.toBe(current.implementationRoot)
+    expect(labRoot("league-reviewed-source-bytes-v1", changed)).not.toBe(current.sourceRoot)
+  }
 })
 const controlledGraphSyncs = () => {
   const pending: Array<(error?: Error) => Promise<void>> = []
@@ -516,6 +528,32 @@ describe("Darwin league available-memory observation", () => {
   })
 })
 
+it("prospective lifetime main cell retains charge before issuing two actual provider identities", async () => {
+  const rows = [await candidate(1), await candidate(3), await candidate(5)], input = prospectiveLifetimeFixture(), source = leagueCurrentSourceIdentity()
+  const { root: _root, schemaVersion: _schema, ...body } = input.amendment
+  const amendment = createLeagueProspectiveAmendmentV2({ ...body, ...source, bases: rows.map((row, index) => ({ sourceSlot: ["S01", "S03", "S05"][index] as "S01" | "S03" | "S05", publicationArtifactRoot: row.publicationRoot, candidateAdmissionRoot: row.admission.root, sourceRoot: row.admission.candidate.proposal.source.root, supervisionArtifactRoot: row.admission.importEvidence!.supervisionArtifactRoot })) })
+  const repository = createLeagueRepository(temporary()), allocation = createProspectiveLeagueExecutionAllocationV2({ ...input, implementationRoot: source.implementationRoot, amendment, initialCandidatePublicationRoots: rows.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: rows[0]!.publicationRoot, outputDirectories: { league: repository.directory, responseFactory: "/fixture/factory-lifetime" } })
+  const capacity = capacityFixture(allocation), capacityReceipt = createLeagueCapacityReceipt(capacity, allocation), captured: any[] = []
+  let session: LeagueConnectedSession
+  const fixture: LeagueFixtureSeams = { candidates: rows, capacityContext: { ...source, nowMilliseconds: 1001, filesystemDevice: capacity.filesystemDevice, freeFilesystemBytes: capacity.freeFilesystemBytes, availableMemoryBytes: capacity.availableMemoryBytes }, host: { createFactorySupervisedRuntime(request) {
+    const options = request as any, authority = options.prospectiveLifetimeAuthority
+    expect(session.graph.latestRoot).not.toBeNull()
+    const retained = readLeagueRecordGraph(repository, session.graph.latestRoot!, allocation.operations), charge = retained.get(retained.roots("cell-start")[0]!)!.value.start
+    expect(readdirSync(repository.directory).some((name) => name.includes(charge.root.slice(7)) && name.endsWith(".started.json"))).toBe(true)
+    expect(options.prospectiveLifetimeMs).toBe(600000); expect(authority.runtime.sourceRoot).toBe(request.admission.sourceRoot)
+    expect(authority.runtime.factoryAuthorizationRoot).toBe(request.admission.authorizationRoot)
+    const binding = { budgetRoot: request.budgetRoot, attemptRoot: request.attemptRoot, matchId: `league-${charge.root.slice(7, 31)}`, containerName: `league-${charge.root.slice(7, 25)}-${captured.length}`, ownershipLabel: `league-${allocation.root.slice(7, 25)}`, runtime: authority.runtime }
+    expect(claimProspectiveLeagueLifetimeAuthority(authority, binding, 600000, "factory")).toBe(600000)
+    expect(claimProspectiveLeagueLifetimeAuthority(authority, binding, 600000, "planner")).toBe(600000)
+    captured.push(options); return host.createFactorySupervisedRuntime(request)
+  } }, run: async () => { throw Error("unit stop after provider join") } }
+  session = new LeagueConnectedSession({ allocation, allocationRoot: allocation.root, capacityReceipt, repository, factoryRepository: rows[0]!.factoryRepository, responseFactoryRepository: null, fixture }, allocation)
+  await expect(session.matrix(rows, allocation.seedBlocks[0]!)).rejects.toThrow()
+  expect(captured).toHaveLength(2)
+  expect(captured[0].prospectiveLifetimeAuthority).not.toBe(captured[1].prospectiveLifetimeAuthority)
+  expect(captured.map((row) => row.prospectiveLifetimeAuthority.seat)).toEqual(["bottom", "top"])
+  expect(captured[0].attemptRoot).toBe(captured[1].attemptRoot)
+})
 describe("prospective CLI source-only gates", () => {
   const inputWithCurrentSource = () => {
     const input = prospectiveFixture(), { root: _root, schemaVersion: _schema, ...body } = input.amendment, source = leagueCurrentSourceIdentity()
