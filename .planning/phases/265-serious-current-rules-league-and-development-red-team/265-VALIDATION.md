@@ -7,13 +7,22 @@ wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-02
 source_reviewed: 5d898accd715baf723fabe2b69fb13c930ebd358
-source_gate: private-ipc-v2-58270-active-build3-strict4-pass-CI1-running
+source_gate: private-ipc-v2-58270-closed-failed-CI1-509pass1fail-older-fixture-reference
 empirical_validation: v10-consumed-process-invalid-one-cell-unique-retained-verifier28015-complete
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+Sourcegate58270 CLOSED exit1 at19:36:23.692UTC, unchanged5d source; CI3/4passed,
+CI1 28/29files and509/510tests passed (1959.64s), one older factory lifetime
+test fails at157 with missing buildFeasibilityCorpus after root's removedimport.
+CI2/5/6/7/8 NOTRUN. No whole-gate acceptance; v2 terminal2754d1db preserved.
+Full-phase Nyquist remains partial/false, every LEAG requirement open. Bounded
+test-only correction/full factory regression/independent rereview/NEW gate next.
+No new Match, route allocation, capacity or retained verifier launched. Earlier
+active snapshots below are historical, not current state.
 
 ### Private finite IPC diagnostics — source-only validation in progress
 

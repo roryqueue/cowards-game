@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 clean IPC reviewv2; ONE freshfullsourcegate58270/PID15219 active at fixed5d898acc
+stopped_at: Phase265 sourcegate58270 CLOSED failed CI1; bounded older-test fixture correction next
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: IPC reviewv2 clean zerofindings; sourcegate58270 started19:03:35UTC, buildCI3/strictCI4 pass, CI1suite active; sourceheld
+last_activity_desc: Sourcegate58270 failed one older undefined fixture reference;509pass1fail,no complete gate or live Match; repair/review/new gate next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,17 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+Sourcegate58270 CLOSED exit1 at19:36:23.692UTC;PID15219 absent. CI3/4passed;
+CI1=509pass1fail (factory test157 undefined buildFeasibilityCorpus, missed older
+reference during root5d import correction). CI2/5/6/7/8 NOTRUN, no complete
+marker, no admission/LEAG credit. V2 start/helper/terminal preserved, neverrerun.
+Bounded local fixture correction/full factory regression/independent rereview
+then NEW sourcegate next. No live entry/verifier/capacity/Match; no human-only
+checkpoint. V11 helpers inert, reviewed marker guard fixed, final pins PENDING.
+Keep all approved600000/frozenbounds and consumed history unchanged; no freeze,
+holdout opening, formation/public/counting/production. Active snapshot below
+is history, not current process state.
 
 ONE freshfull private IPC sourcegate58270/PID15219 is ACTIVE from19:03:35UTC
 at fixed5d898acc (implementationd42a6cf1/sourcee5428d3c). Clean independent

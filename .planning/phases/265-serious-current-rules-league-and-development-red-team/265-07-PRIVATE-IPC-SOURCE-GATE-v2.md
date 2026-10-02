@@ -1,4 +1,20 @@
-# Plan265-07 private IPC source gate v2 — active
+# Plan265-07 private IPC source gate v2 — failed
+
+Status: FAILED. Unique root58270 CLOSED exit1 at2026-10-02T19:36:23.692Z;
+PID15219 absent after terminal. Immutable terminal raw SHA-256:
+2754d1db63a41a1da7dbeae496be98194f2578185e5556e7387319284c3611fb.
+Elapsed1968493ms. Passed exact CI3 build and CI4 strict14script commands;
+CI1 regression returned29files (28pass/1fail),510tests (509pass/1fail),1959.64s.
+Failure: factory-supervised-runtime.test.ts:157, older prospective-lifetime
+test `threads both claims and counts setup plus awaited retention toward exact
+expiry`, ReferenceError buildFeasibilityCorpus is not defined. Root's5d fixture
+import correction missed this older reference; source re-review/focused prefix
+did not catch it. Do not claim those checks established whole-suite validity.
+CI2/5/6/7/8 were NOTRUN; no completion marker, capacity, allocation, provider,
+Match or league/freeze credit. All v2 helper/start/terminal bytes preserved.
+Source hold released for a bounded local test-fixture correction, focused full
+factory regression, independent review/fix and a NEW gate; never rerun v2.
+Below is the retained active-prefix snapshot, not current state.
 
 Status: ACTIVE, unique root session58270/PID15219. Not a complete gate pass,
 empirical route, capacity receipt or league credit. Never duplicate this entry.
