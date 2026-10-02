@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 v10 preparation complete; NEWd1116cd6 canonical allocation published, commit/push before ONE capacity-gated rootentry
+stopped_at: Phase265 v10 ONErootentry27069/PID11414 ACTIVE, staticvalidation beforecapacity; sourcebb98878e held
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: v10 prepare94959 pass/staticcapacity76568 notreceipt/empty0700guard70326pass/publish15380pass; no liveentry/Match yet
+last_activity_desc: committed/pushedd2db9f85 freshv10allocation; ONErootentry27069 started17:45:05UTC; no capacitypass/chargedMatch claimed yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,19 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+ONE v10 rootentry27069/PID11414 ACTIVE from2026-10-02T17:45:05.684Z, actual
+entry_started_static_validation_before_capacity. Newallocationd1116cd6 was
+published/committed/pushedd2db9f85 beforehand. Never duplicate thisentry or
+run competingheavywork. Sourcebb98878e implementationd687/sourcee646 fixed
+throughterminal and ONEunique retainedverification. Initialentrysnapshot
+claims no freshcapacitypass or chargedcells. Result-v10 reserved, notpublished
+success; do notstage its unfinishedbytes. Readactualmarkers/process/session
+27069 before acting, thencontinueafterterminal+uniqueverify in dependency
+order. Standingfreshsame-scope approval+exactprospective600000 apply; all
+otherbounds and priorconsumedartifactsimmutable. NoLEAG/freeze/holdoutopening/
+formation/public/counting/productionauthority fromstart. Nohuman checkpoint.
+See265-07-V10-ENTRY-v1.md; older prepare/publication-next snapshots arehistory.
 
 V10 data-only preparation is COMPLETE. New canonicalallocationd1116cd6,
 raw0b51d7ec/24325B, published15380exit0 after exactsource/gate/reportpins.
