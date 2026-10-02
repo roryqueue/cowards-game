@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 fresh v7 allocation1fdbc6ae published; single entry next after commit/push
+stopped_at: Phase265 single v7 entry95758/PID86474 active at09:16:59.737UTC; static validation before fresh capacity
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: unique prepare65328 and static capacity83608 pass; canonical allocation95556 publishes451daddf; no live receipt yet
+last_activity_desc: reviewed allocation1fdbc6ae committed744e50a2 and pushed; single entry95758 started; no duplicate or competing heavy work
 progress:
   total_phases: 9
   completed_phases: 3
@@ -33,8 +33,13 @@ ONE data-only prepare65328 completes exit0, authenticating prior factory evidenc
 ONE static capacity-input83608 passes at e3d7dd40 with reconciliation84cb5ca9;
 these are inherited static sizing, not a live receipt. ONE canonical allocation
 publication95556 completes allocation1fdbc6ae/raw451daddf/24097bytes. Never
-repeat these steps. Commit/push precedes single entry and fresh same-process
-capacity; no live receipt or Match yet.
+repeat these steps. Allocation committed744e50a2 and pushed to origin/main.
+Root's ONE entry95758/PID86474 started2026-10-02T09:16:59.737Z; actual marker
+reports static validation before fresh same-process capacity. No capacity pass
+or charged Match is yet observed. Result-v7 is reserved empty, not evidence;
+do not stage it. Never duplicate entry or start retained verification while
+active. Keep source fixed and hold all competing heavy work through terminal
+and its ONE ordinary retained check.
 Fixed634b0e84/f942c33f/ae9b47ba and all frozen limits remain. LEAG incomplete,
 freeze-before-formation and unopened holdout/no-public/no-counted stay enforced.
 See EMPIRICAL-PREPARATION-v11. Earlier draft-next snapshots are historical.

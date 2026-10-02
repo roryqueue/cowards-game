@@ -6,8 +6,10 @@ Freshv7 draft64409 completed; actual independent eleven-job review2e909f7a
 accepts unexecuted requests. Unique compile21989 creates45inert records;
 allocation-input3094 completes, data-only prepare65328 completes exit0. Static
 capacity83608 passes without a live receipt; canonical allocation95556 publishes
-1fdbc6ae/raw451daddf. Commit/push then single entry/fresh capacity is next.
-Do not duplicate completed preparation. No live capacity/Match yet.
+1fdbc6ae/raw451daddf, committed744e50a2 and pushed. ONE entry95758/PID86474
+started09:16:59.737UTC in static validation before fresh same-process capacity.
+No capacity pass/charged cell observed yet. No duplicate entry/verifier or
+competing heavy work; main source stays fixed through terminal/retained check.
 Standing approval applies, fixed634b0e84 remains. LEAG/freeze stays incomplete,
 formation/holdout/public/counting stay excluded. See preparation-v11 and
 PACKET-REVIEW-v10; prior request-next snapshots below are historical.

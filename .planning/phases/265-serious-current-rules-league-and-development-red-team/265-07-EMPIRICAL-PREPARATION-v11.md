@@ -46,6 +46,18 @@ precedes the single root entry; fresh same-process capacity is still required
 before charges/dispatch. No live Match, producer/model response, LEAG completion,
 freeze, formation or holdout credit follows. Main source remains fixed.
 
+## Actual unique entry started
+
+Canonical allocation committed744e50a2 and pushed to origin/main before entry.
+Root's ONE entry95758/PID86474 started2026-10-02T09:16:59.737Z with exact
+allocation1fdbc6ae, three declared private repositories and capacity-input path.
+Actual run-entry marker reports static validation before fresh same-process
+capacity; no capacity pass/charged cell is yet observed. Result-v7 is reserved
+empty, not evidence, and is not staged. Do not duplicate entry, run a retained
+verifier concurrently, or run competing heavy work. Fixed main source remains
+through actual terminal and its ONE ordinary retained verification. Earlier
+entry-next snapshots are historical. No LEAG/freeze/formation/holdout credit.
+
 The new namespace is `.strategy-lab/league-265-prospective-v7-20261002-a`. The helpers bind source commit `634b0e84896132a1a9ac5d855763b0793abfe1bc`, implementation root `sha256:f942c33fc577b1cca8b1742b73f2e31637f431abecf6b69b70001cc03b6a0744`, and source root `sha256:ae9b47ba2c607fd54baee4fee8ac24291524877d5f60b954192f6aaa0ff69a06`. They carry the six raw source/test pins and bounded review-v4 identity for the asynchronous dependency repair. The data-only profile result is identified as such; it provides no whole-Match claim. The proof document records the active root gate as pending, not passed.
 
 The preparation structure inherits only the frozen non-authorizing request/config/prompt material and historical static capacity sizing. New v7 output locations are distinct. No earlier route, job identity, review timing, packet, allocation, capacity receipt, model output, runtime result, or Match result is adopted. The historical sizing sample is not a live observation.

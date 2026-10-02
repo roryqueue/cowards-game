@@ -5,8 +5,10 @@
 Freshv7 eleven-job review2e909f7a accepts static requests; unique compile21989
 creates45inert records and allocation-input3094 completes23edce70. ONE data-only
 prepare65328 completes exit0; do not duplicate. Static capacity83608 passes,
-canonical publication95556 yields1fdbc6ae/raw451daddf. Commit/push then single
-entry/fresh same-process capacity follows. No live capacity, Match,
+canonical publication95556 yields1fdbc6ae/raw451daddf, committed744e50a2/pushed.
+ONE entry95758/PID86474 started09:16:59.737UTC before fresh same-process capacity.
+No observed capacity pass/charged Match yet; source fixed/heavy work held.
+No duplicate entry or concurrent retained verifier. No
 plan/phase/LEAG/freeze credit. Standing approval applies at
 fixed634b0e84; every technical gate and frozen bound remains. See preparation-v11
 and PACKET-REVIEW-v10. Earlier request-next snapshots below are historical.
