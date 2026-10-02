@@ -32,10 +32,19 @@ summary5b064d9367557191a1abf961efc2eb731507728cbc26f5c00b46068e6d487d53,
 completion18291fec4c06917e63d6958808fedbc6c40aa5960fa39237c46a74dd6cfd84b7.
 ONE allocation-input3094 completes raw23edce70be2755d18285cd84a146cb89a19497c38d3dbe08720dad48bbc154ea,
 23955bytes, standing-approval:20261001-human-blanket-fresh-same-bounds-v7.
-ONE root data-only prepare65328 is ACTIVE at exact approved-two factory repository;
-never duplicate it. No canonical allocation, capacity receipt, live Match,
-producer/model response, LEAG completion, freeze, formation or holdout exists
-from these steps. Main source remains fixed.
+ONE root data-only prepare65328 completes exit0 at exact approved-two factory
+repository; never duplicate it. Actual allocation semantic root is
+sha256:1fdbc6ae4d4ed7b9c1986f684094e2abd37d814eaa8664387f5a4ce32417970e,
+raw451daddfd57b2c9aecfbd0a54cac038371fa014b0efa8a847d6adee00c9e4b30,
+24097bytes. ONE static capacity-input83608 passes at plan raw
+e3d7dd4083a578ed2522c8133d8ae07aa4277bb345803eba215977072a29e2c6,
+6379bytes, reconciliation84cb5ca90692339c98ba4f250019459aee4fe2c8c11e838841d8353f9fc77883.
+These quantities are inherited static sizing, not current host observations.
+ONE canonical publication95556 passes at the exact semantic/raw roots above,
+destination .planning/artifacts/v1.38-phase-265-allocation-v7.json. Commit/push
+precedes the single root entry; fresh same-process capacity is still required
+before charges/dispatch. No live Match, producer/model response, LEAG completion,
+freeze, formation or holdout credit follows. Main source remains fixed.
 
 The new namespace is `.strategy-lab/league-265-prospective-v7-20261002-a`. The helpers bind source commit `634b0e84896132a1a9ac5d855763b0793abfe1bc`, implementation root `sha256:f942c33fc577b1cca8b1742b73f2e31637f431abecf6b69b70001cc03b6a0744`, and source root `sha256:ae9b47ba2c607fd54baee4fee8ac24291524877d5f60b954192f6aaa0ff69a06`. They carry the six raw source/test pins and bounded review-v4 identity for the asynchronous dependency repair. The data-only profile result is identified as such; it provides no whole-Match claim. The proof document records the active root gate as pending, not passed.
 

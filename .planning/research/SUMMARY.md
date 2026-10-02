@@ -5,8 +5,10 @@
 Freshv7 draft64409 and actual independent eleven-job review2e909f7a complete;
 all requests accepted for static compilation only, real241578ms review total.
 ONE compile21989 produces45inert records, allocation-input3094 completes.
-ONE data-only prepare65328 is ACTIVE, not a producer or Match run. No canonical
-allocation/live capacity/Match yet. Keep634b0e84/f942c33f/ae9b47ba fixed and do not
+ONE data-only prepare65328 completes exit0, not a producer or Match run.
+Static capacity83608 passes without live observation; canonical publication95556
+completes1fdbc6ae/raw451daddf. Commit/push then single entry/fresh same-process
+capacity follows. No live receipt/Match yet. Keep634b0e84/f942c33f/ae9b47ba fixed and do not
 duplicate preparation. No LEAG/freeze/formation/holdout credit. Standing approval
 applies without another literal. See preparation-v11 and PACKET-REVIEW-v10.
 Earlier request-next snapshots below are historical.

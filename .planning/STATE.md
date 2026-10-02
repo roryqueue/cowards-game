@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 fresh v7 requests accepted and compiled; unique data-only preparation65328 active
+stopped_at: Phase265 fresh v7 allocation1fdbc6ae published; single entry next after commit/push
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: actual eleven-job review passes; compile21989 creates45inert records; allocation-input3094 complete; prepare65328 active
+last_activity_desc: unique prepare65328 and static capacity83608 pass; canonical allocation95556 publishes451daddf; no live receipt yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -29,8 +29,12 @@ unexecuted requests at review2e909f7a, with real241578ms total review windows.
 PACKET-REVIEW-v10 preserves earlier reports. ONE compile21989 completes with
 45inert records and packet413e696b; ONE allocation-input3094 completes23edce70
 using standing-approval:20261001-human-blanket-fresh-same-bounds-v7.
-ONE data-only prepare65328 is ACTIVE, authenticating prior factory evidence;
-never duplicate it. No canonical v7 allocation/live capacity/Match yet.
+ONE data-only prepare65328 completes exit0, authenticating prior factory evidence.
+ONE static capacity-input83608 passes at e3d7dd40 with reconciliation84cb5ca9;
+these are inherited static sizing, not a live receipt. ONE canonical allocation
+publication95556 completes allocation1fdbc6ae/raw451daddf/24097bytes. Never
+repeat these steps. Commit/push precedes single entry and fresh same-process
+capacity; no live receipt or Match yet.
 Fixed634b0e84/f942c33f/ae9b47ba and all frozen limits remain. LEAG incomplete,
 freeze-before-formation and unopened holdout/no-public/no-counted stay enforced.
 See EMPIRICAL-PREPARATION-v11. Earlier draft-next snapshots are historical.
