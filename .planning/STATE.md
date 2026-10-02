@@ -54,8 +54,9 @@ before creating records or consuming an allocation/Match. Root fixed that and
 canonical job/channel ID preparation; final helper rereviewv12 is clean and
 strict no-emit types pass. Compile64800 published45inert records, and fresh
 unrooted input46436 is prepared at rawea9f8ef2. Unique data-only
-prepare46814 is active; do not duplicate it.
-No v5 allocation, capacity receipt or execution exists. See canonical-literal
+prepare46814 completed exit0: rooted v5 allocation20077381,raw90816b7c/22037bytes.
+Typed capacity input39739 is prepared, not a host receipt. Do not repeat prepare.
+No v5 capacity receipt or execution exists. See canonical-literal
 proof/review. Standing approval covers a distinct same-bounds route after gates.
 LEAG/Phase265 completion and freeze remain pending.
 

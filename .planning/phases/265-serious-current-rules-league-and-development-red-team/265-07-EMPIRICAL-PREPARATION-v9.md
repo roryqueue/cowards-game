@@ -72,6 +72,13 @@ artifacts and completion-last metadata. This did not execute a producer.
 - compile-complete:sha256:798e3cdd506f21b42f0b9fe73cd00e9904bc89e864044ad542b79e59b495f7a3,521bytes
 - Fresh unrooted allocation input46436:sha256:ea9f8ef22be233ce262d95cc8c6230b3f469e87ba693f03e18f12dd23234e2dc,21895bytes.
 
-Data-only prepare-prospective now checks the imported historical candidate
-evidence. Until it succeeds, no rooted v5 allocation exists. No host capacity,
-provider/model/Match call, LEAG completion or freeze follows from preparation.
+Unique data-only prepare46814 completed exit0 after checking imported historical
+candidate evidence. It produced rooted allocation
+sha256:2007738185532f4afec4902ce8a651e7e9bab1a65fffef7020bed22a04647240,
+rawsha256:90816b7c8598d4a0893c436fe4fd10c42211dabdb919eef031ee4ae3f2ef7073,
+22037bytes. The prepared capacity input39739 passes its typed admission:
+reconciliation ed22b208/4897bytes and capacity-plan-input150985fb/6857bytes.
+Its numeric samples are explicitly inherited, not freshly measured. The fresh
+private league directory is created empty. No host receipt exists yet.
+
+No provider/model/Match call, LEAG completion or freeze follows from preparation.
