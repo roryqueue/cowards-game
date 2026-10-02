@@ -17,13 +17,11 @@ export type CanonicalJsonEncodeResult =
 
 type EncodedString = {
   readonly bytes: Uint8Array
-  readonly sortBytes: Uint8Array
 }
 
 type ObjectEntry = {
   readonly key: string
   readonly keyBytes: Uint8Array
-  readonly sortBytes: Uint8Array
   readonly value: JsonValue
 }
 
@@ -69,13 +67,24 @@ const ownerFor = (
     ? "player_violation"
     : "system_failure"
 
-const compareUnsignedBytes = (left: Uint8Array, right: Uint8Array): number => {
-  const length = Math.min(left.byteLength, right.byteLength)
-  for (let index = 0; index < length; index += 1) {
-    const difference = left[index]! - right[index]!
-    if (difference !== 0) return difference
+// UTF-8 preserves Unicode scalar-value order. Compare code points directly
+// after encodeString has validated each key, avoiding a second TextEncoder
+// allocation per string/key while preserving the original byte ordering.
+const compareUnicodeScalars = (left: string, right: string): number => {
+  let leftOffset = 0
+  let rightOffset = 0
+  while (leftOffset < left.length && rightOffset < right.length) {
+    const leftScalar = left.codePointAt(leftOffset)!
+    const rightScalar = right.codePointAt(rightOffset)!
+    if (leftScalar !== rightScalar) return leftScalar - rightScalar
+    leftOffset += leftScalar > 0xffff ? 2 : 1
+    rightOffset += rightScalar > 0xffff ? 2 : 1
   }
-  return left.byteLength - right.byteLength
+  return leftOffset === left.length
+    ? rightOffset === right.length
+      ? 0
+      : -1
+    : 1
 }
 
 const canonicalNumber = (value: number): string | undefined => {
@@ -190,7 +199,6 @@ export const encodeCanonicalJson = (
     pieces.push('"')
     return {
       bytes: textEncoder.encode(pieces.join("")),
-      sortBytes: textEncoder.encode(value),
     }
   }
 
@@ -282,13 +290,10 @@ export const encodeCanonicalJson = (
         entries.push({
           key,
           keyBytes: encodedKey.bytes,
-          sortBytes: encodedKey.sortBytes,
           value: descriptor.value as JsonValue,
         })
       }
-      entries.sort((left, right) =>
-        compareUnsignedBytes(left.sortBytes, right.sortBytes),
-      )
+      entries.sort((left, right) => compareUnicodeScalars(left.key, right.key))
       activeContainers.add(value)
       let error = append(FIXED_ASCII.objectOpen)
       if (error) return error

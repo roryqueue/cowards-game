@@ -92,6 +92,65 @@ describe("canonical JSON v1 iterative encoder", () => {
     }
   }, 20_000)
 
+  it("orders validated Unicode scalar keys exactly like unsigned UTF-8 bytes", () => {
+    const keys = [
+      "\u{10ffff}",
+      "\u{10000}",
+      "\uffff",
+      "\ue000",
+      "\ud7ff",
+      "\u0800",
+      "\u07ff",
+      "\u0080",
+      "\u007f",
+      "a\u{10000}",
+      "a\u0080",
+      "a\u007f",
+      "a",
+      "",
+      "A\u{1f642}z",
+      "zA",
+      "\u0000",
+      "\n",
+      '"',
+      "\\",
+    ]
+    const value: Record<string, JsonValue> = Object.create(null)
+    for (const key of keys) value[key] = true
+    const byteOrder = (left: string, right: string) =>
+      Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"))
+    const golden = `{${[...keys]
+      .sort(byteOrder)
+      .map((key) => `${JSON.stringify(key)}:true`)
+      .join(",")}}`
+    const encoded = encodeCanonicalJson(value, { context: "host-api-value" })
+    expect(encoded.ok).toBe(true)
+    if (encoded.ok)
+      expect(Buffer.from(encoded.bytes).toString("utf8")).toBe(golden)
+  })
+
+  it("validates malformed keys and preserves entry errors before sorting", () => {
+    const malformed: Record<string, JsonValue> = Object.create(null)
+    malformed["\ud800"] = true
+    const result = encodeCanonicalJson(malformed, { context: "host-api-value" })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe("INVALID_UNICODE_SCALAR")
+    let getterCalls = 0
+    const accessor = Object.defineProperty({}, "\ud800", {
+      enumerable: true,
+      get() {
+        getterCalls++
+        return true
+      },
+    })
+    const rejected = encodeCanonicalJson(accessor, {
+      context: "host-api-value",
+    })
+    expect(rejected.ok).toBe(false)
+    if (!rejected.ok) expect(rejected.error.code).toBe("INVALID_GRAMMAR")
+    expect(getterCalls).toBe(0)
+  })
+
   it("copies private fixed tokens into fresh outputs that cannot poison subsequent encodings", () => {
     const cases: readonly [JsonValue, string][] = [
       [null, "null"],
