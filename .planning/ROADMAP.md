@@ -966,8 +966,9 @@ Current Plan07 continuation: fresh full-league v3 is consumed process-invalid
 after one charged cell and its unique retained verification is complete.
 Independent review accepts small-invocation durability repair e28f29a0 with
 complete source gate53203 passes382main+3tactical tests/types/build/boundaries.
-Fresh v4 has reviewed/compiled inert packets and unique data-only prepare57563
-active, no rooted allocation/capacity/live entry yet. Standing human approval
+Fresh v4 has reviewed/compiled inert packets,prepare57563 passed and canonical
+allocationrootf7968e1e published with typed capacity input,not a host receipt or
+live entry yet. Standing human approval
 covers distinct same-bounds private routes
 after their technical gates, never consumed-route retries or bound changes.
 See265-07-EMPIRICAL-PREPARATION-v8.md. No LEAG completion or freeze follows.

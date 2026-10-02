@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 repaired-source full gate passes; unique fresh v4 data-only prepare57563 active
+stopped_at: Phase265 v4 preparation passes and canonical allocation published; unique guarded entry next
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Source gate passes; unique data-only prepare57563 validates historical bases; no capacity or live entry
+last_activity_desc: Prepare57563 exit0 and v4 allocationf7968e1e published; typed capacity input not host receipt; one fresh entry next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -38,11 +38,13 @@ Fresh league-v4 drafts/helpers are independently reviewed: all11jobs accepted,
 canonical actual review timings; root compiled45 inert packet/disclosure rows.
 Namespace league-265-prospective-v4-20261001-a; source0496bca7 /implementation
 879aaa9b. Fresh unrooted input was created once at raw rootd1a3f5d3,22002bytes.
-Root's unique data-only prepare is ACTIVE as session57563; do not duplicate
-the historical reader or change main source. It does not measure capacity.
-No v4 rooted allocation, capacity input/receipt or live entry exists yet.
-After prepare completes root publishes the distinct source-bound
-allocation and fresh same-process capacity chain under standing approval.
+Root's unique data-only prepare57563 completed exit0. Canonical allocation-v4
+rootf7968e1e is published,rawbytesd2987672/22144bytes. Typed capacity input
+5b54faef is prepared with truthful inherited quantities/format review; it is
+not a host observation or receipt. No live entry or reservation exists yet.
+Root next invokes the unique guarded entry under standing approval; static
+admission and fresh passing same-process capacity must precede dispatch.
+Do not repeat prepare or change main source during this route.
 See265-07-EMPIRICAL-PREPARATION-v8.md and265-07-PACKET-REVIEW-v8.md.
 Complete gate proof:265-07-REPAIRED-SOURCE-GATE-v1.md. Data-only prepare does
 not observe capacity or authorize a Match before fresh same-process admission.

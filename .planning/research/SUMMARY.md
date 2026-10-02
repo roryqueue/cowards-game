@@ -8,7 +8,8 @@ build/types/boundaries. Identical retained-record hashes and approximately
 12 percent sampled write-time savings are bounded source-only measurements,
 not proof that a Match fits the 120-second lifetime. Fresh v4 packets are
 independently reviewed and compiled into inert records; unique data-only
-prepare57563 is active before rooted allocation,fresh capacity and live entry. See
+prepare57563 passed and canonical allocation-v4 rootf7968e1e is published.
+Typed capacity input exists, not a host receipt or live entry yet. See
 265-07-DEPENDENCY-BARRIER-PROOF-v1.md,265-07-REPAIRED-SOURCE-GATE-v1.md and
 265-07-EMPIRICAL-PREPARATION-v8.md.
 

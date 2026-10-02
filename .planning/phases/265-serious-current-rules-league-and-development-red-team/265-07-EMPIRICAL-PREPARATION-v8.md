@@ -52,17 +52,32 @@ charging. Old numeric sample quantities remain inherited, not freshly observed.
 The hashed dependency-barrier proof/review files are immutable witnesses; record
 later full-gate results in a separate document rather than changing those bytes.
 
+## Actual preparation/publication, not capacity admission
+
+Unique data-only prepare57563 completed exit0. Canonical v4 allocation was
+published exactly once by the reviewed create-only wrapper:
+
+- allocation root: `sha256:f7968e1e15923519c25cb1bdca52d71f823e966f6c71ef583501bbccb2a01dd2`
+- allocation raw bytes: `sha256:d298767292493f0e5d20b492a503cfa61a047a26eac9d3a8524e6912b4039319`,22144bytes
+- reconciliation raw bytes: `sha256:e23c5b17b65dbd7e8f1fcb2a6524c946c1419e8788208de53660ba10be50a8ad`,3306bytes
+- capacity-input raw bytes: `sha256:5b54faef3bfb48113969b6d8c1f9785af6d4bcf5083bba888d6d5e04c5476af9`,6406bytes
+
+The capacity input passed its typed allocation-bound reader. It truthfully
+uses inherited numeric quantities with reviewed physical-format compatibility
+and current source witnesses; it is not a host observation or capacity receipt.
+The hashed proof/review/helper bytes remain unchanged. Source/config paths
+remain identical to reviewed e28f29a0 through documentation-only descendants.
+No v4 live entry, reservation, Match or model call has occurred at publication.
+
 ## Remaining technical gates, not an operator checkpoint
 
 1. Complete source gate53203 passed; do not repeat it without source changes.
 2. Fresh unrooted input was created once at raw
    sha256:d1a3f5d37b1fe107156f14a1cb468fd55fbfd603d3aa9f94997d32966123fb33,
-   22002bytes. Root's existing data-only prepare-prospective selector is ACTIVE
-   as unique session57563; no rooted allocation exists yet. Never duplicate
-   this historical reader. It creates no host observation or capacity receipt.
-3. Construct/admit truthful fresh capacity input, publish the unique canonical
-   `.planning/artifacts/v1.38-phase-265-allocation-v4.json` exclusively, and
-   invoke the guarded entry exactly once. Same-process static admission precedes
+   22002bytes. Root's data-only prepare57563 completed once, exit0; canonical
+   allocation-v4 is published. Do not repeat this completed historical reader.
+3. Invoke the guarded entry exactly once with the source-bound capacity input.
+   Same-process static admission precedes
    fresh actual capacity, durable reservation and any provider/Match.
 4. Preserve the actual unique outcome at
    `.planning/artifacts/v1.38-phase-265-run-result-v4.json`, then perform one

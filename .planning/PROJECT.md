@@ -7,8 +7,9 @@ bytes, hashes and accounting while grouping only small runtime-invocation
 dependency directory barriers. Independent deep review is clean; 19 focused
 tests and build pass. Complete source gate53203 passed382main plus3tactical
 tests,types/build and boundaries. Fresh v4 has eleven independently reviewed
-packets compiled into45inert records; unique data-only prepare57563 is active,
-but no rooted allocation, capacity receipt or live entry yet. See STATE.md,
+packets compiled into45inert records; unique data-only prepare57563 passed.
+Canonical allocation-v4 rootf7968e1e is published with typed capacity input,
+not a host receipt or live entry yet. See STATE.md,
 265-07-REPAIRED-SOURCE-GATE-v1.md,265-07-DEPENDENCY-BARRIER-PROOF-v1.md and
 265-07-EMPIRICAL-PREPARATION-v8.md. Standing approval removes repeat operator
 questions for distinct same-bounds private routes, not technical gates.
