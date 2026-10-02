@@ -57,7 +57,7 @@ describe("private IPC diagnostics injected retention", () => {
     }
     const missing = structuredClone(rows); delete missing[0].privateDiagnostic.requestId
     expect(() => verifyRetainedLeagueProbeInvocations(missing, [e], family, { minX: 0, maxX: 11 })).toThrow("RETAINED_PRIVATE_DIAGNOSTIC")
-    for (const forged of [{ stage: "stream_exchange", reason: "correlation_invalid" }, { stage: "unknown", reason: "unknown" }, { source: "PRIVATE_CANARY" }, { identity: { ...d.identity, source: "PRIVATE_CANARY" } }, { reason: "PRIVATE_CANARY" }]) {
+    for (const forged of [{ stage: "stream_exchange", reason: "correlation_invalid" }, { stage: ["outer_frame"] }, { stage: "unknown", reason: "unknown" }, { source: "PRIVATE_CANARY" }, { identity: { ...d.identity, source: "PRIVATE_CANARY" } }, { reason: "PRIVATE_CANARY" }]) {
       const changed = structuredClone(rows); Object.assign(changed[0].privateDiagnostic, forged)
       expect(() => verifyRetainedLeagueProbeInvocations(changed, [e], family, { minX: 0, maxX: 11 })).toThrow("RETAINED_PRIVATE_DIAGNOSTIC")
     }

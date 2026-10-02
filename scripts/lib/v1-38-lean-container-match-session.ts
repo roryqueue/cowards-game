@@ -60,7 +60,7 @@ const originReasons = { stream_exchange: ["wait_timeout", "non_success_state", "
 export const isLeanPrivateFailureOrigin = (value: unknown): value is LeanPrivateFailureOrigin => {
   if (!value || typeof value !== "object") return false
   const pair = value as LeanPrivateFailureOrigin
-  return Object.hasOwn(originReasons, pair.stage) && (originReasons[pair.stage] as readonly string[]).includes(pair.reason)
+  return typeof pair.stage === "string" && typeof pair.reason === "string" && Object.hasOwn(originReasons, pair.stage) && (originReasons[pair.stage] as readonly string[]).includes(pair.reason)
 }
 const objectKey = (value: unknown): value is object => value !== null && (typeof value === "object" || typeof value === "function")
 const observeFailure = <T>(origins: WeakMap<object, LeanPrivateFailureOrigin>, error: T, origin: LeanPrivateFailureOrigin): T => {
