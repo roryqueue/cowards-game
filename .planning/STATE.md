@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 unique v6 entry63193/PID70861 active in static checks before fresh capacity
+stopped_at: Phase265 unique v6 entry63193/PID70861 active after fresh capacity and first valid cell
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: unique v6 entry63193 started04:37UTC at fixed reviewed source; no capacity pass claimed
+last_activity_desc: v6 fresh capacity passed04:52UTC; first cell process-valid and second charged; no full league result
 progress:
   total_phases: 9
   completed_phases: 3
@@ -44,7 +44,12 @@ rawda81aba8/24020bytes. Typed capacity input29153 passed atc4ae9eeb; its
 historical static samples are not a live host observation or receipt.
 Do not repeat preparation/publication. Root's ONE entry63193,PID70861,started
 2026-10-02T04:37:23.273Z. Static validation precedes fresh same-process capacity
-and dispatch; no host receipt or Match/model call is established by entry.
+and dispatch. The subsequent fresh same-process capacity receiptdd6762e0
+passed at2026-10-02T04:52:04.906Z with12,541,304,504available-memory bytes,
+215,305,502,720free-filesystem bytes and device16777222. First charged cell
+4e5b6345 completed success/process_valid atterminalae58eaae; second charged
+cellf1cf0231 is active. These are prefix observations, not complete eligible
+league, response, model-job, finalist or freeze evidence.
 External result-v6 is reserved empty, not evidence; do not stage it yet.
 Never duplicate entry or run retained verification while it remains active.
 Main source stays fixed through terminal and its unique retained check; all

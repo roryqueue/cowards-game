@@ -78,3 +78,24 @@ zero retries and unchanged headroom/terminal/filesystem reserves. No rule,
 quality threshold, evidence denominator or lineage/accounting change is made.
 No LEAG completion, current baseline freeze, formation, holdout opening or
 public/counted/production authority follows from data-only preparation.
+
+## Live admission and prefix observation
+
+The unique entry subsequently passed its fresh same-process capacity admission
+at2026-10-02T04:52:04.906Z, receipt
+sha256:dd6762e07aac546fe8de0b8db98aa35f22e47fcfaa30d42af3e410f5bd0f36b8.
+Observed available memory12,541,304,504bytes and free filesystem
+215,305,502,720bytes, device16777222; unchanged process floor1GiB. Rooted
+run marker8e68153f binds the receipt and allocation. Static quantities in that
+receipt remain explicitly historical projections, not newly measured traces.
+First cell start4e5b6345 has success/process_valid terminalae58eaae; second
+cell startf1cf0231 is charged and active. These observations precede any full
+retained verification, prove no complete matrix/league and grant no freeze.
+Earlier pre-capacity paragraphs are entry-time snapshots, not current state.
+Entry63193 remains active; source stays fixed and heavy tests remain held.
+
+The isolated Phase266 telemetry-only patch c3e90308 has independent review
+00c2b042 with no findings. All48 history workloads/24groups and production
+validators remain intact; only fixed stage/count/local elapsed metadata is
+added. No tests/probes ran. It stays unmerged oncodex/phase266-context while
+the current main operational/retained epoch remains open.
