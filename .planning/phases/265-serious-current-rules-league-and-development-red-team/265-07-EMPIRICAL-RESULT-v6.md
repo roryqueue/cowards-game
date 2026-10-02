@@ -16,8 +16,12 @@ retry, refund, overwrite, reinterpretation or reuse is permitted.
 Five cells were charged: four success/process_valid, then one
 system_failure/process_invalid. All five have their own immutable terminal.
 The third cell passed where v5 had failed, but that prefix is not a complete
-matrix or evidence that the overall lifetime problem is solved. The exact
-fifth-cell cause is not yet established by this closeout.
+matrix or evidence that the overall lifetime problem is solved. Subsequent
+bounded parent-linked metadata inspection identifies the initiating fifth-cell
+code asFACTORY_RUNTIME_LIFETIME_EXHAUSTED. Its live cost split is unmeasured.
+Failure descriptor8e1c2a37 links raw78249965 (4341bytes); inspected output was
+limited to allowlisted error/code/request identity metadata, no private input.
+This read is not another ordinary retained verifier or a rerun of the Match.
 
 | Start prefix | Terminal prefix | Disposition |
 | --- | --- | --- |

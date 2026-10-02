@@ -30,8 +30,10 @@ All ten exact expected route containers are absent by read-only inspection.
 Root's ONE ordinary retained verifier65319 is active at exact allocation/head/
 repositories and no capacity flags; never duplicate it. Main reviewed source
 dbf5daa2/70430463/2f008952 stays fixed and heavy tests/probes remain held.
-No LEAG completion/freeze/formation/holdout is claimed. Exact fifth-cell cause
-still needs safe diagnosis after retained closeout. No human-only checkpoint
+No LEAG completion/freeze/formation/holdout is claimed. Bounded parent-linked
+metadata namesFACTORY_RUNTIME_LIFETIME_EXHAUSTED; live cost split is unknown.
+GSD Debug is resumed source-only while65319 is active; no measured profiling
+or source repair occurs until it closes. No human-only checkpoint
 is identified; standing approval covers later distinct same-bounds routes,
 not reuse of this consumed route. See265-07-EMPIRICAL-RESULT-v6.md.
 The entry-active v6 and earlier snapshots below are historical.

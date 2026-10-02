@@ -59,6 +59,12 @@ gaps:
 
 ## Current main-observed follow-up — 2026-10-02
 
+V6 terminal update: unique entry63193 ended05:04UTC process-invalid after
+5charged cells(4valid,1lifetime system failure), published result09002c67/
+headb21465c7. ONE ordinary retained verifier65319 is active, not a captured
+pass; source remains fixed and heavy tests/probes held. No empirical gap is
+closed by the four-cell prefix. The entry-active paragraph below is historical.
+
 The original independent verdict remains gaps_found,0/5. Its original absence
 and human-allocation statements below are historical, not current inventory.
 V5 is consumed process-invalid after three charged cells; unique ordinary

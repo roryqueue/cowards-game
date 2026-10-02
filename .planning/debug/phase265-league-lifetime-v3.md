@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: investigating
 trigger: "Fresh approved Phase265 league-v3 stopped after one charged cell with FACTORY_RUNTIME_LIFETIME_EXHAUSTED"
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 # Phase265 league-v3 lifetime diagnosis
@@ -30,6 +30,28 @@ updated: 2026-10-01
   it does not extend the frozen120-second deadline or other budgets.
 
 ## Current Focus
+
+- current_epoch: v6 consumed at reviewed dbf5daa2; v3 evidence below stays
+  historical. Unique ordinary retained verifier65319 is active. No tests,
+  probes, benchmarks or source changes until root confirms it is closed.
+- current_hypothesis: aggregate120-second supervisor lifetime is still the
+  initiating failure; remaining live cost split is unknown after the accepted
+  durability/canonical-literal/Unicode-key CPU repairs
+- current_next_action: source-only trace and design of a bounded retained-input
+  profile, independently reviewed before ONE future non-executing measurement;
+  preserve all durability/accounting/resource/cache/hostile-input bounds.
+- current_evidence: v6 allocation5c59970a/headb21465c7/raw result09002c67 ended
+  05:04:02.930UTC after5charged cells (4valid,1systemfailure). Bounded metadata
+  read of parent-linked runtime-failure descriptor8e1c2a37/raw78249965 names
+  allowlistedFACTORY_RUNTIME_LIFETIME_EXHAUSTED; no whole-Match payload was
+  opened and this is not a second ordinary retained verification. Exact ten
+  expected provider containers are absent; retention exhausted=false.
+- caution: four valid prefixes do not prove all workloads fit120seconds.
+  Earlier profiling at v3 is not a measurement of the current dbf5daa2 source.
+  No caller cache/provider reuse, silent clock reinterpretation, skipped
+  durability, weaker validation or reduced quality denominator is authorized.
+
+The following focus/evidence/resolution describes the prior v3 diagnosis.
 
 - hypothesis: supervisor lifetime expiry confirmed; synchronous durability
   dominates sampled graph-recording work, but live aggregate share is unknown
