@@ -6,14 +6,36 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-02
-source_reviewed: bb98878ec996ec63529093a45d9e55ed89e64610
-source_gate: lifetime-43923-complete-493league-20tactical-planner48-engine149-runtime277-build-types-boundaries-pass
-empirical_validation: v9-consumed-process-invalid-five-cells-unique-retained-verifier-complete
+source_reviewed: 5d898accd715baf723fabe2b69fb13c930ebd358
+source_gate: private-ipc-v2-58270-active-build3-strict4-pass-CI1-running
+empirical_validation: v10-consumed-process-invalid-one-cell-unique-retained-verifier28015-complete
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+### Private finite IPC diagnostics — source-only validation in progress
+
+Two checked Plan07 tasks observed RED/GREEN; current corrected5d898acc passes
+38 exact-prefix injected mocks across four files (root29098,8.40s) and exact
+unchanged strict14-script CI4 (37887exit0). Independent reviewv2 is clean.
+V1full sourcegate11368 failed CI4 at215bd3a6 and remains failed/immutable;
+no acceptance is inferred from that review or corrected component alone.
+Fresh fullgate58270 is ACTIVE at fixed5d898acc, source/review/CI pinned;
+buildCI3/strictCI4 passed,29-file CI1 suite and remainingcommands pending.
+No new source/test changes or competingheavywork while active. See
+PRIVATE-IPC-SOURCE-GATE-v1/v2 and DIAGNOSTICS-REVIEW-v2.
+
+The supplement covers finite/redacted host origins, exact evidence/provider
+identity, unchanged failed accounting/cleanup/clocks, optional awaited private
+retention, projection/root binding and legacy bytes/read issued:false. Scoped
+coverage audit and goal verification follow actual source results. Whole-phase
+Nyquist remains partial/false: no complete actual league exists. V10unique
+retained28015 authenticated onecharged process-invalid failure, not league
+success; initiating exception unknown. Consumed evidence immutable, holdout
+unopened; no current-rules freeze/formation/public/counting/production credit.
+Earlier validation/source snapshots below are historical.
 
 ### Prospective private ten-minute supplement — source validation only
 
