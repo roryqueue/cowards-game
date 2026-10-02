@@ -2,6 +2,14 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+Freshv7 draft64409 completed; actual independent eleven-job review2e909f7a
+accepts unexecuted requests. Unique compile21989 creates45inert records;
+allocation-input3094 completes, data-only prepare65328 is ACTIVE. Do not
+duplicate preparation. No canonical allocation/live capacity/Match yet.
+Standing approval applies, fixed634b0e84 remains. LEAG/freeze stays incomplete,
+formation/holdout/public/counting stay excluded. See preparation-v11 and
+PACKET-REVIEW-v10; prior request-next snapshots below are historical.
+
 Final async source gate28406 is now COMPLETE:448league+3tactical tests,
 build/types/scans pass; engine149/runtime277/core/private-helper types pass.
 Source634b0e84 stays fixed for fresh reviewedv7 request/allocation preparation.

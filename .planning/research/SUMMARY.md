@@ -2,6 +2,15 @@
 
 ## Current approved handoff — 2026-10-02
 
+Freshv7 draft64409 and actual independent eleven-job review2e909f7a complete;
+all requests accepted for static compilation only, real241578ms review total.
+ONE compile21989 produces45inert records, allocation-input3094 completes.
+ONE data-only prepare65328 is ACTIVE, not a producer or Match run. No canonical
+allocation/live capacity/Match yet. Keep634b0e84/f942c33f/ae9b47ba fixed and do not
+duplicate preparation. No LEAG/freeze/formation/holdout credit. Standing approval
+applies without another literal. See preparation-v11 and PACKET-REVIEW-v10.
+Earlier request-next snapshots below are historical.
+
 Final async source gate28406 completes all8 unchanged commands atfixed634b0e84:
 448league+3tactical tests, build/types/scans pass; engine149/runtime277/core and
 private-helper types pass. The gate and data-only profile78928 are closed.

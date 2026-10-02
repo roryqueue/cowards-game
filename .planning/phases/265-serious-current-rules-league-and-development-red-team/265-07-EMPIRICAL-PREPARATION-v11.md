@@ -10,7 +10,32 @@ ONE final source gate28406 passes all8unchanged commands,448league+3tactical
 tests, build/types/scans; engine149/runtime277/core/private-helper types pass.
 See ASYNC-DEPENDENCY-SOURCE-GATE-v1. The original helper's pending-gate metadata
 and proof document are construction-time snapshots, not current gate status.
-Fresh draft/review/compile/allocation/capacity have not yet been invoked.
+The next section records later actual preparation; earlier pending language
+is the preserved helper-construction snapshot.
+
+## Actual fresh request preparation
+
+ONE root draft64409 completes at request raw7e0f90067fd9ac213295f7f4a2b5a9169df8b512a28285b7479152755733fbad,
+disclosure37269968212795e56d2ef50725dfe5cda7f73cf40460a65a255bcb75a7db28c4,
+roles4c1eb25dcccf7a2e891d771981876dcc1fd5d6f502baf09592f5a045a82b6e8a and
+completionc1bea370e7ebd3a0b43b5d1b87d926f1cc7ee1f9b64d3f1fdc43e66f20689561.
+All are create-new v7 data-only inputs, not executed responses.
+
+Actual independent /root/265_async_route_packet_review accepts all11 requests
+for static compilation at raw2e909f7aebc33ebca2662fcaf3e017c0101ede6dbc235da6b35c6cf03148cca5.
+Real sequential review windows total241578ms; no timing/acceptance is inherited.
+Tracked PACKET-REVIEW-v10 is clean and preserves existing v9. Source/build,
+disclosure, roles and all14 completion output bindings pass. No runtime claim.
+
+ONE compile21989 completes45inert records, reviewed-packet raw413e696bfbbc8eebbd092af55f26645ea06556970ecd81da58558f489f8cbc72,
+summary5b064d9367557191a1abf961efc2eb731507728cbc26f5c00b46068e6d487d53,
+completion18291fec4c06917e63d6958808fedbc6c40aa5960fa39237c46a74dd6cfd84b7.
+ONE allocation-input3094 completes raw23edce70be2755d18285cd84a146cb89a19497c38d3dbe08720dad48bbc154ea,
+23955bytes, standing-approval:20261001-human-blanket-fresh-same-bounds-v7.
+ONE root data-only prepare65328 is ACTIVE at exact approved-two factory repository;
+never duplicate it. No canonical allocation, capacity receipt, live Match,
+producer/model response, LEAG completion, freeze, formation or holdout exists
+from these steps. Main source remains fixed.
 
 The new namespace is `.strategy-lab/league-265-prospective-v7-20261002-a`. The helpers bind source commit `634b0e84896132a1a9ac5d855763b0793abfe1bc`, implementation root `sha256:f942c33fc577b1cca8b1742b73f2e31637f431abecf6b69b70001cc03b6a0744`, and source root `sha256:ae9b47ba2c607fd54baee4fee8ac24291524877d5f60b954192f6aaa0ff69a06`. They carry the six raw source/test pins and bounded review-v4 identity for the asynchronous dependency repair. The data-only profile result is identified as such; it provides no whole-Match claim. The proof document records the active root gate as pending, not passed.
 
