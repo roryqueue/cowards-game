@@ -3,6 +3,7 @@ import { freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-l
 import type { FactorySupervisionProvider } from "../../packages/strategy-lab/src/factory/admission.js"
 import type { LabRuntimeEvidence } from "../../packages/strategy-lab/src/runtime-bridge.js"
 import type { LeagueProbeFamily } from "../../packages/strategy-lab/src/league/red-team.js"
+import { isLeanPrivateFailureOrigin } from "./v1-38-lean-container-match-session.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAGUE_PROBE_RUNTIME_${code}`) }
 /** Legal observation/output coordinate transformations; the Match kernel is untouched.
@@ -59,7 +60,9 @@ export const wrapLeagueProbeProvider = (provider: FactorySupervisionProvider, fa
         const evidence = await provider.invoke(dispatched, identity)
         if (!provider.verify(evidence)) return fail("UNISSUED_EVIDENCE")
         const wrapped = projection.admit(request, evidence)
-        try { await retain({ family: family ?? null, request, dispatched, originalEvidence: evidence, admittedEvidence: wrapped }) }
+        const diagnostic = getFactoryPrivateDiagnostic(provider, evidence)
+        const privateDiagnostic = diagnostic && verifyFactoryPrivateDiagnostic(provider, evidence, diagnostic) ? diagnostic : undefined
+        try { await retain({ family: family ?? null, request, dispatched, originalEvidence: evidence, admittedEvidence: wrapped, ...(privateDiagnostic === undefined ? {} : { privateDiagnostic }) }) }
         catch (error) { retentionFailed = true; throw error }
         issued.set(wrapped, evidence)
         return wrapped
@@ -77,6 +80,15 @@ export const verifyRetainedLeagueProbeInvocations = (values: readonly any[], acc
     const row = byRoot.get(evidence.invocationRoot) ?? fail("RETAINED_RAW_ACCOUNTING"), identityRoot = labRoot("league-probe-read-identity", evidence.identity), projection = projections.get(identityRoot) ?? createProbeProjection(family, bounds)
     projections.set(identityRoot, projection)
     if (row.family !== (family ?? null) || !same(evidence, row.admittedEvidence) || !same(evidence.identity, row.originalEvidence.identity) || row.originalEvidence.requestId !== row.request.requestId || row.originalEvidence.method !== row.request.kind || row.originalEvidence.inputRoot !== labRoot("runtime-input", row.dispatched.input) || !same(projection.dispatch(row.request), row.dispatched) || !same(projection.admit(row.request, row.originalEvidence), evidence)) return fail("RETAINED_RAW_PROJECTION")
+    if (Object.hasOwn(row, "privateDiagnostic")) {
+      const diagnostic = row.privateDiagnostic, original = row.originalEvidence
+      const bindingKeys = ["identity", "invocationRoot", "requestId", "method", "inputRoot", "ordinal"] as const
+      const identityKeys = ["revisionId", "sourceRoot", "executableRoot", "tupleId", "tupleRoot", "image", "harnessRoot", "budgetRoot", "attemptRoot", "runtimeLimitsRoot", "nativeLane", "factoryPacketRoot", "factoryProposalRoot", "factoryValidationRoot"]
+      const exact = (value: unknown, keys: readonly string[]) => !!value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join("\0") === [...keys].sort().join("\0")
+      if (!exact(diagnostic, ["stage", "reason", ...bindingKeys]) || !isLeanPrivateFailureOrigin(diagnostic) || !exact(diagnostic.identity, identityKeys) || !exact(diagnostic.identity.nativeLane, ["language", "translation", "providerId", "runtimeAbi", "runtimeProfileRoot"]) || bindingKeys.some((key) => !same(diagnostic[key], original[key]))) return fail("RETAINED_PRIVATE_DIAGNOSTIC")
+      const root = (value: unknown) => typeof value === "string" && /^sha256:[a-f0-9]{64}$/u.test(value)
+      if (![diagnostic.invocationRoot, diagnostic.inputRoot, ...["sourceRoot", "executableRoot", "tupleRoot", "harnessRoot", "budgetRoot", "attemptRoot", "runtimeLimitsRoot", "factoryPacketRoot", "factoryProposalRoot", "factoryValidationRoot"].map((key) => diagnostic.identity[key]), diagnostic.identity.nativeLane.runtimeProfileRoot].every(root) || typeof diagnostic.requestId !== "string" || diagnostic.requestId.length === 0 || !["selectActivations", "soldierBrain"].includes(diagnostic.method) || !Number.isSafeInteger(diagnostic.ordinal) || diagnostic.ordinal < 0 || identityKeys.some((key) => key !== "nativeLane" && typeof diagnostic.identity[key] !== "string") || Object.values(diagnostic.identity.nativeLane).some((value) => typeof value !== "string")) return fail("RETAINED_PRIVATE_DIAGNOSTIC")
+    }
   }
   return { issued: false as const }
 }
@@ -98,7 +110,7 @@ import type { RedTeamAttemptStart } from "../../packages/strategy-lab/src/league
 import { createNumericObservationFromVerifiedCell } from "../v1-38-factory-observations.js"
 import { readFactoryIngestion } from "../ingest-v1-38-factory-packet.js"
 import { executeLeagueAuthoring, verifyRetainedLeagueAuthoring, type LeagueAuthoringResult } from "./v1-38-league-authoring.js"
-import { createFactorySupervisedRuntime } from "./v1-38-factory-supervised-runtime.js"
+import { createFactorySupervisedRuntime, getFactoryPrivateDiagnostic, verifyFactoryPrivateDiagnostic } from "./v1-38-factory-supervised-runtime.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { issueProspectiveLeagueLifetimeAuthority, prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { lstatSync, readFileSync } from "node:fs"

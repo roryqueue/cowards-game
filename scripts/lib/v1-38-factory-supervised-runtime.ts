@@ -9,7 +9,11 @@ import type { LabRuntimeEvidence } from "../../packages/strategy-lab/src/runtime
 import type { DiagnosticPilotLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
 import type { DiagnosticOneCellLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-one-cell.js"
 import { claimDiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4RuntimeBinding } from "./v1-38-diagnostic-retry-v4.js"
-import { createPlannerSupervisedRuntime, type PlannerSupervisedRuntime, type PlannerSupervisedRuntimeOptions } from "./v1-38-planner-supervised-runtime.js"
+import { createPlannerSupervisedRuntime, getPlannerPrivateDiagnostic, verifyPlannerPrivateDiagnostic, type PlannerPrivateDiagnostic, type PlannerSupervisedRuntime, type PlannerSupervisedRuntimeOptions } from "./v1-38-planner-supervised-runtime.js"
+
+const privateDiagnostics = new WeakMap<object, (evidence: LabRuntimeEvidence) => PlannerPrivateDiagnostic | undefined>()
+export const getFactoryPrivateDiagnostic = (provider: object, evidence: LabRuntimeEvidence): PlannerPrivateDiagnostic | undefined => privateDiagnostics.get(provider)?.(evidence)
+export const verifyFactoryPrivateDiagnostic = (provider: object, evidence: LabRuntimeEvidence, diagnostic: unknown): boolean => diagnostic !== undefined && getFactoryPrivateDiagnostic(provider, evidence) === diagnostic
 
 const fail = (code: string): never => { throw new TypeError(`FACTORY_RUNTIME_${code}`) }
 const rawRoot = (bytes: Uint8Array): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
@@ -92,7 +96,8 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
     throw error
   }
   const issued = new WeakMap<object, LabRuntimeEvidence>()
-  return {
+  const diagnostics = new WeakMap<object, PlannerPrivateDiagnostic>()
+  const provider: FactorySupervisionProvider = {
     identity,
     invoke(request, admittedIdentity) {
       if (performance.now() - began >= factoryLifetimeMs) { selected.close(); return fail("LIFETIME_EXHAUSTED") }
@@ -102,9 +107,16 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
       if (!selected.verify(evidence) || !same(evidence.identity, selected.identity)) { selected.close(); return fail("EVIDENCE_IDENTITY") }
       const wrapped = freezeLabValue({ ...evidence, identity })
       issued.set(wrapped, evidence)
+      const diagnostic = getPlannerPrivateDiagnostic(selected, evidence)
+      if (diagnostic && verifyPlannerPrivateDiagnostic(selected, evidence, diagnostic)) diagnostics.set(wrapped, freezeLabValue({ stage: diagnostic.stage, reason: diagnostic.reason, identity, invocationRoot: wrapped.invocationRoot, requestId: wrapped.requestId, method: wrapped.method, inputRoot: wrapped.inputRoot, ordinal: wrapped.ordinal }) as PlannerPrivateDiagnostic)
       return wrapped
     },
     verify(evidence) { const underlying = issued.get(evidence); return underlying !== undefined && selected.verify(underlying) },
     close() { return selected.close() },
   }
+  privateDiagnostics.set(provider, (evidence) => {
+    const underlying = issued.get(evidence), diagnostic = underlying && getPlannerPrivateDiagnostic(selected, underlying)
+    return underlying && selected.verify(underlying) && diagnostic && verifyPlannerPrivateDiagnostic(selected, underlying, diagnostic) ? diagnostics.get(evidence) : undefined
+  })
+  return provider
 }
