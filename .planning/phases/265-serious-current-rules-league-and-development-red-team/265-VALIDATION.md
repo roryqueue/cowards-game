@@ -6,14 +6,34 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-01
-source_reviewed: accb76c5
-source_gate: complete29suite367test-existing-types-and-boundaries-pass
-empirical_validation: retry-v4-first-diagnostic-process-valid-full-league-incomplete
+source_reviewed: e28f29a06664059cc9f495f1030581ea7835504a
+source_gate: complete29suite382test-plus3tactical-existing-types-and-boundaries-pass
+empirical_validation: full-league-v3-consumed-process-invalid-v4-data-only-preparation-active
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+### Repaired current-source complete gate and immutable v3 failure
+
+Root's unique session53203 passed29/29suites and382/382tests in2122.81seconds,
+plus the separate3/3tactical-corpus tests in118.56seconds, package build,
+strict14-path script types, all three1353-file/zero-violation scanners and
+service checks (strict0/ownership0/report-only19). Independently reviewed
+sourcee28f29a0 remained unchanged through docs-only descendants. The prior
+19focused tests and50exact-hash source-only samples do not replace this gate.
+See265-07-REPAIRED-SOURCE-GATE-v1.md; hashed repair proof/review stay unchanged.
+
+Fresh v3 passed capacity but its only charged cell exhausted120-second lifetime
+and ended process_invalid. Unique retained verifier73144 exited0 authenticating
+that non-pass; no full matrix, response loop, report or finalist exists.
+Standing human approval covers future distinct same-bounds routes without
+repeat questions. Fresh v4 reviewed packets compiled into45inert records;
+unique data-only prepare57563 is active before allocation/capacity/dispatch.
+Whole-phase status remains partial/Nyquistfalse and all LEAG requirements stay
+open. Source validation is not empirical completion or freeze authority.
+The earlier current-source and pending-human statements below are historical.
 
 ### Complete current prospective-league source gate — 2026-10-01
 

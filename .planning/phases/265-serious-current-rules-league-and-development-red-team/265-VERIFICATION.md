@@ -9,7 +9,7 @@ overrides_applied: 0
 empirical_authority: false
 latest_follow_up: 2026-10-01
 latest_diagnostic_source: e440763a75c0e66beb402548681a9acfddad9b24
-latest_source_gate: accb76c53511f23facc04e4c6a671fc3e628f3ab
+latest_source_gate: e28f29a06664059cc9f495f1030581ea7835504a
 gaps:
   - truth: "Every frozen population has a complete condition-balanced payoff matrix, with process-invalid cells blocking meta-solving."
     status: failed
@@ -58,6 +58,19 @@ gaps:
 # Phase 265: Serious Current-Rules League and Development Red Team — Verification
 
 ## Latest main-observed follow-up — 2026-10-01
+
+Newest main-observed continuation: full-league v3 is consumed process_invalid
+after one charged cell; unique read-only verification73144 authenticates the
+failure with issuedfalse/empiricalRequirementsCompletefalse. Repair e28f29a0
+has independent deep clean review and root's complete gate53203 passes
+382main+3tactical tests/build/strictaffectedtypes/boundaries. Fresh v4 has
+reviewed/compiled inert packets and active unique data-only prepare57563,
+not a capacity observation or dispatched Match. Standing human approval
+removes repeat same-scope operator checkpoints, never technical admission
+or consumed-route stops. See265-07-REPAIRED-SOURCE-GATE-v1.md and
+265-07-EMPIRICAL-PREPARATION-v8.md. The original independent verdict below
+remains gaps_found,0/5; this is a main follow-up, not an independent full-phase
+re-verification or an override. Actual freeze/formation/holdout stay closed.
 
 The original independent report and its absence statements below are historical
 snapshots. Old full-league/pilot/v3 routes exist but are consumed process-invalid.
