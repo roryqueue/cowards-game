@@ -1,5 +1,20 @@
 # Prospective v11 private helpers — unexecuted draft
 
+## Final source pins reviewed and types passed
+
+Rootobserved actualgate59346completecf04142c and fixedfinalreport9baa9836,
+then filled only pendingliterals/status in bothhelpers. Independent REVIEW-v4
+clean confirmsactualmarker/schema/inputbindings. Exactcurrenthelperhashes:
+prepare-data.tsbb998706a16aeff008eec2f827d121d4226baa09b10f985f56dc2267f1981a02;
+run-entry.tsa872df54ed204ed6cb21e7da6c6b62d48b43e2c14a520ac9eca54b36ddcd933d.
+Root strict NodeNext/Node helpertypes42225exit0 for bothfiles. Sourcegoal
+VERIFICATION-v2passed4/4scopeonly. No liveallocation/capacity/provider/model/
+Match/entry. Freshauthoractor265_lifetime_v11_helper_prepare now dispatched
+ONEdata-onlydraft; its actualoutput/result notyetobserved here. Independent
+freshrequestreview/compile/allocation/capacity stillrequired. Earlier pending
+hashes/statuses belowhistory. No consumed evidence/authority reused or old
+gate failure reclassified; no LEAG/freeze/holdout/formation/public credit.
+
 ## Current gate-v3 rebinding — reviewed, still unexecuted
 
 After v2 gate failure and test-only source correction63f1a1a, the same two

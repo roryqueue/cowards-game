@@ -73,8 +73,8 @@ Source references are under `scripts/lib/`; production bytes are unchanged from 
 | `v1-38-planner-supervised-runtime.ts` | Exists, substantive, wired: issued-evidence private diagnostic lookup/verification is consumed by factory. |
 | `v1-38-factory-supervised-runtime.ts` | Exists, substantive, wired: exact underlying/wrapped evidence mapping is consumed by retention. |
 | `v1-38-league-response-runtime.ts` | Exists, substantive, wired: optional awaited private rows and strict data-only read validation. |
-| `v1-38-lean-container-match-session.test.ts` | Substantive injected/native-mocked diagnostic cases; root-observed focused pass and full-gate coverage. |
-| `v1-38-planner-supervised-runtime.test.ts` | Substantive identity/classification/accounting/cleanup assertions; root-observed focused pass and full-gate coverage. |
+| `v1-38-lean-container-match-session.test.ts` | Substantive injected/native-mocked diagnostic cases;13 focused-prefix cases passed in session29098. This test file is not included in CI1; no complete-file session suite pass is claimed. |
+| `v1-38-planner-supervised-runtime.test.ts` | Substantive identity/classification/accounting/cleanup assertions;15 focused-prefix cases passed in session29098. This test file is not included in CI1; no complete-file planner suite pass is claimed. |
 | `v1-38-factory-supervised-runtime.test.ts` | Substantive exact binding and now-working older lifetime fixture;37/37 complete-file pass and full-gate coverage. |
 | `v1-38-league-response-runtime.test.ts` | Substantive projection/retention/redaction/legacy-byte assertions; root-observed focused pass and full-gate coverage. |
 
@@ -97,6 +97,10 @@ Completion raw: `cf04142cd5f8c203ce3382df2de6717554ec71d9c35943e7432e75399bf6f36
 The fixed source63f1a1a, implementation/source rootsd42/e542, review741, helper raw `ff88e1ff2c9bccd045a20c313c4501652560b25b9519e376330b082d6b9d8cc0`, and start raw `66592b3beadd0c4710cbabd2603b95c52315d8b57c95f6c6b5076b26739609c9` remained unchanged. This is the actual fresh complete result, not a prefix or reuse of either failed gate.
 
 Root's corrected four-file exact-prefix session29098 remains exit0,38passed/183skipped,8.40s; the later correction changes only the older non-prefix lifetime fixture. Initial RED provenance remains as recorded in v1/coverage, without asserting every later-added test was individually RED-proven. The source gate, complete factory test and focused prefix do not run a new empirical league/provider/Strategy/Match route or repair historical evidence.
+
+### Evidence-precision amendment
+
+This unconsumed v2 report originally described the session and planner test files as having full-gate coverage. That wording was incorrect and is corrected here: actual session29098 executed only the selected diagnostic prefix,13 session +15 planner +3 factory +7 retention cases,38 total. The unchanged CI1 command does not include the session or planner test file. Their production paths are imported/type-guarded by the source gate, but that is not execution of either complete test-file suite. No additional session/planner test run is claimed or invented. The original report revision remains retained at git `cd7ae4df`; the failed v1 report, pinned SOURCE-GATE-v3 report `9baa`, actual gate/helper/completion pins and empirical history are unchanged. The bounded four-truth verdict remains supported by the actual focused behavioral cases and independent source inspection; this precision amendment introduces no new execution or human checkpoint.
 
 ## Threats, requirements and final limits
 
