@@ -8,8 +8,10 @@ Gate16883 is complete; do not repeat it. Implementation70430463/source2f008952
 stays fixed. Reviewed private v6 helpers produced fresh data-only requests in
 unique draft74721; all eleven jobs are accepted and45inert records compiled.
 Unique prepare38722/publish51314 passed at fresh allocation5c59970a; typed
-static capacity input is ready, not a live receipt. No Match/model/live entry
-has started. Fresh same-process capacity precedes dispatch. See preparation-v10.
+static capacity input is ready, not a live receipt. ONE entry63193/PID70861
+started04:37UTC; static checks precede fresh same-process capacity/dispatch.
+No capacity pass or Match is established by entry. Source stays fixed.
+See preparation-v10; all heavy tests are held.
 
 Current v5 outcome: process-invalid after three charged cells at
 2026-10-02T02:54:19.876Z, with two process-valid successes and one teacher

@@ -59,6 +59,19 @@ used only for path isolation, not history construction. This diagnostic does
 not identify the cause of the earlier600-second full timeout or grant any
 complete-context/empirical authority. Do not rerun this exact diagnostic.
 
+## Unique guarded v6 entry
+
+Root invoked run exactly once in session63193,PID70861,started
+2026-10-02T04:37:23.273Z, after canonical allocation publication was committed
+and pushed atb572d303. Entry binds exact source, allocation5c59970a, new private
+repositories, argv, standing approval and zero retries. Static historical/
+candidate/packet checks precede fresh same-process host capacity and dispatch.
+No capacity pass or Match/model call is established by entry. External result-v6
+is reserved empty, not evidence; do not stage it before actual publication.
+Never duplicate entry or start retained verification while it remains active.
+Keep main source dbf5daa2 fixed through terminal and the unique retained check;
+other heavy tests remain held. No LEAG completion or freeze is claimed.
+
 Frozen limits remain96h overall,11328reserved Matches,240000model tokens,
 150GiB/9million records,120000ms per-Match lifetime,2CPU/256MB,cache disabled,
 zero retries and unchanged headroom/terminal/filesystem reserves. No rule,

@@ -13,7 +13,9 @@ corrected source reviewv2 is clean. Keep70430463/2f008952 source fixed.
 Reviewed v6 helpers produced fresh data-only requests in unique draft74721;
 all eleven jobs are accepted and45inert records compiled. Unique data-only
 prepare38722/publish51314 passed at new allocation5c59970a; typed static capacity
-input is ready, not a host receipt. No Match/model/live entry exists. No LEAG
+input is ready, not a host receipt. ONE entry63193/PID70861 started04:37UTC in
+static checks before fresh capacity/dispatch. Source stays fixed; heavy tests
+are held. No capacity pass or Match is established by entry. No LEAG
 or freeze credit follows. No repeat operator checkpoint is required for a
 future distinct same-bounds route after reviewed repair, applicable gates,
 new allocation and fresh capacity. See265-07-EMPIRICAL-RESULT-v5.md.

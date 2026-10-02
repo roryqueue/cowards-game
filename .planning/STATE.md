@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 fresh v6 allocation published; static capacity input ready before unique entry
+stopped_at: Phase265 unique v6 entry63193/PID70861 active in static checks before fresh capacity
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: unique prepare38722/publish51314 passed; new allocation5c59970a ready for fresh same-process capacity
+last_activity_desc: unique v6 entry63193 started04:37UTC at fixed reviewed source; no capacity pass claimed
 progress:
   total_phases: 9
   completed_phases: 3
@@ -42,8 +42,13 @@ records; unique unrooted input62224 passed atb6e2172a. ONE data-only prepare3872
 completed exit0; canonical publication51314 passed atallocation5c59970a,
 rawda81aba8/24020bytes. Typed capacity input29153 passed atc4ae9eeb; its
 historical static samples are not a live host observation or receipt.
-Do not repeat preparation/publication. No Match/model/live-entry has started;
-fresh passing same-process capacity remains required before dispatch.
+Do not repeat preparation/publication. Root's ONE entry63193,PID70861,started
+2026-10-02T04:37:23.273Z. Static validation precedes fresh same-process capacity
+and dispatch; no host receipt or Match/model call is established by entry.
+External result-v6 is reserved empty, not evidence; do not stage it yet.
+Never duplicate entry or run retained verification while it remains active.
+Main source stays fixed through terminal and its unique retained check; all
+other heavy tests are held.
 Standing approval applies after all technical gates. See KEY-ENCODER-SOURCE-GATE-v1.
 Current preparation details: EMPIRICAL-PREPARATION-v10.md.
 Corrected source rereview KEY-ENCODER-REVIEW-v2 records actual03:46UTC timing;

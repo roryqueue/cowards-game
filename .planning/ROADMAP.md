@@ -8,8 +8,9 @@ Keep implementation70430463/source2f008952 fixed; do not repeat this gate.
 Reviewed v6 helpers produced fresh data-only requests in unique draft74721;
 all eleven jobs are accepted and45inert records compiled. Unique data-only
 prepare38722/publish51314 passed at new allocation5c59970a. Typed static
-capacity input is ready, not a host receipt. No live entry or Match/model call
-has started. See265-07-EMPIRICAL-PREPARATION-v10.md.
+capacity input is ready, not a host receipt. ONE entry63193/PID70861 is active
+since04:37UTC, static checks before fresh capacity/dispatch. Never duplicate it
+or start retained verification concurrently. See EMPIRICAL-PREPARATION-v10.
 
 Current outcome: fresh v5 ended process-invalid after three charged cells,
 including two process-valid results. Its one unique read-only retained verifier14069
