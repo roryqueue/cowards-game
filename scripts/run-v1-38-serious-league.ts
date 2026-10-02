@@ -26,7 +26,7 @@ import { factoryAssessmentImplementationRoot, factoryAssessmentImplementationMan
 import { verifyHistoricalFactoryAssessmentForLeague, readRetainedFactoryLedger } from "./assess-v1-38-factory-independence.js"
 import { readFactorySupervisionArtifactRecords } from "../packages/strategy-lab/src/factory/supervision-artifacts.js"
 import { preflightLeagueAuthoring, verifyRetainedLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
-import { wrapLeagueProbeProvider, produceLeagueResponse, verifyRetainedLeagueResponse, verifyRetainedLeagueProbeInvocations, enumerateLeagueResponseConditions } from "./lib/v1-38-league-response-runtime.js"
+import { wrapLeagueProbeProvider, produceLeagueResponse, verifyRetainedLeagueResponse, verifyRetainedLeagueProbeInvocations, enumerateLeagueResponseConditions, type LeagueProbeProvider } from "./lib/v1-38-league-response-runtime.js"
 import { isLeagueExecutionStreamReference, prepareLeagueExecutionStream, readLeagueExecutionStream } from "./lib/v1-38-league-execution-stream.js"
 import { buildLeagueTacticalCorpus, isProspectiveTacticalJob, readRetainedTacticalAuthoringContext, readTacticalLeagueRecord } from "./lib/v1-38-league-tactical-corpus.js"
 import { MEMORY_PRESSURE_Q_REQUEST, parseMemoryPressureQ, type MemoryPressureQCommandResult } from "./lib/v1-38-darwin-headroom.js"
@@ -448,7 +448,7 @@ export class LeagueConnectedSession {
     this.graph = new LeagueRecordGraph(input.repository, allocation.operations, budget)
   }
   async execute(cell: LeagueCell, bottom: LeagueCandidateInput, top: LeagueCandidateInput, seed: string, options: { baseCell?: LeagueCell; order?: "forward" | "reverse"; transform?: LeagueProbeFamily; arenaAlias?: boolean } = {}) {
-    this.budget?.beforeDispatch()
+    this.graph.beforeDispatch()
     if (this.executedCells + this.responseMatchCharges >= this.allocation.opportunities.matches || Date.now() - this.startTime >= this.allocation.operations.wallClockMilliseconds) return fail("EXECUTION_BUDGET")
     const startValue = { cellRoot: cell.root, allocationRoot: this.allocation.root }, start = { ...startValue, root: labRoot("league-cell-start-v1", startValue) }
     const startRecordValue = { start, cell, bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root, seed, options }
@@ -460,7 +460,7 @@ export class LeagueConnectedSession {
     }
     recordLeagueCellStart(this.input.repository, start)
     const startRecord = this.graph.append("cell-start", startRecordValue)
-    const runtimeRecords: LabRoot[] = [], opened: FactorySupervisionProvider[] = []
+    const runtimeRecords: LabRoot[] = [], opened: FactorySupervisionProvider[] = [], wrappers: LeagueProbeProvider[] = []
     const condition = conditionFor(options.baseCell ?? cell, seed), arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.semanticGeometryHash === cell.semanticGeometryHash && arena.status === "active") ?? fail("ARENA")
     const matchBase = { matchId: `league-${start.root.slice(7, 31)}`, seed: condition.baseSeed, arenaVariant: options.arenaAlias ? { ...arena, id: `alias-${arena.id}`, name: `alias-${arena.name}` } : arena, bottomPlayerId: leaguePlayerId(bottom.admission.candidate.root), topPlayerId: leaguePlayerId(top.admission.candidate.root), initialInitiativePlayerId: condition.initialInitiativePlayerId }
     let actual: LabMatchExecution | null = null
@@ -471,13 +471,15 @@ export class LeagueConnectedSession {
         const { executableRoot: _executableRoot, ...runtimeInput } = request
         const provider = this.input.fixture ? this.input.fixture.host.createFactorySupervisedRuntime(request) : createFactorySupervisedRuntime({ ...runtimeInput, matchId: matchBase.matchId, containerName: `league-${start.root.slice(7, 25)}-${opened.length}`, ownershipLabel: `league-${this.allocation.root.slice(7, 25)}`, image: this.allocation.operations.image, invocationLimit: this.allocation.operations.perProviderInvocations, factoryLifetimeMs: this.allocation.operations.perMatchMilliseconds })
         opened.push(provider)
-        const wrapped = wrapLeagueProbeProvider(provider, options.transform, arena.initialBounds, (value) => { runtimeRecords.push(this.graph.append("runtime-invocation", value, [startRecord])) }, (request) => this.graph.beforeInvocation(request))
+        const wrapped = wrapLeagueProbeProvider(provider, options.transform, arena.initialBounds, async (value) => { runtimeRecords.push(await this.graph.appendInvocation("runtime-invocation", value, [startRecord])) }, (request) => this.graph.beforeInvocation(request), this.graph)
+        wrappers.push(wrapped)
         return {
           ...wrapped,
           invoke: async (request, identity) => {
             try { return await wrapped.invoke(request, identity) }
             catch (error) {
-              runtimeRecords.push(this.graph.append("runtime-invocation-failure", { identity: provider.identity, request, ...retainedSupervisorFailureDiagnostic(error) }, [startRecord]))
+              await wrapped.settlePending()
+              try { runtimeRecords.push(this.graph.append("runtime-invocation-failure", { identity: provider.identity, request, ...retainedSupervisorFailureDiagnostic(error) }, [startRecord])) } catch { /* Preserve the initiating runtime/retention error. */ }
               throw error
             }
           },
@@ -488,12 +490,17 @@ export class LeagueConnectedSession {
       const [issuedBottom, issuedTop] = options.order === "reverse" ? (() => { const t = issue(top), b = issue(bottom); return [b, t] as const })() : [issue(bottom), issue(top)] as const
       const match: MatchInput = { ...matchBase, bottomStrategyRevisionId: issuedBottom.identity.revisionId, topStrategyRevisionId: issuedTop.identity.revisionId }
       const retainResult = (execution: LabMatchExecution, terminal: LeagueCellTerminal) => { recordRoot = this.graph.append("cell-result", { start, cell, match, terminal, execution, bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root, seed, options }, [startRecord, ...runtimeRecords], { bytes: 262144, records: 1 }); this.executedCells++ }
-      const terminal = await runLeagueCell({ repository: this.input.repository, start, cell, bottom: issuedBottom, top: issuedTop, requestRoot: cell.requestRoot, match, runCanonicalLabMatch: async (request) => { actual = await (this.input.fixture?.run ?? runCanonicalLabMatch)(request); return actual }, beforeTerminal: retainResult })
+      const terminal = await runLeagueCell({ repository: this.input.repository, start, cell, bottom: issuedBottom, top: issuedTop, requestRoot: cell.requestRoot, match, runCanonicalLabMatch: async (request) => {
+        try { actual = await (this.input.fixture?.run ?? runCanonicalLabMatch)(request); return actual }
+        finally { await Promise.all(wrappers.map((provider) => provider.settlePending())); await this.graph.settlePending() }
+      }, beforeTerminal: retainResult })
       if (!actual) return fail("MISSING_EXECUTION")
       const completedRecordRoot = publishedResultRoot() ?? fail("MISSING_RESULT_RECORD")
       if (terminal.disposition !== "success") return fail("PROCESS_INVALID")
       return { cell, startRoot: start.root, terminal, recordRoot: completedRecordRoot, ...(options.baseCell ? { canonicalBytes: normalizedGameplayRoot(actual) } : {}), bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root }
     } catch (error) {
+      await Promise.all(wrappers.map((provider) => provider.settlePending()))
+      await this.graph.settlePending()
       for (const provider of opened) { try { runtimeRecords.push(this.graph.append("runtime-cleanup", { identity: provider.identity, closed: provider.close() }, [startRecord])) } catch (error) { runtimeRecords.push(this.graph.append("runtime-cleanup-failure", { identity: provider.identity, error: error instanceof Error ? error.name : "unknown" }, [startRecord])) } }
       const attachedRoot = publishedResultRoot()
       const evidenceRoot = this.graph.append("cell-issuance-failure", { start, cell, failure: error instanceof Error ? error.name : "unknown" }, [startRecord, ...(this.budget?.exhausted ? [] : runtimeRecords), ...(attachedRoot ? [attachedRoot] : [])])
@@ -720,6 +727,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
             produced = await (input.fixture?.produce ?? produceLeagueResponse)({ allocation, job, start, startArtifactRoot, repository, targetArtifactRoot, remainingWallMilliseconds: allocation.operations.wallClockMilliseconds - (Date.now() - session.startTime), opponents: candidates.map((candidate) => ({ candidateRoot: candidate.admission.candidate.root, closure: candidate.closure })), threshold, retention: session.graph })
           }
           catch (error) {
+            await session.graph.settlePending()
             const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot)
             ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null })
             roots.push(session.graph.append("red-team-terminal", { jobId: job.id, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
@@ -765,6 +773,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
           const evidenceRoot = session.graph.append("independent-evaluation", { jobId: job.id, startRoot: start.root, evaluationRole: job.evaluationRole, producedRoot: produced.recordRoot, matrixRoots: currentMatrices.map((matrix) => matrix.recordRoot), authoredFromFrozenPacketOnly: true }, [produced.recordRoot, ...currentMatrices.map((matrix) => matrix.recordRoot)]); roots.push(evidenceRoot)
           ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "accepted", usage: { ...zeroUsage(), matches: produced.matchCount, modelTokens: produced.author.modelTokens ?? 0, effortMilliseconds: Math.max(0, Date.now() - before), reviewMilliseconds: job.reservation.reviewMilliseconds, searchNodes: job.reservation.searchNodes, teacherNodes: job.reservation.teacherNodes, distillationUnits: job.reservation.distillationUnits }, evidenceRoots: [produced.recordRoot, evidenceRoot], candidateAdmissionRoot: null })
         } catch (error) {
+          await session.graph.settlePending()
           const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot)
           ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null })
           roots.push(session.graph.append("red-team-terminal", { jobId: job.id, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
@@ -788,6 +797,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
     const headRoot = session.graph.append("run-complete", value, roots)
     return { ...value, headRoot, empiricalRequirementsComplete: false }
   } catch (error) {
+    await session.graph.settlePending()
     for (const start of ledger.starts.filter((start) => !ledger.terminals.some((terminal) => terminal.startRoot === start.root))) {
       const evidenceRoot = session.graph.append("red-team-process-failure", { startRoot: start.root, error: error instanceof Error ? error.message : "unknown" }); roots.push(evidenceRoot)
       ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null }); roots.push(session.graph.append("red-team-terminal", { startRoot: start.root, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))

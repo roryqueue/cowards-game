@@ -39,22 +39,34 @@ const createProbeProjection = (family: LeagueProbeFamily | undefined, bounds: { 
     },
   }
 }
-export const wrapLeagueProbeProvider = (provider: FactorySupervisionProvider, family: LeagueProbeFamily | undefined, bounds: { minX: number; maxX: number }, retain: (value: unknown) => void, beforeInvocation?: (request: unknown) => void): FactorySupervisionProvider => {
+export interface LeagueProbeProvider extends FactorySupervisionProvider { settlePending(): Promise<void> }
+type InvocationSettlement = { settlePending?(): Promise<void>; readonly invocationPending?: boolean }
+export const wrapLeagueProbeProvider = (provider: FactorySupervisionProvider, family: LeagueProbeFamily | undefined, bounds: { minX: number; maxX: number }, retain: (value: unknown) => void | Promise<void>, beforeInvocation?: (request: unknown) => void, settlement?: InvocationSettlement): LeagueProbeProvider => {
   const projection = createProbeProjection(family, bounds), issued = new WeakMap<object, LabRuntimeEvidence>()
+  let active: Promise<void> | null = null, retentionFailed = false
   return {
     identity: provider.identity,
+    async settlePending() { const pending = active; if (pending) await pending; await settlement?.settlePending?.() },
     async invoke(request, identity) {
-      beforeInvocation?.(request)
-      const dispatched = projection.dispatch(request)
-      const evidence = await provider.invoke(dispatched, identity)
-      if (!provider.verify(evidence)) return fail("UNISSUED_EVIDENCE")
-      const wrapped = projection.admit(request, evidence)
-      retain({ family: family ?? null, request, dispatched, originalEvidence: evidence, admittedEvidence: wrapped })
-      issued.set(wrapped, evidence)
-      return wrapped
+      const pending = active
+      if (pending) { await pending; return fail("PENDING") }
+      if (retentionFailed) return fail("RETENTION_STOP")
+      let release!: () => void
+      active = new Promise<void>((resolve) => { release = resolve })
+      try {
+        beforeInvocation?.(request)
+        const dispatched = projection.dispatch(request)
+        const evidence = await provider.invoke(dispatched, identity)
+        if (!provider.verify(evidence)) return fail("UNISSUED_EVIDENCE")
+        const wrapped = projection.admit(request, evidence)
+        try { await retain({ family: family ?? null, request, dispatched, originalEvidence: evidence, admittedEvidence: wrapped }) }
+        catch (error) { retentionFailed = true; throw error }
+        issued.set(wrapped, evidence)
+        return wrapped
+      } finally { active = null; release() }
     },
     verify(evidence) { const original = issued.get(evidence); return original !== undefined && provider.verify(original) },
-    close() { return provider.close() },
+    close() { if (active || settlement?.invocationPending) return fail("PENDING"); return provider.close() },
   }
 }
 /** Data-only replay of the exact input/output projection; no host capability. */
@@ -93,7 +105,7 @@ import { resolve } from "node:path"
 const encode = (value: unknown) => { const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); return admitted.ok ? admitted.canonicalBytes : fail("CANONICAL") }
 const read = (repository: FactoryRepository, artifactRoot: LabRoot): any => { const admitted = admitCanonicalJsonBytes(readFactoryArtifact(repository, artifactRoot), { profile: "canonical-manifest", operation: "require-canonical" }); return admitted.ok ? admitted.value : fail("ARTIFACT") }
 export interface LeagueResponseOpponent { readonly candidateRoot: LabRoot; readonly closure: FactoryCandidateClosure }
-export interface LeagueResponseRetention { append(kind: string, value: unknown, links?: readonly LabRoot[]): LabRoot; beforeDispatch(): void; beforeInvocation(request: unknown): void }
+export interface LeagueResponseRetention extends InvocationSettlement { append(kind: string, value: unknown, links?: readonly LabRoot[]): LabRoot; appendInvocation?(kind: string, value: unknown, links?: readonly LabRoot[]): Promise<LabRoot>; beforeDispatch(): void; beforeInvocation(request: unknown): void }
 export const enumerateLeagueResponseConditions = (allocation: LeagueExecutionAllocation, opponentRoots: readonly LabRoot[]) => {
   admitLeagueExecutionAllocation(allocation)
   if (!opponentRoots.length || new Set(opponentRoots).size !== opponentRoots.length) return fail("RESPONSE_OPPONENTS")
@@ -172,7 +184,7 @@ export const produceLeagueResponse = async (input: LeagueResponseProductionInput
           const otherAdmission = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet: opposing.packet, proposal: opposing.proposal, sourceBytes: opposing.sourceBytes, repository: input.repository }), validation: opposing.validation, repository: input.repository })
           const measuredAdmission = purpose === "independence_right" ? authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet: opponent.packet, proposal: opponent.proposal, sourceBytes: opponent.sourceBytes, repository: input.repository }), validation: opponent.validation, repository: input.repository }) : admission
           const measuredBytes = purpose === "independence_right" ? opponent.sourceBytes : sourceBytes
-          const opened: FactorySupervisionProvider[] = [], invocationRecords: LabRoot[] = []
+          const opened: FactorySupervisionProvider[] = [], wrappers: LeagueProbeProvider[] = [], invocationRecords: LabRoot[] = []
           const create = (bound: typeof admission, bytes: Uint8Array) => {
             const built = buildStrategyRevision({ source: new TextDecoder().decode(bytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
             if (!built.metadata.sourceArtifact || !built.validation.valid) return fail("RESPONSE_EXECUTABLE")
@@ -184,14 +196,20 @@ export const produceLeagueResponse = async (input: LeagueResponseProductionInput
             const provider = input.fixture ? input.fixture.host.createFactorySupervisedRuntime(request) : createFactorySupervisedRuntime({ admission: bound, sourceBytes: bytes, attemptRoot, budgetRoot: allocation.root, matchId, containerName: `${matchId}-${opened.length}`, ownershipLabel: `league-${allocation.root.slice(7, 25)}`, image: allocation.operations.image, invocationLimit: allocation.operations.perProviderInvocations, factoryLifetimeMs: allocation.operations.perMatchMilliseconds })
             opened.push(provider)
             if (provider.identity.executableRoot !== request.executableRoot || provider.identity.sourceRoot !== bound.sourceRoot || provider.identity.factoryProposalRoot !== bound.proposalRoot || provider.identity.attemptRoot !== attemptRoot || provider.identity.budgetRoot !== allocation.root) return fail("RESPONSE_PROVIDER")
-            const wrapped = wrapLeagueProbeProvider(provider, undefined, arena.initialBounds, (value) => { invocationRecords.push(input.retention.append("response-runtime-invocation", value, [chargeRoot])) }, (request) => input.retention.beforeInvocation(request))
+            const wrapped = wrapLeagueProbeProvider(provider, undefined, arena.initialBounds, async (value) => {
+              const root = await (input.retention.appendInvocation ? input.retention.appendInvocation("response-runtime-invocation", value, [chargeRoot]) : input.retention.append("response-runtime-invocation", value, [chargeRoot]))
+              invocationRecords.push(root)
+            }, (request) => input.retention.beforeInvocation(request), input.retention)
+            wrappers.push(wrapped)
             return { ...wrapped, invoke: async (request, identity) => {
               try { return await wrapped.invoke(request, identity) } catch (error) {
-                invocationRecords.push(input.retention.append("response-runtime-invocation-failure", { identity: provider.identity, request, error: error instanceof Error ? error.name : "unknown" }, [chargeRoot]))
+                await wrapped.settlePending()
+                try { invocationRecords.push(input.retention.append("response-runtime-invocation-failure", { identity: provider.identity, request, error: error instanceof Error ? error.name : "unknown" }, [chargeRoot])) } catch { /* Preserve the initiating runtime/retention error. */ }
                 throw error
               }
             } } satisfies FactorySupervisionProvider
           }
+          let operationFailed = false
           try {
             const candidateProvider = create(measuredAdmission, measuredBytes), otherProvider = create(otherAdmission, opposing.sourceBytes)
             const match = { matchId, seed, arenaVariant: arena, bottomPlayerId: side === "bottom" ? candidatePlayerId : opponentPlayerId, topPlayerId: side === "top" ? candidatePlayerId : opponentPlayerId, bottomStrategyRevisionId: side === "bottom" ? candidateProvider.identity.revisionId : otherProvider.identity.revisionId, topStrategyRevisionId: side === "top" ? candidateProvider.identity.revisionId : otherProvider.identity.revisionId, initialInitiativePlayerId: initial === "candidate" ? candidatePlayerId : opponentPlayerId }
@@ -199,6 +217,7 @@ export const produceLeagueResponse = async (input: LeagueResponseProductionInput
             const receipt = await superviseFactory(measuredAdmission, candidatePlayerId, { match, providers: { [candidatePlayerId]: candidateProvider, [opponentPlayerId]: otherProvider } }, async (request) => {
               otherReceipt = await superviseFactory(otherAdmission, opponentPlayerId, request, async (runtimeRequest) => {
                 const execution = await (input.fixture?.run ?? runCanonicalLabMatch)(runtimeRequest)
+                await Promise.all(wrappers.map((provider) => provider.settlePending()))
                 if (execution.kind === "failure") records.push(input.retention.append("response-match-execution-failure", { matchCharge, match, execution }, [chargeRoot, ...invocationRecords]))
                 return execution
               })
@@ -213,14 +232,16 @@ export const produceLeagueResponse = async (input: LeagueResponseProductionInput
             if (purpose === "score") halfPoints += outcome?.type === "DRAW" ? 1 : outcome?.type === "WIN" && outcome.winnerPlayerId === candidatePlayerId ? 2 : 0
             if (purpose === "independence_left") left.push(retainedObservation(input.repository, allocation, stored.artifactRoot, ingestion.sourceUtf8, condition))
             if (purpose === "independence_right") right.push(retainedObservation(input.repository, allocation, stored.artifactRoot, new TextDecoder().decode(opponent.sourceBytes), condition))
-          } finally {
+          } catch (error) { operationFailed = true; throw error } finally {
+            await Promise.all(wrappers.map((provider) => provider.settlePending()))
+            await input.retention.settlePending?.()
             let failed = false
             for (const provider of opened) {
               let cleanup: unknown
               try { const value = provider.close(); cleanup = value; failed ||= !value.cleanupComplete || value.orphanedChild } catch (error) { cleanup = { error: error instanceof Error ? error.name : "unknown" }; failed = true }
-              records.push(input.retention.append("response-runtime-cleanup", { identity: provider.identity, cleanup }, [chargeRoot, ...invocationRecords]))
+              try { records.push(input.retention.append("response-runtime-cleanup", { identity: provider.identity, cleanup }, [chargeRoot, ...invocationRecords])) } catch (error) { if (!operationFailed) throw error }
             }
-            if (failed) return fail("RESPONSE_CLEANUP")
+            if (failed && !operationFailed) return fail("RESPONSE_CLEANUP")
           }
         }
         scores.push({ seed, opponentRoot: opponent.candidateRoot, numerator: halfPoints, denominator: 16, evidenceRoots: scoreEvidence })
@@ -246,6 +267,7 @@ export const produceLeagueResponse = async (input: LeagueResponseProductionInput
     const recordRoot = input.retention.append("response-production-result", { ...result, factoryRepository: input.repository.directory, closure: { ...closure, factoryRepository: input.repository.directory } }, records)
     return { ...result, recordRoot }
   } catch (error) {
+    await input.retention.settlePending?.()
     const evidenceRoot = input.retention.append("response-production-failure", { start, author, matchCount, accepted, error: error instanceof Error ? error.message : "unknown" }, records)
     if (!accepted) { const terminal = createFactoryAttemptTerminal({ startRoot: start.root, disposition: "system_failure", outputRoot: null, validationRoot: evidenceRoot, duplicateEvidenceRoot: evidenceRoot, finalEvidenceRoot: evidenceRoot }); publishFactoryAttemptTerminal(input.repository, start, terminal) }
     throw error

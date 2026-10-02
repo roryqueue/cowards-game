@@ -26,7 +26,12 @@ import { advanceLeagueRound } from "../packages/strategy-lab/src/league/psro.js"
 import { prepareProspectiveSeriousLeague, preflightProspectiveSeriousLeague, validateProspectiveLeagueInitialCandidates, leagueCurrentSourceIdentity, leagueEffectiveAvailableMemoryBytes, observeLeagueAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
 
 const directories: string[] = []
-afterEach(() => { vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
+const descriptorSyncFailure = vi.hoisted(() => ({ active: false }))
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>()
+  return { ...actual, fsyncSync(fd: number) { if (descriptorSyncFailure.active && !actual.fstatSync(fd).isDirectory()) throw Error("descriptor file fsync failed"); return actual.fsyncSync(fd) } }
+})
+afterEach(() => { descriptorSyncFailure.active = false; vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 const temporary = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-command-test-"))); directories.push(directory); return directory }
 const controlledGraphSyncs = () => {
   const pending: Array<(error?: Error) => Promise<void>> = []
@@ -77,6 +82,27 @@ describe("asynchronous invocation graph retention", () => {
     await expect(graph.appendInvocation("response-runtime-invocation", {})).rejects.toThrow("barrier failed")
     expect(graph.latestRoot).toBeNull(); expect(readdirSync(base.directory)).toHaveLength(boundary === 1 ? 2 : 3)
   })
+  it("does not credit a head when the real serial descriptor file fsync boundary fails", async () => {
+    const repository = createLeagueRepository(temporary()), charges: string[] = []
+    const graph = new LeagueRecordGraph(createLeagueRepository(repository.directory, { beforePublication: ({ target }) => { charges.push(target) } }), limits)
+    descriptorSyncFailure.active = true
+    await expect(graph.appendInvocation("runtime-invocation", {})).rejects.toThrow("descriptor file fsync failed")
+    expect(graph.latestRoot).toBeNull(); expect(charges).toHaveLength(3)
+    expect(readdirSync(repository.directory).filter((name) => name.includes(".tmp-"))).toHaveLength(1)
+    expect(() => graph.beforeDispatch()).toThrow("RETENTION_DISPATCH_STOP")
+  })
+  it.each([0, 1, 2])("keeps exact bytes and one dependency barrier when %i dependencies already exist", async (existing) => {
+    const reference = createLeagueRepository(temporary()), expected = new LeagueRecordGraph(reference, limits).append("runtime-invocation", { ordinal: 1 })
+    const payload = Buffer.from('{"ordinal":1}'), root = `sha256:${createHash("sha256").update(payload).digest("hex")}`
+    const dependencies = readdirSync(reference.directory).filter((name) => !name.includes(expected.slice(7))).sort((left) => left.includes(root.slice(7)) ? -1 : 1)
+    const repository = createLeagueRepository(temporary())
+    for (const name of dependencies.slice(0, existing)) publishLeagueArtifact(repository, readFileSync(join(reference.directory, name)))
+    let syncs = 0, barriers = 0, charges = 0
+    const graph = new LeagueRecordGraph(createLeagueRepository(repository.directory, { syncFile(fd) { syncs++; return new Promise<void>((resolve, reject) => fsync(fd, (error) => { if (error) reject(error); else resolve() })) }, syncDirectory(directory) { barriers++; repository.durability.syncDirectory(directory) }, beforePublication() { charges++ } }), limits)
+    expect(await graph.appendInvocation("runtime-invocation", { ordinal: 1 })).toBe(expected)
+    expect(syncs).toBe(2 - existing); expect(charges).toBe(3 - existing); expect(barriers).toBe(2)
+    expect(snapshot(repository.directory)).toEqual(snapshot(reference.directory))
+  })
   it("prechecks complete-group byte/record/reserve caps before writing", async () => {
     for (const constrained of [{ maxArtifactBytes: 1, maxArtifactRecords: 100 }, { maxArtifactBytes: 2_000_000, maxArtifactRecords: 2 }]) {
       const base = createLeagueRepository(temporary()), graph = new LeagueRecordGraph(base, constrained)
@@ -99,6 +125,43 @@ describe("asynchronous invocation graph retention", () => {
       const root = await writer.appendInvocation(kind, value)
       expect(barriers).toBe(expected); expect(syncs).toBe(0); expect(readLeagueRecordGraph(fallback, root, limits).get(root)?.value).toEqual(value)
     }
+  })
+  it.each(["same-wrapper", "shared-graph"])("ordinary %s adapter waits for real fsync settlement before failure/close/terminal", async (race) => {
+    const candidates = [await candidate(1), await candidate(3)], base = allocationFixture(), syncs = controlledGraphSyncs()
+    let syncReady!: () => void, raceReady!: () => void
+    const syncing = new Promise<void>((resolve) => { syncReady = resolve }), racing = new Promise<void>((resolve) => { raceReady = resolve })
+    const repository = createLeagueRepository(temporary(), { syncFile(fd) { const work = syncs.syncFile(fd); if (syncs.pending.length === 2) syncReady(); return work } })
+    const allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: repository.directory, responseFactory: null }, implementationRoot: factoryAssessmentImplementationRoot(), initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot })
+    let guestCalls = 0, closes = 0, firstError: unknown, raceError: unknown, issued = false
+    const error = Error("original dependency error")
+    const fixture: LeagueFixtureSeams = { candidates, host: { createFactorySupervisedRuntime(request) {
+      const provider = host.createFactorySupervisedRuntime(request), identities = new WeakSet<object>()
+      return { ...provider, invoke(request) { guestCalls++; const evidence = { identity: provider.identity, requestId: request.requestId, method: request.kind, inputRoot: labRoot("runtime-input", request.input), ordinal: 0, invocationRoot: labRoot("async-ordinary-fixture", request), charged: true, completed: true, outputBytes: 2, result: { ok: true as const, value: { activationOrders: [], strategyMemory: {} } } }; identities.add(evidence); return evidence }, verify(evidence) { return identities.has(evidence) }, close() { closes++; return { cleanupComplete: true, orphanedChild: false } } }
+    } }, run: async ({ match, providers }) => {
+      const state = MATCH_KERNEL.createMachineV119(match).initialState, [first, other] = Object.values(providers)
+      const request = { kind: "selectActivations", requestId: "source-only-ordinary", semanticTupleId: "candidate-kernel-v1.19", coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0, actingPlayerId: match.bottomPlayerId }, input: { phaseNumber: 1, roundNumber: 1, activationCount: 1, board: { bounds: state.bounds, soldiers: state.soldiers, terrainStones: [] }, mySoldiers: state.soldiers.filter((row) => row.ownerPlayerId === match.bottomPlayerId), enemySoldiers: state.soldiers.filter((row) => row.ownerPlayerId !== match.bottomPlayerId), strategyMemory: {}, initialInitiativePlayerId: match.initialInitiativePlayerId, hasInitialInitiative: true, roundInitiativePlayerId: match.initialInitiativePlayerId, hasRoundInitiative: true } } as const
+      const invocation = Promise.resolve(first!.invoke(request as never, first!.identity)).then(() => { issued = true }, (caught) => { firstError = caught })
+      await syncing
+      const target = race === "same-wrapper" ? first! : other!
+      const rejected = Promise.resolve(target.invoke(request as never, target.identity)).catch((caught) => { raceError = caught })
+      expect(() => target.close()).toThrow("PENDING"); raceReady()
+      await Promise.all([invocation, rejected]); throw firstError
+    } }
+    const budget = new LeagueRetentionBudget(allocation), session = new LeagueConnectedSession({ allocation, allocationRoot: allocation.root, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, fixture }, allocation, budget)
+    const pending = session.matrix(candidates, allocation.seedBlocks[0]!).catch((caught) => caught)
+    await racing
+    const prior = session.graph.latestRoot, before = readdirSync(repository.directory).sort()
+    expect(guestCalls).toBe(1); expect(closes).toBe(0); expect(issued).toBe(false)
+    expect(readLeagueRecordGraph(repository, prior!, allocation.operations).roots("runtime-invocation-failure")).toEqual([])
+    await syncs.pending[0]!(error); await Promise.resolve()
+    expect(firstError).toBeUndefined(); expect(raceError).toBeUndefined(); expect(closes).toBe(0); expect(session.graph.latestRoot).toBe(prior)
+    expect(readdirSync(repository.directory).sort()).toEqual(before)
+    await syncs.pending[1]!(); expect(await pending).toBe(error); expect(firstError).toBe(error)
+    expect((raceError as Error).message).toContain("PENDING"); expect(guestCalls).toBe(1); expect(issued).toBe(false); expect(closes).toBe(2)
+    const reopened = readLeagueRecordGraph(repository, session.graph.latestRoot!, allocation.operations)
+    expect(reopened.roots("runtime-invocation")).toEqual([]); expect(reopened.roots("runtime-invocation-failure")).toHaveLength(2); expect(reopened.roots("runtime-cleanup")).toHaveLength(2)
+    expect(readdirSync(repository.directory).filter((name) => name.endsWith(".terminal.json"))).toHaveLength(1)
+    expect(() => session.graph.beforeInvocation({})).toThrow("RETENTION_DISPATCH_STOP")
   })
 })
 describe("graph dependency durability", () => {
@@ -731,7 +794,7 @@ describe("complete private league command", () => {
     const fixture: LeagueFixtureSeams = { candidates, host: { createFactorySupervisedRuntime(request) { const provider = host.createFactorySupervisedRuntime(request); return { ...provider, identity: { ...provider.identity, tupleId: MATCH_KERNEL.tupleId } } } }, run: async ({ match, providers }) => { cells++; if (failAfterGrowth === true && cells === 69) return runCanonicalLabMatch({ match, providers }); const state = MATCH_KERNEL.createMachineV119(match).initialState; expect(state.soldiers).toHaveLength(16); for (const provider of Object.values(providers)) provider.close(); return { kind: "completed", privacy: "private_offline", transitions: [], accounting: [], result: { state: { ...state, outcome: { type: "DRAW" } }, events: [{ type: "MATCH_ENDED", payload: { type: "DRAW" } }] } } as never }, produce: (input) => {
       productionJobs.push(input.job.id)
       if (input.job.evaluationRole !== "development_response") throw new Error("independent evaluation must not start before closure")
-      const retention = failAfterGrowth === "result-retention" ? { ...input.retention, beforeDispatch: () => input.retention.beforeDispatch(), beforeInvocation: (request: unknown) => input.retention.beforeInvocation(request), append(kind: string, value: unknown, links: readonly string[] = []) {
+      const retention = failAfterGrowth === "result-retention" ? { ...input.retention, appendInvocation: input.retention.appendInvocation?.bind(input.retention), settlePending: input.retention.settlePending?.bind(input.retention), get invocationPending() { return input.retention.invocationPending }, beforeDispatch: () => input.retention.beforeDispatch(), beforeInvocation: (request: unknown) => input.retention.beforeInvocation(request), append(kind: string, value: unknown, links: readonly string[] = []) {
         if (kind === "response-production-result") throw new Error("injected result retention failure")
         return input.retention.append(kind, value, links as never)
       } } : input.retention

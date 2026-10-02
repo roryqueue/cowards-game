@@ -122,7 +122,7 @@ describe("asynchronous dependency durability", () => {
     await expect(publishLeagueArtifactDependenciesAsync(repo, [Buffer.from("one"), Buffer.from("two")])).rejects.toBe(error)
     expect(charges).toHaveLength(2); expect(readdirSync(base.directory)).toEqual([])
   })
-  it.each([[], [Buffer.from("one")], [Buffer.from("one"), new Uint8Array()], [Buffer.from("one"), new Uint8Array(262145)], [Buffer.from("one"), "two"]])("rejects malformed pairs before charging", async (bytes) => {
+  it.each([[], [Buffer.from("one")], [Buffer.from("one"), new Uint8Array()], [Buffer.from("one"), new Uint8Array(262145)], [Buffer.from("one"), "two"]].map((bytes) => ({ bytes })))("rejects malformed pairs before charging", async ({ bytes }) => {
     const base = repository(), charges: string[] = []
     const repo = createLeagueRepository(base.directory, { beforePublication: ({ target }) => { charges.push(target) } })
     await expect(publishLeagueArtifactDependenciesAsync(repo, bytes as Uint8Array[])).rejects.toThrow("ARTIFACT")
