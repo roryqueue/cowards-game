@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 v8 entry42336 CLOSED setup ENOENT before capacity/dispatch; zero Matches; distinct freshv9 orchestration repair next
+stopped_at: Phase265 freshv9 reviewed pipeline; ONE data-only prepare75014 active, no Match or capacity receipt
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: unique v8 entry CLOSED exit1 at absent league directory; readonly diagnosis98963 reproduces ENOENT; no old entry retry or result repair
+last_activity_desc: v9 helper review and types pass; readonly missing-directory guard pass; eleven fresh requests independently accepted; unique data-only preparation active
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,26 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current continuation — distinct v9 reviewed, data-only preparation active
+
+Fresh helpers e7bc98d2/08cfa38a independently reviewed clean atv16/92b88b50;
+configured strict types23546 CLOSED exit0. Read-only negative guard84016
+refuses missing NEW directory with ENOENT without publishing any marker.
+ONE draft20207 exits0 atrequestcc348d0b/disclosureafca1f3d/rolesca1b252c/
+completionc802bef3. Actual distinct reviewer accepts all11freshjobs at
+a39ab4b3/5078B,106213ms real new windows; reportv12/b504e467 clean.
+ONE compile24100 exits0 with45inertrecords/packetc45afd49; ONE input5857
+exits0 atb383a81d/23911B. ONE root data-only prepare75014 is ACTIVE against
+historical factory inputs; never duplicate. Maina98b5c2b/ea34d793/2bf94999
+fixed and full gate CLOSEDpass, not repeated. Root must create only exact
+NEWv9 league-evidence directory AFTER draft+prepare, BEFORE publication/entry;
+then read-only positive guard, new static capacity input, canonical allocation
+commit/push, and ONE entry with fresh passing same-process capacity before
+charge/dispatch. No receipt/Match yet. V8 and every older closedroute immutable;
+no retry/reuse/refund/re-credit. Standing same-bounds approval applies; no
+repeat literal. No LEAG/freeze/formation/holdout/public/count/production credit.
+See preparation-v13, helperv16 and packetv12. Earlier snapshots historical.
 
 ## Current continuation — v8 setup failure closed, distinct v9 next
 

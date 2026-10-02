@@ -2,6 +2,14 @@
 
 ## Current verified progress — Phases262–264 complete
 
+Distinct freshv9 helper reviewv16 clean; configuredtypes and read-only missing-
+directory guard pass. All11new requests independently accepted atreviewa39ab4b3,
+actual106213ms windows; compile24100 creates45inertrecords; input5857 completes.
+ONE data-only prepare75014 ACTIVE, not Match execution. Maina98b5c2b unchanged;
+no closed sourcegate duplication. Root initializes exact NEW league-directory
+after draft+prepare and before publish/entry; standing approval, fresh capacity
+and immutable oldroutes remain. No LEAG/freeze credit. See preparation-v13.
+
 V8 entry42336 CLOSED exit1 before capacity/dispatch: missing NEW private league
 directory, read-only ENOENT diagnosis98963 confirms setup omission. Zero Matches,
 no head/receipt; reserved empty result is not evidence and remains untouched.
