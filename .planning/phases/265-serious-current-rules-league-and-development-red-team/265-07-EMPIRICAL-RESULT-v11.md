@@ -1,4 +1,30 @@
-# Phase 265 v11 empirical outcome — retained verification pending
+# Phase 265 v11 empirical outcome — closed process-invalid
+
+## Final retained-verifier observation
+
+By2026-10-02T22:04:54UTC, the ONE ordinary retained verifier72861 CLOSED
+exit0. Actual returned projection: issued=false, evidenceClass=empirical,
+processValidity=process_invalid, empiricalRequirementsComplete=false, exact
+allocation69b5cd84930b48c46602f676ea50ed8ea96981e2af6ccfd6d710d544083c0116
+and headf572bd4f17e7863f2f79c4993a193c352b5fa51a3386544585665bd07d547a79.
+PID27380 is absent. Canonical allocation/result raw hashes below were checked
+unchanged. Exit0 means the reader returned this nonpass, not league success.
+No second retained verifier was run. The source hold is released; consumed
+artifacts and this route remain immutable. All LEAG requirements stay open.
+
+Bounded read-only private diagnostic inspection identified MALFORMED_IPC in
+soldierBrain at ordinal172, charged=true/completed=false/outputBytes0, with
+host-issued finite stream_exchange/wait_timeout. The three success/one failure
+counts below are safe terminal-metadata observations, not a successful league.
+The source-only timing diagnosis is in265-v11-system-failure.md: coupled1000ms
+outer and later-starting broker deadlines can preempt response delivery.
+Actual guest/container/host cause of lateness remains unknown; retained
+verification does not prove it. No Strategy-timeout reclassification is made.
+
+Prospective host-receipt decision is pending in265-07-HOST-RECEIPT-DECISION-v1.md;
+no new resource bound, source repair or live route has been applied.
+
+## Original terminal / pending-verifier snapshot (history)
 
 The unique root entry17028/PID21728 CLOSED exit0 returning a nonpass, not league
 success. Started2026-10-02T20:56:12.968UTC; terminal21:26:52.754UTC.

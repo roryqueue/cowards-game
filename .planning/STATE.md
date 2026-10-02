@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Phase265 V11 entry closed process-invalid after four charged cells; unique retained verifier72861 active at fixed source
+status: awaiting_human_decision
+stopped_at: Phase265 V11 and unique verifier closed; pending prospective host-receipt timeout decision, guest limit unchanged
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: V11 terminal21:26:52.754UTC, three success terminals and one system-failure terminal; unique read-only verification72861 active, no LEAG credit
+last_activity_desc: V11 retained verifier72861 closed exit0 issuedfalse/process_invalid; source diagnosis identifies coupled host/guest deadlines; no LEAG credit
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,30 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+As of2026-10-02T22:04:54UTC, unique retained verifier72861 CLOSED exit0:
+issued=false, empirical/process_invalid, requirementsComplete=false, exact
+allocation69b5cd84 and headf572bd4f. PID27380 is absent. Allocation raw67c8fe2d
+and result rawc18dee62 remain unchanged. Source hold for this route is released;
+all consumed route/authority/evidence bytes remain immutable. No new Match,
+provider, capacity check, route or verifier has been started.
+
+Bounded private diagnostic inspection found original/admitted MALFORMED_IPC,
+soldierBrain ordinal172, charged/incomplete/outputBytes0, host-issued finite
+stream_exchange/wait_timeout. This is not a cold-start claim or proof of guest
+timeout. Read-only GSD Debug source diagnosis finds the outer host wait and
+later-starting broker deadline both use1000ms, allowing the host to expire
+before the broker reports. The reason for lateness remains unknown. The closed
+retained verifier does not establish that deeper timing cause.
+
+Genuinely new resource decision pending: propose a prospective private5000ms
+host response-receipt allowance while keeping guest execution1000ms, Match
+600000ms, all other limits/rules/privacy/holdout/formation bounds unchanged.
+Not approved or applied. See265-07-HOST-RECEIPT-DECISION-v1.md. No unchanged
+run merely to repeat this known failure; standing route approval does not
+authorize changing the frozen invocation/transport limit. Continue only safe
+read-only work until this decision changes; do not request another route literal.
+Earlier active-verifier/entry/preparation observations below are history.
 
 V11 root entry17028/PID21728 CLOSED exit0 returning a NONPASS at
 2026-10-02T21:26:52.754UTC: empirical/process_invalid, requirementsComplete=false.
