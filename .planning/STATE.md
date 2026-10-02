@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 lifetime review found two blockers and one test gap; bounded source fixes before re-review/full gates
+stopped_at: Phase265 all three lifetime review findings fixed and integrated; independent re-review before full fixed-source gate
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: independent lifetime review2d0462fb finds stale tacticalv1 predicate, inheritedconstructor bypass and missingactualresponsewiring test; fixing all under approvedscope
+last_activity_desc: exactscopedfixes d4457a00/a03ddd55/bb98878e integrated; focusedregressions and productiontypes pass, re-review/fullgate pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,16 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+All three review findings are corrected in scoped commitsd4457a00/a03ddd55/
+bb98878e, integrated by checked fast-forward from4e87dd06; six owned files,
+no deletions/unrelated edits. The necessary tactical dependency/test expands
+the supplement's total source/test scope to13files. Focused GREEN66692/73198/
+44083 and productiontypes pass; mutation RED72814 failed as intended then
+restored. Exact temporary fix worktree/branch/sentinel cleaned up with report
+retained on main. Independent re-review of finalbb98878e and one unique full
+fixed-source gate remain PENDING. No live route/capacity/retained verifier,
+no LEAG/freeze/phase completion or other bound change.
 
 Independent source reviewv1 of2d0462fb found two BLOCKERs and one WARNING:
 tactical corpus selector recognizes only prospective-v1, inherited factory
