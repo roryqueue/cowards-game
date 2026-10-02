@@ -45,8 +45,9 @@ preserves40 corpus vectors and16 retained-row bytes and measures~29percent
 encoder-component savings, not whole-Match timing. ONE fail-fast complete source
 gate44285 is ACTIVE: exact eight Phase265 CI commands, then engine/runtime suites,
 core types and two-file format check. Keep main source fixed; do not duplicate it.
-Private v5 preparation helpers are drafts only and must be corrected/reviewed;
-no v5 allocation, capacity receipt or execution exists. See canonical-literal
+Private v5 helpers are corrected and independently rereviewed; root's data-only
+draft27353 completed exit0. Eleven new jobs await actual independent packet
+review. No v5 allocation, capacity receipt or execution exists. See canonical-literal
 proof/review. Standing approval covers a distinct same-bounds route after gates.
 LEAG/Phase265 completion and freeze remain pending.
 
@@ -100,16 +101,15 @@ immutable allocation with fresh passing capacity before a further Match.
 No human-only checkpoint has been identified by diagnosis yet. LEAG remains
 pending and Phase265 stays12/14plans complete; formation/holdout stay closed.
 
-The isolated Phase266 fixture-only draft is checkpointed locally at248fc27b
-(branch codex/phase266-context), unmerged/unpushed. Targeted strict no-emit
-types and independent three-file deep review pass; no tests/generation or real
-operations ran. The complete-positive derive/check joins remain missing:
-historical4eb allocation roots differ from live-source run/capacity guards.
-The builder reports the mismatch rather than relabeling history or weakening
-those guards. Source-identity compatibility needs source-only correction in
-the Phase266 window, not a human approval checkpoint. It is not a freeze or
-phase completion; main source stays fixed during prepare/live entry. Two
-unrelated package repository changes in that worktree remain untouched.
+The isolated Phase266 draft is checkpointed locally at4eac9a8a
+(branch codex/phase266-context), unmerged/unpushed. Corrected historical adapter
+and immutable two-epoch source rosters have clean scoped independent reviews;
+strict no-emit checks pass. Only two Git-blob manifest tests ran:2passed,37skipped.
+Root's bounded loader1739 passed exact4eb identities with zero producer calls.
+Complete-positive derive/check joins, broader source gates and integrated review
+remain missing. No fixture generation or real operation ran. It is not a freeze
+or phase completion; main source stays fixed. Two unrelated package repository
+changes in that worktree remain untouched. No human-only checkpoint is needed.
 
 ## Historical fresh entry — now consumed as recorded above
 
