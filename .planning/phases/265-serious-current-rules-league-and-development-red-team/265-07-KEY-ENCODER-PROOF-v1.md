@@ -36,6 +36,12 @@ INVALID_UNICODE_SCALAR and INVALID_GRAMMAR. Production errors did not change.
 Independent exact final-main two-file review reports zero findings, recorded in
 265-07-KEY-ENCODER-REVIEW-v1.md; its reviewer did not run tests.
 
+Timestamp correction: the unchanged v1 review header predates the reviewed
+commit and does not establish review timing. A fresh exact-source rereview at
+2026-10-02T03:46:00Z is recorded in KEY-ENCODER-REVIEW-v2.md, raw1e9477dd.
+It reports zero findings and does not claim any tests or runtime execution.
+Fresh route preparation binds this corrected review, not the inaccurate header.
+
 The earlier bounded synthetic120-key benchmark measured approximately31percent
 encoder-component saving over four alternating50-encode rounds. It is not a
 whole-Match prediction or empirical competitive result. No new Match follows
