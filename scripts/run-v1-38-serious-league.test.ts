@@ -157,17 +157,27 @@ describe("asynchronous invocation graph retention", () => {
       expect(barriers).toBe(expected); expect(syncs).toBe(0); expect(readLeagueRecordGraph(fallback, root, limits).get(root)?.value).toEqual(value)
     }
   })
-  it.each(["same-wrapper", "shared-graph"])("ordinary %s adapter waits for real fsync settlement before failure/close/terminal", async (race) => {
+  it.each([
+    { race: "same-wrapper", fault: "none" }, { race: "shared-graph", fault: "none" },
+    { race: "shared-graph CR-02", fault: "persistent" }, { race: "shared-graph CR-02", fault: "cell-failure" },
+    { race: "shared-graph CR-02", fault: "journal" },
+    { race: "shared-graph CR-02", fault: "persistent-close" },
+  ])("ordinary $race adapter waits for settlement with secondary fault=$fault", async ({ race, fault }) => {
     const candidates = [await candidate(1), await candidate(3)], base = allocationFixture(), syncs = controlledGraphSyncs()
     let syncReady!: () => void, raceReady!: () => void
     const syncing = new Promise<void>((resolve) => { syncReady = resolve }), racing = new Promise<void>((resolve) => { raceReady = resolve })
-    const repository = createLeagueRepository(temporary(), { syncFile(fd) { const work = syncs.syncFile(fd); if (syncs.pending.length === 2) syncReady(); return work } })
+    let secondaryActive = false, budget: LeagueRetentionBudget | undefined
+    const secondary = Error("secondary retention fault")
+    const repository = createLeagueRepository(temporary(), {
+      beforePublication(value) { budget?.beforePublication(value); if (secondaryActive && (fault.startsWith("persistent") || fault === "journal" && value.target.endsWith(".terminal.json"))) throw secondary },
+      syncFile(fd) { const work = syncs.syncFile(fd); if (syncs.pending.length === 2) syncReady(); return work },
+    })
     const allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: repository.directory, responseFactory: null }, implementationRoot: factoryAssessmentImplementationRoot(), initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot })
     let guestCalls = 0, closes = 0, firstError: unknown, raceError: unknown, issued = false
     const error = Error("original dependency error")
     const fixture: LeagueFixtureSeams = { candidates, host: { createFactorySupervisedRuntime(request) {
       const provider = host.createFactorySupervisedRuntime(request), identities = new WeakSet<object>()
-      return { ...provider, invoke(request) { guestCalls++; const evidence = { identity: provider.identity, requestId: request.requestId, method: request.kind, inputRoot: labRoot("runtime-input", request.input), ordinal: 0, invocationRoot: labRoot("async-ordinary-fixture", request), charged: true, completed: true, outputBytes: 2, result: { ok: true as const, value: { activationOrders: [], strategyMemory: {} } } }; identities.add(evidence); return evidence }, verify(evidence) { return identities.has(evidence) }, close() { closes++; return { cleanupComplete: true, orphanedChild: false } } }
+      return { ...provider, invoke(request) { guestCalls++; const evidence = { identity: provider.identity, requestId: request.requestId, method: request.kind, inputRoot: labRoot("runtime-input", request.input), ordinal: 0, invocationRoot: labRoot("async-ordinary-fixture", request), charged: true, completed: true, outputBytes: 2, result: { ok: true as const, value: { activationOrders: [], strategyMemory: {} } } }; identities.add(evidence); return evidence }, verify(evidence) { return identities.has(evidence) }, close() { closes++; if (fault === "persistent-close" && closes === 1) throw secondary; return { cleanupComplete: true, orphanedChild: false } } }
     } }, run: async ({ match, providers }) => {
       const state = MATCH_KERNEL.createMachineV119(match).initialState, [first, other] = Object.values(providers)
       const request = { kind: "selectActivations", requestId: "source-only-ordinary", semanticTupleId: "candidate-kernel-v1.19", coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0, actingPlayerId: match.bottomPlayerId }, input: { phaseNumber: 1, roundNumber: 1, activationCount: 1, board: { bounds: state.bounds, soldiers: state.soldiers, terrainStones: [] }, mySoldiers: state.soldiers.filter((row) => row.ownerPlayerId === match.bottomPlayerId), enemySoldiers: state.soldiers.filter((row) => row.ownerPlayerId !== match.bottomPlayerId), strategyMemory: {}, initialInitiativePlayerId: match.initialInitiativePlayerId, hasInitialInitiative: true, roundInitiativePlayerId: match.initialInitiativePlayerId, hasRoundInitiative: true } } as const
@@ -178,7 +188,12 @@ describe("asynchronous invocation graph retention", () => {
       expect(() => target.close()).toThrow("PENDING"); raceReady()
       await Promise.all([invocation, rejected]); throw firstError
     } }
-    const budget = new LeagueRetentionBudget(allocation), session = new LeagueConnectedSession({ allocation, allocationRoot: allocation.root, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, fixture }, allocation, budget)
+    budget = new LeagueRetentionBudget(allocation)
+    const session = new LeagueConnectedSession({ allocation, allocationRoot: allocation.root, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, fixture }, allocation, budget)
+    if (fault === "cell-failure") {
+      const append = session.graph.append.bind(session.graph)
+      vi.spyOn(session.graph, "append").mockImplementation((kind, ...args) => { if (secondaryActive && kind === "cell-issuance-failure") throw secondary; return append(kind, ...args) })
+    }
     const pending = session.matrix(candidates, allocation.seedBlocks[0]!).catch((caught) => caught)
     await racing
     const prior = session.graph.latestRoot, before = readdirSync(repository.directory).sort()
@@ -187,11 +202,15 @@ describe("asynchronous invocation graph retention", () => {
     await syncs.pending[0]!(error); await Promise.resolve()
     expect(firstError).toBeUndefined(); expect(raceError).toBeUndefined(); expect(closes).toBe(0); expect(session.graph.latestRoot).toBe(prior)
     expect(readdirSync(repository.directory).sort()).toEqual(before)
+    const chargedBeforeFailure = { ...budget.usage }; secondaryActive = true
     await syncs.pending[1]!(); expect(await pending).toBe(error); expect(firstError).toBe(error)
     expect((raceError as Error).message).toContain("PENDING"); expect(guestCalls).toBe(1); expect(issued).toBe(false); expect(closes).toBe(2)
     const reopened = readLeagueRecordGraph(repository, session.graph.latestRoot!, allocation.operations)
-    expect(reopened.roots("runtime-invocation")).toEqual([]); expect(reopened.roots("runtime-invocation-failure")).toHaveLength(2); expect(reopened.roots("runtime-cleanup")).toHaveLength(2)
-    expect(readdirSync(repository.directory).filter((name) => name.endsWith(".terminal.json"))).toHaveLength(1)
+    expect(reopened.roots("runtime-invocation")).toEqual([]); expect(reopened.roots("runtime-invocation-failure")).toHaveLength(fault.startsWith("persistent") ? 0 : 2); expect(reopened.roots("runtime-cleanup")).toHaveLength(fault.startsWith("persistent") ? 0 : 2)
+    expect(reopened.roots("runtime-cleanup-failure")).toEqual([])
+    if (fault.startsWith("persistent")) { expect(session.graph.latestRoot).toBe(prior); expect(reopened.roots("cell-issuance-failure")).toEqual([]) }
+    expect(readdirSync(repository.directory).filter((name) => name.endsWith(".terminal.json"))).toHaveLength(fault === "none" ? 1 : 0)
+    expect(budget.usage.workRecords).toBeGreaterThanOrEqual(chargedBeforeFailure.workRecords); expect(budget.usage.workBytes).toBeGreaterThanOrEqual(chargedBeforeFailure.workBytes)
     expect(() => session.graph.beforeInvocation({})).toThrow("RETENTION_DISPATCH_STOP")
   })
 })

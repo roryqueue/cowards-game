@@ -87,7 +87,7 @@ import { executeLeagueAuthoring } from "./v1-38-league-authoring.js"
 import { produceLeagueResponse, verifyRetainedLeagueResponse, type LeagueResponseProductionInput } from "./v1-38-league-response-runtime.js"
 import { fsync, mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import { createLeagueRepository } from "../../packages/strategy-lab/src/league/repository.js"
-import { LeagueRecordGraph } from "../run-v1-38-serious-league.js"
+import { LeagueRecordGraph, LeagueRetentionBudget } from "../run-v1-38-serious-league.js"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
@@ -128,22 +128,34 @@ it.each([
   ["runs source-only three-arm production (capacity between Matches) without executing Strategies", "capacity between Matches"],
   ["host-bound league behavioral probes: asynchronous invocation graph retention response same-wrapper", "async same-wrapper"],
   ["host-bound league behavioral probes: asynchronous invocation graph retention response shared-graph", "async shared-graph"],
+  ["host-bound league behavioral probes: CR-02 persistent response retention failure", "async persistent"],
+  ["host-bound league behavioral probes: CR-02 response production failure-record fault", "async production-failure"],
+  ["host-bound league behavioral probes: CR-02 response factory-terminal fault", "async factory-terminal"],
+  ["host-bound league behavioral probes: CR-02 response cleanup retention fault without primary", "cleanup without primary"],
+  ["host-bound league behavioral probes: CR-02 response actual close fault without primary", "close without primary"],
 ] as const)("%s", async (_name, scenario) => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-response-injected-test-")))
   const leagueDirectory = scenario.startsWith("async") ? realpathSync(mkdtempSync(join(tmpdir(), "league-response-injected-test-"))) : null
+  let secondaryActive = false
+  const secondary = Error("secondary response retention fault")
+  const closeError = Error("original actual close fault"), noPrimary = scenario.endsWith("without primary")
   try {
-    const repository = createFactoryRepository(directory), put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw new Error("fixture encoding"); return publishFactoryArtifact(repository, encoded.canonicalBytes) }, initial = [await importedCandidateFixture(1), await importedCandidateFixture(3)], opponents = initial.map((entry) => ({ candidateRoot: entry.candidateAdmission.candidate.root, closure: entry.closure })), base = allocationFixture(), r = (text: string) => labRoot("response-fixture", text)
+    const repository = createFactoryRepository(directory, { beforePublication(value) { if (secondaryActive && scenario === "async factory-terminal" && value.terminal) throw secondary } }), put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw new Error("fixture encoding"); return publishFactoryArtifact(repository, encoded.canonicalBytes) }, initial = [await importedCandidateFixture(1), await importedCandidateFixture(3)], opponents = initial.map((entry) => ({ candidateRoot: entry.candidateAdmission.candidate.root, closure: entry.closure })), base = allocationFixture(), r = (text: string) => labRoot("response-fixture", text)
     const producerInput = { split: "development", doctrineFamily: "source-only-response", provider: { providerId: "source-fixture", modelId: "local", modelVersion: "test", settingsRoot: r("settings"), promptRoot: r("prompt"), contextRoot: r("context") }, build: { buildRoot: r("build"), toolchainRoot: r("toolchain") }, lineage: { predecessorRoot: LAB_ADMITTED_ROOTS.currentStartRoot, correctionRoot: null, retryParentRoot: null } }, producerRequestArtifactRoot = put({ producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", producerInput }), disclosureArtifactRoot = put({ participantId: "author", requestArtifactRoot: producerRequestArtifactRoot, sourceAndBuildDisclosed: true, dependencyArtifactRoots: [] }), provenanceArtifactRoot = put({ participantId: "author", priorExposure: "none", conflicts: "none", origin: "tactical-oracle", deterministicDataOnly: true }), reviewArtifactRoot = put({ reviewerId: "reviewer", participantId: "author", disclosureArtifactRoot, provenanceArtifactRoot, disposition: "accepted", reviewMilliseconds: 0 }), reservation = { ...base.channels[0]!.perAttempt, matches: 48, effortMilliseconds: 180000 }
     const job = { id: "source-response", channel: "automated" as const, evaluationRole: "development_response" as const, operation: "produce" as const, producerRequestArtifactRoot, disclosureArtifactRoot, provenanceArtifactRoot, reviewArtifactRoot, participantId: "author", reviewerId: "reviewer", reservation, retryParentJobId: null }, allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: "/fixture/league-response", responseFactory: directory }, initialCandidatePublicationRoots: initial.map((entry) => entry.input.publicationArtifactRoot).sort(), independenceReferencePublicationRoot: initial[0]!.input.publicationArtifactRoot, opportunities: { ...base.opportunities, attemptedCandidates: 1, matches: 200 }, operations: { ...base.operations, perAttemptMilliseconds: 180000, wallClockMilliseconds: 240000, maxArtifactBytes: 160000000, maxArtifactRecords: 100000 }, channels: base.channels.map((channel) => channel.channel === "automated" ? { ...channel, disposition: "allocated", opportunities: 1, ceilings: reservation, perAttempt: reservation, participants: ["author"], reviewers: ["reviewer"] } : channel), rounds: [{ ordinal: 0, acceptedSlots: 0, jobs: [job] }, base.rounds[1]!] }), ledger = declareRedTeamAllocation({ phase: 265, evidenceClass: allocation.evidenceClass, authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes }), start = startRedTeamAttempt({ ledger, channel: "automated", roundRoot: r("round"), candidateRoot: opponents[0]!.candidateRoot, participantId: "author", reviewerId: "reviewer", disclosureRoot: disclosureArtifactRoot, provenanceRoot: provenanceArtifactRoot, inputRoot: producerRequestArtifactRoot, retryParentRoot: null, reservation }).starts[0]!, startArtifactRoot = put(start), targetArtifactRoot = put({ roundRoot: start.roundRoot, candidateRoot: start.candidateRoot, candidates: initial.map((entry) => { const bytes = readFactoryArtifact(entry.factoryRepository, entry.closure.sourceArtifactRoot), sourceArtifactRoot = publishFactoryArtifact(repository, bytes); return { candidateRoot: entry.candidateAdmission.candidate.root, sourceArtifactRoot, byteLength: bytes.length, disclosedFile: `candidate-${sourceArtifactRoot.slice(7)}.ts` } }) })
     const asynchronous = scenario.startsWith("async"), syncs: Array<(error?: Error) => Promise<void>> = []
     let syncReady!: () => void, raceReady!: () => void, firstError: unknown, raceError: unknown, closeCalls = 0, guestCalls = 0
     const syncing = new Promise<void>((resolve) => { syncReady = resolve }), racing = new Promise<void>((resolve) => { raceReady = resolve }), asyncError = Error("original response dependency error")
-    const graph = leagueDirectory ? new LeagueRecordGraph(createLeagueRepository(leagueDirectory, { syncFile(fd) { return new Promise<void>((resolve, reject) => { syncs.push((error) => new Promise<void>((done) => fsync(fd, (actual) => { if (error || actual) reject(error ?? actual); else resolve(); done() }))); if (syncs.length === 2) syncReady() }) } }), allocation.operations) : null
+    const budget = new LeagueRetentionBudget(allocation)
+    const graph = leagueDirectory ? new LeagueRecordGraph(createLeagueRepository(leagueDirectory, { beforePublication(value) { budget.beforePublication(value); if (secondaryActive && scenario === "async persistent") throw secondary }, syncFile(fd) { return new Promise<void>((resolve, reject) => { syncs.push((error) => new Promise<void>((done) => fsync(fd, (actual) => { if (error || actual) reject(error ?? actual); else resolve(); done() }))); if (syncs.length === 2) syncReady() }) } }), allocation.operations, budget) : null
     let calls = 0, providers = 0, authoringFinished = false, invocationChecks = 0
     const completedBeforeStop = scenario === "capacity after authoring" ? 0 : 1
-    const checkCapacity = () => { if (!asynchronous && scenario !== "complete" && authoringFinished && calls >= completedBeforeStop) throw Error("injected live capacity stop"); graph?.beforeDispatch() }
+    const checkCapacity = () => { if (!asynchronous && scenario !== "complete" && !noPrimary && authoringFinished && calls >= completedBeforeStop) throw Error("injected live capacity stop"); graph?.beforeDispatch() }
     const records = new Map<LabRoot, { kind: string; value: any; links: readonly LabRoot[] }>(), retention = {
-      append(kind: string, value: unknown, links: readonly LabRoot[] = []) { const root = graph ? graph.append(kind, value, links) : labRoot("response-fixture-record", { kind, value, links }); records.set(root, { kind, value, links }); return root },
+      append(kind: string, value: unknown, links: readonly LabRoot[] = []) {
+        if (secondaryActive && scenario === "async production-failure" && kind === "response-production-failure" || noPrimary && ["response-runtime-cleanup", "response-production-failure"].includes(kind)) throw secondary
+        const root = graph ? graph.append(kind, value, links) : labRoot("response-fixture-record", { kind, value, links }); records.set(root, { kind, value, links }); return root
+      },
       ...(graph ? { async appendInvocation(kind: string, value: unknown, links: readonly LabRoot[] = []) { const root = await graph.appendInvocation(kind, value, links); records.set(root, { kind, value, links }); return root }, settlePending: () => graph.settlePending() } : {}),
       get invocationPending() { return graph?.invocationPending ?? false },
       beforeDispatch: checkCapacity, beforeInvocation(request: unknown) { invocationChecks++; graph?.beforeInvocation(request) },
@@ -152,7 +164,7 @@ it.each([
       providers++
       const defaults = defaultRuntimeMetadata("typescript"), revision = revisions.get(admission.sourceRoot) ?? buildStrategyRevision({ source: new TextDecoder().decode(sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } }); revisions.set(admission.sourceRoot, revision)
       const issued = new WeakSet<object>(), identity = { revisionId: revision.id, sourceRoot: admission.sourceRoot, executableRoot, tupleId: "candidate-kernel-v1.19", tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: LAB_ADMITTED_ROOTS.image, harnessRoot: r("harness"), budgetRoot, attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, nativeLane: admission.nativeLane, factoryPacketRoot: admission.packetRoot, factoryProposalRoot: admission.proposalRoot, factoryValidationRoot: admission.validationRoot }
-      return { identity, invoke(request) { guestCalls++; const evidence = { identity, requestId: request.requestId, method: request.kind, inputRoot: labRoot("runtime-input", request.input), ordinal: 0, invocationRoot: labRoot("response-fixture-invocation", { identity, request }), charged: true, completed: true, outputBytes: 2, result: { ok: true as const, value: { activationOrders: [], strategyMemory: {} } } }; issued.add(evidence); return evidence }, verify(value) { return issued.has(value) }, close() { closeCalls++; return { cleanupComplete: true, orphanedChild: false } } }
+      return { identity, invoke(request) { guestCalls++; const evidence = { identity, requestId: request.requestId, method: request.kind, inputRoot: labRoot("runtime-input", request.input), ordinal: 0, invocationRoot: labRoot("response-fixture-invocation", { identity, request }), charged: true, completed: true, outputBytes: 2, result: { ok: true as const, value: { activationOrders: [], strategyMemory: {} } } }; issued.add(evidence); return evidence }, verify(value) { return issued.has(value) }, close() { closeCalls++; if (scenario === "close without primary" && closeCalls === 1) throw closeError; return { cleanupComplete: true, orphanedChild: false } } }
     } }, run: async ({ match, providers }) => {
       calls++; const state = MATCH_KERNEL.createMachineV119(match).initialState, accounting = []
       expect(state.soldiers).toHaveLength(16)
@@ -179,12 +191,25 @@ it.each([
       await syncs[0]!(asyncError); await Promise.resolve()
       expect(firstError).toBeUndefined(); expect(raceError).toBeUndefined(); expect(closeCalls).toBe(0); expect(graph!.latestRoot).toBe(prior)
       expect([...records.values()].map((row) => row.kind)).toEqual(before)
+      const priorUsage = { ...budget.usage }; secondaryActive = true
       await syncs[1]!(); expect(await result).toBe(asyncError); expect(firstError).toBe(asyncError)
       expect((raceError as Error).message).toContain("PENDING"); expect(guestCalls).toBe(1); expect(closeCalls).toBe(2); expect(calls).toBe(1)
       const kinds = [...records.values()].map((row) => row.kind)
-      expect(kinds.filter((kind) => kind === "response-runtime-invocation-failure")).toHaveLength(2); expect(kinds.filter((kind) => kind === "response-runtime-cleanup")).toHaveLength(2)
-      expect(kinds).not.toContain("response-runtime-invocation"); expect(kinds.at(-1)).toBe("response-production-failure")
+      expect(kinds.filter((kind) => kind === "response-runtime-invocation-failure")).toHaveLength(scenario === "async persistent" ? 0 : 2); expect(kinds.filter((kind) => kind === "response-runtime-cleanup")).toHaveLength(scenario === "async persistent" ? 0 : 2)
+      expect(kinds).not.toContain("response-runtime-invocation")
+      expect(kinds.filter((kind) => kind === "response-production-failure")).toHaveLength(["async persistent", "async production-failure"].includes(scenario) ? 0 : 1)
+      expect(readdirSync(directory).filter((name) => name.endsWith(".terminal.json"))).toHaveLength(["async persistent", "async production-failure", "async factory-terminal"].includes(scenario) ? 0 : 1)
+      if (scenario === "async persistent") { expect(graph!.latestRoot).toBe(prior); expect(budget.usage.workRecords).toBeGreaterThan(priorUsage.workRecords) }
+      expect(budget.usage.workBytes).toBeGreaterThanOrEqual(priorUsage.workBytes)
       expect(() => graph!.beforeInvocation({})).toThrow("RETENTION_DISPATCH_STOP")
+      return
+    }
+    if (noPrimary) {
+      await expect(pending).rejects.toBe(scenario === "close without primary" ? closeError : secondary)
+      expect(closeCalls).toBe(2); expect(calls).toBe(1)
+      const kinds = [...records.values()].map((row) => row.kind)
+      expect(kinds).not.toContain("response-runtime-cleanup"); expect(kinds).not.toContain("response-production-failure")
+      expect(readdirSync(directory).filter((name) => name.endsWith(".terminal.json"))).toEqual([])
       return
     }
     if (scenario !== "complete") {

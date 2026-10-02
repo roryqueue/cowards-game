@@ -235,12 +235,16 @@ export const produceLeagueResponse = async (input: LeagueResponseProductionInput
           } catch (error) { operationFailed = true; throw error } finally {
             await Promise.all(wrappers.map((provider) => provider.settlePending()))
             await input.retention.settlePending?.()
-            let failed = false
+            let failed = false, cleanupFailure: { error: unknown } | null = null
             for (const provider of opened) {
               let cleanup: unknown
-              try { const value = provider.close(); cleanup = value; failed ||= !value.cleanupComplete || value.orphanedChild } catch (error) { cleanup = { error: error instanceof Error ? error.name : "unknown" }; failed = true }
-              try { records.push(input.retention.append("response-runtime-cleanup", { identity: provider.identity, cleanup }, [chargeRoot, ...invocationRecords])) } catch (error) { if (!operationFailed) throw error }
+              try { const value = provider.close(); cleanup = value; failed ||= !value.cleanupComplete || value.orphanedChild } catch (error) { cleanup = { error: error instanceof Error ? error.name : "unknown" }; failed = true; cleanupFailure ??= { error } }
+              try { records.push(input.retention.append("response-runtime-cleanup", { identity: provider.identity, cleanup }, [chargeRoot, ...invocationRecords])) } catch (error) { cleanupFailure ??= { error } }
             }
+            // Evidence faults cannot prevent an actual close of any remaining
+            // owned provider. Without a primary error, report the first fault
+            // only after every close attempt; otherwise the original throw wins.
+            if (cleanupFailure && !operationFailed) throw cleanupFailure.error
             if (failed && !operationFailed) return fail("RESPONSE_CLEANUP")
           }
         }
@@ -268,8 +272,10 @@ export const produceLeagueResponse = async (input: LeagueResponseProductionInput
     return { ...result, recordRoot }
   } catch (error) {
     await input.retention.settlePending?.()
-    const evidenceRoot = input.retention.append("response-production-failure", { start, author, matchCount, accepted, error: error instanceof Error ? error.message : "unknown" }, records)
-    if (!accepted) { const terminal = createFactoryAttemptTerminal({ startRoot: start.root, disposition: "system_failure", outputRoot: null, validationRoot: evidenceRoot, duplicateEvidenceRoot: evidenceRoot, finalEvidenceRoot: evidenceRoot }); publishFactoryAttemptTerminal(input.repository, start, terminal) }
+    try {
+      const evidenceRoot = input.retention.append("response-production-failure", { start, author, matchCount, accepted, error: error instanceof Error ? error.message : "unknown" }, records)
+      if (!accepted) { const terminal = createFactoryAttemptTerminal({ startRoot: start.root, disposition: "system_failure", outputRoot: null, validationRoot: evidenceRoot, duplicateEvidenceRoot: evidenceRoot, finalEvidenceRoot: evidenceRoot }); publishFactoryAttemptTerminal(input.repository, start, terminal) }
+    } catch { /* Secondary publication faults retain residue/charges, never replace the primary error. */ }
     throw error
   }
 }

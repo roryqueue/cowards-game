@@ -501,11 +501,20 @@ export class LeagueConnectedSession {
     } catch (error) {
       await Promise.all(wrappers.map((provider) => provider.settlePending()))
       await this.graph.settlePending()
-      for (const provider of opened) { try { runtimeRecords.push(this.graph.append("runtime-cleanup", { identity: provider.identity, closed: provider.close() }, [startRecord])) } catch (error) { runtimeRecords.push(this.graph.append("runtime-cleanup-failure", { identity: provider.identity, error: error instanceof Error ? error.name : "unknown" }, [startRecord])) } }
-      const attachedRoot = publishedResultRoot()
-      const evidenceRoot = this.graph.append("cell-issuance-failure", { start, cell, failure: error instanceof Error ? error.name : "unknown" }, [startRecord, ...(this.budget?.exhausted ? [] : runtimeRecords), ...(attachedRoot ? [attachedRoot] : [])])
-      const existing = reopenLeagueEvidence(this.input.repository, { maxBytes: this.allocation.operations.maxArtifactBytes, maxRecords: this.allocation.operations.maxArtifactRecords }).records.find((entry) => entry.start.root === start.root)
-      if (existing?.terminalProvenance === "derived_unterminated_start") publishLeagueCellTerminal(this.input.repository, start, createLeagueCellTerminal({ cellRoot: cell.root, disposition: "system_failure", processValidity: "process_invalid", evidenceRoot, projection: null }))
+      for (const provider of opened) {
+        let closed: ReturnType<FactorySupervisionProvider["close"]>
+        try { closed = provider.close() } catch (cleanupError) {
+          try { runtimeRecords.push(this.graph.append("runtime-cleanup-failure", { identity: provider.identity, error: cleanupError instanceof Error ? cleanupError.name : "unknown" }, [startRecord])) } catch { /* Secondary retention cannot abort the remaining closes. */ }
+          continue
+        }
+        try { runtimeRecords.push(this.graph.append("runtime-cleanup", { identity: provider.identity, closed }, [startRecord])) } catch { /* A failed evidence write is not a failed actual close. */ }
+      }
+      try {
+        const attachedRoot = publishedResultRoot()
+        const evidenceRoot = this.graph.append("cell-issuance-failure", { start, cell, failure: error instanceof Error ? error.name : "unknown" }, [startRecord, ...(this.budget?.exhausted ? [] : runtimeRecords), ...(attachedRoot ? [attachedRoot] : [])])
+        const existing = reopenLeagueEvidence(this.input.repository, { maxBytes: this.allocation.operations.maxArtifactBytes, maxRecords: this.allocation.operations.maxArtifactRecords }).records.find((entry) => entry.start.root === start.root)
+        if (existing?.terminalProvenance === "derived_unterminated_start") publishLeagueCellTerminal(this.input.repository, start, createLeagueCellTerminal({ cellRoot: cell.root, disposition: "system_failure", processValidity: "process_invalid", evidenceRoot, projection: null }))
+      } catch { /* Failed failure/journal publication preserves the initiating error and charges. */ }
       throw error
     }
   }
