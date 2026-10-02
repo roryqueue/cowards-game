@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 small-invocation repair independently reviewed; complete source gate53203 active
+stopped_at: Phase265 repaired-source full gate passes; fresh v4 data-only allocation preparation next
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Review clean,19focused tests pass,50same hashes and~12percent sampled savings; full unchanged CI source gate active before fresh route
+last_activity_desc: Complete source gate382plus3tests types and boundaries passes; prepare fresh v4 under standing approval
 progress:
   total_phases: 9
   completed_phases: 3
@@ -26,8 +26,10 @@ total_plans_in_phase: 14
 Repair source e28f29a0 is committed/pushed with independent deep review
 (zero findings).19 focused tests and build pass;50 source-only benchmark
 records preserve all original hashes with~12percent sampled write-time savings.
-The unchanged complete source gate is active as session53203 at1595efb3.
-Do not duplicate it or edit source during it. This is not a Match timing proof,
+The unchanged complete source gate53203 completed exit0:29suites/382tests,
+separate3tactical tests,build/strict14-path types,all3boundaryscans and strict
+service checks pass. Source stayed unchanged through docs-only acfed588.
+Do not duplicate the completed gate. This is not a Match timing proof,
 capacity admission, fresh allocation, LEAG completion or a freeze. See
 265-07-DEPENDENCY-BARRIER-PROOF-v1.md. No new human approval is required for
 the eventual distinct same-bounds route, but every technical gate still applies.
@@ -36,9 +38,11 @@ Fresh league-v4 drafts/helpers are independently reviewed: all11jobs accepted,
 canonical actual review timings; root compiled45 inert packet/disclosure rows.
 Namespace league-265-prospective-v4-20261001-a; source0496bca7 /implementation
 879aaa9b. No v4 allocation, capacity input/receipt or live entry exists yet.
-After gate53203 succeeds root prepares/publishes the distinct source-bound
+Root now prepares/publishes the distinct source-bound
 allocation and fresh same-process capacity chain under standing approval.
 See265-07-EMPIRICAL-PREPARATION-v8.md and265-07-PACKET-REVIEW-v8.md.
+Complete gate proof:265-07-REPAIRED-SOURCE-GATE-v1.md. Data-only prepare does
+not observe capacity or authorize a Match before fresh same-process admission.
 
 Fresh league-v3 is TERMINAL process-invalid after one charged cell at
 2026-10-01T22:52:59.983Z. Capacity passed, then soldierBrain failed with
