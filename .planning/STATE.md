@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 lifetime source goal verification passed5/5; v10 helper final re-review next, no empirical route started
+stopped_at: Phase265 v10 ONE data-only prepare94959/PID10875 active; no canonical allocation/capacity/Match/live route
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: independent lifetime goal verification passed5truths actual13file source/manifest/marker; v10 finalpins+helper strict67187 pass; independent helper re-review next
+last_activity_desc: v10 helpers clean finalreview and strict;11freshrequests reviewed/45inertrecords compiled; ONEdata-onlyprepare94959 active at fixedbb98878e
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,20 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+ONE NEWv10 data-only prepare94959/PID10875 is ACTIVE atfixedbb98878e, never
+duplicate or run competingheavywork. Actualsource/lifetimegoal accepted5/5;
+finalprivatehelper reviewv2 clean and stricttypes67187 pass. Fresh11requests
+actually reviewed94,000ms accepted, compiled45inertrecords; actualprivate
+input5883f8c8 preserved after successful inputwrite+shellsuffixexit127,
+not incorrectly described aspassing shellchain. See265-07-V10-PREPARATION-v1.md.
+No canonicalallocation/result, capacityreceipt, liveMatch/provider/entry or
+retainedverifier. ExactNEWleague-evidence stillabsent. Afterprepare succeeds,
+static sizing→newempty0700directory→publish/commit/push allocation→ONEroot
+freshsameprocesscapacity/conditionaldispatch→terminal→uniqueverification.
+Standingapproval+prospective600000apply, allotherbounds/history unchanged.
+No human-onlycheckpoint/LEAG/freeze/formation/holdout/public/countingcredit.
+Earlier preparation-next/sourceverification snapshots are historical.
 
 Independent goal-backward source-supplement verification PASSED5/5 truths,
 zero blockers/warnings, atfixedbb98878e and actuald687/e646manifest/complete
