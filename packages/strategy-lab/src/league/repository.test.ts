@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { fsync, mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -9,6 +9,7 @@ import {
   createLeagueRepository,
   publishLeagueArtifact,
   publishLeagueArtifactDependencies,
+  publishLeagueArtifactDependenciesAsync,
   readLeagueArtifact,
   recordLeagueCellStart,
   publishLeagueCellTerminal,
@@ -57,6 +58,95 @@ const terminal = (charged: LeagueCellStart, marker = "first") =>
   })
 
 afterEach(() => { syncProbe.active = false; syncProbe.events = []; syncProbe.failAt = 0; for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
+
+const deferredSyncs = () => {
+  const pending: Array<{ release(error?: Error): Promise<void> }> = []
+  const syncFile = (fd: number) => new Promise<void>((resolve, reject) => {
+    pending.push({ release: (error) => new Promise<void>((done) => fsync(fd, (actualError) => {
+      if (error || actualError) reject(error ?? actualError); else resolve()
+      done()
+    })) })
+  })
+  return { pending, syncFile }
+}
+
+describe("asynchronous dependency durability", () => {
+  it("starts exactly two real file syncs, snapshots bytes and waits for both before publishing", async () => {
+    const base = repository(), syncs = deferredSyncs(), charges: string[] = [], barriers: string[] = []
+    const repo = createLeagueRepository(base.directory, { syncFile: syncs.syncFile, beforePublication: ({ target }) => { charges.push(target) }, syncDirectory(directory) { barriers.push("directory"); base.durability.syncDirectory(directory) } })
+    const bytes = [new TextEncoder().encode("one"), new TextEncoder().encode("two")]
+    const expected = bytes.map((value) => `sha256:${artifactDigest(value)}`)
+    const work = publishLeagueArtifactDependenciesAsync(repo, bytes)
+    expect(syncs.pending).toHaveLength(2); expect(charges).toHaveLength(2)
+    bytes[0]!.fill(0)
+    await syncs.pending[1]!.release()
+    expect(barriers).toEqual([]); expect(readdirSync(base.directory).every((name) => name.includes(".tmp-"))).toBe(true)
+    await syncs.pending[0]!.release()
+    expect(await work).toEqual(expected); expect(barriers).toEqual(["directory"])
+    expect(Buffer.from(readLeagueArtifact(repo, expected[0] as LabRoot)).toString()).toBe("one")
+  })
+  it.each([0, 1])("observes both settlements before returning failure from input %i", async (index) => {
+    const base = repository(), syncs = deferredSyncs(), charges: string[] = [], errors = [Error("first"), Error("second")]
+    const repo = createLeagueRepository(base.directory, { syncFile: syncs.syncFile, beforePublication: ({ target }) => { charges.push(target) } })
+    let settled = false
+    const result = publishLeagueArtifactDependenciesAsync(repo, [Buffer.from("one"), Buffer.from("two")]).catch((error) => { settled = true; return error })
+    await syncs.pending[index]!.release(errors[index]); await Promise.resolve()
+    expect(settled).toBe(false); expect(readdirSync(base.directory)).toHaveLength(2)
+    await syncs.pending[1 - index]!.release(errors[1 - index])
+    expect(await result).toBe(errors[0]); expect(charges).toHaveLength(2)
+    expect(readdirSync(base.directory).every((name) => name.includes(".tmp-"))).toBe(true)
+  })
+  it("uses the real default fsync and one barrier for fresh, mixed, existing and duplicate pairs", async () => {
+    const base = repository(), charges: string[] = [], barriers: string[] = []
+    const repo = createLeagueRepository(base.directory, { beforePublication: ({ target }) => { charges.push(target) }, syncDirectory(directory) { barriers.push("directory"); base.durability.syncDirectory(directory) } })
+    const first = Buffer.from("one"), second = Buffer.from("two"), third = Buffer.from("three")
+    const roots = await publishLeagueArtifactDependenciesAsync(repo, [first, second])
+    expect(roots).toEqual([`sha256:${artifactDigest(first)}`, `sha256:${artifactDigest(second)}`]); expect(charges).toHaveLength(2)
+    await publishLeagueArtifactDependenciesAsync(repo, [first, third]); expect(charges).toHaveLength(3)
+    await publishLeagueArtifactDependenciesAsync(repo, [first, second]); expect(charges).toHaveLength(3)
+    const duplicate = await publishLeagueArtifactDependenciesAsync(repo, [Buffer.from("duplicate"), Buffer.from("duplicate")])
+    expect(duplicate[0]).toBe(duplicate[1]); expect(charges).toHaveLength(4); expect(barriers).toHaveLength(4)
+  })
+  it("precharges in order without writes when a later charge refuses", async () => {
+    const base = repository(), error = Error("charge refused"), charges: string[] = []
+    const repo = createLeagueRepository(base.directory, { beforePublication: ({ target }) => { charges.push(target); if (charges.length === 2) throw error } })
+    await expect(publishLeagueArtifactDependenciesAsync(repo, [Buffer.from("one"), Buffer.from("two")])).rejects.toBe(error)
+    expect(charges).toHaveLength(2); expect(readdirSync(base.directory)).toEqual([])
+  })
+  it.each([[], [Buffer.from("one")], [Buffer.from("one"), new Uint8Array()], [Buffer.from("one"), new Uint8Array(262145)], [Buffer.from("one"), "two"]])("rejects malformed pairs before charging", async (bytes) => {
+    const base = repository(), charges: string[] = []
+    const repo = createLeagueRepository(base.directory, { beforePublication: ({ target }) => { charges.push(target) } })
+    await expect(publishLeagueArtifactDependenciesAsync(repo, bytes as Uint8Array[])).rejects.toThrow("ARTIFACT")
+    expect(charges).toEqual([]); expect(readdirSync(base.directory)).toEqual([])
+  })
+  it("refuses conflicting targets, symlinks and invalid temporary paths before writes", async () => {
+    const base = repository(), bytes = Buffer.from("one"), target = join(base.directory, `league-artifact-${artifactDigest(bytes)}.bin`)
+    writeFileSync(target, "conflict")
+    await expect(publishLeagueArtifactDependenciesAsync(base, [bytes, Buffer.from("two")])).rejects.toThrow("OVERWRITE")
+    const another = Buffer.from("symlink"), symlink = join(base.directory, `league-artifact-${artifactDigest(another)}.bin`)
+    symlinkSync(target, symlink)
+    await expect(publishLeagueArtifactDependenciesAsync(base, [another, bytes])).rejects.toThrow("OVERWRITE")
+    const repo = createLeagueRepository(base.directory, { temporaryName: (name) => `${name}/../bad` })
+    await expect(publishLeagueArtifactDependenciesAsync(repo, [Buffer.from("fresh"), Buffer.from("other")])).rejects.toThrow("TEMPORARY")
+    expect(readFileSync(target, "utf8")).toBe("conflict")
+  })
+  it("never unlinks another instance's colliding temporary while observing its own launched sync", async () => {
+    const base = repository(), syncs = deferredSyncs(), bytes = [Buffer.from("one"), Buffer.from("two")]
+    const temporaryName = (target: string) => `${target}.tmp-00000000-0000-4000-8000-000000000000`
+    const owner = createLeagueRepository(base.directory, { temporaryName, syncFile: syncs.syncFile })
+    const first = publishLeagueArtifactDependenciesAsync(owner, bytes)
+    const snapshot = directorySnapshot(base.directory)
+    await expect(publishLeagueArtifactDependenciesAsync(createLeagueRepository(base.directory, { temporaryName }), bytes)).rejects.toThrow("EEXIST")
+    expect(directorySnapshot(base.directory)).toEqual(snapshot)
+    await syncs.pending[0]!.release(); await syncs.pending[1]!.release(); await first
+  })
+  it("returns no committed group on dependency directory failure and retains linked files", async () => {
+    const base = repository(), error = Error("directory failed"), charges: string[] = []
+    const repo = createLeagueRepository(base.directory, { syncDirectory() { throw error }, beforePublication: ({ target }) => { charges.push(target) } })
+    await expect(publishLeagueArtifactDependenciesAsync(repo, [Buffer.from("one"), Buffer.from("two")])).rejects.toBe(error)
+    expect(charges).toHaveLength(2); expect(readdirSync(base.directory).filter((name) => !name.includes(".tmp-"))).toHaveLength(2)
+  })
+})
 
 describe("immutable private league evidence", () => {
   it("file-syncs each dependency before the group barrier and separately syncs the descriptor", () => {
