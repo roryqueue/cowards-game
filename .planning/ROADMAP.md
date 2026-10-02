@@ -4,8 +4,9 @@
 
 V6 ended05:04UTC process-invalid after5charged cells,4successes and1system
 failure. Actual result09002c67/headb21465c7 is published; all ten exact expected
-containers are absent. Unique retained verifier65319 is active with no capacity
-flags; do not duplicate it. Fixed main sourcedbf5daa2 and heavy-test hold remain.
+containers are absent. Unique retained verifier65319 completed exit0 with no
+capacity flags,issued=false/process_invalid/empiricalRequirementsComplete=false;
+do not duplicate it. Fixed main sourcedbf5daa2 remains for bounded cost profiling.
 No LEAG/freeze/formation credit; fifth-cell diagnosis follows retained closeout.
 Standing same-bounds approval needs no new literal. See EMPIRICAL-RESULT-v6.
 The entry-active v6 and earlier snapshots below are historical.

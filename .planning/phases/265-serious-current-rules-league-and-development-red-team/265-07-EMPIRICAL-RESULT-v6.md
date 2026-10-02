@@ -44,8 +44,14 @@ returned no-such-object for all ten. No broad cleanup/deletion occurred.
 Root started exactly ONE ordinary read-only retained verification in
 session65319 at05:05UTC, using the exact canonical allocation/head and
 private league/factory/response repositories. No capacity input/receipt flags
-were supplied. It is active, not a captured pass. Never duplicate it. Main
-source stays fixed; all heavy tests/probes are held until it closes.
+were supplied. It completed exit0, observed2026-10-02T05:30:44UTC, returning
+exact allocation/head, issued=false,processValidity=process_invalid and
+empiricalRequirementsComplete=false. This is successful verification of a
+non-pass, not league success. Never duplicate the completed verifier.
+The operational/retained source-fixed window is closed. Main remains fixed
+for the next independently reviewed, bounded data-only cost profile. No
+Strategy/Match/provider/model executes in that diagnostic and no fresh
+operational route starts from this closeout alone.
 
 All LEAG requirements, phase goal, complete league, current baseline freeze,
 formation, holdout opening and public/counted/production authority remain

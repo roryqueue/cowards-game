@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 v6 consumed process-invalid after five cells; unique retained verifier65319 active
+stopped_at: Phase265 v6 immutable failure and unique verifier65319 closed; bounded cost profile review next
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: v6 ended05:04UTC with four valid cells then system failure; retained verifier65319 active
+last_activity_desc: unique verifier65319 exit0 confirms process_invalid/issuedfalse; reviewed data-only profiling next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,19 +21,22 @@ total_plans_in_phase: 14
 
 # State: Coward's Game
 
-## Current terminal continuation — v6 consumed; unique retained verifier active
+## Current terminal continuation — v6 and unique retained verifier closed
 
 V6 entry63193 ended2026-10-02T05:04:02.930Z,process_invalid after5charged
 cells:4success/process_valid, then1system_failure/process_invalid. Actual
 result279bytes/raw09002c67,headb21465c7,allocation5c59970a is published.
 All ten exact expected route containers are absent by read-only inspection.
-Root's ONE ordinary retained verifier65319 is active at exact allocation/head/
-repositories and no capacity flags; never duplicate it. Main reviewed source
-dbf5daa2/70430463/2f008952 stays fixed and heavy tests/probes remain held.
+Root's ONE ordinary retained verifier65319 completed exit0, observed05:30:44UTC,
+at exact allocation/head/repositories and no capacity flags, returning
+issued=false/process_invalid/empiricalRequirementsComplete=false. Never
+duplicate it. Operational/retained hold is closed; reviewed main source
+dbf5daa2/70430463/2f008952 stays fixed for bounded data-only profiling next.
 No LEAG completion/freeze/formation/holdout is claimed. Bounded parent-linked
 metadata namesFACTORY_RUNTIME_LIFETIME_EXHAUSTED; live cost split is unknown.
-GSD Debug is resumed source-only while65319 is active; no measured profiling
-or source repair occurs until it closes. No human-only checkpoint
+GSD Debug has designed the private data-only profiler; independent review
+and root's ONE non-executing invocation follow. No new Match route has
+started. No human-only checkpoint
 is identified; standing approval covers later distinct same-bounds routes,
 not reuse of this consumed route. See265-07-EMPIRICAL-RESULT-v6.md.
 The entry-active v6 and earlier snapshots below are historical.

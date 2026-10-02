@@ -32,8 +32,10 @@ updated: 2026-10-02
 ## Current Focus
 
 - current_epoch: v6 consumed at reviewed dbf5daa2; v3 evidence below stays
-  historical. Unique ordinary retained verifier65319 is active. No tests,
-  probes, benchmarks or source changes until root confirms it is closed.
+  historical. Unique ordinary retained verifier65319 completed exit0,
+  observed05:30:44UTC,issued=false/process_invalid/empiricalRequirementsComplete=false.
+  Do not repeat it. Root may run ONE independently reviewed bounded data-only
+  profiler next; production source remains fixed for measurement.
 - current_hypothesis: aggregate120-second supervisor lifetime is still the
   initiating failure; remaining live cost split is unknown after the accepted
   durability/canonical-literal/Unicode-key CPU repairs

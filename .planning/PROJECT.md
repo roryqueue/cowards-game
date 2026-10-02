@@ -4,8 +4,9 @@
 
 V6 is now consumed process-invalid:5charged cells,4valid successes then1system
 failure, actual result09002c67/headb21465c7 published05:04UTC. All ten exact
-expected containers are absent. ONE ordinary retained verifier65319 is active,
-not a captured pass. Source dbf5daa2 stays fixed and heavy tests/probes held.
+expected containers are absent. ONE ordinary retained verifier65319 completed
+exit0,issued=false/process_invalid/empiricalRequirementsComplete=false. Never
+repeat it. Source dbf5daa2 stays fixed for reviewed bounded data-only profiling.
 No LEAG/freeze/formation/holdout credit. See265-07-EMPIRICAL-RESULT-v6.md.
 The following entry-active v6 and earlier source snapshots are historical.
 
