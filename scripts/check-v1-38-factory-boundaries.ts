@@ -139,10 +139,14 @@ const coreManifestDependencies: Readonly<Record<string, readonly string[]>> = {
   "packages/strategy-lab/package.json": ["@cowards/spec", "@cowards/engine", "@cowards/replay", "@cowards/runtime-js"],
 }
 const allowedUnresolved = (path: string, specifier: string | undefined): boolean =>
-  (specifier === "typescript" && reviewedAstTool(path)) || (specifier !== undefined && allowedNode.has(specifier)) ||
+  (specifier === "typescript" && (reviewedAstTool(path) || ["scripts/check-v1-38-lab-boundaries.ts", "scripts/v1-38-factory-controls.ts", "scripts/v1-38-factory-source-audit.ts"].includes(path))) || (specifier !== undefined && allowedNode.has(specifier)) ||
   (specifier === "node:zlib" && path === "packages/strategy-lab/src/league/lean-experiment.ts") ||
   (specifier === "node:child_process" && path === "scripts/run-v1-38-lean-experiment.ts") ||
   (specifier === "node:child_process" && path === "scripts/lib/v1-38-lean-container-match-session.ts") ||
+  (specifier === "node:child_process" && path === "scripts/run-v1-38-serious-league.ts") ||
+  (specifier === "node:child_process" && path === "packages/runtime-js/src/container-subprocess-adapter.ts") ||
+  (specifier === "node:child_process" && path === "scripts/v1-38-factory-app-server-transport.ts") ||
+  (specifier === "node:perf_hooks" && path === "scripts/lib/v1-38-planner-supervised-runtime.ts") ||
   (specifier === "node:perf_hooks" && path === "scripts/run-v1-38-lean-experiment.ts") ||
   // These existing supervised adapters own process containment. This does not
   // allow an oracle/factory module or any new helper to spawn source itself.
@@ -216,12 +220,7 @@ export const checkFactoryBoundaries = (options: { files?: Readonly<Record<string
     const visit = (path: string): void => {
       if (seen.has(path)) return
       seen.add(path)
-      // The lean CLI has a deliberately broad, already-reviewed supervised
-      // runtime closure. Its own imports are checked directly; re-linting every
-      // historical core/runtime leaf here would turn this path exception into
-      // new blanket dependency policy. Other private roots retain the full
-      // transitive unresolved check.
-      if (privatePath(origin) && !leanPrivate.has(origin) && path !== origin && (shared.unresolved.get(path) ?? []).some(specifier => !allowedUnresolved(path, specifier) && !declaredCoreDependency(path, specifier))) add("PRIVATE_TRANSITIVE_UNRESOLVED", origin)
+      if (privatePath(origin) && path !== origin && (shared.unresolved.get(path) ?? []).some(specifier => !allowedUnresolved(path, specifier) && !declaredCoreDependency(path, specifier))) add("PRIVATE_TRANSITIVE_UNRESOLVED", origin)
       if (privatePath(origin) && path !== origin && source.test(path) && hasHostileExecution(files[path] ?? "", path)) add("PRIVATE_TRANSITIVE_HOSTILE_EXECUTION", origin)
       if (oracle(origin) && path !== origin) {
         const ownLeaf = oracle(path) && root(path) === root(origin)

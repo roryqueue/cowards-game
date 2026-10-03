@@ -25,6 +25,13 @@ describe("private factory dependency boundary", () => {
     expect(checkFactoryBoundaries({ files: { ...base, "packages/strategy-oracle-model/src/emit.ts": 'import "node:zlib"' } }).ok).toBe(false)
     expect(checkFactoryBoundaries({ files: { ...base, "scripts/lib/v1-38-lean-container-match-session.ts": 'import "node:child_process"' } }).ok).toBe(true)
     expect(checkFactoryBoundaries({ files: { ...base, "scripts/lib/v1-38-lean-experiment-authority.ts": 'import "node:child_process"' } }).violations).toContainEqual(expect.objectContaining({ code: "UNRESOLVED_PRIVATE_LOADER", file: "scripts/lib/v1-38-lean-experiment-authority.ts" }))
+    const transitiveUnreviewed = { ...base,
+      "scripts/run-v1-38-lean-experiment.ts": 'import "./lean-unreviewed-helper.js"',
+      "scripts/lean-unreviewed-helper.ts": 'import "node:child_process"',
+    }
+    expect(checkFactoryBoundaries({ files: transitiveUnreviewed }).violations).toContainEqual(expect.objectContaining({ code: "PRIVATE_TRANSITIVE_UNRESOLVED", file: "scripts/run-v1-38-lean-experiment.ts" }))
+    expect(checkFactoryBoundaries({ files: { ...base, "scripts/lib/v1-38-lean-experiment-authority.ts": 'import "node:zlib"' } }).violations).toContainEqual(expect.objectContaining({ code: "PRIVATE_TRANSITIVE_UNRESOLVED", file: "scripts/lib/v1-38-lean-experiment-authority.ts" }))
+    expect(checkFactoryBoundaries({ files: { ...base, [codec]: 'import "node:child_process"' } }).violations).toContainEqual(expect.objectContaining({ code: "UNRESOLVED_PRIVATE_LOADER", file: codec }))
     const publicRoute = { ...base, [codec]: "export const codec = 1", "scripts/run-v1-38-lean-experiment.ts": 'import "../packages/strategy-lab/src/league/lean-experiment.js"', "apps/web/src/page.ts": 'import "../../../scripts/run-v1-38-lean-experiment.js"' }
     expect(checkFactoryBoundaries({ files: publicRoute }).violations.some(v => v.code === "PUBLIC_REACHES_PRIVATE_FACTORY")).toBe(true)
   })
