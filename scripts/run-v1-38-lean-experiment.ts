@@ -78,11 +78,16 @@ const rssOf = (pid: number): number => {
   if (!Number.isSafeInteger(kib) || kib <= 0 || kib * 1024 > Number.MAX_SAFE_INTEGER) return fail("PROCESS_RSS")
   return kib * 1024
 }
-/** Pre-import and per-cell checks include the live parent, explicit reserve,
+/** Pre-import and per-cell checks include the entry-bound live parent, explicit reserve,
  * measured store blocks, and the remaining real free-space envelope. The
  * bounded importer itself enforces its 64-MiB cell/256-MiB projection ceilings. */
-export const assertLeanPrefixCapacity = (ledger: LeanExperimentLedger, parentPid = process.ppid): number => {
+export const assertLeanBoundParentObservation = (expectedPid: number, observedPid: number, connected: boolean): void => {
+  if (!Number.isSafeInteger(expectedPid) || expectedPid <= 0 || observedPid !== expectedPid || !connected) return fail("PARENT_LOST")
+}
+export const assertLeanPrefixCapacity = (ledger: LeanExperimentLedger, parentPid: number): number => {
+  assertLeanBoundParentObservation(parentPid, process.ppid, process.connected)
   const childRss = Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024), parentRss = rssOf(parentPid)
+  assertLeanBoundParentObservation(parentPid, process.ppid, process.connected)
   const stat = statfsSync(ledger.directory, { bigint: true }), available = stat.bavail * stat.bsize
   if (available > BigInt(Number.MAX_SAFE_INTEGER)) return fail("PREFIX_CAPACITY")
   return assessLeanPrefixCapacity({ childRss, parentRss, freeBytes: Number(available), allocatedBytes: cumulativeLeanPhysicalBytes(ledger), elapsedMs: currentLeanElapsedMs(ledger) })
@@ -177,8 +182,8 @@ const runLeanPilotBody = async (requestPath: string) => {
   process.once("disconnect", onDisconnect)
   try {
   parent.assert()
-  let bufferHighWater = assertLeanPrefixCapacity(ledger), maximumCellMs = 0, maximumCellPhysicalBytes = 0, clean = true
-  const trackBuffer = () => { parent.assert(); bufferHighWater = Math.max(bufferHighWater, assertLeanPrefixCapacity(ledger)) }
+  let bufferHighWater = assertLeanPrefixCapacity(ledger, entry.parentPid), maximumCellMs = 0, maximumCellPhysicalBytes = 0, clean = true
+  const trackBuffer = () => { parent.assert(); bufferHighWater = Math.max(bufferHighWater, assertLeanPrefixCapacity(ledger, entry.parentPid)) }
   const candidates = readCandidates(request, trackBuffer)
   trackBuffer()
   if (labRoot("lean-candidates", candidates.map(c => c.admission.candidate.root)) !== labRoot("lean-candidates", ledger.allocation.candidateRoots)) return fail("CANDIDATE_JOIN")

@@ -2,7 +2,7 @@ import { expect, it } from "vitest"
 import { mkdtempSync, realpathSync, rmSync, mkdirSync, writeFileSync, symlinkSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult, assessLeanPrefixCapacity, admitLeanChildRelease, assertLeanEntryBinding, createLeanParentObservationGuard } from "./run-v1-38-lean-experiment.js"
+import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult, assessLeanPrefixCapacity, admitLeanChildRelease, assertLeanEntryBinding, createLeanParentObservationGuard, assertLeanBoundParentObservation } from "./run-v1-38-lean-experiment.js"
 import { claimLeanRuntimeAuthority, issueLeanRuntimeAuthority, deriveLeanCandidateRuntime } from "./lib/v1-38-lean-experiment-authority.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../packages/strategy-lab/src/factory/contracts.js"
 import { deriveFactoryOraclePacketRoot } from "../packages/strategy-lab/src/factory/identity.js"
@@ -40,6 +40,12 @@ it("gates the whole import prefix against joint RSS, cell reserve, elapsed and p
   const m = { childRss: 300_000_000, parentRss: 150_000_000, freeBytes: 15_000_000_000, allocatedBytes: 12_288, elapsedMs: 565_459 }
   expect(assessLeanPrefixCapacity(m)).toBe(450_000_000)
   for (const changed of [{ ...m, childRss: 1_600_000_000 }, { ...m, freeBytes: 1 }, { ...m, elapsedMs: 28_800_000 }, { ...m, allocatedBytes: 15_000_000_001 }, { ...m, parentRss: -1 }]) expect(() => assessLeanPrefixCapacity(changed)).toThrow("PREFIX_CAPACITY")
+})
+it("never samples a reparented process as the trusted parent", () => {
+  assertLeanBoundParentObservation(12, 12, true)
+  expect(() => assertLeanBoundParentObservation(12, 1, true)).toThrow("PARENT_LOST")
+  expect(() => assertLeanBoundParentObservation(12, 12, false)).toThrow("PARENT_LOST")
+  expect(() => assertLeanBoundParentObservation(0, 0, true)).toThrow("PARENT_LOST")
 })
 it("rejects stale HEAD, source, request, allocation, process and interval before import", () => {
   const observed = { head: "a".repeat(40), sourceRoot: labRoot("source", 1), requestBytesRoot: labRoot("request", 1), allocationRoot: labRoot("allocation", 1), parentPid: 12, childPid: 13, intervalStartMs: 100 }
