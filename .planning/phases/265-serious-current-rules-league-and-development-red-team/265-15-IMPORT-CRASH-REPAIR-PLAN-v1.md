@@ -1,6 +1,6 @@
 # Plan 265-15 supplement: bounded import and prospective crash accounting
 
-Status: source-only research and checked implementation instructions under the operator's approved `265-15-CRASH-ACCOUNTING-DECISION-v1.md`. This amends the execution path of existing `265-15-PLAN.md`; it is **not** a numbered plan, an empirical result, a new approval literal, or permission to run a Match. Plan 265-16 remains dependent on a genuinely completed and independently retained Plan 265-15 pilot.
+Status: Tasks A/B source repair reviewed and verified; prospective Task C below is newly approved and awaits its narrow independent plan check. Approved decisions are `265-15-CRASH-ACCOUNTING-DECISION-v1.md` and `265-15-HISTORICAL-DISK-ACCOUNTING-DECISION-v1.md`. This amends the execution path of existing `265-15-PLAN.md`; it is **not** a numbered plan, an empirical result, a new approval literal, or a capacity pass. Plan 265-16 remains dependent on a genuinely completed and independently retained Plan 265-15 pilot.
 
 ## Findings that constrain the repair
 

@@ -1,6 +1,6 @@
 # Historical disk-accounting choice
 
-Status: proposed, not approved or implemented. This is a resource-accounting choice for the existing private lean experiment, not another plan or authorization literal.
+Status: approved by the human on 2026-10-03; implementation and independent source checks pending. This is a resource-accounting choice for the existing private lean experiment, not another plan or authorization literal.
 
 The failed launch did not record its temporary cache or possible crash-file high-water usage. Surviving experiment files occupy 12,288 allocated bytes. Today's cache contents, absence of a core file and core limit do not prove what that past process wrote. The approved crash-time amendment requires unknown material disk usage to be bounded or admission to remain closed; therefore it does not resolve this separate question.
 
@@ -13,5 +13,9 @@ This changes the disk budget's historical assurance, not its number: future work
 After explicit approval, make the narrow prospective accounting/schema and regression changes within the checked Plan 265-15 supplement, independently review/test them, then continue the fresh pilot only after source and same-process capacity checks. No approval implies a capacity pass or a Match result. Without approval or a defensible historical numeric bound, preparation stays closed; source-only repair may continue.
 
 All gameplay, runtime, private holdout, freeze-before-formation and no-public/no-counted/no-production restrictions remain unchanged.
+
+## Human approval
+
+The human explicitly approved: “You may record it as unknown, count surviving files, and enforce the same 15 GB limit on retained files and future writes.” This adopts the recommended prospective amendment above. It does not establish a historical peak, capacity pass, pilot result or old-route refund. Record the surviving predecessor files conservatively and remeasure them at admission; preserve all old bytes and the separate 565,459-ms time carry-forward.
 
 Evidence: [read-only failed-prefix inventory](265-15-FAILED-PREFIX-DISK-INVENTORY-v1.md), [approved crash-time amendment](265-15-CRASH-ACCOUNTING-DECISION-v1.md).
