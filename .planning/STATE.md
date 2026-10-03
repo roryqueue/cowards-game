@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: awaiting_resource
-stopped_at: Phase265 V12 entry closed failure; current disk703150760bytes short of unchangedcapacity; restore free space beforefreshroute
+status: in_progress
+stopped_at: Phase265 V13 helpers clean independently reviewed; fresh actual request draft and reviewer next; no allocation or entry yet
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: V12 terminal-only verification closed/nohead; elevenstaticjobs andplanjoins pass; read-onlyresourcecheck diskshort,memorypass; no newroute
+last_activity_desc: V13 bounded helper preparation and independent review complete; strict/inert41checks pass; production and all frozen bounds unchanged
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,34 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+Fresh V13 ignored helpers COMPLETE; independent scoped review CLEAN0findings.
+Author265_host_receipt_v13_helper_prepare, reviewer265_host_receipt_v13_helper_review.
+Prepare rawed6f190c2391968ace1fc7499c5503376bc1d9f1bd34eca85354ccff0c1dde88;
+entry raw40ccb2304f6bf37beec5d429af24c75fbdfac4fc5b9c37a6355e34960d270d0c;
+review raw1b6bbada0f39771419d6ae5125de1fe1cdf02844bc545dc2e214bc4c0b1065c6.
+Strict/import-inert/41inertregressions PASS; no helpermode, freshrequest,
+allocation, capacityreceipt, entry, Match or empiricalcredit yet. New finite
+17exactcapacity diagnostic codes only; unknownV12cause remainsUNKNOWN.
+Production9ff/552bba3d/defe5024 and completed8-commandgate unchanged; no repeat.
+Safe helper reports commit/push, then actualauthor freshdraft and distinct
+actualpacketreviewer before rootcompile/preparation/allocationcommit/unique
+entry/SAMEPROCESS passingcapacity. Noactiveagent/entry/verifier. Older helper
+preparation and disk-short observations below are historical snapshots.
+
+2026-10-03 heartbeat continuation: root read-only statfs now observes
+free210732797952bytes versus unchanged required210368502440bytes (surplus
+364295512bytes). This is advisory/non-admitting, not a capacity receipt or
+proof of the original V12 failure. No active entry/verifier/agent found.
+Standing approval permits a distinct fresh V13 preparation without another
+literal. Next: bounded new private helper preparation and independent review,
+then fresh actual request author/reviewer, new immutable allocation committed
+before unique root entry, checked empty real0700store, and fresh passing
+SAMEPROCESS capacity before any charge/dispatch. Keep all frozen bounds and
+reviewed production source unchanged. V12 remains closed, its zero-byte result
+reservation untouched and untracked; all consumed history immutable. No LEAG,
+freeze, formation, holdout, public, counted, or production credit/authority.
+Older disk-short and active-entry snapshots below are history, not current state.
 
 V12 uniqueentry15575/PID44627 CLOSEDexit1,2026-10-03T04:42:54.570Z,
 TypeError/detailswithheld, resultPublishedfalse/noRetrytrue. Failuremarker raw
