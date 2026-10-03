@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { claimLeanRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
@@ -62,6 +63,7 @@ export const admitFactorySupervisorLifetime = (options: Pick<FactorySupervisedRu
 export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntimeOptions): FactorySupervisionProvider => {
   rejectRetiredDiagnosticLifetimeOptions(options)
   const supplied = options as unknown as Record<string, unknown>
+  if (options.leanExperimentAuthority && ["createRuntime", "prospectiveLifetimeAuthority", "prospectiveLifetimeMs", "prospectiveHostReceiptAuthority", "retryV4LifetimeGrant", "observerHarness", "transport", "streamFactory"].some(key => key in supplied)) return fail("LEAN_MODE")
   if ("hostResponseReceiptMilliseconds" in supplied || "prospectiveHostReceiptBinding" in supplied) return fail("HOST_RECEIPT_OPTION")
   if ("prospectiveHostReceiptAuthority" in supplied && (!options.prospectiveHostReceiptAuthority || !options.prospectiveLifetimeAuthority || options.prospectiveLifetimeMs !== 600000 || "createRuntime" in supplied && !isProspectiveLeagueHostReceiptFixture(options.prospectiveHostReceiptAuthority) || ["retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "benchmarkLifetimeMs", "observerHarness", "privateObserver", "transport", "streamFactory"].some((key) => key in supplied))) return fail("HOST_RECEIPT_MODE")
   if (options.prospectiveHostReceiptAuthority && isProspectiveLeagueHostReceiptFixture(options.prospectiveHostReceiptAuthority) && typeof options.createRuntime !== "function") return fail("HOST_RECEIPT_FIXTURE_CONSTRUCTOR")
@@ -87,7 +89,9 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
     runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: options.image ?? LAB_ADMITTED_ROOTS.image,
   }
   const prospectiveRuntimeBinding = options.prospectiveLifetimeAuthority === undefined ? undefined : prospectiveLeagueRuntimeBinding(admission, { ...options.prospectiveLifetimeAuthority.runtime, revisionId: revision.id, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, image: options.image ?? LAB_ADMITTED_ROOTS.image })
-  const factoryLifetimeMs = admitFactorySupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) })
+  const leanRuntimeBinding = options.leanExperimentAuthority === undefined ? undefined : prospectiveLeagueRuntimeBinding(admission, { ...options.leanExperimentAuthority.runtime, revisionId: revision.id, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, image: options.image ?? LAB_ADMITTED_ROOTS.image })
+  const factoryLifetimeMs = options.leanExperimentAuthority === undefined ? admitFactorySupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }) : claimLeanRuntimeAuthority(options.leanExperimentAuthority, { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: leanRuntimeBinding! }, "factory").lifetimeMs
+  if (options.leanExperimentAuthority && options.factoryLifetimeMs !== 600000) return fail("LEAN_LIFETIME")
   if (options.prospectiveHostReceiptAuthority) claimProspectiveLeagueHostReceiptAuthority(options.prospectiveHostReceiptAuthority, { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: prospectiveRuntimeBinding!, seat: options.prospectiveLifetimeAuthority!.seat }, "factory")
   const began = performance.now()
   const { admission: _admission, sourceBytes: _sourceBytes, createRuntime: _createRuntime, factoryLifetimeMs: _factoryLifetimeMs, ...runtimeOptions } = options

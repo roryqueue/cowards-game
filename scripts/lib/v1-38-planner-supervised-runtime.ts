@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { claimLeanRuntimeAuthority, type LeanRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
 import { claimProspectiveLeagueLifetimeAuthority, isProspectiveLeagueLifetimeFixture, type ProspectiveLeagueLifetimeAuthority, type ProspectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { performance } from "node:perf_hooks"
 import { claimProspectiveLeagueHostReceiptAuthority, isProspectiveLeagueHostReceiptFixture } from "./v1-38-league-host-receipt.js"
@@ -37,6 +38,7 @@ export interface PlannerSupervisedRuntime extends LabSupervisedProvider {
   readonly accounting: readonly LabRuntimeEvidence[];
 }
 export interface PlannerSupervisedRuntimeOptions extends Omit<LeanContainerMatchSessionOptions, "infrastructureProfile" | "privateObserver"> {
+  leanExperimentAuthority?: LeanRuntimeAuthority
   revision: StrategyRevision; attemptRoot: LabRoot; budgetRoot: LabRoot;
   /** Source produced by the reviewed observer builder; expectedRoot hashes the
    * actual buildLeanAuthenticatedHarnessSource(source) worker bytes. */
@@ -78,6 +80,7 @@ export const admitPlannerSupervisorLifetime = (options: Pick<PlannerSupervisedRu
 
 export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntimeOptions): PlannerSupervisedRuntime => {
   rejectRetiredDiagnosticLifetimeOptions(options)
+  if (options.leanExperimentAuthority && ["prospectiveLifetimeAuthority", "prospectiveLifetimeMs", "prospectiveHostReceiptAuthority", "retryV4LifetimeGrant", "benchmarkLifetimeMs", "observerHarness", "privateObserver", "transport", "streamFactory"].some(key => key in options)) throw new TypeError("LAB_RUNTIME_LEAN_MODE")
   if ("hostResponseReceiptMilliseconds" in options || "prospectiveHostReceiptBinding" in options) throw new TypeError("LAB_RUNTIME_HOST_RECEIPT_OPTION")
   if ("prospectiveHostReceiptAuthority" in options && (!options.prospectiveHostReceiptAuthority || !options.prospectiveLifetimeAuthority || options.prospectiveLifetimeMs !== 600000 || ["retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "benchmarkLifetimeMs", "observerHarness", "privateObserver"].some((key) => key in options) || (options.transport !== undefined || options.streamFactory !== undefined) && !isProspectiveLeagueHostReceiptFixture(options.prospectiveHostReceiptAuthority))) throw new TypeError("LAB_RUNTIME_HOST_RECEIPT_MODE")
   if (options.prospectiveHostReceiptAuthority && isProspectiveLeagueHostReceiptFixture(options.prospectiveHostReceiptAuthority) && typeof options.transport !== "function") throw new TypeError("LAB_RUNTIME_HOST_RECEIPT_FIXTURE_CONTROL")
@@ -107,11 +110,13 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
     tupleId: identity.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: identity.image,
   } as DiagnosticRetryV4RuntimeBinding
   const prospectiveRuntimeBinding = options.prospectiveLifetimeAuthority === undefined ? undefined : { ...options.prospectiveLifetimeAuthority.runtime, sourceRoot: identity.sourceRoot, revisionId: identity.revisionId, executableRoot: identity.executableRoot, tupleId: identity.tupleId, tupleRoot: identity.tupleRoot, runtimeLimitsRoot: identity.runtimeLimitsRoot, image: identity.image }
-  const lifetime = admitPlannerSupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }, limit)
+  const leanRuntimeBinding = options.leanExperimentAuthority === undefined ? undefined : { ...options.leanExperimentAuthority.runtime, sourceRoot: identity.sourceRoot, revisionId: identity.revisionId, executableRoot: identity.executableRoot, tupleId: identity.tupleId, tupleRoot: identity.tupleRoot, runtimeLimitsRoot: identity.runtimeLimitsRoot, image: identity.image }
+  const leanExperimentBinding = options.leanExperimentAuthority === undefined ? undefined : { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: leanRuntimeBinding!, seat: options.leanExperimentAuthority.seat }
+  const lifetime = options.leanExperimentAuthority === undefined ? admitPlannerSupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }, limit) : claimLeanRuntimeAuthority(options.leanExperimentAuthority, leanExperimentBinding!, "planner").lifetimeMs
   const prospectiveHostReceiptBinding = options.prospectiveHostReceiptAuthority === undefined ? undefined : { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: prospectiveRuntimeBinding!, seat: options.prospectiveLifetimeAuthority!.seat }
   if (options.prospectiveHostReceiptAuthority) claimProspectiveLeagueHostReceiptAuthority(options.prospectiveHostReceiptAuthority, prospectiveHostReceiptBinding!, "planner")
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 24800 || options.signal?.aborted) throw new TypeError("LAB_RUNTIME_ALLOCATION")
-  const session = createLeanContainerMatchSession({ ...options, ...(prospectiveHostReceiptBinding === undefined ? {} : { prospectiveHostReceiptBinding }), infrastructureProfile: "closeout", ...(observerHarness === undefined ? {} : { privateObserver: {
+  const session = createLeanContainerMatchSession({ ...options, ...(leanExperimentBinding === undefined ? {} : { leanExperimentBinding }), ...(prospectiveHostReceiptBinding === undefined ? {} : { prospectiveHostReceiptBinding }), infrastructureProfile: "closeout", ...(observerHarness === undefined ? {} : { privateObserver: {
     harnessSource: harness,
     binding(request) {
       if (!pending || rawRoot(request.source) !== identity.executableRoot || request.methodName !== pending.method || labRoot("runtime-input", request.input) !== pending.inputRoot) throw new TypeError("LAB_DISPATCH_BINDING")

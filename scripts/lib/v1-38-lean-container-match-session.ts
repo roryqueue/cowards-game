@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer"
+import { claimLeanRuntimeAuthority, type LeanRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import { Worker } from "node:worker_threads"
@@ -26,6 +27,8 @@ export interface LeanContainerPersistentStream {
 }
 export type LeanContainerPersistentStreamFactory = (command: string, args: readonly string[], options: { readonly startupTimeoutMilliseconds: number; readonly maxBufferBytes: number }) => LeanContainerPersistentStream
 export interface LeanContainerMatchSessionOptions {
+  readonly leanExperimentAuthority?: LeanRuntimeAuthority
+  readonly leanExperimentBinding?: ProspectiveLeagueLifetimeProviderBinding
   readonly prospectiveHostReceiptAuthority?: ProspectiveLeagueHostReceiptAuthority
   readonly prospectiveHostReceiptBinding?: ProspectiveLeagueLifetimeProviderBinding
   /** Private trusted coordinator only. Omitted by every historical caller. */
@@ -249,6 +252,11 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const origins = new WeakMap<object, LeanPrivateFailureOrigin>()
   let hostResponseReceiptMilliseconds: 5000 | undefined
   if ("hostResponseReceiptMilliseconds" in options) throw new TypeError("LEAN_HOST_RECEIPT_SCALAR")
+  if ("leanExperimentAuthority" in options || "leanExperimentBinding" in options) {
+    const authority = options.leanExperimentAuthority, binding = options.leanExperimentBinding
+    if (!authority || !binding || options.infrastructureProfile !== "closeout" || ["prospectiveHostReceiptAuthority", "prospectiveHostReceiptBinding", "transport", "streamFactory", "privateObserver"].some(key => key in options) || options.matchId !== binding.matchId || options.containerName !== binding.containerName || options.ownershipLabel !== binding.ownershipLabel || options.image !== binding.runtime.image) throw new TypeError("LEAN_EXPERIMENT_SESSION_BINDING")
+    hostResponseReceiptMilliseconds = claimLeanRuntimeAuthority(authority, binding, "session").receiptMs
+  }
   if ("prospectiveHostReceiptAuthority" in options || "prospectiveHostReceiptBinding" in options) {
     const authority = options.prospectiveHostReceiptAuthority, binding = options.prospectiveHostReceiptBinding
     if (!authority || !binding || options.infrastructureProfile !== "closeout" || options.privateObserver !== undefined || options.matchId !== binding.matchId || options.containerName !== binding.containerName || options.ownershipLabel !== binding.ownershipLabel || options.image !== binding.runtime.image || (options.transport !== undefined || options.streamFactory !== undefined) && !isProspectiveLeagueHostReceiptFixture(authority)) throw new TypeError("LEAN_HOST_RECEIPT_BINDING")
@@ -288,7 +296,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const assertActive = (): void => { if (state === "poisoned") throw new TypeError("LEAN_CONTAINER_SESSION_POISONED"); if (state === "closed") throw new TypeError("LEAN_CONTAINER_SESSION_CLOSED") }
   const runMethod = (request: StrategyExecutionRequest, mode: "legacy" | "v117", timeoutMilliseconds: number, stdoutLimit: number, stderrLimit: number, input: string | Uint8Array): LeanContainerTransportResult => {
     assertActive(); const requestId = nextRequestId++; const inputBytes = typeof input === "string" ? Buffer.byteLength(input) : input.byteLength
-    if (hostResponseReceiptMilliseconds !== undefined && (`sha256:${createHash("sha256").update(request.source).digest("hex")}` !== options.prospectiveHostReceiptAuthority!.runtime.executableRoot || mode === "legacy" && timeoutMilliseconds !== 1000)) { poison(); throw new TypeError("LEAN_HOST_RECEIPT_REQUEST_BINDING") }
+    if (hostResponseReceiptMilliseconds !== undefined && (`sha256:${createHash("sha256").update(request.source).digest("hex")}` !== (options.leanExperimentAuthority ?? options.prospectiveHostReceiptAuthority)!.runtime.executableRoot || mode === "legacy" && timeoutMilliseconds !== 1000)) { poison(); throw new TypeError("LEAN_HOST_RECEIPT_REQUEST_BINDING") }
     if (inputBytes > STREAM_FRAME_LIMIT_BYTES / 2) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded payload cap") }
     const observer = options.privateObserver
     const timingBinding = observer?.binding(request)
