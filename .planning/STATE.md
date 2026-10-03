@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-15 prospective pilot prepared; commit allocation before unique root entry
+stopped_at: Plan265-15 pilot79864 closed child_failed; unique terminal verification closed; source hold released for IPC repair and accounted fresh successor
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Reviewed sourcea5baa650/28dbd0ec verified; root28tests/3scans pass; one data-only preparation78311 closed with new allocation4a3dfb51 and empty0700store
+last_activity_desc: Parent terminal SIGTERM757571ms/zerocharges verified; cumulative1323030ms; noresult/pilotcredit; IPC hang source hypothesis under bounded diagnosis
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved lean experiment reset, 2026-10-03
+
+ACTUAL TERMINAL: unique root79864 parent86485/child86519 CLOSEDexit1 after root intentionally sent SIGTERM to stalled owned child; parent retained child_failed terminal raw74fc7885311158e587a101fc06b7cae4b52dae6597740c150cdfaa8637c9510a, elapsedupper757571ms, zerocharges/noresult. ONE independent TERMINAL-ONLY verifier CLOSED in265-15-PILOT-ENTRY-TERMINAL-VERIFICATION-v2.md; ordinary empiricalreader NEVER invoked. Source/HEADhold released after actualclosure+uniquecheck at8961bf9b. Exactoriginalchildthrow/blockcause UNKNOWN; idleprocess and sourceCLI settingexitCode withoutclosingIPC motivate bounded source repair, not an asserted diagnosis. Currentstore20480allocatedbytes/cumulative53248; terminalconservativephysical114688, oldhistoricalpeak/RSSunknown. Time565459+757571=1323030ms mustcarry into DISTINCTfreshroute, noreset or oldallocationreuse. Allnewv2store/allocation/request/journals/terminal/report nowconsumedimmutable. Next source-only IPCterminaldiagnosis/fix plus checkedprospectivev3 successoraccounting within existingPlan265-15, no newapprovalliteral/capchange. No activeempiricalentry/verifier; sourceagents maywork. Baseline265-16/freeze266/formation/holdout remainunstarted/gated. Earlier live79864 snapshot belowhistorical.
+
+UNIQUE ROOT ENTRY ACTIVE: session79864 parentPID86485 childPID86519, committed/pushed HEAD8961bf9b fixed, reviewed sourcea5baa650/manifest28dbd0ec, allocation4a3dfb51/requestv3. Real entry.json observed, no result/terminal yet. This prefix is NOT a capacity pass, Match success, pilot or LEAG/freeze credit. No duplicate entry/helper/verifier or competing heavywork. HOLD source AND HEAD through actual entryterminal and ONE unique appropriate independent retained verifier; do not commit/edit source duringhold. Determine actual stage from processes/safe private metadata, not historical checkpoint. New actual same-process capacity precedes charge/provider. These STATE-only updates stay uncommitted duringhold. Both human time/diskdecisions approved; old consumedhistoryimmutable, no formation/holdout/public/counting/production authority. Poll79864; afterterminal invoke actualresult-only ordinaryreader once or terminal-only check if noactualresult/head. Earlier preparation paragraphs below are history.
 
 LATEST PREPARATION: TaskC sourcea5baa650 independently reviewed clean and source-verified, manifest28dbd0ec/862entries. Root28/28 focusedtests and all3boundaryscans pass; types/shellchecks recorded. Unique data-only preparation78311 CLOSEDexit0, issuedfalse/preparation_only. New allocation4a3dfb516d13c6c0816185af30e0d9b6b516752091ac525639bcf91474c4d846, canonical rawbc7789b14530c4f585ce006bbe8576c57421621fed3f0e74b0172febcf3ec1fb; distinct requestv3 raw3c2abfd6d3171efaedd5fa9fe72b006bcb76dcd98a91156c31c066ee43a9cd3d. Real0700newstore has exactly allocation.json/ledger.ndjson/time.ndjson, zeroevents and zerotimestarts. Survivingpredecessordebit20480bytes, oldhistoricalpeakunknown, time565459ms; cumulativeallocated40960bytes afterpreparation. Commit/push canonicalallocation BEFORE one rootentry; actual childsameprocesscapacity mustpass beforecharge/provider. No liveentry/verifier yet or Match/pilot/LEAG/freezecredit. SourceANDHEAD musthold through forthcoming entryterminal and itsONEuniqueactual retainedverifier. Prior activefix paragraphs below nowhistory; both human time/diskdecisions approved. No repeatliteral; allrules/runtime/privacy/freeze-beforeformation/holdoutunopened unchanged.
 
