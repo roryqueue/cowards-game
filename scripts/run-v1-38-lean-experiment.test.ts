@@ -2,7 +2,7 @@ import { expect, it } from "vitest"
 import { mkdtempSync, realpathSync, rmSync, mkdirSync, writeFileSync, symlinkSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult, assessLeanPrefixCapacity, admitLeanChildRelease, assertLeanEntryBinding, createLeanParentObservationGuard, assertLeanBoundParentObservation } from "./run-v1-38-lean-experiment.js"
+import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult, assessLeanPrefixCapacity, admitLeanChildRelease, assertLeanEntryBinding, createLeanParentObservationGuard, assertLeanBoundParentObservation, assertLeanProspectiveWritableScope } from "./run-v1-38-lean-experiment.js"
 import { claimLeanRuntimeAuthority, issueLeanRuntimeAuthority, deriveLeanCandidateRuntime } from "./lib/v1-38-lean-experiment-authority.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../packages/strategy-lab/src/factory/contracts.js"
 import { deriveFactoryOraclePacketRoot } from "../packages/strategy-lab/src/factory/identity.js"
@@ -46,6 +46,11 @@ it("never samples a reparented process as the trusted parent", () => {
   expect(() => assertLeanBoundParentObservation(12, 1, true)).toThrow("PARENT_LOST")
   expect(() => assertLeanBoundParentObservation(12, 12, false)).toThrow("PARENT_LOST")
   expect(() => assertLeanBoundParentObservation(0, 0, true)).toThrow("PARENT_LOST")
+})
+it("requires prospective loader-cache and core writes disabled before route work", () => {
+  assertLeanProspectiveWritableScope("1", "0")
+  expect(() => assertLeanProspectiveWritableScope(undefined, "0")).toThrow("WRITABLE_SCOPE")
+  expect(() => assertLeanProspectiveWritableScope("1", "unlimited")).toThrow("WRITABLE_SCOPE")
 })
 it("rejects stale HEAD, source, request, allocation, process and interval before import", () => {
   const observed = { head: "a".repeat(40), sourceRoot: labRoot("source", 1), requestBytesRoot: labRoot("request", 1), allocationRoot: labRoot("allocation", 1), parentPid: 12, childPid: 13, intervalStartMs: 100 }

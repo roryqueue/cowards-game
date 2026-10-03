@@ -25,6 +25,15 @@ import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, currentLe
 const fail = (code: string): never => { throw new TypeError(`LEAN_PILOT_${code}`) }
 const STORE = resolve(".strategy-lab/lean-experiment-20261003-v2")
 const ALLOCATION = ".planning/artifacts/v1.38-lean-pilot-allocation-v2.json"
+/** These controls must be inherited before the tsx loader runs: checking them
+ * inside the route alone cannot retroactively undo a loader-cache/core write. */
+export const assertLeanProspectiveWritableScope = (cacheDisabled: string | undefined, coreSoftLimit: string): void => {
+  if (cacheDisabled !== "1" || coreSoftLimit.trim() !== "0") return fail("WRITABLE_SCOPE")
+}
+const requireLeanProspectiveWritableScope = () => {
+  const coreSoftLimit = execFileSync("sh", ["-c", "ulimit -c"], { encoding: "utf8", timeout: 1000, maxBuffer: 128 })
+  assertLeanProspectiveWritableScope(process.env.TSX_DISABLE_CACHE, coreSoftLimit)
+}
 interface Request { schemaVersion: "lean-pilot-request-v1"; seed: string; reviewPath: string; reviewRoot: LabRoot; sourceRoot: LabRoot; factoryDirectory: string; selection: LeagueInitialCandidateSelection }
 const root = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[0-9a-f]{64}$/u.test(v)
 export const leanSourceManifest = () => {
@@ -130,6 +139,7 @@ const readCandidates = (r: Request, checkpoint: () => void, beforeAllocation: (r
   return [...candidates].sort((a, b) => a.admission.candidate.root.localeCompare(b.admission.candidate.root))
 }
 export const prepareLeanPilot = (requestPath: string) => {
+  requireLeanProspectiveWritableScope()
   const request = readRequest(requestPath), repository = createFactoryRepository(resolve(request.factoryDirectory))
   // Preparation makes no empirical claim: two bounded publication headers fix
   // candidate IDs; the child performs the one complete authenticated import.
@@ -235,6 +245,7 @@ const runLeanPilotBody = async (requestPath: string) => {
  * release matches its create-exclusive entry. An ordinary CLI call cannot
  * supply `process.send` or forge the child PID/parent PID binding. */
 export const runLeanPilotChild = async (requestPath: string) => {
+  requireLeanProspectiveWritableScope()
   if (!process.send || !process.connected) return fail("CHILD_PARENT")
   const token = await new Promise<string>((resolveToken, reject) => {
     const timer = setTimeout(() => reject(new TypeError("LEAN_PILOT_HANDSHAKE")), 30_000)
@@ -249,6 +260,7 @@ export const runLeanPilotChild = async (requestPath: string) => {
   return runLeanPilotBody(requestPath)
 }
 export const runLeanPilot = async (requestPath: string) => {
+  requireLeanProspectiveWritableScope()
   const request = readRequest(requestPath), ledger = openLeanLedger(STORE)
   if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v2" || ledger.allocation.sourceRoot !== request.sourceRoot || ledger.allocation.reviewRoot !== request.reviewRoot || ledger.allocation.seed !== request.seed || readLeanLedger(ledger).events.length || readLeanTimeAccounting(ledger).starts.size || readdirSync(STORE).some(name => ["entry.json", "child-terminal.json", "result.json", "entry-failure.json"].includes(name))) return fail("ALLOCATION")
   const committed = execFileSync("git", ["show", `HEAD:${ALLOCATION}`], { maxBuffer: 262144 })
