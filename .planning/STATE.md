@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-15 source repair under re-review; genuine verifier fixture and historical disk-accounting decision pending
+stopped_at: Plan265-15 third source fix for pre-read byte cap and obsolete mock; historical disk-accounting choice pending
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Four source fixes committed; independent re-review and full-verifier regression underway; historical peak disk usage remains unestablished
+last_activity_desc: Genuine full-verifier fixture independently clean; types and three scans pass; final review found pre-read allocation gap and broad tests exposed obsolete mock
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved lean experiment reset, 2026-10-03
+
+LATEST SOURCE CHECKPOINT: main production `817ab595`; genuine full-48 fixture `d8bc1105` independently reviewed clean. Two repair iterations complete, but v3 source review finds one remaining pre-read byte-cap defect in the shared factory repository reader. Root validation checkpoint `265-15-IMPORT-CRASH-VALIDATION-v1.md` records passing types/shell/three boundary scans and relevant genuine-fixture checks, not a full-suite pass. Broad tests were interrupted and exposed one obsolete incomplete mocked assessment; repair that regression without weakening the new 48-attempt admission predicate, then independently re-review the narrowly fixed reader. A three-stream lower-level parser regression passes; real full-48 coverage remains separate. No empirical entry/verifier active. Historical disk-accounting decision remains pending in `265-15-HISTORICAL-DISK-ACCOUNTING-DECISION-v1.md`; fresh preparation remains closed. Safe source-only work continues; no Match, freeze, formation, holdout, counted/public/production or phase-completion credit. Earlier repair snapshots below are superseded.
 
 CURRENT REPAIR: main source fixes through `ae930c8e` address import preparse working-set checks, observing-parent loss, parent-bound RSS samples, and fail-closed failed-prefix disk inventory admission. Independent source re-review is active; a separate source-only genuine 48-cell historical-verifier regression is being built. The partial iteration-1 fix report and read-only disk inventory do not establish a pilot or phase pass. No empirical entry or retained verifier is active. The old launch's out-of-store cache/core peak is not numerically established, so fresh preparation remains denied. A new human resource-accounting question is pending: permit explicitly unknown historical peak disk usage while counting surviving files and enforcing all future experiment writes under the same 15 GB ceiling. That narrower accounting change is NOT approved or applied; do not infer it from the earlier time-accounting approval. Continue safe source-only repairs and checks meanwhile; do not dispatch another pilot. All consumed history, time debit, private holdout and freeze-before-formation boundaries remain unchanged.
 
