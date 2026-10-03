@@ -2,7 +2,7 @@ import { expect, it } from "vitest"
 import { mkdtempSync, realpathSync, rmSync, mkdirSync, writeFileSync, symlinkSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult } from "./run-v1-38-lean-experiment.js"
+import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult, assessLeanPrefixCapacity, admitLeanChildRelease, assertLeanEntryBinding } from "./run-v1-38-lean-experiment.js"
 import { claimLeanRuntimeAuthority, issueLeanRuntimeAuthority, deriveLeanCandidateRuntime } from "./lib/v1-38-lean-experiment-authority.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../packages/strategy-lab/src/factory/contracts.js"
 import { deriveFactoryOraclePacketRoot } from "../packages/strategy-lab/src/factory/identity.js"
@@ -17,6 +17,23 @@ it("imports inertly and accepts only three explicit private modes", () => {
   expect(() => parseLeanCommand(["run-pilot", "--provider", "forged"])).toThrow()
   expect(() => parseLeanCommand(["production"])).toThrow()
   expect(() => parseLeanCommand(["run-pilot", "--request", "x", "--retry"])).toThrow()
+  expect(() => parseLeanCommand(["child-pilot", "--request", "x"])).toThrow()
+})
+it("denies forged parent handshakes without dispatch", () => {
+  const token = "ab".repeat(32), entry = { parentPid: 12, childPid: 13, handshakeRoot: leanBytesRoot(Buffer.from(token, "hex")) }
+  admitLeanChildRelease(entry as never, token, 13, 12)
+  for (const [value, pid, parent] of [["cd".repeat(32), 13, 12], [token, 14, 12], [token, 13, 11], ["not-hex", 13, 12]] as const) expect(() => admitLeanChildRelease(entry as never, value, pid, parent)).toThrow("HANDSHAKE")
+})
+it("gates the whole import prefix against joint RSS, cell reserve, elapsed and physical capacity", () => {
+  const m = { childRss: 300_000_000, parentRss: 150_000_000, freeBytes: 15_000_000_000, allocatedBytes: 12_288, elapsedMs: 565_459 }
+  expect(assessLeanPrefixCapacity(m)).toBe(450_000_000)
+  for (const changed of [{ ...m, childRss: 1_600_000_000 }, { ...m, freeBytes: 1 }, { ...m, elapsedMs: 28_800_000 }, { ...m, allocatedBytes: 15_000_000_001 }, { ...m, parentRss: -1 }]) expect(() => assessLeanPrefixCapacity(changed)).toThrow("PREFIX_CAPACITY")
+})
+it("rejects stale HEAD, source, request, allocation, process and interval before import", () => {
+  const observed = { head: "a".repeat(40), sourceRoot: labRoot("source", 1), requestBytesRoot: labRoot("request", 1), allocationRoot: labRoot("allocation", 1), parentPid: 12, childPid: 13, intervalStartMs: 100 }
+  const entry = { ...observed, wallStartMs: observed.intervalStartMs }
+  assertLeanEntryBinding(entry as never, observed)
+  for (const changed of [{ head: "b".repeat(40) }, { sourceRoot: labRoot("source", 2) }, { requestBytesRoot: labRoot("request", 2) }, { allocationRoot: labRoot("allocation", 2) }, { parentPid: 14 }, { childPid: 15 }, { intervalStartMs: 101 }]) expect(() => assertLeanEntryBinding(entry as never, { ...observed, ...changed })).toThrow("ENTRY")
 })
 it("denies caller-forged runtime authorities before native construction", () => {
   expect(() => claimLeanRuntimeAuthority({ schemaVersion: "lean-runtime-authority-v1" } as never, {} as never, "factory")).toThrow("AUTHORITY")
