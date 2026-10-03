@@ -115,6 +115,7 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
   const receiptByWorkload = new Map<LabRoot,LabRoot>(), observedSupervision:LabRoot[] = []
   let firstStart:number|null = null, previousStartedAtMs = -1
   for (const [ordinal,entry] of ordered.entries()) {
+    if (options.boundedImport) options.beforeCell?.(ordinal)
     const {start,terminal,accounting} = entry, cell = fresh.cells[ordinal]!, workload = fresh.workloads[ordinal]!, ingestion = fresh.ingestions[cell.slot]
     if (accounting.schemaVersion !== "factory-calibration-accounting-v1" || accounting.ordinal !== ordinal || accounting.manifestRoot !== manifest.root || accounting.allocationRoot !== manifest.allocationRoot || accounting.workloadArtifactRoot !== manifest.workloads[ordinal]!.artifactRoot || accounting.maxInvocations !== 256 || !Number.isSafeInteger(accounting.maxLifetimeMs) || Number(accounting.maxLifetimeMs) < 1 || Number(accounting.maxLifetimeMs) > 120000 || start.inputRoot !== manifest.workloads[ordinal]!.artifactRoot || start.taskRoot !== manifest.protocolRoot || start.candidateRoot !== ingestion.packetRoot || start.retryParentRoot !== null || start.authoringMechanism !== "automated-oracle" || start.budgetRoot !== labRoot("factory-calibration-attempt-budget-v1",{allocationRoot:manifest.allocationRoot,ordinal})) return fail("WORKLOAD_CHARGE")
     if (!Number.isSafeInteger(accounting.firstWorkloadStartedAtMs) || Number(accounting.firstWorkloadStartedAtMs) < 0) return fail("WINDOW_CLOCK")
@@ -132,7 +133,6 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
       reasons.push(`cell:${ordinal}:${terminal.disposition}`); continue
     }
     if (!supervisionRoot || terminal.outputRoot !== supervisionRoot) return fail("RECEIPT_MISSING")
-    if (options.boundedImport) options.beforeCell?.(ordinal)
     const retained = (options.boundedImport ? readFactorySupervisionArtifactRecordsBounded : readFactorySupervisionArtifactRecords)(repository,supervisionRoot,{maxBytes:64*1024*1024,maxRecords:50000})
     const metadata = record(retained.records.find((item) => item.kind === "receipt")?.value), admission = record(metadata.admission), identity = record(metadata.candidateIdentity), matchup = record(metadata.matchup)
     const revisionId = String(identity.revisionId), arenaVariant = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === workload.condition.arenaId)
