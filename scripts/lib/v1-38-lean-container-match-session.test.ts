@@ -12,6 +12,59 @@ import { buildLeanAuthenticatedHarnessSource, buildLeanObserverBrokerSource, cre
 import { LEAN_CONTAINER_IMAGE } from "../run-v1-38-lean-runner-feasibility.js"
 import { WORKER_HARNESS_SOURCE, WORKER_HARNESS_V117_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { createContainerFixtureRevision } from "../run-v1-38-lean-runner-feasibility.js"
+import { issueProspectiveLeagueHostReceiptAuthority, claimProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
+import { createLeagueProspectiveAmendmentV3, createProspectiveLeagueExecutionAllocationV3 } from "../../packages/strategy-lab/src/league/allocation.js"
+import { prospectiveLifetimeFixture } from "../../packages/strategy-lab/src/league/allocation.test.js"
+import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
+import { LeagueRecordGraph } from "../run-v1-38-serious-league.js"
+import { createLeagueRepository } from "../../packages/strategy-lab/src/league/repository.js"
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+
+const receiptDirectories: string[] = []
+afterEach(() => { for (const directory of receiptDirectories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
+const receiptGrant = () => {
+  const directory = mkdtempSync(join(tmpdir(), "receipt-mock-")); receiptDirectories.push(directory)
+  const input = prospectiveLifetimeFixture(), { root: _root, schemaVersion: _schema, ...body } = input.amendment
+  const policy = { ...body.policy, operations: { ...body.policy.operations, hostResponseReceiptMilliseconds: 5000 as const } }
+  const allocation = createProspectiveLeagueExecutionAllocationV3({ ...input, operations: policy.operations, amendment: createLeagueProspectiveAmendmentV3({ ...body, policy, hostReceiptApproval: "265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002" }), outputDirectories: { league: directory, responseFactory: "/fixture/response" } })
+  const value = { cellRoot: labRoot("receipt-cell", directory), allocationRoot: allocation.root }, start = { ...value, root: labRoot("league-cell-start-v1", value) }
+  const runtime = { revisionId: "receipt-revision", sourceRoot: value.cellRoot, executableRoot: value.cellRoot, tupleId: "candidate-kernel-v1.19", tupleRoot: allocation.tupleRoot, runtimeLimitsRoot: allocation.runtimeRoot, image: allocation.operations.image, factoryAuthorizationRoot: value.cellRoot, factoryPacketRoot: value.cellRoot, factoryProposalRoot: value.cellRoot, factoryValidationRoot: value.cellRoot }
+  const binding = { budgetRoot: allocation.root, attemptRoot: start.root, matchId: `league-${start.root.slice(7, 31)}`, seat: "bottom" as const, containerName: "receipt-mock", ownershipLabel: "owner:receipt-mock", runtime }
+  const graph = new LeagueRecordGraph(createLeagueRepository(directory), allocation.operations)
+  const charge = { kind: "cell-start" as const, root: graph.append("cell-start", { start }), value: start }
+  return { allocation, binding, charge, authority: issueProspectiveLeagueHostReceiptAuthority(allocation, charge, binding) }
+}
+describe("host response receipt native stream clock split", () => {
+  it("rejects forged, copied, crossed and reused authority before transport", () => {
+    const { authority, binding } = receiptGrant()
+    for (const fake of [5000, {}, { ...authority }]) expect(() => claimProspectiveLeagueHostReceiptAuthority(fake as never, binding, "factory")).toThrow()
+    for (const key of ["budgetRoot", "attemptRoot", "matchId", "seat", "containerName", "ownershipLabel"] as const) expect(() => claimProspectiveLeagueHostReceiptAuthority(authority, { ...binding, [key]: "crossed" } as never, "factory")).toThrow()
+    expect(() => JSON.stringify(authority)).toThrow()
+    expect(() => claimProspectiveLeagueHostReceiptAuthority(authority, binding, "session")).toThrow()
+    for (const layer of ["factory", "planner", "session"] as const) { expect(claimProspectiveLeagueHostReceiptAuthority(authority, binding, layer)).toBe(5000); expect(() => claimProspectiveLeagueHostReceiptAuthority(authority, binding, layer)).toThrow() }
+  })
+  it.each([false, true])("keeps legacy guest request 1000 with native receipt wait 5000; expiry=%s", (expire) => {
+    const { authority, binding } = receiptGrant()
+    for (const layer of ["factory", "planner"] as const) claimProspectiveLeagueHostReceiptAuthority(authority, binding, layer)
+    let exists = false, frame: any, dispatches = 0
+    nativeStreamMock.worker = { postMessage(message: any) {
+      if (message.type === "exchange") { dispatches++; frame = JSON.parse(Buffer.from(message.request).toString()); const bytes = Buffer.from(JSON.stringify(response(frame.requestId, [])) + "\n"); new Uint8Array(message.response).set(bytes); Atomics.store(new Int32Array(message.control), 1, bytes.length); Atomics.store(new Int32Array(message.control), 0, 1) }
+      else Atomics.store(new Int32Array(message.control), 0, 1)
+    }, terminate: vi.fn(async () => 0) }
+    const waits: number[] = []
+    vi.spyOn(Atomics, "wait").mockImplementation((_view, _index, _value, timeout) => { waits.push(timeout!); return waits.length === 2 && expire ? "timed-out" : "ok" })
+    vi.spyOn(Atomics, "load").mockImplementation((view, index) => view.length === 1 ? 1 : view[index]!)
+    const transport: LeanContainerMatchTransport = (_command, args) => { if (args[0] === "inspect") return exists ? owned(binding.ownershipLabel) : absent(binding.containerName); if (args[0] === "create") exists = true; if (args[0] === "rm") exists = false; return result("id\n") }
+    const session = createLeanContainerMatchSession({ ...binding, image: binding.runtime.image, infrastructureProfile: "closeout", transport, prospectiveHostReceiptAuthority: authority, prospectiveHostReceiptBinding: binding })
+    const invoke = () => session.adapter.execute({ source: "inert", methodName: "selectActivations", input: {}, timeoutMs: 1000 })
+    if (expire) { let error: unknown; try { invoke() } catch (caught) { error = caught }; expect(session.failureOrigin(error)).toEqual({ stage: "stream_exchange", reason: "wait_timeout" }); expect(session.state).toBe("poisoned"); expect(() => invoke()).toThrow() }
+    else expect(invoke()).toEqual({ ok: true, value: [] })
+    expect(frame.timeoutMilliseconds).toBe(1000); expect(frame.mode).toBe("legacy"); expect(waits[1]).toBe(5000); expect(dispatches).toBe(1)
+    expect(session.close().cleanupComplete).toBe(true); expect(nativeStreamMock.worker.terminate).toHaveBeenCalledOnce()
+  })
+})
 
 const result = (stdout: string | Uint8Array = "", override: Partial<LeanContainerTransportResult> = {}): LeanContainerTransportResult => ({ status: 0, signal: null, stdout: Buffer.from(stdout), stderr: Buffer.alloc(0), ...override })
 const absent = (name: string) => result("", { status: 1, stderr: Buffer.from(`Error: No such object: ${name}\n`) })
