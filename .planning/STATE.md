@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Phase265 V13 preparation complete; canonicalallocation ready for commit before unique entry; no capacity or Match yet
+status: awaiting_resource
+stopped_at: Phase265 V13 closed CAPACITY_MARGIN failure; unique terminalcheck closed; currentdisk728722088bytes short; human free-space action needed
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Prepare73515exit0,capacity-input44886exit0 receiptCreatedfalse,publish89264exit0; newempty0700store; exactallocation commitbeforeentry next
+last_activity_desc: V13 entry51033closedexit1; safe capacitycode retained; noactualhead/noordinaryreader; unique boundedterminalcheckclosed; diskshortnow
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,60 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+V13 UNIQUE entry51033/PID50461 CLOSEDexit1 at2026-10-03T07:11:33.239Z.
+Retained finite diagnostic LEAGUE_ALLOCATION_CAPACITY_MARGIN; failure raw
+b9203fe2957fcd888f97000980377900851e34b328b8a0d87616ba50fcee0e42,
+resultPublishedfalse/noRetrytrue. ONE independent ENTRY-terminal-only
+verification CLOSED, report rawa83701a0d59e8a147a332c16a0a1a80bbb364190bb343e135da0d020e8b1fe04.
+Noactualhead, so ordinaryretainedempiricalreader NOTinvoked; neverfabricatehead.
+Emptyreal0700league store/no retainedcapacity-charge-Match-LEAGcredit. Reserved
+canonicalresult-v13 remains0B/immutable/untracked: NEVERfill/delete/stage it.
+V13 allocation, requestreview, markers/helpers/verification and allconsumed
+history neverresume/retry/replace/refund/reinterpret/recredit. V12original
+cause remainsUNKNOWN; no retrospective inference. Recordabsence is not proof
+of absence of allunrecordedhostobservations/transientconstruction. Source/HEAD
+hold released after actualclosure plusuniqueboundedterminalverification;
+production9ff/552bba3d/defe5024 and completed8sourcegate unchanged.
+
+CURRENT resourceblocker confirmed by light non-admitting root statfs at
+2026-10-03T07:16:24.445Z: free209639780352bytes vs unchangedrequired210368502440,
+short728722088bytes (about0.73GB). Earlierbeforeentry advisoryfree210714529792
+was above threshold; currentfree is lower. Whyfreechanged is not established;
+do not claim an exact failure-time reading from the later snapshot. Pure
+static plan arithmetic preserves physical167418829480 +terminal21474836480
++freefloor21474836480; logicalbyte/recordpool margins pass. Current disk alone
+predicts fresh CAPACITY_MARGIN refusal; don't repeat historicalscan/known-failing
+run or create another allocation while insufficient. Only lightstatfs permitted
+for unchanged resource wait. Human action: free at least2GB, preferably more
+comfortable headroom, on this filesystem WITHOUT deleting private historical
+evidence. No autonomous deletion of userfiles/evidence or reduction of frozen
+20GiBfloor/reserve. When enoughfree space is actually observed, standing
+approval permits a DISTINCTFRESH prospective route (nextV14) without another
+literal, with actualauthor/reviewer/newreviewedhelper identities, committednew
+allocation/empty0700store/freshpassingSAMEPROCESScapacity beforecharge. Do not
+reuse V13 authority. AllLEAGpending/unopenedholdout/freeze-beforeformation/
+guest1000-host5000-Match600000/allotherbounds/no-public-counted-production/
+historicalDockerunknownflag unchanged. Noactiveagent/entry/verifier. Safe
+terminal report/STATE commitpush next. OlderactiveV13 paragraphs belowhistory.
+
+V13 UNIQUE ROOT ENTRY session51033/PID50461 ACTIVE since
+2026-10-03T06:56:48.044Z, actualstatus entry_started_static_validation_before_capacity.
+Exactcanonicalallocation committed/pushed BEFOREentry in
+e3df2cb2a13555ae302611a3e5dcfec87ea2c2ae; admitted
+3bb0abed1f3d835640ec605896ad0e05fecd62bdc72227bc81672dcf39caffc1,
+raw6a0b01fda4ef6d68e898f947f64476fb6722be96ae97bcd5751f28110612fca3.
+This start is NOTcapacitypass, charge, Matchsuccess orLEAGcredit. Determine
+currentstage fromactualprocess/private markers; neverduplicateentry/helper/
+gate/verifier. HOLD HEADe3df2cb2 and production9ff/552bba3d/defe5024 fixed
+through actualterminal and ONE unique retainedverifier ifactualheadexists.
+No commits/sourceedits/competingheavywork duringhold. This liveSTATEhandoff
+is uncommitted planning-only untilholdreleased. Freshsameprocesscapacity
+mustpass beforecharge/dispatch. All frozenbounds guest1000/host5000/Match600000
+andothers unchanged. V12unknowncause/emptyresultreservation/consumedhistory
+remainimmutable. AllLEAGpending/unopenedholdout/currentrulesfreeze-before
+formation/no-public-counted-production retained. Olderpreparation snapshots
+below nowhistory; poll51033, then actualhead-only uniqueverification.
 
 V13 unique data-only prepare73515 CLOSEDexit0; capacity-input44886 CLOSEDexit0,
 receiptCreatedfalse; publish89264 CLOSEDexit0. Canonicalallocation-v13 admitted
