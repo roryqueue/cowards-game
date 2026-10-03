@@ -50,15 +50,8 @@ export const publishChildTerminalAfterOptionalReceipt = <T>(
   return publishTerminal(receiptPublicationUncertain)
 }
 
-const codeStages: Partial<Record<LeanChildFailureCode, LeanChildFailureStage>> = {
-  CHILD_PARENT: "handshake", HANDSHAKE: "handshake", PARENT_LOST: "handshake",
-  ARGUMENTS: "preflight", REQUEST: "preflight", FACTORY: "preflight", REVIEW: "preflight", REVIEW_SOURCE: "preflight", WRITABLE_SCOPE: "preflight", ALLOCATION: "preflight", UNCOMMITTED_ALLOCATION: "preflight", ENTRY: "preflight", ENTRY_PATH: "preflight", SOURCE_HOLD: "preflight",
-  FILE: "candidate-import", PREFIX_CAPACITY: "candidate-import", CAPACITY_RANGE: "candidate-import", ASSESSED_PAIR: "candidate-import", CANDIDATE_HEADER: "candidate-import", CANDIDATE_JOIN: "candidate-import",
-  ARENA: "match", REVISION: "match", IDENTITY: "match", MATCH_DEADLINE: "match",
-  TIME_CAP: "finalize", RETAINED_RESULT: "finalize", RETAINED_ENTRY: "finalize", CHILD_FAILED: "finalize",
-}
-// Deliberately leave shared trusted codes unmapped: preserve the actionable
-// code, but report an unknown stage rather than inventing precharge provenance.
+// Error text does not prove a host stage, including for legacy pilot codes.
+// Preserve the actionable code but do not invent stage provenance.
 const codeSet = new Set<string>(LEAN_CHILD_FAILURE_CODES)
 const stageSet = new Set<string>(LEAN_CHILD_FAILURE_STAGES)
 const isCode = (value: unknown): value is LeanChildFailureCode => typeof value === "string" && codeSet.has(value)
@@ -76,7 +69,7 @@ const boundedFailureReceipt = (error: unknown): LeanChildFailureReceipt => {
   const match = /^LEAN_PILOT_([A-Z0-9_]{1,64})$/u.exec(message)
   const trustedImportCode = TRUSTED_CANDIDATE_IMPORT_FAILURE_CODES.find(code => code === message)
   const code = match && isCode(match[1]) ? match[1] : trustedImportCode ?? "UNKNOWN_INTERNAL_FAILURE"
-  return { type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code, stage: codeStages[code] ?? "unknown" }
+  return { type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code, stage: "unknown" }
 }
 
 interface LeanCliChildProcess {

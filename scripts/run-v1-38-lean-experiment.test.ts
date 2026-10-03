@@ -34,7 +34,7 @@ it.each([{ mode: "success", exitCode: 0 }, { mode: "failure", exitCode: 1 }, { m
   expect(outcome).toEqual({ code: exitCode, signal: null })
   expect(events).toEqual(exitCode === 0 ? ["cleanup", "disconnect"] : ["cleanup", "failure-receipt", "disconnect"])
   const expectedFailure = mode === "known-failure"
-    ? { code: "HANDSHAKE", stage: "handshake" }
+    ? { code: "HANDSHAKE", stage: "unknown" }
     : mode === "trusted-import-failure"
       ? { code: "SERIOUS_LEAGUE_CANDIDATE_SUPERVISION", stage: "unknown" }
       : mode === "resource-failure"
@@ -48,12 +48,13 @@ it.each([{ mode: "success", exitCode: 0 }, { mode: "failure", exitCode: 1 }, { m
 it.each(["precharge", "postcharge", "finalize"])("does not infer the %s stage from a shared resource error code", async () => {
   const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true)
   try {
-    for (const code of ["LEAN_EXPERIMENT_RESOURCE", "LEAN_EXPERIMENT_BUFFER_CAP"] as const) {
+    for (const code of ["LEAN_EXPERIMENT_RESOURCE", "LEAN_EXPERIMENT_BUFFER_CAP", "LEAN_PILOT_PREFIX_CAPACITY", "LEAN_PILOT_FILE", "LEAN_PILOT_CAPACITY_RANGE"] as const) {
       const receipts: unknown[] = []
       const child = { connected: true, exitCode: null as number | null, disconnect() { this.connected = false }, send(message: unknown, callback?: (error: Error | null) => void) { receipts.push(message); callback?.(null); return true } }
       // These are inert host-phase labels, not actual charge or Match evidence.
       await resolveLeanChildCliTerminal(Promise.reject(new TypeError(code)), child)
-      expect(receipts).toEqual([{ type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code, stage: "unknown" }])
+      const expectedCode = code.startsWith("LEAN_PILOT_") ? code.slice("LEAN_PILOT_".length) : code
+      expect(receipts).toEqual([{ type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code: expectedCode, stage: "unknown" }])
       expect(child.exitCode).toBe(1)
       expect(child.connected).toBe(false)
     }
