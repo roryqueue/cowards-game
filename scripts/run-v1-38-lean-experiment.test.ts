@@ -1,8 +1,8 @@
 import { expect, it } from "vitest"
-import { mkdtempSync, realpathSync, rmSync } from "node:fs"
+import { mkdtempSync, realpathSync, rmSync, mkdirSync, writeFileSync, symlinkSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { parseLeanCommand, leanSourceManifest } from "./run-v1-38-lean-experiment.js"
+import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult } from "./run-v1-38-lean-experiment.js"
 import { claimLeanRuntimeAuthority, issueLeanRuntimeAuthority, deriveLeanCandidateRuntime } from "./lib/v1-38-lean-experiment-authority.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../packages/strategy-lab/src/factory/contracts.js"
 import { deriveFactoryOraclePacketRoot } from "../packages/strategy-lab/src/factory/identity.js"
@@ -24,7 +24,8 @@ it("denies caller-forged runtime authorities before native construction", () => 
   expect(admitFactorySupervisorLifetime({} as never)).toBe(120000)
 })
 const candidateFixture = (directory: string, name: string) => {
-  const factoryRepository = createFactoryRepository(join(directory, name))
+  mkdirSync(join(directory, `factory-${name}`), { mode: 0o700 })
+  const factoryRepository = createFactoryRepository(join(directory, `factory-${name}`))
   const sourceBytes = new TextEncoder().encode(`// ${name}\nexport default { selectActivations(input) { return { activationOrders: [], strategyMemory: {} }; }, soldierBrain() { return { action: { type: 'TURN_TO_STONE' }, soldierMemory: {} }; } }`)
   const sourceRoot = leanBytesRoot(sourceBytes), base = factoryOraclePacketFixture()
   const draft = { ...base, source: { ...base.source, root: sourceRoot, sha256: sourceRoot, byteLength: sourceBytes.byteLength } }, packet = { ...draft, root: deriveFactoryOraclePacketRoot(draft) }
@@ -51,6 +52,29 @@ it("requires allocated source closure, rejects a different valid candidate and b
     expect(claimLeanRuntimeAuthority(h, b, "planner").lifetimeMs).toBe(600000)
     expect(claimLeanRuntimeAuthority(h, b, "session").receiptMs).toBe(5000)
     expect(() => JSON.stringify(h)).toThrow("AUTHORITY")
+  } finally { rmSync(p, { recursive: true, force: true }) }
+})
+it("requires actual review bytes and rejects missing, fabricated and other-source reviews", () => {
+  const p = mkdtempSync(".planning/phases/265-serious-current-rules-league-and-development-red-team/.review-test-")
+  try {
+    const pin = labRoot("review", 1), file = join(p, "review.md")
+    expect(() => authenticateLeanReview(file, pin, pin)).toThrow()
+    const bytes = Buffer.from(`---\nstatus: clean\nsource_commit: ${"a".repeat(40)}\nsource_root: ${labRoot("other", 1)}\nreviewer_agent: /root/reviewer\nauthor_agent: /root/author\nindependently_reviewed: true\n---\n`)
+    writeFileSync(file, bytes)
+    expect(() => authenticateLeanReview(file, pin, pin)).toThrow("REVIEW")
+    expect(() => authenticateLeanReview(file, leanBytesRoot(bytes), pin)).toThrow("REVIEW")
+  } finally { rmSync(p, { recursive: true, force: true }) }
+})
+it("uses bounded no-symlink result admission and rejects any head/count/extra-field change", () => {
+  const p = mkdtempSync(join(tmpdir(), "lean-result-"))
+  try {
+    const file = join(p, "result.json"), alias = join(p, "alias.json")
+    writeFileSync(file, "x".repeat(1025)); symlinkSync(file, alias)
+    expect(() => readLeanSafeFile(file, 1024)).toThrow("FILE")
+    expect(() => readLeanSafeFile(alias)).toThrow("FILE")
+    const expected = { head: "a".repeat(40), successful: 8, charged: 8, cleanupComplete: true }
+    validateLeanResult(expected, expected)
+    for (const result of [{ ...expected, head: "b".repeat(40) }, { ...expected, successful: 7 }, { ...expected, extra: true }, { ...expected, cleanupComplete: false }]) expect(() => validateLeanResult(result, expected)).toThrow("RETAINED_RESULT")
   } finally { rmSync(p, { recursive: true, force: true }) }
 })
 it("binds the entire reviewed implementation including additive native opt-ins", () => {

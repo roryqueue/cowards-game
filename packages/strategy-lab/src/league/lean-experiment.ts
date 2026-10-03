@@ -54,11 +54,12 @@ const boundedFrameEstimate = (value: unknown, remaining: number): number => {
     if (typeof v === "string") bytes += 6 * v.length + 2
     else if (v === null || typeof v !== "object") bytes += 32
     else if (Array.isArray(v)) { bytes += 2 + v.length; for (const x of v) { visit(x, depth + 1); if (bytes > remaining) return fail("REPLAY_LIMIT") } }
-    else { bytes += 2; for (const [key, x] of Object.entries(v)) { bytes += key.length * 6 + 5; visit(x, depth + 1); if (bytes > remaining) return fail("REPLAY_LIMIT") } }
+    else { bytes += 2; for (const key in v) { if (!Object.hasOwn(v, key)) continue; bytes += key.length * 6 + 5; visit((v as Record<string, unknown>)[key], depth + 1); if (bytes > remaining) return fail("REPLAY_LIMIT") } }
     if (bytes > remaining) return fail("REPLAY_LIMIT")
   }
   visit(value, 0); return bytes
 }
+export const boundLeanReplayFrame = (value: unknown) => { const upper = boundedFrameEstimate(value, REPLAY_MAX); assertTransient(upper * 3) }
 export const encodeLeanReplay = (frames: Iterable<unknown>, maximumBytes = REPLAY_MAX): { container: LeanReplayContainer; bytes: Uint8Array } => {
   const limit = Math.min(maximumBytes, REPLAY_MAX), chunks: Buffer[] = []
   let length = 0, count = 0
@@ -80,6 +81,7 @@ export const decodeLeanReplay = (container: LeanReplayContainer, bytes: Uint8Arr
   const { root: claimed, ...body } = container
   if (claimed !== labRoot("lean-sampled-replay-gzip-v1", body)) return fail("REPLAY")
   let plain: Buffer
+  assertTransient(container.uncompressedBytes * 4)
   try { plain = gunzipSync(bytes, { maxOutputLength: Math.max(1, Math.min(maximumBytes, REPLAY_MAX)) }) } catch { return fail("REPLAY_LIMIT") }
   if (plain.length !== container.uncompressedBytes || leanBytesRoot(plain) !== container.uncompressedRoot) return fail("REPLAY")
   const lines = plain.toString("utf8").split("\n")
@@ -125,6 +127,7 @@ export const readLeanTimeAccounting = (ledger: LeanExperimentLedger) => {
   return { elapsedMs: starts.size === closed.size ? elapsedMs : LEAN_CAPS.elapsedMs, active: starts.size !== closed.size, starts, closed }
 }
 const appendTime = (ledger: LeanExperimentLedger, kind: "start" | "close", id: string, atMs: number) => {
+  assertLeanPublicationCapacity(ledger, 4096)
   const fd = openSync(join(safeDirectory(ledger.directory), "time.ndjson"), constants.O_APPEND | constants.O_WRONLY | constants.O_NOFOLLOW)
   try { writeLeanAll(fd, Buffer.concat([leanCanonicalBytes({ kind, id, atMs }), Buffer.from("\n")])); fsyncSync(fd) } finally { closeSync(fd) }
 }
@@ -193,6 +196,7 @@ export const chargeLeanSlot = (ledger: LeanExperimentLedger, slot: LeanSlot, cap
 }
 const admitCompactRecord = (r: LeanCompactMatchRecord): void => {
   if (!exactLabKeys(r, ["classification", "code", "outcome", "elapsedMs", "cleanupComplete", "invocationCount", "accountingRoot", "executionRoot", "telemetry"]) || !["success", "player_violation", "system_failure"].includes(r.classification) || !["OK", "PLAYER_VIOLATION", "SUPERVISOR_FAILURE", "CAPACITY", "CLEANUP"].includes(r.code) || ![null, "bottom", "top", "DRAW"].includes(r.outcome) || !natural(r.elapsedMs) || r.elapsedMs > LEAN_CAPS.matchMs + 30_000 || typeof r.cleanupComplete !== "boolean" || !natural(r.invocationCount) || r.invocationCount > 49_600 || !root(r.accountingRoot) || !root(r.executionRoot) || !exactLabKeys(r.telemetry, ["transitions", "events"]) || !Object.values(r.telemetry).every(natural)) return fail("RECORD")
+  if (r.classification === "success" ? r.code !== "OK" || !r.cleanupComplete || r.outcome === null : r.outcome !== null || r.code === "OK" || (r.classification === "player_violation" ? r.code !== "PLAYER_VIOLATION" || !r.cleanupComplete : !["SUPERVISOR_FAILURE", "CAPACITY", "CLEANUP"].includes(r.code)) || (!r.cleanupComplete && r.code !== "CLEANUP")) return fail("RECORD_CLASSIFICATION")
 }
 export const assertLeanPublicationCapacity = (ledger: LeanExperimentLedger, bytes: number, currentPhysicalBytes = measureLeanPhysicalBytes(ledger.directory)) => {
   if (!natural(bytes) || !natural(currentPhysicalBytes) || currentPhysicalBytes + Math.ceil(bytes / 4096) * 4096 + 65536 > LEAN_CAPS.retainedBytes) return fail("RESOURCE")
