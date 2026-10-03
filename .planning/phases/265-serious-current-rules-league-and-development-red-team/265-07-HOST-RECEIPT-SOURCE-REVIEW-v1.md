@@ -1,11 +1,12 @@
 ---
 phase: 265-serious-current-rules-league-and-development-red-team
-reviewed: 2026-10-03T01:22:13Z
+reviewed: 2026-10-03T01:54:13Z
+iteration: 2
 depth: standard
-reviewed_commit: 50a104041e947d901fd5a39f2c836bea494c6fbd
-diff_base: 5b87bb91
-implementation_root: sha256:479051f331a48a3d20d346d00eb36f335ee31dbc910aa765f32768200f9e6eb1
-source_root: sha256:2d4e1ba9e9a8f5aa336eb7f2a5808e399863dc891aa03ddb92ffa7c52b00b594
+reviewed_commit: 18f68a5dfcb39c26a4be3f2f85993172c454689f
+diff_base: b3962fdd3148eb4d8ee151c00cabccd853f74bcf
+implementation_root: sha256:2057bf8c431c47de7cfdd2e1918ed8f75589dc3b0bf879175071e762ab5874dc
+source_root: sha256:e60e7da1d9cfd67efd17dcbfb5e5c2a4a6f2d50264dddce958a4f80bc5740409
 production_source_entries: 858
 files_reviewed: 15
 files_reviewed_list:
@@ -25,88 +26,91 @@ files_reviewed_list:
   - scripts/run-v1-38-serious-league.test.ts
   - .github/workflows/ci.yml
 findings:
-  critical: 2
-  warning: 1
+  critical: 1
+  warning: 0
   info: 0
-  total: 3
+  total: 1
 finding_ids:
+  - CR-03
+resolved_finding_ids:
   - CR-01
   - CR-02
   - WR-01
 status: issues_found
 ---
 
-# Phase 265 host-receipt source review
+# Phase 265 host-receipt source re-review — iteration 2
 
 ## Summary
 
-Independent adversarial review of the fixed source commit above, at standard depth with the factory → planner → session capability chain and main/response retained call chains included. The reviewer is not the source author. Two BLOCKER findings and one WARNING remain; the clean-review gate must not pass at this commit.
+Independent GSD standard-depth re-review of the same 15-file scope at exact held HEAD `18f68a5dfcb39c26a4be3f2f85993172c454689f`, including the factory → planner → session capability chain and retained failure-reader chain. The reviewer is not the source author or fixer. The original three findings are resolved in inspected source; one new BLOCKER, CR-03, prevents a clean-review gate.
 
-Fallow was not configured and was disabled; no structural pre-pass was supplied. This is a source-only review, not production certification or empirical league validation.
+The source fixes are `a4b07d61` (CR-01), `a78a3d35` (WR-01), and `f77d3ede` (CR-02). The subsequent HEAD changes only planning state/review backup; production source matches `f77d3ede`. The original issues report is preserved in Git and `265-07-HOST-RECEIPT-SOURCE-REVIEW-v1.iter2.md`; this canonical report is the workflow's latest result. Fallow remains disabled, with no structural pre-pass supplied.
 
 ## Narrative Findings (AI reviewer)
 
-### CR-01 — BLOCKER: fixture host-receipt authority can construct the live native stream
+### CR-03 — BLOCKER: V3 failed-response reader requires successful validation before any Match/provider exists
 
-**Primary file/line:** `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-lean-container-match-session.ts:247`.
+**Primary file/line:** `/Users/roryquinlan/runtime/cowards-game/scripts/run-v1-38-serious-league.ts:949`.
 
-**Related evidence:** same file `:253`, `:277`, `:191`, `:174`–`:177`; `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-planner-supervised-runtime.ts:83` and `:113`; `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-factory-supervised-runtime.ts:67`; `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-lean-container-match-session.test.ts:8` and `:98`; `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-planner-supervised-runtime.test.ts:7` and its native-parent-expiry test.
+**Related evidence:** same file `:944`–`:956`, `:967`–`:970`; `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-league-response-runtime.ts:181`–`:188`, `:305`–`:309`; new retained-failure tests in `/Users/roryquinlan/runtime/cowards-game/scripts/run-v1-38-serious-league.test.ts:48`.
 
-**Causal failure:** the V3 fixture guard requires an injected control `transport`, but does not require an injected `streamFactory`. The subsequent nullish default therefore chooses `defaultStreamFactory` when the fixture omits the stream constructor or supplies `undefined`. After mock inspect/create/start responses, line 277 invokes that default with `docker exec -i <containerId> node ...`; the default creates a native Worker, whose source calls `child_process.spawn`. Thus a fixture-authorized 5000 ms grant reaches native process construction. Requiring an injected factory `createRuntime` does not seal the chain: that callback may invoke the real planner with only a mock control transport, and planner line 83 accepts it.
+**Causal failure:** CR-02's fix unconditionally reconstructs an authored provider source and requires exactly one valid `response-validation` record whenever a V3 failure's author disposition is `produced`. That is stronger than the execution lifecycle: the author result is assigned at response-runtime line 181, before the authoring graph append at line 182, selected revision validation at line 186, and validation-record publication at line 188. A legitimate error at any of those intervening boundaries leaves a produced author but no validation record, zero charged response Matches and no provider identities. The existing catch can still retain its honest production-failure record and matching system-failure terminal using reserved failure capacity. The new reader rejects that prefix at line 949 before reaching the already-permitted zero-charge coverage case.
 
-**Bounded reproduction construction, not executed:** issue a genuine fixture V3 authority from a durable temporary `cell-start`, make the factory/planner claims, and invoke the session with the exact binding plus a mock control transport returning absent/created/started state, but no `streamFactory`. This is exactly the constructor shape in the new session test at line 98. Without the module-wide Worker mock, it reaches native `spawn`; whether Docker subsequently succeeds is irrelevant to the prohibited launch. No live probe was performed.
+**Bounded reproduction construction, not executed:** use a valid source-current V3 allocation/start/target and an author whose authentic produced result/ingestion has been retained. Inject a work-publication/capacity refusal specifically for the `response-authoring` append, while allowing the existing production-failure record and factory/red-team failure terminals. `produceLeagueResponse` then retains `author.disposition: produced`, `matchCount: 0`, no `response-match-start`, no `response-validation`, and no runtime record. Reopen that otherwise valid failed prefix. The author/artifact/start/terminal joins can pass, but line 949 throws `SERIOUS_LEAGUE_RETAINED_FAILED_RESPONSE_VALIDATION`. A failure publishing the validation record itself has the same result. A selected-source validation rejection before that record is published likewise must not acquire fabricated successful validation evidence.
 
-**Test reliability:** the new native tests globally replace Worker while `nativeStreamMock.worker` is populated, so the accepted default-constructor configuration does not actually launch in those tests. Passing them proves the mocked native transaction's wait argument, not fixture/default-live isolation. The planner test deliberately sets `streamFactory: undefined`, reproducing the same gap under its Worker mock.
+This is a new false rejection of honest process-invalid evidence, not a new successful-payoff or LEAG-credit path. It violates the existing charged-prefix/failure-accounting behavior that the approved V3 amendment must preserve.
 
-**Fix:** reject fixture V3 authority unless both control transport and an explicit fixture stream constructor are present, at planner/session entry before claims or construction. Keep empirical injected overrides denied. To test the real native transaction logic, provide a narrow process-local test-only Worker/transaction seam or extract that logic for explicit injection; do not let a fixture grant select the live default constructor. Add missing/undefined stream regressions with native/control constructor sentinels proving zero dispatch. This repair can be V3-only, preserving V1/V2/default semantics.
+**Fix:** make successful authored-provider validation conditional on reaching the relevant charged/provider-evidence stage. Compute response charges early (or lazily derive the expected authored provider only when checking available identities). With zero Match charges and no provider/result evidence, retain the existing authenticated author/start/target/terminal checks but do not demand or invent a successful validation record. For charged Matches and every available provider identity/completed prefix, keep CR-02's exact admitted joins mandatory; do not permit omission of required validation or wrong provider roots. Existing validation evidence, when present, should still be checked appropriately. Add a focused source-only regression for produced-author/zero-charge failure before authoring append and at validation publication, plus a negative proving charged provider evidence cannot use the exception. V1/V2 behavior and failure disposition must remain unchanged.
 
-### CR-02 — BLOCKER: retained failed V3 responses skip admitted provider-root joins
+**Test gap:** the new helper-level cases all reach successful validation first: “issuance” means the second provider constructor fails after the first Match charge, “execution” means one Match, and “prefix” means nine completed synthetic Matches followed by issuance failure. None exercises a produced author failing before validation/first charge. The author validator is explicitly mocked in these fixtures; their passes do not establish whole-run retained correctness.
 
-**Primary file/line:** `/Users/roryquinlan/runtime/cowards-game/scripts/run-v1-38-serious-league.ts:955`.
+## Resolution of original findings
 
-**Related evidence:** same file `:899`–`:901`, `:967`–`:972`, `:1186`, `:1234`–`:1236`; `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-league-response-runtime.ts:358`, `:76`–`:93`, `:238`, `:263`–`:266`, `:297`–`:301`.
+### CR-01 — RESOLVED: explicit fixture control and stream seams precede claims
 
-**Causal failure:** the successful-response reader explicitly checks V3 tuple ID/root, runtime-limits root, image, and factory packet/proposal/validation roots against the admitted allocation and the selected source closure. Failed production is instead verified by `verifyRetainedProductionFailures`. That path only requires runtime records to link to a response charge. A charged issuance failure with no result/execution reaches line 955 and skips all provider-identity validation, even when cleanup records exist. With execution evidence, lines 967–969 check source/attempt/budget/revision but never the tuple/image/limits/factory joins. Lines 961–962 only establish mutually consistent raw/accounting evidence and kernel behavior; `verifyRetainedLeagueProbeInvocations` has no expected allocation/provider argument. For prior completed Matches in a subsequently failed production, line 972 also lacks the prospective checks from successful-response line 358.
+Inspected `scripts/lib/v1-38-planner-supervised-runtime.ts:83`–`:84` and `scripts/lib/v1-38-lean-container-match-session.ts:255`–`:257`: fixture V3 authority requires both seams to be callable before authority consumption or control/session construction. Missing, undefined and null stream values cannot reach the nullish live default. Empirical injected overrides remain denied, and factory's explicit fixture-constructor guard remains intact.
 
-**Accepted-path construction, not executed:** start from a source-current fixture V3 run with a valid marker/reservation/capacity, imported candidates, preceding round/ledger records, a valid `response-production-start`, and one valid ordinal-0 `response-match-start`. Have the first source-only fixture provider return a normal source/attempt/budget/revision identity but a different image or runtime-limits root, and the second fixture constructor throw before any Match runs. The response catch/finally retains the first provider's cleanup, `matchCount: 1`, a production-failure record, and the matching system-failure factory/red-team terminals. In the retained reader, the cleanup passes the charge-link check at lines 899–901; the normal start/author/target/terminal joins remain intact; charges=1/results=0 passes lines 947 and 952; no execution/invocation-failure permits line 955's `continue`. The caller invokes this reader at line 1186 and can return `issued: false, processValidity: process_invalid` at line 1236 without rejecting that wrong provider root. A coherent retained-graph rewrite of only that cleanup identity has the same omission, provided graph/terminal content roots are recomputed normally.
+The transaction logic is shared by a private launch abstraction; the live default still constructs the same Worker at session line 222, while explicit `createLeanContainerFixtureStreamFactory` at lines 224–226 substitutes a supplied process-local Worker interface without constructing a Worker/child. Its use is test-environment guarded. New session/planner regressions reject missing/undefined/null streams before dispatch and show claims remain available for legitimate subsequent use. Native Worker mocks now throw when unset instead of falling through to native construction. These are inspected source/mock assertions, not a live isolation probe.
 
-This is a failure-evidence attribution defect, **not** a route to a successful payoff, re-entry, freeze, or LEAG credit. It matters here because the approved V3 contract requires admitted provider/source/runtime joins on retained main/response paths, including honest charged failure prefixes. The omission predates V3 in the old failure helper; the new V3 selector exposes it to the newly approved route.
+### CR-02 — RESOLVED: available failed-response identities receive admitted V3 joins
 
-**Fix:** add V3-only expected-provider checks before the no-execution `continue`, for every available cleanup/invocation/failure identity. Derive the measured/opposing source closure for the exact purpose/seat (including `independence_right` and equal-source self-play), bind attempt/budget/revision plus admitted tuple ID/root, limits root, image, executable source and factory closure roots, and apply the same checks to supervision metadata in completed prefixes of failed production. Do not require fabricated cleanup for a provider whose constructor never returned. Share a small expected-binding validator with the successful V3 response path where practical. Add source-only negative fixtures for wrong image/limits/factory roots in both no-execution issuance failure and execution/completed-prefix failure; preserve existing V1/V2 history and process-invalid disposition.
+Inspected shared `verifyRetainedV3ResponseProvider` in `scripts/lib/v1-38-league-response-runtime.ts:124`–`:130` and the failure helper in `scripts/run-v1-38-serious-league.ts:978`–`:1012`. It rebuilds the selected revision from authenticated source bytes and joins source/executable/revision, allocation budget, exact attempt, tuple ID/root, runtime limits, image, and factory packet/proposal/validation roots. Imported source closures are reopened and selected by exact score/independence-left/independence-right purpose; measured and opposing attempts remain distinct for both seats and equal-source self-play.
 
-### WR-01 — WARNING: malformed inner legacy response leaves the direct session active
+Every available cleanup, original/admitted invocation, invocation-failure and execution-accounting identity is checked before the no-execution continuation at line 995. Completed-prefix supervision metadata is checked too, and the successful V3 response metadata uses the same validator. Providers whose constructors did not return do not acquire fabricated cleanup requirements. V1/V2 checks are gated out of the new validator. CR-03 separately reports the newly overbroad requirement for zero-provider pre-validation failures; it does not reopen the original missing-provider-join finding.
 
-**Primary file/line:** `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-lean-container-match-session.ts:314`.
+The new focused tests inspect actual retained failure-helper behavior, twelve changed binding fields across available record kinds, and completed supervision metadata. They remain isolated synthetic helper tests with author verification mocked, not an author/whole-run proof.
 
-**Related evidence:** same file `:230`–`:237`, `:309`–`:310`, `:279`; `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-planner-supervised-runtime.ts:149`–`:153`; the session's private inner-response tests and planner malformed-inner tests.
+### WR-01 — RESOLVED: V3 inner admission errors poison while preserving original error
 
-**Causal failure:** `runMethod` poisons on outer/frame/transport failure, but returns before `strictJsonResponse` runs. A correctly correlated status-0 outer response containing inner `null`, invalid JSON, surplus keys, or a schema-invalid runtime result throws outside the poisoning catch. The direct session therefore remains `active` and permits a second exchange after malformed IPC. The real planner catches this error and closes its session, which limits the production impact; the direct session contract still does not enforce the claimed fail-closed behavior itself. This is pre-existing adapter behavior inherited by V3, not a new deadline-classification change.
+Inspected `scripts/lib/v1-38-lean-container-match-session.ts:323`–`:329`: strict inner JSON/schema admission now has a V3-only catch. It poisons/attempts cleanup and rethrows the original origin-bearing error even if cleanup itself throws. Session state is set poisoned before cleanup, so the second request cannot exchange another frame. New tests cover malformed JSON, null, surplus keys and invalid schema, with original MALFORMED_IPC/private origin, one frame, one close/removal and no second dispatch. Historical no-grant inner-error behavior is explicitly retained and asserted.
 
-**Bounded reproduction construction, not executed:** use a genuine fixture V3 grant and explicit mock transports; return a valid outer frame whose canonical base64 stdout decodes to `null`. Catch `adapter.execute`'s MALFORMED_IPC error, then inspect `session.state` or call `execute` again. The first parse error does not reach line 310's catch, so the state is still active and the second request can dispatch. Existing inner-response tests check diagnostic origins/explicit close but do not assert immediate poisoned state and zero second dispatch.
+## Scope and contract recheck
 
-**Fix:** for the authorized V3 legacy path, include inner JSON/schema admission in the poison-on-failure boundary, preserve the original error/private origin, and add a one-frame/one-cleanup/no-second-dispatch regression for valid-outer/invalid-inner responses. Do not reinterpret it as a Strategy timeout. Keep historical no-grant behavior unchanged unless separately authorized.
+The 15-file review scope is unchanged. Seven files have fix diffs; the other eight scoped files are byte-identical to the previously inspected source at `b3962fdd` (allocation/source authority/lifetime/factory sources and relevant tests/CI). The new diffs and surrounding call chains were rechecked without repeating bulk old-history scans.
 
-## Inspected contract evidence and limits
+- The exact rooted V3 5000 ms field/approval, legacy guest/broker 1000 ms, Match 600000 ms, and V1.17 signed 50 ms method/100 ms cancellation/startup aggregate are unchanged by the fixes. Host expiry remains a system/transport observation, never guessed Strategy timeout; authenticated D and late ambiguous attribution handling are unchanged.
+- The private WeakMap authority and ordered one-use source/durable-start/provider bindings are unchanged. Main and response score/left/right provider issuance still follows existing durable charges. Preparation/preflight/run/reservation/source/capacity and retained V3 selectors remain explicit.
+- V1/V2 allocation bytes/selectors and default/native transaction behavior are preserved by version guards and the shared transaction extraction. Public privacy, current gameplay, capacity, accounting, retention-before-return and resource limits were not expanded. CR-03 limits the claim of V3 honest failure-prefix preservation.
+- Existing canonical fixture constructors/golden input/source roots and complete provider interfaces remain. No new CI removal, cast-based strict-error suppression, or flag weakening was introduced by the fixes. The test-only seams are not asserted equivalent to real provider execution.
 
-- Allocation V3 adds the exact `operations.hostResponseReceiptMilliseconds: 5000` and the exact host approval identifier. Its projection removes only that field before delegating to the existing V2/V1 admission logic; Match remains 600000 ms and the other approved policy bounds are not numerically changed. This is static constructor/diff evidence, not a fresh empirical allocation.
-- Explicit V3 selection is present in preparation, admitted allocation unions, capacity/reservation/source-current logic, main/response issuance and the successful retained joins. CR-02 limits the retained-failure claim.
-- The host authority is issued into a private WeakMap, freezes cloned bindings, reopens durable main/response records, checks the response production parent, and requires ordered one-use factory/planner/session claims. Empirical issuance/claims compare the actual source inventory. Main issuance follows durable cell start; response issuance follows Match charge and uses distinct measured/opposing attempts for score/left/right purposes, both seats and self-play. CR-01 limits fixture isolation.
-- The encoded legacy broker request remains 1000 ms; `stream.exchange` alone receives the authorized 5000. The alternative V1.17 request still encodes its signed 50 ms method, existing 100 ms cancellation grace and unchanged startup-plus-method-plus-grace aggregate. The unchanged observer's bounded authenticated D/late-receipt logic and the adapter's TRANSPORT_CRASH system-failure path were inspected; no host-wait-only Strategy-timeout inference was found. WR-01 limits direct legacy malformed-inner poisoning.
-- Planner accounting is charged before dispatch; wrapper retention is awaited before issuance/return, and the inspected cleanup/error handoffs remain present. No test/CI gate removal or strict-TypeScript flag weakening was found in the diff. The native tests' isolation gap is part of CR-01, not dismissed as test style.
-- Replacement fixtures use the canonical game/input constructors or the exact factory packet/proposal/validation fixtures, with the former planner input golden roots and canonical source-hash assertions retained. Complete fake-provider timing/accounting interfaces were inspected. Their reported successful type checks are not an independent execution result from this review.
+Current AGENTS/state, the actual host approval, checked host-receipt plan/research and allocation/runtime summaries remain the scoped authority. The fix report was read, including its explicit limitations and unexpected initial native-construction attempts. Generic “requires human verification” fixer labels do not create a new human-only checkpoint; this independent review is the requested same-scope check. CR-03 is an actual source blocker.
 
-## Identity computation and verification performed
+## Actual source identity and verification limits
 
-The production closure was actually recomputed twice using the existing safe source-only `factoryAssessmentImplementationManifest()` and `labRoot("league-reviewed-source-bytes-v1", manifest.entries)`. Its 858 sorted production/config entries exclude tests, planning, dependencies and generated outputs under the existing inventory rules. Both calls returned exactly the frontmatter roots. The new host-receipt source entry was present with raw-byte hash `sha256:7cce7b6a98fac43386b751bd440dcaff019da98eff982d2dc42285427de0b324`.
+The existing safe source-only `factoryAssessmentImplementationManifest()` and `labRoot("league-reviewed-source-bytes-v1", manifest.entries)` were executed to compute the current 858-entry production closure. They returned exactly:
 
-The only executed TypeScript operation was that read-only inventory/hash computation, not an executable CLI mode. HEAD was checked before and after source inspection and remained `50a104041e947d901fd5a39f2c836bea494c6fbd`. Source files were not edited. The report is the only new review output and is left uncommitted for the parent.
+- Implementation: `sha256:2057bf8c431c47de7cfdd2e1918ed8f75589dc3b0bf879175071e762ab5874dc`
+- Source: `sha256:e60e7da1d9cfd67efd17dcbfb5e5c2a4a6f2d50264dddce958a4f80bc5740409`
 
-Context consulted: AGENTS and current PROJECT/REQUIREMENTS/STATE/ROADMAP/research SUMMARY; Phase 265 CONTEXT; HOST-RECEIPT PLAN/RESEARCH; actual `265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002.md`; ALLOCATION/RUNTIME summaries. Relevant imported inventory, runtime observation and admission/retention context was inspected without reopening old empirical routes.
+These are actual computed identities, not placeholders, and source inventory semantics are unchanged. HEAD was checked as `18f68a5dfcb39c26a4be3f2f85993172c454689f`. Only this canonical review report is updated by the reviewer and is left uncommitted for the parent; no source, fix report, backup, other planning file, existing untracked artifact or lock was changed.
 
-Authors' summaries report allocation 17 passing tests/type checks; runtime five-file focused selection 49 passed/368 skipped in 108.54 s; golden fixture selection 1 passed/74 skipped; source-closure selection 1 passed/142 skipped; and augmented strict TypeScript success. These are **reported, not rerun**. No tests, all-eight CI gate, provider/model/process/Docker/Match/capacity/route/helper/retained empirical verifier was launched by the reviewer. Static mock assertions are not empirical equivalence or default-constructor isolation proof.
+The fixer reports 62 host-response-selected tests passed/368 skipped and the exact augmented strict TypeScript pass at `f77d3ede`, plus the focused failure-helper/historical cases. These results were **not rerun** by this reviewer. No full suite, eight-command CI gate, native/process/Docker/model/provider/Match/capacity/route/helper/retained empirical verifier was launched.
 
-## Handoff boundary
+The fix report acknowledges two unexpected native default construction attempts during its initial RED run; Docker-launch outcome is unknown, and its later process inspection reported no lingering matching processes. This review does not reinterpret that event as proof of no Docker launch, and performed no follow-up native probe.
 
-Fix the findings within the approved source-only scope, commit source under parent control, and independently re-review the resulting exact HEAD/actual roots before the full fixed-source gate. This report cannot satisfy a `status: clean` gate.
+## Handoff
 
-No LEAG-01–09, league/freeze, matrix/solver/response closure, portfolio/finalist or Phase 265 completion credit follows from this review. V11 and other consumed artifacts remain immutable; holdout was not opened; no formation/public/counted/production authority was created. Existing untracked empty/result-v8/recovery/cache/lock files were preserved.
+Resolve CR-03 with the bounded conditional failure-stage fix and focused regression, then independently re-review the resulting exact HEAD/actual roots before the fixed-source gate. This `issues_found` report cannot admit the clean gate.
+
+No LEAG-01–09, league/freeze, empirical matrix/solver/response/red-team/portfolio/finalist or Phase 265 completion credit follows. V11 and all other consumed history stay immutable; holdout remains unopened; formation/public/counted/production authority remains absent.
