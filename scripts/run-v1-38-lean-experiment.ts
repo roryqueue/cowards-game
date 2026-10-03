@@ -18,6 +18,7 @@ import { factoryAssessmentImplementationManifest } from "./v1-38-factory-impleme
 import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-runtime.js"
 import { issueLeanRuntimeAuthority } from "./lib/v1-38-lean-experiment-authority.js"
 import { prospectiveLeagueRuntimeBinding } from "./lib/v1-38-league-prospective-lifetime.js"
+import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting } from "../packages/strategy-lab/src/league/lean-experiment.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_PILOT_${code}`) }
 const STORE = resolve(".strategy-lab/lean-experiment-20261003")
@@ -130,6 +131,8 @@ const runLeanPilotBody = async (requestPath: string, entryCreated: () => void) =
   exclusive(join(STORE, "result.json"), result); return result
 }
 export const runLeanPilot = async (requestPath: string) => {
+  const ledger = openLeanLedger(STORE)
+  beginLeanInterval(ledger, "pilot-entry")
   let entered = false
   try { return await runLeanPilotBody(requestPath, () => { entered = true }) }
   catch (error) {
@@ -138,13 +141,15 @@ export const runLeanPilot = async (requestPath: string) => {
       exclusive(join(STORE, "entry-failure.json"), { schemaVersion: "lean-pilot-entry-terminal-v1", issued: false, status: "feasibility_not_established", code, noRetry: true, pid: process.pid })
     }
     throw error
+  } finally {
+    closeLeanInterval(ledger, "pilot-entry")
   }
 }
 const derivePilotPhysicalMaximum = (ledger: LeanExperimentLedger): number => {
   const resources = readLeanLedger(ledger).events.filter(e => e.kind === "resource")
   return resources.reduce((maximum, e, i) => Math.max(maximum, i % 2 === 1 ? e.physicalBytes - resources[i - 1]!.physicalBytes : 0), 0)
 }
-export const readLeanPilotResult = (requestPath: string) => {
+const readLeanPilotResultBody = (requestPath: string) => {
   const request = readRequest(requestPath), ledger = openLeanLedger(STORE), verified = verifyLeanEvidence(ledger)
   const result = JSON.parse(readFileSync(join(STORE, "result.json"), "utf8"))
   if (result.schemaVersion !== "lean-pilot-result-v1" || result.issued !== false || result.evidenceClass !== "feasibility_only" || result.sourceRoot !== request.sourceRoot || result.allocationRoot !== ledger.allocation.root || result.evidenceRoot !== verified.root || result.charged !== verified.charged || !readLeanLedger(ledger).stopped) return fail("RETAINED_RESULT")
@@ -153,6 +158,12 @@ export const readLeanPilotResult = (requestPath: string) => {
   const expectedTier = verified.charged === 8 && records.every(r => r.classification === "success" && r.cleanupComplete) ? chooseLeanTier({ pilotCells: 8, maximumCellMs, maximumCellPhysicalBytes, elapsedMs: verified.elapsedMs, physicalHighWaterBytes: verified.physicalHighWaterBytes, scratchHighWaterBytes: verified.scratchHighWaterBytes }) : "feasibility_not_established"
   if (result.tier !== expectedTier || result.maximumCellPhysicalBytes !== maximumCellPhysicalBytes || result.maximumCellMs !== maximumCellMs || result.elapsedMs !== verified.elapsedMs || result.physicalHighWaterBytes !== verified.physicalHighWaterBytes || result.scratchHighWaterBytes !== verified.scratchHighWaterBytes) return fail("RETAINED_MEASUREMENT")
   return { issued: false, evidenceClass: "feasibility_only", allocationRoot: ledger.allocation.root, evidenceRoot: verified.root, charged: verified.charged, tier: result.tier, status: verified.records.every(r => r.status === "success") ? "pilot_complete" : "feasibility_not_established" }
+}
+export const readLeanPilotResult = (requestPath: string) => {
+  const ledger = openLeanLedger(STORE)
+  beginLeanInterval(ledger, "pilot-retained-verifier")
+  try { return readLeanPilotResultBody(requestPath) }
+  finally { closeLeanInterval(ledger, "pilot-retained-verifier") }
 }
 export const leanPilotMain = async (args: readonly string[]) => { const c = parseLeanCommand(args); return c.mode === "prepare-pilot" ? prepareLeanPilot(c.request) : c.mode === "run-pilot" ? runLeanPilot(c.request) : readLeanPilotResult(c.request) }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) void leanPilotMain(process.argv.slice(2)).then(v => process.stdout.write(`${JSON.stringify(v)}\n`)).catch(() => { process.stderr.write("LEAN_PILOT_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })

@@ -3,6 +3,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, expect, it } from "vitest"
 import { labRoot, LAB_ADMITTED_ROOTS } from "../contracts.js"
+import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting } from "./lean-experiment.js"
 import { writeLeanAll, createLeanAllocation, chargeLeanSlot, createLeanLedger, retainLeanMatch, verifyLeanEvidence, chooseLeanTier, encodeLeanReplay, decodeLeanReplay, leanSchedule, readLeanLedger } from "./lean-experiment.js"
 
 const dirs: string[] = []
@@ -16,6 +17,20 @@ it("finishes short writes and rejects zero progress", () => {
 })
 const allocation = () => createLeanAllocation({ sourceRoot: pin, reviewRoot: pin, candidateRoots: [pin, labRoot("test", 2)], seed: "lean-pilot-test" })
 const ledger = () => { const p = realpathSync(mkdtempSync(join(tmpdir(), "lean-test-"))); dirs.push(p); return createLeanLedger(join(p, "evidence"), allocation()) }
+it("charges failed-entry and retained-verifier intervals without mutating outcomes", () => {
+  const l = ledger()
+  const now = Date.now()
+  beginLeanInterval(l, "entry", now)
+  chargeLeanSlot(l, l.allocation.slots[0]!, { freeBytes: 20e9, availableMemoryBytes: 2e9 })
+  closeLeanInterval(l, "entry", now + 1500)
+  beginLeanInterval(l, "verifier", now + 2000); closeLeanInterval(l, "verifier", now + 3200)
+  expect(readLeanTimeAccounting(l).elapsedMs).toBe(2700)
+  expect(readLeanLedger(l).charged).toBe(1)
+  expect(() => beginLeanInterval(l, "entry", 4300)).toThrow("TIME_ACTIVE")
+  beginLeanInterval(l, "next-stage", 5000)
+  expect(readLeanTimeAccounting(l).elapsedMs).toBe(28_800_000)
+  expect(() => beginLeanInterval(l, "replacement", 6000)).toThrow("TIME_ACTIVE")
+})
 it("enumerates exact balanced200/128 tiers, eight distinct pilot cells and committed hash sample", () => {
   expect(leanSchedule("full")).toHaveLength(200); expect(leanSchedule("reduced")).toHaveLength(128)
   const a = allocation(); expect(a.slots).toHaveLength(8); expect(new Set(a.slots.map(s => s.requestRoot)).size).toBe(8)

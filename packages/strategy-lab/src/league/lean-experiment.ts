@@ -83,11 +83,49 @@ const append = (ledger: LeanExperimentLedger, event: Event) => {
   const fd = openSync(join(p, "ledger.ndjson"), constants.O_APPEND | constants.O_WRONLY | constants.O_NOFOLLOW)
   try { writeLeanAll(fd, Buffer.concat([bytes, Buffer.from("\n")])); fsyncSync(fd) } finally { closeSync(fd) }
 }
+/** Append-only trusted host intervals. Interrupted intervals conservatively burn the
+ * remaining eight-hour envelope; no future stage may reset or recover that time. */
+const activeTime = new Map<string, { id: string; atMs: number; priorMs: number }>()
+export const readLeanTimeAccounting = (ledger: LeanExperimentLedger) => {
+  const text = Buffer.from(readSafe(join(safeDirectory(ledger.directory), "time.ndjson"))).toString("utf8")
+  if (text.length && !text.endsWith("\n")) return fail("TIME_PUBLICATION")
+  const starts = new Map<string, number>(), closed = new Set<string>()
+  let elapsedMs = 0
+  for (const line of text ? text.slice(0, -1).split("\n") : []) {
+    const e = parse(Buffer.from(line)) as { kind: string; id: string; atMs: number }
+    if (!exactLabKeys(e, ["kind", "id", "atMs"]) || !/^[a-z0-9-]{1,80}$/u.test(e.id) || !natural(e.atMs)) return fail("TIME")
+    if (e.kind === "start") { if (starts.has(e.id) || starts.size !== closed.size) return fail("TIME_ACTIVE"); starts.set(e.id, e.atMs) }
+    else if (e.kind === "close") { const start = starts.get(e.id); if (start === undefined || closed.has(e.id) || e.atMs < start) return fail("TIME"); elapsedMs += e.atMs - start; closed.add(e.id) }
+    else return fail("TIME")
+  }
+  return { elapsedMs: starts.size === closed.size ? elapsedMs : LEAN_CAPS.elapsedMs, active: starts.size !== closed.size, starts, closed }
+}
+const appendTime = (ledger: LeanExperimentLedger, kind: "start" | "close", id: string, atMs: number) => {
+  const fd = openSync(join(safeDirectory(ledger.directory), "time.ndjson"), constants.O_APPEND | constants.O_WRONLY | constants.O_NOFOLLOW)
+  try { writeLeanAll(fd, Buffer.concat([leanCanonicalBytes({ kind, id, atMs }), Buffer.from("\n")])); fsyncSync(fd) } finally { closeSync(fd) }
+}
+export const beginLeanInterval = (ledger: LeanExperimentLedger, id: string, atMs = Date.now()) => {
+  const s = readLeanTimeAccounting(ledger)
+  if (s.active || s.starts.has(id) || s.elapsedMs >= LEAN_CAPS.elapsedMs || !natural(atMs) || !/^[a-z0-9-]{1,80}$/u.test(id)) return fail("TIME_ACTIVE")
+  appendTime(ledger, "start", id, atMs)
+  activeTime.set(ledger.directory, { id, atMs, priorMs: s.elapsedMs })
+}
+export const closeLeanInterval = (ledger: LeanExperimentLedger, id: string, atMs = Date.now()) => {
+  const s = readLeanTimeAccounting(ledger), start = s.starts.get(id)
+  if (!s.active || start === undefined || s.closed.has(id) || !natural(atMs) || atMs < start) return fail("TIME")
+  appendTime(ledger, "close", id, atMs)
+  activeTime.delete(ledger.directory)
+  return readLeanTimeAccounting(ledger)
+}
+export const currentLeanElapsedMs = (ledger: LeanExperimentLedger) => {
+  const s = readLeanTimeAccounting(ledger), local = activeTime.get(ledger.directory)
+  return s.active && local ? local.priorMs + Math.max(0, Date.now() - local.atMs) : s.elapsedMs
+}
 export const createLeanLedger = (directory: string, allocation: LeanExperimentAllocation): LeanExperimentLedger => {
   const a = admitLeanAllocation(allocation), p = resolve(directory)
   if (realpathSync(dirname(p)) !== dirname(p)) return fail("STORE")
   mkdirSync(p, { mode: 0o700 }); safeDirectory(p)
-  writeExclusive(join(p, "allocation.json"), leanCanonicalBytes(a)); writeExclusive(join(p, "ledger.ndjson"), new Uint8Array())
+  writeExclusive(join(p, "allocation.json"), leanCanonicalBytes(a)); writeExclusive(join(p, "ledger.ndjson"), new Uint8Array()); writeExclusive(join(p, "time.ndjson"), new Uint8Array())
   return { directory: p, allocation: a }
 }
 export const openLeanLedger = (directory: string): LeanExperimentLedger => { const p = safeDirectory(directory); return { directory: p, allocation: admitLeanAllocation(parse(readSafe(join(p, "allocation.json")))) } }
@@ -125,7 +163,7 @@ export const chargeLeanSlot = (ledger: LeanExperimentLedger, slot: LeanSlot, cap
   const state = readLeanLedger(ledger)
   if (state.stopped || ledger.allocation.slots[slot.ordinal]?.root !== slot.root || labRoot("lean-slot-v1", { ordinal: slot.ordinal, condition: slot.condition, arenaHash: slot.arenaHash, requestRoot: slot.requestRoot }) !== slot.root) return fail("SLOT")
   if (state.charges.has(slot.root)) return fail("CHARGED")
-  if (!natural(capacity.freeBytes) || !natural(capacity.availableMemoryBytes) || capacity.freeBytes < LEAN_CAPS.totalBytes - measureLeanPhysicalBytes(ledger.directory) || capacity.availableMemoryBytes < 1_073_741_824 || state.elapsedMs + LEAN_CAPS.matchMs > LEAN_CAPS.elapsedMs || state.charged >= LEAN_CAPS.matches) return fail("CAPACITY")
+  if (!natural(capacity.freeBytes) || !natural(capacity.availableMemoryBytes) || capacity.freeBytes < LEAN_CAPS.totalBytes - measureLeanPhysicalBytes(ledger.directory) || capacity.availableMemoryBytes < 1_073_741_824 || Math.max(state.elapsedMs, currentLeanElapsedMs(ledger)) + LEAN_CAPS.matchMs > LEAN_CAPS.elapsedMs || state.charged >= LEAN_CAPS.matches) return fail("CAPACITY")
   const body = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: ledger.allocation.root, slotRoot: slot.root, ordinal: slot.ordinal }
   const charge = { ...body, root: labRoot("lean-slot-charge-v1", body) }; append(ledger, { kind: "charge", charge }); return charge
 }
