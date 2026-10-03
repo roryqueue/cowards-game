@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: awaiting_human_decision
-stopped_at: Plan265-15 import/crash source repair verified; historical disk-accounting choice pending
+status: executing
+stopped_at: Plan265-15 retained-disk amendment approved; preparation write-order review fix active
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Retained-ledger descriptor-read gap fixed at 748d7869; independent review and source verification clean; 10 focused root tests and factory scan pass; no empirical admission
+last_activity_desc: Human explicitly approved unknown historical disk peak with surviving/future15GB accounting; TaskC source7d4eda7f tested27/27; one creation-preflight defect under repair
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved lean experiment reset, 2026-10-03
+
+CURRENT DISK APPROVAL: the human explicitly approved “You may record it as unknown, count surviving files, and enforce the same 15 GB limit on retained files and future writes.” The separate disk decision is now approved and bound, not a pending human checkpoint. Existing Plan265-15 TaskC amendment and its narrow plan check are complete. Source7d4eda7f has 27 focused tests/types/shell passing; independent RETAINED-DISK-REVIEW-v1 finds one preparation write-order defect, now assigned to the source author for repair. No new allocation, pilot, provider or Match has been started. Do not duplicate the active source-fix agent or run a real historical reader meanwhile. Finish review/fix/validation/narrow verification, then distinct fresh request/allocation and same-process capacity under standing approval without repeat literals. Old failed v1 artifacts and full-open-time interpretation remain immutable; prospective565459ms time carry, known survivor debit and unknown historical disk/RSS remain explicit. Same15GB/8h/300Match/runtime/privacy/freeze-beforeformation bounds unchanged. Prior pending-disk paragraphs below are historical and superseded.
 
 LATEST SOURCE CHECKPOINT (2026-10-03T20:09Z): source repair `748d7869` independently reviewed clean in `265-15-IMPORT-CRASH-REVIEW-v5.md` and verified for the narrow source-repair subgoal in `265-15-IMPORT-CRASH-SOURCE-VERIFICATION-v2.md`. The remaining retained-ledger lstat/readFileSync race is fixed with the shared bounded descriptor readers for both starts and terminals. Root validation v3 records 10 focused tests, project types, whitespace and the factory boundary scan passing; preceding validation v2 retains genuine full-48/root-equality/call-count evidence and honest broad-suite limitations. No empirical entry or verifier is active. The source-fix loop is closed, not Plan265-15, Phase265 or empirical admission. HUMAN-ONLY choice remains: approve the proposed retained-and-future 15GB disk accounting while explicitly disclosing the failed launch's historical peak as unknown, or retain the past-peak proof requirement and keep preparation closed. `265-15-HISTORICAL-DISK-ACCOUNTING-DECISION-v1.md` is pending, not approved by the earlier crash-time approval. Do not create another allocation/run, fabricate a peak/head/result, repeat heavy historical scans, or infer empirical credit. Current-rules baseline265-16 and266freeze remain unstarted; holdout unopened, freeze-before-formation and no-public/counting/production unchanged. Earlier repair snapshots below are historical and superseded.
 
