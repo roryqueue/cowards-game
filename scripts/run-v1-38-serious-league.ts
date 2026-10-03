@@ -901,6 +901,9 @@ export const verifyRetainedProductionFailures = (repository: FactoryRepository |
   for (const [, node] of nodes.filter(([, node]) => ["response-runtime-invocation", "response-runtime-invocation-failure", "response-runtime-cleanup"].includes(node.kind))) {
     if (rows("response-match-start").filter(([root]) => node.links.includes(root)).length !== 1) return fail("RETAINED_RESPONSE_RUNTIME_CHARGE")
   }
+  if (allocation.schemaVersion === "league-prospective-execution-allocation-v3") for (const [, node] of nodes.filter(([, node]) => ["response-match-result", "response-match-execution-failure"].includes(node.kind))) {
+    if (rows("response-match-start").filter(([root]) => node.links.includes(root)).length !== 1) return fail("RETAINED_RESPONSE_RUNTIME_CHARGE")
+  }
   for (const [failureRoot, failureNode] of failures) {
     const failure = failureNode.value, start = validateFactoryAttemptStart(failure.start)
     const matching = starts.filter(([, node]) => node.value.start.root === start.root)
@@ -936,6 +939,9 @@ export const verifyRetainedProductionFailures = (repository: FactoryRepository |
     }
     const roundBlocks = blocks.filter((block) => block.round.round.root === redTeamStart.roundRoot || block.round.roundOrdinal === blocks.find((row) => row.round.round.root === redTeamStart.roundRoot)?.round.roundOrdinal)
     if (target.roundRoot !== redTeamStart.roundRoot || target.candidateRoot !== redTeamStart.candidateRoot || job.evaluationRole === "development_response" && (!roundBlocks.length || !same(target.targets, roundBlocks.map((block) => ({ seed: block.seed, target: block.round.target, weights: block.matrix.solver.weights }))) || !same(target.candidates.map((row: any) => row.candidateRoot), roundBlocks[0]!.candidateRoots))) return fail("RETAINED_RESPONSE_FAILURE_TARGET")
+    const charges = [...graph.matches("response-match-start", start.root)].sort((a, b) => a.ordinal - b.ordinal).map(({ root }) => [root, graph.get(root)!] as const)
+    const results = graph.matches("response-match-result", start.root).map(({ root }) => [root, graph.get(root)!] as const)
+    const validationRows = allocation.schemaVersion === "league-prospective-execution-allocation-v3" ? rows("response-validation").filter(([, node]) => node.links.includes(matching[0]![0])) : []
     let authoredSource: LabRoot | null = null
     let authoredProviderSource: LeagueResponseProviderSource | undefined
     if (failure.author) {
@@ -945,17 +951,23 @@ export const verifyRetainedProductionFailures = (repository: FactoryRepository |
         const authored = verifyRetainedLeagueAuthoring(repository!, allocation, author.evidenceArtifactRoot)
         authoredSource = authored.ingestion.packet.source.root
         if (allocation.schemaVersion === "league-prospective-execution-allocation-v3") {
-          const proposal = factoryProposalFromPacket(authored.ingestion.packet), validationRows = rows("response-validation").filter(([, node]) => node.links.includes(matching[0]![0]) && node.value.proposalRoot === proposal.root)
-          if (validationRows.length !== 1) return fail("RETAINED_FAILED_RESPONSE_VALIDATION")
-          const [evidenceRoot, validationNode] = validationRows[0]!, sourceBytes = new TextEncoder().encode(authored.ingestion.sourceUtf8)
-          const defaults = defaultRuntimeMetadata("typescript"), revision = buildStrategyRevision({ source: authored.ingestion.sourceUtf8, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
-          const binding = { proposalRoot: proposal.root, sourceRoot: proposal.source.root, revisionId: revision.id, validation: revision.validation, exactNativeLane: proposal.nativeLane }
-          if (!revision.validation.valid || !same(validationNode.value, binding)) return fail("RETAINED_FAILED_RESPONSE_VALIDATION")
-          const validationValue = { schemaVersion: "factory-validation-evidence-v1" as const, privacy: "private_offline" as const, proposalRoot: proposal.root, validationRoot: labRoot("factory-selected-source-validation-v1", binding), status: "valid" as const, exactNativeLane: proposal.nativeLane, evidenceRoot }
-          authoredProviderSource = { proposal, sourceBytes, validation: FactoryValidationEvidenceSchema.parse({ ...validationValue, root: deriveFactoryValidationRoot(validationValue) }) }
+          // Authoring can fail before selected validation is published. Only an
+          // evidence-free, zero-charge prefix may omit it; available validation
+          // is always checked, including a foreign proposal linked to this start.
+          if (validationRows.length > 1 || charges.length && validationRows.length !== 1) return fail("RETAINED_FAILED_RESPONSE_VALIDATION")
+          if (validationRows.length) {
+            const proposal = factoryProposalFromPacket(authored.ingestion.packet)
+            const [evidenceRoot, validationNode] = validationRows[0]!, sourceBytes = new TextEncoder().encode(authored.ingestion.sourceUtf8)
+            const defaults = defaultRuntimeMetadata("typescript"), revision = buildStrategyRevision({ source: authored.ingestion.sourceUtf8, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
+            const binding = { proposalRoot: proposal.root, sourceRoot: proposal.source.root, revisionId: revision.id, validation: revision.validation, exactNativeLane: proposal.nativeLane }
+            if (!revision.validation.valid || !same(validationNode.value, binding)) return fail("RETAINED_FAILED_RESPONSE_VALIDATION")
+            const validationValue = { schemaVersion: "factory-validation-evidence-v1" as const, privacy: "private_offline" as const, proposalRoot: proposal.root, validationRoot: labRoot("factory-selected-source-validation-v1", binding), status: "valid" as const, exactNativeLane: proposal.nativeLane, evidenceRoot }
+            authoredProviderSource = { proposal, sourceBytes, validation: FactoryValidationEvidenceSchema.parse({ ...validationValue, root: deriveFactoryValidationRoot(validationValue) }) }
+          }
         }
       }
     }
+    if (allocation.schemaVersion === "league-prospective-execution-allocation-v3" && validationRows.length && !authoredProviderSource) return fail("RETAINED_FAILED_RESPONSE_VALIDATION")
     const conditions = enumerateLeagueResponseConditions(allocation, target.candidates.map((row: any) => row.candidateRoot))
     const providerSources = new Map<LabRoot, ReturnType<typeof readCandidateClosure>>()
     const providerSource = (candidate: LeagueCandidateInput | undefined) => {
@@ -964,8 +976,6 @@ export const verifyRetainedProductionFailures = (repository: FactoryRepository |
       if (!source) { source = readCandidateClosure(candidate.closure); providerSources.set(candidate.admission.candidate.root, source) }
       return source
     }
-    const charges = [...graph.matches("response-match-start", start.root)].sort((a, b) => a.ordinal - b.ordinal).map(({ root }) => [root, graph.get(root)!] as const)
-    const results = graph.matches("response-match-result", start.root).map(({ root }) => [root, graph.get(root)!] as const)
     if (failure.accepted && (failure.matchCount !== conditions.length || results.length !== conditions.length)) return fail("RETAINED_RESPONSE_FAILURE_TERMINAL")
     if (charges.length !== failure.matchCount || charges.length > conditions.length || charges.length > job.reservation.matches || results.length < charges.length - 1 || results.length > charges.length || charges.length && !authoredSource) return fail("RETAINED_FAILED_RESPONSE_COVERAGE")
     for (const [ordinal, [chargeRoot, charge]] of charges.entries()) {

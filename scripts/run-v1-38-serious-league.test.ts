@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MATCH_KERNEL } from "../packages/engine/src/index.js"
 import { defaultRuntimeMetadata, admitCanonicalJsonValue } from "@cowards/spec"
 import { buildStrategyRevision } from "../packages/runtime-js/src/revision.js"
+import * as revisionApi from "../packages/runtime-js/src/revision.js"
 import { allocationFixture, prospectiveFixture, prospectiveLifetimeFixture, capacityFixture } from "../packages/strategy-lab/src/league/allocation.test.js"
 import { importedCandidateFixture } from "../packages/strategy-lab/src/league/contracts.test.js"
 import { createLeagueExecutionAllocation, createLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt } from "../packages/strategy-lab/src/league/allocation.js"
@@ -45,6 +46,56 @@ vi.mock("node:fs", async (importOriginal) => {
 afterEach(() => { descriptorSyncFailure.active = false; descriptorSyncFailure.error = null; vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 const temporary = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-command-test-"))); directories.push(directory); return directory }
 
+it.each(["authoring-append", "validation-publication", "selected-validation", "validated-before-charge"])("host response receipt V3 retains honest zero-charge produced author failure (%s)", async (stage) => {
+  const candidates = [await candidate(1), await candidate(3), await candidate(5)], factoryDirectory = realpathSync(mkdtempSync(join(tmpdir(), "factory-retained-v3-"))), league = createLeagueRepository(temporary()), input = prospectiveLifetimeFixture()
+  directories.push(factoryDirectory)
+  const repository = createFactoryRepository(factoryDirectory)
+  const put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw Error("fixture canonical"); return publishFactoryArtifact(repository, encoded.canonicalBytes) }, r = (value: unknown) => labRoot("retained-v3-precharge-fixture", value)
+  const { root: _root, schemaVersion: _schema, ...body } = input.amendment
+  const amendment = createLeagueProspectiveAmendmentV3({ ...body, policy: { ...body.policy, operations: { ...body.policy.operations, hostResponseReceiptMilliseconds: 5000 } }, hostReceiptApproval: "265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002", bases: body.bases.map((base, index) => ({ ...base, publicationArtifactRoot: candidates[index]!.publicationRoot, candidateAdmissionRoot: candidates[index]!.admission.root, sourceRoot: candidates[index]!.closure.sourceArtifactRoot, supervisionArtifactRoot: candidates[index]!.admission.importEvidence!.supervisionArtifactRoot })) })
+  const allocation = createProspectiveLeagueExecutionAllocationV3({ ...input, amendment, operations: amendment.policy.operations, initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, outputDirectories: { league: league.directory, responseFactory: repository.directory } }), job = allocation.rounds[0]!.jobs[0]!
+  let ledger = declareRedTeamAllocation({ phase: 265, evidenceClass: "injected_fixture", authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes })
+  ledger = startRedTeamAttempt({ ledger, channel: job.channel, roundRoot: r("round"), candidateRoot: candidates[0]!.admission.candidate.root, participantId: job.participantId, reviewerId: job.reviewerId, disclosureRoot: job.disclosureArtifactRoot, provenanceRoot: job.provenanceArtifactRoot, inputRoot: job.producerRequestArtifactRoot, retryParentRoot: null, reservation: job.reservation })
+  const start = ledger.starts[0]!, graph = new LeagueRecordGraph(league, allocation.operations), target = { roundRoot: start.roundRoot, candidateRoot: start.candidateRoot, targets: [{ seed: allocation.seedBlocks[0], target: {}, weights: [] }], candidates: candidates.map((row) => { const bytes = readFactoryArtifact(row.closure.factoryRepository, row.closure.sourceArtifactRoot); publishFactoryArtifact(repository, bytes); return { candidateRoot: row.admission.candidate.root, sourceArtifactRoot: row.closure.sourceArtifactRoot, byteLength: bytes.length } }) }
+  const stop = Error(`finite precharge fixture: ${stage}`), host = vi.fn(() => { throw Error("unexpected mock provider construction") }), run = vi.fn(async () => { throw Error("unexpected mock Match execution") })
+  await expect(produceLeagueResponse({ allocation, job, start, startArtifactRoot: put(start), targetArtifactRoot: put(target), remainingWallMilliseconds: allocation.operations.wallClockMilliseconds, repository, opponents: candidates.map((row) => ({ candidateRoot: row.admission.candidate.root, closure: row.closure })), threshold: { repository: candidates[0]!.factoryRepository, artifactRoot: candidates[0]!.admission.importEvidence!.thresholdArtifactRoot }, retention: {
+    append(kind, value, links) { if (kind === (stage === "authoring-append" ? "response-authoring" : stage === "validation-publication" ? "response-validation" : "never")) throw stop; return graph.append(kind, value, links) },
+    beforeDispatch() { throw stop }, beforeInvocation() { throw Error("unexpected mock invocation") },
+  }, fixture: { host: { createFactorySupervisedRuntime: host }, run, author: async () => {
+    const result = await ingestNamedFactoryPacket({ producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", producerInput: { split: "development", doctrineFamily: "finite-precharge-v3", provider: { providerId: "source-fixture", modelId: "local", modelVersion: "test", settingsRoot: r("settings"), promptRoot: r("prompt"), contextRoot: r("context") }, build: { buildRoot: r("build"), toolchainRoot: r("toolchain") }, lineage: { predecessorRoot: LAB_ADMITTED_ROOTS.currentStartRoot, correctionRoot: null, retryParentRoot: null } } }, repository)
+    if (result.disposition !== "accepted") throw Error("fixture ingestion")
+    const ingestion = readFactoryIngestion(repository, result.artifactRoot)
+    // This reader regression authenticates the result projection; full author validation is independently tested.
+    vi.spyOn(leagueAuthoring, "verifyRetainedLeagueAuthoring").mockReturnValue({ ingestion } as never)
+    if (stage === "selected-validation") {
+      const actual = revisionApi.buildStrategyRevision
+      vi.spyOn(revisionApi, "buildStrategyRevision").mockImplementation((request) => { const revision = actual(request); return request.source === ingestion.sourceUtf8 ? { ...revision, validation: { ...revision.validation, valid: false } } : revision })
+    }
+    const body = { disposition: "produced" as const, allocationRoot: allocation.root, startRoot: start.root, jobId: job.id, ingestionArtifactRoot: result.artifactRoot, modelTokens: 0, elapsedMilliseconds: 0 }
+    return { disposition: body.disposition, startRoot: start.root, ingestionArtifactRoot: result.artifactRoot, modelTokens: 0, elapsedMilliseconds: 0, evidenceArtifactRoot: put({ ...body, root: labRoot("league-authoring-result-v1", body) }) }
+  } } })).rejects.toThrow(stage === "selected-validation" ? "RESPONSE_VALIDATION" : stop.message)
+  expect(host).not.toHaveBeenCalled(); expect(run).not.toHaveBeenCalled()
+  const failureRoot = graph.latestRoot!, records = readLeagueRecordGraph(league, failureRoot, allocation.operations)
+  expect(records.get(failureRoot)!.value.matchCount).toBe(0)
+  for (const kind of ["response-match-start", "response-match-result", "response-runtime-cleanup", "response-runtime-invocation", "response-runtime-invocation-failure"]) expect(records.roots(kind)).toHaveLength(0)
+  expect(records.roots("response-validation")).toHaveLength(stage === "validated-before-charge" ? 1 : 0)
+  ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [failureRoot], candidateAdmissionRoot: null })
+  const blocks = [{ seed: allocation.seedBlocks[0], round: { round: { root: start.roundRoot }, roundOrdinal: 0, target: {} }, matrix: { solver: { weights: [] } }, candidateRoots: candidates.map((row) => row.admission.candidate.root) }] as never
+  expect(() => verifyRetainedProductionFailures(repository, allocation, records, ledger, blocks, candidates)).not.toThrow()
+  for (const kind of ["response-runtime-cleanup", "response-runtime-invocation", "response-runtime-invocation-failure", "response-match-result", "response-match-execution-failure"]) {
+    const rogue = { ...records, *entries() { yield* records.entries(); yield [r(kind), { kind, value: { identity: { sourceRoot: "foreign" } }, links: [records.roots("response-production-start")[0]!] }] as never } }
+    expect(() => verifyRetainedProductionFailures(repository, allocation, rogue, ledger, blocks, candidates), kind).toThrow("RETAINED_RESPONSE_RUNTIME_CHARGE")
+  }
+  if (stage === "validated-before-charge") {
+    const validationRoot = records.roots("response-validation")[0]!
+    for (const field of ["proposalRoot", "sourceRoot", "revisionId", "validation", "exactNativeLane"]) {
+      const node = structuredClone(records.get(validationRoot)!), wrong = { ...records, get(root: typeof validationRoot) { return root === validationRoot ? node : records.get(root) } }
+      node.value[field] = "wrong"
+      expect(() => verifyRetainedProductionFailures(repository, allocation, wrong, ledger, blocks, candidates), field).toThrow("RETAINED_FAILED_RESPONSE_VALIDATION")
+    }
+  }
+}, 120000)
+
 it.each(["issuance", "execution", "prefix"])("host response receipt V3 retained failed response joins every available provider (%s)", async (stage) => {
   const candidates = [await candidate(1), await candidate(3), await candidate(5)], factoryDirectory = realpathSync(mkdtempSync(join(tmpdir(), "factory-retained-v3-"))), league = createLeagueRepository(temporary()), input = prospectiveLifetimeFixture()
   directories.push(factoryDirectory)
@@ -78,6 +129,14 @@ it.each(["issuance", "execution", "prefix"])("host response receipt V3 retained 
   ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [failureRoot], candidateAdmissionRoot: null })
   const blocks = [{ seed: allocation.seedBlocks[0], round: { round: { root: start.roundRoot }, roundOrdinal: 0, target: {} }, matrix: { solver: { weights: [] } }, candidateRoots: candidates.map((row) => row.admission.candidate.root) }] as never
   expect(() => verifyRetainedProductionFailures(repository, allocation, records, ledger, blocks, candidates)).not.toThrow()
+  if (stage === "issuance") {
+    const validationRoot = records.roots("response-validation")[0]!
+    const missing = { ...records, roots(kind: string) { return kind === "response-validation" ? [] : records.roots(kind) } }
+    expect(() => verifyRetainedProductionFailures(repository, allocation, missing, ledger, blocks, candidates)).toThrow("RETAINED_FAILED_RESPONSE_VALIDATION")
+    const node = structuredClone(records.get(validationRoot)!), wrong = { ...records, get(root: typeof validationRoot) { return root === validationRoot ? node : records.get(root) } }
+    node.value.sourceRoot = "wrong"
+    expect(() => verifyRetainedProductionFailures(repository, allocation, wrong, ledger, blocks, candidates)).toThrow("RETAINED_FAILED_RESPONSE_VALIDATION")
+  }
   expect(runs).toBe(stage === "issuance" ? 0 : stage === "execution" ? 1 : 9)
   expect(records.roots("response-runtime-cleanup")).toHaveLength(stage === "issuance" ? 1 : stage === "execution" ? 2 : 19)
   const mutations = ["image", "runtimeLimitsRoot", "tupleId", "tupleRoot", "factoryPacketRoot", "factoryProposalRoot", "factoryValidationRoot", "sourceRoot", "executableRoot", "attemptRoot", "budgetRoot", "revisionId"]
