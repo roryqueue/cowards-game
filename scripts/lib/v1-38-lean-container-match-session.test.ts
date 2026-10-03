@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 const nativeStreamMock = vi.hoisted(() => ({ worker: undefined as any }))
 vi.mock("node:worker_threads", async (original) => {
   const actual = await original<typeof import("node:worker_threads")>()
-  return { ...actual, Worker: vi.fn(function (...args: any[]) { if (nativeStreamMock.worker) { Atomics.store(new Int32Array(args[1].workerData.start), 0, 1); return nativeStreamMock.worker }; return Reflect.construct(actual.Worker, args) }) }
+  return { ...actual, Worker: vi.fn(function (...args: any[]) { if (nativeStreamMock.worker) { Atomics.store(new Int32Array(args[1].workerData.start), 0, 1); return nativeStreamMock.worker }; throw Error("unexpected native Worker construction") }) }
 })
 afterEach(() => { nativeStreamMock.worker = undefined; vi.restoreAllMocks() })
 import { buildLeanAuthenticatedHarnessSource, buildLeanObserverBrokerSource, createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, validateLeanTimingObservation, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult, type LeanTimingBinding } from "./v1-38-lean-container-match-session.js"
@@ -27,6 +27,7 @@ import { mkdtempSync, rmSync, realpathSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createHash } from "node:crypto"
+import { createLeanContainerFixtureStreamFactory } from "./v1-38-lean-container-match-session.js"
 
 const receiptDirectories: string[] = []
 afterEach(() => { for (const directory of receiptDirectories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
@@ -59,6 +60,13 @@ describe("host response receipt native stream clock split", () => {
     expect(transport).not.toHaveBeenCalled(); expect(streamFactory).not.toHaveBeenCalled()
     const normal = create("receipt-unchanged-default", []); normal.session.close()
     expect(normal.persistent.calls[0]![1].at(-1)).toBe(LEAN_CONTAINER_BROKER_SOURCE)
+  })
+  it.each(["missing", "undefined", "null"])("host response receipt rejects %s fixture stream before claims or construction", (fault) => {
+    const { authority, binding } = receiptGrant(), transport = vi.fn(() => { throw Error("control must not dispatch") })
+    for (const layer of ["factory", "planner"] as const) claimProspectiveLeagueHostReceiptAuthority(authority, binding, layer)
+    expect(() => createLeanContainerMatchSession({ ...binding, image: binding.runtime.image, infrastructureProfile: "closeout", transport, ...(fault === "undefined" ? { streamFactory: undefined } : fault === "null" ? { streamFactory: null as never } : {}), prospectiveHostReceiptAuthority: authority, prospectiveHostReceiptBinding: binding })).toThrow("FIXTURE_STREAM")
+    expect(transport).not.toHaveBeenCalled()
+    expect(claimProspectiveLeagueHostReceiptAuthority(authority, binding, "session")).toBe(5000)
   })
   it("rejects forged, copied, crossed and reused authority before transport", () => {
     const { authority, binding } = receiptGrant()
@@ -95,7 +103,7 @@ describe("host response receipt native stream clock split", () => {
     const waits: number[] = []; let receiptElapsed = 0
     vi.spyOn(Atomics, "wait").mockImplementation((_view, _index, _value, timeout) => { waits.push(timeout!); if (waits.length === 2) receiptElapsed = elapsed; return waits.length === 2 && expire ? "timed-out" : "ok" })
     const transport: LeanContainerMatchTransport = (_command, args) => { if (args[0] === "inspect") return exists ? owned(binding.ownershipLabel) : absent(binding.containerName); if (args[0] === "create") exists = true; if (args[0] === "rm") exists = false; return result("id\n") }
-    const session = createLeanContainerMatchSession({ ...binding, image: binding.runtime.image, infrastructureProfile: "closeout", transport, prospectiveHostReceiptAuthority: authority, prospectiveHostReceiptBinding: binding })
+    const session = createLeanContainerMatchSession({ ...binding, image: binding.runtime.image, infrastructureProfile: "closeout", transport, streamFactory: createLeanContainerFixtureStreamFactory(nativeStreamMock.worker), prospectiveHostReceiptAuthority: authority, prospectiveHostReceiptBinding: binding })
     const signingIdentity = { keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID, secret: "fixture-only:runtime-js:v1.17:host-secret" }
     const request = createSelectedRuntimeInvocationRequestV117({ requestId: "request:receipt", invocationId: "invocation:receipt", kernelRequestId: "kernel:receipt", method: "selectActivations", semanticTuple: { rules: "cowards-rules-v1.4", engine: "engine-kernel-v1.37-candidate-1", runtimeAbi: "strategy-runtime-abi-v1.17", chronicle: "chronicle-recorder-current-events-v1.37-candidate-1", arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1", setPolicy: "canonical-set-policy-v1.4" }, sourceIdentity: { strategyRevisionId: binding.runtime.revisionId, originalSourceSha256: binding.runtime.executableRoot, normalizedSourceSha256: binding.runtime.executableRoot, artifactSha256: binding.runtime.executableRoot }, budget: createRuntimeInvocationBudgetV117("selectActivations"), accounting: { prestate: createRuntimeAbiV117ExecutionLedger() }, input: { value: {} }, retry: { retryId: "retry:receipt", attempt: 0, previousRequestSha256: null } }, signingIdentity)
     const invocation = { requestBytes: serializeRuntimeInvocationRequestV117(request), executableSource: "inert", signingIdentity }

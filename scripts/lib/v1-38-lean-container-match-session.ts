@@ -185,10 +185,11 @@ child.on("exit",(code,signal)=>{exited={code,signal};if(pending)finish(pending.t
 parentPort.on("message",m=>{if(m.type==="exchange"){const occupied=pending!==null||exited!==null||stdout.length!==0||stderr.length!==0;pending=m;if(occupied)return void finish(-5);child.stdin.write(Buffer.from(m.request));}else if(m.type==="close"){if(pending){finish(-7);forced=true}pending=m;child.stdin.end();if(forced&&!exited)child.kill("SIGKILL");if(exited)finish(stderr.length===0&&(forced||(exited.code===0&&!exited.signal))?1:-6)}});
 `
 
-const defaultStreamFactory: LeanContainerPersistentStreamFactory = (command, args, options) => {
+type StreamWorker = Pick<Worker, "postMessage" | "terminate">
+const createStreamFactory = (launch: (command: string, args: readonly string[], start: SharedArrayBuffer, max: number) => StreamWorker): LeanContainerPersistentStreamFactory => (command, args, options) => {
   const origins = new WeakMap<object, LeanPrivateFailureOrigin>()
   const start = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)
-  const worker = new Worker(STREAM_WORKER_SOURCE, { eval: true, workerData: { command, args: [...args], path: process.env.PATH ?? "", start, max: options.maxBufferBytes } })
+  const worker = launch(command, args, start, options.maxBufferBytes)
   const started = new Int32Array(start)
   if (Atomics.wait(started, 0, 0, options.startupTimeoutMilliseconds) === "timed-out" || Atomics.load(started, 0) !== 1) {
     void worker.terminate()
@@ -218,6 +219,13 @@ const defaultStreamFactory: LeanContainerPersistentStreamFactory = (command, arg
   return stream
 }
 
+const defaultStreamFactory = createStreamFactory((command, args, start, max) => new Worker(STREAM_WORKER_SOURCE, { eval: true, workerData: { command, args: [...args], path: process.env.PATH ?? "", start, max } }))
+/** Explicit process-local mock transaction seam; never constructs a Worker or child. */
+export const createLeanContainerFixtureStreamFactory = (worker: StreamWorker): LeanContainerPersistentStreamFactory => {
+  if (process.env.NODE_ENV !== "test") throw new TypeError("LEAN_STREAM_FIXTURE_TEST_ONLY")
+  return createStreamFactory((_command, _args, start) => { Atomics.store(new Int32Array(start), 0, 1); return worker })
+}
+
 const exactKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean => Object.keys(value).sort().join("\0") === [...keys].sort().join("\0")
 const canonicalBase64 = (value: string): boolean => { try { return Buffer.from(value, "base64").toString("base64") === value } catch { return false } }
 const assertSafeIdentity = (label: string, value: string): void => { if (value.length === 0 || value.startsWith("-") || !/^[a-zA-Z0-9._:/@-]+$/u.test(value)) throw new TypeError(`LEAN_CONTAINER_SESSION_${label}_INVALID`) }
@@ -244,7 +252,8 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   if ("prospectiveHostReceiptAuthority" in options || "prospectiveHostReceiptBinding" in options) {
     const authority = options.prospectiveHostReceiptAuthority, binding = options.prospectiveHostReceiptBinding
     if (!authority || !binding || options.infrastructureProfile !== "closeout" || options.privateObserver !== undefined || options.matchId !== binding.matchId || options.containerName !== binding.containerName || options.ownershipLabel !== binding.ownershipLabel || options.image !== binding.runtime.image || (options.transport !== undefined || options.streamFactory !== undefined) && !isProspectiveLeagueHostReceiptFixture(authority)) throw new TypeError("LEAN_HOST_RECEIPT_BINDING")
-    if (isProspectiveLeagueHostReceiptFixture(authority) && options.transport === undefined) throw new TypeError("LEAN_HOST_RECEIPT_FIXTURE_CONTROL")
+    if (isProspectiveLeagueHostReceiptFixture(authority) && typeof options.transport !== "function") throw new TypeError("LEAN_HOST_RECEIPT_FIXTURE_CONTROL")
+    if (isProspectiveLeagueHostReceiptFixture(authority) && typeof options.streamFactory !== "function") throw new TypeError("LEAN_HOST_RECEIPT_FIXTURE_STREAM")
     hostResponseReceiptMilliseconds = claimProspectiveLeagueHostReceiptAuthority(authority, binding, "session")
   }
   assertLeanInfrastructureProfile(options.infrastructureProfile)

@@ -2,9 +2,10 @@ import { describe, expect, it, vi, afterEach } from "vitest"
 const nativeStreamMock = vi.hoisted(() => ({ worker: undefined as any }))
 vi.mock("node:worker_threads", async (original) => {
   const actual = await original<typeof import("node:worker_threads")>()
-  return { ...actual, Worker: vi.fn(function (...args: any[]) { if (nativeStreamMock.worker) { Atomics.store(new Int32Array(args[1].workerData.start), 0, 1); return nativeStreamMock.worker }; return Reflect.construct(actual.Worker, args) }) }
+  return { ...actual, Worker: vi.fn(function (...args: any[]) { if (nativeStreamMock.worker) { Atomics.store(new Int32Array(args[1].workerData.start), 0, 1); return nativeStreamMock.worker }; throw Error("unexpected native Worker construction") }) }
 })
 import { performance } from "node:perf_hooks"
+import { createLeanContainerFixtureStreamFactory } from "./v1-38-lean-container-match-session.js"
 afterEach(() => { nativeStreamMock.worker = undefined; vi.restoreAllMocks() })
 import { createHash } from "node:crypto"
 import { defaultRuntimeMetadata, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
@@ -108,6 +109,13 @@ const hostReceiptOptions = (fault?: string) => {
   return { ...opts, ...binding, prospectiveLifetimeAuthority, prospectiveLifetimeMs: 600000, prospectiveHostReceiptAuthority }
 }
 describe("host response receipt planner charge and isolation", () => {
+  it.each(["missing", "undefined", "null"])("rejects %s fixture stream before planner claims or construction", (fault) => {
+    const opts = hostReceiptOptions(), { streamFactory: _stream, ...withoutStream } = opts
+    expect(() => createPlannerSupervisedRuntime({ ...withoutStream, ...(fault === "undefined" ? { streamFactory: undefined } : fault === "null" ? { streamFactory: null as never } : {}) })).toThrow("FIXTURE_STREAM")
+    expect(opts.calls).toHaveLength(0)
+    const provider = createPlannerSupervisedRuntime(opts)
+    expect(provider.close().cleanupComplete).toBe(true)
+  })
   it("threads the opaque grant into the actual legacy session, charging before dispatch", () => {
     const opts = hostReceiptOptions(), original = opts.streamFactory, waits: number[] = []
     let provider: ReturnType<typeof createPlannerSupervisedRuntime>
@@ -121,7 +129,7 @@ describe("host response receipt planner charge and isolation", () => {
     const opts = hostReceiptOptions(); let waits = 0, hostWait = 0, dispatches = 0
     nativeStreamMock.worker = { postMessage(message: any) { if (message.type === "exchange") dispatches++; else Atomics.store(new Int32Array(message.control), 0, 1) }, terminate: vi.fn(async () => 0) }
     vi.spyOn(Atomics, "wait").mockImplementation((_view, _index, _value, timeout) => { if (++waits === 2) { hostWait = timeout!; return "timed-out" }; return "ok" })
-    const provider = createPlannerSupervisedRuntime({ ...opts, streamFactory: undefined }), e = provider.invoke(request("selectActivations"), provider.identity)
+    const provider = createPlannerSupervisedRuntime({ ...opts, streamFactory: createLeanContainerFixtureStreamFactory(nativeStreamMock.worker) }), e = provider.invoke(request("selectActivations"), provider.identity)
     expect(hostWait).toBe(5000); expect(dispatches).toBe(1)
     expect(e).toMatchObject({ charged: true, completed: false, outputBytes: 0, result: { ok: false, systemFailure: { code: "MALFORMED_IPC", retryable: false } } })
     expect(plannerApi.getPlannerPrivateDiagnostic(provider, e)).toMatchObject({ stage: "stream_exchange", reason: "wait_timeout" })
