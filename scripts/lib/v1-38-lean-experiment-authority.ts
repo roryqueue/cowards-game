@@ -24,13 +24,15 @@ export const deriveLeanCandidateRuntime = (input: FactoryCandidateClosure) => {
   return { candidateRoot: closure.candidate.root, runtime }
 }
 export const issueLeanRuntimeAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, input: FactoryCandidateClosure, binding: ProspectiveLeagueLifetimeProviderBinding): LeanRuntimeAuthority => {
-  const derived = deriveLeanCandidateRuntime(input), candidateRoot = derived.candidateRoot
   const state = readLeanLedger(ledger)
-  const slot = ledger.allocation.slots[charge.ordinal]
+  const retainedCharge = state.charges.get(charge.slotRoot)
+  if (!retainedCharge || labRoot("lean-slot-charge", charge) !== labRoot("lean-slot-charge", retainedCharge)) return fail()
+  const derived = deriveLeanCandidateRuntime(input), candidateRoot = derived.candidateRoot
+  const slot = ledger.allocation.slots[retainedCharge.ordinal]
   const seatIndex = binding.seat === "bottom" ? 0 : 1
   const scheduled = slot && ledger.allocation.candidateRoots[slot.condition < 2 ? seatIndex : 1 - seatIndex]
   if (candidateRoot !== scheduled || labRoot("lean-candidate-runtime", binding.runtime) !== labRoot("lean-candidate-runtime", derived.runtime)) return fail()
-  if (state.stopped || state.charges.get(charge.slotRoot)?.root !== charge.root || state.terminals.has(charge.root) || !ledger.allocation.candidateRoots.includes(candidateRoot) || binding.budgetRoot !== ledger.allocation.root || binding.attemptRoot !== charge.root || binding.matchId !== `lean-${charge.root.slice(7, 31)}` || binding.containerName !== `lean-${charge.root.slice(7, 25)}-${binding.seat}` || binding.ownershipLabel !== `lean-${ledger.allocation.root.slice(7, 25)}` || binding.runtime.tupleRoot !== LAB_ADMITTED_ROOTS.tupleRoot || binding.runtime.runtimeLimitsRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot || binding.runtime.image !== LAB_ADMITTED_ROOTS.image || !["bottom", "top"].includes(binding.seat)) return fail()
+  if (state.stopped || state.terminals.has(retainedCharge.root) || !ledger.allocation.candidateRoots.includes(candidateRoot) || binding.budgetRoot !== ledger.allocation.root || binding.attemptRoot !== retainedCharge.root || binding.matchId !== `lean-${retainedCharge.root.slice(7, 31)}` || binding.containerName !== `lean-${retainedCharge.root.slice(7, 25)}-${binding.seat}` || binding.ownershipLabel !== `lean-${ledger.allocation.root.slice(7, 25)}` || binding.runtime.tupleRoot !== LAB_ADMITTED_ROOTS.tupleRoot || binding.runtime.runtimeLimitsRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot || binding.runtime.image !== LAB_ADMITTED_ROOTS.image || !["bottom", "top"].includes(binding.seat)) return fail()
   const key = `${ledger.allocation.root}:${charge.root}:${binding.seat}`
   if (used.has(key)) return fail()
   const authority: LeanRuntimeAuthority = Object.freeze({ schemaVersion: "lean-runtime-authority-v1", runtime: freezeLabValue(structuredClone(binding.runtime)), seat: binding.seat, toJSON: fail })

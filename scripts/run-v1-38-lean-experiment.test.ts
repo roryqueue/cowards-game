@@ -42,6 +42,7 @@ it("requires allocated source closure, rejects a different valid candidate and b
     const runtime = deriveLeanCandidateRuntime(allocated).runtime
     const b = { budgetRoot: a.root, attemptRoot: c.root, matchId: `lean-${c.root.slice(7, 31)}`, seat: "bottom" as const, containerName: `lean-${c.root.slice(7, 25)}-bottom`, ownershipLabel: `lean-${a.root.slice(7, 25)}`, runtime }
     expect(() => issueLeanRuntimeAuthority(l, { ...c, root: pin }, allocated, b)).toThrow("AUTHORITY")
+    expect(() => issueLeanRuntimeAuthority(l, { ...c, ordinal: 2 }, other, { ...b, runtime: deriveLeanCandidateRuntime(other).runtime })).toThrow("AUTHORITY")
     expect(() => issueLeanRuntimeAuthority(l, c, allocated, { ...b, runtime: deriveLeanCandidateRuntime(other).runtime })).toThrow("AUTHORITY")
     expect(() => issueLeanRuntimeAuthority(l, c, other, { ...b, runtime: deriveLeanCandidateRuntime(other).runtime })).toThrow("AUTHORITY")
     const h = issueLeanRuntimeAuthority(l, c, allocated, b)
