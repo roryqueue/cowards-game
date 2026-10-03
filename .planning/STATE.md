@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 V12 helper fixes independently clean; fresh request preparation next
-last_updated: "2026-10-02"
-last_activity: 2026-10-02
-last_activity_desc: V12 CR01/WR01 fixed;10guardregressions/strict/importinertpass; independent exactbyte reviewclean; no mode/allocation/Match
+stopped_at: Phase265 V12 requests independently accepted; unique data-only allocation preparation98897 active
+last_updated: "2026-10-03"
+last_activity: 2026-10-03
+last_activity_desc: FreshV12 eleven requests accepted; compile/allocation-input exit0; single prepare session98897 PID44142 active, no capacity/Match
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,24 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+FreshV12 actual request draft41127 CLOSEDexit0, actualdraft03:54:12.802Z,
+draft raw48e990194bc37577eb26b63cb013d9e7905a6790ff5267c0220bc2a092863ada.
+Distinct actual packetreviewer265_host_receipt_v12_packet_review accepted11/11
+with329933ms measured sequential per-job review, no findings; review raw
+107506e3e6c948e8ad2e47f16aeddcd412a4b7c480bdb70b65063444a495e837.
+Root compile98484 CLOSEDexit0,45artifacts; allocation-input72947 CLOSEDexit0.
+UNIQUE data-only prepare session98897 childPID44142 ACTIVE, parent44136,
+factoryrepository factory-264-fresh-20260914-approved-two. Do not duplicate
+this helpermode/retained historical candidate verification. No prospective
+allocation output/canonicalallocation/capacity/entry/Match yet. When actual
+prepare closes successfully, continue capacity-input (static sizing only),
+checked empty0700league store, exclusive allocation publication+commit/push,
+then ONE root run entry with fresh passing SAMEPROCESS capacity beforecharge.
+Source9ff/552bba3d/defe5024 unchanged; source/helper gates and standing
+approvals retained. AllLEAGpending; V11/otherconsumedhistory immutable;
+historical unknownDockerlaunch flag/unopenedholdout/freeze-beforeformation/
+no-public-counted-production unchanged. Previous helper notes below history.
 
 V12 helper bounded fixes COMPLETE, independent iteration2 review CLEAN:
 CR-01 all11 reviewed standalone/embedded canonical joins before publication;
