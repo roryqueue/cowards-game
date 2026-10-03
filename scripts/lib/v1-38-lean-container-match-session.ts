@@ -320,7 +320,15 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   }
   const adapter: StrategyExecutionAdapterV117 = {
     metadata: containerSubprocessStrategyExecutionAdapterMetadata,
-    execute(request) { const stdoutLimit = request.outputByteLimit ?? SUBPROCESS_STDOUT_BYTES; const encoded = encodeSubprocessIpcRequest({ source: request.source, methodName: request.methodName, input: request.input, outputByteLimit: request.outputByteLimit }); return strictJsonResponse(runMethod(request, "legacy", request.timeoutMs ?? RUNTIME_TIMEOUT_MS, stdoutLimit, SUBPROCESS_STDERR_BYTES, encoded).stdout, stdoutLimit, origins) },
+    execute(request) {
+      const stdoutLimit = request.outputByteLimit ?? SUBPROCESS_STDOUT_BYTES, encoded = encodeSubprocessIpcRequest({ source: request.source, methodName: request.methodName, input: request.input, outputByteLimit: request.outputByteLimit })
+      const response = runMethod(request, "legacy", request.timeoutMs ?? RUNTIME_TIMEOUT_MS, stdoutLimit, SUBPROCESS_STDERR_BYTES, encoded)
+      try { return strictJsonResponse(response.stdout, stdoutLimit, origins) }
+      catch (error) {
+        if (hostResponseReceiptMilliseconds !== undefined) { try { poison() } catch { /* Preserve the original inner admission error; state is already poisoned. */ } }
+        throw error
+      }
+    },
     executeV117(request) { return executeStrategyRuntimeAbiV117({ requestBytes: request.requestBytes, executableSource: request.executableSource, signingIdentity: request.signingIdentity, invokeGuest(guest) {
       const observed = (observation: RuntimeGuestObservationV117) => createRuntimeGuestExecutionV117(observation, consumeCandidateEvidenceFixture(request, observeRuntimeGuestAccountingV117(observation, guest.outputByteLimit)))
       const input = JSON.stringify({ source: guest.executableSource, methodName: guest.methodName, input: guest.input, outputByteLimit: guest.outputByteLimit, methodWallMilliseconds: guest.timeoutMs, startupTimeoutMilliseconds: guest.startupTimeoutMs, cancellationGraceMilliseconds: guest.cancellationGraceMilliseconds })

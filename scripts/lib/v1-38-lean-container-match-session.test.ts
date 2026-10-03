@@ -92,6 +92,20 @@ describe("host response receipt native stream clock split", () => {
     expect(persistent.frames).toHaveLength(1); expect(session.close().cleanupComplete).toBe(true); expect(persistent.closes).toBe(1)
     expect(control.calls.some((call) => call[1][0] === "rm")).toBe(true)
   })
+  it.each([["{", "json_invalid"], ["null", "object_invalid"], ['{"ok":true,"value":{},"extra":1}', "keys_invalid"], ['{"ok":0,"violation":{}}', "schema_invalid"]])("host response receipt poisons invalid inner legacy %s with original origin and one cleanup", (inner, reason) => {
+    const { authority, binding } = receiptGrant()
+    for (const layer of ["factory", "planner"] as const) claimProspectiveLeagueHostReceiptAuthority(authority, binding, layer)
+    const control = fakeTransport([absent(binding.containerName), result("id\n"), owned(binding.ownershipLabel), result(), result(), absent(binding.containerName)]), persistent = fakeStream([{ ...response(1, {}), stdoutBase64: Buffer.from(inner!).toString("base64") }])
+    const session = createLeanContainerMatchSession({ ...binding, image: binding.runtime.image, infrastructureProfile: "closeout", transport: control.transport, streamFactory: persistent.factory, prospectiveHostReceiptAuthority: authority, prospectiveHostReceiptBinding: binding })
+    const invoke = () => session.adapter.execute({ source: "inert", methodName: "selectActivations", input: {}, timeoutMs: 1000 })
+    let error: unknown; try { invoke() } catch (caught) { error = caught }
+    expect(error).toMatchObject({ code: "MALFORMED_IPC" })
+    expect(session.failureOrigin(error)).toEqual({ stage: "inner_response", reason })
+    expect(session.state).toBe("poisoned"); expect(() => invoke()).toThrow("SESSION_POISONED")
+    expect(persistent.frames).toHaveLength(1); expect(persistent.closes).toBe(1)
+    expect(session.close().cleanupComplete).toBe(true); expect(persistent.closes).toBe(1)
+    expect(control.calls.filter((call) => call[1][0] === "rm")).toHaveLength(1)
+  })
   it.each([["legacy", false, 1200], ["legacy", true, 5000], ["v117", false, 51], ["v117", true, 5000], ["v117", false, 1200]] as const)("keeps %s signed guest/broker budget with native receipt wait 5000; expiry=%s elapsed=%s", (mode, expire, elapsed) => {
     const { authority, binding } = receiptGrant()
     for (const layer of ["factory", "planner"] as const) claimProspectiveLeagueHostReceiptAuthority(authority, binding, layer)
@@ -174,6 +188,7 @@ describe("private IPC diagnostics injected session", () => {
     const { session, persistent, control } = create("diag-session", [frame])
     const error = capture(session), origin = (session as any).failureOrigin?.(error)
     expect(origin).toEqual({ stage, reason }); expect(Object.isFrozen(origin)).toBe(true)
+    expect(session.state).toBe(stage === "inner_response" ? "active" : "poisoned") // Historical no-grant behavior is unchanged.
     expect((session as any).failureOrigin?.({ ...(error as object) })).toBeUndefined()
     expect(session.close()).toEqual({ cleanupComplete: true, orphanedChild: false })
     expect(() => invoke(session)).toThrow(); expect(persistent.frames).toHaveLength(1)
