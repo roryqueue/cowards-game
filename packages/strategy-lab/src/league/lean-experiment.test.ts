@@ -1,9 +1,9 @@
-import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, expect, it } from "vitest"
 import { labRoot, LAB_ADMITTED_ROOTS } from "../contracts.js"
-import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, LEAN_FAILED_PREFIX, createLeanAllocationV2, admitLeanAllocation, verifyLeanFailedPrefix, verifyLeanFailedWriteInventory, publishLeanChildEntry, deriveLeanChildTerminal, publishLeanChildTerminal, readLeanChildTerminal, readLeanCumulativeAccounting, leanBytesRoot, leanCanonicalBytes } from "./lean-experiment.js"
+import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, LEAN_FAILED_PREFIX, createLeanAllocationV2, admitLeanAllocation, verifyLeanFailedPrefix, verifyLeanFailedWriteInventory, deriveLeanChildTerminal, readLeanChildTerminal, readLeanCumulativeAccounting, leanBytesRoot, leanCanonicalBytes, type LeanExperimentAllocationV2, type LeanExperimentLedger } from "./lean-experiment.js"
 import { assertLeanPublicationCapacity } from "./lean-experiment.js"
 import { writeLeanAll, createLeanAllocation, chargeLeanSlot, createLeanLedger, retainLeanMatch, verifyLeanEvidence, chooseLeanTier, encodeLeanReplay, decodeLeanReplay, leanSchedule, readLeanLedger } from "./lean-experiment.js"
 
@@ -89,22 +89,36 @@ it("denies symlink stores", () => {
   const p = mkdtempSync(join(tmpdir(), "lean-symlink-")); dirs.push(p); symlinkSync(p, join(p, "alias"))
   expect(() => createLeanLedger(join(p, "alias"), allocation())).toThrow()
 })
-const v2Ledger = () => {
+/** Inert file-backed arithmetic fixture, deliberately never passed to the
+ * production v2 allocation/ledger constructors. Its inventory root is an
+ * unverified marker, not historical disk proof or preparation authority. */
+const v2Ledger = (): LeanExperimentLedger => {
   const p = realpathSync(mkdtempSync(join(tmpdir(), "lean-v2-test-"))); dirs.push(p)
-  const a = createLeanAllocationV2({ sourceRoot: pin, reviewRoot: pin, candidateRoots: [pin, labRoot("test", 2)], seed: "prospective-test" })
-  return createLeanLedger(join(p, "evidence"), a)
+  const { root: _v1Root, schemaVersion: _v1Version, ...base } = allocation()
+  const body = { ...base, schemaVersion: "lean-experiment-allocation-v2" as const, predecessor: { ...LEAN_FAILED_PREFIX, writeInventoryRoot: labRoot("inert-unverified-inventory", p) } }
+  const a: LeanExperimentAllocationV2 = { ...body, root: labRoot("lean-experiment-allocation-v2", body) }
+  const directory = join(p, "evidence"); mkdirSync(directory, { mode: 0o700 })
+  writeFileSync(join(directory, "allocation.json"), leanCanonicalBytes(a))
+  writeFileSync(join(directory, "ledger.ndjson"), "")
+  writeFileSync(join(directory, "time.ndjson"), "")
+  return { directory, allocation: a }
 }
 const v2Entry = (l: ReturnType<typeof v2Ledger>) => ({ schemaVersion: "lean-child-entry-v2" as const, allocationRoot: l.allocation.root, sourceRoot: l.allocation.sourceRoot, requestBytesRoot: pin, head: "a".repeat(40), parentPid: 100, childPid: 101, handshakeRoot: pin, wallStartMs: 1_791_100_000_000, monotonicStartNs: "1000000000" })
-const enterV2 = (l: ReturnType<typeof v2Ledger>) => { const entry = v2Entry(l); publishLeanChildEntry(l, entry); beginLeanInterval(l, "pilot-entry", entry.wallStartMs); return entry }
-it("carries exact failed prefix without changing v1 open-time burn or inventing RSS", () => {
+const timeLine = (kind: "start" | "close", atMs: number) => Buffer.from(leanCanonicalBytes({ kind, id: "pilot-entry", atMs })).toString("utf8") + "\n"
+const enterV2 = (l: ReturnType<typeof v2Ledger>) => { const entry = v2Entry(l); writeFileSync(join(l.directory, "entry.json"), leanCanonicalBytes(entry)); writeFileSync(join(l.directory, "time.ndjson"), timeLine("start", entry.wallStartMs)); return entry }
+const retainV2Terminal = (l: ReturnType<typeof v2Ledger>, entry: ReturnType<typeof v2Entry>, terminal: ReturnType<typeof deriveLeanChildTerminal>) => { writeFileSync(join(l.directory, "child-terminal.json"), leanCanonicalBytes(terminal)); writeFileSync(join(l.directory, "time.ndjson"), timeLine("start", entry.wallStartMs) + timeLine("close", entry.wallStartMs + terminal.elapsedUpperBoundMs)) }
+it("keeps failed-prefix arithmetic inert while real v2 preparation stays denied", () => {
   const old = ledger(); beginLeanInterval(old, "pilot-entry", 1_791_038_553_541)
   expect(readLeanTimeAccounting(old).elapsedMs).toBe(28_800_000)
   const l = v2Ledger()
   expect(l.allocation.root).not.toBe(old.allocation.root)
   expect(readLeanTimeAccounting(l).elapsedMs).toBe(565_459)
-  expect(readLeanLedger(l)).toMatchObject({ charged: 0, elapsedMs: 565_459, physicalHighWaterBytes: 12_288 })
+  expect(() => readLeanLedger(l)).toThrow()
   expect(LEAN_FAILED_PREFIX.oldPeakRss).toBe("unknown")
-  expect(() => admitLeanAllocation({ ...l.allocation, predecessor: { ...LEAN_FAILED_PREFIX, chargedMatches: 1 } })).toThrow("ALLOCATION")
+  // The real historical inventory gate refuses both this forged predecessor
+  // and an otherwise shaped v2 allocation before semantic admission proceeds.
+  expect(() => admitLeanAllocation({ ...l.allocation, predecessor: { ...LEAN_FAILED_PREFIX, chargedMatches: 1 } })).toThrow()
+  expect(() => createLeanAllocationV2({ sourceRoot: pin, reviewRoot: pin, candidateRoots: [pin, labRoot("test", 2)], seed: "prospective-test" })).toThrow()
 })
 it("rejects any omitted, duplicated, downgraded or forged predecessor binding", () => {
   const p = LEAN_FAILED_PREFIX
@@ -112,25 +126,29 @@ it("rejects any omitted, duplicated, downgraded or forged predecessor binding", 
   expect(verifyLeanFailedPrefix(observed)).toBe(p)
   for (const changed of [{ ...observed, entry: pin }, { ...observed, decision: pin }, { ...observed, physicalBytes: 0 }, { ...observed, storeFiles: [...observed.storeFiles, "result.json"] }, { ...observed, storeFiles: observed.storeFiles.slice(1) }, { ...observed, oldResultExists: true }]) expect(() => verifyLeanFailedPrefix(changed)).toThrow("PREDECESSOR")
 })
-it("parent-observed exit uses the conservative larger clock and publishes one durable failure witness", () => {
+it("reopens an inert parent-observed failure witness with the conservative larger clock", () => {
   const l = v2Ledger(), e = enterV2(l)
   const terminal = deriveLeanChildTerminal(l, e, { exitCode: 134, signal: null, wallObservedMs: e.wallStartMs + 900, monotonicObservedNs: "2000000001", status: "child_failed", parentRssBytes: 120_000_000, childRssObservedBytes: 300_000_000, physicalBytes: 100_000, freeBytes: 20_000_000_000 })
   expect(terminal.elapsedUpperBoundMs).toBe(1001)
   expect(terminal.entryBytesRoot).toBe(leanBytesRoot(leanCanonicalBytes(e)))
-  publishLeanChildTerminal(l, terminal)
+  retainV2Terminal(l, e, terminal)
   expect(readLeanChildTerminal(l)).toEqual(terminal)
-  expect(readLeanCumulativeAccounting(l)).toMatchObject({ elapsedMs: 566_460, charged: 0, active: false })
-  expect(() => publishLeanChildTerminal(l, terminal)).toThrow()
+  expect(readLeanTimeAccounting(l)).toMatchObject({ elapsedMs: 566_460, active: false })
+  expect(() => readLeanCumulativeAccounting(l)).toThrow()
+  writeFileSync(join(l.directory, "child-terminal.json"), leanCanonicalBytes({ ...terminal, elapsedUpperBoundMs: 1000 }))
+  expect(() => readLeanChildTerminal(l)).toThrow("TERMINAL")
 })
 it("fails closed on parent crash, torn terminal, and prospective cap overrun", () => {
   const crashed = v2Ledger(); enterV2(crashed)
   expect(readLeanTimeAccounting(crashed).elapsedMs).toBe(28_800_000)
+  expect(() => readLeanChildTerminal(crashed)).toThrow()
   expect(() => readLeanCumulativeAccounting(crashed)).toThrow()
   writeFileSync(join(crashed.directory, "child-terminal.json"), "{\"incomplete\":")
   expect(() => readLeanChildTerminal(crashed)).toThrow()
   const exceeded = v2Ledger(), e = enterV2(exceeded)
   const terminal = deriveLeanChildTerminal(exceeded, e, { exitCode: null, signal: "SIGKILL", wallObservedMs: e.wallStartMs + 28_800_000, monotonicObservedNs: "28801000000000", status: "child_failed", parentRssBytes: 100_000_000, childRssObservedBytes: null, physicalBytes: 100_000, freeBytes: null })
-  publishLeanChildTerminal(exceeded, terminal)
-  expect(() => readLeanCumulativeAccounting(exceeded)).toThrow("TERMINAL")
+  retainV2Terminal(exceeded, e, terminal)
+  expect(() => readLeanChildTerminal(exceeded)).toThrow("TERMINAL")
+  expect(() => readLeanCumulativeAccounting(exceeded)).toThrow()
   expect(() => chargeLeanSlot(exceeded, exceeded.allocation.slots[0]!, { freeBytes: 20e9, availableMemoryBytes: 2e9 })).toThrow()
 })
