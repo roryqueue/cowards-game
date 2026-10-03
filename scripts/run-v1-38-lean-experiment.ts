@@ -14,18 +14,19 @@ import { createFactoryRepository } from "../packages/strategy-lab/src/factory/re
 import { readFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
 import { readCandidateClosure } from "../packages/strategy-lab/src/league/connected-runner.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../packages/strategy-lab/src/runtime-bridge.js"
-import { writeLeanAll, createLeanAllocationV2, createLeanLedger, openLeanLedger, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, measureLeanPhysicalBytes, readLeanLedger, readLeanCumulativeAccounting, stopLeanLedger, verifyLeanEvidence, chooseLeanTier, leanBytesRoot, leanCanonicalBytes, LEAN_CAPS, LEAN_FAILED_PREFIX, LEAN_PROSPECTIVE_REQUEST, publishLeanChildEntry, readLeanChildEntry, deriveLeanChildTerminal, publishLeanChildTerminal, readLeanChildTerminal, cumulativeLeanPhysicalBytes, type LeanChildEntryV2, type LeanExperimentLedger, type LeanCompactMatchRecord, type LeanCharge } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { writeLeanAll, createLeanAllocationV3, createLeanLedger, openLeanLedger, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, measureLeanPhysicalBytes, readLeanLedger, readLeanCumulativeAccounting, stopLeanLedger, verifyLeanEvidence, chooseLeanTier, leanBytesRoot, leanCanonicalBytes, LEAN_CAPS, LEAN_SUCCESSOR_REQUEST, publishLeanChildEntry, readLeanChildEntry, deriveLeanChildTerminal, publishLeanChildTerminal, readLeanChildTerminal, cumulativeLeanPhysicalBytes, type LeanChildEntryV2, type LeanExperimentLedger, type LeanCompactMatchRecord, type LeanCharge } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { readLeanPilotInitialCandidates, observeLeagueAvailableMemoryBytes, type LeagueInitialCandidateSelection } from "./run-v1-38-serious-league.js"
 import { factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
 import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-runtime.js"
 import { issueLeanRuntimeAuthority } from "./lib/v1-38-lean-experiment-authority.js"
 import { prospectiveLeagueRuntimeBinding } from "./lib/v1-38-league-prospective-lifetime.js"
 import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, currentLeanElapsedMs, LEAN_EXTERNAL_SCRATCH_RESERVE, assertLeanPublicationCapacity, boundLeanReplayFrame } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { isLeanChildFailureReceipt, resolveLeanChildCliTerminal, type LeanChildFailureReceipt } from "./lib/v1-38-lean-child-cli-terminal.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_PILOT_${code}`) }
-const STORE = resolve(".strategy-lab/lean-experiment-20261003-v2")
-const ALLOCATION = ".planning/artifacts/v1.38-lean-pilot-allocation-v2.json"
-const LEAN_TEMP = resolve(".strategy-lab/lean-experiment-20261003-v2-tmp")
+const STORE = resolve(".strategy-lab/lean-experiment-20261003-v3")
+const ALLOCATION = ".planning/artifacts/v1.38-lean-pilot-allocation-v3.json"
+const LEAN_TEMP = resolve(".strategy-lab/lean-experiment-20261003-v3-tmp")
 /** These controls must be inherited before the tsx loader runs: checking them
  * inside the route alone cannot retroactively undo a loader-cache/core write. */
 export const assertLeanProspectiveWritableScope = (scope: { cacheDisabled?: string; compileDisabled?: string; nodeOptions?: string; compileCache?: string; warningRedirect?: string; coverage?: string; tempDirectory?: string }, coreSoftLimit: string): void => {
@@ -39,7 +40,7 @@ interface Request { schemaVersion: "lean-pilot-request-v1"; seed: string; review
 const root = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[0-9a-f]{64}$/u.test(v)
 export const leanSourceManifest = () => {
   const legacy = factoryAssessmentImplementationManifest()
-  const paths = ["scripts/run-v1-38-lean-experiment.ts", "scripts/run-v1-38-lean-experiment.sh", "scripts/lib/v1-38-lean-experiment-authority.ts", "packages/strategy-lab/src/league/lean-experiment.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-planner-supervised-runtime.ts", "scripts/lib/v1-38-lean-container-match-session.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts", "scripts/run-v1-38-serious-league.ts"]
+  const paths = ["scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-lean-child-cli-terminal.ts", "scripts/run-v1-38-lean-experiment.sh", "scripts/lib/v1-38-lean-experiment-authority.ts", "packages/strategy-lab/src/league/lean-experiment.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-planner-supervised-runtime.ts", "scripts/lib/v1-38-lean-container-match-session.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts", "scripts/run-v1-38-serious-league.ts"]
   const byPath = new Map(legacy.entries.map(e => [e.path, e]))
   for (const path of paths) byPath.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
   const entries = [...byPath.values()].sort((a, b) => a.path.localeCompare(b.path))
@@ -51,7 +52,7 @@ export const parseLeanCommand = (args: readonly string[]) => {
 }
 const readRequest = (path: string): Request => {
   const p = resolve(path)
-  if (p !== resolve(LEAN_PROSPECTIVE_REQUEST)) return fail("REQUEST")
+  if (p !== resolve(LEAN_SUCCESSOR_REQUEST)) return fail("REQUEST")
   const s = lstatSync(p)
   if (s.isSymbolicLink() || !s.isFile() || s.size > 262144 || realpathSync(p) !== p) return fail("REQUEST")
   const r = JSON.parse(readFileSync(p, "utf8")) as Request
@@ -151,7 +152,7 @@ export const prepareLeanPilot = (requestPath: string) => {
     if (!root(publication?.candidate?.root)) return fail("CANDIDATE_HEADER")
     return publication.candidate.root
   })
-  const allocation = createLeanAllocationV2({ seed: request.seed, sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, candidateRoots })
+  const allocation = createLeanAllocationV3({ seed: request.seed, sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, candidateRoots })
   const ledger = createLeanLedger(STORE, allocation)
   exclusive(resolve(ALLOCATION), allocation)
   return { issued: false, evidenceClass: "preparation_only", allocationRoot: ledger.allocation.root, allocationPath: ALLOCATION, store: STORE }
@@ -185,7 +186,8 @@ const nativeLeanProvider = (ledger: LeanExperimentLedger, charge: LeanCharge, ca
 }
 const runLeanPilotBody = async (requestPath: string) => {
   const began = performance.now(), request = readRequest(requestPath), ledger = openLeanLedger(STORE)
-  if (ledger.allocation.sourceRoot !== request.sourceRoot || ledger.allocation.reviewRoot !== request.reviewRoot || ledger.allocation.seed !== request.seed || readLeanLedger(ledger).events.length) return fail("ALLOCATION")
+  if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v3" || ledger.allocation.sourceRoot !== request.sourceRoot || ledger.allocation.reviewRoot !== request.reviewRoot || ledger.allocation.seed !== request.seed || readLeanLedger(ledger).events.length) return fail("ALLOCATION")
+  const priorMs = ledger.allocation.predecessor.elapsedUpperBoundMs
   const committed = execFileSync("git", ["show", `HEAD:${ALLOCATION}`], { maxBuffer: 262144 })
   if (leanBytesRoot(committed) !== leanBytesRoot(readFileSync(resolve(ALLOCATION))) || leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(ledger.allocation))) return fail("UNCOMMITTED_ALLOCATION")
   const entry = readLeanChildEntry(ledger), head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim()
@@ -205,7 +207,7 @@ const runLeanPilotBody = async (requestPath: string) => {
     const f = statfsSync(STORE, { bigint: true }), freeBytes = f.bavail * f.bsize
     if (freeBytes > BigInt(Number.MAX_SAFE_INTEGER)) return fail("CAPACITY_RANGE")
     trackBuffer()
-    checkpointLeanResources(ledger, Math.max(currentLeanElapsedMs(ledger), LEAN_FAILED_PREFIX.elapsedUpperBoundMs + Math.ceil(performance.now() - began)), bufferHighWater, LEAN_EXTERNAL_SCRATCH_RESERVE)
+    checkpointLeanResources(ledger, Math.max(currentLeanElapsedMs(ledger), priorMs + Math.ceil(performance.now() - began)), bufferHighWater, LEAN_EXTERNAL_SCRATCH_RESERVE)
     parent.assert()
     const charge = chargeLeanSlot(ledger, slot, { freeBytes: Number(freeBytes), availableMemoryBytes: observeLeagueAvailableMemoryBytes() })
     const cellBegan = performance.now(), opened: FactorySupervisionProvider[] = []
@@ -231,7 +233,7 @@ const runLeanPilotBody = async (requestPath: string) => {
     const frames = replayFrames()
     retainLeanMatch(ledger, charge, record, frames)
     trackBuffer(); maximumCellMs = Math.max(maximumCellMs, elapsedMs)
-    checkpointLeanResources(ledger, Math.max(currentLeanElapsedMs(ledger), LEAN_FAILED_PREFIX.elapsedUpperBoundMs + Math.ceil(performance.now() - began)), bufferHighWater, LEAN_EXTERNAL_SCRATCH_RESERVE)
+    checkpointLeanResources(ledger, Math.max(currentLeanElapsedMs(ledger), priorMs + Math.ceil(performance.now() - began)), bufferHighWater, LEAN_EXTERNAL_SCRATCH_RESERVE)
     if (record.classification !== "success" || !cleanupComplete) { clean = false; break }
   }
   stopLeanLedger(ledger, clean ? "complete" : "failure")
@@ -265,14 +267,19 @@ export const runLeanPilotChild = async (requestPath: string) => {
 export const runLeanPilot = async (requestPath: string) => {
   requireLeanProspectiveWritableScope()
   const request = readRequest(requestPath), ledger = openLeanLedger(STORE)
-  if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v2" || ledger.allocation.sourceRoot !== request.sourceRoot || ledger.allocation.reviewRoot !== request.reviewRoot || ledger.allocation.seed !== request.seed || readLeanLedger(ledger).events.length || readLeanTimeAccounting(ledger).starts.size || readdirSync(STORE).some(name => ["entry.json", "child-terminal.json", "result.json", "entry-failure.json"].includes(name))) return fail("ALLOCATION")
+  if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v3" || ledger.allocation.sourceRoot !== request.sourceRoot || ledger.allocation.reviewRoot !== request.reviewRoot || ledger.allocation.seed !== request.seed || readLeanLedger(ledger).events.length || readLeanTimeAccounting(ledger).starts.size || readdirSync(STORE).some(name => ["entry.json", "child-terminal.json", "result.json", "entry-failure.json"].includes(name))) return fail("ALLOCATION")
   const committed = execFileSync("git", ["show", `HEAD:${ALLOCATION}`], { maxBuffer: 262144 })
   if (leanBytesRoot(committed) !== leanBytesRoot(readLeanSafeFile(ALLOCATION)) || leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(ledger.allocation))) return fail("UNCOMMITTED_ALLOCATION")
   const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim()
   const token = randomBytes(32).toString("hex")
   const child = fork(resolve(process.argv[1] ?? fail("ENTRY_PATH")), ["child-pilot", "--request", requestPath], { execArgv: process.execArgv, stdio: ["ignore", "ignore", "ignore", "ipc"] })
-  let entered = false, childRssObservedBytes: number | null = null, uncertain = false
+  let entered = false, childRssObservedBytes: number | null = null, uncertain = false, childFailure: LeanChildFailureReceipt | null = null
   child.on("error", () => { uncertain = true })
+  child.on("message", message => {
+    if (message !== null && typeof message === "object" && exactLabKeys(message, ["ready"]) && message.ready === child.pid) return
+    if (!isLeanChildFailureReceipt(message) || childFailure !== null) { uncertain = true; return }
+    childFailure = message
+  })
   try {
     await new Promise<void>((resolveReady, reject) => {
       const timer = setTimeout(() => reject(new TypeError("LEAN_PILOT_CHILD_READY")), 30_000)
@@ -296,14 +303,15 @@ export const runLeanPilot = async (requestPath: string) => {
         if (process.memoryUsage().rss + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes || currentLeanElapsedMs(ledger) >= LEAN_CAPS.elapsedMs) { uncertain = true; child.kill("SIGKILL") }
       } catch { uncertain = true; child.kill("SIGKILL") }
     }, 250)
-    const timeout = setTimeout(() => { uncertain = true; child.kill("SIGKILL") }, LEAN_CAPS.elapsedMs - LEAN_FAILED_PREFIX.elapsedUpperBoundMs)
+    const timeout = setTimeout(() => { uncertain = true; child.kill("SIGKILL") }, LEAN_CAPS.elapsedMs - ledger.allocation.predecessor.elapsedUpperBoundMs)
     const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => resolveExit({ code, signal })))
     clearInterval(period); clearTimeout(timeout)
+    if (childFailure) exclusive(join(STORE, "entry-failure.json"), childFailure)
     try {
       if (execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim() !== head || leanSourceManifest().root !== request.sourceRoot || leanBytesRoot(readLeanSafeFile(requestPath)) !== entry.requestBytesRoot) uncertain = true
     } catch { uncertain = true }
     const stat = statfsSync(STORE, { bigint: true }), freeBytes = stat.bavail * stat.bsize
-    const terminal = deriveLeanChildTerminal(ledger, entry, { exitCode: exit.code, signal: exit.signal, wallObservedMs: Date.now(), monotonicObservedNs: process.hrtime.bigint().toString(), status: exit.code === 0 && !uncertain ? "child_exited" : "child_failed", parentRssBytes: process.memoryUsage().rss, childRssObservedBytes, physicalBytes: cumulativeLeanPhysicalBytes(ledger) + 65_536, freeBytes: freeBytes <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(freeBytes) : null })
+    const terminal = deriveLeanChildTerminal(ledger, entry, { exitCode: exit.code, signal: exit.signal, wallObservedMs: Date.now(), monotonicObservedNs: process.hrtime.bigint().toString(), status: exit.code === 0 && !uncertain && childFailure === null ? "child_exited" : "child_failed", parentRssBytes: process.memoryUsage().rss, childRssObservedBytes, physicalBytes: cumulativeLeanPhysicalBytes(ledger) + 65_536, freeBytes: freeBytes <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(freeBytes) : null })
     publishLeanChildTerminal(ledger, terminal)
     if (terminal.status !== "child_exited") return fail("CHILD_FAILED")
     return { issued: false, evidenceClass: "feasibility_only", status: "child_exited_pending_independent_verification", allocationRoot: ledger.allocation.root, terminalElapsedUpperBoundMs: terminal.elapsedUpperBoundMs }
@@ -345,6 +353,8 @@ export const readLeanPilotResult = (requestPath: string) => {
 export const leanPilotMain = async (args: readonly string[]) => { const c = parseLeanCommand(args); return c.mode === "prepare-pilot" ? prepareLeanPilot(c.request) : c.mode === "run-pilot" ? runLeanPilot(c.request) : readLeanPilotResult(c.request) }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const args = process.argv.slice(2)
-  const action = args.length === 3 && args[0] === "child-pilot" && args[1] === "--request" ? runLeanPilotChild(args[2]!) : leanPilotMain(args)
-  void action.then(v => { if (args[0] !== "child-pilot") process.stdout.write(`${JSON.stringify(v)}\n`) }).catch(() => { process.stderr.write("LEAN_PILOT_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
+  const childMode = args.length === 3 && args[0] === "child-pilot" && args[1] === "--request"
+  const action = childMode ? runLeanPilotChild(args[2]!) : leanPilotMain(args)
+  if (childMode) void resolveLeanChildCliTerminal(action)
+  else void action.then(v => { process.stdout.write(`${JSON.stringify(v)}\n`) }).catch(() => { process.stderr.write("LEAN_PILOT_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
 }

@@ -1,6 +1,6 @@
 import { expect, it } from "vitest"
 import { mkdtempSync, realpathSync, rmSync, mkdirSync, writeFileSync, symlinkSync } from "node:fs"
-import { execFileSync } from "node:child_process"
+import { execFileSync, fork } from "node:child_process"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult, assessLeanPrefixCapacity, admitLeanChildRelease, assertLeanEntryBinding, createLeanParentObservationGuard, assertLeanBoundParentObservation, assertLeanProspectiveWritableScope } from "./run-v1-38-lean-experiment.js"
@@ -13,6 +13,35 @@ import { createLeanAllocation, createLeanLedger, chargeLeanSlot } from "../packa
 import { labRoot, LAB_ADMITTED_ROOTS } from "../packages/strategy-lab/src/contracts.js"
 import { createLeanContainerMatchSession } from "./lib/v1-38-lean-container-match-session.js"
 import { admitFactorySupervisorLifetime } from "./lib/v1-38-factory-supervised-runtime.js"
+import { isLeanChildFailureReceipt, resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
+
+it.each([{ mode: "success", exitCode: 0 }, { mode: "failure", exitCode: 1 }, { mode: "known-failure", exitCode: 1 }])("settles inert child IPC after cleanup on $mode", async ({ mode, exitCode }) => {
+  const child = fork(resolve("scripts/fixtures/v1-38-lean-child-terminal-probe.ts"), [mode], { execArgv: ["--import", "tsx"], stdio: ["ignore", "ignore", "pipe", "ipc"] })
+  const events: string[] = []
+  const receipts: unknown[] = []
+  let stderr = ""
+  child.stderr?.setEncoding("utf8").on("data", chunk => { stderr += chunk })
+  child.on("message", message => {
+    if (message === "cleanup-complete") events.push("cleanup")
+    else if (isLeanChildFailureReceipt(message)) { events.push("failure-receipt"); receipts.push(message) }
+  })
+  child.on("disconnect", () => events.push("disconnect"))
+  const outcome = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolveOutcome, reject) => {
+    const timer = setTimeout(() => { child.kill("SIGKILL"); reject(new Error("inert child did not terminate")) }, 5000)
+    child.once("error", error => { clearTimeout(timer); reject(error) })
+    child.once("exit", (code, signal) => { clearTimeout(timer); resolveOutcome({ code, signal }) })
+  })
+  expect(outcome).toEqual({ code: exitCode, signal: null })
+  expect(events).toEqual(exitCode === 0 ? ["cleanup", "disconnect"] : ["cleanup", "failure-receipt", "disconnect"])
+  expect(receipts).toEqual(exitCode === 0 ? [] : [{ type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code: mode === "known-failure" ? "HANDSHAKE" : "UNKNOWN_INTERNAL_FAILURE", stage: mode === "known-failure" ? "handshake" : "unknown" }])
+  expect(stderr).toBe(exitCode === 0 ? "" : "LEAN_PILOT_FAILED_DETAILS_WITHHELD\n")
+})
+it("rejects tampered failure receipts without widening the diagnostic boundary", () => {
+  const valid = { type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code: "UNKNOWN_INTERNAL_FAILURE", stage: "unknown" }
+  expect(isLeanChildFailureReceipt(valid)).toBe(true)
+  expect(isLeanChildFailureReceipt({ ...valid, privateError: "must not be retained" })).toBe(false)
+  expect(isLeanChildFailureReceipt({ ...valid, code: "PRIVATE_ERROR" })).toBe(false)
+})
 it("imports inertly and accepts only three explicit private modes", () => {
   expect(parseLeanCommand(["prepare-pilot", "--request", "x.json"])).toEqual({ mode: "prepare-pilot", request: "x.json" })
   expect(() => parseLeanCommand(["run-pilot", "--provider", "forged"])).toThrow()
@@ -55,9 +84,9 @@ it("sanitizes Node and TSX at a pre-Node shell boundary and rechecks inherited s
     const launcher = resolve("scripts/run-v1-38-lean-experiment.sh")
     const output = execFileSync("sh", [launcher, "--probe-launch-scope"], { cwd: p, encoding: "utf8", env: { PATH: process.env.PATH ?? "", LEAN_LAUNCH_PROBE: "1", NODE_OPTIONS: "--report-on-fatalerror --report-directory=/tmp/unowned", NODE_COMPILE_CACHE: "/tmp/unowned", NODE_REDIRECT_WARNINGS: "/tmp/unowned", NODE_V8_COVERAGE: "/tmp/unowned" } })
     expect(output).toContain("cache=1 compile=1 node_options=unset compile_cache=unset warnings=unset coverage=unset core=0")
-    expect(output).toContain(`tmp=${join(p, ".strategy-lab", "lean-experiment-20261003-v2-tmp")}`)
+    expect(output).toContain(`tmp=${join(p, ".strategy-lab", "lean-experiment-20261003-v3-tmp")}`)
   } finally { rmSync(p, { recursive: true, force: true }) }
-  const safe = { cacheDisabled: "1", compileDisabled: "1", tempDirectory: resolve(".strategy-lab/lean-experiment-20261003-v2-tmp") }
+  const safe = { cacheDisabled: "1", compileDisabled: "1", tempDirectory: resolve(".strategy-lab/lean-experiment-20261003-v3-tmp") }
   assertLeanProspectiveWritableScope(safe, "0")
   for (const changed of [{ ...safe, nodeOptions: "--report-on-fatalerror" }, { ...safe, compileCache: "/tmp/cache" }, { ...safe, warningRedirect: "/tmp/warnings" }, { ...safe, coverage: "/tmp/coverage" }, { ...safe, tempDirectory: "/tmp/unowned" }, { ...safe, cacheDisabled: undefined }]) expect(() => assertLeanProspectiveWritableScope(changed, "0")).toThrow("WRITABLE_SCOPE")
   expect(() => assertLeanProspectiveWritableScope(safe, "unlimited")).toThrow("WRITABLE_SCOPE")
