@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 host receipt Task1 complete; Task2 sequential runtime integration active
+stopped_at: Phase265 host receipt Tasks1/2 source-complete; independent source review next
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: Task1 V3 allocation committed and tested; Task2 host-only runtime integration follows; no route/capacity/Match/verifier
+last_activity_desc: V3 runtime GREEN929023fe and summary7f0a3550; 49mocktests/types/sourceclosure pass; review and fullgate pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,18 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+Task2 source-only COMPLETE: RED0b45e91f, GREEN929023fe, summary7f0a3550.
+Final5files49passed/368skipped, exactstrictTypes pass, sourceclosure1passed.
+No active test/provider/Match/verifier. Both realstreammodes preserveencoded
+broker budgets; onlyV3capability extendsparentreceipt5000. Corrected scoped
+plan/research wording: alternativeV1.17 actualsigned50ms/100mscancel and
+authenticatedDsystem_failure/TIMEOUT remain unchanged; selectedlegacy1000.
+Equivalentownedtestfixtures preservegoldenrequestroots; unownedoldstrict
+errors notedited. Independent15filesource review nowfollows, thenall8fixed
+sourcegates/scopedverification. AllLEAGpending; historicalroutesimmutable;
+holdoutunopened, formation/public/counting/production absent. Prioractive
+Task1/Task2 observations below are history.
 
 Task1 source-only allocation contract COMPLETE: RED d52dbdcc, GREEN7e841376,
 scopedsummary94ccb46f. Focused2/2, fullallocation17/17 and checkedstrategy-lab
