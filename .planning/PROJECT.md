@@ -1,5 +1,11 @@
 # Coward's Game
 
+## Active approved lean replacement — 2026-10-03
+
+The operator approved [the15GB/shared eight-hour charter](/Users/roryquinlan/runtime/cowards-game/.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-EXPERIMENT-20261003.md). [The active prospective plan](/Users/roryquinlan/runtime/cowards-game/.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-REMAINING-PLAN-20261003.md) fixes200Matches total (8pilot+3×64), or a pilot-resource-selected complete matched128Match tier; maximum300, no budget resets. Exactly two cold-trained initial candidates and one automated adversarial response attempt per profile; model/human/external budgets zero equally. Compact every-Match accounting/results plus preselected compressed and failure replays; no exhaustive invocation transcripts or fullscale certification.
+
+Plans265-15→265-16 replace the uncompleted oversized265-07route. Existing266-01…06 and older fullleague/finalist gates are suspended prospectively, not passed or recredited; replacements for266–270 are planned at measured dependency frontiers. Completed262–264 and every consumed artifact remain unchanged. The active outline's explicit requirement dispositions govern earlier contradictory scale/certification language below. Current-rules baseline freeze still precedes any formation materialization; exact3profiles retrain separately with equal work; allpopulations freeze before one privateholdout opening. Canonicalengine/rules and guest1000/host5000/Match600000 unchanged. No product/promotion/counted/public/production authority. Original sealed commitments are never silently replaced; a separately named exploratory seal has explicit provenance or holdoutdependent claims remain inconclusive. Verification/audit/archive/annotatedtag/posttagcheck remain required for honest revised scope, never oldgate certification.
+
 ## Current v1.38 progress — Phases262–264 complete
 
 On2026-10-02 the human also approved exactly5000ms prospective PRIVATE host

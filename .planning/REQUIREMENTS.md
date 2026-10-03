@@ -1,10 +1,35 @@
 # Requirements: Coward's Game v1.38 Competitive Strategy Factory and Adversarial League
 
+## Active approved lean replacement — 2026-10-03
+
+The operator approved [the15GB/shared eight-hour charter](/Users/roryquinlan/runtime/cowards-game/.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-EXPERIMENT-20261003.md). [The active prospective plan](/Users/roryquinlan/runtime/cowards-game/.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-REMAINING-PLAN-20261003.md) fixes200Matches total (8pilot+3×64), or a pilot-resource-selected complete matched128Match tier; maximum300, no budget resets. Exactly two cold-trained initial candidates and one automated adversarial response attempt per profile; model/human/external budgets zero equally. Compact every-Match accounting/results plus preselected compressed and failure replays; no exhaustive invocation transcripts or fullscale certification.
+
+Plans265-15→265-16 replace the uncompleted oversized265-07route. Existing266-01…06 and older fullleague/finalist gates are suspended prospectively, not passed or recredited; replacements for266–270 are planned at measured dependency frontiers. Completed262–264 and every consumed artifact remain unchanged. The active outline's explicit requirement dispositions govern earlier contradictory scale/certification language below. Current-rules baseline freeze still precedes any formation materialization; exact3profiles retrain separately with equal work; allpopulations freeze before one privateholdout opening. Canonicalengine/rules and guest1000/host5000/Match600000 unchanged. No product/promotion/counted/public/production authority. Original sealed commitments are never silently replaced; a separately named exploratory seal has explicit provenance or holdoutdependent claims remain inconclusive. Verification/audit/archive/annotatedtag/posttagcheck remain required for honest revised scope, never oldgate certification.
+
 **Defined:** 2026-07-27
 **Core Value:** Players can design, run, replay, and understand deterministic autonomous doctrines competing under the canonical Coward's Game rules.
 **Binding contract:** `.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/ACTIVATION-PROMPT.md`
 
 ## v1.38 Requirements
+
+### Active prospective traceability overlay
+
+The original94-row definitions below are retained historical contracts. For remaining execution, each original ID is audited once with its explicit disposition in LEAN-REMAINING-PLAN-20261003.md. Unchecked deferred/superseded rows are not made green by a small experiment.
+
+|IDs|Active disposition and phase|
+|---|---|
+|LEAG-01…05,07|Retained exploratory complete small snapshots/solver/evidence/pure portfolio;265-15/16|
+|LEAG-06,08|Old scale/diversity/robust certification deferred; explicit limited portfolio/no-robust-claim output required,265-16|
+|LEAG-09|Superseded one automated round, equally zero model/human/external channels; counters and failures retained,265-16|
+|FRZE-01…04|Retained lean freeze/no-formation-before-valid-root,266; promotion clause deferred and eligible list empty|
+|LAB-01…08|Retained exact profile/rules/unreachability obligations,267|
+|EQAL-01…08|Retained exact new structural vector and separately cold-adapted profiles,268|
+|SEAL-02…07|Retained new exploratory seal process if original incompatible; original-commitment claim explicitly deferred,269|
+|DECI-01,03…08|Retained precommitted exploratory thresholds/telemetry/nonshipping; old strongest-response conclusion deferred,269|
+|CERT-01…05|Deferred entirely, no product promotion/certification in lean experiment|
+|CLOSE-01…10|Retained revised-scope compact retention/independent verification/audit/archive/tag/post-tag,270; disposition map includes deferred rows honestly|
+
+Completed262–264 and foundation definitions/evidence remain unchanged. Future MEAS-02/03/06/07 workload/thresholds follow new approved prospective charter, never reinterpret previous artifacts.
 
 Each requirement is complete only when its named behavior has an immutable evidence artifact or executable denial, an explicit `current`, `lab`, or `both` scope, and a fail-closed disposition for missing, stale, mismatched, contaminated, or non-reproducible evidence. Empirical gate failure may be a valid recorded outcome only where the requirement says so; process or integrity failure is never silently accepted.
 

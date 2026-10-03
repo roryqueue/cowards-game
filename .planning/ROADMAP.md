@@ -1,5 +1,11 @@
 # Roadmap: Coward's Game
 
+## Active approved lean replacement — 2026-10-03
+
+The operator approved [the15GB/shared eight-hour charter](/Users/roryquinlan/runtime/cowards-game/.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-EXPERIMENT-20261003.md). [The active prospective plan](/Users/roryquinlan/runtime/cowards-game/.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-REMAINING-PLAN-20261003.md) fixes200Matches total (8pilot+3×64), or a pilot-resource-selected complete matched128Match tier; maximum300, no budget resets. Exactly two cold-trained initial candidates and one automated adversarial response attempt per profile; model/human/external budgets zero equally. Compact every-Match accounting/results plus preselected compressed and failure replays; no exhaustive invocation transcripts or fullscale certification.
+
+Plans265-15→265-16 replace the uncompleted oversized265-07route. Existing266-01…06 and older fullleague/finalist gates are suspended prospectively, not passed or recredited; replacements for266–270 are planned at measured dependency frontiers. Completed262–264 and every consumed artifact remain unchanged. The active outline's explicit requirement dispositions govern earlier contradictory scale/certification language below. Current-rules baseline freeze still precedes any formation materialization; exact3profiles retrain separately with equal work; allpopulations freeze before one privateholdout opening. Canonicalengine/rules and guest1000/host5000/Match600000 unchanged. No product/promotion/counted/public/production authority. Original sealed commitments are never silently replaced; a separately named exploratory seal has explicit provenance or holdoutdependent claims remain inconclusive. Verification/audit/archive/annotatedtag/posttagcheck remain required for honest revised scope, never oldgate certification.
+
 ## Current verified progress — Phases262–264 complete
 
 The human approved prospective private per-Match lifetime120000→600000ms
@@ -1114,6 +1120,10 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
 
 ### Phase 265: Serious Current-Rules League and Development Red Team
 
+**Active prospective goal:** Obtain a useful bounded current-rules cold-adapted small empirical game, one adversarial round, compact complete accounting and honest exploratory pure outcome within the shared approved caps.
+**Active plans:**2 new plans:265-15(wave11 compactpath+measuredpilot)→265-16(wave12 boundedbaseline+response+freezehandoff). Earlier unfinished265-07fullleague route suspended, historicalcompleted12plans untouched.
+**Active success:** exact200/128pilot-selected schedule; actual real cold training and onecounter attempt; complete requiredsmall matrices/probe/repeat with no imputation; current-only verifiedfreezehandoff; no olddiversity/certification claim.
+
 **Goal:** Researchers can inspect a complete, independently attacked current-rules empirical game and obtain a bounded portfolio and robust-pure outcome without hiding counters or sparse evidence.
 **Depends on:** Phase 264
 **Requirements:** LEAG-01, LEAG-02, LEAG-03, LEAG-04, LEAG-05, LEAG-06, LEAG-07, LEAG-08, LEAG-09
@@ -1187,6 +1197,8 @@ Cross-cutting constraints: canonical unchanged kernel and supervised hostile-sou
 
 ### Phase 266: Content-Addressed Current-League Freeze
 
+**Active prospective plan:** One checked lean replacement after265-16; old266-01…06 are suspended, not admitted by this reset. Exact current compact root and absence proof gate formation; empty product-eligible list.
+
 **Goal:** Maintainers have one immutable current-league root whose process integrity, preliminary finalist feasibility, unopened operator-local seal commitment, and one-way dependency proof alone authorize later formation materialization.
 **Depends on:** Phase 265
 **Requirements:** FRZE-01, FRZE-02, FRZE-03, FRZE-04
@@ -1201,6 +1213,8 @@ Cross-cutting constraints: canonical unchanged kernel and supervised hostile-sou
 **Research flag:** Reuse the content-addressed identity, runtime, replay, privacy, and release-evidence patterns proved through v1.37; no new technology spike should bypass the exact acceptance gate.
 
 ### Phase 267: Post-Freeze Formation Boundary and Production Unreachability
+
+**Active prospective plan:** One checked position-only seam and full production-denial replacement after actual266freeze; original exact geometry and fixedrules obligations retained.
 
 **Goal:** After the valid current freeze, researchers can construct exactly the three position-only lab profiles through the unchanged kernel while proving that no experimental artifact can affect canonical or public product behavior.
 **Depends on:** Phase 266
@@ -1218,6 +1232,8 @@ Cross-cutting constraints: canonical unchanged kernel and supervised hostile-sou
 
 ### Phase 268: Equal-Compute Retraining and Branch Freezes
 
+**Active prospective plan:** One checked matched cold retraining/equality/freeze replacement using the same200/128globalmanifest; no additional budget or baselinelearned reuse.
+
 **Goal:** Researchers can compare separately adapted current, inward, and bracket metagames under equal structural opportunity, isolated learning, equal red-team pressure, and frozen branch evidence.
 **Depends on:** Phase 267
 **Requirements:** EQAL-01, EQAL-02, EQAL-03, EQAL-04, EQAL-05, EQAL-06, EQAL-07, EQAL-08
@@ -1234,6 +1250,8 @@ Cross-cutting constraints: canonical unchanged kernel and supervised hostile-sou
 
 ### Phase 269: Sealed Evaluation, Causal Decision, and Current-Only Certification
 
+**Active prospective plan:** One checked exploratory one-open/decision replacement; certification/promotion is deferred, no_certifiable_current_finalist. New exploratory seal must have explicit provenance, never substitute originalcommitment. Honest incomplete claim remains inconclusive.
+
 **Goal:** The named repository operator can invoke the closed command to open the common operator-sealed local holdout exactly once, issue an immutable causal result without production authorization, and certify only exact eligible pre-formation current finalists through ordinary product paths under the explicit `single_operator_local_seal_v1` limits.
 **Depends on:** Phase 268
 **Requirements:** SEAL-02, SEAL-03, SEAL-04, SEAL-05, SEAL-06, SEAL-07, DECI-01, DECI-03, DECI-04, DECI-05, DECI-06, DECI-07, DECI-08, CERT-01, CERT-02, CERT-03, CERT-04, CERT-05
@@ -1249,6 +1267,8 @@ Cross-cutting constraints: canonical unchanged kernel and supervised hostile-sou
 **Research flag:** Run a sacrificial mock one-open drill with synthetic data, safe receipt projection, and non-authorizing packet enforcement before the real sealed batch; the drill cannot access or replace the committed holdout.
 
 ### Phase 270: Independent Verification and Release Closure
+
+**Active prospective plan:** One checked independent compact reproduction/audit/archive/tag replacement. Original94rows get truthful completed/superseded/deferred/inconclusive dispositions; oldfullgate completion is not claimed. No tag while unresolved blocking process/integrity finding exists.
 
 **Goal:** An independent verifier can reproduce, audit, archive, tag, and externally attest the exact v1.38 result without circular evidence, private-data leakage, or tagged-file rewriting.
 **Depends on:** Phase 269

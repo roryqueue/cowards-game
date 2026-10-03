@@ -4,22 +4,28 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: awaiting_resource
-stopped_at: Phase265 V13 closed CAPACITY_MARGIN failure; unique terminalcheck closed; currentdisk728722088bytes short; human free-space action needed
+status: executing
+stopped_at: Lean Plans265-15/16 checked; implementing compact source path before reviewed root-only pilot; old V14 suspended
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: V13 entry51033closedexit1; safe capacitycode retained; noactualhead/noordinaryreader; unique boundedterminalcheckclosed; diskshortnow
+last_activity_desc: Lean research and independent plan recheck passed; next265-15 compact runner implementation and reviewed pilot
 progress:
   total_phases: 9
   completed_phases: 3
   total_plans: 14
   completed_plans: 12
   percent: 33
-current_plan: 7
-total_plans_in_phase: 14
+current_plan: 15
+total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — approved lean experiment reset, 2026-10-03
+
+Research complete; Plans265-15/16 independently checked and rechecked. A work-vector arithmetic defect was corrected to64+64+64+128=320 separately capped channel operations; original LEAG-06/08 remain deferred/non-green. Root parsed both plan YAML frontmatters; a flow-map separator typo was corrected without semantic change. Active full/reduced tiers are200/128 total Matches including8pilot and balanced training/probe/repeat/holdout, hard maximum300; 15GB/eight-hour shared caps unchanged. Next frontier is Plan265-15 source-only implementation, independent code review/fixes and focused validation, then one main-root actual pilot with fresh same-process capacity and unique retained verification. No Match is running, no formation or holdout opened. Suspended old plans are not executable dependencies. Phase completion remains pending.
+
+The operator approved `milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-EXPERIMENT-20261003.md`: 15,000,000,000 additional disk bytes including buffers; measured small pilot; small candidate pool; one adversarial improvement round; few hundred Matches at most; compact every-Match results/accounting plus compressed preselected and failure replays; one shared eight-hour empirical execution cap. Research and independent checked planning precede new execution. Explicitly supersede/defer old future full-league gates, never claim them passed by exploratory evidence. No active entry or verifier; source/HEAD hold is released. Do not start old V14 or require disk cleanup for its oversized reservation. Historical paragraphs below are superseded continuation snapshots, not current instructions. All consumed evidence and empty result reservations remain immutable, with no retroactive credit. Current-rules baseline/freeze precedes formation; retrain all profiles equally; holdout unopened; no public/counted/production authority. Continue the bounded GSD research/plan/execute/review-fix/validate/verify/audit-fix workflow autonomously under this approval.
 
 ## Current continuation — prospective ten-minute private limit approved
 

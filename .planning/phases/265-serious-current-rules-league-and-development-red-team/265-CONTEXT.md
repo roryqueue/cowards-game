@@ -1,5 +1,11 @@
 # Phase 265: Serious Current-Rules League and Development Red Team - Context
 
+## Active approved lean replacement — 2026-10-03
+
+The operator approved [the15GB/shared eight-hour charter](/Users/roryquinlan/runtime/cowards-game/.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-EXPERIMENT-20261003.md). [The active prospective plan](/Users/roryquinlan/runtime/cowards-game/.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-REMAINING-PLAN-20261003.md) fixes200Matches total (8pilot+3×64), or a pilot-resource-selected complete matched128Match tier; maximum300, no budget resets. Exactly two cold-trained initial candidates and one automated adversarial response attempt per profile; model/human/external budgets zero equally. Compact every-Match accounting/results plus preselected compressed and failure replays; no exhaustive invocation transcripts or fullscale certification.
+
+Plans265-15→265-16 replace the uncompleted oversized265-07route. Existing266-01…06 and older fullleague/finalist gates are suspended prospectively, not passed or recredited; replacements for266–270 are planned at measured dependency frontiers. Completed262–264 and every consumed artifact remain unchanged. The active outline's explicit requirement dispositions govern earlier contradictory scale/certification language below. Current-rules baseline freeze still precedes any formation materialization; exact3profiles retrain separately with equal work; allpopulations freeze before one privateholdout opening. Canonicalengine/rules and guest1000/host5000/Match600000 unchanged. No product/promotion/counted/public/production authority. Original sealed commitments are never silently replaced; a separately named exploratory seal has explicit provenance or holdoutdependent claims remain inconclusive. Verification/audit/archive/annotatedtag/posttagcheck remain required for honest revised scope, never oldgate certification.
+
 ## Approved prospective diagnostic retry amendment — 2026-10-01
 
 The operator states: `I authorize up to 5 retries, please continue`.
@@ -36,6 +42,18 @@ This phase executes and closes the precommitted serious league for the unchanged
 
 <decisions>
 ## Implementation Decisions
+
+### Approved prospective decisions overriding obsolete scale only
+
+- **D-22:** Single cumulative 15,000,000,000-byte /28,800,000-ms /300-Match ledger across pilot, failed attempts and all profiles; no resets/refunds.
+- **D-23:** Eight feasibility-only current pilot Matches select complete200/128matched tier before comparative outcomes; no formation before current freeze.
+- **D-24:** Per arm two real cold-trained initial candidate attempts and one independent automated response attempt; identical64tactical/64teacher/64distillation/128response opportunity vector; model/human/external zero equally, one round.
+- **D-25:** Compact all-slot accounting/results and preselected compressed/failure replay retention with new schema; old full readers untouched.
+- **D-26:** Verified current baseline freeze before formation; identical cold workflow makes baseline edge arm, separately retrain other profiles with no learned cross-arm reuse.
+- **D-27:** All populations/analysis/finalists/equality freeze before one sealed opening; honest partial/inconclusive on missing evidence/caps, no retry of consumed routes.
+- **D-28:** Canonical rules/kernel and guest1000/host5000/Match600000 unchanged; all lab private, no promotion/counting/public/production; later-rules packet only.
+
+Exact numeric schedule, metric thresholds, superseded requirement dispositions and downstream outline are in LEAN-REMAINING-PLAN-20261003.md. D-17 old12/6/5/3diversity and D-18robust certification are prospectively deferred; D-14/15/20 use the one-round automated zero-model/human/external vector; D-10 forbids consumed route resume/retry while deterministic source-only order tests remain. Other safety/scientific decisions continue unchanged.
 
 ### Carry-forward scientific and production charter
 - **D-01:** All inputs and outputs are immutable and content-addressed. There is no mutable `latest`, implicit active population, or result selected by directory order.
