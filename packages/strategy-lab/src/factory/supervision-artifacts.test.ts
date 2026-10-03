@@ -79,6 +79,26 @@ describe("bounded private supervision persistence", () => {
     expect(publishFactorySupervisionArtifacts(repository, receipt)).toEqual(stored)
   })
 
+  it("preflights 48 distinct multi-chunk records before parse and preserves legacy roots", async () => {
+    const { repository, admission } = setup()
+    const roots: LabRoot[] = []
+    let peakReserve = 0
+    for (let cell = 0; cell < 48; cell++) {
+      const transitions = Array.from({ length: 18 }, (_, sequence) => ({ sequence, payload: `${cell}:${sequence}:` + "x".repeat(16_000) }))
+      const stored = publishFactorySupervisionArtifacts(repository, await issuedFixture(admission, transitions))
+      expect(stored.chunkCount).toBeGreaterThan(1)
+      const legacy = readFactorySupervisionArtifactRecords(repository, stored.artifactRoot, limits)
+      const bounded = readFactorySupervisionArtifactRecordsBounded(repository, stored.artifactRoot, { ...limits, beforeAllocation: bytes => { peakReserve = Math.max(peakReserve, bytes) } })
+      expect(bounded.descriptor).toEqual(legacy.descriptor)
+      expect(bounded.records).toEqual(legacy.records)
+      roots.push(bounded.descriptor.receiptRoot)
+      expect(() => readFactorySupervisionArtifactRecordsBounded(repository, stored.artifactRoot, { ...limits, beforeAllocation: bytes => { if (bytes > 8 * 1024 * 1024) throw new TypeError("PREFIX_CAPACITY") } })).toThrow("PREFIX_CAPACITY")
+    }
+    expect(roots).toHaveLength(48)
+    expect(new Set(roots).size).toBe(48)
+    expect(peakReserve).toBeGreaterThan(8 * 1024 * 1024)
+  }, 120000)
+
   it("retains aggregate evidence above 8 MiB and individual records above the artifact cap", async () => {
     const { repository, admission } = setup()
     const transitions = Array.from({ length: 1500 }, (_, sequence) => ({ sequence, payload: "private-fixture".repeat(450) }))

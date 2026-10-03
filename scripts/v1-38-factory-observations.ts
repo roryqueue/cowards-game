@@ -43,29 +43,34 @@ export interface VerifiedFactoryCellObservationInput {
 }
 
 const tokensFor = (value: unknown, side: "bottom" | "top", ids: Map<string, string>, path = "value", budget?: { remaining: number }): string[] => {
-  const leaf = (token: string): string[] => {
+  const output: string[] = []
+  const leaf = (token: string): void => {
     if (budget) { budget.remaining -= 64 + token.length * 8; if (budget.remaining < 0) return fail("TOKEN_LIMIT") }
-    return [token]
+    output.push(token)
   }
-  if (value === null) return leaf(`${path}=null`)
-  if (typeof value === "string") return leaf(`${path}=${value}`)
-  if (typeof value === "boolean") return leaf(`${path}=${String(value)}`)
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) return fail("RECORDS")
-    const coordinate = side === "top" && /\.(?:x|y)$/u.test(path) ? 11 - value : side === "top" && /\.(?:dx|dy)$/u.test(path) ? -value : value
-    return leaf(`${path}=${coordinate}`)
+  const visit = (item: unknown, at: string, depth: number): void => {
+    if (depth > 128) return fail("TOKEN_LIMIT")
+    if (item === null) { leaf(`${at}=null`); return }
+    if (typeof item === "string") { leaf(`${at}=${item}`); return }
+    if (typeof item === "boolean") { leaf(`${at}=${String(item)}`); return }
+    if (typeof item === "number") {
+      if (!Number.isFinite(item)) return fail("RECORDS")
+      const coordinate = side === "top" && /\.(?:x|y)$/u.test(at) ? 11 - item : side === "top" && /\.(?:dx|dy)$/u.test(at) ? -item : item
+      leaf(`${at}=${coordinate}`); return
+    }
+    if (Array.isArray(item)) { for (let index = 0; index < item.length; index++) visit(item[index], `${at}[${index}]`, depth + 1); return }
+    const object = record(item, "RECORDS")
+    for (const key of Object.keys(object).sort()) {
+      if (FORBIDDEN.test(key) || !FIELDS.has(key)) continue
+      const entry = object[key], next = `${at}.${key}`
+      if (/(?:^|_)id$/iu.test(key) || /Id$/u.test(key)) {
+        if (typeof entry !== "string" || entry.length === 0) return fail("RECORDS")
+        let normalized = ids.get(entry); if (!normalized) { normalized = `entity-${ids.size + 1}`; ids.set(entry, normalized) }
+        leaf(`${next}=${normalized}`)
+      } else visit(entry, next, depth + 1)
+    }
   }
-  if (Array.isArray(value)) return value.flatMap((entry, index) => tokensFor(entry, side, ids, `${path}[${index}]`, budget))
-  const object = record(value, "RECORDS"), output: string[] = []
-  for (const key of Object.keys(object).sort()) {
-    if (FORBIDDEN.test(key) || !FIELDS.has(key)) continue
-    const entry = object[key], next = `${path}.${key}`
-    if (/(?:^|_)id$/iu.test(key) || /Id$/u.test(key)) {
-      if (typeof entry !== "string" || entry.length === 0) return fail("RECORDS")
-      let normalized = ids.get(entry); if (!normalized) { normalized = `entity-${ids.size + 1}`; ids.set(entry, normalized) }
-      output.push(...leaf(`${next}=${normalized}`))
-    } else output.push(...tokensFor(entry, side, ids, next, budget))
-  }
+  visit(value, path, 0)
   return output
 }
 
@@ -96,7 +101,9 @@ export const createNumericObservationFromVerifiedCell = (input: VerifiedFactoryC
       const self = request.self === null ? null : record(request.self, "RECORDS"), status = typeof self?.status === "string" ? self.status : null
       if (status !== null && status !== "STONE" && typeof self?.id === "string") nonStoneIds.add(self.id)
       if (actionType === "TURN_TO_STONE" && status !== null && status !== "STONE") nonStoneToStoneDecisionCount += 1
-      const signature = tokensFor(decision, input.cell.candidateSide, ids, "decision", budget).join("|"); decisionSignatures.push(signature)
+      const signatureTokens = tokensFor(decision, input.cell.candidateSide, ids, "decision", budget)
+      if (budget) { budget.remaining -= 64 + signatureTokens.reduce((sum, token) => sum + token.length + 1, 0) * 8; if (budget.remaining < 0) return fail("TOKEN_LIMIT") }
+      const signature = signatureTokens.join("|"); decisionSignatures.push(signature)
       guardBehaviors.push(Object.freeze({ sampleKey, hasAdvancedThisActivation: typeof request.hasAdvancedThisActivation === "boolean" ? request.hasAdvancedThisActivation : null, actionType }))
     }
   }

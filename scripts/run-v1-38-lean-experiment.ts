@@ -84,16 +84,16 @@ const rssOf = (pid: number): number => {
 export const assertLeanBoundParentObservation = (expectedPid: number, observedPid: number, connected: boolean): void => {
   if (!Number.isSafeInteger(expectedPid) || expectedPid <= 0 || observedPid !== expectedPid || !connected) return fail("PARENT_LOST")
 }
-export const assertLeanPrefixCapacity = (ledger: LeanExperimentLedger, parentPid: number): number => {
+export const assertLeanPrefixCapacity = (ledger: LeanExperimentLedger, parentPid: number, reserveBytes = 320 * 1024 * 1024): number => {
   assertLeanBoundParentObservation(parentPid, process.ppid, process.connected)
   const childRss = Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024), parentRss = rssOf(parentPid)
   assertLeanBoundParentObservation(parentPid, process.ppid, process.connected)
   const stat = statfsSync(ledger.directory, { bigint: true }), available = stat.bavail * stat.bsize
   if (available > BigInt(Number.MAX_SAFE_INTEGER)) return fail("PREFIX_CAPACITY")
-  return assessLeanPrefixCapacity({ childRss, parentRss, freeBytes: Number(available), allocatedBytes: cumulativeLeanPhysicalBytes(ledger), elapsedMs: currentLeanElapsedMs(ledger) })
+  return assessLeanPrefixCapacity({ childRss, parentRss, freeBytes: Number(available), allocatedBytes: cumulativeLeanPhysicalBytes(ledger), elapsedMs: currentLeanElapsedMs(ledger) }, reserveBytes)
 }
-export const assessLeanPrefixCapacity = (m: { childRss: number; parentRss: number; freeBytes: number; allocatedBytes: number; elapsedMs: number }): number => {
-  if (!exactLabKeys(m, ["childRss", "parentRss", "freeBytes", "allocatedBytes", "elapsedMs"]) || !Object.values(m).every(n => Number.isSafeInteger(n) && n >= 0) || m.childRss + m.parentRss + LEAN_EXTERNAL_SCRATCH_RESERVE + 64 * 1024 * 1024 + 256 * 1024 * 1024 > LEAN_CAPS.scratchBytes || m.elapsedMs >= LEAN_CAPS.elapsedMs || m.allocatedBytes > LEAN_CAPS.totalBytes || m.freeBytes < LEAN_CAPS.totalBytes - m.allocatedBytes) return fail("PREFIX_CAPACITY")
+export const assessLeanPrefixCapacity = (m: { childRss: number; parentRss: number; freeBytes: number; allocatedBytes: number; elapsedMs: number }, reserveBytes = 320 * 1024 * 1024): number => {
+  if (!exactLabKeys(m, ["childRss", "parentRss", "freeBytes", "allocatedBytes", "elapsedMs"]) || !Object.values(m).every(n => Number.isSafeInteger(n) && n >= 0) || !Number.isSafeInteger(reserveBytes) || reserveBytes < 0 || m.childRss + m.parentRss + LEAN_EXTERNAL_SCRATCH_RESERVE + reserveBytes > LEAN_CAPS.scratchBytes || m.elapsedMs >= LEAN_CAPS.elapsedMs || m.allocatedBytes > LEAN_CAPS.totalBytes || m.freeBytes < LEAN_CAPS.totalBytes - m.allocatedBytes) return fail("PREFIX_CAPACITY")
   return m.childRss + m.parentRss
 }
 export const admitLeanChildRelease = (entry: LeanChildEntryV2, token: string, pid: number, parentPid: number): void => {
@@ -124,8 +124,8 @@ export const createLeanParentObservationGuard = (parentPid: number, observedPid 
 export const assertLeanEntryBinding = (entry: LeanChildEntryV2, observed: { head: string; sourceRoot: LabRoot; requestBytesRoot: LabRoot; allocationRoot: LabRoot; parentPid: number; childPid: number; intervalStartMs: number }): void => {
   if (!exactLabKeys(observed, ["head", "sourceRoot", "requestBytesRoot", "allocationRoot", "parentPid", "childPid", "intervalStartMs"]) || entry.head !== observed.head || entry.sourceRoot !== observed.sourceRoot || entry.requestBytesRoot !== observed.requestBytesRoot || entry.allocationRoot !== observed.allocationRoot || entry.parentPid !== observed.parentPid || entry.childPid !== observed.childPid || entry.wallStartMs !== observed.intervalStartMs) return fail("ENTRY")
 }
-const readCandidates = (r: Request, checkpoint: () => void) => {
-  const repository = createFactoryRepository(resolve(r.factoryDirectory)), candidates = readLeanPilotInitialCandidates(repository, r.selection, checkpoint)
+const readCandidates = (r: Request, checkpoint: () => void, beforeAllocation: (reserveBytes: number) => void) => {
+  const repository = createFactoryRepository(resolve(r.factoryDirectory)), candidates = readLeanPilotInitialCandidates(repository, r.selection, checkpoint, beforeAllocation)
   if (candidates.length !== 2 || candidates.some(c => !c.admission.importEvidence || !["S01", "S03"].includes(c.admission.importEvidence.sourceSlot))) return fail("ASSESSED_PAIR")
   return [...candidates].sort((a, b) => a.admission.candidate.root.localeCompare(b.admission.candidate.root))
 }
@@ -184,7 +184,8 @@ const runLeanPilotBody = async (requestPath: string) => {
   parent.assert()
   let bufferHighWater = assertLeanPrefixCapacity(ledger, entry.parentPid), maximumCellMs = 0, maximumCellPhysicalBytes = 0, clean = true
   const trackBuffer = () => { parent.assert(); bufferHighWater = Math.max(bufferHighWater, assertLeanPrefixCapacity(ledger, entry.parentPid)) }
-  const candidates = readCandidates(request, trackBuffer)
+  const beforeAllocation = (reserveBytes: number) => { parent.assert(); bufferHighWater = Math.max(bufferHighWater, assertLeanPrefixCapacity(ledger, entry.parentPid, reserveBytes)) }
+  const candidates = readCandidates(request, trackBuffer, beforeAllocation)
   trackBuffer()
   if (labRoot("lean-candidates", candidates.map(c => c.admission.candidate.root)) !== labRoot("lean-candidates", ledger.allocation.candidateRoots)) return fail("CANDIDATE_JOIN")
   for (const slot of ledger.allocation.slots) {

@@ -275,8 +275,9 @@ export interface LeagueCandidateInput extends LeaguePortfolioCandidate { readonl
 /** Data-only selection has no execution/allocation authority. This lets the
  * same reader derive original evidence before the amendment/allocation DAG. */
 export type LeagueInitialCandidateSelection = Pick<LeagueExecutionAllocation, "initialCandidatePublicationRoots" | "factoryAssessmentArtifactRoots"> & { readonly operations: Pick<LeagueExecutionAllocation["operations"], "maxArtifactBytes" | "maxArtifactRecords"> }
-const indexFactory = (repository: FactoryRepository, allocation: LeagueInitialCandidateSelection) => {
+const indexFactory = (repository: FactoryRepository, allocation: LeagueInitialCandidateSelection, beforeAllocation?: (reserveBytes: number) => void) => {
   const byRoot = new Map<LabRoot, LabRoot>(); let bytes = 0, records = 0
+  beforeAllocation?.(allocation.operations.maxArtifactRecords * 512 + 64 * 1024 * 1024)
   for (const name of readdirSync(repository.directory).sort()) {
     const match = /^factory-artifact-([a-f0-9]{64})\.bin$/u.exec(name); if (!match) continue
     const artifactRoot = `sha256:${match[1]}` as LabRoot, raw = readFactoryArtifact(repository, artifactRoot)
@@ -286,16 +287,16 @@ const indexFactory = (repository: FactoryRepository, allocation: LeagueInitialCa
   }
   return byRoot
 }
-const readInitialCandidates = (repository: FactoryRepository, allocation: LeagueInitialCandidateSelection, lean?: { readonly beforeCell?: (ordinal: number) => void }): readonly LeagueCandidateInput[] => {
+const readInitialCandidates = (repository: FactoryRepository, allocation: LeagueInitialCandidateSelection, lean?: { readonly beforeCell?: (ordinal: number) => void; readonly beforeAllocation?: (reserveBytes: number) => void }): readonly LeagueCandidateInput[] => {
   const prospective = "schemaVersion" in allocation && isProspectiveLeagueExecutionAllocation(allocation) ? admitLeagueExecutionAllocation(allocation) as ProspectiveLeagueExecutionAllocation : null
   const importMaxBytes = lean ? Math.min(allocation.operations.maxArtifactBytes, 64 * 1024 * 1024) : allocation.operations.maxArtifactBytes
   const importMaxRecords = lean ? Math.min(allocation.operations.maxArtifactRecords, 50_000) : allocation.operations.maxArtifactRecords
-  const index = indexFactory(repository, allocation), ledger = readRetainedFactoryLedger(repository)
+  const index = indexFactory(repository, allocation, lean?.beforeAllocation), ledger = readRetainedFactoryLedger(repository)
   // A verifier closure is created only after complete historical re-assessment.
   // It is bound to this repository and exact root; candidate import still
   // reopens publication, threshold, receipt, source and closure evidence.
   const assessments = allocation.factoryAssessmentArtifactRoots.map((artifactRoot) => {
-    const verified = verifyHistoricalFactoryAssessmentForLeague(repository, artifactRoot, lean ? { boundedImport: true, beforeCell: lean.beforeCell } : {})
+    const verified = verifyHistoricalFactoryAssessmentForLeague(repository, artifactRoot, lean ? { boundedImport: true, beforeCell: lean.beforeCell, beforeAllocation: lean.beforeAllocation } : {})
     const verify = lean ? (candidateRepository: FactoryRepository, candidateRoot: LabRoot) => {
       if (candidateRepository !== repository || candidateRoot !== artifactRoot) return fail("CANDIDATE_ASSESSMENT")
       return verified
@@ -312,9 +313,9 @@ const readInitialCandidates = (repository: FactoryRepository, allocation: League
     if (assessment.length !== 1) return fail("CANDIDATE_ASSESSMENT")
     const subject = assessment[0]!, stored = subject.value.input.supervisionArtifactRoots.map((root: LabRoot) => ({ root, descriptor: parse(readFactoryArtifact(repository, root)) })).find((entry: any) => entry.descriptor.receiptRoot === candidate.supervisionReceiptRoot)
     if (!stored) return fail("CANDIDATE_SUPERVISION")
-    const retained = (lean ? readFactorySupervisionArtifactRecordsBounded : readFactorySupervisionArtifactRecords)(repository, stored.root, { maxBytes: importMaxBytes, maxRecords: importMaxRecords }), receipt = retained.records.find((entry) => entry.kind === "receipt")!.value as any
+    const retained = (lean ? readFactorySupervisionArtifactRecordsBounded : readFactorySupervisionArtifactRecords)(repository, stored.root, { maxBytes: importMaxBytes, maxRecords: importMaxRecords, ...(lean ? { beforeAllocation: lean.beforeAllocation } : {}) }), receipt = retained.records.find((entry) => entry.kind === "receipt")!.value as any
     const attempt = ledger.entries.find((entry) => entry.start.root === receipt.candidateIdentity.attemptRoot) ?? fail("CANDIDATE_CHARGE")
-    const admission = importAssessedFactoryCandidate({ repository, publicationArtifactRoot: publicationRoot, supervisionArtifactRoot: stored.root, assessmentArtifactRoot: subject.artifactRoot, attemptStart: attempt.start, attemptTerminal: attempt.terminal, maxBytes: importMaxBytes, maxRecords: importMaxRecords, verifyRetainedAssessment: subject.verify, ...(lean ? { boundedSupervision: true as const } : {}) })
+    const admission = importAssessedFactoryCandidate({ repository, publicationArtifactRoot: publicationRoot, supervisionArtifactRoot: stored.root, assessmentArtifactRoot: subject.artifactRoot, attemptStart: attempt.start, attemptTerminal: attempt.terminal, maxBytes: importMaxBytes, maxRecords: importMaxRecords, verifyRetainedAssessment: subject.verify, ...(lean ? { boundedSupervision: true as const, beforeAllocation: lean.beforeAllocation } : {}) })
     const packet = index.get(candidate.proposal.packetRoot), proposal = index.get(candidate.proposal.root), validation = index.get(candidate.validation.root)
     if (!packet || !proposal || !validation) return fail("CANDIDATE_CLOSURE")
     const closure = { factoryRepository: repository, candidatePublicationArtifactRoot: publicationRoot, sourceArtifactRoot: candidate.proposal.source.root, packetArtifactRoot: packet, proposalArtifactRoot: proposal, validationArtifactRoot: validation }
@@ -328,7 +329,7 @@ export const readLeagueInitialCandidates = (repository: FactoryRepository, alloc
 /** Private lean pilot path: one complete authenticated 48-cell assessment per
  * root, with bounded per-cell reopening and a root-bound verifier shared by
  * both candidate imports. No execution or empirical authority is issued. */
-export const readLeanPilotInitialCandidates = (repository: FactoryRepository, allocation: LeagueInitialCandidateSelection, beforeCell?: (ordinal: number) => void): readonly LeagueCandidateInput[] => readInitialCandidates(repository, allocation, { beforeCell })
+export const readLeanPilotInitialCandidates = (repository: FactoryRepository, allocation: LeagueInitialCandidateSelection, beforeCell?: (ordinal: number) => void, beforeAllocation?: (reserveBytes: number) => void): readonly LeagueCandidateInput[] => readInitialCandidates(repository, allocation, { beforeCell, beforeAllocation })
 
 /** Called only after the existing data-only assessment reader, never on labels
  * supplied as empirical evidence. Fixture seams cannot enter an empirical run. */

@@ -106,7 +106,7 @@ export const publishFactorySupervisionArtifacts = (repository: FactoryRepository
 }
 
 /** Bounded data-only reopening. The caller sets a read budget; this grants no execution authority. */
-const readFactorySupervisionArtifactRecordsInternal = (repository: FactoryRepository, artifactRoot: LabRoot, limits: { readonly maxBytes: number; readonly maxRecords: number }, bounded: boolean): Readonly<{ descriptor: StoredFactorySupervisionDescriptor; records: readonly StoredFactorySupervisionRecord[]; issued: false }> => {
+const readFactorySupervisionArtifactRecordsInternal = (repository: FactoryRepository, artifactRoot: LabRoot, limits: { readonly maxBytes: number; readonly maxRecords: number; readonly beforeAllocation?: (reserveBytes: number) => void }, bounded: boolean): Readonly<{ descriptor: StoredFactorySupervisionDescriptor; records: readonly StoredFactorySupervisionRecord[]; issued: false }> => {
   if (!natural(limits.maxBytes) || !natural(limits.maxRecords) || limits.maxBytes < 1 || limits.maxRecords < 1) return fail("READ_LIMITS")
   const raw = parse(readFactoryArtifact(repository, artifactRoot))
   if (!exactLabKeys(raw, ["schemaVersion", "privacy", "root", "receiptRoot", "executionRoot", "tracesRoot", "recordCount", "byteLength", "chunkCount", "tailRoot"])) return fail("DESCRIPTOR")
@@ -137,6 +137,32 @@ const readFactorySupervisionArtifactRecordsInternal = (repository: FactoryReposi
     tail = node.previousRoot as LabRoot | null
   }
   if (remaining !== 0 || tail !== null) return fail("CHUNK_CHAIN")
+  let parseReserve = 0
+  if (bounded && limits.beforeAllocation) {
+    // A lexical pass over one authenticated chunk at a time precedes every
+    // record parse. Charge decoded strings/canonical copies from raw bytes and
+    // object/array/property slots from structural tokens, including complete
+    // retained records and commitment scratch. This is a deliberately high
+    // admission bound, not a measurement of the old process's RSS.
+    let structural = 0, depth = 0, quoted = false, escaped = false
+    for (const chunk of [...chunks].reverse()) {
+      limits.beforeAllocation(2 * CAP)
+      const data = readFactoryArtifact(repository, chunk.bytesRoot)
+      if (data.byteLength !== chunk.length) return fail("CHUNK_LENGTH")
+      for (const byte of data) {
+        if (quoted) { if (escaped) escaped = false; else if (byte === 92) escaped = true; else if (byte === 34) quoted = false; continue }
+        if (byte === 34) { quoted = true; structural++; continue }
+        if (byte === 123 || byte === 91) { depth++; structural++; if (depth > 128) return fail("RECORD_DEPTH") }
+        else if (byte === 125 || byte === 93) depth--
+        else if (byte === 44 || byte === 58) structural++
+        if (depth < 0) return fail("RECORD_DEPTH")
+      }
+    }
+    if (quoted || depth !== 0) return fail("RECORD_DEPTH")
+    parseReserve = descriptor.byteLength * 32 + structural * 256 + descriptor.recordCount * 512 + 16 * 1024 * 1024
+    if (!Number.isSafeInteger(parseReserve)) return fail("RECORD_LIMIT")
+    limits.beforeAllocation(parseReserve)
+  }
   const output: StoredFactorySupervisionRecord[] = []
   let start = 0
   const counts = new Map<string, number>()
@@ -154,6 +180,7 @@ const readFactorySupervisionArtifactRecordsInternal = (repository: FactoryReposi
   if (bounded) {
     let pending = new Uint8Array(0)
     for (const chunk of chunks.reverse()) {
+      limits.beforeAllocation?.(parseReserve)
       const data = readFactoryArtifact(repository, chunk.bytesRoot)
       if (data.byteLength !== chunk.length) return fail("CHUNK_LENGTH")
       let offset = 0
@@ -185,6 +212,7 @@ const readFactorySupervisionArtifactRecordsInternal = (repository: FactoryReposi
     if (start !== bytes!.byteLength) return fail("RECORD_COUNT")
   }
   if (output.length !== descriptor.recordCount || counts.get("receipt") !== 1 || counts.get("execution") !== 1) return fail("RECORD_COUNT")
+  if (bounded) limits.beforeAllocation?.(parseReserve)
   const values = (kind: StoredFactorySupervisionRecord["kind"]) => output.filter(record => record.kind === kind).map(record => record.value)
   const metadata = values("receipt")[0]
   if (!exactLabKeys(metadata, ["admission", "candidatePlayerId", "candidateIdentity", "matchup", "root"])) return fail("RECEIPT_METADATA")
@@ -217,4 +245,4 @@ export const readFactorySupervisionArtifactRecords = (repository: FactoryReposit
 
 /** Lean-only authenticated reopening: one raw chunk at a time, with the same
  * receipt/execution/trace commitments and record checks as the full reader. */
-export const readFactorySupervisionArtifactRecordsBounded = (repository: FactoryRepository, artifactRoot: LabRoot, limits: { readonly maxBytes: number; readonly maxRecords: number }): Readonly<{ descriptor: StoredFactorySupervisionDescriptor; records: readonly StoredFactorySupervisionRecord[]; issued: false }> => readFactorySupervisionArtifactRecordsInternal(repository, artifactRoot, limits, true)
+export const readFactorySupervisionArtifactRecordsBounded = (repository: FactoryRepository, artifactRoot: LabRoot, limits: { readonly maxBytes: number; readonly maxRecords: number; readonly beforeAllocation?: (reserveBytes: number) => void }): Readonly<{ descriptor: StoredFactorySupervisionDescriptor; records: readonly StoredFactorySupervisionRecord[]; issued: false }> => readFactorySupervisionArtifactRecordsInternal(repository, artifactRoot, limits, true)

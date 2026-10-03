@@ -94,7 +94,7 @@ export const boundedFactoryProjectionCharge = (value: unknown, ceiling = LEAN_FA
   visit(value)
   return charged
 }
-const assessBoundFactoryIndependence = (repository: FactoryRepository, input: FactoryAssessmentInput, options: {persist?: boolean; correctionArtifactRoot?: LabRoot; boundedImport?: boolean; beforeCell?: (ordinal: number) => void} = {}, historicalImport?: FactoryHistoricalImportContext): FactoryAssessmentResult => {
+const assessBoundFactoryIndependence = (repository: FactoryRepository, input: FactoryAssessmentInput, options: {persist?: boolean; correctionArtifactRoot?: LabRoot; boundedImport?: boolean; beforeCell?: (ordinal: number) => void; beforeAllocation?: (reserveBytes: number) => void} = {}, historicalImport?: FactoryHistoricalImportContext): FactoryAssessmentResult => {
   const persist = options.persist !== false, reasons:string[] = []
   if (historicalImport && persist) return fail("IMPORT_READ_ONLY")
   const measurementImplementationRoot = historicalImport ? requireFactoryHistoricalImportContext(historicalImport, repository, input.executionEvidenceArtifactRoot).historicalAssessmentImplementationRoot : implementationRoot()
@@ -133,7 +133,7 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
       reasons.push(`cell:${ordinal}:${terminal.disposition}`); continue
     }
     if (!supervisionRoot || terminal.outputRoot !== supervisionRoot) return fail("RECEIPT_MISSING")
-    const retained = (options.boundedImport ? readFactorySupervisionArtifactRecordsBounded : readFactorySupervisionArtifactRecords)(repository,supervisionRoot,{maxBytes:64*1024*1024,maxRecords:50000})
+    const retained = (options.boundedImport ? readFactorySupervisionArtifactRecordsBounded : readFactorySupervisionArtifactRecords)(repository,supervisionRoot,{maxBytes:64*1024*1024,maxRecords:50000,...(options.boundedImport ? {beforeAllocation: options.beforeAllocation} : {})})
     const metadata = record(retained.records.find((item) => item.kind === "receipt")?.value), admission = record(metadata.admission), identity = record(metadata.candidateIdentity), matchup = record(metadata.matchup)
     const revisionId = String(identity.revisionId), arenaVariant = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === workload.condition.arenaId)
     if (!arenaVariant) return fail("ARENA")
@@ -152,6 +152,7 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
     const sourceAudit = auditFactorySource(ingestion.sourceUtf8)
     const baseSlot = Object.hasOwn(FACTORY_CONTROL_BASES,cell.slot) ? FACTORY_CONTROL_BASES[cell.slot as FactoryControlSlot] : cell.slot
     const lineageEdges = [{label:"emitted-by",from:"strategy",to:fresh.ingestions[baseSlot].producerIdentity},...(baseSlot === cell.slot ? [] : [{label:"derived-from",from:"control",to:"strategy"}])]
+    if (options.boundedImport) options.beforeAllocation?.(4 * 64 * 1024 * 1024)
     const observation = createNumericObservationFromVerifiedCell({sourceUtf8:ingestion.sourceUtf8,cell:{key:`${cell.slot}:${cell.block}:${cell.initialInitiative}`,block:cell.block === "A"?"block-a":"block-b",candidateSide:cell.candidateSide,initialInitiative:cell.initialInitiative},lineageEdges,dependencyEdges:sourceAudit.dependencyEdges,records:retained.records,...(options.boundedImport ? { maxTokenChargeBytes: 64 * 1024 * 1024 } : {})})
     if (options.boundedImport) projectionBytes += boundedFactoryProjectionCharge(observation, LEAN_FACTORY_PROJECTION_CEILING_BYTES - projectionBytes)
     observations[cell.slot] = [...(observations[cell.slot]??[]),observation]
@@ -226,7 +227,7 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
 }
 export const assessFactoryIndependence = (repository: FactoryRepository, input: FactoryAssessmentInput, options: {persist?: boolean; correctionArtifactRoot?: LabRoot} = {}): FactoryAssessmentResult => assessBoundFactoryIndependence(repository, input, options)
 /** Original measurement and current reader identities remain distinct. No new execution authority. */
-export const verifyHistoricalFactoryAssessmentForLeague = (repository: FactoryRepository, artifactRoot: LabRoot, options: { readonly boundedImport?: true; readonly beforeCell?: (ordinal: number) => void } = {}): FactoryAssessmentResult & { issued: false; historicalProducerImplementationRoot: LabRoot; historicalAssessmentImplementationRoot: LabRoot; currentReaderImplementationRoot: LabRoot } => {
+export const verifyHistoricalFactoryAssessmentForLeague = (repository: FactoryRepository, artifactRoot: LabRoot, options: { readonly boundedImport?: true; readonly beforeCell?: (ordinal: number) => void; readonly beforeAllocation?: (reserveBytes: number) => void } = {}): FactoryAssessmentResult & { issued: false; historicalProducerImplementationRoot: LabRoot; historicalAssessmentImplementationRoot: LabRoot; currentReaderImplementationRoot: LabRoot } => {
   const context = readFactoryHistoricalImportContext(repository, artifactRoot), saved = readFactoryCanonicalRecord(repository, artifactRoot)
   const result = assessBoundFactoryIndependence(repository, saved.input as unknown as FactoryAssessmentInput, { persist: false, ...options, ...(saved.schemaVersion === "factory-independence-assessment-v2" ? { correctionArtifactRoot: saved.correctionArtifactRoot as LabRoot } : {}) }, context)
   if (result.assessmentRoot !== context.assessmentRoot) return fail("IMPORT_ASSESSMENT_REOPEN")
