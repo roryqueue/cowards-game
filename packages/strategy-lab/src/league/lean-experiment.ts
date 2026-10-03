@@ -68,12 +68,20 @@ export interface LeanCharge { schemaVersion: "lean-slot-charge-v1"; allocationRo
 type Event = { kind: "charge"; charge: LeanCharge } | { kind: "terminal"; chargeRoot: LabRoot; record: LeanCompactMatchRecord; replay: LeanReplayContainer | null } | { kind: "resource"; elapsedMs: number; physicalBytes: number; bufferBytes: number; scratchBytes: number } | { kind: "stop"; reason: string }
 export interface LeanExperimentLedger { directory: string; allocation: Readonly<LeanExperimentAllocation> }
 const safeDirectory = (directory: string): string => { const p = resolve(directory), s = lstatSync(p); if (!s.isDirectory() || s.isSymbolicLink() || realpathSync(p) !== p || (s.mode & 0o777) !== 0o700) return fail("STORE"); return p }
-const writeExclusive = (path: string, bytes: Uint8Array) => { const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600); try { writeSync(fd, bytes); fsyncSync(fd) } finally { closeSync(fd) } }
+export const writeLeanAll = (fd: number, bytes: Uint8Array, writer = writeSync): void => {
+  let offset = 0
+  while (offset < bytes.length) {
+    const count = writer(fd, bytes, offset, bytes.length - offset)
+    if (!Number.isSafeInteger(count) || count <= 0 || count > bytes.length - offset) return fail("PUBLICATION")
+    offset += count
+  }
+}
+const writeExclusive = (path: string, bytes: Uint8Array) => { const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600); try { writeLeanAll(fd, bytes); fsyncSync(fd) } finally { closeSync(fd) } }
 const readSafe = (path: string): Uint8Array => { const s = lstatSync(path); if (!s.isFile() || s.isSymbolicLink() || s.size > REPLAY_MAX) return fail("FILE"); const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW); try { return readFileSync(fd) } finally { closeSync(fd) } }
 const append = (ledger: LeanExperimentLedger, event: Event) => {
   const p = safeDirectory(ledger.directory), bytes = leanCanonicalBytes(event)
   const fd = openSync(join(p, "ledger.ndjson"), constants.O_APPEND | constants.O_WRONLY | constants.O_NOFOLLOW)
-  try { writeSync(fd, Buffer.concat([bytes, Buffer.from("\n")])); fsyncSync(fd) } finally { closeSync(fd) }
+  try { writeLeanAll(fd, Buffer.concat([bytes, Buffer.from("\n")])); fsyncSync(fd) } finally { closeSync(fd) }
 }
 export const createLeanLedger = (directory: string, allocation: LeanExperimentAllocation): LeanExperimentLedger => {
   const a = admitLeanAllocation(allocation), p = resolve(directory)

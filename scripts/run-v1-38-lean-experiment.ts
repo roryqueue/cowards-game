@@ -12,7 +12,7 @@ import { admitFactory, authorizeFactorySupervision, deriveFactoryExecutionCommit
 import { createFactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { readCandidateClosure } from "../packages/strategy-lab/src/league/connected-runner.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../packages/strategy-lab/src/runtime-bridge.js"
-import { createLeanAllocation, createLeanLedger, openLeanLedger, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, measureLeanPhysicalBytes, readLeanLedger, stopLeanLedger, verifyLeanEvidence, chooseLeanTier, leanBytesRoot, leanCanonicalBytes, LEAN_CAPS, type LeanExperimentLedger, type LeanCompactMatchRecord, type LeanCharge } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { writeLeanAll, createLeanAllocation, createLeanLedger, openLeanLedger, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, measureLeanPhysicalBytes, readLeanLedger, stopLeanLedger, verifyLeanEvidence, chooseLeanTier, leanBytesRoot, leanCanonicalBytes, LEAN_CAPS, type LeanExperimentLedger, type LeanCompactMatchRecord, type LeanCharge } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { readLeagueInitialCandidates, observeLeagueAvailableMemoryBytes, type LeagueInitialCandidateSelection } from "./run-v1-38-serious-league.js"
 import { factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
 import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-runtime.js"
@@ -45,7 +45,7 @@ const readRequest = (path: string): Request => {
   if (!f.startsWith(`${resolve(".strategy-lab")}/`) || realpathSync(f) !== f || lstatSync(f).isSymbolicLink()) return fail("FACTORY")
   return r
 }
-const exclusive = (path: string, value: unknown) => { const bytes = leanCanonicalBytes(value); const fd = openSync(path, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600); try { let offset = 0; while (offset < bytes.length) offset += writeSync(fd, bytes, offset, bytes.length - offset); fsyncSync(fd) } finally { closeSync(fd) } }
+const exclusive = (path: string, value: unknown) => { const bytes = leanCanonicalBytes(value); const fd = openSync(path, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600); try { writeLeanAll(fd, bytes); fsyncSync(fd) } finally { closeSync(fd) } }
 const readCandidates = (r: Request) => {
   const repository = createFactoryRepository(resolve(r.factoryDirectory)), candidates = readLeagueInitialCandidates(repository, r.selection)
   if (candidates.length !== 2 || candidates.some(c => !c.admission.importEvidence || !["S01", "S03"].includes(c.admission.importEvidence.sourceSlot))) return fail("ASSESSED_PAIR")
