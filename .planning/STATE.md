@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Phase265 V12 allocation published; commit before unique capacity-gated root entry
+status: awaiting_resource
+stopped_at: Phase265 V12 entry closed failure; current disk703150760bytes short of unchangedcapacity; restore free space beforefreshroute
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: V12 prepare98897/capacity-input99540/publication55711 closedexit0; fresh allocation02bb7a07 ready tocommit, no receipt/Match
+last_activity_desc: V12 terminal-only verification closed/nohead; elevenstaticjobs andplanjoins pass; read-onlyresourcecheck diskshort,memorypass; no newroute
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,60 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+V12 uniqueentry15575/PID44627 CLOSEDexit1,2026-10-03T04:42:54.570Z,
+TypeError/detailswithheld, resultPublishedfalse/noRetrytrue. Failuremarker raw
+4d6c64b0a9ec0d6426f8f37e1785a65207043d290b00f17d0bc4656d075a0860.
+ONE independent entry-terminal-only verification CLOSED; no actualhead exists,
+so ordinary retained reader NOTinvoked/noheadfabricated. Emptyreal0700league
+store and zero-byte reservedcanonicalresult-v12 remain immutable; do notfill/
+delete/stage result reservation. No retained capacity/charge/Match/LEAGcredit.
+Original throw point/cause UNKNOWN; absence of retainedrecords is not absence
+of every unrecorded observation/construction. Source hold released after entry
+closure+unique boundedterminalcheck; production9ff/552bba3d/defe5024 unchanged.
+
+GSD diagnosis-only CLOSED: all11 actual staticauthoringpreflights PASS;
+exactcapacity-plan/source joins PASS. One authorized currentresourceobservation
+at05:01:05.103Z shows disk699357864bytes short, effective availablememory
+11854109736bytes >1073741824required. Root read-only statfs confirmation at
+05:04:26.909Z: free209665351680 vs required210368502440, short703150760bytes
+(about0.70GB). This predicts current CAPACITY_MARGIN refusal, NOTproof of
+the original V12 cause. No capacityreceipt/admission/runtime/provider/Match
+or expensivehistoricalscan was repeated. Safe diagnosis/terminal reports
+commit/push next; noactive agent/entry/verifier.
+
+Human resource action: free at least2GB on the repository filesystem for
+comfortable headroom, keeping all private historical evidence intact. Do not
+lower the frozen20GiB free margin or terminalreserve, and do not delete user
+files or consumed evidence autonomously. While unchanged insufficientdisk,
+no newroute merely to repeat predicted refusal; light read-only statfs only.
+Once enough free space is actually observed, standing route approval permits
+distinctfreshV13 under unchangedbounds WITHOUTanotherliteral: fresh actual
+requestauthor/reviewer, fixedreviewedsource/helper/gates, NEWimmutableallocation
+committedbeforeuniqueentry, fresh0700store and freshpassing SAMEPROCESScapacity.
+V12 and allconsumedhistory neverresume/retry/replace/refund/recredit. Consider
+finite whitelisted pre-reservation diagnostic retention in NEWhelper only;
+no rewriting oldfailure. AllLEAGpending/unopenedholdout/freeze-beforeformation/
+no-public-counted-production/historicalDockerunknownflag unchanged. Older
+activeentry paragraphs below now history; actualclosedmarkers supersede them.
+
+V12 UNIQUE root entry session15575 PID44627 ACTIVE, admittedallocation
+02bb7a07b956c37eeadb2282cf12cfd1775aa7bb71cf5d052d3c069736343b0e,
+canonical raw19cce0e4ef93454e944990b58802dab053e3f86f0e881ba34d85d238ee696ce9.
+Exactallocation committed/pushed BEFOREentry in526bb7c19e30a7b1059b0b8f436b9962eb393794.
+Actualfirststatus entry_started_static_validation_before_capacity. This is
+NOTcapacitypass, charge/Match success or LEAGcredit. Determinecurrentstage
+fromactual private markers/process; neverduplicateentry/helper/gate/verifier.
+HOLD HEAD526bb7c1 and production source9ff/552bba3d/defe5024 fixed through
+terminal and its ONE unique retained verifier. No commit/sourceedit/competing
+CPU-heavywork during entry or retained verification. This STATE handoff is
+uncommitted planning-only while hold applies. Fresh private store0700; same
+processcapacity must pass beforecharge/dispatch. All frozenbounds approved
+guest1000/host5000/Match600000 and others unchanged. AllLEAGpending; immutable
+consumedhistory/unknown historicalDockerlaunchflag/unopenedholdout/current
+rulesfreeze-beforeformation/no-public-counted-production retained. Earlier
+preparation statuses below history. Poll unique15575, then one ordinary
+retained verifier over exact newallocation/head; never substitute oldV11.
 
 V12 data-only prepare98897 CLOSEDexit0; capacity-input99540 CLOSEDexit0,
 receiptCreatedfalse (historicalstatic sizing only); publish55711 CLOSEDexit0.
