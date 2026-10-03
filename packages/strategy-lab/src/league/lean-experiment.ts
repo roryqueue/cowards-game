@@ -277,7 +277,8 @@ export const measureLeanPhysicalBytes = (directory: string): number => {
   const p = safeDirectory(directory)
   return readdirSync(p).reduce((n, name) => { const s = lstatSync(join(p, name)); if (s.isSymbolicLink() || !s.isFile()) return fail("FILE"); return n + s.blocks * 512 }, statSync(p).blocks * 512)
 }
-export const cumulativeLeanPhysicalBytes = (ledger: LeanExperimentLedger): number => measureLeanPhysicalBytes(ledger.directory) + (ledger.allocation.schemaVersion === "lean-experiment-allocation-v2" ? ledger.allocation.predecessor.allocatedDiskBytes : 0)
+const leanProspectiveOwnedBytes = (ledger: LeanExperimentLedger): number => measureLeanPhysicalBytes(ledger.directory) + (ledger.allocation.schemaVersion === "lean-experiment-allocation-v2" ? measuredDestinationBlocks(".strategy-lab/lean-experiment-20261003-v2-tmp") + measuredDestinationBlocks(".planning/artifacts/v1.38-lean-pilot-allocation-v2.json") : 0)
+export const cumulativeLeanPhysicalBytes = (ledger: LeanExperimentLedger): number => leanProspectiveOwnedBytes(ledger) + (ledger.allocation.schemaVersion === "lean-experiment-allocation-v2" ? ledger.allocation.predecessor.allocatedDiskBytes : 0)
 export interface LeanChildEntryV2 { schemaVersion: "lean-child-entry-v2"; allocationRoot: LabRoot; sourceRoot: LabRoot; requestBytesRoot: LabRoot; head: string; parentPid: number; childPid: number; handshakeRoot: LabRoot; wallStartMs: number; monotonicStartNs: string }
 export interface LeanChildTerminalV2 { schemaVersion: "lean-child-terminal-v2"; entryBytesRoot: LabRoot; allocationRoot: LabRoot; sourceRoot: LabRoot; head: string; parentPid: number; childPid: number; exitCode: number | null; signal: string | null; wallObservedMs: number; monotonicObservedNs: string; elapsedUpperBoundMs: number; status: "child_exited" | "child_failed"; parentRssBytes: number; childRssObservedBytes: number | null; physicalBytes: number; freeBytes: number | null }
 const monotonic = (v: string): bigint => /^\d{1,30}$/u.test(v) ? BigInt(v) : fail("MONOTONIC")
@@ -374,7 +375,7 @@ const admitCompactRecord = (r: LeanCompactMatchRecord): void => {
   if (!exactLabKeys(r, ["classification", "code", "outcome", "elapsedMs", "cleanupComplete", "invocationCount", "accountingRoot", "executionRoot", "telemetry"]) || !["success", "player_violation", "system_failure"].includes(r.classification) || !["OK", "PLAYER_VIOLATION", "SUPERVISOR_FAILURE", "CAPACITY", "CLEANUP"].includes(r.code) || ![null, "bottom", "top", "DRAW"].includes(r.outcome) || !natural(r.elapsedMs) || r.elapsedMs > LEAN_CAPS.matchMs + 30_000 || typeof r.cleanupComplete !== "boolean" || !natural(r.invocationCount) || r.invocationCount > 49_600 || !root(r.accountingRoot) || !root(r.executionRoot) || !exactLabKeys(r.telemetry, ["transitions", "events"]) || !Object.values(r.telemetry).every(natural)) return fail("RECORD")
   if (r.classification === "success" ? r.code !== "OK" || !r.cleanupComplete || r.outcome === null : r.outcome !== null || r.code === "OK" || (r.classification === "player_violation" ? r.code !== "PLAYER_VIOLATION" || !r.cleanupComplete : !["SUPERVISOR_FAILURE", "CAPACITY", "CLEANUP"].includes(r.code)) || (!r.cleanupComplete && r.code !== "CLEANUP")) return fail("RECORD_CLASSIFICATION")
 }
-export const assertLeanPublicationCapacity = (ledger: LeanExperimentLedger, bytes: number, currentPhysicalBytes = measureLeanPhysicalBytes(ledger.directory)) => {
+export const assertLeanPublicationCapacity = (ledger: LeanExperimentLedger, bytes: number, currentPhysicalBytes = leanProspectiveOwnedBytes(ledger)) => {
   if (!natural(bytes) || !natural(currentPhysicalBytes) || currentPhysicalBytes + (ledger.allocation.schemaVersion === "lean-experiment-allocation-v2" ? ledger.allocation.predecessor.allocatedDiskBytes : 0) + Math.ceil(bytes / 4096) * 4096 + 65536 > LEAN_CAPS.retainedBytes) return fail("RESOURCE")
 }
 export const retainLeanMatch = (ledger: LeanExperimentLedger, charge: LeanCharge, record: LeanCompactMatchRecord, replayFrames: Iterable<unknown>) => {
@@ -388,7 +389,7 @@ export const retainLeanMatch = (ledger: LeanExperimentLedger, charge: LeanCharge
   append(ledger, { kind: "terminal", chargeRoot: charge.root, record, replay: replay?.container ?? null })
 }
 export const checkpointLeanResources = (ledger: LeanExperimentLedger, elapsedMs: number, bufferBytes: number, scratchBytes = 0) => {
-  const e = { kind: "resource" as const, elapsedMs, physicalBytes: measureLeanPhysicalBytes(ledger.directory), bufferBytes, scratchBytes }
+  const e = { kind: "resource" as const, elapsedMs, physicalBytes: leanProspectiveOwnedBytes(ledger), bufferBytes, scratchBytes }
   const cumulative = cumulativeLeanPhysicalBytes(ledger)
   if (cumulative > LEAN_CAPS.retainedBytes || bufferBytes + scratchBytes > LEAN_CAPS.scratchBytes || cumulative + bufferBytes + scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || elapsedMs > LEAN_CAPS.elapsedMs) return fail("RESOURCE")
   append(ledger, e); readLeanLedger(ledger)

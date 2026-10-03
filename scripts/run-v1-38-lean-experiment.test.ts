@@ -1,7 +1,8 @@
 import { expect, it } from "vitest"
 import { mkdtempSync, realpathSync, rmSync, mkdirSync, writeFileSync, symlinkSync } from "node:fs"
+import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult, assessLeanPrefixCapacity, admitLeanChildRelease, assertLeanEntryBinding, createLeanParentObservationGuard, assertLeanBoundParentObservation, assertLeanProspectiveWritableScope } from "./run-v1-38-lean-experiment.js"
 import { claimLeanRuntimeAuthority, issueLeanRuntimeAuthority, deriveLeanCandidateRuntime } from "./lib/v1-38-lean-experiment-authority.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../packages/strategy-lab/src/factory/contracts.js"
@@ -47,10 +48,19 @@ it("never samples a reparented process as the trusted parent", () => {
   expect(() => assertLeanBoundParentObservation(12, 12, false)).toThrow("PARENT_LOST")
   expect(() => assertLeanBoundParentObservation(0, 0, true)).toThrow("PARENT_LOST")
 })
-it("requires prospective loader-cache and core writes disabled before route work", () => {
-  assertLeanProspectiveWritableScope("1", "0")
-  expect(() => assertLeanProspectiveWritableScope(undefined, "0")).toThrow("WRITABLE_SCOPE")
-  expect(() => assertLeanProspectiveWritableScope("1", "unlimited")).toThrow("WRITABLE_SCOPE")
+it("sanitizes Node and TSX at a pre-Node shell boundary and rechecks inherited scope", () => {
+  const p = realpathSync(mkdtempSync(join(tmpdir(), "lean-launch-test-")))
+  try {
+    mkdirSync(join(p, ".strategy-lab"))
+    const launcher = resolve("scripts/run-v1-38-lean-experiment.sh")
+    const output = execFileSync("sh", [launcher, "--probe-launch-scope"], { cwd: p, encoding: "utf8", env: { PATH: process.env.PATH ?? "", LEAN_LAUNCH_PROBE: "1", NODE_OPTIONS: "--report-on-fatalerror --report-directory=/tmp/unowned", NODE_COMPILE_CACHE: "/tmp/unowned", NODE_REDIRECT_WARNINGS: "/tmp/unowned", NODE_V8_COVERAGE: "/tmp/unowned" } })
+    expect(output).toContain("cache=1 compile=1 node_options=unset compile_cache=unset warnings=unset coverage=unset core=0")
+    expect(output).toContain(`tmp=${join(p, ".strategy-lab", "lean-experiment-20261003-v2-tmp")}`)
+  } finally { rmSync(p, { recursive: true, force: true }) }
+  const safe = { cacheDisabled: "1", compileDisabled: "1", tempDirectory: resolve(".strategy-lab/lean-experiment-20261003-v2-tmp") }
+  assertLeanProspectiveWritableScope(safe, "0")
+  for (const changed of [{ ...safe, nodeOptions: "--report-on-fatalerror" }, { ...safe, compileCache: "/tmp/cache" }, { ...safe, warningRedirect: "/tmp/warnings" }, { ...safe, coverage: "/tmp/coverage" }, { ...safe, tempDirectory: "/tmp/unowned" }, { ...safe, cacheDisabled: undefined }]) expect(() => assertLeanProspectiveWritableScope(changed, "0")).toThrow("WRITABLE_SCOPE")
+  expect(() => assertLeanProspectiveWritableScope(safe, "unlimited")).toThrow("WRITABLE_SCOPE")
 })
 it("rejects stale HEAD, source, request, allocation, process and interval before import", () => {
   const observed = { head: "a".repeat(40), sourceRoot: labRoot("source", 1), requestBytesRoot: labRoot("request", 1), allocationRoot: labRoot("allocation", 1), parentPid: 12, childPid: 13, intervalStartMs: 100 }
@@ -120,6 +130,7 @@ it("uses bounded no-symlink result admission and rejects any head/count/extra-fi
 })
 it("binds the entire reviewed implementation including additive native opt-ins", () => {
   const m = leanSourceManifest(); expect(m.entries.some(e => e.path.endsWith("lean-experiment.ts"))).toBe(true)
+  expect(m.entries.some(e => e.path.endsWith("run-v1-38-lean-experiment.sh"))).toBe(true)
   expect(m.entries.some(e => e.path.endsWith("v1-38-lean-container-match-session.ts"))).toBe(true)
   expect(m.root).toMatch(/^sha256:/)
 })

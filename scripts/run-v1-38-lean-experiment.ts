@@ -25,20 +25,21 @@ import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, currentLe
 const fail = (code: string): never => { throw new TypeError(`LEAN_PILOT_${code}`) }
 const STORE = resolve(".strategy-lab/lean-experiment-20261003-v2")
 const ALLOCATION = ".planning/artifacts/v1.38-lean-pilot-allocation-v2.json"
+const LEAN_TEMP = resolve(".strategy-lab/lean-experiment-20261003-v2-tmp")
 /** These controls must be inherited before the tsx loader runs: checking them
  * inside the route alone cannot retroactively undo a loader-cache/core write. */
-export const assertLeanProspectiveWritableScope = (cacheDisabled: string | undefined, coreSoftLimit: string): void => {
-  if (cacheDisabled !== "1" || coreSoftLimit.trim() !== "0") return fail("WRITABLE_SCOPE")
+export const assertLeanProspectiveWritableScope = (scope: { cacheDisabled?: string; compileDisabled?: string; nodeOptions?: string; compileCache?: string; warningRedirect?: string; coverage?: string; tempDirectory?: string }, coreSoftLimit: string): void => {
+  if (scope.cacheDisabled !== "1" || scope.compileDisabled !== "1" || scope.nodeOptions !== undefined || scope.compileCache !== undefined || scope.warningRedirect !== undefined || scope.coverage !== undefined || scope.tempDirectory !== LEAN_TEMP || coreSoftLimit.trim() !== "0") return fail("WRITABLE_SCOPE")
 }
 const requireLeanProspectiveWritableScope = () => {
   const coreSoftLimit = execFileSync("sh", ["-c", "ulimit -c"], { encoding: "utf8", timeout: 1000, maxBuffer: 128 })
-  assertLeanProspectiveWritableScope(process.env.TSX_DISABLE_CACHE, coreSoftLimit)
+  assertLeanProspectiveWritableScope({ cacheDisabled: process.env.TSX_DISABLE_CACHE, compileDisabled: process.env.NODE_DISABLE_COMPILE_CACHE, nodeOptions: process.env.NODE_OPTIONS, compileCache: process.env.NODE_COMPILE_CACHE, warningRedirect: process.env.NODE_REDIRECT_WARNINGS, coverage: process.env.NODE_V8_COVERAGE, tempDirectory: process.env.TMPDIR }, coreSoftLimit)
 }
 interface Request { schemaVersion: "lean-pilot-request-v1"; seed: string; reviewPath: string; reviewRoot: LabRoot; sourceRoot: LabRoot; factoryDirectory: string; selection: LeagueInitialCandidateSelection }
 const root = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[0-9a-f]{64}$/u.test(v)
 export const leanSourceManifest = () => {
   const legacy = factoryAssessmentImplementationManifest()
-  const paths = ["scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-lean-experiment-authority.ts", "packages/strategy-lab/src/league/lean-experiment.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-planner-supervised-runtime.ts", "scripts/lib/v1-38-lean-container-match-session.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts", "scripts/run-v1-38-serious-league.ts"]
+  const paths = ["scripts/run-v1-38-lean-experiment.ts", "scripts/run-v1-38-lean-experiment.sh", "scripts/lib/v1-38-lean-experiment-authority.ts", "packages/strategy-lab/src/league/lean-experiment.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-planner-supervised-runtime.ts", "scripts/lib/v1-38-lean-container-match-session.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts", "scripts/run-v1-38-serious-league.ts"]
   const byPath = new Map(legacy.entries.map(e => [e.path, e]))
   for (const path of paths) byPath.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
   const entries = [...byPath.values()].sort((a, b) => a.path.localeCompare(b.path))
