@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Lean Plans265-15/16 checked; implementing compact source path before reviewed root-only pilot; old V14 suspended
+stopped_at: Plan265-15 final compact source reviewed; gates passed; preparing fresh lean pilot before allocation commit and unique root entry
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Lean research and independent plan recheck passed; next265-15 compact runner implementation and reviewed pilot
+last_activity_desc: Lean source and corrected boundary integration independently clean; focused tests/types/build/scans passed; pilot not yet allocated
 progress:
   total_phases: 9
   completed_phases: 3
@@ -23,7 +23,7 @@ total_plans_in_phase: 16
 
 ## Current continuation — approved lean experiment reset, 2026-10-03
 
-Research complete; Plans265-15/16 independently checked and rechecked. A work-vector arithmetic defect was corrected to64+64+64+128=320 separately capped channel operations; original LEAG-06/08 remain deferred/non-green. Root parsed both plan YAML frontmatters; a flow-map separator typo was corrected without semantic change. Active full/reduced tiers are200/128 total Matches including8pilot and balanced training/probe/repeat/holdout, hard maximum300; 15GB/eight-hour shared caps unchanged. Next frontier is Plan265-15 source-only implementation, independent code review/fixes and focused validation, then one main-root actual pilot with fresh same-process capacity and unique retained verification. No Match is running, no formation or holdout opened. Suspended old plans are not executable dependencies. Phase completion remains pending.
+Research and independent Plans265-15/16 checks complete. Final source92cc6bfe/root a37b17b1f58ae48e5cce5193716fe57199c8810f5a63797210bbe5f6bb6e6057 (861 entries) has clean independent REVIEW-v4. Original review findings were repaired; actual boundary scans exposed a gzip integration gap, and the final correction restores full transitive enforcement with exact private-codec/host-leaf allowances. Source checks:247 runner/runtime tests,88 scanner tests,12 Set-condition tests; focused and project types, dependency/strategy-lab builds; three actual1360-file scans zero violations; service strict/ownership zero with19 existing report-only offenses. First preparation PID64186 was stopped exit143 before any store/allocation/entry/charge; its request remains untouched. New request lean-pilot-request-20261003-v2.json binds the final source/review and S01/S03 historical candidate provenance only, never old allocation authority. Next: prepare once, commit exact fresh allocation, unique root eight-cell pilot with same-process capacity, then one independent retained verifier while source/HEAD remain fixed. No Match is running, no formation/holdout opened. Shared15GB/eight-hour/full200-or-reduced128 bounds unchanged. Phase completion and265-15 empirical completion remain pending; no old LEAG credit.
 
 The operator approved `milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-EXPERIMENT-20261003.md`: 15,000,000,000 additional disk bytes including buffers; measured small pilot; small candidate pool; one adversarial improvement round; few hundred Matches at most; compact every-Match results/accounting plus compressed preselected and failure replays; one shared eight-hour empirical execution cap. Research and independent checked planning precede new execution. Explicitly supersede/defer old future full-league gates, never claim them passed by exploratory evidence. No active entry or verifier; source/HEAD hold is released. Do not start old V14 or require disk cleanup for its oversized reservation. Historical paragraphs below are superseded continuation snapshots, not current instructions. All consumed evidence and empty result reservations remain immutable, with no retroactive credit. Current-rules baseline/freeze precedes formation; retrain all profiles equally; holdout unopened; no public/counted/production authority. Continue the bounded GSD research/plan/execute/review-fix/validate/verify/audit-fix workflow autonomously under this approval.
 

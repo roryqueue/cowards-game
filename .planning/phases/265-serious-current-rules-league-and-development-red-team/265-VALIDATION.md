@@ -21,7 +21,7 @@ Plans265-15→265-16 replace the uncompleted oversized265-07route. Existing266-0
 
 ## Latest captured results
 
-### Lean prospective source coverage — pending, not a validation pass
+### Lean prospective source coverage — source-only checks passed; empirical pending
 
 |Plan/task|New behavior|Required automated check|
 |---|---|---|
@@ -30,7 +30,20 @@ Plans265-15→265-16 replace the uncompleted oversized265-07route. Existing266-0
 |265-16/T1|Real cold adaptation, exact oracle opportunity vector, hidden-state boundary|pnpm exec vitest run packages/strategy-lab/src/league/lean-training.test.ts|
 |265-16/T2|Actual small matrix/probe/repeat accounting, honest counter/selection/freeze handoff|pnpm exec vitest run scripts/lib/v1-38-lean-baseline.test.ts|
 
-All new tests are currently MISSING; the first source tasks create them before implementation. Nyquist remains partial/false until actual reviewed source and empirical retained verification. Synthetic fixtures cannot provide league credit.
+Plan265-15 tests now exist and pass; Plan265-16 tests remain unimplemented. Nyquist remains partial/false until actual empirical retained verification and remaining implementation. Synthetic fixtures cannot provide league credit.
+
+#### Scoped source validation audit — 2026-10-03
+
+Final source92cc6bfe/root `sha256:a37b17b1f58ae48e5cce5193716fe57199c8810f5a63797210bbe5f6bb6e6057` independently reviewed clean in265-15-REVIEW-v4. Source-only checks passed:247 tests across five runner/runtime suites;88 tests across three boundary suites;12 canonical Set-condition tests. Focused strict TypeScript including all new runner/codec/scanner files passed, as did project `tsc --noEmit`, dependency build and direct `tsc -b packages/strategy-lab/tsconfig.json`. Lab/factory/serious actual scans each found zero violations in1360 files; service boundary strict/ownership offenses zero,19 pre-existing report-only offenses. Runner sources were unchanged during final scanner correction; final focused types and boundary tests/scans cover that integration. Earlier scanner failures and overbroad intermediate allowance are retained inBOUNDARY-FIX-v1/v2, not relabeled passed.
+
+|Task|Behavior coverage|Status|
+|---|---|---|
+|265-15/T1|Caps/reset refusal; exact schedule metadata; strict all-slot charging; failed accounting; bounded sampled/failure gzip integrity|COVERED source-only, empirical pending|
+|265-15/T2 source|Review byte/source authentication; canonical durable charge/candidate/ordinal joins; native capability ordering; disjoint private entry; retained-result/HEAD joins; legacy/default denials|COVERED source-only, empirical pending|
+|265-15/T2 pilot|Eight actual supervised current-rules cells and one unique retained verification; measured full/reduced fit|MISSING until actual execution|
+|265-16|Cold adaptation, response/probe/repeat matrix and freeze handoff|MISSING, planned next dependency|
+
+This is an existing State-A scoped GSD validation update, not whole-phase Nyquist signoff. No source/test run establishes actual Match or league completion. Preparation stopped PID64186/exit143 before publication after gate failures; no store/allocation/entry/charge was present. Its private request remains unchanged; final checked source is bound by a separately named new request.
 
 ### Host-receipt supplement — actual source gate complete; empirical coverage pending
 
