@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 checked host receipt Plan07 supplement Task1 allocation-policy source execution active
+stopped_at: Phase265 host receipt Task1 complete; Task2 sequential runtime integration active
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: Source-only Task1 exactV3policy/allocation RED-GREEN execution active, runtime Task2 waits; no route/capacity/Match/verifier
+last_activity_desc: Task1 V3 allocation committed and tested; Task2 host-only runtime integration follows; no route/capacity/Match/verifier
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,16 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+Task1 source-only allocation contract COMPLETE: RED d52dbdcc, GREEN7e841376,
+scopedsummary94ccb46f. Focused2/2, fullallocation17/17 and checkedstrategy-lab
+TypeScriptbuild pass. V3 onlyaddsoperations.hostResponseReceiptMilliseconds5000;
+V1/V2 and600000Match unchanged. Task2 sequential runtime executor nowowns
+private authority/session/planner/factory/main/response/retained selectors and
+CI integration; no concurrent source edits/tests by root. Independent review,
+fullfixedsourcegate and scopedverification remain pending. No empiricalroute,
+capacity/provider/Match/verifier or LEAG/freeze credit. PreviousTask1active
+snapshots below are history; all historical consumed evidence immutable.
 
 Sequential source-only Task1 begins in actor265_host_receipt_allocation_execute,
 ownershipallocation.ts/allocation.test.ts and scopedsummary only. Root holds
