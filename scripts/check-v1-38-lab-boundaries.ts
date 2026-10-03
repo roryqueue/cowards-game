@@ -6,7 +6,8 @@ import ts from "typescript"
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const isLab = (p: string) => p.startsWith("packages/strategy-lab/")
 const isOracle = (p: string) => /^packages\/strategy-oracle-(?:tactical|teacher|model)\//u.test(p)
-const isPrivateStrategy = (p: string) => isLab(p) || isOracle(p)
+const leanPrivate = new Set(["scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-lean-experiment-authority.ts"])
+const isPrivateStrategy = (p: string) => isLab(p) || isOracle(p) || leanPrivate.has(p)
 const isTest = (p: string) => /(?:\.test|\.spec)\.[cm]?[jt]sx?$/u.test(p) || /(?:^|\/)(?:test|__tests__|testdata)\//u.test(p) || /_test\.go$/u.test(p)
 const production = (p: string) => /^(?:packages|apps)\//u.test(p) && !isPrivateStrategy(p) && !isTest(p)
 const labText = /strategy[-_/](?:lab|oracle)|private[-_]lab|lab[-_]artifacts|lab[-_]trace|planner-feasibility/iu
@@ -158,10 +159,11 @@ export const checkLabBoundaries = (options: { files?: Readonly<Record<string, st
     }
   }
   for (const [path, unresolved] of sharedGraph.unresolved) for (const specifier of unresolved) {
+    if (specifier === "node:zlib" && path !== "packages/strategy-lab/src/league/lean-experiment.ts") add("CORE_DEPENDENCY_DENIED", path)
     const staticBuildTool = (path === "packages/strategy-lab/src/planner/emit.ts" || path === "packages/strategy-lab/src/factory/fingerprint.ts" || path === "packages/strategy-lab/src/factory/numeric-calibration.ts") && specifier === "typescript"
     if (specifier === undefined) { if (isLab(path) || labText.test(files[path] ?? "")) add("UNRESOLVED_LAB_EDGE", path); continue }
     if (!isLab(path) && labText.test(specifier)) add("UNRESOLVED_LAB_EDGE", path)
-    if (isLab(path) && !allowedNode.has(specifier) && !staticBuildTool) add("CORE_DEPENDENCY_DENIED", path)
+    if (isLab(path) && !allowedNode.has(specifier) && !(path === "packages/strategy-lab/src/league/lean-experiment.ts" && specifier === "node:zlib") && !staticBuildTool) add("CORE_DEPENDENCY_DENIED", path)
   }
   for (const [path, edges] of sharedGraph.graph) if (isLab(path)) for (const target of edges) if (!isLab(target) && !allowedCore.test(target)) add("CORE_DEPENDENCY_DENIED", path)
   // The policy-specific pass above preserves historical violation codes; all

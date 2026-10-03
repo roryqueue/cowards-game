@@ -27,6 +27,17 @@ describe("Phase 265 resolved league import/privacy boundary", () => {
     const transitive = { ...allowed, "scripts/lib/v1-38-league-authoring.ts": 'import { observeLeagueAvailableMemoryBytes } from "../run-v1-38-serious-league.js"; void observeLeagueAvailableMemoryBytes' }
     expect(checkSeriousLeagueBoundaries({ files: transitive }).violations).toContainEqual(expect.objectContaining({ path: "scripts/lib/v1-38-league-authoring.ts", rule: "unresolved-private-loader" }))
   })
+  it("permits zlib only in lean codec and bounded process access only in lean CLI", () => {
+    const allowed = { ...base,
+      "packages/strategy-lab/src/league/lean-experiment.ts": 'import "node:zlib"',
+      "scripts/run-v1-38-lean-experiment.ts": 'import "node:child_process"; import "../packages/strategy-lab/src/league/lean-experiment.js"',
+      "scripts/lib/v1-38-lean-experiment-authority.ts": 'import "../run-v1-38-lean-experiment.js"',
+    }
+    expect(checkSeriousLeagueBoundaries({ files: allowed }).ok).toBe(true)
+    expect(checkSeriousLeagueBoundaries({ files: { ...allowed, "packages/engine/src/codec.ts": 'import "node:zlib"' } }).ok).toBe(false)
+    const publicRoute = { ...allowed, "apps/web/app/page.ts": 'import "../../../scripts/run-v1-38-lean-experiment.js"' }
+    expect(checkSeriousLeagueBoundaries({ files: publicRoute }).violations).toContainEqual(expect.objectContaining({ path: "apps/web/app/page.ts", rule: "public-or-deployment-reaches-private-league" }))
+  })
   it.each([
     ["multi-hop innocent package barrel", { "apps/web/app/page.ts": 'import "@cowards/innocent-package"', "packages/innocent-package/package.json": JSON.stringify({ name: "@cowards/innocent-package", exports: "./src/index.ts" }), "packages/innocent-package/src/index.ts": 'export * from "./middle.js"', "packages/innocent-package/src/middle.ts": 'export * from "../../strategy-lab/src/league/repository.js"' }],
     ["transitive dynamic loader", { "apps/web/app/page.ts": 'import "../../../scripts/public-middle.js"', "scripts/public-middle.ts": 'const target = "../packages/strategy-lab/src/league/" + "repository.js"; void import(target)' }],

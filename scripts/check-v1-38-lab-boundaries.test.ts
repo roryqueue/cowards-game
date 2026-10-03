@@ -52,6 +52,14 @@ describe("one-way lab boundary monitor", () => {
     expect(checkLabBoundaries({ files: { ...lab, "packages/strategy-lab/src/core.ts": 'import "@cowards/spec"; import "node:crypto"', "packages/spec/src/index.ts": "export {}" } }).ok).toBe(true)
     expect(checkLabBoundaries({ files: { ...lab, "packages/strategy-lab/src/core.ts": 'import "node:vm"' } }).ok).toBe(false)
   })
+  it("allows gzip only in the private lean evidence codec and denies public reachability", () => {
+    const codec = "packages/strategy-lab/src/league/lean-experiment.ts"
+    expect(checkLabBoundaries({ files: { [codec]: 'import "node:zlib"' } }).ok).toBe(true)
+    for (const path of ["packages/engine/src/codec.ts", "packages/strategy-oracle-model/src/codec.ts", "packages/strategy-lab/src/league/other.ts"]) {
+      expect(checkLabBoundaries({ files: { [path]: 'import "node:zlib"' } }).ok).toBe(false)
+    }
+    expect(checkLabBoundaries({ files: { [codec]: "export const codec = 1", "scripts/run-v1-38-lean-experiment.ts": 'import "../packages/strategy-lab/src/league/lean-experiment.js"', "apps/web/src/page.ts": 'import "../../../scripts/run-v1-38-lean-experiment.js"' } }).violations.some(v => v.code === "PRODUCTION_REACHES_LAB")).toBe(true)
+  })
   it("allows TypeScript only in the reviewed factory fingerprint collector", () => {
     expect(checkLabBoundaries({ files: { ...lab, "packages/strategy-lab/src/factory/fingerprint.ts": 'import ts from "typescript"; export { ts }' } }).ok).toBe(true)
   })

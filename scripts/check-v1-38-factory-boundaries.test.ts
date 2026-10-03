@@ -18,6 +18,16 @@ describe("private factory dependency boundary", () => {
   it("allows only the narrow packet contract from an oracle", () => {
     expect(checkFactoryBoundaries({ files: base })).toEqual(expect.objectContaining({ ok: true, violations: [] }))
   })
+  it("keeps the lean CLI and gzip codec private with path-specific builtin allowances", () => {
+    const codec = "packages/strategy-lab/src/league/lean-experiment.ts"
+    expect(checkFactoryBoundaries({ files: { ...base, [codec]: 'import "node:zlib"', "scripts/run-v1-38-lean-experiment.ts": 'import "node:child_process"', "scripts/lib/v1-38-lean-experiment-authority.ts": "export {}" } }).ok).toBe(true)
+    expect(checkFactoryBoundaries({ files: { ...base, "packages/engine/src/codec.ts": 'import "node:zlib"' } }).ok).toBe(false)
+    expect(checkFactoryBoundaries({ files: { ...base, "packages/strategy-oracle-model/src/emit.ts": 'import "node:zlib"' } }).ok).toBe(false)
+    expect(checkFactoryBoundaries({ files: { ...base, "scripts/lib/v1-38-lean-container-match-session.ts": 'import "node:child_process"' } }).ok).toBe(true)
+    expect(checkFactoryBoundaries({ files: { ...base, "scripts/lib/v1-38-lean-experiment-authority.ts": 'import "node:child_process"' } }).violations).toContainEqual(expect.objectContaining({ code: "UNRESOLVED_PRIVATE_LOADER", file: "scripts/lib/v1-38-lean-experiment-authority.ts" }))
+    const publicRoute = { ...base, [codec]: "export const codec = 1", "scripts/run-v1-38-lean-experiment.ts": 'import "../packages/strategy-lab/src/league/lean-experiment.js"', "apps/web/src/page.ts": 'import "../../../scripts/run-v1-38-lean-experiment.js"' }
+    expect(checkFactoryBoundaries({ files: publicRoute }).violations.some(v => v.code === "PUBLIC_REACHES_PRIVATE_FACTORY")).toBe(true)
+  })
 
   it("retains exact allowed oracle manifest dependencies without opening package barrels", () => {
     const files = { ...base, "packages/strategy-oracle-model/package.json": JSON.stringify({ dependencies: { "@cowards/strategy-lab": "workspace:*", "@cowards/engine": "workspace:*" } }) }

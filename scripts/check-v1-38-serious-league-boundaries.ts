@@ -9,7 +9,8 @@ export interface SeriousLeagueBoundaryOptions { readonly files?: Readonly<Record
 
 const source = /\.[cm]?[jt]sx?$/u
 const test = /(?:\.test|\.spec)\.[cm]?[jt]sx?$/u
-const restricted = (file: string) => file === "packages/strategy-lab/src/index.ts" || file.startsWith("packages/strategy-lab/src/league/") || ["scripts/run-v1-38-serious-league.ts", "scripts/lib/v1-38-league-authoring.ts", "scripts/lib/v1-38-league-response-runtime.ts", "scripts/assess-v1-38-factory-independence.ts", "scripts/v1-38-factory-execution-evidence.ts", "scripts/v1-38-factory-assessment-correction.ts"].includes(file)
+const leanRestricted = new Set(["packages/strategy-lab/src/league/lean-experiment.ts", "scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-lean-experiment-authority.ts"])
+const restricted = (file: string) => file === "packages/strategy-lab/src/index.ts" || file.startsWith("packages/strategy-lab/src/league/") || leanRestricted.has(file) || ["scripts/run-v1-38-serious-league.ts", "scripts/lib/v1-38-league-authoring.ts", "scripts/lib/v1-38-league-response-runtime.ts", "scripts/assess-v1-38-factory-independence.ts", "scripts/v1-38-factory-execution-evidence.ts", "scripts/v1-38-factory-assessment-correction.ts"].includes(file)
 const publicOrDeployment = (file: string) => (/^(?:apps|packages)\//u.test(file) && !file.startsWith("packages/strategy-lab/") && !test.test(file)) || /(?:^|\/)(?:public|generated|deploy|deployment|artifacts)\//u.test(file) || /(?:^|\/)(?:Dockerfile[^/]*|[^/]*docker[^/]*|compose[^/]*)(?:\/|$)/iu.test(file)
 const allowedUnresolved = new Set(["node:buffer", "node:crypto", "node:fs", "node:fs/promises", "node:os", "node:path", "node:url", "node:worker_threads"])
 
@@ -31,6 +32,7 @@ export const checkSeriousLeagueBoundaries = (options: SeriousLeagueBoundaryOptio
   for (const violation of checkLabBoundaries({ files: shared.files }).violations) {
     add(`lab:${violation.code}`, violation.file)
   }
+  for (const [path, unresolved] of shared.unresolved) if (unresolved.includes("node:zlib") && path !== "packages/strategy-lab/src/league/lean-experiment.ts") add("unresolved-private-loader", path)
   const visit = (origin: string, predicate: (path: string) => void) => {
     const visited = new Set<string>()
     const walk = (path: string) => { if (visited.has(path)) return; visited.add(path); predicate(path); for (const next of shared.graph.get(path) ?? []) walk(next) }
@@ -46,6 +48,10 @@ export const checkSeriousLeagueBoundaries = (options: SeriousLeagueBoundaryOptio
         // memory probe. This does not grant process-spawn reachability to the
         // league package, authoring helpers, web, API, or worker paths.
         if (origin === "scripts/run-v1-38-serious-league.ts" && path === origin && specifier === "node:child_process") continue
+        if (origin === "scripts/run-v1-38-lean-experiment.ts" && path === "scripts/run-v1-38-serious-league.ts" && specifier === "node:child_process") continue
+        if (path === "scripts/run-v1-38-lean-experiment.ts" && specifier === "node:child_process") continue
+        if (path === "scripts/run-v1-38-lean-experiment.ts" && specifier === "node:perf_hooks") continue
+        if (path === "packages/strategy-lab/src/league/lean-experiment.ts" && specifier === "node:zlib") continue
         if (specifier === undefined || !allowedUnresolved.has(specifier)) add("unresolved-private-loader", origin)
       }
     })
