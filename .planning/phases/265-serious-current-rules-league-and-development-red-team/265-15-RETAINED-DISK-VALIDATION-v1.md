@@ -1,0 +1,9 @@
+# Approved disk amendment: focused root validation
+
+Source commit `a5baa65051e0eaa05c0dc0ef9c2bfdfed9725d28`, source manifest `sha256:28dbd0ec7de8954d53ffa67ff3b4db34b0a6c6f0ec02b501950f1ef7c8d58695`, 862 entries. Actual source author `/root/fixture_265_15_full_verifier`; independent reviewer `/root/review_265_15_import_crash`; root request author `/root`.
+
+Root reran the accounting and lean runner suites: **28/28 passed**, two files, 5.70 s. All three lab/factory/serious-league boundary scanners passed with zero violations, 1,362 files each. Shell syntax and whitespace passed. Author project/root TypeScript checks passed; those reported checks were not rerun by root. Independent review v2 is clean and TaskC source verification is `source-repair-verified`, not empirical admission.
+
+The approved disk decision is separately byte-bound; the unknown historical peak is not claimed measured. The six fixed predecessor survivors are remeasured on actual admission, and future request/store/temp/canonical writes are counted under unchanged numeric limits. Old numeric-bound inputs remain denied. The creation-before-cap-check defect is fixed and a near-cap fixture proves denial without creating a store. No whole-suite or whole-phase pass is inferred from this focused gate.
+
+Fresh prospective request `.strategy-lab/lean-pilot-request-20261003-v3.json` binds the exact reviewed source/review and S01/S03 historical selection only; seed `lean-pilot-20261003-c`. Existing v2 request is predecessor-only and remains immutable. New store and allocation were observed absent before request creation. Advisory available filesystem bytes were 209,081,073,664, not a same-process capacity receipt. Next is one data-only preparation, then commit/push its new allocation before one parent root entry and actual child precharge capacity checks. No pilot/Match, baseline/freeze, formation, holdout or counted/public/production credit yet.

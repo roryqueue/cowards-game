@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-15 retained-disk amendment approved; preparation write-order review fix active
+stopped_at: Plan265-15 prospective pilot prepared; commit allocation before unique root entry
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Human explicitly approved unknown historical disk peak with surviving/future15GB accounting; TaskC source7d4eda7f tested27/27; one creation-preflight defect under repair
+last_activity_desc: Reviewed sourcea5baa650/28dbd0ec verified; root28tests/3scans pass; one data-only preparation78311 closed with new allocation4a3dfb51 and empty0700store
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved lean experiment reset, 2026-10-03
+
+LATEST PREPARATION: TaskC sourcea5baa650 independently reviewed clean and source-verified, manifest28dbd0ec/862entries. Root28/28 focusedtests and all3boundaryscans pass; types/shellchecks recorded. Unique data-only preparation78311 CLOSEDexit0, issuedfalse/preparation_only. New allocation4a3dfb516d13c6c0816185af30e0d9b6b516752091ac525639bcf91474c4d846, canonical rawbc7789b14530c4f585ce006bbe8576c57421621fed3f0e74b0172febcf3ec1fb; distinct requestv3 raw3c2abfd6d3171efaedd5fa9fe72b006bcb76dcd98a91156c31c066ee43a9cd3d. Real0700newstore has exactly allocation.json/ledger.ndjson/time.ndjson, zeroevents and zerotimestarts. Survivingpredecessordebit20480bytes, oldhistoricalpeakunknown, time565459ms; cumulativeallocated40960bytes afterpreparation. Commit/push canonicalallocation BEFORE one rootentry; actual childsameprocesscapacity mustpass beforecharge/provider. No liveentry/verifier yet or Match/pilot/LEAG/freezecredit. SourceANDHEAD musthold through forthcoming entryterminal and itsONEuniqueactual retainedverifier. Prior activefix paragraphs below nowhistory; both human time/diskdecisions approved. No repeatliteral; allrules/runtime/privacy/freeze-beforeformation/holdoutunopened unchanged.
 
 CURRENT DISK APPROVAL: the human explicitly approved “You may record it as unknown, count surviving files, and enforce the same 15 GB limit on retained files and future writes.” The separate disk decision is now approved and bound, not a pending human checkpoint. Existing Plan265-15 TaskC amendment and its narrow plan check are complete. Source7d4eda7f has 27 focused tests/types/shell passing; independent RETAINED-DISK-REVIEW-v1 finds one preparation write-order defect, now assigned to the source author for repair. No new allocation, pilot, provider or Match has been started. Do not duplicate the active source-fix agent or run a real historical reader meanwhile. Finish review/fix/validation/narrow verification, then distinct fresh request/allocation and same-process capacity under standing approval without repeat literals. Old failed v1 artifacts and full-open-time interpretation remain immutable; prospective565459ms time carry, known survivor debit and unknown historical disk/RSS remain explicit. Same15GB/8h/300Match/runtime/privacy/freeze-beforeformation bounds unchanged. Prior pending-disk paragraphs below are historical and superseded.
 
