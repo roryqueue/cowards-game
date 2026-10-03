@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-15 successor source verified; fresh prospective v4 request under independent data-only review before v3 preparation
+stopped_at: Plan265-15 v3 data-only preparation complete; commit new allocation before unique main pilot entry
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Source35f67b8d cleanreview/sourceverification and36roottests; disjointv4request authored; no liveentry or newpilotcredit
+last_activity_desc: Prepare86787closedexit0 allocation46bf3f4b/rawaadc20e1 real0700store/zerocharges; currentsource35f67b8d gated; no liveentry
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved lean experiment reset, 2026-10-03
+
+LATEST PREPARATION: unique data-only86787 CLOSEDexit0, issuedfalse/preparation_only. New v3allocation46bf3f4b/rawaadc20e1 and independently reviewed v4request raw1ce6b4ce fix source35f67b8d/manifest0c88f6ba. Real0700store contains allocation.json and empty charge/timejournals; noentry/provider/Match. Approved successor carries1323030ms/zerocharges/conservative114688bytes; historicalpeakdisk/RSSunknown. Source gates and narrow verification closed clean. Commit/push exactnewallocation BEFORE ONE mainparententry; actualsameprocesscapacity beforecharge/provider. HOLD sourceANDHEAD through forthcoming terminal and ONE unique actual retained verifier (ordinary reader only if realresult exists, otherwise terminal-only). No duplicate entry or competing heavywork. No pending human decision; standing same-scope approval remains. All consumedv1/v2 artifacts immutable; noreset/reuse. Pilotonlyfeasibility, baseline265-16/freeze266 remainrequired beforeformation; holdoutunopened/no public-counted-production. Source-frontier snapshots below are history.
 
 CURRENT SOURCE FRONTIER: human time and disk amendments are approved; there is no pending human decision. Successor source35f67b8d carries1323030ms, zero charges and a conservative114688-byte disk debit, while explicitly leaving historical peak disk/RSS unknown. IPC cleanup/disconnect is implemented; the previous child's original exception is still unknown. Root36 focusedtests/three1364-file zero-violation boundary scans/shell/diff checks pass; author types pass. Independent successor REVIEW-v2 is clean at manifest0c88f6ba/863entries, CR-01 optional-marker/mandatory-terminal error path repaired. Narrow SOURCE-VERIFICATION-v1 closes only source repair, not empirical work. Main authored the disjoint prospectivev4 request binding that exact source/review; independent data-only request review is active before v3 preparation. No empirical entry or retained verifier is active. Next identities are disjoint v3 store/allocation and v4 request, not reuse of the consumed v2 route. Standing approval covers this scope without another literal. Same15GB/eight-hour/300Match/runtime/gameplay/privacy bounds; baseline/freeze still precede formation and holdout remains unopened. All consumed artifacts/readers remain immutable. The preceding live/preparation snapshots below are history, not current instructions.
 

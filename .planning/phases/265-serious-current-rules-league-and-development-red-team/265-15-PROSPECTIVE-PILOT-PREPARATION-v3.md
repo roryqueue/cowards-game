@@ -1,0 +1,10 @@
+# Prospective lean pilot preparation v3
+
+Unique data-only preparation session86787 closed exit0. Main `/root` authored the fresh request and ran preparation; `/root/review_265_15_import_crash` independently reviewed the request. Fixed source35f67b8d/manifest0c88f6ba has clean source review, narrow source verification, root36 tests and three zero-violation boundary scans. No provider or Match was started by preparation.
+
+- Request `.strategy-lab/lean-pilot-request-20261003-v4.json`, seed `lean-pilot-20261003-d`, raw `sha256:1ce6b4ce6197f0d276e2f299a6f3724300ab9ddc793984fe9cee413be5493014`.
+- Allocation `sha256:46bf3f4b4ddd7fa3dbf4d1c44ba3bc8c7833c6c7afab9d62615b69c758818226`; canonical `.planning/artifacts/v1.38-lean-pilot-allocation-v3.json`, raw `sha256:aadc20e1e1355b723f2771797969cba85445d4d8df47cd1da72616d012b13920`.
+- New real0700 store `.strategy-lab/lean-experiment-20261003-v3` contains exactly allocation.json (5,986 logical/8,192 allocated bytes), empty ledger.ndjson and empty time.ndjson. Zero charges and time starts.
+- Predecessor root `sha256:09e1f9eee6bed18ce1c42bee5aa4f2eb6a99960dd4482e28f61ee3c8402b9a4d` binds the consumed v2 allocation, request, entry, closed terminal, empty charge journal, closed time journal and independent terminal report. It carries 1,323,030 ms and zero charges. Measured survivors53,248 bytes are below the conservative114,688-byte debit. Historical peak disk/RSS remain unknown.
+
+This establishes preparation only, not capacity admission, empirical success, tier selection, league/freeze credit or Phase completion. Commit/push the exact allocation before ONE main parent entry. That entry must pass actual same-process checks before any charge/provider; keep source and HEAD fixed until actual terminal and one unique appropriate retained verification. No result/head fabrication or old route reuse. Same15GB/eight-hour/300Match and runtime/gameplay/privacy bounds; baseline/freeze before formation, holdout unopened, no public/counted/production authority.
