@@ -14,7 +14,7 @@ import { createFactoryRepository } from "../packages/strategy-lab/src/factory/re
 import { readFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
 import { readCandidateClosure } from "../packages/strategy-lab/src/league/connected-runner.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../packages/strategy-lab/src/runtime-bridge.js"
-import { writeLeanAll, createLeanAllocationV2, createLeanLedger, openLeanLedger, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, measureLeanPhysicalBytes, readLeanLedger, readLeanCumulativeAccounting, stopLeanLedger, verifyLeanEvidence, chooseLeanTier, leanBytesRoot, leanCanonicalBytes, LEAN_CAPS, LEAN_FAILED_PREFIX, publishLeanChildEntry, readLeanChildEntry, deriveLeanChildTerminal, publishLeanChildTerminal, readLeanChildTerminal, cumulativeLeanPhysicalBytes, type LeanChildEntryV2, type LeanExperimentLedger, type LeanCompactMatchRecord, type LeanCharge } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { writeLeanAll, createLeanAllocationV2, createLeanLedger, openLeanLedger, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, measureLeanPhysicalBytes, readLeanLedger, readLeanCumulativeAccounting, stopLeanLedger, verifyLeanEvidence, chooseLeanTier, leanBytesRoot, leanCanonicalBytes, LEAN_CAPS, LEAN_FAILED_PREFIX, LEAN_PROSPECTIVE_REQUEST, publishLeanChildEntry, readLeanChildEntry, deriveLeanChildTerminal, publishLeanChildTerminal, readLeanChildTerminal, cumulativeLeanPhysicalBytes, type LeanChildEntryV2, type LeanExperimentLedger, type LeanCompactMatchRecord, type LeanCharge } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { readLeanPilotInitialCandidates, observeLeagueAvailableMemoryBytes, type LeagueInitialCandidateSelection } from "./run-v1-38-serious-league.js"
 import { factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
 import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-runtime.js"
@@ -50,7 +50,9 @@ export const parseLeanCommand = (args: readonly string[]) => {
   return { mode: args[0] as "prepare-pilot" | "run-pilot" | "verify-retained", request: args[2] }
 }
 const readRequest = (path: string): Request => {
-  const p = resolve(path), s = lstatSync(p)
+  const p = resolve(path)
+  if (p !== resolve(LEAN_PROSPECTIVE_REQUEST)) return fail("REQUEST")
+  const s = lstatSync(p)
   if (s.isSymbolicLink() || !s.isFile() || s.size > 262144 || realpathSync(p) !== p) return fail("REQUEST")
   const r = JSON.parse(readFileSync(p, "utf8")) as Request
   if (!exactLabKeys(r, ["schemaVersion", "seed", "reviewPath", "reviewRoot", "sourceRoot", "factoryDirectory", "selection"]) || r.schemaVersion !== "lean-pilot-request-v1" || !root(r.reviewRoot) || !root(r.sourceRoot) || r.sourceRoot !== leanSourceManifest().root || !exactLabKeys(r.selection, ["initialCandidatePublicationRoots", "factoryAssessmentArtifactRoots", "operations"]) || r.selection.initialCandidatePublicationRoots.length !== 2 || r.selection.factoryAssessmentArtifactRoots.length !== 1 || ![...r.selection.initialCandidatePublicationRoots, ...r.selection.factoryAssessmentArtifactRoots].every(root) || !exactLabKeys(r.selection.operations, ["maxArtifactBytes", "maxArtifactRecords"]) || r.selection.operations.maxArtifactBytes !== 12_000_000_000 || r.selection.operations.maxArtifactRecords !== 200_000) return fail("REQUEST")
@@ -80,7 +82,7 @@ export const authenticateLeanReview = (path: string, expectedRoot: LabRoot, sour
   try { execFileSync("git", ["diff", "--exit-code", commit, "--", ...manifest.entries.map(e => e.path)], { maxBuffer: 1024, stdio: "pipe" }) } catch { return fail("REVIEW_SOURCE") }
   return { reviewRoot: expectedRoot, sourceRoot, sourceCommit: commit }
 }
-const exclusive = (path: string, value: unknown) => { const bytes = leanCanonicalBytes(value); if (resolve(path).startsWith(`${STORE}/`)) assertLeanPublicationCapacity(openLeanLedger(STORE), bytes.length); const fd = openSync(path, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600); try { writeLeanAll(fd, bytes); fsyncSync(fd) } finally { closeSync(fd) } }
+const exclusive = (path: string, value: unknown) => { const bytes = leanCanonicalBytes(value); if (resolve(path).startsWith(`${STORE}/`) || resolve(path) === resolve(ALLOCATION)) assertLeanPublicationCapacity(openLeanLedger(STORE), bytes.length); const fd = openSync(path, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600); try { writeLeanAll(fd, bytes); fsyncSync(fd) } finally { closeSync(fd) } }
 const rssOf = (pid: number): number => {
   if (!Number.isSafeInteger(pid) || pid <= 0) return fail("PROCESS_RSS")
   const value = execFileSync("ps", ["-o", "rss=", "-p", String(pid)], { encoding: "utf8", timeout: 1000, maxBuffer: 128 }).trim()
