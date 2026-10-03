@@ -44,3 +44,13 @@ The CLI terminal wrapper handled a rejected child action by setting `process.exi
 - root_cause: CLI child success and failure handling left its IPC channel connected after the action settled, keeping the child process alive.
 - fix: Await child action completion and cleanup, send only finite whitelisted failure diagnostics, persist the validated receipt exclusively in the parent, then disconnect IPC; add inert fork regression coverage.
 - original_run_error: unknown
+
+## Follow-up: Fresh v3 Candidate-Import Failure (2026-10-03)
+
+- The unique v3 terminal check verified session 64011 closed with exit 1 after 39,446 ms, zero charges, no result, and a sanitized `UNKNOWN_INTERNAL_FAILURE` / `unknown` receipt. This is separate from the original IPC hang; neither run's exact underlying exception is established here.
+- Bounded read-only descriptor inspection found the two selected supervision descriptors at 3,701,815 bytes / 1,155 records and 3,997,990 bytes / 1,276 records. Both are below the lean reader's 64 MiB / 50,000-record limits, ruling out that specific clamp hypothesis.
+- One direct `readLeanPilotInitialCandidates` invocation was attempted against the frozen v4 selection. The diagnostic's own 2 GB scratch-plus-parent memory guard stopped it at the first cell callback: observed RSS sample 544,956,416 bytes after 5,285 ms (not a peak claim). It emitted no trusted reader error, disclosed no candidate data, and wrote no files. The importer was not retried.
+- Static resource-path review found `assertLeanPrefixCapacity` records observed child+parent RSS; `checkpointLeanResources` adds the explicit 512 MB external scratch reserve once. No double-count was found in that arithmetic.
+- Source diagnosis confirms a finite diagnostics gap: the failure-receipt mapper accepted only `LEAN_PILOT_<code>`, so trusted errors from candidate-import and resource-check modules were collapsed to `UNKNOWN_INTERNAL_FAILURE` / `unknown`. This explains the generic receipt, not the v3 child exception.
+- The receipt mapper now preserves only an exact finite set of trusted candidate-import and pre-charge resource codes at stage `candidate-import`; unlisted/private failures remain `UNKNOWN_INTERNAL_FAILURE` / `unknown`. This changes observability only and does not identify the v3 child exception or alter consumed artifacts, importer behavior, resource limits, or route accounting.
+- The 64 MiB / 50,000-record clamp is not the observed cause. The exact v3 exception remains unknown.

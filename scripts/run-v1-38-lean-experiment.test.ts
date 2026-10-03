@@ -15,7 +15,7 @@ import { createLeanContainerMatchSession } from "./lib/v1-38-lean-container-matc
 import { admitFactorySupervisorLifetime } from "./lib/v1-38-factory-supervised-runtime.js"
 import { isLeanChildFailureReceipt, publishChildTerminalAfterOptionalReceipt, resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
 
-it.each([{ mode: "success", exitCode: 0 }, { mode: "failure", exitCode: 1 }, { mode: "known-failure", exitCode: 1 }])("settles inert child IPC after cleanup on $mode", async ({ mode, exitCode }) => {
+it.each([{ mode: "success", exitCode: 0 }, { mode: "failure", exitCode: 1 }, { mode: "known-failure", exitCode: 1 }, { mode: "trusted-import-failure", exitCode: 1 }, { mode: "resource-failure", exitCode: 1 }, { mode: "buffer-failure", exitCode: 1 }, { mode: "unlisted-import-failure", exitCode: 1 }])("settles inert child IPC after cleanup on $mode", async ({ mode, exitCode }) => {
   const child = fork(resolve("scripts/fixtures/v1-38-lean-child-terminal-probe.ts"), [mode], { execArgv: ["--import", "tsx"], stdio: ["ignore", "ignore", "pipe", "ipc"] })
   const events: string[] = []
   const receipts: unknown[] = []
@@ -33,7 +33,16 @@ it.each([{ mode: "success", exitCode: 0 }, { mode: "failure", exitCode: 1 }, { m
   })
   expect(outcome).toEqual({ code: exitCode, signal: null })
   expect(events).toEqual(exitCode === 0 ? ["cleanup", "disconnect"] : ["cleanup", "failure-receipt", "disconnect"])
-  expect(receipts).toEqual(exitCode === 0 ? [] : [{ type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code: mode === "known-failure" ? "HANDSHAKE" : "UNKNOWN_INTERNAL_FAILURE", stage: mode === "known-failure" ? "handshake" : "unknown" }])
+  const expectedFailure = mode === "known-failure"
+    ? { code: "HANDSHAKE", stage: "handshake" }
+    : mode === "trusted-import-failure"
+      ? { code: "SERIOUS_LEAGUE_CANDIDATE_SUPERVISION", stage: "candidate-import" }
+      : mode === "resource-failure"
+        ? { code: "LEAN_EXPERIMENT_RESOURCE", stage: "candidate-import" }
+        : mode === "buffer-failure"
+          ? { code: "LEAN_EXPERIMENT_BUFFER_CAP", stage: "candidate-import" }
+      : { code: "UNKNOWN_INTERNAL_FAILURE", stage: "unknown" }
+  expect(receipts).toEqual(exitCode === 0 ? [] : [{ type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", ...expectedFailure }])
   expect(stderr).toBe(exitCode === 0 ? "" : "LEAN_PILOT_FAILED_DETAILS_WITHHELD\n")
 })
 it("rejects tampered failure receipts without widening the diagnostic boundary", () => {
