@@ -1,6 +1,6 @@
 /** Private trusted-coordinator evidence. Never imported by the rules engine. */
 import { createHash } from "node:crypto"
-import { constants, openSync, closeSync, writeSync, fsyncSync, readFileSync, mkdirSync, lstatSync, realpathSync, readdirSync, statSync } from "node:fs"
+import { constants, openSync, closeSync, writeSync, fsyncSync, readFileSync, mkdirSync, lstatSync, realpathSync, readdirSync, statSync, statfsSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { gzipSync, gunzipSync } from "node:zlib"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
@@ -321,17 +321,41 @@ export const currentLeanElapsedMs = (ledger: LeanExperimentLedger) => {
   return s.elapsedMs
 }
 export const createLeanLedger = (directory: string, allocation: AnyLeanAllocation): LeanExperimentLedger => {
-  const a = admitLeanAllocation(allocation), p = resolve(directory)
-  if (a.schemaVersion === "lean-experiment-allocation-v2") inspectLeanProspectiveDiskBasis()
+  const p = resolve(directory)
   if (realpathSync(dirname(p)) !== dirname(p)) return fail("STORE")
+  // A near-cap v2 claim must fail before even reading predecessor evidence or
+  // creating a directory. Admission below replaces it with the measured basis.
+  if (allocation.schemaVersion === "lean-experiment-allocation-v2") assertLeanV2StoreCapacity(p, allocation.predecessor?.allocatedDiskBytes, 1_048_576)
+  const a = admitLeanAllocation(allocation)
+  if (a.schemaVersion === "lean-experiment-allocation-v2") {
+    inspectLeanProspectiveDiskBasis()
+    assertLeanV2StoreCapacity(p, a.predecessor.allocatedDiskBytes, leanCanonicalBytes(a).length)
+  }
   mkdirSync(p, { mode: 0o700 }); safeDirectory(p)
-  writeExclusive(join(p, "allocation.json"), leanCanonicalBytes(a)); writeExclusive(join(p, "ledger.ndjson"), new Uint8Array()); writeExclusive(join(p, "time.ndjson"), new Uint8Array())
+  const allocationBytes = leanCanonicalBytes(a)
+  if (a.schemaVersion === "lean-experiment-allocation-v2") assertLeanV2StoreCapacity(p, a.predecessor.allocatedDiskBytes, allocationBytes.length)
+  writeExclusive(join(p, "allocation.json"), allocationBytes)
+  if (a.schemaVersion === "lean-experiment-allocation-v2") assertLeanV2StoreCapacity(p, a.predecessor.allocatedDiskBytes, 0)
+  writeExclusive(join(p, "ledger.ndjson"), new Uint8Array())
+  if (a.schemaVersion === "lean-experiment-allocation-v2") assertLeanV2StoreCapacity(p, a.predecessor.allocatedDiskBytes, 0)
+  writeExclusive(join(p, "time.ndjson"), new Uint8Array())
   return { directory: p, allocation: a }
 }
 export const openLeanLedger = (directory: string): LeanExperimentLedger => { const p = safeDirectory(directory), allocation = admitLeanAllocation(parse(readSafe(join(p, "allocation.json")))); if (allocation.schemaVersion === "lean-experiment-allocation-v2") inspectLeanProspectiveDiskBasis(); return { directory: p, allocation } }
 export const measureLeanPhysicalBytes = (directory: string): number => {
   const p = safeDirectory(directory)
   return readdirSync(p).reduce((n, name) => { const s = lstatSync(join(p, name)); if (s.isSymbolicLink() || !s.isFile()) return fail("FILE"); return n + s.blocks * 512 }, statSync(p).blocks * 512)
+}
+/** Reserve disk for the pending store publication before each v2 write. The
+ * parent filesystem must also have the unspent 15 GB envelope available. */
+const assertLeanV2StoreCapacity = (store: string, survivingBytes: unknown, nextFileBytes: number): void => {
+  if (!natural(survivingBytes) || !natural(nextFileBytes)) return fail("RESOURCE")
+  const owned = LEAN_PROSPECTIVE_WRITABLE_PATHS.reduce((bytes, path) => bytes + measuredDestinationBlocks(path), 0)
+  const current = survivingBytes + owned + measuredDestinationBlocks(store)
+  const projected = current + Math.ceil(nextFileBytes / 4096) * 4096 + 131_072
+  if (!natural(projected) || projected > LEAN_CAPS.retainedBytes || projected + LEAN_CAPS.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes) return fail("RESOURCE")
+  const filesystem = statfsSync(dirname(store), { bigint: true })
+  if (filesystem.bavail * filesystem.bsize < BigInt(LEAN_CAPS.totalBytes - current)) return fail("RESOURCE")
 }
 export const leanProspectiveOwnedBytes = (ledger: LeanExperimentLedger): number => measureLeanPhysicalBytes(ledger.directory) + (ledger.allocation.schemaVersion === "lean-experiment-allocation-v2" ? LEAN_PROSPECTIVE_WRITABLE_PATHS.reduce((bytes, path) => bytes + measuredDestinationBlocks(path), 0) : 0)
 export const cumulativeLeanPhysicalBytes = (ledger: LeanExperimentLedger): number => leanProspectiveOwnedBytes(ledger) + (ledger.allocation.schemaVersion === "lean-experiment-allocation-v2" ? ledger.allocation.predecessor.allocatedDiskBytes : 0)

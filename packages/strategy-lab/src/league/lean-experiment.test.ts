@@ -1,6 +1,6 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync, readFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync, readFileSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { afterEach, expect, it } from "vitest"
 import { labRoot, LAB_ADMITTED_ROOTS } from "../contracts.js"
 import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, LEAN_FAILED_PREFIX, LEAN_DISK_APPROVAL, LEAN_PROSPECTIVE_WRITABLE_PATHS, createLeanProspectiveDiskBasis, verifyLeanProspectiveDiskBasis, verifyLeanFailedPrefix, verifyLeanFailedWriteInventory, deriveLeanChildTerminal, readLeanChildTerminal, readLeanCumulativeAccounting, leanBytesRoot, leanCanonicalBytes, type LeanExperimentAllocationV2, type LeanExperimentLedger } from "./lean-experiment.js"
@@ -126,6 +126,13 @@ const v2Ledger = (): LeanExperimentLedger => {
   writeFileSync(join(directory, "time.ndjson"), "")
   return { directory, allocation: a }
 }
+it("rejects a near-cap v2 store before its directory or first file exists", () => {
+  const fixture = v2Ledger(), destination = join(dirname(fixture.directory), "denied-store")
+  const a = fixture.allocation as LeanExperimentAllocationV2
+  const nearCap = { ...a, predecessor: { ...a.predecessor, allocatedDiskBytes: 12_000_000_000 - 4096 } }
+  expect(() => createLeanLedger(destination, nearCap)).toThrow("RESOURCE")
+  expect(existsSync(destination)).toBe(false)
+})
 const v2Entry = (l: ReturnType<typeof v2Ledger>) => ({ schemaVersion: "lean-child-entry-v2" as const, allocationRoot: l.allocation.root, sourceRoot: l.allocation.sourceRoot, requestBytesRoot: pin, head: "a".repeat(40), parentPid: 100, childPid: 101, handshakeRoot: pin, wallStartMs: 1_791_100_000_000, monotonicStartNs: "1000000000" })
 const timeLine = (kind: "start" | "close", atMs: number) => Buffer.from(leanCanonicalBytes({ kind, id: "pilot-entry", atMs })).toString("utf8") + "\n"
 const enterV2 = (l: ReturnType<typeof v2Ledger>) => { const entry = v2Entry(l); writeFileSync(join(l.directory, "entry.json"), leanCanonicalBytes(entry)); writeFileSync(join(l.directory, "time.ndjson"), timeLine("start", entry.wallStartMs)); return entry }
