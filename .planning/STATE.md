@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-15 root pilot closedexit134 uncharged; unique entry-terminal check closed; source-only memory/accounting diagnosis next
+stopped_at: Plan265-15 diagnosis closed; human crash-accounting amendment required before a fresh pilot
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Pilot heap exhaustion before retained charge; immutable open interval/no result; no tier or empirical credit; sourcehold released after unique terminal check
+last_activity_desc: Source-backed repeated historical import diagnosed; no fix or fresh route; immutable open interval consumes v1 time allowance pending human amendment
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved lean experiment reset, 2026-10-03
+
+LATEST: source-only GSD diagnosis CLOSED (one investigation, zero fix cycles). Candidate admission performs three materializing historical 48-cell assessments for two candidates before the first charge; the exact failing allocation remains unknown. No source fix or new route has been run. Unique root and terminal verifier are closed; no active helper or agent. The v1 open interval explicitly consumes the shared eight-hour allowance and forbids recovery by later stages. Standing same-scope route approval does not amend that rule. A HUMAN crash-accounting decision is now required: permit a prospective versioned ledger to carry forward the independently bounded 565,459 ms failed-entry wall interval (about nine and a half minutes), plus conservatively bounded prior resources, instead of the v1 full-envelope burn. This is not approved, an exact duration, a v1 close event, or a refund/recredit of the historical route. Keep its failure, allocation, interval and all historical bytes untouched. Unmeasured peak scratch/RSS must be independently bounded or fail closed; the 768 MiB V8 old-space flag is not an RSS bound. Decision note:265-15-CRASH-ACCOUNTING-DECISION-v1.md. Do not dispatch another pilot, reopen the failed route or fabricate a result while pending. Current15GB/eight-hour/300Match limits, all rules/runtime/privacy bounds, unopened holdout and freeze-before-formation remain unchanged. Phase265 incomplete;265-16 and266freeze unstarted. Quiet on unchanged pending state.
+
+The following paragraph is the preceding diagnosis-start snapshot, not a current instruction:
 
 CURRENT: unique root pilot session36848/PID66239 CLOSEDexit134; native coordinator heap exhaustion under main's768MiBlaunch bound during candidate admission. Unique independent ENTRY-terminal-only verification CLOSED in265-15-PILOT-ENTRY-TERMINAL-VERIFICATION-v1.md: exact source/HEAD/allocation joins, PID absent, zero retainedcharges, one open time row, no actualresult/terminal. Never invoke ordinary empirical reader with fabricatedresult/head; never close/alter/resume/retry/refund this allocation/store/interval. V1 conservative unknown-interval rule exhausts remainingtime; no selectedtier/LEAG/freeze/formationcredit. The failed launch does not establish minimum memory or Strategy strength. Actualabsence is not proof of absence of all transient/unrecorded observations. Source/HEADhold is released after rootclosure+uniquecheck. Next is bounded GSD diagnosis-only of import memory and prospective crash accounting under unchanged15GB/8hour/300Match caps, with independently checked carry-forward before any distinct fresh route; no budgetreset. If bounded carry-forward cannot be soundly established, that new resource decision is human-only. Plan265-15/phase265 remain incomplete;265-16empirical and266freeze unstarted. Old and new consumed artifacts immutable; current-rules freeze-before-formation/privateholdout/no-public-counted-production unchanged.
 
