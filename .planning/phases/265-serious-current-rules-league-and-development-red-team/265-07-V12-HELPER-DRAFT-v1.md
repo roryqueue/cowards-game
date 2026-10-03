@@ -2,11 +2,12 @@
 phase: 265-serious-current-rules-league-and-development-red-team
 plan: "07"
 scope: source_only_private_v12_helper_draft
-status: drafted_awaiting_independent_helper_review
+status: independently_reviewed_clean_source_only
 author_agent_id: /root/265_host_receipt_v12_helper_prepare
 future_packet_reviewer_agent_id: /root/265_host_receipt_v12_packet_review
 source_reviewed: 9ffde3ffafd23c6508766e15c05b5004c0fe030f
 draft_head: 5d3544d8d5d1b582133f1e0e1a7177e28d6ccab5
+fix_head: 941f129687c39aeafcc000aab211b2455dba40e4
 implementation_root: sha256:552bba3d794cf902d12282ac453434fe74569a9d56870a655ba5b9a3e61a0aa8
 source_root: sha256:defe5024690baceb2128cbd370f6c24f86e8301dcec2e816eff57d1eabea73e2
 empirical_credit: false
@@ -27,7 +28,7 @@ later preparation, commits and execution.
 
 | File in the new private directory | Raw SHA-256 |
 |---|---|
-| `prepare-data.ts` | `b04cfe344b0aa5972cdf40d7f19db15a11ac2814ea558e6958877e9524135b8e` |
+| `prepare-data.ts` | `69bc51a22b9ffebcfa5908e763c0c656cf0ca89803976b7341acc6b45c992b7c` |
 | `run-entry.ts` | `ef73d38fd7069f5745d0319d0e96eea0e5466c0e8547a83c3cc886d1c31bc539` |
 
 The V11 helper sources were read only as code templates and never invoked or
@@ -104,7 +105,7 @@ source_root: sha256:defe5024690baceb2128cbd370f6c24f86e8301dcec2e816eff57d1eabea
 author_agent_id: /root/265_host_receipt_v12_helper_prepare
 reviewer_agent_id: /root/<actual distinct helper reviewer>
 empirical_credit: false
-prepare_helper_raw_sha256: b04cfe344b0aa5972cdf40d7f19db15a11ac2814ea558e6958877e9524135b8e
+prepare_helper_raw_sha256: 69bc51a22b9ffebcfa5908e763c0c656cf0ca89803976b7341acc6b45c992b7c
 run_helper_raw_sha256: ef73d38fd7069f5745d0319d0e96eea0e5466c0e8547a83c3cc886d1c31bc539
 ```
 
@@ -139,7 +140,56 @@ resource, lineage, accounting, runtime, semantic and privacy bound. Current
 rules league and freeze precede formation; holdout remains unopened; no
 public/counted/production authority is added.
 
-## Permitted source-only checks actually performed
+## Bounded independent-review fixes
+
+The initial helper review found CR-01 (missing embedded-to-standalone review
+join) and WR-01 (early context spelling did not include the model role).
+That `issues_found` report remains unchanged in Git; the canonical path now
+contains independently authored iteration 2 clean re-review. Original draft/report bytes were committed in
+`941f1296` before these source-only fixes; no mode had run.
+
+CR-01: `joinReviewedV12Jobs` validates all eleven ordered IDs, review row roots,
+canonical standalone bytes and exact canonical equality with each embedded
+job before the caller creates `factory-response` or publishes anything.
+It returns only the admitted standalone representations. Those exact joined
+jobs drive packet publication; allocation-input consumes the compiled jobs,
+checks their producer request roots against the pinned packet summary, and
+preserves the same compiled artifact references rather than using a second
+embedded draft representation.
+
+WR-01: one `prospectiveV12JobPaths` builder now creates IDs and actual authoring
+paths and also derives the early guard's exact paths, including `-model-state`
+and `-model-disclosed`. The guard runs after all job paths are derived and
+before the first draft output. `lstat` treats every entry, including dangling
+symlinks, as occupied; only ENOENT means absent. Later production preflight is
+unchanged. Output/canonical-destination early checks use the same entry-aware
+absence helper.
+
+The new inert private regression source is
+`.strategy-lab/phase265-v12-helper-guard-regression-v1.ts`, mode 0600, raw SHA-256
+`fbbe6e4df328c9ecaa1a6849f1a31d1cb61cb9a2af4337df8f005ae954e99137`.
+It exercises the actual shared guards with dummy canonical data and its own
+temporary context paths; it never invokes a helper CLI mode. Observed RED:
+2 passed, 8 failed. Final GREEN: **10/10 passed**, including all three changed
+embedded field families, a later-row mismatch with zero publication calls,
+actual model-role context directories and dangling symlinks with zero output
+writes, equal admitted standalone input and absent fresh contexts. All owned
+fixture paths were cleaned. The equal-input assertion compares exact canonical
+bytes and confirms a newly admitted standalone object, accommodating canonical
+admission's null-prototype objects rather than accepting different bytes.
+
+One post-fix strict check found TS7006 on a new map callback; the explicit
+narrow producer-identity parameter type fixed it without suppression or a cast.
+The same bounded strict check then passed for the two helpers plus the guard
+regression. The paired import-inert check exited 0 with exactly the original
+two helper directory entries and no outputs. No broad gate was rerun, no
+production source changed and no resource/semantic bound changed. Independent
+exact-new-byte re-review completed clean with raw SHA-256
+`e2f8b25d30f959d8b43aaedd96d425e5c616aae206b4b062e123731417c361f0`.
+No helper invocation has occurred; fresh request review and every applicable
+prospective execution gate remain required.
+
+## Original draft-task source-only checks
 
 One strict NodeNext helper typecheck exited 0, no diagnostics:
 `tsc --ignoreConfig --noEmit --target ES2022 --module NodeNext
