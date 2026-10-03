@@ -14,6 +14,22 @@ export interface LeanChildFailureReceipt {
   stage: LeanChildFailureStage
 }
 
+/** Attempt the optional bounded diagnostic first, but always run the required
+ * terminal callback. A diagnostic write failure is returned as uncertainty;
+ * errors from the mandatory terminal callback deliberately propagate. */
+export const publishChildTerminalAfterOptionalReceipt = <T>(
+  receipt: LeanChildFailureReceipt | null,
+  publishReceipt: (receipt: LeanChildFailureReceipt) => void,
+  publishTerminal: (receiptPublicationUncertain: boolean) => T,
+): T => {
+  let receiptPublicationUncertain = false
+  if (receipt) {
+    try { publishReceipt(receipt) }
+    catch { receiptPublicationUncertain = true }
+  }
+  return publishTerminal(receiptPublicationUncertain)
+}
+
 const codeStages: Partial<Record<LeanChildFailureCode, LeanChildFailureStage>> = {
   CHILD_PARENT: "handshake", HANDSHAKE: "handshake", PARENT_LOST: "handshake",
   ARGUMENTS: "preflight", REQUEST: "preflight", FACTORY: "preflight", REVIEW: "preflight", REVIEW_SOURCE: "preflight", WRITABLE_SCOPE: "preflight", ALLOCATION: "preflight", UNCOMMITTED_ALLOCATION: "preflight", ENTRY: "preflight", ENTRY_PATH: "preflight", SOURCE_HOLD: "preflight",

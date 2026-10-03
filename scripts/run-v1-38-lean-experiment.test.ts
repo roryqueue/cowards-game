@@ -13,7 +13,7 @@ import { createLeanAllocation, createLeanLedger, chargeLeanSlot } from "../packa
 import { labRoot, LAB_ADMITTED_ROOTS } from "../packages/strategy-lab/src/contracts.js"
 import { createLeanContainerMatchSession } from "./lib/v1-38-lean-container-match-session.js"
 import { admitFactorySupervisorLifetime } from "./lib/v1-38-factory-supervised-runtime.js"
-import { isLeanChildFailureReceipt, resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
+import { isLeanChildFailureReceipt, publishChildTerminalAfterOptionalReceipt, resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
 
 it.each([{ mode: "success", exitCode: 0 }, { mode: "failure", exitCode: 1 }, { mode: "known-failure", exitCode: 1 }])("settles inert child IPC after cleanup on $mode", async ({ mode, exitCode }) => {
   const child = fork(resolve("scripts/fixtures/v1-38-lean-child-terminal-probe.ts"), [mode], { execArgv: ["--import", "tsx"], stdio: ["ignore", "ignore", "pipe", "ipc"] })
@@ -41,6 +41,20 @@ it("rejects tampered failure receipts without widening the diagnostic boundary",
   expect(isLeanChildFailureReceipt(valid)).toBe(true)
   expect(isLeanChildFailureReceipt({ ...valid, privateError: "must not be retained" })).toBe(false)
   expect(isLeanChildFailureReceipt({ ...valid, code: "PRIVATE_ERROR" })).toBe(false)
+})
+it("publishes the mandatory failed child terminal and interval close if optional receipt publication fails", () => {
+  const receipt = { type: "lean-child-failure" as const, schemaVersion: "lean-child-failure-v1" as const, code: "UNKNOWN_INTERNAL_FAILURE" as const, stage: "unknown" as const }
+  const events: string[] = []
+  const terminal = publishChildTerminalAfterOptionalReceipt(receipt, () => {
+    events.push("optional-marker")
+    throw new TypeError("capacity details remain private")
+  }, receiptPublicationUncertain => {
+    events.push(receiptPublicationUncertain ? "failed-terminal" : "clean-terminal")
+    events.push("pilot-entry-close")
+    return { status: "child_failed", intervalClosed: true }
+  })
+  expect(events).toEqual(["optional-marker", "failed-terminal", "pilot-entry-close"])
+  expect(terminal).toEqual({ status: "child_failed", intervalClosed: true })
 })
 it("imports inertly and accepts only three explicit private modes", () => {
   expect(parseLeanCommand(["prepare-pilot", "--request", "x.json"])).toEqual({ mode: "prepare-pilot", request: "x.json" })

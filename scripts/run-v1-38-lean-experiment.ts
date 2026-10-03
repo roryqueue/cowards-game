@@ -21,7 +21,7 @@ import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-r
 import { issueLeanRuntimeAuthority } from "./lib/v1-38-lean-experiment-authority.js"
 import { prospectiveLeagueRuntimeBinding } from "./lib/v1-38-league-prospective-lifetime.js"
 import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, currentLeanElapsedMs, LEAN_EXTERNAL_SCRATCH_RESERVE, assertLeanPublicationCapacity, boundLeanReplayFrame } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { isLeanChildFailureReceipt, resolveLeanChildCliTerminal, type LeanChildFailureReceipt } from "./lib/v1-38-lean-child-cli-terminal.js"
+import { isLeanChildFailureReceipt, publishChildTerminalAfterOptionalReceipt, resolveLeanChildCliTerminal, type LeanChildFailureReceipt } from "./lib/v1-38-lean-child-cli-terminal.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_PILOT_${code}`) }
 const STORE = resolve(".strategy-lab/lean-experiment-20261003-v3")
@@ -306,13 +306,18 @@ export const runLeanPilot = async (requestPath: string) => {
     const timeout = setTimeout(() => { uncertain = true; child.kill("SIGKILL") }, LEAN_CAPS.elapsedMs - ledger.allocation.predecessor.elapsedUpperBoundMs)
     const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => resolveExit({ code, signal })))
     clearInterval(period); clearTimeout(timeout)
-    if (childFailure) exclusive(join(STORE, "entry-failure.json"), childFailure)
     try {
       if (execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim() !== head || leanSourceManifest().root !== request.sourceRoot || leanBytesRoot(readLeanSafeFile(requestPath)) !== entry.requestBytesRoot) uncertain = true
     } catch { uncertain = true }
     const stat = statfsSync(STORE, { bigint: true }), freeBytes = stat.bavail * stat.bsize
-    const terminal = deriveLeanChildTerminal(ledger, entry, { exitCode: exit.code, signal: exit.signal, wallObservedMs: Date.now(), monotonicObservedNs: process.hrtime.bigint().toString(), status: exit.code === 0 && !uncertain && childFailure === null ? "child_exited" : "child_failed", parentRssBytes: process.memoryUsage().rss, childRssObservedBytes, physicalBytes: cumulativeLeanPhysicalBytes(ledger) + 65_536, freeBytes: freeBytes <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(freeBytes) : null })
-    publishLeanChildTerminal(ledger, terminal)
+    const terminal = publishChildTerminalAfterOptionalReceipt(childFailure,
+      receipt => exclusive(join(STORE, "entry-failure.json"), receipt),
+      receiptPublicationUncertain => {
+        if (receiptPublicationUncertain) uncertain = true
+        const observed = deriveLeanChildTerminal(ledger, entry, { exitCode: exit.code, signal: exit.signal, wallObservedMs: Date.now(), monotonicObservedNs: process.hrtime.bigint().toString(), status: exit.code === 0 && !uncertain && childFailure === null ? "child_exited" : "child_failed", parentRssBytes: process.memoryUsage().rss, childRssObservedBytes, physicalBytes: cumulativeLeanPhysicalBytes(ledger) + 65_536, freeBytes: freeBytes <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(freeBytes) : null })
+        publishLeanChildTerminal(ledger, observed)
+        return observed
+      })
     if (terminal.status !== "child_exited") return fail("CHILD_FAILED")
     return { issued: false, evidenceClass: "feasibility_only", status: "child_exited_pending_independent_verification", allocationRoot: ledger.allocation.root, terminalElapsedUpperBoundMs: terminal.elapsedUpperBoundMs }
   } finally { if (!entered && child.exitCode === null) child.kill("SIGKILL") }
