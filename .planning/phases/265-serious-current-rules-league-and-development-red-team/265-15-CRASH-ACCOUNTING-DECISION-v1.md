@@ -1,6 +1,6 @@
 # Lean pilot crash-accounting decision
 
-Status: awaiting human approval. This note grants no execution authority.
+Status: approved by the repository operator in this chat on 2026-10-03, replying `approved` to the requested accounting amendment. This approval authorizes the prospective repair and distinct fresh same-scope pilot workflow below, not reuse of the failed route or dispatch before reviewed source and capacity checks.
 
 The approved smaller experiment runner is implemented and independently reviewed. Its first pilot failed while importing old evidence, before any retained Match charge. The importer validates the same historical assessment three times and holds large records in memory. The coordinator's 768 MiB heap limit was a main-orchestrator launch choice, not a Strategy rule or evidence that the laptop is full.
 

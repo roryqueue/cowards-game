@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-15 diagnosis closed; human crash-accounting amendment required before a fresh pilot
+stopped_at: Plan265-15 crash-accounting amendment approved; checked source repair before distinct fresh pilot
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Source-backed repeated historical import diagnosed; no fix or fresh route; immutable open interval consumes v1 time allowance pending human amendment
+last_activity_desc: Operator approved prospective bounded carry-forward; preserve failed v1 bytes; research and checked repair of importer and crash accounting next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved lean experiment reset, 2026-10-03
+
+CURRENT APPROVAL: the human replied `approved` to265-15-CRASH-ACCOUNTING-DECISION-v1.md. New prospective cumulative accounting may carry forward the independently bounded565,459ms failed-entry interval plus conservatively bounded prior disk/resources, under unchanged15GB/28,800,000ms/300Match ceilings. Failed v1 reader/artifacts stay immutable and failed. No budget reset or old allocation reuse. Continue source-only research/checked Plan265-15 repair for single-assessment bounded import and parent-observed crash-safe timing/resources, then review/fix/test/validate/verify before distinct fresh allocation and same-process capacity. No repeat approval literal within this scope. No active empirical entry/verifier; diagnosis closed. Phase265 incomplete, baseline265-16 and266freeze unstarted; no formation/holdout/public/counted/production authority. The pending-decision snapshots below are now history.
 
 LATEST: source-only GSD diagnosis CLOSED (one investigation, zero fix cycles). Candidate admission performs three materializing historical 48-cell assessments for two candidates before the first charge; the exact failing allocation remains unknown. No source fix or new route has been run. Unique root and terminal verifier are closed; no active helper or agent. The v1 open interval explicitly consumes the shared eight-hour allowance and forbids recovery by later stages. Standing same-scope route approval does not amend that rule. A HUMAN crash-accounting decision is now required: permit a prospective versioned ledger to carry forward the independently bounded 565,459 ms failed-entry wall interval (about nine and a half minutes), plus conservatively bounded prior resources, instead of the v1 full-envelope burn. This is not approved, an exact duration, a v1 close event, or a refund/recredit of the historical route. Keep its failure, allocation, interval and all historical bytes untouched. Unmeasured peak scratch/RSS must be independently bounded or fail closed; the 768 MiB V8 old-space flag is not an RSS bound. Decision note:265-15-CRASH-ACCOUNTING-DECISION-v1.md. Do not dispatch another pilot, reopen the failed route or fabricate a result while pending. Current15GB/eight-hour/300Match limits, all rules/runtime/privacy bounds, unopened holdout and freeze-before-formation remain unchanged. Phase265 incomplete;265-16 and266freeze unstarted. Quiet on unchanged pending state.
 
