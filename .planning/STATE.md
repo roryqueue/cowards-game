@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 V13 fresh requests reviewed; unique data-only prepare73515 active; no capacity or Match yet
+stopped_at: Phase265 V13 preparation complete; canonicalallocation ready for commit before unique entry; no capacity or Match yet
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Actualauthor draft13763exit0; distinct reviewer11accepted; compile51492 andallocation-input30437exit0; uniqueprepare73515active
+last_activity_desc: Prepare73515exit0,capacity-input44886exit0 receiptCreatedfalse,publish89264exit0; newempty0700store; exactallocation commitbeforeentry next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,22 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+V13 unique data-only prepare73515 CLOSEDexit0; capacity-input44886 CLOSEDexit0,
+receiptCreatedfalse; publish89264 CLOSEDexit0. Canonicalallocation-v13 admitted
+3bb0abed1f3d835640ec605896ad0e05fecd62bdc72227bc81672dcf39caffc1,
+raw6a0b01fda4ef6d68e898f947f64476fb6722be96ae97bcd5751f28110612fca3,
+24680bytes. Fresh league-evidence observed empty real0700/non-symlink. Latest
+advisory diskfree210714529792 >unchangedrequired210368502440; notreceipt/admission.
+Noactiveagent/helper/entry/verifier. Commit/push exactnewallocation and safe
+preparation report BEFORE unique rootrun. Its staticjoins then freshpassing
+SAMEPROCESScapacity must precedecharge/dispatch. Hold source AND HEAD fixed
+through liveentryterminal and ONE retainedverifier onlyifactualheadexists;
+no competingheavywork orfabricatedhead. Source9ff/552bba3d/defe5024/completed
+8gate/guest1000-host5000-Match600000/allotherbounds unchanged. AllLEAGpending,
+V12unknowncause/0Bresultreservation/consumedimmutablehistory/unopenedholdout/
+freeze-beforeformation/no-public-counted-production retained. Olderactive
+prepare snapshots below are now history.
 
 FreshV13 actualauthor draft13763 CLOSEDexit0 at06:27:17.377Z,11jobs,
 draft raw4e18e5addae9c24d58ceb65226d94f0daa797b9a033149db90a0d17f130c4e00.
