@@ -40,6 +40,13 @@ export const LEAN_FAILED_PREFIX = Object.freeze({
 const FAILED_WRITE_INVENTORY = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-15-FAILED-PREFIX-WRITE-INVENTORY-v1.json"
 const FAILED_WRITE_REVIEW = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-15-FAILED-PREFIX-DISK-INVENTORY-v1.md"
 type FailedWriteDestination = { path: string; kind: "source" | "core" | "runtime-cache" | "scratch"; allocatedBytes: number; upperBoundBytes: number; evidenceRoot: LabRoot }
+/** No contemporaneous failed-PID core limit or TSX-cache write ceiling is
+ * retained. A present-day path inventory or reviewer signature cannot turn
+ * either unknown historical maximum into an admissible number. This gate
+ * remains closed until independently verified source evidence is bound in a
+ * separately reviewed source amendment; it does not apply the pending human
+ * resource-accounting choice. */
+const HISTORICAL_CORE_CACHE_BOUNDS_ESTABLISHED = false
 export const verifyLeanFailedWriteInventory = (value: unknown): { inventoryRoot: LabRoot; allocatedDiskBytes: number; completenessEvidenceRoot: LabRoot; destinations: readonly FailedWriteDestination[] } => {
   if (!exactLabKeys(value, ["schemaVersion", "failedHead", "entryPid", "storeAllocatedBytes", "sourcePrefixWrites", "otherWritableDestinations", "reviewer", "completenessEvidenceRoot", "scope"])) return fail("PREDECESSOR_INVENTORY")
   const v = value as Record<string, unknown>
@@ -56,6 +63,7 @@ export const verifyLeanFailedWriteInventory = (value: unknown): { inventoryRoot:
     hasCore ||= item.kind === "core"; hasCache ||= item.kind === "runtime-cache"
   }
   if (!hasCore || !hasCache || !paths.has(required[1]!) || !paths.has(required[2]!) || !natural(upper) || upper > LEAN_CAPS.totalBytes || (v.sourcePrefixWrites as string[]).some(path => path !== required[0] && !paths.has(path))) return fail("PREDECESSOR_INVENTORY")
+  if (!HISTORICAL_CORE_CACHE_BOUNDS_ESTABLISHED) return fail("PREDECESSOR_HISTORICAL_BOUND")
   return { inventoryRoot: leanBytesRoot(leanCanonicalBytes(value)), allocatedDiskBytes: upper, completenessEvidenceRoot: v.completenessEvidenceRoot as LabRoot, destinations: v.otherWritableDestinations as FailedWriteDestination[] }
 }
 const measuredDestinationBlocks = (path: string): number => {

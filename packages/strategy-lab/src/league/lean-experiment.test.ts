@@ -10,10 +10,11 @@ import { writeLeanAll, createLeanAllocation, chargeLeanSlot, createLeanLedger, r
 const dirs: string[] = []
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }) })
 const pin = labRoot("test", 1)
-it("requires a reviewed exact failed-prefix write inventory and debits its conservative upper bound", () => {
+it("denies self-asserted historical cache/core bounds even with a reviewer and matching path inventory", () => {
   const inventory = { schemaVersion: "lean-failed-prefix-write-inventory-v1", failedHead: "1da8d11393359ffb23b96e15cc87513e49a0fbea", entryPid: 66239, storeAllocatedBytes: 12_288, sourcePrefixWrites: [".strategy-lab/lean-experiment-20261003", ".strategy-lab/lean-pilot-request-20261003-v2.json", ".planning/artifacts/v1.38-lean-pilot-allocation-v1.json"], otherWritableDestinations: [{ path: ".strategy-lab/lean-pilot-request-20261003-v2.json", kind: "source", allocatedBytes: 4096, upperBoundBytes: 4096, evidenceRoot: pin }, { path: ".planning/artifacts/v1.38-lean-pilot-allocation-v1.json", kind: "source", allocatedBytes: 4096, upperBoundBytes: 4096, evidenceRoot: pin }, { path: "/cores/core.66239", kind: "core", allocatedBytes: 0, upperBoundBytes: 1_000_000, evidenceRoot: pin }, { path: "/tmp/tsx-cache", kind: "runtime-cache", allocatedBytes: 4096, upperBoundBytes: 8192, evidenceRoot: pin }], reviewer: "/root/independent-write-review", completenessEvidenceRoot: pin, scope: "complete_source_runtime_and_crash_destinations" }
-  const checked = verifyLeanFailedWriteInventory(inventory)
-  expect(checked.allocatedDiskBytes).toBe(1_028_672)
+  expect(() => verifyLeanFailedWriteInventory(inventory)).toThrow("PREDECESSOR_HISTORICAL_BOUND")
+  const assertedZeros = { ...inventory, otherWritableDestinations: inventory.otherWritableDestinations.map(destination => ["core", "runtime-cache"].includes(destination.kind) ? { ...destination, allocatedBytes: 0, upperBoundBytes: 0 } : destination) }
+  expect(() => verifyLeanFailedWriteInventory(assertedZeros)).toThrow("PREDECESSOR_HISTORICAL_BOUND")
   for (const changed of [{ ...inventory, reviewer: "" }, { ...inventory, sourcePrefixWrites: [] }, { ...inventory, otherWritableDestinations: [] }, { ...inventory, otherWritableDestinations: [{ ...inventory.otherWritableDestinations[0], upperBoundBytes: 0 }] }, { ...inventory, scope: "store_only" }]) expect(() => verifyLeanFailedWriteInventory(changed)).toThrow("PREDECESSOR_INVENTORY")
 })
 it("finishes short writes and rejects zero progress", () => {
