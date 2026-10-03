@@ -1,4 +1,4 @@
-import { expect, it } from "vitest"
+import { expect, it, vi } from "vitest"
 import { mkdtempSync, realpathSync, rmSync, mkdirSync, writeFileSync, symlinkSync } from "node:fs"
 import { execFileSync, fork } from "node:child_process"
 import { tmpdir } from "node:os"
@@ -36,14 +36,28 @@ it.each([{ mode: "success", exitCode: 0 }, { mode: "failure", exitCode: 1 }, { m
   const expectedFailure = mode === "known-failure"
     ? { code: "HANDSHAKE", stage: "handshake" }
     : mode === "trusted-import-failure"
-      ? { code: "SERIOUS_LEAGUE_CANDIDATE_SUPERVISION", stage: "candidate-import" }
+      ? { code: "SERIOUS_LEAGUE_CANDIDATE_SUPERVISION", stage: "unknown" }
       : mode === "resource-failure"
-        ? { code: "LEAN_EXPERIMENT_RESOURCE", stage: "candidate-import" }
+        ? { code: "LEAN_EXPERIMENT_RESOURCE", stage: "unknown" }
         : mode === "buffer-failure"
-          ? { code: "LEAN_EXPERIMENT_BUFFER_CAP", stage: "candidate-import" }
+          ? { code: "LEAN_EXPERIMENT_BUFFER_CAP", stage: "unknown" }
       : { code: "UNKNOWN_INTERNAL_FAILURE", stage: "unknown" }
   expect(receipts).toEqual(exitCode === 0 ? [] : [{ type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", ...expectedFailure }])
   expect(stderr).toBe(exitCode === 0 ? "" : "LEAN_PILOT_FAILED_DETAILS_WITHHELD\n")
+})
+it.each(["precharge", "postcharge", "finalize"])("does not infer the %s stage from a shared resource error code", async () => {
+  const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true)
+  try {
+    for (const code of ["LEAN_EXPERIMENT_RESOURCE", "LEAN_EXPERIMENT_BUFFER_CAP"] as const) {
+      const receipts: unknown[] = []
+      const child = { connected: true, exitCode: null as number | null, disconnect() { this.connected = false }, send(message: unknown, callback?: (error: Error | null) => void) { receipts.push(message); callback?.(null); return true } }
+      // These are inert host-phase labels, not actual charge or Match evidence.
+      await resolveLeanChildCliTerminal(Promise.reject(new TypeError(code)), child)
+      expect(receipts).toEqual([{ type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code, stage: "unknown" }])
+      expect(child.exitCode).toBe(1)
+      expect(child.connected).toBe(false)
+    }
+  } finally { stderr.mockRestore() }
 })
 it("rejects tampered failure receipts without widening the diagnostic boundary", () => {
   const valid = { type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code: "UNKNOWN_INTERNAL_FAILURE", stage: "unknown" }

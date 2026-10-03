@@ -1,8 +1,9 @@
 const LEAN_CHILD_FAILURE_STAGES = ["handshake", "preflight", "candidate-import", "match", "finalize", "unknown"] as const
 const trustedCodes = <const Prefix extends string, const Codes extends readonly string[]>(prefix: Prefix, codes: Codes) =>
   codes.map(code => `${prefix}${code}` as `${Prefix}${Codes[number]}`)
-// Exact static TypeError codes emitted by the bounded pre-charge candidate
-// reader. Keep this list finite: no message fragments, stacks, paths, or
+// Exact static TypeError codes used by trusted readers and resource guards.
+// These codes may also occur after charge; an error message is not stage
+// provenance. Keep this list finite: no message fragments, stacks, paths, or
 // artifact-controlled strings cross the child IPC boundary.
 const TRUSTED_CANDIDATE_IMPORT_FAILURE_CODES = [
   "LEAN_EXPERIMENT_BUFFER_CAP", "LEAN_EXPERIMENT_RESOURCE",
@@ -56,7 +57,8 @@ const codeStages: Partial<Record<LeanChildFailureCode, LeanChildFailureStage>> =
   ARENA: "match", REVISION: "match", IDENTITY: "match", MATCH_DEADLINE: "match",
   TIME_CAP: "finalize", RETAINED_RESULT: "finalize", RETAINED_ENTRY: "finalize", CHILD_FAILED: "finalize",
 }
-for (const code of TRUSTED_CANDIDATE_IMPORT_FAILURE_CODES) codeStages[code] = "candidate-import"
+// Deliberately leave shared trusted codes unmapped: preserve the actionable
+// code, but report an unknown stage rather than inventing precharge provenance.
 const codeSet = new Set<string>(LEAN_CHILD_FAILURE_CODES)
 const stageSet = new Set<string>(LEAN_CHILD_FAILURE_STAGES)
 const isCode = (value: unknown): value is LeanChildFailureCode => typeof value === "string" && codeSet.has(value)
