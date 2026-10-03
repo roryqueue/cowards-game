@@ -1,6 +1,9 @@
 import { Buffer } from "node:buffer"
+import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import { Worker } from "node:worker_threads"
+import { claimProspectiveLeagueHostReceiptAuthority, isProspectiveLeagueHostReceiptFixture, type ProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
+import type { ProspectiveLeagueLifetimeProviderBinding } from "./v1-38-league-prospective-lifetime.js"
 import { assertLeanInfrastructureProfile, LEAN_CLOSEOUT_PROFILE, type LeanInfrastructureProfile } from "./v1-38-lean-infrastructure-profile.js"
 import type { RuntimeResult } from "../../packages/engine/src/index.js"
 import type { StrategyExecutionAdapterV117, StrategyExecutionRequest } from "../../packages/runtime-js/src/adapter.js"
@@ -23,6 +26,8 @@ export interface LeanContainerPersistentStream {
 }
 export type LeanContainerPersistentStreamFactory = (command: string, args: readonly string[], options: { readonly startupTimeoutMilliseconds: number; readonly maxBufferBytes: number }) => LeanContainerPersistentStream
 export interface LeanContainerMatchSessionOptions {
+  readonly prospectiveHostReceiptAuthority?: ProspectiveLeagueHostReceiptAuthority
+  readonly prospectiveHostReceiptBinding?: ProspectiveLeagueLifetimeProviderBinding
   /** Private trusted coordinator only. Omitted by every historical caller. */
   readonly privateObserver?: LeanPrivateObserver | undefined
   readonly infrastructureProfile?: LeanInfrastructureProfile | undefined
@@ -234,6 +239,14 @@ const strictJsonResponse = (stdout: Buffer, byteLimit: number, origins: WeakMap<
 
 export const createLeanContainerMatchSession = (options: LeanContainerMatchSessionOptions): LeanContainerMatchSession => {
   const origins = new WeakMap<object, LeanPrivateFailureOrigin>()
+  let hostResponseReceiptMilliseconds: 5000 | undefined
+  if ("hostResponseReceiptMilliseconds" in options) throw new TypeError("LEAN_HOST_RECEIPT_SCALAR")
+  if ("prospectiveHostReceiptAuthority" in options || "prospectiveHostReceiptBinding" in options) {
+    const authority = options.prospectiveHostReceiptAuthority, binding = options.prospectiveHostReceiptBinding
+    if (!authority || !binding || options.infrastructureProfile !== "closeout" || options.privateObserver !== undefined || options.matchId !== binding.matchId || options.containerName !== binding.containerName || options.ownershipLabel !== binding.ownershipLabel || options.image !== binding.runtime.image || (options.transport !== undefined || options.streamFactory !== undefined) && !isProspectiveLeagueHostReceiptFixture(authority)) throw new TypeError("LEAN_HOST_RECEIPT_BINDING")
+    if (isProspectiveLeagueHostReceiptFixture(authority) && options.transport === undefined) throw new TypeError("LEAN_HOST_RECEIPT_FIXTURE_CONTROL")
+    hostResponseReceiptMilliseconds = claimProspectiveLeagueHostReceiptAuthority(authority, binding, "session")
+  }
   assertLeanInfrastructureProfile(options.infrastructureProfile)
   assertSafeIdentity("MATCH_ID", options.matchId); assertSafeIdentity("CONTAINER_NAME", options.containerName); assertSafeIdentity("OWNERSHIP_LABEL", options.ownershipLabel); assertSafeIdentity("IMAGE", options.image)
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$/u.test(options.containerName)) throw new TypeError("LEAN_CONTAINER_SESSION_CONTAINER_NAME_INVALID")
@@ -266,6 +279,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const assertActive = (): void => { if (state === "poisoned") throw new TypeError("LEAN_CONTAINER_SESSION_POISONED"); if (state === "closed") throw new TypeError("LEAN_CONTAINER_SESSION_CLOSED") }
   const runMethod = (request: StrategyExecutionRequest, mode: "legacy" | "v117", timeoutMilliseconds: number, stdoutLimit: number, stderrLimit: number, input: string | Uint8Array): LeanContainerTransportResult => {
     assertActive(); const requestId = nextRequestId++; const inputBytes = typeof input === "string" ? Buffer.byteLength(input) : input.byteLength
+    if (hostResponseReceiptMilliseconds !== undefined && (`sha256:${createHash("sha256").update(request.source).digest("hex")}` !== options.prospectiveHostReceiptAuthority!.runtime.executableRoot || mode === "legacy" && timeoutMilliseconds !== 1000)) { poison(); throw new TypeError("LEAN_HOST_RECEIPT_REQUEST_BINDING") }
     if (inputBytes > STREAM_FRAME_LIMIT_BYTES / 2) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded payload cap") }
     const observer = options.privateObserver
     const timingBinding = observer?.binding(request)
@@ -275,7 +289,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
     try {
       const transportStart = observer ? process.hrtime.bigint() : undefined
       let raw: Buffer
-      try { raw = stream!.exchange(frame, { timeoutMilliseconds, maxBufferBytes: Math.min(STREAM_FRAME_LIMIT_BYTES, Math.max(stdoutLimit, stderrLimit) * 2 + CONTROL_BUFFER_BYTES) }) }
+      try { raw = stream!.exchange(frame, { timeoutMilliseconds: hostResponseReceiptMilliseconds ?? timeoutMilliseconds, maxBufferBytes: Math.min(STREAM_FRAME_LIMIT_BYTES, Math.max(stdoutLimit, stderrLimit) * 2 + CONTROL_BUFFER_BYTES) }) }
       catch (error) { throw observeFailure(origins, error, objectKey(error) ? streamOrigins.get(stream!)?.get(error) ?? { stage: "stream_exchange", reason: "unknown" } : { stage: "stream_exchange", reason: "unknown" }) }
       const transportMs = transportStart === undefined ? 0 : Number(process.hrtime.bigint() - transportStart) / 1e6
       if (raw.byteLength > STREAM_FRAME_LIMIT_BYTES) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was not one frame"), { stage: "outer_frame", reason: "frame_cap_exceeded" })

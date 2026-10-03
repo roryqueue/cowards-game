@@ -21,6 +21,9 @@ import { defaultRuntimeMetadata, StrategyInputV119Schema } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { wrapLeagueProbeProvider } from "./v1-38-league-response-runtime.js"
+import { issueProspectiveLeagueHostReceiptAuthority, claimProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
+import { createLeagueRepository } from "../../packages/strategy-lab/src/league/repository.js"
+import { LeagueRecordGraph } from "../run-v1-38-serious-league.js"
 // Only module-level unit injection; no caller constructor override is supplied
 // to v4 and no guest/container or real assessment operation is performed.
 vi.mock("./v1-38-planner-supervised-runtime.js", async (original) => ({ ...await original<typeof import("./v1-38-planner-supervised-runtime.js")>(), createPlannerSupervisedRuntime: vi.fn(() => { throw Error("unit container construction forbidden") }) }))
@@ -101,14 +104,40 @@ describe("private IPC diagnostics injected factory", () => {
   })
 })
 let prospectiveOrdinal = 0
-const lifetimeGrant = () => {
-  const allocation = createProspectiveLeagueExecutionAllocationV2(prospectiveLifetimeFixture()), { admission } = admitted(), defaults = defaultRuntimeMetadata("typescript")
+const lifetimeGrant = (hostReceipt = false) => {
+  const input = prospectiveLifetimeFixture(), { root: _root, schemaVersion: _schema, ...body } = input.amendment
+  const directory = hostReceipt ? realpathSync(mkdtempSync(join(tmpdir(), "league-factory-receipt-"))) : undefined
+  if (directory) temporaryRoots.push(directory)
+  const amendment = hostReceipt ? allocationApi.createLeagueProspectiveAmendmentV3({ ...body, policy: { ...body.policy, operations: { ...body.policy.operations, hostResponseReceiptMilliseconds: 5000 } }, hostReceiptApproval: "265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002" }) : undefined
+  const allocation = amendment ? allocationApi.createProspectiveLeagueExecutionAllocationV3({ ...input, amendment, operations: amendment.policy.operations, outputDirectories: { ...input.outputDirectories, league: directory! } }) : createProspectiveLeagueExecutionAllocationV2(input), { admission } = admitted(), defaults = defaultRuntimeMetadata("typescript")
   const revision = buildStrategyRevision({ source: new TextDecoder().decode(sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
   const value = { cellRoot: labRoot("lifetime-unit-cell", prospectiveOrdinal++), allocationRoot: allocation.root }, start = { ...value, root: labRoot("league-cell-start-v1", value) }
   const binding = { budgetRoot: allocation.root, attemptRoot: start.root, matchId: `league-${start.root.slice(7, 31)}`, seat: "bottom" as const, containerName: `unit-${prospectiveOrdinal}`, ownershipLabel: "unit-private", runtime: prospectiveLeagueRuntimeBinding(admission, { revisionId: revision.id, sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}` as LabRoot, tupleId: MATCH_KERNEL.tupleId, tupleRoot: allocation.tupleRoot, runtimeLimitsRoot: allocation.runtimeRoot, image: allocation.operations.image }) }
-  const charge = { kind: "cell-start" as const, root: labRoot("lifetime-unit-retained", start), value: start }
-  return { allocation, admission, binding, charge, authority: issueProspectiveLeagueLifetimeAuthority(allocation, charge, binding) }
+  const charge = { kind: "cell-start" as const, root: directory ? new LeagueRecordGraph(createLeagueRepository(directory), allocation.operations).append("cell-start", { start }) : labRoot("lifetime-unit-retained", start), value: start }
+  return { allocation, admission, binding, charge, authority: issueProspectiveLeagueLifetimeAuthority(allocation, charge, binding), hostReceiptAuthority: allocation.schemaVersion === "league-prospective-execution-allocation-v3" ? issueProspectiveLeagueHostReceiptAuthority(allocation, charge, binding) : undefined }
 }
+describe("host response receipt factory grant forwarding", () => {
+  it("passes the exact opaque handle through the real factory constructor, never a numeric grant", () => {
+    const { authority, hostReceiptAuthority, admission, binding } = lifetimeGrant(true)
+    const creator = vi.fn((options: import("./v1-38-planner-supervised-runtime.js").PlannerSupervisedRuntimeOptions) => {
+      expect(options.prospectiveHostReceiptAuthority).toBe(hostReceiptAuthority)
+      expect(options).not.toHaveProperty("hostResponseReceiptMilliseconds")
+      expect(admitPlannerSupervisorLifetime({ ...options, prospectiveRuntimeBinding: binding.runtime }, 24800)).toBe(600000)
+      expect(claimProspectiveLeagueHostReceiptAuthority(hostReceiptAuthority!, binding, "planner")).toBe(5000)
+      expect(claimProspectiveLeagueHostReceiptAuthority(hostReceiptAuthority!, binding, "session")).toBe(5000)
+      return { identity: { ...binding.runtime, harnessRoot: root("a"), budgetRoot: binding.budgetRoot, attemptRoot: binding.attemptRoot }, invoke() { throw Error("no guest dispatch") }, verify() { return false }, close() { return { cleanupComplete: true, orphanedChild: false } }, accounting: [], timing: () => undefined, verifyTiming: () => false }
+    })
+    const options = { admission, sourceBytes, ...binding, prospectiveLifetimeAuthority: authority, prospectiveLifetimeMs: 600000, prospectiveHostReceiptAuthority: hostReceiptAuthority, createRuntime: creator }
+    const provider = createFactorySupervisedRuntime(options)
+    expect(creator).toHaveBeenCalledOnce(); expect(provider.close().cleanupComplete).toBe(true)
+    expect(() => createFactorySupervisedRuntime(options)).toThrow("CLAIM_REUSED")
+  })
+  it.each(["scalar", "copied", "crossed", "diagnostic", "observer", "fixture-default"])("rejects %s before an injected runtime is constructed", (fault) => {
+    const { authority, hostReceiptAuthority, admission, binding } = lifetimeGrant(true), createRuntime = vi.fn(() => { throw Error("forbidden construction") })
+    const options = { admission, sourceBytes, ...binding, prospectiveLifetimeAuthority: authority, prospectiveLifetimeMs: 600000, prospectiveHostReceiptAuthority: fault === "copied" ? { ...hostReceiptAuthority! } : hostReceiptAuthority, createRuntime, ...(fault === "crossed" ? { attemptRoot: root("c") } : fault === "scalar" ? { hostResponseReceiptMilliseconds: 5000 } : fault === "diagnostic" ? { retryV4LifetimeGrant: {} } : fault === "observer" ? { observerHarness: {} } : {}) }
+    expect(() => createFactorySupervisedRuntime({ ...options, ...(fault === "fixture-default" ? { createRuntime: undefined } : {}) } as never)).toThrow(); expect(createRuntime).not.toHaveBeenCalled()
+  })
+})
 describe("prospective lifetime issued factory authority", () => {
   it.each(["function", "undefined", "accessor"])("prospective lifetime empirical authority rejects inherited constructor %s before source, accessor, construction or claims", (kind) => {
     // Admission is mocked ONLY while issuing a test-only empirical handle.
@@ -191,7 +220,7 @@ describe("selected factory supervised runtime adapter", () => {
     expect(() => admitFactorySupervisorLifetime({ ...binding, factoryLifetimeMs: 240000, retryV4LifetimeGrant: {} as never })).toThrow()
     expect(() => admitFactorySupervisorLifetime({ ...binding, factoryLifetimeMs: 240001, retryV4LifetimeGrant: {} as never })).toThrow("LIFETIME")
     expect(() => admitFactorySupervisorLifetime({ ...binding, retryV4LifetimeGrant: {} as never, oneCellLifetimeGrant: {} as never })).toThrow("RETIRED_DIAGNOSTIC_LIFETIME")
-    expect(() => createFactorySupervisedRuntime({ ...binding, admission: admitted().admission, sourceBytes, retryV4LifetimeGrant: {} as never, createRuntime: vi.fn() })).toThrow("RETRY_V4_CONSTRUCTOR_OVERRIDE")
+    expect(() => createFactorySupervisedRuntime({ ...binding, matchId: "unit-match", admission: admitted().admission, sourceBytes, retryV4LifetimeGrant: {} as never, createRuntime: vi.fn() })).toThrow("RETRY_V4_CONSTRUCTOR_OVERRIDE")
   })
   it("never treats an unissued v3 object as 240-second authority", () => {
     expect(() => admitFactorySupervisorLifetime({ factoryLifetimeMs: 240_000, budgetRoot: root("5"), attemptRoot: root("4"), containerName: "fake", ownershipLabel: "fake", oneCellLifetimeGrant: { schemaVersion: "diagnostic-one-cell-lifetime-grant-v3", cellRoot: root("6") } as never })).toThrow()
@@ -247,8 +276,8 @@ describe("selected factory supervised runtime adapter", () => {
   })
   it("builds the exact authored TypeScript revision and wraps selected adapter identity", () => {
     const { admission } = admitted()
-    const createRuntime = vi.fn((options: any) => ({ identity: { revisionId: options.revision.id, sourceRoot, executableRoot: root("1"), tupleId: "tuple", tupleRoot: root("2"), image: options.image, harnessRoot: root("3"), budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot }, invoke() { throw new Error("not invoked") }, verify() { return true }, close() { return { cleanupComplete: true, orphanedChild: false } } }))
-    const runtime = createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), createRuntime })
+    const createRuntime = vi.fn((options: any) => ({ accounting: [], timing: () => undefined, verifyTiming: () => false, identity: { revisionId: options.revision.id, sourceRoot, executableRoot: root("1"), tupleId: "tuple", tupleRoot: root("2"), image: options.image, harnessRoot: root("3"), budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot }, invoke() { throw new Error("not invoked") }, verify() { return true }, close() { return { cleanupComplete: true, orphanedChild: false } } }))
+    const runtime = createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), matchId: "unit-match", containerName: "unit-container", ownershipLabel: "unit-owner", createRuntime })
     expect(createRuntime).toHaveBeenCalledOnce()
     expect(runtime.identity.nativeLane).toEqual(admission.nativeLane)
     expect(runtime.identity.factoryPacketRoot).toBe(admission.packetRoot)
@@ -260,26 +289,26 @@ describe("selected factory supervised runtime adapter", () => {
 
   it("blocks unsupported lanes and identity drift before creating a runtime", () => {
     const { admission } = admitted(), createRuntime = vi.fn()
-    expect(() => createFactorySupervisedRuntime({ admission: { ...admission, nativeLane: { ...admission.nativeLane, language: "python" } } as never, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), createRuntime })).toThrow("FACTORY_RUNTIME_UNSUPPORTED_NATIVE_LANE")
+    expect(() => createFactorySupervisedRuntime({ admission: { ...admission, nativeLane: { ...admission.nativeLane, language: "python" } } as never, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), matchId: "unit-match", containerName: "unit-container", ownershipLabel: "unit-owner", createRuntime })).toThrow("FACTORY_RUNTIME_UNSUPPORTED_NATIVE_LANE")
     expect(createRuntime).not.toHaveBeenCalled()
     const close = vi.fn(() => ({ cleanupComplete: true, orphanedChild: false }))
-    const drifted = vi.fn((options: any) => ({ identity: { revisionId: options.revision.id, sourceRoot: root("9"), executableRoot: root("1"), tupleId: "tuple", tupleRoot: root("2"), image: options.image, harnessRoot: root("3"), budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot }, invoke() { throw new Error("not invoked") }, verify() { return true }, close }))
-    expect(() => createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), createRuntime: drifted })).toThrow("FACTORY_RUNTIME_SELECTED_IDENTITY")
+    const drifted = vi.fn((options: any) => ({ accounting: [], timing: () => undefined, verifyTiming: () => false, identity: { revisionId: options.revision.id, sourceRoot: root("9"), executableRoot: root("1"), tupleId: "tuple", tupleRoot: root("2"), image: options.image, harnessRoot: root("3"), budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot }, invoke() { throw new Error("not invoked") }, verify() { return true }, close }))
+    expect(() => createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), matchId: "unit-match", containerName: "unit-container", ownershipLabel: "unit-owner", createRuntime: drifted })).toThrow("FACTORY_RUNTIME_SELECTED_IDENTITY")
     expect(close).toHaveBeenCalledOnce()
-    expect(() => createFactorySupervisedRuntime({ admission, sourceBytes: new TextEncoder().encode("drift"), attemptRoot: root("4"), budgetRoot: root("5"), createRuntime })).toThrow("FACTORY_RUNTIME_SOURCE_BINDING")
+    expect(() => createFactorySupervisedRuntime({ admission, sourceBytes: new TextEncoder().encode("drift"), attemptRoot: root("4"), budgetRoot: root("5"), matchId: "unit-match", containerName: "unit-container", ownershipLabel: "unit-owner", createRuntime })).toThrow("FACTORY_RUNTIME_SOURCE_BINDING")
     for (const forbidden of [{ benchmarkLifetimeMs: 1 }, { observerHarness: {} }, { transport: () => ({}) }, { streamFactory: () => ({}) }]) {
-      expect(() => createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), createRuntime, ...forbidden } as never)).toThrow("FACTORY_RUNTIME_UNSUPPORTED_OPTION")
+      expect(() => createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), matchId: "unit-match", containerName: "unit-container", ownershipLabel: "unit-owner", createRuntime, ...forbidden } as never)).toThrow("FACTORY_RUNTIME_UNSUPPORTED_OPTION")
     }
   })
 
   it("closes the selected runtime on wrapper identity failures and returns cleanup proof", () => {
     const { admission } = admitted(), close = vi.fn(() => ({ cleanupComplete: true, orphanedChild: false }))
     const baseIdentity = { revisionId: "revision", sourceRoot, executableRoot: root("1"), tupleId: "tuple", tupleRoot: root("2"), image: "image", harnessRoot: root("3"), budgetRoot: root("5"), attemptRoot: root("4"), runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot }
-    const creator = vi.fn(() => ({ identity: baseIdentity, invoke() { return { identity: { ...baseIdentity, sourceRoot: root("9") } } as never }, verify() { return true }, close }))
-    const runtime = createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), image: "image", createRuntime: creator })
+    const creator = vi.fn(() => ({ accounting: [], timing: () => undefined, verifyTiming: () => false, identity: baseIdentity, invoke() { return { identity: { ...baseIdentity, sourceRoot: root("9") } } as never }, verify() { return true }, close }))
+    const runtime = createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), matchId: "unit-match", containerName: "unit-container", ownershipLabel: "unit-owner", image: "image", createRuntime: creator })
     expect(() => runtime.invoke({} as never, { ...runtime.identity, sourceRoot: root("8") })).toThrow("FACTORY_RUNTIME_REQUEST_IDENTITY")
     expect(close).toHaveBeenCalledOnce()
-    const runtime2 = createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), image: "image", createRuntime: creator })
+    const runtime2 = createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), matchId: "unit-match", containerName: "unit-container", ownershipLabel: "unit-owner", image: "image", createRuntime: creator })
     expect(() => runtime2.invoke({} as never, runtime2.identity)).toThrow("FACTORY_RUNTIME_EVIDENCE_IDENTITY")
     expect(close).toHaveBeenCalledTimes(2)
     expect(runtime2.close()).toEqual({ cleanupComplete: true, orphanedChild: false })
@@ -291,9 +320,9 @@ describe("selected factory supervised runtime adapter", () => {
     vi.spyOn(performance, "now").mockImplementation(() => now)
     const creator = vi.fn((options: any) => ({
       identity: { revisionId: options.revision.id, sourceRoot, executableRoot: root("1"), tupleId: "tuple", tupleRoot: root("2"), image: options.image, harnessRoot: root("3"), budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot },
-      invoke, verify() { return true }, close,
+      invoke, verify() { return true }, close, accounting: [], timing: () => undefined, verifyTiming: () => false,
     }))
-    const runtime = createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), factoryLifetimeMs: 1, createRuntime: creator })
+    const runtime = createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: root("4"), budgetRoot: root("5"), matchId: "unit-match", containerName: "unit-container", ownershipLabel: "unit-owner", factoryLifetimeMs: 1, createRuntime: creator })
     now = 1
     expect(() => runtime.invoke({} as never, runtime.identity)).toThrow("FACTORY_RUNTIME_LIFETIME_EXHAUSTED")
     expect(invoke).not.toHaveBeenCalled()

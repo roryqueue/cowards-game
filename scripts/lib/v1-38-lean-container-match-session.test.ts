@@ -5,63 +5,118 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 const nativeStreamMock = vi.hoisted(() => ({ worker: undefined as any }))
 vi.mock("node:worker_threads", async (original) => {
   const actual = await original<typeof import("node:worker_threads")>()
-  return { ...actual, Worker: vi.fn(function (...args: any[]) { return nativeStreamMock.worker ?? Reflect.construct(actual.Worker, args) }) }
+  return { ...actual, Worker: vi.fn(function (...args: any[]) { if (nativeStreamMock.worker) { Atomics.store(new Int32Array(args[1].workerData.start), 0, 1); return nativeStreamMock.worker }; return Reflect.construct(actual.Worker, args) }) }
 })
 afterEach(() => { nativeStreamMock.worker = undefined; vi.restoreAllMocks() })
 import { buildLeanAuthenticatedHarnessSource, buildLeanObserverBrokerSource, createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, validateLeanTimingObservation, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult, type LeanTimingBinding } from "./v1-38-lean-container-match-session.js"
-import { LEAN_CONTAINER_IMAGE } from "../run-v1-38-lean-runner-feasibility.js"
+import { LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js"
 import { WORKER_HARNESS_SOURCE, WORKER_HARNESS_V117_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
-import { createContainerFixtureRevision } from "../run-v1-38-lean-runner-feasibility.js"
+import { buildAdvancedStrategyRevision, findAdvancedStrategy } from "../../packages/persistence/src/advanced-strategies.js"
+import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
+import { defaultRuntimeMetadata, RUNTIME_INVOCATION_V1_17_TEST_KEY_ID, createSelectedRuntimeInvocationRequestV117, createRuntimeAbiV117ExecutionLedger, createRuntimeInvocationBudgetV117, serializeRuntimeInvocationRequestV117, verifyRuntimeInvocationResponseV117 } from "@cowards/spec"
+import { encodeCandidateHostEnvelopeV117 } from "../../packages/runtime-js/src/candidate-host-envelope.js"
+import { registerCandidateEvidenceFixture } from "../../packages/runtime-js/src/candidate-evidence-fixture.js"
+const LEAN_CONTAINER_IMAGE = LAB_ADMITTED_ROOTS.image
 import { issueProspectiveLeagueHostReceiptAuthority, claimProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
 import { createLeagueProspectiveAmendmentV3, createProspectiveLeagueExecutionAllocationV3 } from "../../packages/strategy-lab/src/league/allocation.js"
 import { prospectiveLifetimeFixture } from "../../packages/strategy-lab/src/league/allocation.test.js"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LeagueRecordGraph } from "../run-v1-38-serious-league.js"
 import { createLeagueRepository } from "../../packages/strategy-lab/src/league/repository.js"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync, rmSync, realpathSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { createHash } from "node:crypto"
 
 const receiptDirectories: string[] = []
 afterEach(() => { for (const directory of receiptDirectories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 const receiptGrant = () => {
-  const directory = mkdtempSync(join(tmpdir(), "receipt-mock-")); receiptDirectories.push(directory)
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-receipt-mock-"))); receiptDirectories.push(directory)
   const input = prospectiveLifetimeFixture(), { root: _root, schemaVersion: _schema, ...body } = input.amendment
   const policy = { ...body.policy, operations: { ...body.policy.operations, hostResponseReceiptMilliseconds: 5000 as const } }
-  const allocation = createProspectiveLeagueExecutionAllocationV3({ ...input, operations: policy.operations, amendment: createLeagueProspectiveAmendmentV3({ ...body, policy, hostReceiptApproval: "265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002" }), outputDirectories: { league: directory, responseFactory: "/fixture/response" } })
+  const allocation = createProspectiveLeagueExecutionAllocationV3({ ...input, operations: policy.operations, amendment: createLeagueProspectiveAmendmentV3({ ...body, policy, hostReceiptApproval: "265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002" }), outputDirectories: { league: directory, responseFactory: "/fixture/factory-response" } })
   const value = { cellRoot: labRoot("receipt-cell", directory), allocationRoot: allocation.root }, start = { ...value, root: labRoot("league-cell-start-v1", value) }
-  const runtime = { revisionId: "receipt-revision", sourceRoot: value.cellRoot, executableRoot: value.cellRoot, tupleId: "candidate-kernel-v1.19", tupleRoot: allocation.tupleRoot, runtimeLimitsRoot: allocation.runtimeRoot, image: allocation.operations.image, factoryAuthorizationRoot: value.cellRoot, factoryPacketRoot: value.cellRoot, factoryProposalRoot: value.cellRoot, factoryValidationRoot: value.cellRoot }
+  const runtime = { revisionId: "receipt-revision", sourceRoot: value.cellRoot, executableRoot: `sha256:${createHash("sha256").update("inert").digest("hex")}` as const, tupleId: "candidate-kernel-v1.19", tupleRoot: allocation.tupleRoot, runtimeLimitsRoot: allocation.runtimeRoot, image: allocation.operations.image, factoryAuthorizationRoot: value.cellRoot, factoryPacketRoot: value.cellRoot, factoryProposalRoot: value.cellRoot, factoryValidationRoot: value.cellRoot }
   const binding = { budgetRoot: allocation.root, attemptRoot: start.root, matchId: `league-${start.root.slice(7, 31)}`, seat: "bottom" as const, containerName: "receipt-mock", ownershipLabel: "owner:receipt-mock", runtime }
   const graph = new LeagueRecordGraph(createLeagueRepository(directory), allocation.operations)
   const charge = { kind: "cell-start" as const, root: graph.append("cell-start", { start }), value: start }
-  return { allocation, binding, charge, authority: issueProspectiveLeagueHostReceiptAuthority(allocation, charge, binding) }
+  return { allocation, binding, charge, graph, authority: issueProspectiveLeagueHostReceiptAuthority(allocation, charge, binding) }
 }
 describe("host response receipt native stream clock split", () => {
+  it("requires the exact durable record and V3 allocation before issuing a provider", () => {
+    const { allocation, binding, charge, graph } = receiptGrant()
+    expect(() => issueProspectiveLeagueHostReceiptAuthority(allocation, { ...charge, root: labRoot("missing-retained", 1) }, { ...binding, seat: "top" })).toThrow()
+    expect(() => issueProspectiveLeagueHostReceiptAuthority(allocation, { ...charge, value: { ...charge.value, cellRoot: labRoot("crossed-retained", 1) } }, { ...binding, seat: "top" })).toThrow()
+    expect(() => issueProspectiveLeagueHostReceiptAuthority(allocation, charge, binding)).toThrow("PROVIDER_REUSED")
+    const v2 = { ...allocation, schemaVersion: "league-prospective-execution-allocation-v2" }
+    expect(() => issueProspectiveLeagueHostReceiptAuthority(v2 as never, charge, { ...binding, seat: "top" })).toThrow()
+    const wrongKind = graph.append("runtime-cleanup", charge.value)
+    expect(() => issueProspectiveLeagueHostReceiptAuthority(allocation, { ...charge, root: wrongKind }, { ...binding, seat: "top" })).toThrow("RETAINED_START")
+  })
+  it("rejects public/default scalar or unauthenticated handles before any control dispatch", () => {
+    const transport = vi.fn(() => result()), streamFactory = vi.fn()
+    for (const extra of [{ hostResponseReceiptMilliseconds: 5000 }, { prospectiveHostReceiptAuthority: {} }, { prospectiveHostReceiptBinding: {} }]) expect(() => createLeanContainerMatchSession({ matchId: "default", containerName: "default", ownershipLabel: "default", image: LEAN_CONTAINER_IMAGE, transport, streamFactory, ...extra } as never)).toThrow()
+    expect(transport).not.toHaveBeenCalled(); expect(streamFactory).not.toHaveBeenCalled()
+    const normal = create("receipt-unchanged-default", []); normal.session.close()
+    expect(normal.persistent.calls[0]![1].at(-1)).toBe(LEAN_CONTAINER_BROKER_SOURCE)
+  })
   it("rejects forged, copied, crossed and reused authority before transport", () => {
     const { authority, binding } = receiptGrant()
+    expect(() => createLeanContainerMatchSession({ ...binding, image: binding.runtime.image, infrastructureProfile: "closeout", prospectiveHostReceiptAuthority: authority, prospectiveHostReceiptBinding: binding })).toThrow("FIXTURE_CONTROL")
     for (const fake of [5000, {}, { ...authority }]) expect(() => claimProspectiveLeagueHostReceiptAuthority(fake as never, binding, "factory")).toThrow()
     for (const key of ["budgetRoot", "attemptRoot", "matchId", "seat", "containerName", "ownershipLabel"] as const) expect(() => claimProspectiveLeagueHostReceiptAuthority(authority, { ...binding, [key]: "crossed" } as never, "factory")).toThrow()
+    for (const key of Object.keys(binding.runtime)) expect(() => claimProspectiveLeagueHostReceiptAuthority(authority, { ...binding, runtime: { ...binding.runtime, [key]: "crossed" } }, "factory")).toThrow()
     expect(() => JSON.stringify(authority)).toThrow()
     expect(() => claimProspectiveLeagueHostReceiptAuthority(authority, binding, "session")).toThrow()
     for (const layer of ["factory", "planner", "session"] as const) { expect(claimProspectiveLeagueHostReceiptAuthority(authority, binding, layer)).toBe(5000); expect(() => claimProspectiveLeagueHostReceiptAuthority(authority, binding, layer)).toThrow() }
   })
-  it.each([false, true])("keeps legacy guest request 1000 with native receipt wait 5000; expiry=%s", (expire) => {
+  it.each(["missing", "malformed", "crossed"])("poisons a %s late receipt without guessing Strategy timeout and cleans up", (fault) => {
+    const { authority, binding } = receiptGrant()
+    for (const layer of ["factory", "planner"] as const) claimProspectiveLeagueHostReceiptAuthority(authority, binding, layer)
+    const control = fakeTransport([absent(binding.containerName), result("id\n"), owned(binding.ownershipLabel), result(), result(), absent(binding.containerName)])
+    const frames = fault === "missing" ? ["\n"] : fault === "malformed" ? ["{\n"] : [response(99, [])]
+    const persistent = fakeStream(frames)
+    const session = createLeanContainerMatchSession({ ...binding, image: binding.runtime.image, infrastructureProfile: "closeout", transport: control.transport, streamFactory: persistent.factory, prospectiveHostReceiptAuthority: authority, prospectiveHostReceiptBinding: binding })
+    const invoke = () => session.adapter.execute({ source: "inert", methodName: "selectActivations", input: {}, timeoutMs: 1000 })
+    let error: unknown; try { invoke() } catch (caught) { error = caught }
+    expect(session.failureOrigin(error)?.stage).toBe("outer_frame")
+    expect(session.state).toBe("poisoned"); expect(() => invoke()).toThrow()
+    expect(persistent.frames).toHaveLength(1); expect(session.close().cleanupComplete).toBe(true); expect(persistent.closes).toBe(1)
+    expect(control.calls.some((call) => call[1][0] === "rm")).toBe(true)
+  })
+  it.each([["legacy", false, 1200], ["legacy", true, 5000], ["v117", false, 51], ["v117", true, 5000], ["v117", false, 1200]] as const)("keeps %s signed guest/broker budget with native receipt wait 5000; expiry=%s elapsed=%s", (mode, expire, elapsed) => {
     const { authority, binding } = receiptGrant()
     for (const layer of ["factory", "planner"] as const) claimProspectiveLeagueHostReceiptAuthority(authority, binding, layer)
     let exists = false, frame: any, dispatches = 0
     nativeStreamMock.worker = { postMessage(message: any) {
-      if (message.type === "exchange") { dispatches++; frame = JSON.parse(Buffer.from(message.request).toString()); const bytes = Buffer.from(JSON.stringify(response(frame.requestId, [])) + "\n"); new Uint8Array(message.response).set(bytes); Atomics.store(new Int32Array(message.control), 1, bytes.length); Atomics.store(new Int32Array(message.control), 0, 1) }
+      if (message.type === "exchange") { dispatches++; frame = JSON.parse(Buffer.from(message.request).toString()); const envelope = encodeCandidateHostEnvelopeV117({ frame: Uint8Array.of(68), goNanoseconds: 1n, terminationMilliseconds: 1 }); const answer = mode === "legacy" ? response(frame.requestId, []) : { requestId: frame.requestId, status: 0, signal: null, stdoutBase64: envelope.toString("base64"), stderrBase64: "" }; const bytes = Buffer.from(JSON.stringify(answer) + "\n"); new Uint8Array(message.response).set(bytes); Atomics.store(new Int32Array(message.control), 1, bytes.length); Atomics.store(new Int32Array(message.control), 0, 1) }
       else Atomics.store(new Int32Array(message.control), 0, 1)
     }, terminate: vi.fn(async () => 0) }
-    const waits: number[] = []
-    vi.spyOn(Atomics, "wait").mockImplementation((_view, _index, _value, timeout) => { waits.push(timeout!); return waits.length === 2 && expire ? "timed-out" : "ok" })
-    vi.spyOn(Atomics, "load").mockImplementation((view, index) => view.length === 1 ? 1 : view[index]!)
+    const waits: number[] = []; let receiptElapsed = 0
+    vi.spyOn(Atomics, "wait").mockImplementation((_view, _index, _value, timeout) => { waits.push(timeout!); if (waits.length === 2) receiptElapsed = elapsed; return waits.length === 2 && expire ? "timed-out" : "ok" })
     const transport: LeanContainerMatchTransport = (_command, args) => { if (args[0] === "inspect") return exists ? owned(binding.ownershipLabel) : absent(binding.containerName); if (args[0] === "create") exists = true; if (args[0] === "rm") exists = false; return result("id\n") }
     const session = createLeanContainerMatchSession({ ...binding, image: binding.runtime.image, infrastructureProfile: "closeout", transport, prospectiveHostReceiptAuthority: authority, prospectiveHostReceiptBinding: binding })
-    const invoke = () => session.adapter.execute({ source: "inert", methodName: "selectActivations", input: {}, timeoutMs: 1000 })
-    if (expire) { let error: unknown; try { invoke() } catch (caught) { error = caught }; expect(session.failureOrigin(error)).toEqual({ stage: "stream_exchange", reason: "wait_timeout" }); expect(session.state).toBe("poisoned"); expect(() => invoke()).toThrow() }
-    else expect(invoke()).toEqual({ ok: true, value: [] })
-    expect(frame.timeoutMilliseconds).toBe(1000); expect(frame.mode).toBe("legacy"); expect(waits[1]).toBe(5000); expect(dispatches).toBe(1)
+    const signingIdentity = { keyId: RUNTIME_INVOCATION_V1_17_TEST_KEY_ID, secret: "fixture-only:runtime-js:v1.17:host-secret" }
+    const request = createSelectedRuntimeInvocationRequestV117({ requestId: "request:receipt", invocationId: "invocation:receipt", kernelRequestId: "kernel:receipt", method: "selectActivations", semanticTuple: { rules: "cowards-rules-v1.4", engine: "engine-kernel-v1.37-candidate-1", runtimeAbi: "strategy-runtime-abi-v1.17", chronicle: "chronicle-recorder-current-events-v1.37-candidate-1", arenaCatalog: "semantic-arena-catalog-v1.37-candidate-1", setPolicy: "canonical-set-policy-v1.4" }, sourceIdentity: { strategyRevisionId: binding.runtime.revisionId, originalSourceSha256: binding.runtime.executableRoot, normalizedSourceSha256: binding.runtime.executableRoot, artifactSha256: binding.runtime.executableRoot }, budget: createRuntimeInvocationBudgetV117("selectActivations"), accounting: { prestate: createRuntimeAbiV117ExecutionLedger() }, input: { value: {} }, retry: { retryId: "retry:receipt", attempt: 0, previousRequestSha256: null } }, signingIdentity)
+    const invocation = { requestBytes: serializeRuntimeInvocationRequestV117(request), executableSource: "inert", signingIdentity }
+    registerCandidateEvidenceFixture(invocation, (observation) => {
+      const deltas = { wallMilliseconds: observation.methodDeadlineExceeded ? 51 : 1, computeFuel: 1, payloadBytes: observation.payloadBytes, stdoutBytes: observation.stdoutBytes, stderrBytes: observation.stderrBytes }
+      return { attribution: expire ? "host" : "proven_strategy", counters: Object.fromEntries(Object.entries(deltas).map(([key, delta]) => [key, { status: "measured", delta, cumulative: delta }])) as import("@cowards/spec").RuntimeInvocationExecutionReceiptEvidenceV117["counters"], memory: { status: "measured", peakBytes: 1, cumulativePeakBytes: 1 }, process: { status: "verified", processes: 1, threads: 1, children: 0 }, capabilities: { status: "verified", filesystem: "none", network: "disabled", environment: "empty", shell: "disabled" }, cancellation: { status: "verified", ...observation.cancellation }, accountingEvidence: { status: "verified", signatureVerified: true, monotonic: true } }
+    })
+    let clockReads = 0; vi.spyOn(process.hrtime, "bigint").mockImplementation(() => ++clockReads === 1 ? 1n : BigInt(elapsed) * 1000000n + 1n)
+    const invokeLegacy = () => session.adapter.execute({ source: "inert", methodName: "selectActivations", input: {}, timeoutMs: 1000 })
+    if (mode === "v117") {
+      const verified = verifyRuntimeInvocationResponseV117(session.adapter.executeV117(invocation), request, signingIdentity)
+      expect(verified).toMatchObject({ kind: "success", value: { outcome: { kind: "system_failure", failure: { code: expire || elapsed > 150 ? "AMBIGUOUS_ATTRIBUTION" : "TIMEOUT" } } } })
+      if (expire && verified.kind === "success") { expect(verified.value.outcome.trace.safeCodes).toContain("TRANSPORT_CRASH"); expect(verified.value.outcome.trace.safeCodes).not.toContain("WALL_DEADLINE_EXCEEDED") }
+      const payload = JSON.parse(Buffer.from(frame.payloadBase64, "base64").toString())
+      expect(payload.methodWallMilliseconds).toBe(50)
+      expect(frame.timeoutMilliseconds).toBe(payload.startupTimeoutMilliseconds + 50 + payload.cancellationGraceMilliseconds)
+      expect(payload.cancellationGraceMilliseconds).toBe(100)
+    } else if (expire) { let error: unknown; try { invokeLegacy() } catch (caught) { error = caught }; expect(session.failureOrigin(error)).toEqual({ stage: "stream_exchange", reason: "wait_timeout" }); expect(session.state).toBe("poisoned"); expect(() => invokeLegacy()).toThrow() }
+    else expect(invokeLegacy()).toEqual({ ok: true, value: [] })
+    if (mode === "legacy") expect(frame.timeoutMilliseconds).toBe(1000)
+    expect(frame.mode).toBe(mode); expect(waits[1]).toBe(5000); expect(receiptElapsed).toBe(elapsed); expect(dispatches).toBe(1)
     expect(session.close().cleanupComplete).toBe(true); expect(nativeStreamMock.worker.terminate).toHaveBeenCalledOnce()
   })
 })
@@ -121,7 +176,6 @@ describe("private IPC diagnostics injected session", () => {
     nativeStreamMock.worker = { postMessage(message: any) { if (message.type === "exchange") { dispatches++; Atomics.store(new Int32Array(message.control), 0, fault === "state" ? -6 : 0) } else Atomics.store(new Int32Array(message.control), 0, 1) }, terminate: vi.fn(async () => 0) }
     let waits = 0
     vi.spyOn(Atomics, "wait").mockImplementation(() => ++waits === 2 && fault === "timeout" ? "timed-out" : "ok")
-    vi.spyOn(Atomics, "load").mockImplementation((view, index) => view.length === 1 ? 1 : view[index]!)
     const transport: LeanContainerMatchTransport = (_command, args) => {
       if (args[0] === "inspect") return exists ? owned("owner:diag-native") : absent("diag-native")
       if (args[0] === "create") { exists = true; return result("id\n") }
@@ -170,8 +224,16 @@ const v117BrokerRequest = (requestId: number, source: string, timeoutMillisecond
 })
 const decodeLegacyBrokerFrame = (frame: Record<string, unknown>) => JSON.parse(Buffer.from(frame.stdoutBase64 as string, "base64").toString("utf8")) as unknown
 const advancedSource = () => {
-  const artifact = createContainerFixtureRevision("advanced:vanguard-pressure").metadata.sourceArtifact
-  if (artifact === undefined) throw new Error("advanced fixture artifact missing")
+  // Same authored source and container compilation as the old broad CLI helper;
+  // importing that CLI pulled unrelated feasibility/admission code into strict CI.
+  const selected = findAdvancedStrategy("advanced:vanguard-pressure")
+  if (!selected) throw Error("advanced fixture missing")
+  const legacy = buildAdvancedStrategyRevision(selected), current = defaultRuntimeMetadata("typescript")
+  const revision = buildStrategyRevision({ source: legacy.source, strategyId: legacy.strategyId, runtime: { ...current, adapter: { id: "runtime-js-container-subprocess", version: current.adapter.version }, limits: { ...current.limits, filesystem: "read-only-root", network: "disabled" } } })
+  expect(revision.validation.valid).toBe(true)
+  expect(revision.sourceHash).toBe(legacy.sourceHash)
+  const artifact = revision.metadata.sourceArtifact
+  if (artifact === undefined || artifact.bytesBase64 === undefined) throw new Error("advanced fixture artifact missing")
   return Buffer.from(artifact.bytesBase64, "base64").toString("utf8")
 }
 

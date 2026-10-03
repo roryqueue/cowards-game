@@ -2,15 +2,15 @@ import { describe, expect, it, vi, afterEach } from "vitest"
 const nativeStreamMock = vi.hoisted(() => ({ worker: undefined as any }))
 vi.mock("node:worker_threads", async (original) => {
   const actual = await original<typeof import("node:worker_threads")>()
-  return { ...actual, Worker: vi.fn(function (...args: any[]) { return nativeStreamMock.worker ?? Reflect.construct(actual.Worker, args) }) }
+  return { ...actual, Worker: vi.fn(function (...args: any[]) { if (nativeStreamMock.worker) { Atomics.store(new Int32Array(args[1].workerData.start), 0, 1); return nativeStreamMock.worker }; return Reflect.construct(actual.Worker, args) }) }
 })
 import { performance } from "node:perf_hooks"
 afterEach(() => { nativeStreamMock.worker = undefined; vi.restoreAllMocks() })
 import { createHash } from "node:crypto"
-import { defaultRuntimeMetadata } from "@cowards/spec"
+import { defaultRuntimeMetadata, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
+import { createInitialGameState, createStrategyInputV119, createSoldierBrainInputV119 } from "../../packages/engine/src/index.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
-import { buildFeasibilityCorpus } from "../../packages/strategy-lab/src/feasibility-protocol.js"
 import { labRoot, LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js"
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { SubprocessSystemFailure } from "../../packages/runtime-js/src/subprocess-ipc.js"
@@ -27,11 +27,38 @@ import { buildLeanAuthenticatedHarnessSource } from "./v1-38-lean-container-matc
 import { prospectiveLifetimeFixture } from "../../packages/strategy-lab/src/league/allocation.test.js"
 import { createProspectiveLeagueExecutionAllocationV2 } from "../../packages/strategy-lab/src/league/allocation.js"
 import { issueProspectiveLeagueLifetimeAuthority, claimProspectiveLeagueLifetimeAuthority, type ProspectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
+import { issueProspectiveLeagueHostReceiptAuthority, claimProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
+import { createLeagueProspectiveAmendmentV3, createProspectiveLeagueExecutionAllocationV3 } from "../../packages/strategy-lab/src/league/allocation.js"
+import { createLeagueRepository } from "../../packages/strategy-lab/src/league/repository.js"
+import { LeagueRecordGraph } from "../run-v1-38-serious-league.js"
+import { mkdtempSync, realpathSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+const receiptDirectories: string[] = []
+afterEach(() => { for (const directory of receiptDirectories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 
 const source = "export default { selectActivations(input) { return { activationOrders: [], strategyMemory: input.strategyMemory }; }, soldierBrain(input) { return { action: { type: 'TURN_TO_STONE' }, soldierMemory: input.soldierMemory }; } };"
 const runtime = { ...defaultRuntimeMetadata("typescript"), adapter: { ...defaultRuntimeMetadata("typescript").adapter, id: "runtime-js-container-subprocess" as const } }
 const revision = () => buildStrategyRevision({ source, runtime })
-const corpus = buildFeasibilityCorpus()
+// Exact first synthetic positive evacuation case formerly obtained through the
+// full feasibility CLI corpus. Use the same canonical constructors directly.
+const fixtureState = createInitialGameState({ matchId: "lab-corpus-0", seed: "lab-corpus-0", arenaVariant: CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === "arena:smoke:v1")!, bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: "lab-candidate", topStrategyRevisionId: "lab-fixture" })
+const fixtureSelf = fixtureState.soldiers[0]!, fixtureEnemy = fixtureState.soldiers.find((soldier) => soldier.ownerPlayerId === "top")!
+fixtureSelf.position = { x: 2, y: 4 }; fixtureSelf.facing = "UP"; fixtureSelf.lastSuccessfulMoveDirection = null
+fixtureEnemy.position = { x: 2, y: 2 }; fixtureEnemy.facing = "DOWN"
+fixtureState.roundNumber = 1; fixtureState.activationCount = 1; fixtureState.phaseNumber = 1; fixtureState.initiativePlayerId = "bottom"
+const fixtureContext = { mission: "evacuation", family: "positive", ordinal: 0 }
+fixtureState.players[0].strategyMemory = { fixtureContext, stalePhase: 1 }; fixtureSelf.soldierMemory = { fixtureContext, previous: "UP" }
+// Preserve the old fixture-to-mission-paths-v2 mapping too, not just its base
+// state. This is an immutable synthetic first-case packet, not a rules helper.
+const fixtureMission = { schemaVersion: "mission-v1", kind: "evacuation", soldierId: fixtureSelf.id, issuedPhase: 1, issuedRound: 1, expiresPhase: 2, goal: { x: 5, y: 5 }, goalFacing: "UP", targetId: "", targetPosition: null, partnerId: "" }
+const fixtureBrainInput = createSoldierBrainInputV119(fixtureState, fixtureSelf.id, 0, false, fixtureMission)
+fixtureState.players[0].strategyMemory = { fixtureContext: { ordinal: 0, family: "positive", mission: "evacuation" }, missions: [fixtureMission] }
+const corpus = { selectActivations: [{ input: createStrategyInputV119(fixtureState, "bottom") }], soldierBrain: [{ input: fixtureBrainInput }] }
+it("host response receipt preserves exact former canonical feasibility fixture roots", () => {
+  expect(labRoot("timing-input", corpus.selectActivations[0]!.input)).toBe("sha256:629ef6500887e18a66edfe378c0a8dacf08d81e720e499d8e5b79ba2caf814f8")
+  expect(labRoot("timing-input", corpus.soldierBrain[0]!.input)).toBe("sha256:e312a34fb2b75be20a4847d5da07d93513a6bc72236172a854404499eec9f9f3")
+})
 const root = labRoot("synthetic-host-test", 1)
 const fixture = (fault?: string) => {
   let exists = false
@@ -66,12 +93,56 @@ const fixture = (fault?: string) => {
 }
 const options = (fault?: string) => ({ revision: revision(), attemptRoot: root, budgetRoot: root, matchId: "phase263:match", containerName: "phase263-test", ownershipLabel: "owner:phase263-test", image: LAB_ADMITTED_ROOTS.image, ...fixture(fault) })
 const request = (method: "selectActivations" | "soldierBrain", id = "kernel:1") => ({ kind: method, requestId: id, semanticTupleId: MATCH_KERNEL.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input: corpus[method][0]!.input }) as Parameters<ReturnType<typeof createPlannerSupervisedRuntime>["invoke"]>[0]
+const hostReceiptOptions = (fault?: string) => {
+  const opts = options(fault), input = prospectiveLifetimeFixture(), { root: _root, schemaVersion: _schema, ...body } = input.amendment
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-planner-receipt-"))); receiptDirectories.push(directory)
+  const policy = { ...body.policy, operations: { ...body.policy.operations, hostResponseReceiptMilliseconds: 5000 as const } }
+  const amendment = createLeagueProspectiveAmendmentV3({ ...body, policy, hostReceiptApproval: "265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002" })
+  const allocation = createProspectiveLeagueExecutionAllocationV3({ ...input, operations: policy.operations, amendment, outputDirectories: { ...input.outputDirectories, league: directory } })
+  const value = { cellRoot: labRoot("planner-receipt-cell", directory), allocationRoot: allocation.root }, start = { ...value, root: labRoot("league-cell-start-v1", value) }
+  const runtime: ProspectiveLeagueRuntimeBinding = { revisionId: opts.revision.id, sourceRoot: `sha256:${opts.revision.sourceHash}`, executableRoot: `sha256:${opts.revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: allocation.tupleRoot, runtimeLimitsRoot: allocation.runtimeRoot, image: allocation.operations.image, factoryAuthorizationRoot: root, factoryPacketRoot: root, factoryProposalRoot: root, factoryValidationRoot: root }
+  const binding = { budgetRoot: allocation.root, attemptRoot: start.root, matchId: `league-${start.root.slice(7, 31)}`, seat: "bottom" as const, containerName: opts.containerName, ownershipLabel: opts.ownershipLabel, runtime }
+  const graph = new LeagueRecordGraph(createLeagueRepository(directory), allocation.operations), charge = { kind: "cell-start" as const, root: graph.append("cell-start", { start }), value: start }
+  const prospectiveLifetimeAuthority = issueProspectiveLeagueLifetimeAuthority(allocation, charge, binding), prospectiveHostReceiptAuthority = issueProspectiveLeagueHostReceiptAuthority(allocation, charge, binding)
+  claimProspectiveLeagueLifetimeAuthority(prospectiveLifetimeAuthority, binding, 600000, "factory"); claimProspectiveLeagueHostReceiptAuthority(prospectiveHostReceiptAuthority, binding, "factory")
+  return { ...opts, ...binding, prospectiveLifetimeAuthority, prospectiveLifetimeMs: 600000, prospectiveHostReceiptAuthority }
+}
+describe("host response receipt planner charge and isolation", () => {
+  it("threads the opaque grant into the actual legacy session, charging before dispatch", () => {
+    const opts = hostReceiptOptions(), original = opts.streamFactory, waits: number[] = []
+    let provider: ReturnType<typeof createPlannerSupervisedRuntime>
+    provider = createPlannerSupervisedRuntime({ ...opts, streamFactory: (...args) => { const stream = original(...args); return { ...stream, exchange(frame, config) { expect(provider.accounting).toHaveLength(1); expect(provider.accounting[0]).toMatchObject({ charged: true, completed: false }); waits.push(config.timeoutMilliseconds); return stream.exchange(frame, config) } } } })
+    expect(provider.invoke(request("selectActivations"), provider.identity).completed).toBe(true)
+    expect(waits).toEqual([5000]); expect(opts.frames[0]!.timeoutMilliseconds).toBe(1000)
+    expect(() => createPlannerSupervisedRuntime(opts)).toThrow("CLAIM_REUSED")
+    expect(opts.calls.filter((args) => args[0] === "create")).toHaveLength(1); expect(provider.close().cleanupComplete).toBe(true)
+  })
+  it("exact native parent expiry retains one incomplete system charge and cleanup", () => {
+    const opts = hostReceiptOptions(); let waits = 0, hostWait = 0, dispatches = 0
+    nativeStreamMock.worker = { postMessage(message: any) { if (message.type === "exchange") dispatches++; else Atomics.store(new Int32Array(message.control), 0, 1) }, terminate: vi.fn(async () => 0) }
+    vi.spyOn(Atomics, "wait").mockImplementation((_view, _index, _value, timeout) => { if (++waits === 2) { hostWait = timeout!; return "timed-out" }; return "ok" })
+    const provider = createPlannerSupervisedRuntime({ ...opts, streamFactory: undefined }), e = provider.invoke(request("selectActivations"), provider.identity)
+    expect(hostWait).toBe(5000); expect(dispatches).toBe(1)
+    expect(e).toMatchObject({ charged: true, completed: false, outputBytes: 0, result: { ok: false, systemFailure: { code: "MALFORMED_IPC", retryable: false } } })
+    expect(plannerApi.getPlannerPrivateDiagnostic(provider, e)).toMatchObject({ stage: "stream_exchange", reason: "wait_timeout" })
+    expect(() => provider.invoke(request("selectActivations", "next"), provider.identity)).toThrow("LAB_RUNTIME_STOPPED")
+    expect(provider.accounting).toEqual([e]); expect(provider.close().cleanupComplete).toBe(true)
+  })
+  it.each(["scalar", "copy", "seat", "source", "benchmark", "diagnostic", "fixture-default"])("rejects %s before session construction", (fault) => {
+    const opts = hostReceiptOptions(), changed = { ...opts }
+    if (fault === "copy") changed.prospectiveHostReceiptAuthority = { ...opts.prospectiveHostReceiptAuthority }
+    if (fault === "seat") changed.prospectiveLifetimeAuthority = { ...opts.prospectiveLifetimeAuthority, seat: "top" }
+    if (fault === "source") changed.revision = buildStrategyRevision({ source: source.replace("TURN_TO_STONE", "WAIT"), runtime })
+    const extra = fault === "scalar" ? { hostResponseReceiptMilliseconds: 5000 } : fault === "benchmark" ? { benchmarkLifetimeMs: 3600000 } : fault === "diagnostic" ? { retryV4LifetimeGrant: {} } : {}
+    expect(() => createPlannerSupervisedRuntime({ ...changed, ...extra, ...(fault === "fixture-default" ? { transport: undefined } : {}) } as never)).toThrow()
+    expect(opts.calls).toHaveLength(0)
+  })
+})
 describe("private IPC diagnostics injected planner", () => {
   it.each(["timeout", "state"])("preserves actual native %s origin in one charged incomplete invocation", (fault) => {
     let dispatches = 0, waits = 0
     nativeStreamMock.worker = { postMessage(message: any) { if (message.type === "exchange") { dispatches++; Atomics.store(new Int32Array(message.control), 0, fault === "state" ? -6 : 0) } else Atomics.store(new Int32Array(message.control), 0, 1) }, terminate: vi.fn(async () => 0) }
     vi.spyOn(Atomics, "wait").mockImplementation(() => ++waits === 2 && fault === "timeout" ? "timed-out" : "ok")
-    vi.spyOn(Atomics, "load").mockImplementation((view, index) => view.length === 1 ? 1 : view[index]!)
     const opts = options(), host = createPlannerSupervisedRuntime({ ...opts, streamFactory: undefined }), e = host.invoke(request("selectActivations"), host.identity)
     expect((plannerApi as any).getPlannerPrivateDiagnostic(host, e)).toMatchObject({ stage: "stream_exchange", reason: fault === "timeout" ? "wait_timeout" : "non_success_state" })
     expect(e).toMatchObject({ charged: true, completed: false, outputBytes: 0, result: { ok: false, systemFailure: { code: "MALFORMED_IPC", retryable: false } } })

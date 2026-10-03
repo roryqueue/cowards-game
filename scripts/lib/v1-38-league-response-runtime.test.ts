@@ -9,6 +9,7 @@ import { createHash } from "node:crypto"
 import { admitFactory, authorizeFactorySupervision } from "../../packages/strategy-lab/src/factory/admission.js"
 import { factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../../packages/strategy-lab/src/factory/contracts.js"
 import { deriveFactoryOraclePacketRoot } from "../../packages/strategy-lab/src/factory/identity.js"
+import { claimProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
 
 const root = labRoot("probe-test", "identity")
 const soldiers = [1, 2].map((x) => ({ id: `soldier-${x}`, ownerPlayerId: "player", status: "ACTIVE", position: { x, y: 1 }, facing: "LEFT", lastSuccessfulMoveDirection: "LEFT" }))
@@ -227,14 +228,19 @@ export const positiveResponseFixture = (initialSources: ReadonlySet<LabRoot>): N
   } }
 }
 
-it.each([false, true])("prospective lifetime actual response provider wiring retains charge first, both seats/all arms; refused=%s", async (refused) => {
+it.each([[false, false], [true, false], [false, true], [true, true]])("host response receipt prospective lifetime actual response provider wiring retains charge first, both seats/all arms; refused=%s v3=%s", async (refused, v3) => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-response-v2-wiring-")))
+  const leagueDirectory = realpathSync(mkdtempSync(join(tmpdir(), "league-response-v3-wiring-")))
   try {
     const repository = createFactoryRepository(directory), put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw Error("fixture canonical"); return publishFactoryArtifact(repository, encoded.canonicalBytes) }, r = (value: string) => labRoot("response-v2-wiring", value)
     const initial = [await importedCandidateFixture(1), await importedCandidateFixture(3), await importedCandidateFixture(5)], input = prospectiveLifetimeFixture()
     const { root: _root, schemaVersion: _schema, ...amendment } = input.amendment
     const updated = allocationApi.createLeagueProspectiveAmendmentV2({ ...amendment, bases: amendment.bases.map((base, index) => ({ ...base, publicationArtifactRoot: initial[index]!.closure.candidatePublicationArtifactRoot, candidateAdmissionRoot: initial[index]!.candidateAdmission.root, sourceRoot: initial[index]!.candidateAdmission.candidate.proposal.source.root, supervisionArtifactRoot: initial[index]!.input.supervisionArtifactRoot })) })
-    const allocation = allocationApi.createProspectiveLeagueExecutionAllocationV2({ ...input, amendment: updated, initialCandidatePublicationRoots: updated.bases.map((base) => base.publicationArtifactRoot).sort(), independenceReferencePublicationRoot: updated.bases[0]!.publicationArtifactRoot, outputDirectories: { ...input.outputDirectories, responseFactory: directory } }), job = allocation.rounds[0]!.jobs[0]!
+    const { root: _updatedRoot, schemaVersion: _updatedSchema, ...updatedBody } = updated
+    const amendmentV3 = v3 ? allocationApi.createLeagueProspectiveAmendmentV3({ ...updatedBody, policy: { ...updated.policy, operations: { ...updated.policy.operations, hostResponseReceiptMilliseconds: 5000 } }, hostReceiptApproval: "265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002" }) : undefined
+    const allocationInput = { ...input, amendment: updated, initialCandidatePublicationRoots: updated.bases.map((base) => base.publicationArtifactRoot).sort(), independenceReferencePublicationRoot: updated.bases[0]!.publicationArtifactRoot, outputDirectories: { league: leagueDirectory, responseFactory: directory } }
+    const allocation = amendmentV3 ? allocationApi.createProspectiveLeagueExecutionAllocationV3({ ...allocationInput, amendment: amendmentV3, operations: amendmentV3.policy.operations }) : allocationApi.createProspectiveLeagueExecutionAllocationV2(allocationInput), job = allocation.rounds[0]!.jobs[0]!
+    const graph = new LeagueRecordGraph(createLeagueRepository(leagueDirectory), allocation.operations)
     const ledger = declareRedTeamAllocation({ phase: 265, evidenceClass: allocation.evidenceClass, authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes }), start = startRedTeamAttempt({ ledger, channel: job.channel, roundRoot: r("round"), candidateRoot: initial[0]!.candidateAdmission.candidate.root, participantId: job.participantId, reviewerId: job.reviewerId, disclosureRoot: job.disclosureArtifactRoot, provenanceRoot: job.provenanceArtifactRoot, inputRoot: job.producerRequestArtifactRoot, retryParentRoot: null, reservation: job.reservation }).starts[0]!
     const records = new Map<LabRoot, { kind: string; value: any }>(), captures: Array<{ chargeRoot: LabRoot; charge: any; options: any; identity: FactorySupervisionProvider["identity"] }> = [], synthetic = positiveResponseFixture(new Set(initial.map((entry) => entry.candidateAdmission.candidate.proposal.source.root)))
     let retainedCharge: LabRoot | undefined, dispatches = 0, runs = 0, closes = 0
@@ -242,7 +248,7 @@ it.each([false, true])("prospective lifetime actual response provider wiring ret
     await expect(produceLeagueResponse({ allocation, job, start, startArtifactRoot: put(start), targetArtifactRoot: put({ roundRoot: start.roundRoot, candidateRoot: start.candidateRoot }), remainingWallMilliseconds: allocation.operations.wallClockMilliseconds, repository, opponents: initial.map((entry) => ({ candidateRoot: entry.candidateAdmission.candidate.root, closure: entry.closure })), threshold: { repository: initial[0]!.factoryRepository, artifactRoot: initial[0]!.candidateAdmission.importEvidence!.thresholdArtifactRoot }, retention: {
       append(kind, value) {
         if (kind === "response-match-start" && refused) throw refusal
-        const recordRoot = labRoot("response-v2-wiring-record", { kind, value }); records.set(recordRoot, { kind, value })
+        const recordRoot = graph.append(kind, value); records.set(recordRoot, { kind, value })
         if (kind === "response-match-start") retainedCharge = recordRoot
         return recordRoot
       }, beforeDispatch() { if (dispatches++ === 9) throw stop; retainedCharge = undefined }, beforeInvocation() {},
@@ -267,6 +273,10 @@ it.each([false, true])("prospective lifetime actual response provider wiring ret
           expect(claimProspectiveLeagueLifetimeAuthority(options.prospectiveLifetimeAuthority!, binding, 600000, layer)).toBe(600000)
           expect(() => claimProspectiveLeagueLifetimeAuthority(options.prospectiveLifetimeAuthority!, binding, 600000, layer)).toThrow("CLAIM_REUSED")
         }
+        if (v3) {
+          expect(() => claimProspectiveLeagueHostReceiptAuthority(options.prospectiveHostReceiptAuthority!, { ...binding, attemptRoot: measured ? chargeRoot : start.root }, "factory")).toThrow("CLAIM_BINDING")
+          for (const layer of ["factory", "planner", "session"] as const) expect(claimProspectiveLeagueHostReceiptAuthority(options.prospectiveHostReceiptAuthority!, binding, layer)).toBe(5000)
+        } else expect(options).not.toHaveProperty("prospectiveHostReceiptAuthority")
         captures.push({ chargeRoot, charge, options, identity: provider.identity })
         return { ...provider, close() { closes++; return provider.close() } }
       } }, run: async (request) => { runs++; return synthetic.run(request) },
@@ -281,12 +291,13 @@ it.each([false, true])("prospective lifetime actual response provider wiring ret
       expect(records.get(measured.chargeRoot)?.kind).toBe("response-match-start")
       expect(measured.identity.attemptRoot).toBe(start.root); expect(opposing.identity.attemptRoot).toBe(measured.chargeRoot)
       expect(measured.options.prospectiveLifetimeAuthority).not.toBe(opposing.options.prospectiveLifetimeAuthority)
+      if (v3) expect(measured.options.prospectiveHostReceiptAuthority).not.toBe(opposing.options.prospectiveHostReceiptAuthority)
       if (measured.charge.purpose === "independence_right") {
         expect(measured.identity.sourceRoot).toBe(opposing.identity.sourceRoot)
         expect(measured.identity).not.toEqual(opposing.identity)
       }
     }
-  } finally { rmSync(directory, { recursive: true, force: true }) }
+  } finally { rmSync(directory, { recursive: true, force: true }); rmSync(leagueDirectory, { recursive: true, force: true }) }
 }, 180000)
 
 it("charges separate common-reference counterfactual cells on the entire multi-seed product", () => {

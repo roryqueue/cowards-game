@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { claimProspectiveLeagueLifetimeAuthority, isProspectiveLeagueLifetimeFixture, type ProspectiveLeagueLifetimeAuthority, type ProspectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { performance } from "node:perf_hooks"
+import { claimProspectiveLeagueHostReceiptAuthority, isProspectiveLeagueHostReceiptFixture } from "./v1-38-league-host-receipt.js"
 import { DEFAULT_RUNTIME_LIMITS, StrategyRevisionSchema, StrategyInputV119Schema, SoldierBrainInputV119Schema, type StrategyRevision } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
@@ -77,6 +78,9 @@ export const admitPlannerSupervisorLifetime = (options: Pick<PlannerSupervisedRu
 
 export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntimeOptions): PlannerSupervisedRuntime => {
   rejectRetiredDiagnosticLifetimeOptions(options)
+  if ("hostResponseReceiptMilliseconds" in options || "prospectiveHostReceiptBinding" in options) throw new TypeError("LAB_RUNTIME_HOST_RECEIPT_OPTION")
+  if ("prospectiveHostReceiptAuthority" in options && (!options.prospectiveHostReceiptAuthority || !options.prospectiveLifetimeAuthority || options.prospectiveLifetimeMs !== 600000 || ["retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "benchmarkLifetimeMs", "observerHarness", "privateObserver"].some((key) => key in options) || (options.transport !== undefined || options.streamFactory !== undefined) && !isProspectiveLeagueHostReceiptFixture(options.prospectiveHostReceiptAuthority))) throw new TypeError("LAB_RUNTIME_HOST_RECEIPT_MODE")
+  if (options.prospectiveHostReceiptAuthority && isProspectiveLeagueHostReceiptFixture(options.prospectiveHostReceiptAuthority) && options.transport === undefined) throw new TypeError("LAB_RUNTIME_HOST_RECEIPT_FIXTURE_CONTROL")
   if (options.retryV4LifetimeGrant !== undefined && ["observerHarness", "transport", "streamFactory", "benchmarkLifetimeMs"].some((key) => Object.prototype.hasOwnProperty.call(options, key))) throw new TypeError("LAB_RUNTIME_RETRY_V4_CONSTRUCTOR_OVERRIDE")
   const observerHarness = options.observerHarness && freezeLabValue({ ...options.observerHarness })
   const provenance = options.transport || options.streamFactory ? "synthetic_transport" as const : "supervised_container" as const
@@ -103,8 +107,10 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   } as DiagnosticRetryV4RuntimeBinding
   const prospectiveRuntimeBinding = options.prospectiveLifetimeAuthority === undefined ? undefined : { ...options.prospectiveLifetimeAuthority.runtime, sourceRoot: identity.sourceRoot, revisionId: identity.revisionId, executableRoot: identity.executableRoot, tupleId: identity.tupleId, tupleRoot: identity.tupleRoot, runtimeLimitsRoot: identity.runtimeLimitsRoot, image: identity.image }
   const lifetime = admitPlannerSupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }, limit)
+  const prospectiveHostReceiptBinding = options.prospectiveHostReceiptAuthority === undefined ? undefined : { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: prospectiveRuntimeBinding!, seat: options.prospectiveLifetimeAuthority!.seat }
+  if (options.prospectiveHostReceiptAuthority) claimProspectiveLeagueHostReceiptAuthority(options.prospectiveHostReceiptAuthority, prospectiveHostReceiptBinding!, "planner")
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 24800 || options.signal?.aborted) throw new TypeError("LAB_RUNTIME_ALLOCATION")
-  const session = createLeanContainerMatchSession({ ...options, infrastructureProfile: "closeout", ...(observerHarness === undefined ? {} : { privateObserver: {
+  const session = createLeanContainerMatchSession({ ...options, ...(prospectiveHostReceiptBinding === undefined ? {} : { prospectiveHostReceiptBinding }), infrastructureProfile: "closeout", ...(observerHarness === undefined ? {} : { privateObserver: {
     harnessSource: harness,
     binding(request) {
       if (!pending || rawRoot(request.source) !== identity.executableRoot || request.methodName !== pending.method || labRoot("runtime-input", request.input) !== pending.inputRoot) throw new TypeError("LAB_DISPATCH_BINDING")

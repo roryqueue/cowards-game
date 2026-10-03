@@ -1,5 +1,5 @@
 import { LAB_ADMITTED_ROOTS, exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
-import { admitProspectiveLeagueExecutionAllocationV2, type ProspectiveLeagueExecutionAllocationV2 } from "../../packages/strategy-lab/src/league/allocation.js"
+import { admitProspectiveLeagueExecutionAllocationV2, admitProspectiveLeagueExecutionAllocationV3, type ProspectiveLeagueExecutionAllocationV2, type ProspectiveLeagueExecutionAllocationV3 } from "../../packages/strategy-lab/src/league/allocation.js"
 import type { FactoryAdmission } from "../../packages/strategy-lab/src/factory/admission.js"
 import type { LabRuntimeIdentity } from "../../packages/strategy-lab/src/runtime-bridge.js"
 
@@ -12,6 +12,7 @@ export interface ProspectiveLeagueLifetimeProviderBinding {
 export interface ProspectiveLeagueRetainedCharge {
   readonly kind: "cell-start" | "response-match-start"; readonly root: LabRoot; readonly value: Readonly<Record<string, unknown>>
   readonly measuredAttemptRoot?: LabRoot
+  readonly parentStartArtifactRoot?: LabRoot
 }
 export interface ProspectiveLeagueLifetimeAuthority {
   readonly schemaVersion: "league-prospective-lifetime-authority-v2"
@@ -26,8 +27,8 @@ const fail = (code: string): never => { throw new TypeError(`LEAGUE_PROSPECTIVE_
 const same = (a: unknown, b: unknown) => labRoot("league-prospective-lifetime-binding-v2", a) === labRoot("league-prospective-lifetime-binding-v2", b)
 /** Called only by the existing private host closure AFTER durable Match charge.
  * Nothing is serialized or independently signed; copying the handle is forgery. */
-export const issueProspectiveLeagueLifetimeAuthority = (allocationValue: ProspectiveLeagueExecutionAllocationV2, charge: ProspectiveLeagueRetainedCharge, binding: ProspectiveLeagueLifetimeProviderBinding): ProspectiveLeagueLifetimeAuthority => {
-  const allocation = admitProspectiveLeagueExecutionAllocationV2(allocationValue)
+export const validateProspectiveLeagueProviderCharge = (allocationValue: ProspectiveLeagueExecutionAllocationV2 | ProspectiveLeagueExecutionAllocationV3, charge: ProspectiveLeagueRetainedCharge, binding: ProspectiveLeagueLifetimeProviderBinding) => {
+  const allocation = allocationValue.schemaVersion === "league-prospective-execution-allocation-v3" ? admitProspectiveLeagueExecutionAllocationV3(allocationValue) : admitProspectiveLeagueExecutionAllocationV2(allocationValue)
   if (!root(charge.root) || binding.budgetRoot !== allocation.root || !root(binding.attemptRoot) || !["bottom", "top"].includes(binding.seat) || !binding.containerName || !binding.ownershipLabel || !exactLabKeys(binding.runtime, ["revisionId", "sourceRoot", "executableRoot", "tupleId", "tupleRoot", "runtimeLimitsRoot", "image", "factoryAuthorizationRoot", "factoryPacketRoot", "factoryProposalRoot", "factoryValidationRoot"]) || Object.entries(binding.runtime).some(([key, value]) => key.endsWith("Root") && !root(value)) || binding.runtime.tupleRoot !== allocation.tupleRoot || binding.runtime.runtimeLimitsRoot !== allocation.runtimeRoot || binding.runtime.image !== allocation.operations.image || !binding.runtime.revisionId || !binding.runtime.tupleId) return fail("ISSUE_BINDING")
   const value = charge.value
   if (charge.kind === "cell-start") {
@@ -38,6 +39,10 @@ export const issueProspectiveLeagueLifetimeAuthority = (allocationValue: Prospec
     const measuredSeat = value.side
     if (!root(charge.measuredAttemptRoot) || binding.attemptRoot !== (binding.seat === measuredSeat ? charge.measuredAttemptRoot : charge.root)) return fail("CHARGE_BINDING")
   } else return fail("CHARGE_BINDING")
+  return allocation
+}
+export const issueProspectiveLeagueLifetimeAuthority = (allocationValue: ProspectiveLeagueExecutionAllocationV2 | ProspectiveLeagueExecutionAllocationV3, charge: ProspectiveLeagueRetainedCharge, binding: ProspectiveLeagueLifetimeProviderBinding): ProspectiveLeagueLifetimeAuthority => {
+  const allocation = validateProspectiveLeagueProviderCharge(allocationValue, charge, binding)
   const key = `${allocation.root}:${charge.root}:${binding.seat}`
   if (providers.has(key)) return fail("PROVIDER_REUSED")
   const authority: ProspectiveLeagueLifetimeAuthority = Object.freeze({ schemaVersion: "league-prospective-lifetime-authority-v2", runtime: freezeLabValue(structuredClone(binding.runtime)), seat: binding.seat, toJSON() { return fail("NOT_SERIALIZABLE") } })

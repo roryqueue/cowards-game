@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
+import { claimProspectiveLeagueHostReceiptAuthority, isProspectiveLeagueHostReceiptFixture } from "./v1-38-league-host-receipt.js"
 import { claimProspectiveLeagueLifetimeAuthority, isProspectiveLeagueLifetimeFixture, prospectiveLeagueRuntimeBinding, type ProspectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import type { FactoryAdmission, FactorySupervisionProvider } from "../../packages/strategy-lab/src/factory/admission.js"
@@ -61,6 +62,9 @@ export const admitFactorySupervisorLifetime = (options: Pick<FactorySupervisedRu
 export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntimeOptions): FactorySupervisionProvider => {
   rejectRetiredDiagnosticLifetimeOptions(options)
   const supplied = options as unknown as Record<string, unknown>
+  if ("hostResponseReceiptMilliseconds" in supplied || "prospectiveHostReceiptBinding" in supplied) return fail("HOST_RECEIPT_OPTION")
+  if ("prospectiveHostReceiptAuthority" in supplied && (!options.prospectiveHostReceiptAuthority || !options.prospectiveLifetimeAuthority || options.prospectiveLifetimeMs !== 600000 || "createRuntime" in supplied && !isProspectiveLeagueHostReceiptFixture(options.prospectiveHostReceiptAuthority) || ["retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "benchmarkLifetimeMs", "observerHarness", "privateObserver", "transport", "streamFactory"].some((key) => key in supplied))) return fail("HOST_RECEIPT_MODE")
+  if (options.prospectiveHostReceiptAuthority && isProspectiveLeagueHostReceiptFixture(options.prospectiveHostReceiptAuthority) && typeof options.createRuntime !== "function") return fail("HOST_RECEIPT_FIXTURE_CONSTRUCTOR")
   if (("prospectiveLifetimeAuthority" in options || "prospectiveLifetimeMs" in options) && ("createRuntime" in supplied && (!options.prospectiveLifetimeAuthority || !isProspectiveLeagueLifetimeFixture(options.prospectiveLifetimeAuthority)) || ["retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "benchmarkLifetimeMs", "observerHarness", "transport", "streamFactory"].some((key) => key in supplied))) return fail("PROSPECTIVE_CONSTRUCTOR_OVERRIDE")
   if (options.retryV4LifetimeGrant !== undefined && Object.prototype.hasOwnProperty.call(supplied, "createRuntime")) return fail("RETRY_V4_CONSTRUCTOR_OVERRIDE")
   if (["benchmarkLifetimeMs", "observerHarness", "transport", "streamFactory"].some((key) => Object.prototype.hasOwnProperty.call(supplied, key))) return fail("UNSUPPORTED_OPTION")
@@ -84,6 +88,7 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
   }
   const prospectiveRuntimeBinding = options.prospectiveLifetimeAuthority === undefined ? undefined : prospectiveLeagueRuntimeBinding(admission, { ...options.prospectiveLifetimeAuthority.runtime, revisionId: revision.id, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, image: options.image ?? LAB_ADMITTED_ROOTS.image })
   const factoryLifetimeMs = admitFactorySupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) })
+  if (options.prospectiveHostReceiptAuthority) claimProspectiveLeagueHostReceiptAuthority(options.prospectiveHostReceiptAuthority, { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: prospectiveRuntimeBinding!, seat: options.prospectiveLifetimeAuthority!.seat }, "factory")
   const began = performance.now()
   const { admission: _admission, sourceBytes: _sourceBytes, createRuntime: _createRuntime, factoryLifetimeMs: _factoryLifetimeMs, ...runtimeOptions } = options
   const selected = createRuntime({ ...runtimeOptions, ...(options.retryV4LifetimeGrant === undefined ? {} : { retryV4LifetimeMs: factoryLifetimeMs, retryV4RuntimeBinding: retryV4RuntimeBinding! }), revision, image: options.image ?? LAB_ADMITTED_ROOTS.image })
