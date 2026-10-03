@@ -6,14 +6,81 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-02
-source_reviewed: 63f1a1a380aa753d88e2825abef176b7306b3980
-source_gate: private-ipc-v3-59346-complete-all8-pass-510league-20tactical
-empirical_validation: v10-consumed-process-invalid-one-cell-unique-retained-verifier28015-complete
+source_reviewed: 9ffde3ffafd23c6508766e15c05b5004c0fe030f
+source_gate: host-receipt-v1-68733-complete-all8-pass-728league-22tactical
+empirical_validation: v11-consumed-process-invalid-four-charged-unique-retained-verifier72861-complete
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+### Host-receipt supplement — actual source gate complete; empirical coverage pending
+
+At fixed reviewed9ffde3ff (actual858entry implementation552bba3d/source
+defe5024), unique rootgate68733/PID39906 CLOSED exit0 with all8 CIcommands
+passed in2368951ms. Actual31files/728league-runtime-factory tests and1file/
+22tactical tests passed without skips. Build/strict22paths passed; three
+1355file scanners reported0violations; service strict0/ownership0 and19
+existingreport-only entries remain. See HOST-RECEIPT-SOURCE-GATE-v1 for
+exact commands/bindings/actual completion b209bce8. No duplicate fullrun.
+
+Nyquist configuration is enabled. This is a State-A scoped update of the
+existing incomplete Phase265 validation strategy, not whole-phase signoff.
+The six existing focused files cover the bounded source supplement and all
+were executed unfiltered in CI1; no new source-only test gap was identified
+by the root mapping below. Independent source goal verification remains a
+separate next step. Earlier validation snapshots below are historical.
+
+| Supplement task | Behavior/threats | Existing behavioral tests and automated command | Observed status |
+|---|---|---|---|
+| 07-HR-T1 | Exact V3-only5000; V1/V2 preservation; reject changed keys/roots/approvals; HR-01/05 | allocation.test.ts, `prospective host response receipt`; unfiltered CI1 plus build/strict | GREEN in actual complete gate |
+| 07-HR-T2a | Durable start-bound opaque ordered one-use claims; reject forged/copied/crossed/default grants; HR-01/05 | lean-container-match-session.test.ts, planner-supervised-runtime.test.ts, factory-supervised-runtime.test.ts; unfiltered CI1 | GREEN in actual complete gate |
+| 07-HR-T2b | Both legacy and V117 native transaction clock paths; unchanged broker/guest/cancel budgets; expiry, poison/cleanup/original origin; HR-02/03 | lean-container-match-session.test.ts clock-split/inner-parse/missing-stream regressions; unfiltered CI1 | GREEN in actual complete gate |
+| 07-HR-T2c | Main and score/left/right/seat/self-play charge-before-provider; V3 retained selectors and honest failed prefixes; HR-01/03/05 | serious-league.test.ts and league-response-runtime.test.ts, host-receipt wiring plus CR-02/CR-03 regressions; unfiltered CI1 | GREEN in actual complete gate |
+| 07-HR-T3 | Source inventory, privacy/public/default/production boundaries and no new dependency; HR-04/05/SC | Source-closure regression in CI1; exact CI3/4 build/types and CI5–8 boundary scans; clean independent review iteration3 | All8 commands passed; scoped goal verification pending |
+
+Tests include negative policy/root/authority controls, both production
+transaction modes using explicit mocks, original failure preservation and
+actual produced-author lifecycle fixtures. Retained-author verification is
+mocked in the latter fixtures: these do not establish whole-run empirical
+authoring/retained correctness. Earlier two RED native-construction attempts
+and unknown Docker-launch outcome remain disclosed; reviewed fail-closed
+fixture seams are the current correction, not retrospective no-launch proof.
+
+**Whole-phase Nyquist remains partial/false.** LEAG-01–09 all remain pending:
+complete actual matrix, solver/response-loop closure, development red team,
+diverse portfolio and robust-pure/no-finalist outcome still require a fresh
+eligible empirical league and its unique independent retained verification.
+V11 and every consumed allocation/result/diagnostic/verifier stay immutable.
+No source/mock test grants LEAG/freeze/formation/holdout/public/counting/
+production credit. No human-only resource decision is newly required by
+this coverage update; the standing prospective approval remains conditional
+on fresh reviewed requests/allocation/store/same-process capacity.
+
+## Scoped Validation Audit 2026-10-02 — host receipt
+
+| Metric | Count |
+|---|---:|
+| Source supplement tasks mapped | 3 |
+| Existing focused files actually run unfiltered | 6 |
+| New source-only coverage gaps identified by root mapping | 0 |
+| Actual gate tests passed | 750 |
+| Full-phase empirical requirements still pending | 9 |
+| Independent scoped goal verification complete | 0 (next step) |
+
+### Independent source verification observed — 2026-10-02
+
+HOST-RECEIPT-VERIFICATION-v1 now verifies4/4 source truths with0
+behavior-unverified: recomputed858-entry roots, actual gate/review bindings,
+all8exit0 outcomes and750no-skip tests; three independently run named
+mock/source tests also pass. The source-only gate was not rerun. The report
+retains human_needed solely for the disclosed historical CR-01 two native
+construction attempts/Docker-launch outcome unknown. This prohibition flag
+is preserved for audit, not a newproduct/resource approval or future-route
+prerequisite; no override or empiricalcredit is applied. Full-phase Nyquist
+stayspartialfalse/all9LEAGpending. The preceding "next step" audit row is
+the pre-verification snapshot; independent scoped verification is now1.
 
 Scoped PRIVATE-IPC-DIAGNOSTICS-VERIFICATION-v2 PASSED4/4 boundedtruths after
 actual fullgate59346exit0; earlierregressionblocker closed, no overrides or
