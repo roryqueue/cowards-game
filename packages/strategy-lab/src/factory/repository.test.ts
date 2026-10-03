@@ -68,6 +68,12 @@ describe("content-addressed private factory repository", () => {
     expect(() => readFactoryArtifact(repo, root)).toThrow("FACTORY_REPOSITORY_FILE")
   })
 
+  it("rejects an oversized named artifact before returning a Buffer", () => {
+    const repo = repository()
+    writeFileSync(join(repo.directory, `factory-artifact-${r.slice(7)}.bin`), Buffer.alloc(262_145))
+    expect(() => readFactoryArtifact(repo, r)).toThrow("FACTORY_REPOSITORY_CAP")
+  })
+
   it("recovers a named interrupted temporary publication without overwriting it or blocking one terminal", () => {
     const repo = repository(), charged = start()
     recordFactoryAttemptStart(repo, charged)

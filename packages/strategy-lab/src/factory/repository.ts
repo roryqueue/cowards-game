@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto"
-import { closeSync, constants, fsyncSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync, unlinkSync, writeSync, linkSync } from "node:fs"
+import { closeSync, constants, fstatSync, fsyncSync, lstatSync, openSync, readSync, readdirSync, realpathSync, unlinkSync, writeSync, linkSync } from "node:fs"
 import { basename, join, resolve } from "node:path"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
 import { freezeLabValue, type LabRoot } from "../contracts.js"
@@ -14,7 +14,28 @@ const rootDigest = (id: unknown) => { if (!isRoot(id)) return fail("ROOT"); retu
 const artifactName = (id: LabRoot) => `factory-artifact-${rootDigest(id)}.bin`
 const startName = (id: LabRoot) => `factory-attempt-${rootDigest(id)}.started.json`
 const terminalName = (id: LabRoot) => `factory-attempt-${rootDigest(id)}.terminal.json`
-const boundedRead = (path: string) => { if (!lstatSync(path).isFile()) return fail("FILE"); const bytes = readFileSync(path); if (bytes.byteLength > CAP) return fail("CAP"); return bytes }
+const boundedRead = (path: string) => {
+  const named = lstatSync(path)
+  if (!named.isFile()) return fail("FILE")
+  if (!Number.isSafeInteger(named.size) || named.size > CAP) return fail("CAP")
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
+  try {
+    const opened = fstatSync(fd)
+    if (!opened.isFile()) return fail("FILE")
+    if (!Number.isSafeInteger(opened.size) || opened.size > CAP) return fail("CAP")
+    // One byte beyond the opened size detects concurrent growth without a
+    // whole-file read. The allocation is at most CAP + 1, even under a race.
+    const bytes = Buffer.allocUnsafe(opened.size + 1)
+    let offset = 0
+    while (offset < bytes.length) {
+      const count = readSync(fd, bytes, offset, bytes.length - offset, null)
+      if (count === 0) break
+      offset += count
+    }
+    if (offset !== opened.size || fstatSync(fd).size !== opened.size) return fail("FILE_CHANGED")
+    return bytes.subarray(0, offset)
+  } finally { closeSync(fd) }
+}
 const canonicalBytes = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok || encoded.canonicalByteLength > CAP) return fail("CANONICAL"); return encoded.canonicalBytes }
 const syncDirectory = (directory: string) => {
   const descriptor = openSync(safeDirectory(directory), constants.O_RDONLY)
