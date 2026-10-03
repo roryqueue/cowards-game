@@ -38,18 +38,24 @@ export interface VerifiedFactoryCellObservationInput {
   readonly dependencyEdges: readonly ConcreteEdgeToken[]
   /** Records have already been reopened and content/root verified by the caller. */
   readonly records: readonly StoredFactorySupervisionRecord[]
+  /** Lean-only fail-closed projection ceiling; absent preserves historical behavior. */
+  readonly maxTokenChargeBytes?: number
 }
 
-const tokensFor = (value: unknown, side: "bottom" | "top", ids: Map<string, string>, path = "value"): string[] => {
-  if (value === null) return [`${path}=null`]
-  if (typeof value === "string") return [`${path}=${value}`]
-  if (typeof value === "boolean") return [`${path}=${String(value)}`]
+const tokensFor = (value: unknown, side: "bottom" | "top", ids: Map<string, string>, path = "value", budget?: { remaining: number }): string[] => {
+  const leaf = (token: string): string[] => {
+    if (budget) { budget.remaining -= 64 + token.length * 8; if (budget.remaining < 0) return fail("TOKEN_LIMIT") }
+    return [token]
+  }
+  if (value === null) return leaf(`${path}=null`)
+  if (typeof value === "string") return leaf(`${path}=${value}`)
+  if (typeof value === "boolean") return leaf(`${path}=${String(value)}`)
   if (typeof value === "number") {
     if (!Number.isFinite(value)) return fail("RECORDS")
     const coordinate = side === "top" && /\.(?:x|y)$/u.test(path) ? 11 - value : side === "top" && /\.(?:dx|dy)$/u.test(path) ? -value : value
-    return [`${path}=${coordinate}`]
+    return leaf(`${path}=${coordinate}`)
   }
-  if (Array.isArray(value)) return value.flatMap((entry, index) => tokensFor(entry, side, ids, `${path}[${index}]`))
+  if (Array.isArray(value)) return value.flatMap((entry, index) => tokensFor(entry, side, ids, `${path}[${index}]`, budget))
   const object = record(value, "RECORDS"), output: string[] = []
   for (const key of Object.keys(object).sort()) {
     if (FORBIDDEN.test(key) || !FIELDS.has(key)) continue
@@ -57,8 +63,8 @@ const tokensFor = (value: unknown, side: "bottom" | "top", ids: Map<string, stri
     if (/(?:^|_)id$/iu.test(key) || /Id$/u.test(key)) {
       if (typeof entry !== "string" || entry.length === 0) return fail("RECORDS")
       let normalized = ids.get(entry); if (!normalized) { normalized = `entity-${ids.size + 1}`; ids.set(entry, normalized) }
-      output.push(`${next}=${normalized}`)
-    } else output.push(...tokensFor(entry, side, ids, next))
+      output.push(...leaf(`${next}=${normalized}`))
+    } else output.push(...tokensFor(entry, side, ids, next, budget))
   }
   return output
 }
@@ -66,6 +72,8 @@ const tokensFor = (value: unknown, side: "bottom" | "top", ids: Map<string, stri
 export const createNumericObservationFromVerifiedCell = (input: VerifiedFactoryCellObservationInput): Readonly<VerifiedFactoryCellObservation> => {
   if (!input.cell || !CELL.test(input.cell.key) || !["block-a", "block-b"].includes(input.cell.block) || !["bottom", "top"].includes(input.cell.candidateSide) || !["candidate", "opponent"].includes(input.cell.initialInitiative) || typeof input.sourceUtf8 !== "string" || input.sourceUtf8.length === 0 || !Array.isArray(input.records) || input.records.length === 0) return fail("RECORDS")
   if (input.records.some((item) => !item || !KINDS.has(item.kind) || !Number.isSafeInteger(item.ordinal) || item.ordinal < 0)) return fail("RECORDS")
+  if (input.maxTokenChargeBytes !== undefined && (!Number.isSafeInteger(input.maxTokenChargeBytes) || input.maxTokenChargeBytes < 1 || input.maxTokenChargeBytes > 64 * 1024 * 1024)) return fail("TOKEN_LIMIT")
+  const budget = input.maxTokenChargeBytes === undefined ? undefined : { remaining: input.maxTokenChargeBytes }
   const executions = input.records.filter((item) => item.kind === "execution")
   if (executions.length !== 1 || record(executions[0]!.value, "EXECUTION").kind !== "completed") return fail("EXECUTION")
   const traces = input.records.filter((item) => item.kind === "trace")
@@ -79,7 +87,7 @@ export const createNumericObservationFromVerifiedCell = (input: VerifiedFactoryC
     const trace = record(item.value, "RECORDS"), method = trace.method
     if ((method !== "selectActivations" && method !== "soldierBrain") || trace.ordinal !== item.ordinal || !["success", "player_violation", "system_failure"].includes(String(trace.classification))) return fail("RECORDS")
     const request = record(trace.requestProjection, "RECORDS"), decision = record(trace.decisionProjection, "RECORDS"), sampleKey = `${conditionKey}:${method}:${item.ordinal}`
-    const sampleTokens = [...tokensFor(request, input.cell.candidateSide, ids, "request"), ...tokensFor(decision, input.cell.candidateSide, ids, "decision"), `classification=${String(trace.classification)}`]
+    const sampleTokens = [...tokensFor(request, input.cell.candidateSide, ids, "request", budget), ...tokensFor(decision, input.cell.candidateSide, ids, "decision", budget), `classification=${String(trace.classification)}`]
     legalInputSamples[sampleKey] = Object.freeze(sampleTokens)
     if (method === "soldierBrain") {
       soldierBrainDecisionCount += 1
@@ -88,13 +96,13 @@ export const createNumericObservationFromVerifiedCell = (input: VerifiedFactoryC
       const self = request.self === null ? null : record(request.self, "RECORDS"), status = typeof self?.status === "string" ? self.status : null
       if (status !== null && status !== "STONE" && typeof self?.id === "string") nonStoneIds.add(self.id)
       if (actionType === "TURN_TO_STONE" && status !== null && status !== "STONE") nonStoneToStoneDecisionCount += 1
-      const signature = tokensFor(decision, input.cell.candidateSide, ids, "decision").join("|"); decisionSignatures.push(signature)
+      const signature = tokensFor(decision, input.cell.candidateSide, ids, "decision", budget).join("|"); decisionSignatures.push(signature)
       guardBehaviors.push(Object.freeze({ sampleKey, hasAdvancedThisActivation: typeof request.hasAdvancedThisActivation === "boolean" ? request.hasAdvancedThisActivation : null, actionType }))
     }
   }
   for (const item of input.records) {
-    if (item.kind === "transition" || item.kind === "result-event") chronicleSamples[`${conditionKey}:${item.kind === "transition" ? "transition" : "event"}:${item.ordinal}`] = Object.freeze([`record-kind=${item.kind}`, `record-ordinal=${item.ordinal}`, ...tokensFor(item.value, input.cell.candidateSide, ids, item.kind)])
-    if (item.kind === "result-state" || item.kind === "result-event") matchupSamples[`${conditionKey}:${item.kind === "result-state" ? "final-state" : "final-event"}:${item.ordinal}`] = Object.freeze([`record-kind=${item.kind}`, `record-ordinal=${item.ordinal}`, ...tokensFor(item.value, input.cell.candidateSide, ids, item.kind)])
+    if (item.kind === "transition" || item.kind === "result-event") chronicleSamples[`${conditionKey}:${item.kind === "transition" ? "transition" : "event"}:${item.ordinal}`] = Object.freeze([`record-kind=${item.kind}`, `record-ordinal=${item.ordinal}`, ...tokensFor(item.value, input.cell.candidateSide, ids, item.kind, budget)])
+    if (item.kind === "result-state" || item.kind === "result-event") matchupSamples[`${conditionKey}:${item.kind === "result-state" ? "final-state" : "final-event"}:${item.ordinal}`] = Object.freeze([`record-kind=${item.kind}`, `record-ordinal=${item.ordinal}`, ...tokensFor(item.value, input.cell.candidateSide, ids, item.kind, budget)])
   }
   if (Object.keys(chronicleSamples).length === 0 || Object.keys(matchupSamples).length === 0) return fail("RECORDS")
   const counts = new Map<string, number>(); for (const signature of decisionSignatures) counts.set(signature, (counts.get(signature) ?? 0) + 1)

@@ -58,6 +58,12 @@ describe("verified factory cell observation adapter", () => {
     expect(Object.keys(base.evidence.legalInputSamples)).toHaveLength(2)
   })
 
+  it("stops a lean projection before a single cell expands beyond its token ceiling", () => {
+    const input = { sourceUtf8: "export default {}", cell: { key: "cell", block: "block-a" as const, candidateSide: "bottom" as const, initialInitiative: "candidate" as const }, lineageEdges: [], dependencyEdges: [], records }
+    expect(createNumericObservationFromVerifiedCell({ ...input, maxTokenChargeBytes: 100_000 })).toEqual(createNumericObservationFromVerifiedCell(input))
+    expect(() => createNumericObservationFromVerifiedCell({ ...input, maxTokenChargeBytes: 256 })).toThrow("FACTORY_OBSERVATION_TOKEN_LIMIT")
+  })
+
   it("rejects empty traces, failed execution and invented record kinds", () => {
     const input = { sourceUtf8: "export default {}", cell: { key: "cell", block: "block-a" as const, candidateSide: "bottom" as const, initialInitiative: "candidate" as const }, lineageEdges: [], dependencyEdges: [], records }
     expect(() => createNumericObservationFromVerifiedCell({ ...input, records: records.filter((record) => record.kind !== "trace") })).toThrow("FACTORY_OBSERVATION_RECORDS")

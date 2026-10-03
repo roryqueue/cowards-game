@@ -2,7 +2,7 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { assessFactoryIndependence, decideFactoryIndependence, factoryWorkloadResourceViolations, readRetainedFactoryLedger, verifyRetainedFactoryAssessment, verifyHistoricalFactoryAssessmentForLeague } from "./assess-v1-38-factory-independence.js"
+import { assessFactoryIndependence, boundedFactoryProjectionCharge, decideFactoryIndependence, factoryWorkloadResourceViolations, LEAN_FACTORY_PROJECTION_CEILING_BYTES, readRetainedFactoryLedger, verifyRetainedFactoryAssessment, verifyHistoricalFactoryAssessmentForLeague } from "./assess-v1-38-factory-independence.js"
 import { readFactoryCanonicalRecord } from "./v1-38-factory-fresh-evidence.js"
 import { NUMERIC_DIMENSIONS, type NumericComparison, type NumericControlTable } from "../packages/strategy-lab/src/factory/numeric-calibration.js"
 import { createFactoryRepository, recordFactoryAttemptStart, publishFactoryAttemptTerminal, publishFactoryArtifact, resumeFactoryAttemptInventory } from "../packages/strategy-lab/src/factory/repository.js"
@@ -23,6 +23,14 @@ const score = (n: number): NumericComparison => ({ dimensions: Object.fromEntrie
 const controls: NumericControlTable = { "S01/S02":score(.9), "S03/S04":score(.95), "S05/S06":score(.9), "S01/S07":score(.7), "S01/S08":score(.3), "S11/S12":score(.7) }
 const edges = {"S01/S03":score(.1),"S01/S05":score(.2),"S03/S05":score(.25)}
 describe("finite factory independence decision", () => {
+  it("charges the complete 48-cell projection set without retaining raw streams", () => {
+    const cell = { evidence: { legalInputSamples: { sample: ["request.self.position.x=2"] }, chronicleSamples: {}, matchupSamples: {} }, facts: { allSoldierBrainActionsStone: false, nonStoneToStoneCount: 0 } }
+    let charged = 0
+    for (let ordinal = 0; ordinal < 48; ordinal++) charged += boundedFactoryProjectionCharge(cell, LEAN_FACTORY_PROJECTION_CEILING_BYTES - charged)
+    expect(charged).toBeGreaterThan(0)
+    expect(charged).toBeLessThan(LEAN_FACTORY_PROJECTION_CEILING_BYTES)
+    expect(() => boundedFactoryProjectionCharge({ raw: "x".repeat(1024) }, 1024)).toThrow("IMPORT_PROJECTION_LIMIT")
+  })
   it("reopens a full source-bound but unrun allocation as unresolved, without inventing cells",async()=>{
     const fixture=await createFactoryExecutionEvidenceFixture();directories.push(fixture.repository.directory)
     const {repository}=fixture

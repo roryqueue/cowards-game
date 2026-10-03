@@ -8,7 +8,7 @@ import { createFactoryRepository, publishFactoryArtifact, type FactoryRepository
 import { admitFactoryCalibrationManifest } from "../packages/strategy-lab/src/factory/calibration.js"
 import { validateFactoryAttemptStart, validateFactoryAttemptLedger } from "../packages/strategy-lab/src/factory/ledger.js"
 import { FactoryCandidateSchema } from "../packages/strategy-lab/src/factory/contracts.js"
-import { readFactorySupervisionArtifactRecords } from "../packages/strategy-lab/src/factory/supervision-artifacts.js"
+import { readFactorySupervisionArtifactRecords, readFactorySupervisionArtifactRecordsBounded } from "../packages/strategy-lab/src/factory/supervision-artifacts.js"
 import { compareNumericEvidence, freezeNumericCalibrationThreshold, classifyNumericComparison, type NumericCalibrationEvidence, type NumericComparison, type NumericControlTable, type NumericControlId } from "../packages/strategy-lab/src/factory/numeric-calibration.js"
 import { readFactoryCanonicalRecord, readFreshFactoryCalibration, requireFactoryRecordRoot, remainingFreshWorkloadLifetime } from "./v1-38-factory-fresh-evidence.js"
 import { deriveFactorySharedHelperAudit, factoryEvidenceByteRoot, readFactoryExecutionEvidence, readHistoricalFactoryExecutionEvidence } from "./v1-38-factory-execution-evidence.js"
@@ -76,7 +76,25 @@ export interface FactoryAssessmentResult {
 const rooted = (schemaVersion:string, value:Record<string,unknown>) => { const body = {schemaVersion,...value}; return {...body,root:labRoot(schemaVersion,body)} }
 const artifactIdentity = (value:unknown) => factoryEvidenceByteRoot(encode(value))
 
-const assessBoundFactoryIndependence = (repository: FactoryRepository, input: FactoryAssessmentInput, options: {persist?: boolean; correctionArtifactRoot?: LabRoot} = {}, historicalImport?: FactoryHistoricalImportContext): FactoryAssessmentResult => {
+/** Conservative in-process ceiling for 48 retained numeric projections. Each
+ * primitive character is charged eight bytes plus object/array overhead; raw
+ * records and chunks are not retained between cells. This is a fail-closed
+ * import limit, not an assertion about historical peak RSS. */
+export const LEAN_FACTORY_PROJECTION_CEILING_BYTES = 256 * 1024 * 1024
+export const boundedFactoryProjectionCharge = (value: unknown, ceiling = LEAN_FACTORY_PROJECTION_CEILING_BYTES): number => {
+  let charged = 0
+  const visit = (item: unknown): void => {
+    charged += 64
+    if (charged > ceiling) return fail("IMPORT_PROJECTION_LIMIT")
+    if (typeof item === "string") charged += item.length * 8
+    else if (Array.isArray(item)) for (const member of item) visit(member)
+    else if (item && typeof item === "object") for (const [key, member] of Object.entries(item)) { charged += key.length * 8; visit(member) }
+    if (charged > ceiling) return fail("IMPORT_PROJECTION_LIMIT")
+  }
+  visit(value)
+  return charged
+}
+const assessBoundFactoryIndependence = (repository: FactoryRepository, input: FactoryAssessmentInput, options: {persist?: boolean; correctionArtifactRoot?: LabRoot; boundedImport?: boolean; beforeCell?: (ordinal: number) => void} = {}, historicalImport?: FactoryHistoricalImportContext): FactoryAssessmentResult => {
   const persist = options.persist !== false, reasons:string[] = []
   if (historicalImport && persist) return fail("IMPORT_READ_ONLY")
   const measurementImplementationRoot = historicalImport ? requireFactoryHistoricalImportContext(historicalImport, repository, input.executionEvidenceArtifactRoot).historicalAssessmentImplementationRoot : implementationRoot()
@@ -93,6 +111,7 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
   const ordered = ledger.entries.map((entry) => ({...entry,accounting:readFactoryCanonicalRecord(repository,entry.start.resourceAccountingRoot)})).sort((left,right) => Number(left.accounting.ordinal)-Number(right.accounting.ordinal))
   if (!same(input.terminalRoots,ordered.map((entry) => entry.terminal.root))) return fail("TERMINAL_ROOTS")
   const observations = {} as Record<FactorySourceSlot,VerifiedFactoryCellObservation[]>
+  let projectionBytes = 0
   const receiptByWorkload = new Map<LabRoot,LabRoot>(), observedSupervision:LabRoot[] = []
   let firstStart:number|null = null, previousStartedAtMs = -1
   for (const [ordinal,entry] of ordered.entries()) {
@@ -113,7 +132,8 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
       reasons.push(`cell:${ordinal}:${terminal.disposition}`); continue
     }
     if (!supervisionRoot || terminal.outputRoot !== supervisionRoot) return fail("RECEIPT_MISSING")
-    const retained = readFactorySupervisionArtifactRecords(repository,supervisionRoot,{maxBytes:64*1024*1024,maxRecords:50000})
+    if (options.boundedImport) options.beforeCell?.(ordinal)
+    const retained = (options.boundedImport ? readFactorySupervisionArtifactRecordsBounded : readFactorySupervisionArtifactRecords)(repository,supervisionRoot,{maxBytes:64*1024*1024,maxRecords:50000})
     const metadata = record(retained.records.find((item) => item.kind === "receipt")?.value), admission = record(metadata.admission), identity = record(metadata.candidateIdentity), matchup = record(metadata.matchup)
     const revisionId = String(identity.revisionId), arenaVariant = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === workload.condition.arenaId)
     if (!arenaVariant) return fail("ARENA")
@@ -132,7 +152,8 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
     const sourceAudit = auditFactorySource(ingestion.sourceUtf8)
     const baseSlot = Object.hasOwn(FACTORY_CONTROL_BASES,cell.slot) ? FACTORY_CONTROL_BASES[cell.slot as FactoryControlSlot] : cell.slot
     const lineageEdges = [{label:"emitted-by",from:"strategy",to:fresh.ingestions[baseSlot].producerIdentity},...(baseSlot === cell.slot ? [] : [{label:"derived-from",from:"control",to:"strategy"}])]
-    const observation = createNumericObservationFromVerifiedCell({sourceUtf8:ingestion.sourceUtf8,cell:{key:`${cell.slot}:${cell.block}:${cell.initialInitiative}`,block:cell.block === "A"?"block-a":"block-b",candidateSide:cell.candidateSide,initialInitiative:cell.initialInitiative},lineageEdges,dependencyEdges:sourceAudit.dependencyEdges,records:retained.records})
+    const observation = createNumericObservationFromVerifiedCell({sourceUtf8:ingestion.sourceUtf8,cell:{key:`${cell.slot}:${cell.block}:${cell.initialInitiative}`,block:cell.block === "A"?"block-a":"block-b",candidateSide:cell.candidateSide,initialInitiative:cell.initialInitiative},lineageEdges,dependencyEdges:sourceAudit.dependencyEdges,records:retained.records,...(options.boundedImport ? { maxTokenChargeBytes: 64 * 1024 * 1024 } : {})})
+    if (options.boundedImport) projectionBytes += boundedFactoryProjectionCharge(observation, LEAN_FACTORY_PROJECTION_CEILING_BYTES - projectionBytes)
     observations[cell.slot] = [...(observations[cell.slot]??[]),observation]
     receiptByWorkload.set(workload.root,retained.descriptor.receiptRoot)
   }
@@ -205,9 +226,9 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
 }
 export const assessFactoryIndependence = (repository: FactoryRepository, input: FactoryAssessmentInput, options: {persist?: boolean; correctionArtifactRoot?: LabRoot} = {}): FactoryAssessmentResult => assessBoundFactoryIndependence(repository, input, options)
 /** Original measurement and current reader identities remain distinct. No new execution authority. */
-export const verifyHistoricalFactoryAssessmentForLeague = (repository: FactoryRepository, artifactRoot: LabRoot): FactoryAssessmentResult & { issued: false; historicalProducerImplementationRoot: LabRoot; historicalAssessmentImplementationRoot: LabRoot; currentReaderImplementationRoot: LabRoot } => {
+export const verifyHistoricalFactoryAssessmentForLeague = (repository: FactoryRepository, artifactRoot: LabRoot, options: { readonly boundedImport?: true; readonly beforeCell?: (ordinal: number) => void } = {}): FactoryAssessmentResult & { issued: false; historicalProducerImplementationRoot: LabRoot; historicalAssessmentImplementationRoot: LabRoot; currentReaderImplementationRoot: LabRoot } => {
   const context = readFactoryHistoricalImportContext(repository, artifactRoot), saved = readFactoryCanonicalRecord(repository, artifactRoot)
-  const result = assessBoundFactoryIndependence(repository, saved.input as unknown as FactoryAssessmentInput, { persist: false, ...(saved.schemaVersion === "factory-independence-assessment-v2" ? { correctionArtifactRoot: saved.correctionArtifactRoot as LabRoot } : {}) }, context)
+  const result = assessBoundFactoryIndependence(repository, saved.input as unknown as FactoryAssessmentInput, { persist: false, ...options, ...(saved.schemaVersion === "factory-independence-assessment-v2" ? { correctionArtifactRoot: saved.correctionArtifactRoot as LabRoot } : {}) }, context)
   if (result.assessmentRoot !== context.assessmentRoot) return fail("IMPORT_ASSESSMENT_REOPEN")
   return Object.freeze({ ...result, issued: false as const, historicalProducerImplementationRoot: context.historicalProducerImplementationRoot, historicalAssessmentImplementationRoot: context.historicalAssessmentImplementationRoot, currentReaderImplementationRoot: context.currentReaderImplementationRoot })
 }

@@ -9,7 +9,7 @@ import { admitFactory, authorizeFactorySupervision, isIssuedFactorySupervisionRe
 import { factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "./contracts.js"
 import { deriveFactoryOraclePacketRoot } from "./identity.js"
 import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact } from "./repository.js"
-import { publishFactorySupervisionArtifacts, readFactorySupervisionArtifactRecords } from "./supervision-artifacts.js"
+import { publishFactorySupervisionArtifacts, readFactorySupervisionArtifactRecords, readFactorySupervisionArtifactRecordsBounded } from "./supervision-artifacts.js"
 
 const directories: string[] = []
 const root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
@@ -57,6 +57,8 @@ describe("bounded private supervision persistence", () => {
     expect(receipt.matchup).toMatchObject({ status: "verified", side: "bottom", initialInitiative: true })
     const stored = publishFactorySupervisionArtifacts(repository, receipt)
     const reopened = readFactorySupervisionArtifactRecords(repository, stored.artifactRoot, limits)
+    const bounded = readFactorySupervisionArtifactRecordsBounded(repository, stored.artifactRoot, limits)
+    expect(bounded).toEqual(reopened)
     expect(reopened.records.find(record => record.kind === "receipt")?.value).toMatchObject({ matchup: receipt.matchup })
     expect(reopened.issued).toBe(false)
   })
@@ -65,6 +67,7 @@ describe("bounded private supervision persistence", () => {
     const receipt = await issuedFixture(admission, [{ sequence: 0, fixture: true }])
     const stored = publishFactorySupervisionArtifacts(repository, receipt)
     const reopened = readFactorySupervisionArtifactRecords(repository, stored.artifactRoot, limits)
+    expect(readFactorySupervisionArtifactRecordsBounded(repository, stored.artifactRoot, limits)).toEqual(reopened)
     expect(reopened.descriptor.receiptRoot).toBe(receipt.root)
     expect(reopened.records.find(record => record.kind === "transition")?.value).toEqual(receipt.execution.transitions[0])
     expect(reopened.records.find(record => record.kind === "accounting")?.value).toEqual(receipt.execution.accounting[0])
@@ -88,6 +91,7 @@ describe("bounded private supervision persistence", () => {
     expect(reopened.records.filter(record => record.kind === "transition").map(record => record.value)).toEqual(transitions)
     expect(readdirSync(repository.directory).every(name => statSync(join(repository.directory, name)).size <= 262144)).toBe(true)
     expect(() => readFactorySupervisionArtifactRecords(repository, stored.artifactRoot, { ...limits, maxBytes: stored.byteLength - 1 })).toThrow("DESCRIPTOR_LIMITS")
+    expect(() => readFactorySupervisionArtifactRecordsBounded(repository, stored.artifactRoot, { ...limits, maxBytes: stored.byteLength - 1 })).toThrow("DESCRIPTOR_LIMITS")
   }, 20000) // Disk/canonicalization regression only; no guest/runtime limit changes.
 
   it("retains system failure state and rejects descriptor claims that disagree with the stored records", async () => {
@@ -102,6 +106,7 @@ describe("bounded private supervision persistence", () => {
     if (!encoded.ok) throw new Error("fixture encoding")
     const forged = publishFactoryArtifact(repository, encoded.canonicalBytes)
     expect(() => readFactorySupervisionArtifactRecords(repository, forged, limits)).toThrow("CONTENT_BINDING")
+    expect(() => readFactorySupervisionArtifactRecordsBounded(repository, forged, limits)).toThrow("CONTENT_BINDING")
   })
 
   it("refuses a truncated or corrupted chunk before presenting archived evidence", async () => {
@@ -112,5 +117,6 @@ describe("bounded private supervision persistence", () => {
     const chunk = parsed.value as { bytesRoot: string }
     writeFileSync(join(repository.directory, `factory-artifact-${chunk.bytesRoot.slice(7)}.bin`), "corrupted fixture")
     expect(() => readFactorySupervisionArtifactRecords(repository, stored.artifactRoot, limits)).toThrow("ARTIFACT_DIGEST")
+    expect(() => readFactorySupervisionArtifactRecordsBounded(repository, stored.artifactRoot, limits)).toThrow("ARTIFACT_DIGEST")
   })
 })

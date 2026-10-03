@@ -1,4 +1,4 @@
-import { fsync, mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync, cpSync, writeFileSync } from "node:fs"
+import { fsync, mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync, cpSync, copyFileSync, writeFileSync } from "node:fs"
 import { createHash, randomUUID } from "node:crypto"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -18,9 +18,10 @@ import { createLeagueCellTerminal, deriveLeagueResultEventRoot, LeaguePayoffProj
 import { LAB_ADMITTED_ROOTS, labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { factoryAssessmentImplementationRoot, factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
 import { claimProspectiveLeagueLifetimeAuthority } from "./lib/v1-38-league-prospective-lifetime.js"
-import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRetainedSeriousLeague, verifyRetainedCellJournalBijection, LeagueConnectedSession, LeagueRecordGraph, LeagueRetentionBudget, normalizedGameplayRoot, sameLargeExecution, sameLargeResult, diagnoseLeagueExecutionStorage, seriousLeagueMain, retainedSupervisorFailureDiagnostic, type LeagueCandidateInput, type LeagueFixtureSeams } from "./run-v1-38-serious-league.js"
+import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRetainedSeriousLeague, verifyRetainedCellJournalBijection, LeagueConnectedSession, LeagueRecordGraph, LeagueRetentionBudget, normalizedGameplayRoot, sameLargeExecution, sameLargeResult, diagnoseLeagueExecutionStorage, seriousLeagueMain, retainedSupervisorFailureDiagnostic, readLeagueInitialCandidates, readLeanPilotInitialCandidates, type LeagueCandidateInput, type LeagueFixtureSeams } from "./run-v1-38-serious-league.js"
 import { prepareLeagueExecutionStream, readLeagueExecutionStream } from "./lib/v1-38-league-execution-stream.js"
 import { createFactoryRepository, publishFactoryArtifact, recordFactoryAttemptStart, publishFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/repository.js"
+import * as assessmentModule from "./assess-v1-38-factory-independence.js"
 import { readFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
 import { produceLeagueResponse, wrapLeagueProbeProvider, verifyRetainedLeagueProbeInvocations } from "./lib/v1-38-league-response-runtime.js"
@@ -45,6 +46,41 @@ vi.mock("node:fs", async (importOriginal) => {
 })
 afterEach(() => { descriptorSyncFailure.active = false; descriptorSyncFailure.error = null; vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 const temporary = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-command-test-"))); directories.push(directory); return directory }
+
+it("lean import authenticates one selected assessment for two candidate closures without changing legacy roots", async () => {
+  const first = await importedCandidateFixture(1), second = await importedCandidateFixture(3), repository = first.factoryRepository
+  for (const name of readdirSync(second.factoryRepository.directory)) {
+    if (!name.startsWith("factory-artifact-")) continue
+    const destination = join(repository.directory, name)
+    if (!readdirSync(repository.directory).includes(name)) copyFileSync(join(second.factoryRepository.directory, name), destination)
+  }
+  for (const fixture of [first, second]) {
+    recordFactoryAttemptStart(repository, fixture.input.attemptStart)
+    publishFactoryAttemptTerminal(repository, fixture.input.attemptStart, fixture.input.attemptTerminal)
+  }
+  const read = (artifactRoot: typeof first.input.assessmentArtifactRoot) => JSON.parse(new TextDecoder().decode(readFactoryArtifact(repository, artifactRoot))) as Record<string, any>
+  const priorThreshold = read(first.candidateAdmission.importEvidence!.thresholdArtifactRoot)
+  const sourceRoots = [...priorThreshold.sourceRoots]
+  sourceRoots[2] = second.candidateAdmission.candidate.proposal.source.root
+  const { root: _oldThresholdRoot, ...thresholdBody } = priorThreshold
+  const newThresholdBody = { ...thresholdBody, sourceRoots }
+  const thresholdArtifactRoot = first.put({ ...newThresholdBody, root: labRoot("factory-numeric-threshold-v1", newThresholdBody) })
+  const priorAssessment = read(first.input.assessmentArtifactRoot)
+  const { root: _oldAssessmentRoot, ...assessmentBody } = priorAssessment
+  const joined = { ...assessmentBody, thresholdArtifactRoot, input: { ...assessmentBody.input, candidateArtifactRoots: [first.input.publicationArtifactRoot, second.input.publicationArtifactRoot], supervisionArtifactRoots: [first.input.supervisionArtifactRoot, second.input.supervisionArtifactRoot], terminalRoots: [first.input.attemptTerminal.root, second.input.attemptTerminal.root] } }
+  const assessmentRoot = labRoot("factory-independence-assessment-v1", joined), assessmentArtifactRoot = first.put({ ...joined, root: assessmentRoot })
+  const verifier = vi.spyOn(assessmentModule, "verifyHistoricalFactoryAssessmentForLeague").mockReturnValue({ status: "affirmed", reasons: [], assessmentRoot, assessmentArtifactRoot: null, thresholdArtifactRoot, manifestRoot: joined.manifestRoot, allocationRoot: joined.allocationRoot, issued: false, historicalProducerImplementationRoot: assessmentRoot, historicalAssessmentImplementationRoot: assessmentRoot, currentReaderImplementationRoot: assessmentRoot })
+  const selection = { initialCandidatePublicationRoots: [first.input.publicationArtifactRoot, second.input.publicationArtifactRoot], factoryAssessmentArtifactRoots: [assessmentArtifactRoot], operations: { maxArtifactBytes: 64 * 1024 * 1024, maxArtifactRecords: 50_000 } }
+  const oldCandidates = readLeagueInitialCandidates(repository, selection)
+  expect(verifier).toHaveBeenCalledTimes(3)
+  verifier.mockClear()
+  const leanCandidates = readLeanPilotInitialCandidates(repository, selection)
+  expect(verifier).toHaveBeenCalledTimes(1)
+  expect(leanCandidates.map((candidate) => candidate.admission.root)).toEqual(oldCandidates.map((candidate) => candidate.admission.root))
+  for (const candidate of leanCandidates) expect(candidate.importedAssessment!.verifyRetainedAssessment(repository, assessmentArtifactRoot).assessmentRoot).toBe(assessmentRoot)
+  expect(verifier).toHaveBeenCalledTimes(1)
+  expect(() => leanCandidates[0]!.importedAssessment!.verifyRetainedAssessment(second.factoryRepository, assessmentArtifactRoot)).toThrow("CANDIDATE_ASSESSMENT")
+}, 60000)
 
 it.each(["authoring-append", "validation-publication", "selected-validation", "validated-before-charge"])("host response receipt V3 retains honest zero-charge produced author failure (%s)", async (stage) => {
   const candidates = [await candidate(1), await candidate(3), await candidate(5)], factoryDirectory = realpathSync(mkdtempSync(join(tmpdir(), "factory-retained-v3-"))), league = createLeagueRepository(temporary()), input = prospectiveLifetimeFixture()

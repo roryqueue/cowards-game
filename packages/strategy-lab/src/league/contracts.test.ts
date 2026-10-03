@@ -99,6 +99,7 @@ describe("private league contracts", () => {
   it("imports finalized packet-reserved evidence without rewriting unresolved historical terminals", async () => {
     const fixture = await importedCandidateFixture(1), original = JSON.stringify(fixture.input.attemptTerminal)
     expect(fixture.candidateAdmission.importEvidence).toMatchObject({ sourceSlot: "S01", qualification: "base_distinct" })
+    expect(importAssessedFactoryCandidate({ ...fixture.input, boundedSupervision: true }).root).toBe(fixture.candidateAdmission.root)
     expect(fixture.candidateAdmission.attemptTerminal.disposition).toBe("unresolved")
     expect(() => importAssessedFactoryCandidate({ ...fixture.input, verifyRetainedAssessment: () => ({ status: "unresolved", assessmentRoot: root("a"), thresholdArtifactRoot: null }) })).toThrow("IMPORT_ASSESSMENT")
     expect(() => importAssessedFactoryCandidate({ ...fixture.input, publicationArtifactRoot: root("b") })).toThrow("IMPORT_MEMBERSHIP")
