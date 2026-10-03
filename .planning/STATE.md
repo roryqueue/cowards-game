@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 host receipt source truths4/4 verified with historical prohibition flag; distinctfreshV12 preparation next
+stopped_at: Phase265 V12 inert helper review found2 technical issues; bounded helperfix before anymode
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: Hostreceipt4/4 sourceverified, actualgate750tests/all8pass; historicalDockeroutcome flag preserved, no newdecision; freshV12 data-only preparation next
+last_activity_desc: V12helpers strict/importinertpass; independentreview CR01embedded-vs-reviewedrequestjoin BLOCKER/WR01contextpath guard; no mode/allocation/Match
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,21 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+FreshV12 inerthelpers drafted by265_host_receipt_v12_helper_prepare,
+strict2-helper/import-inert checks pass, noCLI mode/output/allocation/capacity/
+Match. Independentreviewer265_host_receipt_v12_helper_review finds2technical
+issues: CR-01BLOCKER compile checks reviewedstandalonejobs butpublishes
+uncheckedembeddedjobs; WR-01WARNING earlycontextabsence check omitsactual
+model-role suffix (laterproductionpreflight stilldeniesreuse). Helpergate
+issues_found, NOmodeinvocation admitted. Preserveoriginalreview inGit,
+boundedsource-onlyfix+negativeguardregressions thenexactnew-byteindependent
+re-review next. No newhumanproduct/resourcechoice; allfrozenboundsunchanged.
+Currentproductionclosure9ff/552bba3d/defe5024 and8-commandgate stayaccepted/
+unchanged; theseareignoredprivatewrapperfixes, not production-sourcechanges.
+Noactive agent/gate/entry/verifier. V11andconsumedhistoryimmutable, holdout
+unopened, formation/public/counting/production absent, allLEAGpending.
+Previoussource/freshpreparation-next notesbelowhistory.
 
 Host-receipt scopedsource cycle COMPLETEWITHFLAG: independent sourceverifier
 265_host_receipt_source_verify recomputed858entry552bba3d/defe5024, checked
