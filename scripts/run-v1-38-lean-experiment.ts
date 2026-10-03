@@ -94,6 +94,28 @@ export const assessLeanPrefixCapacity = (m: { childRss: number; parentRss: numbe
 export const admitLeanChildRelease = (entry: LeanChildEntryV2, token: string, pid: number, parentPid: number): void => {
   if (!/^[a-f0-9]{64}$/u.test(token) || entry.parentPid !== parentPid || entry.childPid !== pid || leanBytesRoot(Buffer.from(token, "hex")) !== entry.handshakeRoot) return fail("HANDSHAKE")
 }
+/** The observing parent is part of the child's work authority for the whole
+ * interval, not just the release handshake. A lost IPC channel closes every
+ * currently owned provider before the child exits without a success terminal. */
+export const createLeanParentObservationGuard = (parentPid: number, observedPid = () => process.ppid, connected = () => process.connected) => {
+  let lost = false
+  const providers = new Set<Pick<FactorySupervisionProvider, "close">>()
+  const disconnect = () => {
+    if (lost) return
+    lost = true
+    for (const provider of providers) { try { provider.close() } catch { /* loss remains fatal */ } }
+    providers.clear()
+  }
+  const assert = () => {
+    if (lost || !connected() || observedPid() !== parentPid) { disconnect(); return fail("PARENT_LOST") }
+  }
+  return {
+    assert,
+    disconnect,
+    register(provider: Pick<FactorySupervisionProvider, "close">) { assert(); providers.add(provider) },
+    unregister(provider: Pick<FactorySupervisionProvider, "close">) { providers.delete(provider) },
+  }
+}
 export const assertLeanEntryBinding = (entry: LeanChildEntryV2, observed: { head: string; sourceRoot: LabRoot; requestBytesRoot: LabRoot; allocationRoot: LabRoot; parentPid: number; childPid: number; intervalStartMs: number }): void => {
   if (!exactLabKeys(observed, ["head", "sourceRoot", "requestBytesRoot", "allocationRoot", "parentPid", "childPid", "intervalStartMs"]) || entry.head !== observed.head || entry.sourceRoot !== observed.sourceRoot || entry.requestBytesRoot !== observed.requestBytesRoot || entry.allocationRoot !== observed.allocationRoot || entry.parentPid !== observed.parentPid || entry.childPid !== observed.childPid || entry.wallStartMs !== observed.intervalStartMs) return fail("ENTRY")
 }
@@ -150,8 +172,13 @@ const runLeanPilotBody = async (requestPath: string) => {
   if (leanBytesRoot(committed) !== leanBytesRoot(readFileSync(resolve(ALLOCATION))) || leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(ledger.allocation))) return fail("UNCOMMITTED_ALLOCATION")
   const entry = readLeanChildEntry(ledger), head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim()
   assertLeanEntryBinding(entry, { head, sourceRoot: request.sourceRoot, requestBytesRoot: leanBytesRoot(readLeanSafeFile(requestPath)), allocationRoot: ledger.allocation.root, parentPid: process.ppid, childPid: process.pid, intervalStartMs: readLeanTimeAccounting(ledger).starts.get("pilot-entry") ?? -1 })
+  const parent = createLeanParentObservationGuard(entry.parentPid)
+  const onDisconnect = () => { parent.disconnect(); process.exit(1) }
+  process.once("disconnect", onDisconnect)
+  try {
+  parent.assert()
   let bufferHighWater = assertLeanPrefixCapacity(ledger), maximumCellMs = 0, maximumCellPhysicalBytes = 0, clean = true
-  const trackBuffer = () => { bufferHighWater = Math.max(bufferHighWater, assertLeanPrefixCapacity(ledger)) }
+  const trackBuffer = () => { parent.assert(); bufferHighWater = Math.max(bufferHighWater, assertLeanPrefixCapacity(ledger)) }
   const candidates = readCandidates(request, trackBuffer)
   trackBuffer()
   if (labRoot("lean-candidates", candidates.map(c => c.admission.candidate.root)) !== labRoot("lean-candidates", ledger.allocation.candidateRoots)) return fail("CANDIDATE_JOIN")
@@ -160,6 +187,7 @@ const runLeanPilotBody = async (requestPath: string) => {
     if (freeBytes > BigInt(Number.MAX_SAFE_INTEGER)) return fail("CAPACITY_RANGE")
     trackBuffer()
     checkpointLeanResources(ledger, Math.max(currentLeanElapsedMs(ledger), LEAN_FAILED_PREFIX.elapsedUpperBoundMs + Math.ceil(performance.now() - began)), bufferHighWater, LEAN_EXTERNAL_SCRATCH_RESERVE)
+    parent.assert()
     const charge = chargeLeanSlot(ledger, slot, { freeBytes: Number(freeBytes), availableMemoryBytes: observeLeagueAvailableMemoryBytes() })
     const cellBegan = performance.now(), opened: FactorySupervisionProvider[] = []
     let cleanupComplete = true, actual: LabMatchExecution
@@ -169,11 +197,12 @@ const runLeanPilotBody = async (requestPath: string) => {
       const bottomPlayerId = `lean-${side[0]!.admission.candidate.root.slice(7)}`, topPlayerId = `lean-${side[1]!.admission.candidate.root.slice(7)}`
       const scenario = createSetScenarioV137({ arenaCatalogVersion: CANONICAL_ARENA_CATALOG_V1_37.catalogVersion, arenaSemanticGeometryHash: slot.arenaHash, entrantA: { entrantKey: candidates[0]!.admission.candidate.root, playerId: `lean-${candidates[0]!.admission.candidate.root.slice(7)}` }, entrantB: { entrantKey: candidates[1]!.admission.candidate.root, playerId: `lean-${candidates[1]!.admission.candidate.root.slice(7)}` }, baseSeed: request.seed })
       const condition = scenario.conditions[slot.condition]!
-      const bottom = nativeLeanProvider(ledger, charge, side[0]!, "bottom", trackBuffer, cellBegan); opened.push(bottom)
-      const top = nativeLeanProvider(ledger, charge, side[1]!, "top", trackBuffer, cellBegan); opened.push(top)
+      trackBuffer(); const bottom = nativeLeanProvider(ledger, charge, side[0]!, "bottom", trackBuffer, cellBegan); opened.push(bottom); parent.register(bottom)
+      trackBuffer(); const top = nativeLeanProvider(ledger, charge, side[1]!, "top", trackBuffer, cellBegan); opened.push(top); parent.register(top)
       actual = await runCanonicalLabMatch({ match: { matchId: `lean-${charge.root.slice(7, 31)}`, seed: condition.baseSeed, arenaVariant: arena, bottomPlayerId, topPlayerId, initialInitiativePlayerId: condition.initialInitiativePlayerId, bottomStrategyRevisionId: bottom.identity.revisionId, topStrategyRevisionId: top.identity.revisionId }, providers: { [bottomPlayerId]: bottom, [topPlayerId]: top } })
     } catch { actual = { kind: "failure", privacy: "private_offline", unchangedState: null, transitions: [], accounting: [], failure: { classification: "system_failure", code: "LEAN_SUPERVISOR_FAILURE" } } }
-    finally { for (const p of opened) { try { const closed = p.close(); cleanupComplete = cleanupComplete && closed.cleanupComplete && !closed.orphanedChild } catch { cleanupComplete = false } } }
+    finally { for (const p of opened) { parent.unregister(p); try { const closed = p.close(); cleanupComplete = cleanupComplete && closed.cleanupComplete && !closed.orphanedChild } catch { cleanupComplete = false } } }
+    parent.assert()
     const elapsedMs = Math.ceil(performance.now() - cellBegan), bottom = slot.condition < 2 ? candidates[0]! : candidates[1]!
     const record = compactExecution(actual, elapsedMs, cleanupComplete, `lean-${bottom.admission.candidate.root.slice(7)}`)
     function* replayFrames() {
@@ -194,19 +223,22 @@ const runLeanPilotBody = async (requestPath: string) => {
   const verified = verifyLeanEvidence(ledger)
   const result = { schemaVersion: "lean-pilot-result-v2", issued: false, evidenceClass: "feasibility_only", allocationRoot: ledger.allocation.root, sourceRoot: request.sourceRoot, head, evidenceRoot: verified.root, charged: verified.charged, successful: verified.records.filter(r => r.status === "success").length, tier: "pending_independent_verification", maximumCellMs, maximumCellPhysicalBytes, elapsedMs: verified.elapsedMs, physicalHighWaterBytes: verified.physicalHighWaterBytes, scratchHighWaterBytes: verified.scratchHighWaterBytes }
   exclusive(join(STORE, "result.json"), result); return result
+  } finally { process.off("disconnect", onDisconnect) }
 }
 /** The hidden child mode has no work authority until the one-use parent IPC
  * release matches its create-exclusive entry. An ordinary CLI call cannot
  * supply `process.send` or forge the child PID/parent PID binding. */
 export const runLeanPilotChild = async (requestPath: string) => {
-  if (!process.send) return fail("CHILD_PARENT")
+  if (!process.send || !process.connected) return fail("CHILD_PARENT")
   const token = await new Promise<string>((resolveToken, reject) => {
     const timer = setTimeout(() => reject(new TypeError("LEAN_PILOT_HANDSHAKE")), 30_000)
+    process.once("disconnect", () => { clearTimeout(timer); reject(new TypeError("LEAN_PILOT_PARENT_LOST")) })
     process.once("message", message => { clearTimeout(timer); if (!message || typeof message !== "object" || !exactLabKeys(message, ["release"]) || typeof message.release !== "string") { reject(new TypeError("LEAN_PILOT_HANDSHAKE")); return }; resolveToken(message.release) })
     process.send!({ ready: process.pid })
   })
   const ledger = openLeanLedger(STORE), entry = readLeanChildEntry(ledger)
   admitLeanChildRelease(entry, token, process.pid, process.ppid)
+  if (!process.connected) return fail("PARENT_LOST")
   if (!readLeanTimeAccounting(ledger).active) return fail("HANDSHAKE")
   return runLeanPilotBody(requestPath)
 }

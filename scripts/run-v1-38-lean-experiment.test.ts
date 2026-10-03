@@ -2,7 +2,7 @@ import { expect, it } from "vitest"
 import { mkdtempSync, realpathSync, rmSync, mkdirSync, writeFileSync, symlinkSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult, assessLeanPrefixCapacity, admitLeanChildRelease, assertLeanEntryBinding } from "./run-v1-38-lean-experiment.js"
+import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult, assessLeanPrefixCapacity, admitLeanChildRelease, assertLeanEntryBinding, createLeanParentObservationGuard } from "./run-v1-38-lean-experiment.js"
 import { claimLeanRuntimeAuthority, issueLeanRuntimeAuthority, deriveLeanCandidateRuntime } from "./lib/v1-38-lean-experiment-authority.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../packages/strategy-lab/src/factory/contracts.js"
 import { deriveFactoryOraclePacketRoot } from "../packages/strategy-lab/src/factory/identity.js"
@@ -23,6 +23,18 @@ it("denies forged parent handshakes without dispatch", () => {
   const token = "ab".repeat(32), entry = { parentPid: 12, childPid: 13, handshakeRoot: leanBytesRoot(Buffer.from(token, "hex")) }
   admitLeanChildRelease(entry as never, token, 13, 12)
   for (const [value, pid, parent] of [["cd".repeat(32), 13, 12], [token, 14, 12], [token, 13, 11], ["not-hex", 13, 12]] as const) expect(() => admitLeanChildRelease(entry as never, value, pid, parent)).toThrow("HANDSHAKE")
+})
+it("stops an in-flight cell and future charge/invoke after bound-parent loss", () => {
+  let pid = 12, connected = true, invoked = 0, charged = 0, closed = 0
+  const guard = createLeanParentObservationGuard(12, () => pid, () => connected)
+  guard.register({ close: () => { closed++; return { cleanupComplete: true, orphanedChild: false } } } as never)
+  guard.assert(); charged++; guard.assert(); invoked++
+  pid = 1; connected = false; guard.disconnect()
+  expect(closed).toBe(1)
+  expect(() => { guard.assert(); charged++ }).toThrow("PARENT_LOST")
+  expect(() => { guard.assert(); invoked++ }).toThrow("PARENT_LOST")
+  expect(charged).toBe(1); expect(invoked).toBe(1)
+  expect(() => guard.register({ close: () => { throw new Error("late provider") } } as never)).toThrow("PARENT_LOST")
 })
 it("gates the whole import prefix against joint RSS, cell reserve, elapsed and physical capacity", () => {
   const m = { childRss: 300_000_000, parentRss: 150_000_000, freeBytes: 15_000_000_000, allocatedBytes: 12_288, elapsedMs: 565_459 }
