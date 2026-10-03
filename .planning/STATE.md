@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-15 pilot79864 closed child_failed; unique terminal verification closed; source hold released for IPC repair and accounted fresh successor
+stopped_at: Plan265-15 successor source verified; fresh prospective v4 request under independent data-only review before v3 preparation
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Parent terminal SIGTERM757571ms/zerocharges verified; cumulative1323030ms; noresult/pilotcredit; IPC hang source hypothesis under bounded diagnosis
+last_activity_desc: Source35f67b8d cleanreview/sourceverification and36roottests; disjointv4request authored; no liveentry or newpilotcredit
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved lean experiment reset, 2026-10-03
+
+CURRENT SOURCE FRONTIER: human time and disk amendments are approved; there is no pending human decision. Successor source35f67b8d carries1323030ms, zero charges and a conservative114688-byte disk debit, while explicitly leaving historical peak disk/RSS unknown. IPC cleanup/disconnect is implemented; the previous child's original exception is still unknown. Root36 focusedtests/three1364-file zero-violation boundary scans/shell/diff checks pass; author types pass. Independent successor REVIEW-v2 is clean at manifest0c88f6ba/863entries, CR-01 optional-marker/mandatory-terminal error path repaired. Narrow SOURCE-VERIFICATION-v1 closes only source repair, not empirical work. Main authored the disjoint prospectivev4 request binding that exact source/review; independent data-only request review is active before v3 preparation. No empirical entry or retained verifier is active. Next identities are disjoint v3 store/allocation and v4 request, not reuse of the consumed v2 route. Standing approval covers this scope without another literal. Same15GB/eight-hour/300Match/runtime/gameplay/privacy bounds; baseline/freeze still precede formation and holdout remains unopened. All consumed artifacts/readers remain immutable. The preceding live/preparation snapshots below are history, not current instructions.
 
 ACTUAL TERMINAL: unique root79864 parent86485/child86519 CLOSEDexit1 after root intentionally sent SIGTERM to stalled owned child; parent retained child_failed terminal raw74fc7885311158e587a101fc06b7cae4b52dae6597740c150cdfaa8637c9510a, elapsedupper757571ms, zerocharges/noresult. ONE independent TERMINAL-ONLY verifier CLOSED in265-15-PILOT-ENTRY-TERMINAL-VERIFICATION-v2.md; ordinary empiricalreader NEVER invoked. Source/HEADhold released after actualclosure+uniquecheck at8961bf9b. Exactoriginalchildthrow/blockcause UNKNOWN; idleprocess and sourceCLI settingexitCode withoutclosingIPC motivate bounded source repair, not an asserted diagnosis. Currentstore20480allocatedbytes/cumulative53248; terminalconservativephysical114688, oldhistoricalpeak/RSSunknown. Time565459+757571=1323030ms mustcarry into DISTINCTfreshroute, noreset or oldallocationreuse. Allnewv2store/allocation/request/journals/terminal/report nowconsumedimmutable. Next source-only IPCterminaldiagnosis/fix plus checkedprospectivev3 successoraccounting within existingPlan265-15, no newapprovalliteral/capchange. No activeempiricalentry/verifier; sourceagents maywork. Baseline265-16/freeze266/formation/holdout remainunstarted/gated. Earlier live79864 snapshot belowhistorical.
 
