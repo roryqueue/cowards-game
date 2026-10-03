@@ -27,7 +27,7 @@ import { SUBPROCESS_SYSTEM_FAILURE_CODES } from "../packages/runtime-js/src/subp
 import type { FactorySupervisionProvider } from "../packages/strategy-lab/src/factory/admission.js"
 import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-runtime.js"
 import { factoryAssessmentImplementationRoot, factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
-import { verifyHistoricalFactoryAssessmentForLeague, readRetainedFactoryLedger } from "./assess-v1-38-factory-independence.js"
+import { verifyHistoricalFactoryAssessmentForLeague, readLeanFactoryInventoryNames, readRetainedFactoryLedger } from "./assess-v1-38-factory-independence.js"
 import { readFactorySupervisionArtifactRecords, readFactorySupervisionArtifactRecordsBounded } from "../packages/strategy-lab/src/factory/supervision-artifacts.js"
 import { preflightLeagueAuthoring, verifyRetainedLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
 import { wrapLeagueProbeProvider, produceLeagueResponse, verifyRetainedLeagueResponse, verifyRetainedLeagueProbeInvocations, verifyRetainedV3ResponseProvider, enumerateLeagueResponseConditions, type LeagueProbeProvider, type LeagueResponseProviderSource } from "./lib/v1-38-league-response-runtime.js"
@@ -275,10 +275,10 @@ export interface LeagueCandidateInput extends LeaguePortfolioCandidate { readonl
 /** Data-only selection has no execution/allocation authority. This lets the
  * same reader derive original evidence before the amendment/allocation DAG. */
 export type LeagueInitialCandidateSelection = Pick<LeagueExecutionAllocation, "initialCandidatePublicationRoots" | "factoryAssessmentArtifactRoots"> & { readonly operations: Pick<LeagueExecutionAllocation["operations"], "maxArtifactBytes" | "maxArtifactRecords"> }
-const indexFactory = (repository: FactoryRepository, allocation: LeagueInitialCandidateSelection, beforeAllocation?: (reserveBytes: number) => void) => {
+const indexFactory = (repository: FactoryRepository, allocation: LeagueInitialCandidateSelection, beforeAllocation?: (reserveBytes: number) => void, leanNames?: readonly string[]) => {
   const byRoot = new Map<LabRoot, LabRoot>(); let bytes = 0, records = 0
   beforeAllocation?.(allocation.operations.maxArtifactRecords * 512 + 64 * 1024 * 1024)
-  for (const name of readdirSync(repository.directory).sort()) {
+  for (const name of leanNames ?? readdirSync(repository.directory).sort()) {
     const match = /^factory-artifact-([a-f0-9]{64})\.bin$/u.exec(name); if (!match) continue
     const artifactRoot = `sha256:${match[1]}` as LabRoot, raw = readFactoryArtifact(repository, artifactRoot)
     if ((bytes += raw.length) > allocation.operations.maxArtifactBytes || ++records > allocation.operations.maxArtifactRecords) return fail("FACTORY_READ_BUDGET")
@@ -291,7 +291,8 @@ const readInitialCandidates = (repository: FactoryRepository, allocation: League
   const prospective = "schemaVersion" in allocation && isProspectiveLeagueExecutionAllocation(allocation) ? admitLeagueExecutionAllocation(allocation) as ProspectiveLeagueExecutionAllocation : null
   const importMaxBytes = lean ? Math.min(allocation.operations.maxArtifactBytes, 64 * 1024 * 1024) : allocation.operations.maxArtifactBytes
   const importMaxRecords = lean ? Math.min(allocation.operations.maxArtifactRecords, 50_000) : allocation.operations.maxArtifactRecords
-  const index = indexFactory(repository, allocation, lean?.beforeAllocation), ledger = readRetainedFactoryLedger(repository)
+  const leanNames = lean ? readLeanFactoryInventoryNames(repository, allocation.operations.maxArtifactRecords, lean.beforeAllocation) : undefined
+  const index = indexFactory(repository, allocation, lean?.beforeAllocation, leanNames), ledger = readRetainedFactoryLedger(repository, leanNames)
   // A verifier closure is created only after complete historical re-assessment.
   // It is bound to this repository and exact root; candidate import still
   // reopens publication, threshold, receipt, source and closure evidence.

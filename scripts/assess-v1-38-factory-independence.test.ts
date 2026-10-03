@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { assessFactoryIndependence, boundedFactoryProjectionCharge, decideFactoryIndependence, factoryWorkloadResourceViolations, LEAN_FACTORY_PROJECTION_CEILING_BYTES, readRetainedFactoryLedger, verifyRetainedFactoryAssessment, verifyHistoricalFactoryAssessmentForLeague } from "./assess-v1-38-factory-independence.js"
+import { assessFactoryIndependence, boundedFactoryProjectionCharge, decideFactoryIndependence, factoryWorkloadResourceViolations, LEAN_FACTORY_PROJECTION_CEILING_BYTES, readLeanFactoryInventoryNames, readRetainedFactoryLedger, verifyRetainedFactoryAssessment, verifyHistoricalFactoryAssessmentForLeague } from "./assess-v1-38-factory-independence.js"
 import { readFactoryCanonicalRecord } from "./v1-38-factory-fresh-evidence.js"
 import { NUMERIC_DIMENSIONS, type NumericComparison, type NumericControlTable } from "../packages/strategy-lab/src/factory/numeric-calibration.js"
 import { createFactoryRepository, recordFactoryAttemptStart, publishFactoryAttemptTerminal, publishFactoryArtifact, resumeFactoryAttemptInventory } from "../packages/strategy-lab/src/factory/repository.js"
@@ -24,6 +24,13 @@ const score = (n: number): NumericComparison => ({ dimensions: Object.fromEntrie
 const controls: NumericControlTable = { "S01/S02":score(.9), "S03/S04":score(.95), "S05/S06":score(.9), "S01/S07":score(.7), "S01/S08":score(.3), "S11/S12":score(.7) }
 const edges = {"S01/S03":score(.1),"S01/S05":score(.2),"S03/S05":score(.25)}
 describe("finite factory independence decision", () => {
+  it("denies over-48 lean attempt filenames before parsing malformed bodies", () => {
+    const repository = store()
+    for (let ordinal = 0; ordinal < 49; ordinal++) writeFileSync(join(repository.directory, `factory-attempt-${ordinal.toString(16).padStart(64, "0")}.started.json`), "not canonical JSON")
+    let reserved = 0
+    expect(() => readLeanFactoryInventoryNames(repository, 200_000, () => { reserved++ })).toThrow("EXTRA_ATTEMPTS")
+    expect(reserved).toBe(1)
+  })
   it("reopens a complete synthetic 48-cell historical assessment in ordinary and bounded modes", async () => {
     const fixture = await createCompleteHistoricalFactoryFixture(); directories.push(fixture.directory)
     expect(fixture.input.terminalRoots).toHaveLength(48)

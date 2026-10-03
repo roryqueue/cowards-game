@@ -1,4 +1,4 @@
-import { lstatSync, readdirSync, readFileSync } from "node:fs"
+import { lstatSync, opendirSync, readdirSync, readFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
@@ -42,8 +42,33 @@ export const decideFactoryIndependence = (controls: NumericControlTable, baseEdg
 }
 
 /** No recovery or writes: uncertain starts fail instead of being repaired by verification. */
-export const readRetainedFactoryLedger = (repository: FactoryRepository) => {
-  const names = readdirSync(repository.directory).sort()
+/** Lean-only filename preflight. The iterator stops before an oversized
+ * directory can be sorted or any attempt body can be parsed. Legacy readers
+ * retain their original inventory and root semantics. */
+export const readLeanFactoryInventoryNames = (repository: FactoryRepository, maxArtifactRecords: number, beforeAllocation?: (reserveBytes: number) => void): readonly string[] => {
+  if (!Number.isSafeInteger(maxArtifactRecords) || maxArtifactRecords < 1 || maxArtifactRecords > 200_000) return fail("IMPORT_INVENTORY_LIMIT")
+  const maximumNames = maxArtifactRecords + 96
+  beforeAllocation?.(maximumNames * 512 + 64 * 1024 * 1024)
+  const directory = opendirSync(repository.directory), names: string[] = []
+  let starts = 0, terminals = 0, artifacts = 0
+  try {
+    for (let entry = directory.readSync(); entry !== null; entry = directory.readSync()) {
+      const name = entry.name
+      if (++artifacts > maximumNames || !entry.isFile()) return fail("IMPORT_INVENTORY_LIMIT")
+      if (/^factory-attempt-[a-f0-9]{64}\.started\.json$/u.test(name)) starts++
+      else if (/^factory-attempt-[a-f0-9]{64}\.terminal\.json$/u.test(name)) terminals++
+      else if (!/^factory-artifact-[a-f0-9]{64}\.bin$/u.test(name)) return fail("LEDGER_INVENTORY")
+      if (starts > 48 || terminals > 48) return fail("EXTRA_ATTEMPTS")
+      names.push(name)
+    }
+  } finally { directory.closeSync() }
+  if (starts !== 48 || terminals !== 48) return fail("IMPORT_ATTEMPT_COUNT")
+  const listed = new Set(names)
+  for (const name of names) if (name.endsWith(".started.json") && !listed.has(name.replace(".started.json", ".terminal.json"))) return fail("UNCERTAIN_START")
+  return names.sort()
+}
+export const readRetainedFactoryLedger = (repository: FactoryRepository, leanNames?: readonly string[]) => {
+  const names = leanNames ?? readdirSync(repository.directory).sort()
   const read = (name: string) => {
     const path = join(repository.directory,name), stat = lstatSync(path)
     if (!stat.isFile() || stat.size > 262144) return fail("LEDGER_FILE")
@@ -104,7 +129,7 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
   const correction = options.correctionArtifactRoot && !historicalImport ? readFactoryAssessmentCorrection(repository,options.correctionArtifactRoot,{...input,windowTerminalArtifactRoot:input.windowTerminalArtifactRoot??null}) : undefined
   const evidence = historicalImport ? readHistoricalFactoryExecutionEvidence(repository,input.executionEvidenceArtifactRoot,fresh,historicalImport).evidence : readFactoryExecutionEvidence(repository,input.executionEvidenceArtifactRoot,fresh,correction)
   const correctionBinding = options.correctionArtifactRoot ? {correctionArtifactRoot:options.correctionArtifactRoot} : {}
-  const ledger = readRetainedFactoryLedger(repository)
+  const ledger = options.boundedImport ? readRetainedFactoryLedger(repository, readLeanFactoryInventoryNames(repository, 200_000, options.beforeAllocation)) : readRetainedFactoryLedger(repository)
   if (ledger.ledgerRoot !== input.ledgerRoot) return fail("LEDGER_ROOT")
   if (ledger.entries.length > 48) return fail("EXTRA_ATTEMPTS")
   if (ledger.entries.length !== 48) reasons.push("incomplete_48_cells")
