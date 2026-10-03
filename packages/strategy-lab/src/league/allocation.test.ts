@@ -52,7 +52,7 @@ export const prospectiveLifetimeFixture = () => {
 }
 const prospectiveHostReceiptFixture = () => {
   const input = prospectiveLifetimeFixture(), { root: _root, schemaVersion: _schema, ...amendment } = input.amendment
-  const policy = { ...amendment.policy, operations: { ...amendment.policy.operations, hostResponseReceiptMilliseconds: 5000 } }
+  const policy = { ...amendment.policy, operations: { ...amendment.policy.operations, hostResponseReceiptMilliseconds: 5000 as const } }
   return { ...input, operations: policy.operations, amendment: allocationApi.createLeagueProspectiveAmendmentV3({ ...amendment, policy, lifetimeApproval: "265-PROSPECTIVE-LIFETIME-APPROVAL-20261002", hostReceiptApproval: "265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002" }) }
 }
 describe("prospective host response receipt", () => {

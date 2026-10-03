@@ -192,7 +192,6 @@ export const admitLeagueProspectiveAmendmentV2 = (value: unknown): LeagueProspec
 }
 export type ProspectiveLeagueExecutionAllocationV2Input = Omit<ProspectiveLeagueExecutionAllocationInput, "amendment"> & { readonly amendment: LeagueProspectiveAmendmentV2 }
 export type ProspectiveLeagueExecutionAllocationV2 = Readonly<ProspectiveLeagueExecutionAllocationV2Input & { schemaVersion: "league-prospective-execution-allocation-v2"; root: LabRoot }>
-export type AnyProspectiveLeagueExecutionAllocation = ProspectiveLeagueExecutionAllocation | ProspectiveLeagueExecutionAllocationV2
 export const createProspectiveLeagueExecutionAllocationV2 = (input: ProspectiveLeagueExecutionAllocationV2Input): ProspectiveLeagueExecutionAllocationV2 => {
   boundedDocument(input, [...keys, "amendment", "participantRoles"])
   const amendment = admitLeagueProspectiveAmendmentV2(input.amendment)
@@ -208,12 +207,68 @@ export const admitProspectiveLeagueExecutionAllocationV2 = (value: unknown): Pro
   if (root !== admitted.root || schemaVersion !== admitted.schemaVersion) fail("PROSPECTIVE_IDENTITY")
   return admitted
 }
-export const isProspectiveLeagueExecutionAllocation = (value: unknown): value is AnyProspectiveLeagueExecutionAllocation => value !== null && typeof value === "object" && "schemaVersion" in value && (value.schemaVersion === "league-prospective-execution-allocation-v1" || value.schemaVersion === "league-prospective-execution-allocation-v2")
-export const admitAnyLeagueExecutionAllocation = (value: unknown): AdmittedLeagueExecutionAllocation => {
+/** Prospective host-receipt successor; its sole policy delta from V2 is the separately approved outer receipt wait. */
+export const LEAGUE_APPROVED_PROSPECTIVE_POLICY_V3 = freezeLabValue({
+  ...LEAGUE_APPROVED_PROSPECTIVE_POLICY_V2,
+  operations: { ...LEAGUE_APPROVED_PROSPECTIVE_POLICY_V2.operations, hostResponseReceiptMilliseconds: 5000 as const },
+})
+export type LeagueProspectiveAmendmentV3Input = Omit<LeagueProspectiveAmendmentInput, "policy"> & {
+  readonly lifetimeApproval: "265-PROSPECTIVE-LIFETIME-APPROVAL-20261002"
+  readonly hostReceiptApproval: "265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002"
+  readonly policy: typeof LEAGUE_APPROVED_PROSPECTIVE_POLICY_V3
+}
+export type LeagueProspectiveAmendmentV3 = Readonly<LeagueProspectiveAmendmentV3Input & { schemaVersion: "league-prospective-measurement-amendment-v3"; root: LabRoot }>
+export const createLeagueProspectiveAmendmentV3 = (input: LeagueProspectiveAmendmentV3Input): LeagueProspectiveAmendmentV3 => {
+  boundedDocument(input, [...amendmentKeys, "lifetimeApproval", "hostReceiptApproval"])
+  if (input.lifetimeApproval !== "265-PROSPECTIVE-LIFETIME-APPROVAL-20261002" || input.hostReceiptApproval !== "265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002" || !equal(input.policy, LEAGUE_APPROVED_PROSPECTIVE_POLICY_V3)) fail("PROSPECTIVE_POLICY")
+  const { hostReceiptApproval: _hostReceiptApproval, ...lifetimeInput } = input
+  const { hostResponseReceiptMilliseconds: _hostReceipt, ...lifetimeOperations } = input.policy.operations
+  createLeagueProspectiveAmendmentV2({ ...lifetimeInput, policy: { ...input.policy, operations: lifetimeOperations } })
+  const value = { schemaVersion: "league-prospective-measurement-amendment-v3" as const, ...input }
+  return freezeLabValue({ ...value, root: labRoot(value.schemaVersion, value) })
+}
+export const admitLeagueProspectiveAmendmentV3 = (value: unknown): LeagueProspectiveAmendmentV3 => {
+  boundedDocument(value, ["schemaVersion", "root", ...amendmentKeys, "lifetimeApproval", "hostReceiptApproval"])
+  const { root, schemaVersion, ...body } = value as LeagueProspectiveAmendmentV3, admitted = createLeagueProspectiveAmendmentV3(body)
+  if (root !== admitted.root || schemaVersion !== admitted.schemaVersion) fail("PROSPECTIVE_IDENTITY")
+  return admitted
+}
+export type ProspectiveLeagueExecutionAllocationV3Input = Omit<ProspectiveLeagueExecutionAllocationV2Input, "operations" | "amendment"> & {
+  readonly operations: typeof LEAGUE_APPROVED_PROSPECTIVE_POLICY_V3.operations
+  readonly amendment: LeagueProspectiveAmendmentV3
+}
+export type ProspectiveLeagueExecutionAllocationV3 = Readonly<ProspectiveLeagueExecutionAllocationV3Input & { schemaVersion: "league-prospective-execution-allocation-v3"; root: LabRoot }>
+export const createProspectiveLeagueExecutionAllocationV3 = (input: ProspectiveLeagueExecutionAllocationV3Input): ProspectiveLeagueExecutionAllocationV3 => {
+  boundedDocument(input, [...keys, "amendment", "participantRoles"])
+  const amendment = admitLeagueProspectiveAmendmentV3(input.amendment)
+  if (!equal(input.operations, amendment.policy.operations)) fail("PROSPECTIVE_VECTOR")
+  const { hostResponseReceiptMilliseconds: _hostReceipt, ...lifetimeOperations } = input.operations
+  const { hostReceiptApproval: _hostReceiptApproval, root: _amendmentRoot, schemaVersion: _amendmentSchema, ...lifetimeAmendment } = amendment
+  const lifetimePolicy = { ...amendment.policy, operations: lifetimeOperations }
+  const admittedLifetimeAmendment = createLeagueProspectiveAmendmentV2({ ...lifetimeAmendment, policy: lifetimePolicy })
+  createProspectiveLeagueExecutionAllocationV2({ ...input, operations: lifetimeOperations, amendment: admittedLifetimeAmendment })
+  const value = { schemaVersion: "league-prospective-execution-allocation-v3" as const, ...input }
+  return freezeLabValue({ ...value, root: labRoot(value.schemaVersion, value) })
+}
+export const admitProspectiveLeagueExecutionAllocationV3 = (value: unknown): ProspectiveLeagueExecutionAllocationV3 => {
+  boundedDocument(value, ["schemaVersion", "root", ...keys, "amendment", "participantRoles"])
+  const { root, schemaVersion, ...body } = value as ProspectiveLeagueExecutionAllocationV3, admitted = createProspectiveLeagueExecutionAllocationV3(body)
+  if (root !== admitted.root || schemaVersion !== admitted.schemaVersion) fail("PROSPECTIVE_IDENTITY")
+  return admitted
+}
+export type AnyProspectiveLeagueExecutionAllocation = ProspectiveLeagueExecutionAllocation | ProspectiveLeagueExecutionAllocationV2 | ProspectiveLeagueExecutionAllocationV3
+export const isProspectiveLeagueExecutionAllocation = (value: unknown): value is AnyProspectiveLeagueExecutionAllocation => value !== null && typeof value === "object" && "schemaVersion" in value && (value.schemaVersion === "league-prospective-execution-allocation-v1" || value.schemaVersion === "league-prospective-execution-allocation-v2" || value.schemaVersion === "league-prospective-execution-allocation-v3")
+/** Version-aware admission for private readers that accept any prospective allocation. */
+export const admitAnyProspectiveLeagueExecutionAllocation = (value: unknown): AnyProspectiveLeagueExecutionAllocation => {
   if (value && typeof value === "object" && "schemaVersion" in value) {
     if (value.schemaVersion === "league-prospective-execution-allocation-v1") return admitProspectiveLeagueExecutionAllocation(value)
     if (value.schemaVersion === "league-prospective-execution-allocation-v2") return admitProspectiveLeagueExecutionAllocationV2(value)
+    if (value.schemaVersion === "league-prospective-execution-allocation-v3") return admitProspectiveLeagueExecutionAllocationV3(value)
   }
+  return fail("PROSPECTIVE_VERSION")
+}
+export const admitAnyLeagueExecutionAllocation = (value: unknown): AdmittedLeagueExecutionAllocation => {
+  if (value && typeof value === "object" && "schemaVersion" in value && (value.schemaVersion === "league-prospective-execution-allocation-v1" || value.schemaVersion === "league-prospective-execution-allocation-v2" || value.schemaVersion === "league-prospective-execution-allocation-v3")) return admitAnyProspectiveLeagueExecutionAllocation(value)
   return admitLeagueExecutionAllocation(value)
 }
 const admitAnyProspective = (value: unknown): AnyProspectiveLeagueExecutionAllocation => {
