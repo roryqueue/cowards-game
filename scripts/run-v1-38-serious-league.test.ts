@@ -37,6 +37,7 @@ import { runCanonicalLabMatch, type LabRuntimeEvidence } from "../packages/strat
 import { advanceLeagueRound } from "../packages/strategy-lab/src/league/psro.js"
 import * as redTeamModule from "../packages/strategy-lab/src/league/red-team.js"
 import { prepareProspectiveSeriousLeague, preflightProspectiveSeriousLeague, validateProspectiveLeagueInitialCandidates, leagueCurrentSourceIdentity, leagueEffectiveAvailableMemoryBytes, observeLeagueAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
+import { createCompleteHistoricalFactoryFixture } from "./fixtures/factory-complete-historical-assessment-fixture.js"
 
 const directories: string[] = []
 const descriptorSyncFailure = vi.hoisted(() => ({ active: false, error: null as Error | null }))
@@ -46,6 +47,21 @@ vi.mock("node:fs", async (importOriginal) => {
 })
 afterEach(() => { descriptorSyncFailure.active = false; descriptorSyncFailure.error = null; vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 const temporary = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-command-test-"))); directories.push(directory); return directory }
+
+it("imports two synthetic candidates through both genuine historical verifier paths", async () => {
+  const fixture = await createCompleteHistoricalFactoryFixture(); directories.push(fixture.directory)
+  const publicationRoots = (["S01", "S03"] as const).map(slot => fixture.candidates.find(candidate => candidate.slot === slot)!.publicationRoot)
+  const selection = { initialCandidatePublicationRoots: publicationRoots, factoryAssessmentArtifactRoots: [fixture.assessment.assessmentArtifactRoot!], operations: { maxArtifactBytes: 64 * 1024 * 1024, maxArtifactRecords: 50_000 } }
+  const ordinary = readLeagueInitialCandidates(fixture.repository, selection)
+  let reopenedCells = 0
+  const bounded = readLeanPilotInitialCandidates(fixture.repository, selection, () => { reopenedCells++ })
+  expect(reopenedCells).toBe(48)
+  expect(ordinary.map(candidate => candidate.admission.root)).toEqual(bounded.map(candidate => candidate.admission.root))
+  expect(bounded.map(candidate => candidate.admission.importEvidence?.sourceSlot)).toEqual(["S01", "S03"])
+  expect(bounded.every(candidate => candidate.admission.importEvidence?.qualification === "base_distinct")).toBe(true)
+  expect(bounded.map(candidate => candidate.admission.importEvidence?.assessmentRoot)).toEqual([fixture.assessment.assessmentRoot, fixture.assessment.assessmentRoot])
+  expect(bounded.map(candidate => candidate.admission.importEvidence?.thresholdArtifactRoot)).toEqual([fixture.assessment.thresholdArtifactRoot, fixture.assessment.thresholdArtifactRoot])
+}, 180000)
 
 it("lean import authenticates one selected assessment for two candidate closures without changing legacy roots", async () => {
   const first = await importedCandidateFixture(1), second = await importedCandidateFixture(3), repository = first.factoryRepository
@@ -69,7 +85,7 @@ it("lean import authenticates one selected assessment for two candidate closures
   const { root: _oldAssessmentRoot, ...assessmentBody } = priorAssessment
   const joined = { ...assessmentBody, thresholdArtifactRoot, input: { ...assessmentBody.input, candidateArtifactRoots: [first.input.publicationArtifactRoot, second.input.publicationArtifactRoot], supervisionArtifactRoots: [first.input.supervisionArtifactRoot, second.input.supervisionArtifactRoot], terminalRoots: [first.input.attemptTerminal.root, second.input.attemptTerminal.root] } }
   const assessmentRoot = labRoot("factory-independence-assessment-v1", joined), assessmentArtifactRoot = first.put({ ...joined, root: assessmentRoot })
-  const verifier = vi.spyOn(assessmentModule, "verifyHistoricalFactoryAssessmentForLeague").mockReturnValue({ status: "affirmed", reasons: [], assessmentRoot, assessmentArtifactRoot: null, thresholdArtifactRoot, manifestRoot: joined.manifestRoot, allocationRoot: joined.allocationRoot, issued: false, historicalProducerImplementationRoot: assessmentRoot, historicalAssessmentImplementationRoot: assessmentRoot, currentReaderImplementationRoot: assessmentRoot })
+  const verifier = vi.spyOn(assessmentModule, "verifyHistoricalFactoryAssessmentForLeague").mockReturnValue({ status: "affirmed", reasons: [], assessmentRoot, assessmentArtifactRoot: null, thresholdArtifactRoot, manifestRoot: (joined as Record<string, any>).manifestRoot, allocationRoot: (joined as Record<string, any>).allocationRoot, issued: false, historicalProducerImplementationRoot: assessmentRoot, historicalAssessmentImplementationRoot: assessmentRoot, currentReaderImplementationRoot: assessmentRoot })
   const selection = { initialCandidatePublicationRoots: [first.input.publicationArtifactRoot, second.input.publicationArtifactRoot], factoryAssessmentArtifactRoots: [assessmentArtifactRoot], operations: { maxArtifactBytes: 64 * 1024 * 1024, maxArtifactRecords: 50_000 } }
   const oldCandidates = readLeagueInitialCandidates(repository, selection)
   expect(verifier).toHaveBeenCalledTimes(3)

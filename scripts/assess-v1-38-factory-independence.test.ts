@@ -1,4 +1,4 @@
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -10,6 +10,7 @@ import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../pack
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { admitCanonicalJsonValue } from "@cowards/spec"
 import { createFactoryExecutionEvidenceFixture } from "./fixtures/factory-execution-evidence-fixture.js"
+import { createCompleteHistoricalFactoryFixture } from "./fixtures/factory-complete-historical-assessment-fixture.js"
 import { createFactoryAuthoringAllocation, type FactorySourceSlot } from "./v1-38-factory-allocation.js"
 import { FACTORY_CONTROL_BASES, type FactoryControlSlot } from "./v1-38-factory-controls.js"
 import { ingestNamedFactoryPacket } from "./ingest-v1-38-factory-packet.js"
@@ -23,6 +24,41 @@ const score = (n: number): NumericComparison => ({ dimensions: Object.fromEntrie
 const controls: NumericControlTable = { "S01/S02":score(.9), "S03/S04":score(.95), "S05/S06":score(.9), "S01/S07":score(.7), "S01/S08":score(.3), "S11/S12":score(.7) }
 const edges = {"S01/S03":score(.1),"S01/S05":score(.2),"S03/S05":score(.25)}
 describe("finite factory independence decision", () => {
+  it("reopens a complete synthetic 48-cell historical assessment in ordinary and bounded modes", async () => {
+    const fixture = await createCompleteHistoricalFactoryFixture(); directories.push(fixture.directory)
+    expect(fixture.input.terminalRoots).toHaveLength(48)
+    expect(fixture.input.pairingArtifactRoots).toHaveLength(24)
+    expect(fixture.input.candidateArtifactRoots).toHaveLength(48)
+    expect(fixture.assessment.status, JSON.stringify(fixture.assessment.reasons)).toBe("affirmed")
+    expect(fixture.assessment.thresholdArtifactRoot).toMatch(/^sha256:/u)
+    let cells = 0, reservations = 0
+    const ordinary = verifyHistoricalFactoryAssessmentForLeague(fixture.repository, fixture.assessment.assessmentArtifactRoot!)
+    const bounded = verifyHistoricalFactoryAssessmentForLeague(fixture.repository, fixture.assessment.assessmentArtifactRoot!, { boundedImport: true, beforeCell: () => { cells++ }, beforeAllocation: () => { reservations++ } })
+    expect(cells).toBe(48); expect(reservations).toBeGreaterThan(48)
+    expect(bounded).toEqual(ordinary)
+    expect(bounded).toMatchObject({ issued: false, assessmentRoot: fixture.assessment.assessmentRoot, thresholdArtifactRoot: fixture.assessment.thresholdArtifactRoot })
+    const saved = fixture.read(fixture.assessment.assessmentArtifactRoot!)
+    const { root: _savedRoot, ...body } = saved
+    const forged = (changes: Record<string, unknown>) => fixture.rooted("factory-independence-assessment-v1", { ...body, ...changes })
+    expect(() => verifyHistoricalFactoryAssessmentForLeague(fixture.repository, forged({ input: { ...fixture.input, candidateArtifactRoots: fixture.input.candidateArtifactRoots.slice(1) } }), { boundedImport: true })).toThrow()
+    expect(() => verifyHistoricalFactoryAssessmentForLeague(fixture.repository, forged({ input: { ...fixture.input, terminalRoots: fixture.input.terminalRoots.slice(1) } }), { boundedImport: true })).toThrow()
+    const threshold = fixture.read(fixture.assessment.thresholdArtifactRoot!)
+    const { root: _thresholdRoot, ...thresholdBody } = threshold
+    const falseThresholdRoot = fixture.rooted("factory-numeric-threshold-v1", { ...thresholdBody, threshold: { ...(threshold.threshold as object), distinctCeiling: 0 } })
+    expect(() => verifyHistoricalFactoryAssessmentForLeague(fixture.repository, forged({ thresholdArtifactRoot: falseThresholdRoot }), { boundedImport: true })).toThrow()
+    const corrupt = (root: LabRoot) => {
+      const path = join(fixture.directory, `factory-artifact-${root.slice(7)}.bin`), original = readFileSync(path)
+      try {
+        const changed = Buffer.from(original); changed[0] = changed[0] === 123 ? 91 : 123; writeFileSync(path, changed)
+        expect(() => verifyHistoricalFactoryAssessmentForLeague(fixture.repository, fixture.assessment.assessmentArtifactRoot!, { boundedImport: true })).toThrow()
+      } finally { writeFileSync(path, original) }
+    }
+    const descriptor = fixture.read(fixture.input.supervisionArtifactRoots[0]!), chunk = fixture.read(descriptor.tailRoot as LabRoot)
+    corrupt(chunk.bytesRoot as LabRoot)
+    corrupt(fixture.slots.S01)
+    corrupt(fixture.slots.S08)
+    expect(verifyHistoricalFactoryAssessmentForLeague(fixture.repository, fixture.assessment.assessmentArtifactRoot!, { boundedImport: true }).assessmentRoot).toBe(fixture.assessment.assessmentRoot)
+  }, 180000)
   it("charges the complete 48-cell projection set without retaining raw streams", () => {
     const cell = { evidence: { legalInputSamples: { sample: ["request.self.position.x=2"] }, chronicleSamples: {}, matchupSamples: {} }, facts: { allSoldierBrainActionsStone: false, nonStoneToStoneCount: 0 } }
     let charged = 0
