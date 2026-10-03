@@ -1,12 +1,11 @@
-import { lstatSync, opendirSync, readdirSync, readFileSync } from "node:fs"
-import { join, resolve } from "node:path"
+import { opendirSync, readdirSync } from "node:fs"
+import { resolve } from "node:path"
 import { pathToFileURL } from "node:url"
-import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
+import { admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { MATCH_KERNEL } from "../packages/engine/src/index.js"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
-import { createFactoryRepository, publishFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
+import { createFactoryRepository, publishFactoryArtifact, readFactoryAttemptStart, readFactoryAttemptTerminal, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { admitFactoryCalibrationManifest } from "../packages/strategy-lab/src/factory/calibration.js"
-import { validateFactoryAttemptStart, validateFactoryAttemptLedger } from "../packages/strategy-lab/src/factory/ledger.js"
 import { FactoryCandidateSchema } from "../packages/strategy-lab/src/factory/contracts.js"
 import { readFactorySupervisionArtifactRecords, readFactorySupervisionArtifactRecordsBounded } from "../packages/strategy-lab/src/factory/supervision-artifacts.js"
 import { compareNumericEvidence, freezeNumericCalibrationThreshold, classifyNumericComparison, type NumericCalibrationEvidence, type NumericComparison, type NumericControlTable, type NumericControlId } from "../packages/strategy-lab/src/factory/numeric-calibration.js"
@@ -69,18 +68,12 @@ export const readLeanFactoryInventoryNames = (repository: FactoryRepository, max
 }
 export const readRetainedFactoryLedger = (repository: FactoryRepository, leanNames?: readonly string[]) => {
   const names = leanNames ?? readdirSync(repository.directory).sort()
-  const read = (name: string) => {
-    const path = join(repository.directory,name), stat = lstatSync(path)
-    if (!stat.isFile() || stat.size > 262144) return fail("LEDGER_FILE")
-    const parsed = admitCanonicalJsonBytes(readFileSync(path),{profile:"canonical-manifest",operation:"require-canonical"})
-    return parsed.ok ? parsed.value : fail("LEDGER_BYTES")
-  }
   const entries = names.filter((name) => /^factory-attempt-[a-f0-9]{64}\.started\.json$/u.test(name)).map((name) => {
-    const start = validateFactoryAttemptStart(read(name))
+    const start = readFactoryAttemptStart(repository, `sha256:${name.slice("factory-attempt-".length, -".started.json".length)}` as LabRoot)
     if (name !== `factory-attempt-${start.root.slice(7)}.started.json`) return fail("LEDGER_NAME")
     const terminalName = name.replace(".started.json",".terminal.json")
     if (!names.includes(terminalName)) return fail("UNCERTAIN_START")
-    return {start,terminal:validateFactoryAttemptLedger(start,read(terminalName))}
+    return {start,terminal:readFactoryAttemptTerminal(repository,start)}
   })
   if (names.some((name) => !/^factory-artifact-[a-f0-9]{64}\.bin$/u.test(name) && !/^factory-attempt-[a-f0-9]{64}\.(started|terminal)\.json$/u.test(name)) || names.filter((name) => name.endsWith(".terminal.json")).length !== entries.length) return fail("LEDGER_INVENTORY")
   const roots = entries.map((entry) => entry.start.root)

@@ -83,7 +83,19 @@ export const createFactoryRepository = (directory: string, options: { readonly s
 export const publishFactoryArtifact = (repository: FactoryRepository, bytes: Uint8Array): LabRoot => { if (!(bytes instanceof Uint8Array) || bytes.byteLength < 1 || bytes.byteLength > CAP) return fail("ARTIFACT"); const id = root(bytes); atomic(repository, artifactName(id), bytes); return id }
 export const readFactoryArtifact = (repository: FactoryRepository, id: LabRoot): Uint8Array => { const bytes = boundedRead(join(safeDirectory(repository.directory), artifactName(id))); if (root(bytes) !== id) return fail("ARTIFACT_DIGEST"); return new Uint8Array(bytes) }
 export const recordFactoryAttemptStart = (repository: FactoryRepository, start: FactoryAttemptStart): void => { const charged = validateFactoryAttemptStart(start); atomic(repository, startName(charged.root), canonicalBytes(charged)) }
-const readStart = (repository: FactoryRepository, id: LabRoot) => validateFactoryAttemptStart(parse(boundedRead(join(safeDirectory(repository.directory), startName(id)))))
+/** Bounded descriptor reads for retained attempt files. These preserve the
+ * ordinary ledger schemas while refusing growth/replacement during opening. */
+export const readFactoryAttemptStart = (repository: FactoryRepository, id: LabRoot): FactoryAttemptStart => {
+  const start = validateFactoryAttemptStart(parse(boundedRead(join(safeDirectory(repository.directory), startName(id)))))
+  if (start.root !== id) return fail("ATTEMPT_NAME")
+  return start
+}
+export const readFactoryAttemptTerminal = (repository: FactoryRepository, start: FactoryAttemptStart): FactoryAttemptTerminal => {
+  const charged = validateFactoryAttemptStart(start)
+  const terminal = validateFactoryAttemptTerminal(parse(boundedRead(join(safeDirectory(repository.directory), terminalName(charged.root)))))
+  return validateFactoryAttemptLedger(charged, terminal)
+}
+const readStart = readFactoryAttemptStart
 export const publishFactoryAttemptTerminal = (repository: FactoryRepository, start: FactoryAttemptStart, terminal: FactoryAttemptTerminal): void => { const charged = readStart(repository, validateFactoryAttemptStart(start).root); const final = validateFactoryAttemptLedger(charged, terminal); atomic(repository, terminalName(charged.root), canonicalBytes(final), ["player_violation", "system_failure"].includes(final.disposition)) }
 export const resumeFactoryAttemptInventory = (repository: FactoryRepository) => {
   recoverTemporaryArtifacts(repository)
@@ -93,8 +105,8 @@ export const resumeFactoryAttemptInventory = (repository: FactoryRepository) => 
     if (!match) { if (!/^factory-artifact-[a-f0-9]{64}\.bin$/u.test(name)) return fail("UNKNOWN_ARTIFACT"); continue }
     const id = `sha256:${match[1]}` as LabRoot
     if (match[2] === "started") { readStart(repository, id); started.push(id); continue }
-    const charged = readStart(repository, id), terminal = validateFactoryAttemptTerminal(parse(boundedRead(join(repository.directory, name))))
-    validateFactoryAttemptLedger(charged, terminal); completed.push(id)
+    const charged = readStart(repository, id)
+    readFactoryAttemptTerminal(repository, charged); completed.push(id)
   }
   if (new Set(started).size !== started.length || new Set(completed).size !== completed.length || completed.some((id) => !started.includes(id))) return fail("DUPLICATE_OR_UNCHARGED")
   const uncertain = started.filter((id) => !completed.includes(id)); if (uncertain.length) return fail("UNCERTAIN_START_ONLY")

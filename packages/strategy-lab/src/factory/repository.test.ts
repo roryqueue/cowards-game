@@ -1,15 +1,24 @@
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { existsSync, mkdtempSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "./ledger.js"
-import { createFactoryRepository, publishFactoryArtifact, publishFactoryAttemptTerminal, readFactoryArtifact, recordFactoryAttemptStart, resumeFactoryAttemptInventory } from "./repository.js"
+import { createFactoryRepository, publishFactoryArtifact, publishFactoryAttemptTerminal, readFactoryArtifact, readFactoryAttemptStart, readFactoryAttemptTerminal, recordFactoryAttemptStart, resumeFactoryAttemptInventory } from "./repository.js"
+
+const growth = vi.hoisted(() => ({ path: null as string | null }))
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>()
+  return { ...actual, readSync: ((...args: Parameters<typeof actual.readSync>) => {
+    if (growth.path) { const path = growth.path; growth.path = null; actual.appendFileSync(path, "x") }
+    return actual.readSync(...args)
+  }) as typeof actual.readSync }
+})
 
 const r = `sha256:${"a".repeat(64)}` as const
 const dirs: string[] = []
 const repository = () => { const dir = realpathSync(mkdtempSync(join(tmpdir(), "factory-test-"))); dirs.push(dir); return createFactoryRepository(dir) }
 const start = () => createFactoryAttemptStart({ taskRoot: r, budgetRoot: r, candidateRoot: r, authoringMechanism: "automated-oracle", inputRoot: r, resourceAccountingRoot: r, retryParentRoot: null })
-afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }) })
+afterEach(() => { growth.path = null; for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }) })
 
 describe("content-addressed private factory repository", () => {
   it("gates new bytes and records before publication while identical artifacts remain idempotent", () => {
@@ -72,6 +81,34 @@ describe("content-addressed private factory repository", () => {
     const repo = repository()
     writeFileSync(join(repo.directory, `factory-artifact-${r.slice(7)}.bin`), Buffer.alloc(262_145))
     expect(() => readFactoryArtifact(repo, r)).toThrow("FACTORY_REPOSITORY_CAP")
+  })
+
+  it("bounds retained start and terminal reads if files grow after opening", () => {
+    const repo = repository(), charged = start()
+    recordFactoryAttemptStart(repo, charged)
+    const startPath = join(repo.directory, `factory-attempt-${charged.root.slice(7)}.started.json`)
+    growth.path = startPath
+    expect(() => readFactoryAttemptStart(repo, charged.root)).toThrow("FACTORY_REPOSITORY_FILE_CHANGED")
+    expect(growth.path).toBeNull()
+    const second = repository()
+    recordFactoryAttemptStart(second, charged)
+    const terminal = createFactoryAttemptTerminal({ startRoot: charged.root, disposition: "system_failure", outputRoot: null, validationRoot: r, duplicateEvidenceRoot: r, finalEvidenceRoot: r })
+    publishFactoryAttemptTerminal(second, charged, terminal)
+    const terminalPath = join(second.directory, `factory-attempt-${charged.root.slice(7)}.terminal.json`)
+    growth.path = terminalPath
+    expect(() => readFactoryAttemptTerminal(second, charged)).toThrow("FACTORY_REPOSITORY_FILE_CHANGED")
+    expect(growth.path).toBeNull()
+  })
+
+  it("rejects oversized retained attempt files before decoding", () => {
+    const repo = repository(), charged = start()
+    recordFactoryAttemptStart(repo, charged)
+    writeFileSync(join(repo.directory, `factory-attempt-${charged.root.slice(7)}.started.json`), Buffer.alloc(262_145))
+    expect(() => readFactoryAttemptStart(repo, charged.root)).toThrow("FACTORY_REPOSITORY_CAP")
+    const second = repository()
+    recordFactoryAttemptStart(second, charged)
+    writeFileSync(join(second.directory, `factory-attempt-${charged.root.slice(7)}.terminal.json`), Buffer.alloc(262_145))
+    expect(() => readFactoryAttemptTerminal(second, charged)).toThrow("FACTORY_REPOSITORY_CAP")
   })
 
   it("recovers a named interrupted temporary publication without overwriting it or blocking one terminal", () => {
