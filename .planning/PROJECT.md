@@ -2,6 +2,15 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+On2026-10-02 the human also approved exactly5000ms prospective PRIVATE host
+response-receipt allowance, separate from unchanged1000msguest and600000msMatch.
+Existing Plan265-07 bounded research/checked supplement is complete; source
+implementation/review/gates/scopedverification next, no fresh route yet.
+V11entry/uniqueverifier CLOSEDprocess-invalid, noLEAG/freezecredit. Consumed
+history immutable; holdout unopened, current-rules freeze before formation,
+no public/counted/production authority. See STATE and
+265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002.md. Older snapshots below history.
+
 The human approved the prospective private per-Match lifetime120000→600000ms
 on2026-10-02; every other bound remains unchanged. Checked Plan265-07 source
 amendment research/planning is next, before a distinct fresh allocation and
