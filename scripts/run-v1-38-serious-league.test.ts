@@ -20,10 +20,16 @@ import { claimProspectiveLeagueLifetimeAuthority } from "./lib/v1-38-league-pros
 import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRetainedSeriousLeague, verifyRetainedCellJournalBijection, LeagueConnectedSession, LeagueRecordGraph, LeagueRetentionBudget, normalizedGameplayRoot, sameLargeExecution, sameLargeResult, diagnoseLeagueExecutionStorage, seriousLeagueMain, retainedSupervisorFailureDiagnostic, type LeagueCandidateInput, type LeagueFixtureSeams } from "./run-v1-38-serious-league.js"
 import { prepareLeagueExecutionStream, readLeagueExecutionStream } from "./lib/v1-38-league-execution-stream.js"
 import { createFactoryRepository, publishFactoryArtifact, recordFactoryAttemptStart, publishFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/repository.js"
+import { readFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
 import { produceLeagueResponse, wrapLeagueProbeProvider, verifyRetainedLeagueProbeInvocations } from "./lib/v1-38-league-response-runtime.js"
 import { positiveResponseFixture } from "./lib/v1-38-league-response-runtime.test.js"
 import { executeLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
+import * as leagueAuthoring from "./lib/v1-38-league-authoring.js"
+import { ingestNamedFactoryPacket, readFactoryIngestion } from "./ingest-v1-38-factory-packet.js"
+import { declareRedTeamAllocation, startRedTeamAttempt, terminalizeRedTeamAttempt } from "../packages/strategy-lab/src/league/red-team.js"
+import { verifyRetainedProductionFailures } from "./run-v1-38-serious-league.js"
+import * as supervisionArtifacts from "../packages/strategy-lab/src/factory/supervision-artifacts.js"
 import { countLinkedResponseIterations } from "../packages/strategy-lab/src/league/selection.js"
 import { runCanonicalLabMatch, type LabRuntimeEvidence } from "../packages/strategy-lab/src/runtime-bridge.js"
 import { advanceLeagueRound } from "../packages/strategy-lab/src/league/psro.js"
@@ -38,6 +44,71 @@ vi.mock("node:fs", async (importOriginal) => {
 })
 afterEach(() => { descriptorSyncFailure.active = false; descriptorSyncFailure.error = null; vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 const temporary = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-command-test-"))); directories.push(directory); return directory }
+
+it.each(["issuance", "execution", "prefix"])("host response receipt V3 retained failed response joins every available provider (%s)", async (stage) => {
+  const candidates = [await candidate(1), await candidate(3), await candidate(5)], factoryDirectory = realpathSync(mkdtempSync(join(tmpdir(), "factory-retained-v3-"))), league = createLeagueRepository(temporary()), input = prospectiveLifetimeFixture()
+  directories.push(factoryDirectory)
+  const repository = createFactoryRepository(factoryDirectory)
+  const put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw Error("fixture canonical"); return publishFactoryArtifact(repository, encoded.canonicalBytes) }, r = (value: unknown) => labRoot("retained-v3-failure-fixture", value)
+  const { root: _root, schemaVersion: _schema, ...body } = input.amendment
+  const amendment = createLeagueProspectiveAmendmentV3({ ...body, policy: { ...body.policy, operations: { ...body.policy.operations, hostResponseReceiptMilliseconds: 5000 } }, hostReceiptApproval: "265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002", bases: body.bases.map((base, index) => ({ ...base, publicationArtifactRoot: candidates[index]!.publicationRoot, candidateAdmissionRoot: candidates[index]!.admission.root, sourceRoot: candidates[index]!.closure.sourceArtifactRoot, supervisionArtifactRoot: candidates[index]!.admission.importEvidence!.supervisionArtifactRoot })) })
+  const allocation = createProspectiveLeagueExecutionAllocationV3({ ...input, amendment, operations: amendment.policy.operations, initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, outputDirectories: { league: league.directory, responseFactory: repository.directory } }), job = allocation.rounds[0]!.jobs[0]!
+  let ledger = declareRedTeamAllocation({ phase: 265, evidenceClass: "injected_fixture", authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes })
+  ledger = startRedTeamAttempt({ ledger, channel: job.channel, roundRoot: r("round"), candidateRoot: candidates[0]!.admission.candidate.root, participantId: job.participantId, reviewerId: job.reviewerId, disclosureRoot: job.disclosureArtifactRoot, provenanceRoot: job.provenanceArtifactRoot, inputRoot: job.producerRequestArtifactRoot, retryParentRoot: null, reservation: job.reservation })
+  const start = ledger.starts[0]!, graph = new LeagueRecordGraph(league, allocation.operations), target = { roundRoot: start.roundRoot, candidateRoot: start.candidateRoot, targets: [{ seed: allocation.seedBlocks[0], target: {}, weights: [] }], candidates: candidates.map((row) => { const bytes = readFactoryArtifact(row.closure.factoryRepository, row.closure.sourceArtifactRoot); publishFactoryArtifact(repository, bytes); return { candidateRoot: row.admission.candidate.root, sourceArtifactRoot: row.closure.sourceArtifactRoot, byteLength: bytes.length } }) }
+  const synthetic = positiveResponseFixture(new Set(candidates.map((row) => row.closure.sourceArtifactRoot))), stop = Error("finite fixture stop")
+  let constructors = 0, runs = 0
+  await expect(produceLeagueResponse({ allocation, job, start, startArtifactRoot: put(start), targetArtifactRoot: put(target), remainingWallMilliseconds: allocation.operations.wallClockMilliseconds, repository, opponents: candidates.map((row) => ({ candidateRoot: row.admission.candidate.root, closure: row.closure })), threshold: { repository: candidates[0]!.factoryRepository, artifactRoot: candidates[0]!.admission.importEvidence!.thresholdArtifactRoot }, retention: graph, fixture: {
+    author: async () => {
+      const result = await ingestNamedFactoryPacket({ producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", producerInput: { split: "development", doctrineFamily: "finite-retained-v3", provider: { providerId: "source-fixture", modelId: "local", modelVersion: "test", settingsRoot: r("settings"), promptRoot: r("prompt"), contextRoot: r("context") }, build: { buildRoot: r("build"), toolchainRoot: r("toolchain") }, lineage: { predecessorRoot: LAB_ADMITTED_ROOTS.currentStartRoot, correctionRoot: null, retryParentRoot: null } } }, repository)
+      if (result.disposition !== "accepted") throw Error("fixture ingestion")
+      const ingestion = readFactoryIngestion(repository, result.artifactRoot)
+      // Author-validation is outside this focused failed-provider reader test.
+      vi.spyOn(leagueAuthoring, "verifyRetainedLeagueAuthoring").mockReturnValue({ ingestion } as never)
+      const body = { disposition: "produced" as const, allocationRoot: allocation.root, startRoot: start.root, jobId: job.id, ingestionArtifactRoot: result.artifactRoot, modelTokens: 0, elapsedMilliseconds: 0 }
+      return { disposition: body.disposition, startRoot: start.root, ingestionArtifactRoot: result.artifactRoot, modelTokens: 0, elapsedMilliseconds: 0, evidenceArtifactRoot: put({ ...body, root: labRoot("league-authoring-result-v1", body) }) }
+    }, host: { createFactorySupervisedRuntime(request) {
+      if (++constructors === (stage === "issuance" ? 2 : stage === "prefix" ? 20 : -1)) throw stop
+      const provider = synthetic.host.createFactorySupervisedRuntime(request)
+      Object.assign(provider.identity, { tupleId: MATCH_KERNEL.tupleId })
+      return stage === "execution" ? { ...provider, invoke() { throw stop } } : provider
+    } }, run: async (request) => { runs++; return stage === "execution" ? runCanonicalLabMatch(request) : synthetic.run(request) },
+  } })).rejects.toThrow()
+  const failureRoot = graph.latestRoot!, records = readLeagueRecordGraph(league, failureRoot, allocation.operations)
+  ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [failureRoot], candidateAdmissionRoot: null })
+  const blocks = [{ seed: allocation.seedBlocks[0], round: { round: { root: start.roundRoot }, roundOrdinal: 0, target: {} }, matrix: { solver: { weights: [] } }, candidateRoots: candidates.map((row) => row.admission.candidate.root) }] as never
+  expect(() => verifyRetainedProductionFailures(repository, allocation, records, ledger, blocks, candidates)).not.toThrow()
+  expect(runs).toBe(stage === "issuance" ? 0 : stage === "execution" ? 1 : 9)
+  expect(records.roots("response-runtime-cleanup")).toHaveLength(stage === "issuance" ? 1 : stage === "execution" ? 2 : 19)
+  const mutations = ["image", "runtimeLimitsRoot", "tupleId", "tupleRoot", "factoryPacketRoot", "factoryProposalRoot", "factoryValidationRoot", "sourceRoot", "executableRoot", "attemptRoot", "budgetRoot", "revisionId"]
+  for (const kind of ["response-runtime-cleanup", "response-runtime-invocation", "response-runtime-invocation-failure", "response-match-result", "response-match-execution-failure"]) {
+    const selectedRoot = records.roots(kind)[0]
+    if (!selectedRoot) continue
+    for (const field of mutations) {
+      const node = structuredClone(records.get(selectedRoot)!), wrong = { ...records, get(root: typeof selectedRoot) { return root === selectedRoot ? node : records.get(root) } }
+      if (kind === "response-runtime-invocation") node.value.originalEvidence.identity[field] = "wrong"
+      else if (kind === "response-match-result" || kind === "response-match-execution-failure") { if (!node.value.execution.accounting.length) continue; node.value.execution.accounting[0].identity[field] = "wrong" }
+      else node.value.identity[field] = "wrong"
+      expect(() => verifyRetainedProductionFailures(repository, allocation, wrong, ledger, blocks, candidates), `${stage}:${kind}:${field}`).toThrow(/RETAINED_RESPONSE_PROSPECTIVE_PROVIDER|RETAINED_FAILED_RESPONSE_IDENTITY/u)
+    }
+  }
+  if (stage === "prefix") {
+    const original = supervisionArtifacts.readFactorySupervisionArtifactRecords
+    for (const field of ["image", "runtimeLimitsRoot", "tupleRoot", "factoryPacketRoot", "factoryProposalRoot", "factoryValidationRoot", "sourceRoot", "executableRoot"]) {
+      const spy = vi.spyOn(supervisionArtifacts, "readFactorySupervisionArtifactRecords").mockImplementation((...args) => {
+        const stored = original(...args), records = stored.records.map((row) => {
+          if (row.kind !== "receipt") return row
+          const value = row.value
+          if (!value || typeof value !== "object" || !("candidateIdentity" in value) || !value.candidateIdentity || typeof value.candidateIdentity !== "object") throw Error("fixture receipt identity")
+          return { ...row, value: { ...value, candidateIdentity: { ...value.candidateIdentity, [field]: "wrong" } } }
+        })
+        return { ...stored, records }
+      })
+      expect(() => verifyRetainedProductionFailures(repository, allocation, records, ledger, blocks, candidates)).toThrow("RETAINED_RESPONSE_PROSPECTIVE_PROVIDER")
+      spy.mockRestore()
+    }
+  }
+}, 120000)
 it("prospective lifetime preparation binds current reviewed roots before candidate reads", () => {
   const input = prospectiveLifetimeFixture(), source = leagueCurrentSourceIdentity(), readCandidates = vi.fn(() => { throw Error("reached v2 candidate seam") })
   expect(() => prepareProspectiveSeriousLeague(input, { factoryRepository: {} as never, fixture: { readCandidates } })).toThrow("STALE_IMPLEMENTATION")

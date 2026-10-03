@@ -30,7 +30,9 @@ import { factoryAssessmentImplementationRoot, factoryAssessmentImplementationMan
 import { verifyHistoricalFactoryAssessmentForLeague, readRetainedFactoryLedger } from "./assess-v1-38-factory-independence.js"
 import { readFactorySupervisionArtifactRecords } from "../packages/strategy-lab/src/factory/supervision-artifacts.js"
 import { preflightLeagueAuthoring, verifyRetainedLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
-import { wrapLeagueProbeProvider, produceLeagueResponse, verifyRetainedLeagueResponse, verifyRetainedLeagueProbeInvocations, enumerateLeagueResponseConditions, type LeagueProbeProvider } from "./lib/v1-38-league-response-runtime.js"
+import { wrapLeagueProbeProvider, produceLeagueResponse, verifyRetainedLeagueResponse, verifyRetainedLeagueProbeInvocations, verifyRetainedV3ResponseProvider, enumerateLeagueResponseConditions, type LeagueProbeProvider, type LeagueResponseProviderSource } from "./lib/v1-38-league-response-runtime.js"
+import { factoryProposalFromPacket, FactoryValidationEvidenceSchema } from "../packages/strategy-lab/src/factory/contracts.js"
+import { deriveFactoryValidationRoot } from "../packages/strategy-lab/src/factory/identity.js"
 import { isLeagueExecutionStreamReference, prepareLeagueExecutionStream, readLeagueExecutionStream } from "./lib/v1-38-league-execution-stream.js"
 import { buildLeagueTacticalCorpus, isProspectiveTacticalJob, readRetainedTacticalAuthoringContext, readTacticalLeagueRecord } from "./lib/v1-38-league-tactical-corpus.js"
 import { MEMORY_PRESSURE_Q_REQUEST, parseMemoryPressureQ, type MemoryPressureQCommandResult } from "./lib/v1-38-darwin-headroom.js"
@@ -891,7 +893,7 @@ const replayRetainedKernel = (match: MatchInput, execution: LabMatchExecution, e
 }
 
 /** Failed production retains a charged prefix, not a pretend complete payoff. */
-const verifyRetainedProductionFailures = (repository: FactoryRepository | null, allocation: LeagueExecutionAllocation, graph: ReturnType<typeof readLeagueRecordGraph>, ledger: RedTeamLedger, blocks: readonly RoundBlock[], candidates: readonly LeagueCandidateInput[]) => {
+export const verifyRetainedProductionFailures = (repository: FactoryRepository | null, allocation: LeagueExecutionAllocation, graph: ReturnType<typeof readLeagueRecordGraph>, ledger: RedTeamLedger, blocks: readonly RoundBlock[], candidates: readonly LeagueCandidateInput[]) => {
   const nodes = [...graph.entries()], rows = (kind: string) => graph.roots(kind).map((root) => [root, graph.get(root)!] as const)
   const starts = rows("response-production-start"), failures = rows("response-production-failure")
   if (!repository && starts.length) return fail("RETAINED_RESPONSE_REPOSITORY")
@@ -935,12 +937,33 @@ const verifyRetainedProductionFailures = (repository: FactoryRepository | null, 
     const roundBlocks = blocks.filter((block) => block.round.round.root === redTeamStart.roundRoot || block.round.roundOrdinal === blocks.find((row) => row.round.round.root === redTeamStart.roundRoot)?.round.roundOrdinal)
     if (target.roundRoot !== redTeamStart.roundRoot || target.candidateRoot !== redTeamStart.candidateRoot || job.evaluationRole === "development_response" && (!roundBlocks.length || !same(target.targets, roundBlocks.map((block) => ({ seed: block.seed, target: block.round.target, weights: block.matrix.solver.weights }))) || !same(target.candidates.map((row: any) => row.candidateRoot), roundBlocks[0]!.candidateRoots))) return fail("RETAINED_RESPONSE_FAILURE_TARGET")
     let authoredSource: LabRoot | null = null
+    let authoredProviderSource: LeagueResponseProviderSource | undefined
     if (failure.author) {
       const author = failure.author, retained = parse(readFactoryArtifact(repository!, author.evidenceArtifactRoot)), { root, ...body } = retained
       if (root !== labRoot("league-authoring-result-v1", body) || retained.allocationRoot !== allocation.root || retained.startRoot !== redTeamStart.root || retained.jobId !== job.id || !same(author, { disposition: retained.disposition, startRoot: retained.startRoot, ingestionArtifactRoot: retained.ingestionArtifactRoot, evidenceArtifactRoot: author.evidenceArtifactRoot, modelTokens: retained.modelTokens, elapsedMilliseconds: retained.elapsedMilliseconds })) return fail("RETAINED_FAILED_AUTHOR")
-      if (author.disposition === "produced") authoredSource = verifyRetainedLeagueAuthoring(repository!, allocation, author.evidenceArtifactRoot).ingestion.packet.source.root
+      if (author.disposition === "produced") {
+        const authored = verifyRetainedLeagueAuthoring(repository!, allocation, author.evidenceArtifactRoot)
+        authoredSource = authored.ingestion.packet.source.root
+        if (allocation.schemaVersion === "league-prospective-execution-allocation-v3") {
+          const proposal = factoryProposalFromPacket(authored.ingestion.packet), validationRows = rows("response-validation").filter(([, node]) => node.links.includes(matching[0]![0]) && node.value.proposalRoot === proposal.root)
+          if (validationRows.length !== 1) return fail("RETAINED_FAILED_RESPONSE_VALIDATION")
+          const [evidenceRoot, validationNode] = validationRows[0]!, sourceBytes = new TextEncoder().encode(authored.ingestion.sourceUtf8)
+          const defaults = defaultRuntimeMetadata("typescript"), revision = buildStrategyRevision({ source: authored.ingestion.sourceUtf8, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
+          const binding = { proposalRoot: proposal.root, sourceRoot: proposal.source.root, revisionId: revision.id, validation: revision.validation, exactNativeLane: proposal.nativeLane }
+          if (!revision.validation.valid || !same(validationNode.value, binding)) return fail("RETAINED_FAILED_RESPONSE_VALIDATION")
+          const validationValue = { schemaVersion: "factory-validation-evidence-v1" as const, privacy: "private_offline" as const, proposalRoot: proposal.root, validationRoot: labRoot("factory-selected-source-validation-v1", binding), status: "valid" as const, exactNativeLane: proposal.nativeLane, evidenceRoot }
+          authoredProviderSource = { proposal, sourceBytes, validation: FactoryValidationEvidenceSchema.parse({ ...validationValue, root: deriveFactoryValidationRoot(validationValue) }) }
+        }
+      }
     }
     const conditions = enumerateLeagueResponseConditions(allocation, target.candidates.map((row: any) => row.candidateRoot))
+    const providerSources = new Map<LabRoot, ReturnType<typeof readCandidateClosure>>()
+    const providerSource = (candidate: LeagueCandidateInput | undefined) => {
+      if (!candidate || allocation.schemaVersion !== "league-prospective-execution-allocation-v3") return undefined
+      let source = providerSources.get(candidate.admission.candidate.root)
+      if (!source) { source = readCandidateClosure(candidate.closure); providerSources.set(candidate.admission.candidate.root, source) }
+      return source
+    }
     const charges = [...graph.matches("response-match-start", start.root)].sort((a, b) => a.ordinal - b.ordinal).map(({ root }) => [root, graph.get(root)!] as const)
     const results = graph.matches("response-match-result", start.root).map(({ root }) => [root, graph.get(root)!] as const)
     if (failure.accepted && (failure.matchCount !== conditions.length || results.length !== conditions.length)) return fail("RETAINED_RESPONSE_FAILURE_TERMINAL")
@@ -952,6 +975,23 @@ const verifyRetainedProductionFailures = (repository: FactoryRepository | null, 
       if (matched.length > 1 || matched.length === 0 && ordinal !== charges.length - 1) return fail("RETAINED_FAILED_RESPONSE_PREFIX")
       const failedExecutions = rows("response-match-execution-failure").filter(([, node]) => node.links.includes(chargeRoot))
       if (failedExecutions.length > 1 || !matched.length && !failedExecutions.length && rows("response-runtime-invocation-failure").some(([, node]) => node.links.includes(chargeRoot))) return fail("RETAINED_FAILED_EXECUTION_MISSING")
+      const opponent = candidates.find((candidate) => candidate.admission.candidate.root === condition.opponentRoot), reference = candidates.find((candidate) => candidate.publicationRoot === allocation.independenceReferencePublicationRoot)
+      const measured = condition.purpose === "independence_right" ? providerSource(opponent) : authoredProviderSource
+      const opposing = condition.purpose === "score" ? providerSource(opponent) : providerSource(reference)
+      const verifiedProviders = new Set<LabRoot>()
+      const verifyProvider = (identity: any) => {
+        if (allocation.schemaVersion !== "league-prospective-execution-allocation-v3") return
+        const identityRoot = labRoot("league-v3-retained-response-provider", identity)
+        if (verifiedProviders.has(identityRoot)) return
+        const expected = identity?.attemptRoot === redTeamStart.root ? measured : identity?.attemptRoot === chargeRoot ? opposing : undefined
+        if (!expected) return fail("RETAINED_FAILED_RESPONSE_IDENTITY")
+        verifyRetainedV3ResponseProvider(allocation, identity, expected, identity.attemptRoot)
+        verifiedProviders.add(identityRoot)
+      }
+      if (allocation.schemaVersion === "league-prospective-execution-allocation-v3") {
+        const invocationRows = rows("response-runtime-invocation").filter(([, node]) => node.links.includes(chargeRoot)), failureRows = rows("response-runtime-invocation-failure").filter(([, node]) => node.links.includes(chargeRoot))
+        for (const identity of [...cleanup.map(([, node]) => node.value.identity), ...invocationRows.flatMap(([, node]) => [node.value.originalEvidence.identity, node.value.admittedEvidence.identity]), ...failureRows.map(([, node]) => node.value.identity), ...(matched[0] ?? failedExecutions[0])?.[1].value.execution.accounting.map((row: any) => row.identity) ?? []]) verifyProvider(identity)
+      }
       if (!matched.length && !failedExecutions.length) continue // Charged issuance failed before a Match executed.
       const value = (matched[0] ?? failedExecutions[0])![1].value, arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.filter((arena) => arena.status === "active" && arena.schedulable)[arenaIndex]!
       if (failedExecutions.length && (failedExecutions[0]![1].value.execution.kind !== "failure" || !sameLargeExecution(failedExecutions[0]![1].value.execution, value.execution))) return fail("RETAINED_FAILED_EXECUTION_CONFLICT")
@@ -960,15 +1000,15 @@ const verifyRetainedProductionFailures = (repository: FactoryRepository | null, 
       if ([...raw.map(([, node]) => node.value.originalEvidence.identity), ...thrown.map(([, node]) => node.value.identity)].some((identity) => !cleanup.some(([, node]) => same(node.value.identity, identity)))) return fail("RETAINED_FAILED_RUNTIME_IDENTITY")
       verifyRetainedLeagueProbeInvocations(raw.map(([, node]) => node.value), value.execution.accounting, undefined, arena.initialBounds)
       replayRetainedKernel(value.match, value.execution, allocation.evidenceClass === "empirical", { invocationFailures: thrown.map(([, node]) => node.value), cleanupIncomplete: cleanup.some(([, node]) => !node.value.cleanup.cleanupComplete || node.value.cleanup.orphanedChild) })
-      const opponent = target.candidates.find((row: any) => row.candidateRoot === condition.opponentRoot)
-      const reference = candidates.find((candidate) => candidate.publicationRoot === allocation.independenceReferencePublicationRoot)
-      const measuredSource = condition.purpose === "independence_right" ? opponent.sourceArtifactRoot : authoredSource
-      for (const [artifactRoot, playerId, sourceRoot, attemptRoot] of [[value.candidateReceiptArtifactRoot, "league-response-candidate", measuredSource, redTeamStart.root], [value.opponentReceiptArtifactRoot, "league-response-opponent", condition.purpose === "score" ? opponent.sourceArtifactRoot : reference?.closure.sourceArtifactRoot, chargeRoot]] as const) {
+      const targetOpponent = target.candidates.find((row: any) => row.candidateRoot === condition.opponentRoot)
+      const measuredSource = condition.purpose === "independence_right" ? targetOpponent.sourceArtifactRoot : authoredSource
+      for (const [artifactRoot, playerId, sourceRoot, attemptRoot] of [[value.candidateReceiptArtifactRoot, "league-response-candidate", measuredSource, redTeamStart.root], [value.opponentReceiptArtifactRoot, "league-response-opponent", condition.purpose === "score" ? targetOpponent.sourceArtifactRoot : reference?.closure.sourceArtifactRoot, chargeRoot]] as const) {
         const cleanupRows = cleanup.filter(([, node]) => node.value.identity.sourceRoot === sourceRoot && node.value.identity.attemptRoot === attemptRoot)
         const side = (condition.side === "bottom") === (playerId === "league-response-candidate") ? "bottom" : "top"
         if (!sourceRoot || cleanupRows.length !== 1 || cleanupRows[0]![1].value.identity.budgetRoot !== allocation.root || cleanupRows[0]![1].value.identity.revisionId !== (side === "bottom" ? value.match.bottomStrategyRevisionId : value.match.topStrategyRevisionId)) return fail("RETAINED_FAILED_RESPONSE_IDENTITY")
         if (!matched.length) continue // Honest failed execution, never an issued supervision receipt.
         const stored = readFactorySupervisionArtifactRecords(repository!, artifactRoot, { maxBytes: allocation.operations.maxArtifactBytes, maxRecords: allocation.operations.maxArtifactRecords }), metadata = stored.records.find((row) => row.kind === "receipt")!.value as any
+        verifyProvider(metadata.candidateIdentity)
         if (!sourceRoot || metadata.candidatePlayerId !== playerId || metadata.admission.sourceRoot !== sourceRoot || metadata.candidateIdentity.attemptRoot !== attemptRoot || metadata.candidateIdentity.budgetRoot !== allocation.root || stored.descriptor.executionRoot !== labRoot("factory-stored-execution-v1", deriveFactoryExecutionCommitment(value.execution)) || cleanup.filter(([, node]) => same(node.value.identity, metadata.candidateIdentity)).length !== 1) return fail("RETAINED_FAILED_RESPONSE_SUPERVISION")
       }
     }
