@@ -10,7 +10,7 @@ if [ ! -d .strategy-lab ] || [ -L .strategy-lab ]; then
   echo 'LEAN_PILOT_WRITABLE_SCOPE' >&2
   exit 1
 fi
-LEAN_PILOT_TEMP="$(pwd -P)/.strategy-lab/lean-experiment-20261003-v2-tmp"
+LEAN_PILOT_TEMP="$(pwd -P)/.strategy-lab/lean-experiment-20261003-v3-tmp"
 if [ -L "$LEAN_PILOT_TEMP" ]; then
   echo 'LEAN_PILOT_WRITABLE_SCOPE' >&2
   exit 1

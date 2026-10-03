@@ -39,12 +39,76 @@ export const LEAN_FAILED_PREFIX = Object.freeze({
 })
 export const LEAN_PROSPECTIVE_REQUEST = ".strategy-lab/lean-pilot-request-20261003-v3.json" as const
 export const LEAN_PROSPECTIVE_WRITABLE_PATHS = Object.freeze([".strategy-lab/lean-experiment-20261003-v2-tmp", ".planning/artifacts/v1.38-lean-pilot-allocation-v2.json", LEAN_PROSPECTIVE_REQUEST] as const)
+export const LEAN_SUCCESSOR_REQUEST = ".strategy-lab/lean-pilot-request-20261003-v4.json" as const
+export const LEAN_SUCCESSOR_WRITABLE_PATHS = Object.freeze([".strategy-lab/lean-experiment-20261003-v3-tmp", ".planning/artifacts/v1.38-lean-pilot-allocation-v3.json", LEAN_SUCCESSOR_REQUEST] as const)
+export const LEAN_CLOSED_V2 = Object.freeze({
+  storeIdentity: ".strategy-lab/lean-experiment-20261003-v2" as const,
+  requestIdentity: LEAN_PROSPECTIVE_REQUEST,
+  canonicalIdentity: ".planning/artifacts/v1.38-lean-pilot-allocation-v2.json" as const,
+  allocationRoot: "sha256:4a3dfb516d13c6c0816185af30e0d9b6b516752091ac525639bcf91474c4d846" as LabRoot,
+  allocationBytesRoot: "sha256:bc7789b14530c4f585ce006bbe8576c57421621fed3f0e74b0172febcf3ec1fb" as LabRoot,
+  requestBytesRoot: "sha256:3c2abfd6d3171efaedd5fa9fe72b006bcb76dcd98a91156c31c066ee43a9cd3d" as LabRoot,
+  entryBytesRoot: "sha256:842c1ce65d419ee92a1e0bb9d3be5f6250616dbdb29f55e84495481bdf8ea438" as LabRoot,
+  terminalBytesRoot: "sha256:74fc7885311158e587a101fc06b7cae4b52dae6597740c150cdfaa8637c9510a" as LabRoot,
+  timeBytesRoot: "sha256:5272c9f354a5baf8bab1eab1fa501183804b8e307a73493ab18e870c1eb8d523" as LabRoot,
+  emptyChargeBytesRoot: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" as LabRoot,
+  heldHead: "8961bf9b485e16cdd7ac49f44f98be0daa88e534" as const,
+  sourceRoot: "sha256:28dbd0ec7de8954d53ffa67ff3b4db34b0a6c6f0ec02b501950f1ef7c8d58695" as LabRoot,
+  terminalReportIdentity: ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-15-PILOT-ENTRY-TERMINAL-VERIFICATION-v2.md" as const,
+  terminalReportBytesRoot: "sha256:4d7afc3e7333f649333ea8ef8f356d46cfe55ea891851e8d3f8c6d851cddcb1c" as LabRoot,
+  v1DiskBasisRoot: "sha256:7e203d25baaa1b295691943f2af02af6d468409018b9cf224454780052e7aa7f" as LabRoot,
+  v1SurvivingAllocatedBytes: 20_480,
+  terminalElapsedUpperBoundMs: 757_571,
+  terminalPhysicalBytes: 114_688,
+  elapsedUpperBoundMs: 1_323_030,
+  chargedMatches: 0,
+})
 export const LEAN_DISK_APPROVAL = Object.freeze({
   identity: ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-15-HISTORICAL-DISK-ACCOUNTING-DECISION-v1.md" as const,
   bytesRoot: "sha256:33c0b6a597b6c0dc8009b3a5272265b03a901d46e43ccca77c0127d2adb1a220" as LabRoot,
 })
 type LeanSurvivor = { identity: string; bytesRoot: LabRoot; allocatedBytes: number }
 export interface LeanProspectiveDiskBasis { schemaVersion: "lean-prospective-surviving-disk-v1"; historicalPeakDiskBytes: "unknown"; diskApproval: typeof LEAN_DISK_APPROVAL; survivors: readonly LeanSurvivor[]; oldStoreDirectoryAllocatedBytes: number; survivingAllocatedBytes: number; root: LabRoot }
+type LeanClosedV2Observation = {
+  raw: { allocation: LabRoot; canonical: LabRoot; request: LabRoot; entry: LabRoot; terminal: LabRoot; time: LabRoot; charge: LabRoot; report: LabRoot }
+  storeFiles: readonly string[]; allocationRoot: LabRoot; sourceRoot: LabRoot; heldHead: string
+  entry: { allocationRoot: LabRoot; sourceRoot: LabRoot; requestBytesRoot: LabRoot; head: string; parentPid: number; childPid: number }
+  terminal: { entryBytesRoot: LabRoot; allocationRoot: LabRoot; sourceRoot: LabRoot; head: string; parentPid: number; childPid: number; elapsedUpperBoundMs: number; physicalBytes: number; status: string; signal: string | null; exitCode: number | null }
+  timeElapsedMs: number; timeStarts: number; timeCloses: number; chargedMatches: number; resultExists: boolean
+  v1DiskBasisRoot: LabRoot; v1SurvivingAllocatedBytes: number; v2Survivors: readonly { identity: string; allocatedBytes: number }[]
+}
+export interface LeanClosedV2Predecessor { schemaVersion: "lean-closed-v2-predecessor-v1"; closed: typeof LEAN_CLOSED_V2; historicalPeakDiskBytes: "unknown"; v1SurvivingAllocatedBytes: number; v2Survivors: readonly { identity: string; allocatedBytes: number }[]; v2SurvivingAllocatedBytes: number; measuredSurvivingAllocatedBytes: number; terminalPhysicalBytes: number; allocatedDiskBytes: number; elapsedUpperBoundMs: number; chargedMatches: number; root: LabRoot }
+const leanClosedV2SurvivorPaths = () => [LEAN_CLOSED_V2.storeIdentity, ...["allocation.json", "child-terminal.json", "entry.json", "ledger.ndjson", "time.ndjson"].map(name => `${LEAN_CLOSED_V2.storeIdentity}/${name}`), LEAN_CLOSED_V2.requestIdentity, LEAN_CLOSED_V2.canonicalIdentity, LEAN_PROSPECTIVE_WRITABLE_PATHS[0]]
+/** A terminal snapshot is a conservative charged floor, not a measured old peak. */
+export const createLeanClosedV2Predecessor = (o: LeanClosedV2Observation): Readonly<LeanClosedV2Predecessor> => {
+  const c = LEAN_CLOSED_V2
+  if (!exactLabKeys(o, ["raw", "storeFiles", "allocationRoot", "sourceRoot", "heldHead", "entry", "terminal", "timeElapsedMs", "timeStarts", "timeCloses", "chargedMatches", "resultExists", "v1DiskBasisRoot", "v1SurvivingAllocatedBytes", "v2Survivors"]) ||
+    !exactLabKeys(o.raw, ["allocation", "canonical", "request", "entry", "terminal", "time", "charge", "report"]) ||
+    o.raw.allocation !== c.allocationBytesRoot || o.raw.canonical !== c.allocationBytesRoot || o.raw.request !== c.requestBytesRoot || o.raw.entry !== c.entryBytesRoot || o.raw.terminal !== c.terminalBytesRoot || o.raw.time !== c.timeBytesRoot || o.raw.charge !== c.emptyChargeBytesRoot || o.raw.report !== c.terminalReportBytesRoot ||
+    !Array.isArray(o.storeFiles) || o.storeFiles.join("|") !== "allocation.json|child-terminal.json|entry.json|ledger.ndjson|time.ndjson" || o.resultExists || o.allocationRoot !== c.allocationRoot || o.sourceRoot !== c.sourceRoot || o.heldHead !== c.heldHead ||
+    !exactLabKeys(o.entry, ["allocationRoot", "sourceRoot", "requestBytesRoot", "head", "parentPid", "childPid"]) || o.entry.allocationRoot !== c.allocationRoot || o.entry.sourceRoot !== c.sourceRoot || o.entry.requestBytesRoot !== c.requestBytesRoot || o.entry.head !== c.heldHead || !natural(o.entry.parentPid) || !natural(o.entry.childPid) || o.entry.parentPid === o.entry.childPid ||
+    !exactLabKeys(o.terminal, ["entryBytesRoot", "allocationRoot", "sourceRoot", "head", "parentPid", "childPid", "elapsedUpperBoundMs", "physicalBytes", "status", "signal", "exitCode"]) || o.terminal.entryBytesRoot !== c.entryBytesRoot || o.terminal.allocationRoot !== c.allocationRoot || o.terminal.sourceRoot !== c.sourceRoot || o.terminal.head !== c.heldHead || o.terminal.parentPid !== o.entry.parentPid || o.terminal.childPid !== o.entry.childPid || o.terminal.elapsedUpperBoundMs !== c.terminalElapsedUpperBoundMs || o.terminal.physicalBytes !== c.terminalPhysicalBytes || o.terminal.status !== "child_failed" || o.terminal.signal !== "SIGTERM" || o.terminal.exitCode !== null ||
+    o.timeElapsedMs !== c.elapsedUpperBoundMs || o.timeStarts !== 1 || o.timeCloses !== 1 || o.chargedMatches !== 0 || c.elapsedUpperBoundMs !== LEAN_FAILED_PREFIX.elapsedUpperBoundMs + c.terminalElapsedUpperBoundMs ||
+    o.v1DiskBasisRoot !== c.v1DiskBasisRoot || o.v1SurvivingAllocatedBytes !== c.v1SurvivingAllocatedBytes || !Array.isArray(o.v2Survivors) || o.v2Survivors.length !== 9) return fail("SUCCESSOR_PREDECESSOR")
+  const paths = leanClosedV2SurvivorPaths()
+  let v2SurvivingAllocatedBytes = 0
+  for (let i = 0; i < paths.length; i++) {
+    const item = o.v2Survivors[i]!
+    if (!exactLabKeys(item, ["identity", "allocatedBytes"]) || item.identity !== paths[i] || !natural(item.allocatedBytes)) return fail("SUCCESSOR_PREDECESSOR")
+    v2SurvivingAllocatedBytes += item.allocatedBytes
+  }
+  const measuredSurvivingAllocatedBytes = o.v1SurvivingAllocatedBytes + v2SurvivingAllocatedBytes
+  const allocatedDiskBytes = Math.max(measuredSurvivingAllocatedBytes, c.terminalPhysicalBytes)
+  if (!natural(measuredSurvivingAllocatedBytes) || allocatedDiskBytes > LEAN_CAPS.retainedBytes) return fail("SUCCESSOR_PREDECESSOR")
+  const body = { schemaVersion: "lean-closed-v2-predecessor-v1" as const, closed: c, historicalPeakDiskBytes: "unknown" as const, v1SurvivingAllocatedBytes: o.v1SurvivingAllocatedBytes, v2Survivors: o.v2Survivors, v2SurvivingAllocatedBytes, measuredSurvivingAllocatedBytes, terminalPhysicalBytes: c.terminalPhysicalBytes, allocatedDiskBytes, elapsedUpperBoundMs: c.elapsedUpperBoundMs, chargedMatches: c.chargedMatches }
+  return freezeLabValue({ ...body, root: labRoot("lean-closed-v2-predecessor-v1", body) })
+}
+export const verifyLeanClosedV2Predecessor = (claim: unknown, observed: LeanClosedV2Observation): Readonly<LeanClosedV2Predecessor> => {
+  if (!exactLabKeys(claim, ["schemaVersion", "closed", "historicalPeakDiskBytes", "v1SurvivingAllocatedBytes", "v2Survivors", "v2SurvivingAllocatedBytes", "measuredSurvivingAllocatedBytes", "terminalPhysicalBytes", "allocatedDiskBytes", "elapsedUpperBoundMs", "chargedMatches", "root"])) return fail("SUCCESSOR_PREDECESSOR")
+  const expected = createLeanClosedV2Predecessor(observed)
+  if (labRoot("lean-successor-predecessor-admission", claim) !== labRoot("lean-successor-predecessor-admission", expected)) return fail("SUCCESSOR_PREDECESSOR")
+  return expected
+}
 const expectedLeanSurvivors = () => [
   { identity: `${LEAN_FAILED_PREFIX.oldStoreIdentity}/allocation.json`, bytesRoot: LEAN_FAILED_PREFIX.oldAllocationBytesRoot },
   { identity: `${LEAN_FAILED_PREFIX.oldStoreIdentity}/entry.json`, bytesRoot: LEAN_FAILED_PREFIX.oldEntryBytesRoot },
@@ -126,7 +190,12 @@ const readLeanFailedWriteInventory = () => {
   return verified
 }
 export interface LeanExperimentAllocationV2 extends Omit<LeanExperimentAllocation, "schemaVersion" | "root"> { schemaVersion: "lean-experiment-allocation-v2"; predecessor: Omit<typeof LEAN_FAILED_PREFIX, "allocatedDiskBytes"> & { readonly allocatedDiskBytes: number; readonly diskBasis: LeanProspectiveDiskBasis }; root: LabRoot }
-export type AnyLeanAllocation = LeanExperimentAllocation | LeanExperimentAllocationV2
+export interface LeanExperimentAllocationV3 extends Omit<LeanExperimentAllocation, "schemaVersion" | "root"> { schemaVersion: "lean-experiment-allocation-v3"; predecessor: LeanClosedV2Predecessor; root: LabRoot }
+export type AnyLeanAllocation = LeanExperimentAllocation | LeanExperimentAllocationV2 | LeanExperimentAllocationV3
+const leanProspective = (a: AnyLeanAllocation): a is LeanExperimentAllocationV2 | LeanExperimentAllocationV3 => a.schemaVersion === "lean-experiment-allocation-v2" || a.schemaVersion === "lean-experiment-allocation-v3"
+const leanPriorMs = (a: AnyLeanAllocation): number => leanProspective(a) ? a.predecessor.elapsedUpperBoundMs : 0
+const leanPriorBytes = (a: AnyLeanAllocation): number => leanProspective(a) ? a.predecessor.allocatedDiskBytes : 0
+export const leanWritablePaths = (a: AnyLeanAllocation): readonly string[] => a.schemaVersion === "lean-experiment-allocation-v2" ? LEAN_PROSPECTIVE_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v3" ? LEAN_SUCCESSOR_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v1" ? [] : fail("ALLOCATION")
 export const createLeanAllocation = (input: { sourceRoot: LabRoot; reviewRoot: LabRoot; candidateRoots: readonly LabRoot[]; seed: string }): Readonly<LeanExperimentAllocation> => {
   if (!exactLabKeys(input, ["sourceRoot", "reviewRoot", "candidateRoots", "seed"]) || !root(input.sourceRoot) || !root(input.reviewRoot) || !Array.isArray(input.candidateRoots) || input.candidateRoots.length !== 2 || !input.candidateRoots.every(root) || new Set(input.candidateRoots).size !== 2 || !/^[a-z0-9-]{1,100}$/u.test(input.seed)) return fail("ALLOCATION")
   const candidateRoots = [...input.candidateRoots].sort()
@@ -147,7 +216,19 @@ export const createLeanAllocationV2 = (input: { sourceRoot: LabRoot; reviewRoot:
   const body = { ...base, schemaVersion: "lean-experiment-allocation-v2" as const, predecessor: { ...LEAN_FAILED_PREFIX, allocatedDiskBytes: diskBasis.survivingAllocatedBytes, diskBasis } }
   return freezeLabValue({ ...body, root: labRoot("lean-experiment-allocation-v2", body) })
 }
+export const createLeanAllocationV3 = (input: { sourceRoot: LabRoot; reviewRoot: LabRoot; candidateRoots: readonly LabRoot[]; seed: string }): Readonly<LeanExperimentAllocationV3> => {
+  const { root: _oldRoot, schemaVersion: _oldVersion, ...base } = createLeanAllocation(input)
+  const predecessor = inspectLeanClosedV2Predecessor()
+  const body = { ...base, schemaVersion: "lean-experiment-allocation-v3" as const, predecessor }
+  return freezeLabValue({ ...body, root: labRoot("lean-experiment-allocation-v3", body) })
+}
 export const admitLeanAllocation = (value: unknown): Readonly<AnyLeanAllocation> => {
+  if (typeof value === "object" && value !== null && (value as { schemaVersion?: unknown }).schemaVersion === "lean-experiment-allocation-v3") {
+    if (!exactLabKeys(value, ["schemaVersion", "privacy", "sourceRoot", "reviewRoot", "candidateRoots", "seed", "tupleRoot", "runtimeRoot", "caps", "slots", "sampleSlotRoots", "predecessor", "root"])) return fail("ALLOCATION")
+    const a = value as unknown as LeanExperimentAllocationV3, expected = createLeanAllocationV3({ sourceRoot: a.sourceRoot, reviewRoot: a.reviewRoot, candidateRoots: a.candidateRoots, seed: a.seed })
+    if (labRoot("lean-admission", value) !== labRoot("lean-admission", expected)) return fail("ALLOCATION")
+    return expected
+  }
   if (typeof value === "object" && value !== null && (value as { schemaVersion?: unknown }).schemaVersion === "lean-experiment-allocation-v2") {
     if (!exactLabKeys(value, ["schemaVersion", "privacy", "sourceRoot", "reviewRoot", "candidateRoots", "seed", "tupleRoot", "runtimeRoot", "caps", "slots", "sampleSlotRoots", "predecessor", "root"])) return fail("ALLOCATION")
     const a = value as unknown as LeanExperimentAllocationV2, expected = createLeanAllocationV2({ sourceRoot: a.sourceRoot, reviewRoot: a.reviewRoot, candidateRoots: a.candidateRoots, seed: a.seed })
@@ -273,7 +354,7 @@ const append = (ledger: LeanExperimentLedger, event: Event) => {
  * remaining eight-hour envelope; no future stage may reset or recover that time. */
 const activeTime = new Map<string, { id: string; atMs: number; priorMs: number }>()
 export const readLeanTimeAccounting = (ledger: LeanExperimentLedger) => {
-  const priorMs = ledger.allocation.schemaVersion === "lean-experiment-allocation-v2" ? LEAN_FAILED_PREFIX.elapsedUpperBoundMs : 0
+  const priorMs = leanPriorMs(ledger.allocation)
   const text = Buffer.from(readSafe(join(safeDirectory(ledger.directory), "time.ndjson"))).toString("utf8")
   if (text.length && !text.endsWith("\n")) return fail("TIME_PUBLICATION")
   const starts = new Map<string, number>(), closed = new Set<string>(), closes = new Map<string, number>()
@@ -307,7 +388,7 @@ export const closeLeanInterval = (ledger: LeanExperimentLedger, id: string, atMs
 }
 export const currentLeanElapsedMs = (ledger: LeanExperimentLedger) => {
   const s = readLeanTimeAccounting(ledger), local = activeTime.get(ledger.directory)
-  if (s.active && ledger.allocation.schemaVersion === "lean-experiment-allocation-v2") {
+  if (s.active && leanProspective(ledger.allocation)) {
     const started = [...s.starts.values()].at(-1)
     if (started === undefined) return LEAN_CAPS.elapsedMs
     if (!s.closed.has("pilot-entry")) {
@@ -323,21 +404,21 @@ export const currentLeanElapsedMs = (ledger: LeanExperimentLedger) => {
 export const createLeanLedger = (directory: string, allocation: AnyLeanAllocation): LeanExperimentLedger => {
   const p = resolve(directory)
   if (realpathSync(dirname(p)) !== dirname(p)) return fail("STORE")
-  // A near-cap v2 claim must fail before even reading predecessor evidence or
+  // A near-cap prospective claim must fail before predecessor evidence or
   // creating a directory. Admission below replaces it with the measured basis.
-  if (allocation.schemaVersion === "lean-experiment-allocation-v2") assertLeanV2StoreCapacity(p, allocation.predecessor?.allocatedDiskBytes, 1_048_576)
+  if (leanProspective(allocation)) assertLeanProspectiveStoreCapacity(p, allocation, allocation.predecessor?.allocatedDiskBytes, 1_048_576)
   const a = admitLeanAllocation(allocation)
-  if (a.schemaVersion === "lean-experiment-allocation-v2") {
-    inspectLeanProspectiveDiskBasis()
-    assertLeanV2StoreCapacity(p, a.predecessor.allocatedDiskBytes, leanCanonicalBytes(a).length)
+  if (leanProspective(a)) {
+    if (a.schemaVersion === "lean-experiment-allocation-v2") inspectLeanProspectiveDiskBasis()
+    assertLeanProspectiveStoreCapacity(p, a, a.predecessor.allocatedDiskBytes, leanCanonicalBytes(a).length)
   }
   mkdirSync(p, { mode: 0o700 }); safeDirectory(p)
   const allocationBytes = leanCanonicalBytes(a)
-  if (a.schemaVersion === "lean-experiment-allocation-v2") assertLeanV2StoreCapacity(p, a.predecessor.allocatedDiskBytes, allocationBytes.length)
+  if (leanProspective(a)) assertLeanProspectiveStoreCapacity(p, a, a.predecessor.allocatedDiskBytes, allocationBytes.length)
   writeExclusive(join(p, "allocation.json"), allocationBytes)
-  if (a.schemaVersion === "lean-experiment-allocation-v2") assertLeanV2StoreCapacity(p, a.predecessor.allocatedDiskBytes, 0)
+  if (leanProspective(a)) assertLeanProspectiveStoreCapacity(p, a, a.predecessor.allocatedDiskBytes, 0)
   writeExclusive(join(p, "ledger.ndjson"), new Uint8Array())
-  if (a.schemaVersion === "lean-experiment-allocation-v2") assertLeanV2StoreCapacity(p, a.predecessor.allocatedDiskBytes, 0)
+  if (leanProspective(a)) assertLeanProspectiveStoreCapacity(p, a, a.predecessor.allocatedDiskBytes, 0)
   writeExclusive(join(p, "time.ndjson"), new Uint8Array())
   return { directory: p, allocation: a }
 }
@@ -348,35 +429,35 @@ export const measureLeanPhysicalBytes = (directory: string): number => {
 }
 /** Reserve disk for the pending store publication before each v2 write. The
  * parent filesystem must also have the unspent 15 GB envelope available. */
-const assertLeanV2StoreCapacity = (store: string, survivingBytes: unknown, nextFileBytes: number): void => {
+const assertLeanProspectiveStoreCapacity = (store: string, allocation: AnyLeanAllocation, survivingBytes: unknown, nextFileBytes: number): void => {
   if (!natural(survivingBytes) || !natural(nextFileBytes)) return fail("RESOURCE")
-  const owned = LEAN_PROSPECTIVE_WRITABLE_PATHS.reduce((bytes, path) => bytes + measuredDestinationBlocks(path), 0)
+  const owned = leanWritablePaths(allocation).reduce((bytes, path) => bytes + measuredDestinationBlocks(path), 0)
   const current = survivingBytes + owned + measuredDestinationBlocks(store)
   const projected = current + Math.ceil(nextFileBytes / 4096) * 4096 + 131_072
   if (!natural(projected) || projected > LEAN_CAPS.retainedBytes || projected + LEAN_CAPS.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes) return fail("RESOURCE")
   const filesystem = statfsSync(dirname(store), { bigint: true })
   if (filesystem.bavail * filesystem.bsize < BigInt(LEAN_CAPS.totalBytes - current)) return fail("RESOURCE")
 }
-export const leanProspectiveOwnedBytes = (ledger: LeanExperimentLedger): number => measureLeanPhysicalBytes(ledger.directory) + (ledger.allocation.schemaVersion === "lean-experiment-allocation-v2" ? LEAN_PROSPECTIVE_WRITABLE_PATHS.reduce((bytes, path) => bytes + measuredDestinationBlocks(path), 0) : 0)
-export const cumulativeLeanPhysicalBytes = (ledger: LeanExperimentLedger): number => leanProspectiveOwnedBytes(ledger) + (ledger.allocation.schemaVersion === "lean-experiment-allocation-v2" ? ledger.allocation.predecessor.allocatedDiskBytes : 0)
+export const leanProspectiveOwnedBytes = (ledger: LeanExperimentLedger): number => measureLeanPhysicalBytes(ledger.directory) + leanWritablePaths(ledger.allocation).reduce((bytes, path) => bytes + measuredDestinationBlocks(path), 0)
+export const cumulativeLeanPhysicalBytes = (ledger: LeanExperimentLedger): number => leanProspectiveOwnedBytes(ledger) + leanPriorBytes(ledger.allocation)
 export interface LeanChildEntryV2 { schemaVersion: "lean-child-entry-v2"; allocationRoot: LabRoot; sourceRoot: LabRoot; requestBytesRoot: LabRoot; head: string; parentPid: number; childPid: number; handshakeRoot: LabRoot; wallStartMs: number; monotonicStartNs: string }
 export interface LeanChildTerminalV2 { schemaVersion: "lean-child-terminal-v2"; entryBytesRoot: LabRoot; allocationRoot: LabRoot; sourceRoot: LabRoot; head: string; parentPid: number; childPid: number; exitCode: number | null; signal: string | null; wallObservedMs: number; monotonicObservedNs: string; elapsedUpperBoundMs: number; status: "child_exited" | "child_failed"; parentRssBytes: number; childRssObservedBytes: number | null; physicalBytes: number; freeBytes: number | null }
 const monotonic = (v: string): bigint => /^\d{1,30}$/u.test(v) ? BigInt(v) : fail("MONOTONIC")
 const syncLeanDirectory = (path: string): void => { const fd = openSync(safeDirectory(path), constants.O_RDONLY); try { fsyncSync(fd) } finally { closeSync(fd) } }
 export const publishLeanChildEntry = (ledger: LeanExperimentLedger, entry: LeanChildEntryV2): void => {
-  if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v2" || !exactLabKeys(entry, ["schemaVersion", "allocationRoot", "sourceRoot", "requestBytesRoot", "head", "parentPid", "childPid", "handshakeRoot", "wallStartMs", "monotonicStartNs"]) || entry.schemaVersion !== "lean-child-entry-v2" || entry.allocationRoot !== ledger.allocation.root || entry.sourceRoot !== ledger.allocation.sourceRoot || !root(entry.requestBytesRoot) || !root(entry.handshakeRoot) || !/^[a-f0-9]{40}$/u.test(entry.head) || !natural(entry.parentPid) || entry.parentPid === 0 || !natural(entry.childPid) || entry.childPid === 0 || entry.parentPid === entry.childPid || !natural(entry.wallStartMs)) return fail("ENTRY")
+  if (!leanProspective(ledger.allocation) || !exactLabKeys(entry, ["schemaVersion", "allocationRoot", "sourceRoot", "requestBytesRoot", "head", "parentPid", "childPid", "handshakeRoot", "wallStartMs", "monotonicStartNs"]) || entry.schemaVersion !== "lean-child-entry-v2" || entry.allocationRoot !== ledger.allocation.root || entry.sourceRoot !== ledger.allocation.sourceRoot || !root(entry.requestBytesRoot) || !root(entry.handshakeRoot) || !/^[a-f0-9]{40}$/u.test(entry.head) || !natural(entry.parentPid) || entry.parentPid === 0 || !natural(entry.childPid) || entry.childPid === 0 || entry.parentPid === entry.childPid || !natural(entry.wallStartMs)) return fail("ENTRY")
   monotonic(entry.monotonicStartNs)
   if (readLeanTimeAccounting(ledger).starts.size || readLeanLedger(ledger).events.length) return fail("ENTRY")
   writeExclusive(join(safeDirectory(ledger.directory), "entry.json"), leanCanonicalBytes(entry)); syncLeanDirectory(ledger.directory)
 }
 export const readLeanChildEntry = (ledger: LeanExperimentLedger): LeanChildEntryV2 => {
-  if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v2") return fail("ENTRY")
+  if (!leanProspective(ledger.allocation)) return fail("ENTRY")
   const entry = parse(readSafe(join(safeDirectory(ledger.directory), "entry.json"))) as LeanChildEntryV2
   if (!exactLabKeys(entry, ["schemaVersion", "allocationRoot", "sourceRoot", "requestBytesRoot", "head", "parentPid", "childPid", "handshakeRoot", "wallStartMs", "monotonicStartNs"]) || entry.schemaVersion !== "lean-child-entry-v2" || entry.allocationRoot !== ledger.allocation.root || entry.sourceRoot !== ledger.allocation.sourceRoot || !root(entry.requestBytesRoot) || !root(entry.handshakeRoot) || !/^[a-f0-9]{40}$/u.test(entry.head) || !natural(entry.parentPid) || entry.parentPid === 0 || !natural(entry.childPid) || entry.childPid === 0 || entry.parentPid === entry.childPid || !natural(entry.wallStartMs)) return fail("ENTRY")
   monotonic(entry.monotonicStartNs); return entry
 }
 export const deriveLeanChildTerminal = (ledger: LeanExperimentLedger, entry: LeanChildEntryV2, observation: Omit<LeanChildTerminalV2, "schemaVersion" | "entryBytesRoot" | "allocationRoot" | "sourceRoot" | "head" | "parentPid" | "childPid" | "elapsedUpperBoundMs">): LeanChildTerminalV2 => {
-  if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v2") return fail("TERMINAL")
+  if (!leanProspective(ledger.allocation)) return fail("TERMINAL")
   if (!exactLabKeys(observation, ["exitCode", "signal", "wallObservedMs", "monotonicObservedNs", "status", "parentRssBytes", "childRssObservedBytes", "physicalBytes", "freeBytes"]) || !natural(observation.wallObservedMs) || observation.wallObservedMs < entry.wallStartMs || !natural(observation.parentRssBytes) || !natural(observation.physicalBytes) || observation.physicalBytes < ledger.allocation.predecessor.allocatedDiskBytes || observation.childRssObservedBytes !== null && !natural(observation.childRssObservedBytes) || observation.freeBytes !== null && !natural(observation.freeBytes) || observation.exitCode !== null && !natural(observation.exitCode) || observation.signal !== null && !/^[A-Z0-9]{1,20}$/u.test(observation.signal) || !["child_exited", "child_failed"].includes(observation.status) || observation.status === "child_exited" && (observation.exitCode !== 0 || observation.signal !== null)) return fail("TERMINAL")
   const ns = monotonic(observation.monotonicObservedNs) - monotonic(entry.monotonicStartNs)
   if (ns < 0n) return fail("TERMINAL")
@@ -399,8 +480,39 @@ export const readLeanChildTerminal = (ledger: LeanExperimentLedger): LeanChildTe
   const entry = readLeanChildEntry(ledger), { schemaVersion: _s, entryBytesRoot: _e, allocationRoot: _a, sourceRoot: _r, head: _h, parentPid: _p, childPid: _c, elapsedUpperBoundMs: _m, ...observation } = terminal
   if (labRoot("lean-terminal-admission", terminal) !== labRoot("lean-terminal-admission", deriveLeanChildTerminal(ledger, entry, observation))) return fail("TERMINAL")
   const time = readLeanTimeAccounting(ledger)
-  if (time.starts.get("pilot-entry") !== entry.wallStartMs || time.closes.get("pilot-entry") !== entry.wallStartMs + terminal.elapsedUpperBoundMs || time.closedElapsedMs < LEAN_FAILED_PREFIX.elapsedUpperBoundMs + terminal.elapsedUpperBoundMs || terminal.elapsedUpperBoundMs + LEAN_FAILED_PREFIX.elapsedUpperBoundMs > LEAN_CAPS.elapsedMs) return fail("TERMINAL")
+  const priorMs = leanPriorMs(ledger.allocation)
+  if (time.starts.get("pilot-entry") !== entry.wallStartMs || time.closes.get("pilot-entry") !== entry.wallStartMs + terminal.elapsedUpperBoundMs || time.closedElapsedMs < priorMs + terminal.elapsedUpperBoundMs || terminal.elapsedUpperBoundMs + priorMs > LEAN_CAPS.elapsedMs) return fail("TERMINAL")
   return terminal
+}
+/** Only the seven bounded closed-v2 records and its previously owned paths
+ * are read. This never replays the historical factory repository. */
+export const inspectLeanClosedV2Predecessor = (): Readonly<LeanClosedV2Predecessor> => {
+  const c = LEAN_CLOSED_V2, store = safeDirectory(c.storeIdentity)
+  const ledger = openLeanLedger(store)
+  if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v2") return fail("SUCCESSOR_PREDECESSOR")
+  const entry = readLeanChildEntry(ledger), terminal = readLeanChildTerminal(ledger)
+  const time = readLeanTimeAccounting(ledger), state = readLeanLedger(ledger)
+  const digest = (path: string) => leanBytesRoot(readSafe(resolve(path)))
+  const paths = leanClosedV2SurvivorPaths(), seen = new Set<string>()
+  const v2Survivors = paths.map((identity, index) => {
+    if (index === 0 || index === paths.length - 1) {
+      const directory = safeDirectory(identity)
+      if (index === paths.length - 1 && readdirSync(directory).length !== 0) return fail("SUCCESSOR_PREDECESSOR")
+      return { identity, allocatedBytes: statSync(directory).blocks * 512 }
+    }
+    const path = resolve(identity), stat = lstatSync(path), inode = `${stat.dev}:${stat.ino}`
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || realpathSync(path) !== path || seen.has(inode)) return fail("SUCCESSOR_PREDECESSOR")
+    seen.add(inode)
+    return { identity, allocatedBytes: stat.blocks * 512 }
+  })
+  return createLeanClosedV2Predecessor({
+    raw: { allocation: digest(join(store, "allocation.json")), canonical: digest(c.canonicalIdentity), request: digest(c.requestIdentity), entry: digest(join(store, "entry.json")), terminal: digest(join(store, "child-terminal.json")), time: digest(join(store, "time.ndjson")), charge: digest(join(store, "ledger.ndjson")), report: digest(c.terminalReportIdentity) },
+    storeFiles: readdirSync(store).sort(), allocationRoot: ledger.allocation.root, sourceRoot: ledger.allocation.sourceRoot, heldHead: entry.head,
+    entry: { allocationRoot: entry.allocationRoot, sourceRoot: entry.sourceRoot, requestBytesRoot: entry.requestBytesRoot, head: entry.head, parentPid: entry.parentPid, childPid: entry.childPid },
+    terminal: { entryBytesRoot: terminal.entryBytesRoot, allocationRoot: terminal.allocationRoot, sourceRoot: terminal.sourceRoot, head: terminal.head, parentPid: terminal.parentPid, childPid: terminal.childPid, elapsedUpperBoundMs: terminal.elapsedUpperBoundMs, physicalBytes: terminal.physicalBytes, status: terminal.status, signal: terminal.signal, exitCode: terminal.exitCode },
+    timeElapsedMs: time.elapsedMs, timeStarts: time.starts.size, timeCloses: time.closes.size, chargedMatches: state.charged, resultExists: readdirSync(store).includes("result.json"),
+    v1DiskBasisRoot: ledger.allocation.predecessor.diskBasis.root, v1SurvivingAllocatedBytes: ledger.allocation.predecessor.allocatedDiskBytes, v2Survivors,
+  })
 }
 export const readLeanLedger = (ledger: LeanExperimentLedger) => {
   const retained = openLeanLedger(ledger.directory)
@@ -409,7 +521,7 @@ export const readLeanLedger = (ledger: LeanExperimentLedger) => {
   if (text.length && !text.endsWith("\n")) return fail("PUBLICATION")
   const events = text ? text.slice(0, -1).split("\n").map(line => parse(Buffer.from(line)) as Event) : []
   const charges = new Map<LabRoot, LeanCharge>(), terminals = new Map<LabRoot, Extract<Event, { kind: "terminal" }>>()
-  const previous = ledger.allocation.schemaVersion === "lean-experiment-allocation-v2" ? ledger.allocation.predecessor : null
+  const previous = leanProspective(ledger.allocation) ? ledger.allocation.predecessor : null
   let elapsedMs = previous?.elapsedUpperBoundMs ?? 0, physicalHighWaterBytes = previous?.allocatedDiskBytes ?? 0, scratchHighWaterBytes = 0, stopped = false
   for (const e of events) {
     if (e.kind === "charge") {
@@ -433,12 +545,12 @@ export const readLeanLedger = (ledger: LeanExperimentLedger) => {
  * open interval, never a recoverable elapsed sample. */
 export const readLeanCumulativeAccounting = (ledger: LeanExperimentLedger) => {
   const state = readLeanLedger(ledger), time = readLeanTimeAccounting(ledger)
-  if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v2") return { elapsedMs: time.elapsedMs, charged: state.charged, physicalHighWaterBytes: state.physicalHighWaterBytes, active: time.active }
+  if (!leanProspective(ledger.allocation)) return { elapsedMs: time.elapsedMs, charged: state.charged, physicalHighWaterBytes: state.physicalHighWaterBytes, active: time.active }
   const terminal = readLeanChildTerminal(ledger)
   return { elapsedMs: time.elapsedMs, charged: state.charged, physicalHighWaterBytes: Math.max(state.physicalHighWaterBytes, terminal.physicalBytes, cumulativeLeanPhysicalBytes(ledger)), active: time.active }
 }
 export const chargeLeanSlot = (ledger: LeanExperimentLedger, slot: LeanSlot, capacity: { freeBytes: number; availableMemoryBytes: number }): LeanCharge => {
-  if (ledger.allocation.schemaVersion === "lean-experiment-allocation-v2") {
+  if (leanProspective(ledger.allocation)) {
     const time = readLeanTimeAccounting(ledger), entry = readLeanChildEntry(ledger)
     if (!time.closed.has("pilot-entry")) {
       if (!time.active || time.starts.get("pilot-entry") !== entry.wallStartMs || entry.childPid !== process.pid || entry.parentPid !== process.ppid) return fail("ENTRY")
@@ -456,7 +568,7 @@ const admitCompactRecord = (r: LeanCompactMatchRecord): void => {
   if (r.classification === "success" ? r.code !== "OK" || !r.cleanupComplete || r.outcome === null : r.outcome !== null || r.code === "OK" || (r.classification === "player_violation" ? r.code !== "PLAYER_VIOLATION" || !r.cleanupComplete : !["SUPERVISOR_FAILURE", "CAPACITY", "CLEANUP"].includes(r.code)) || (!r.cleanupComplete && r.code !== "CLEANUP")) return fail("RECORD_CLASSIFICATION")
 }
 export const assertLeanPublicationCapacity = (ledger: LeanExperimentLedger, bytes: number, currentPhysicalBytes = leanProspectiveOwnedBytes(ledger)) => {
-  if (!natural(bytes) || !natural(currentPhysicalBytes) || currentPhysicalBytes + (ledger.allocation.schemaVersion === "lean-experiment-allocation-v2" ? ledger.allocation.predecessor.allocatedDiskBytes : 0) + Math.ceil(bytes / 4096) * 4096 + 65536 > LEAN_CAPS.retainedBytes) return fail("RESOURCE")
+  if (!natural(bytes) || !natural(currentPhysicalBytes) || currentPhysicalBytes + leanPriorBytes(ledger.allocation) + Math.ceil(bytes / 4096) * 4096 + 65536 > LEAN_CAPS.retainedBytes) return fail("RESOURCE")
 }
 export const retainLeanMatch = (ledger: LeanExperimentLedger, charge: LeanCharge, record: LeanCompactMatchRecord, replayFrames: Iterable<unknown>) => {
   admitCompactRecord(record)
