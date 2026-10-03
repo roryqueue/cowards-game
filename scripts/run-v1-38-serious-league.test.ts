@@ -1,4 +1,4 @@
-import { fsync, mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync, cpSync, copyFileSync, writeFileSync } from "node:fs"
+import { fsync, mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync, cpSync, writeFileSync } from "node:fs"
 import { createHash, randomUUID } from "node:crypto"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -41,20 +41,25 @@ import { createCompleteHistoricalFactoryFixture } from "./fixtures/factory-compl
 
 const directories: string[] = []
 const descriptorSyncFailure = vi.hoisted(() => ({ active: false, error: null as Error | null }))
+const oversizedWholeRead = vi.hoisted(() => ({ path: "", attempted: 0 }))
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>()
-  return { ...actual, fsyncSync(fd: number) { if (descriptorSyncFailure.active && !actual.fstatSync(fd).isDirectory()) throw descriptorSyncFailure.error ?? Error("descriptor file fsync failed"); return actual.fsyncSync(fd) } }
+  return { ...actual, fsyncSync(fd: number) { if (descriptorSyncFailure.active && !actual.fstatSync(fd).isDirectory()) throw descriptorSyncFailure.error ?? Error("descriptor file fsync failed"); return actual.fsyncSync(fd) }, readFileSync: ((...args: Parameters<typeof actual.readFileSync>) => { if (String(args[0]) === oversizedWholeRead.path) { oversizedWholeRead.attempted++; throw new Error("oversized-whole-read") }; return actual.readFileSync(...args) }) as typeof actual.readFileSync }
 })
-afterEach(() => { descriptorSyncFailure.active = false; descriptorSyncFailure.error = null; vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
+afterEach(() => { descriptorSyncFailure.active = false; descriptorSyncFailure.error = null; oversizedWholeRead.path = ""; oversizedWholeRead.attempted = 0; vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 const temporary = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-command-test-"))); directories.push(directory); return directory }
 
 it("imports two synthetic candidates through both genuine historical verifier paths", async () => {
   const fixture = await createCompleteHistoricalFactoryFixture(); directories.push(fixture.directory)
   const publicationRoots = (["S01", "S03"] as const).map(slot => fixture.candidates.find(candidate => candidate.slot === slot)!.publicationRoot)
   const selection = { initialCandidatePublicationRoots: publicationRoots, factoryAssessmentArtifactRoots: [fixture.assessment.assessmentArtifactRoot!], operations: { maxArtifactBytes: 64 * 1024 * 1024, maxArtifactRecords: 50_000 } }
+  const verifier = vi.spyOn(assessmentModule, "verifyHistoricalFactoryAssessmentForLeague")
   const ordinary = readLeagueInitialCandidates(fixture.repository, selection)
+  expect(verifier).toHaveBeenCalledTimes(3)
+  verifier.mockClear()
   let reopenedCells = 0
   const bounded = readLeanPilotInitialCandidates(fixture.repository, selection, () => { reopenedCells++ })
+  expect(verifier).toHaveBeenCalledTimes(1)
   expect(reopenedCells).toBe(48)
   expect(ordinary.map(candidate => candidate.admission.root)).toEqual(bounded.map(candidate => candidate.admission.root))
   expect(bounded.map(candidate => candidate.admission.importEvidence?.sourceSlot)).toEqual(["S01", "S03"])
@@ -63,40 +68,37 @@ it("imports two synthetic candidates through both genuine historical verifier pa
   expect(bounded.map(candidate => candidate.admission.importEvidence?.thresholdArtifactRoot)).toEqual([fixture.assessment.thresholdArtifactRoot, fixture.assessment.thresholdArtifactRoot])
 }, 180000)
 
-it("lean import authenticates one selected assessment for two candidate closures without changing legacy roots", async () => {
+it("denies an incomplete mocked two-attempt import before historical verification", async () => {
   const first = await importedCandidateFixture(1), second = await importedCandidateFixture(3), repository = first.factoryRepository
-  for (const name of readdirSync(second.factoryRepository.directory)) {
-    if (!name.startsWith("factory-artifact-")) continue
-    const destination = join(repository.directory, name)
-    if (!readdirSync(repository.directory).includes(name)) copyFileSync(join(second.factoryRepository.directory, name), destination)
-  }
   for (const fixture of [first, second]) {
     recordFactoryAttemptStart(repository, fixture.input.attemptStart)
     publishFactoryAttemptTerminal(repository, fixture.input.attemptStart, fixture.input.attemptTerminal)
   }
-  const read = (artifactRoot: typeof first.input.assessmentArtifactRoot) => JSON.parse(new TextDecoder().decode(readFactoryArtifact(repository, artifactRoot))) as Record<string, any>
-  const priorThreshold = read(first.candidateAdmission.importEvidence!.thresholdArtifactRoot)
-  const sourceRoots = [...priorThreshold.sourceRoots]
-  sourceRoots[2] = second.candidateAdmission.candidate.proposal.source.root
-  const { root: _oldThresholdRoot, ...thresholdBody } = priorThreshold
-  const newThresholdBody = { ...thresholdBody, sourceRoots }
-  const thresholdArtifactRoot = first.put({ ...newThresholdBody, root: labRoot("factory-numeric-threshold-v1", newThresholdBody) })
-  const priorAssessment = read(first.input.assessmentArtifactRoot)
-  const { root: _oldAssessmentRoot, ...assessmentBody } = priorAssessment
-  const joined = { ...assessmentBody, thresholdArtifactRoot, input: { ...assessmentBody.input, candidateArtifactRoots: [first.input.publicationArtifactRoot, second.input.publicationArtifactRoot], supervisionArtifactRoots: [first.input.supervisionArtifactRoot, second.input.supervisionArtifactRoot], terminalRoots: [first.input.attemptTerminal.root, second.input.attemptTerminal.root] } }
-  const assessmentRoot = labRoot("factory-independence-assessment-v1", joined), assessmentArtifactRoot = first.put({ ...joined, root: assessmentRoot })
-  const verifier = vi.spyOn(assessmentModule, "verifyHistoricalFactoryAssessmentForLeague").mockReturnValue({ status: "affirmed", reasons: [], assessmentRoot, assessmentArtifactRoot: null, thresholdArtifactRoot, manifestRoot: (joined as Record<string, any>).manifestRoot, allocationRoot: (joined as Record<string, any>).allocationRoot, issued: false, historicalProducerImplementationRoot: assessmentRoot, historicalAssessmentImplementationRoot: assessmentRoot, currentReaderImplementationRoot: assessmentRoot })
-  const selection = { initialCandidatePublicationRoots: [first.input.publicationArtifactRoot, second.input.publicationArtifactRoot], factoryAssessmentArtifactRoots: [assessmentArtifactRoot], operations: { maxArtifactBytes: 64 * 1024 * 1024, maxArtifactRecords: 50_000 } }
-  const oldCandidates = readLeagueInitialCandidates(repository, selection)
-  expect(verifier).toHaveBeenCalledTimes(3)
-  verifier.mockClear()
-  const leanCandidates = readLeanPilotInitialCandidates(repository, selection)
-  expect(verifier).toHaveBeenCalledTimes(1)
-  expect(leanCandidates.map((candidate) => candidate.admission.root)).toEqual(oldCandidates.map((candidate) => candidate.admission.root))
-  for (const candidate of leanCandidates) expect(candidate.importedAssessment!.verifyRetainedAssessment(repository, assessmentArtifactRoot).assessmentRoot).toBe(assessmentRoot)
-  expect(verifier).toHaveBeenCalledTimes(1)
-  expect(() => leanCandidates[0]!.importedAssessment!.verifyRetainedAssessment(second.factoryRepository, assessmentArtifactRoot)).toThrow("CANDIDATE_ASSESSMENT")
+  const verifier = vi.spyOn(assessmentModule, "verifyHistoricalFactoryAssessmentForLeague")
+  const selection = { initialCandidatePublicationRoots: [first.input.publicationArtifactRoot, second.input.publicationArtifactRoot], factoryAssessmentArtifactRoots: [first.input.assessmentArtifactRoot], operations: { maxArtifactBytes: 64 * 1024 * 1024, maxArtifactRecords: 50_000 } }
+  expect(() => readLeanPilotInitialCandidates(repository, selection)).toThrow("FACTORY_ASSESSMENT_IMPORT_ATTEMPT_COUNT")
+  expect(verifier).not.toHaveBeenCalled()
 }, 60000)
+
+it("denies an oversized indexed artifact before whole-file read or verifier work", () => {
+  const repository = createFactoryRepository(realpathSync(mkdtempSync(join(tmpdir(), "factory-oversized-index-"))))
+  directories.push(repository.directory)
+  for (let ordinal = 0; ordinal < 48; ordinal++) {
+    const digest = ordinal.toString(16).padStart(64, "0")
+    writeFileSync(join(repository.directory, `factory-attempt-${digest}.started.json`), "{}")
+    writeFileSync(join(repository.directory, `factory-attempt-${digest}.terminal.json`), "{}")
+  }
+  const path = join(repository.directory, `factory-artifact-${"f".repeat(64)}.bin`)
+  writeFileSync(path, Buffer.alloc(262_145))
+  oversizedWholeRead.path = path
+  const verifier = vi.spyOn(assessmentModule, "verifyHistoricalFactoryAssessmentForLeague")
+  const selection = { initialCandidatePublicationRoots: [labRoot("oversized", 1), labRoot("oversized", 2)], factoryAssessmentArtifactRoots: [labRoot("oversized", 3)], operations: { maxArtifactBytes: 64 * 1024 * 1024, maxArtifactRecords: 50_000 } }
+  let reservations = 0
+  expect(() => readLeanPilotInitialCandidates(repository, selection, undefined, () => { reservations++ })).toThrow("FACTORY_REPOSITORY_CAP")
+  expect(reservations).toBeGreaterThan(0)
+  expect(oversizedWholeRead.attempted).toBe(0)
+  expect(verifier).not.toHaveBeenCalled()
+})
 
 it.each(["authoring-append", "validation-publication", "selected-validation", "validated-before-charge"])("host response receipt V3 retains honest zero-charge produced author failure (%s)", async (stage) => {
   const candidates = [await candidate(1), await candidate(3), await candidate(5)], factoryDirectory = realpathSync(mkdtempSync(join(tmpdir(), "factory-retained-v3-"))), league = createLeagueRepository(temporary()), input = prospectiveLifetimeFixture()
