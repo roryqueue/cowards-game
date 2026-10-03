@@ -44,12 +44,35 @@ export const leanSchedule = (tier: "full" | "reduced") => {
 }
 export interface LeanReplayContainer { schemaVersion: "lean-sampled-replay-gzip-v1"; privacy: "private_offline"; codec: "gzip-node-v1"; compressedRoot: LabRoot; uncompressedRoot: LabRoot; compressedBytes: number; uncompressedBytes: number; frames: number; root: LabRoot }
 const REPLAY_MAX = 256_000_000
-export const encodeLeanReplay = (frames: readonly unknown[]): { container: LeanReplayContainer; bytes: Uint8Array } => {
-  const chunks = frames.map(frame => Buffer.concat([leanCanonicalBytes(frame), Buffer.from("\n")]))
-  const length = chunks.reduce((n, b) => n + b.length, 0)
-  if (length > REPLAY_MAX) return fail("REPLAY_LIMIT")
+export const LEAN_EXTERNAL_SCRATCH_RESERVE = 512_000_000
+const assertTransient = (additionalBytes = 0) => { if (Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024) + LEAN_EXTERNAL_SCRATCH_RESERVE + additionalBytes > LEAN_CAPS.scratchBytes) return fail("BUFFER_CAP") }
+/** Conservative JSON-size traversal refuses large frames before JSON/string/buffer allocation. */
+const boundedFrameEstimate = (value: unknown, remaining: number): number => {
+  let bytes = 1
+  const visit = (v: unknown, depth: number): void => {
+    if (depth > 128) return fail("REPLAY_LIMIT")
+    if (typeof v === "string") bytes += 6 * v.length + 2
+    else if (v === null || typeof v !== "object") bytes += 32
+    else if (Array.isArray(v)) { bytes += 2 + v.length; for (const x of v) { visit(x, depth + 1); if (bytes > remaining) return fail("REPLAY_LIMIT") } }
+    else { bytes += 2; for (const [key, x] of Object.entries(v)) { bytes += key.length * 6 + 5; visit(x, depth + 1); if (bytes > remaining) return fail("REPLAY_LIMIT") } }
+    if (bytes > remaining) return fail("REPLAY_LIMIT")
+  }
+  visit(value, 0); return bytes
+}
+export const encodeLeanReplay = (frames: Iterable<unknown>, maximumBytes = REPLAY_MAX): { container: LeanReplayContainer; bytes: Uint8Array } => {
+  const limit = Math.min(maximumBytes, REPLAY_MAX), chunks: Buffer[] = []
+  let length = 0, count = 0
+  for (const frame of frames) {
+    const upper = boundedFrameEstimate(frame, limit - length)
+    assertTransient(length + upper * 3)
+    const encoded = leanCanonicalBytes(frame)
+    if (length + encoded.length + 1 > limit) return fail("REPLAY_LIMIT")
+    chunks.push(Buffer.concat([encoded, Buffer.from("\n")])); length += encoded.length + 1; count++
+  }
+  assertTransient(length * 3 + 1_000_000)
   const plain = Buffer.concat(chunks), bytes = gzipSync(plain, { level: 6 })
-  const body = { schemaVersion: "lean-sampled-replay-gzip-v1" as const, privacy: "private_offline" as const, codec: "gzip-node-v1" as const, compressedRoot: leanBytesRoot(bytes), uncompressedRoot: leanBytesRoot(plain), compressedBytes: bytes.length, uncompressedBytes: plain.length, frames: frames.length }
+  assertTransient()
+  const body = { schemaVersion: "lean-sampled-replay-gzip-v1" as const, privacy: "private_offline" as const, codec: "gzip-node-v1" as const, compressedRoot: leanBytesRoot(bytes), uncompressedRoot: leanBytesRoot(plain), compressedBytes: bytes.length, uncompressedBytes: plain.length, frames: count }
   return { container: { ...body, root: labRoot("lean-sampled-replay-gzip-v1", body) }, bytes }
 }
 export const decodeLeanReplay = (container: LeanReplayContainer, bytes: Uint8Array, maximumBytes = REPLAY_MAX): unknown[] => {
@@ -80,6 +103,7 @@ const writeExclusive = (path: string, bytes: Uint8Array) => { const fd = openSyn
 const readSafe = (path: string): Uint8Array => { const s = lstatSync(path); if (!s.isFile() || s.isSymbolicLink() || s.size > REPLAY_MAX) return fail("FILE"); const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW); try { return readFileSync(fd) } finally { closeSync(fd) } }
 const append = (ledger: LeanExperimentLedger, event: Event) => {
   const p = safeDirectory(ledger.directory), bytes = leanCanonicalBytes(event)
+  assertLeanPublicationCapacity(ledger, bytes.length + 1)
   const fd = openSync(join(p, "ledger.ndjson"), constants.O_APPEND | constants.O_WRONLY | constants.O_NOFOLLOW)
   try { writeLeanAll(fd, Buffer.concat([bytes, Buffer.from("\n")])); fsyncSync(fd) } finally { closeSync(fd) }
 }
@@ -170,13 +194,17 @@ export const chargeLeanSlot = (ledger: LeanExperimentLedger, slot: LeanSlot, cap
 const admitCompactRecord = (r: LeanCompactMatchRecord): void => {
   if (!exactLabKeys(r, ["classification", "code", "outcome", "elapsedMs", "cleanupComplete", "invocationCount", "accountingRoot", "executionRoot", "telemetry"]) || !["success", "player_violation", "system_failure"].includes(r.classification) || !["OK", "PLAYER_VIOLATION", "SUPERVISOR_FAILURE", "CAPACITY", "CLEANUP"].includes(r.code) || ![null, "bottom", "top", "DRAW"].includes(r.outcome) || !natural(r.elapsedMs) || r.elapsedMs > LEAN_CAPS.matchMs + 30_000 || typeof r.cleanupComplete !== "boolean" || !natural(r.invocationCount) || r.invocationCount > 49_600 || !root(r.accountingRoot) || !root(r.executionRoot) || !exactLabKeys(r.telemetry, ["transitions", "events"]) || !Object.values(r.telemetry).every(natural)) return fail("RECORD")
 }
-export const retainLeanMatch = (ledger: LeanExperimentLedger, charge: LeanCharge, record: LeanCompactMatchRecord, replayFrames: readonly unknown[]) => {
+export const assertLeanPublicationCapacity = (ledger: LeanExperimentLedger, bytes: number, currentPhysicalBytes = measureLeanPhysicalBytes(ledger.directory)) => {
+  if (!natural(bytes) || !natural(currentPhysicalBytes) || currentPhysicalBytes + Math.ceil(bytes / 4096) * 4096 + 65536 > LEAN_CAPS.retainedBytes) return fail("RESOURCE")
+}
+export const retainLeanMatch = (ledger: LeanExperimentLedger, charge: LeanCharge, record: LeanCompactMatchRecord, replayFrames: Iterable<unknown>) => {
   admitCompactRecord(record)
   const s = readLeanLedger(ledger)
   if (s.charges.get(charge.slotRoot)?.root !== charge.root || s.terminals.has(charge.root)) return fail("TERMINAL")
   const selected = ledger.allocation.sampleSlotRoots.includes(charge.slotRoot) || record.classification !== "success" || !record.cleanupComplete
-  const replay = selected ? encodeLeanReplay(replayFrames) : null
-  if (replay) writeExclusive(join(safeDirectory(ledger.directory), `${charge.root.slice(7)}.gz`), replay.bytes)
+  const remaining = LEAN_CAPS.retainedBytes - measureLeanPhysicalBytes(ledger.directory) - 131072
+  const replay = selected ? encodeLeanReplay(replayFrames, remaining) : null
+  if (replay) { assertLeanPublicationCapacity(ledger, replay.bytes.length); writeExclusive(join(safeDirectory(ledger.directory), `${charge.root.slice(7)}.gz`), replay.bytes) }
   append(ledger, { kind: "terminal", chargeRoot: charge.root, record, replay: replay?.container ?? null })
 }
 export const checkpointLeanResources = (ledger: LeanExperimentLedger, elapsedMs: number, bufferBytes: number, scratchBytes = 0) => {

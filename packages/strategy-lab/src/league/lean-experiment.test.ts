@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { afterEach, expect, it } from "vitest"
 import { labRoot, LAB_ADMITTED_ROOTS } from "../contracts.js"
 import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting } from "./lean-experiment.js"
+import { assertLeanPublicationCapacity } from "./lean-experiment.js"
 import { writeLeanAll, createLeanAllocation, chargeLeanSlot, createLeanLedger, retainLeanMatch, verifyLeanEvidence, chooseLeanTier, encodeLeanReplay, decodeLeanReplay, leanSchedule, readLeanLedger } from "./lean-experiment.js"
 
 const dirs: string[] = []
@@ -51,6 +52,18 @@ it("authenticates bounded gzip and rejects legacy references, corruption and dec
   expect(() => decodeLeanReplay({ schemaVersion: "league-execution-ref-v2" } as never, p.bytes)).toThrow()
   expect(() => decodeLeanReplay(p.container, p.bytes.map(b => b ^ 1))).toThrow()
   expect(() => decodeLeanReplay(p.container, p.bytes, 1)).toThrow()
+})
+it("refuses oversized frame streams and near-cap publication before writing", () => {
+  const l = ledger(), before = readLeanLedger(l).events.length
+  let produced = 0
+  function* frames() { for (let i = 0; i < 100; i++) { produced++; yield { value: "x".repeat(500) } } }
+  expect(() => encodeLeanReplay(frames(), 4000)).toThrow("REPLAY_LIMIT")
+  expect(produced).toBeLessThan(100)
+  expect(() => assertLeanPublicationCapacity(l, 8192, 12_000_000_000 - 4096)).toThrow("RESOURCE")
+  expect(readLeanLedger(l).events.length).toBe(before)
+  const charge = chargeLeanSlot(l, l.allocation.slots.find(s => !l.allocation.sampleSlotRoots.includes(s.root))!, { freeBytes: 20e9, availableMemoryBytes: 2e9 })
+  const unsampled = { [Symbol.iterator]() { throw new Error("must not create redacted replay") } }
+  retainLeanMatch(l, charge, { classification: "success", code: "OK", outcome: "DRAW", elapsedMs: 4, cleanupComplete: true, invocationCount: 0, accountingRoot: pin, executionRoot: pin, telemetry: { transitions: 0, events: 0 } }, unsampled)
 })
 it("retains every failure and exact all-slot accounting without source or memory leakage", () => {
   const l = ledger(), s = l.allocation.slots[0]!
