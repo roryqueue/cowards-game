@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 V12 requests independently accepted; unique data-only allocation preparation98897 active
+stopped_at: Phase265 V12 allocation published; commit before unique capacity-gated root entry
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: FreshV12 eleven requests accepted; compile/allocation-input exit0; single prepare session98897 PID44142 active, no capacity/Match
+last_activity_desc: V12 prepare98897/capacity-input99540/publication55711 closedexit0; fresh allocation02bb7a07 ready tocommit, no receipt/Match
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,22 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+V12 data-only prepare98897 CLOSEDexit0; capacity-input99540 CLOSEDexit0,
+receiptCreatedfalse (historicalstatic sizing only); publish55711 CLOSEDexit0.
+New canonicalallocation-v12 raw19cce0e4ef93454e944990b58802dab053e3f86f0e881ba34d85d238ee696ce9,
+admitted02bb7a07b956c37eeadb2282cf12cfd1775aa7bb71cf5d052d3c069736343b0e.
+Exact V3 host5000/Match600000/11jobs, all other frozen bounds unchanged.
+Fresh league-evidence observed empty, real nonsymlink0700. Commit/push exact
+allocation and safe preparation report BEFORE unique root run-entry. No current
+capacity receipt, charge, provider or Match; run itself must perform fresh
+passing SAMEPROCESS capacity before charge/dispatch. Noactive helper/gate/
+entry/verifier. After entry starts hold production source AND HEAD fixed
+through its terminal and ONE unique retained verifier; no competing heavywork.
+AllLEAGpending; source9ff/552bba3d/defe5024, all approvals/clean source/helper/
+request reviews retained; historical unknownDockerlaunch flag and immutable
+consumedroutes/privacy/holdout/freeze-beforeformation unchanged. Older active
+prepare paragraph below is now history; do not duplicate completed modes.
 
 FreshV12 actual request draft41127 CLOSEDexit0, actualdraft03:54:12.802Z,
 draft raw48e990194bc37577eb26b63cb013d9e7905a6790ff5267c0220bc2a092863ada.
