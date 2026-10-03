@@ -1,0 +1,9 @@
+# Lean pilot attempt — bounded nonpass
+
+The unique root entry session36848/PID66239 over HEAD1da8d113 and reviewed source92cc6bfe exited134 after a native coordinator heap-exhaustion diagnostic. The launch's768MiBheap restriction was a main-orchestrator conservative choice, not a gameplay/runtime or laptop-capacity finding. Exact throw point and required heap are not independently established.
+
+The [unique independent entry-terminal check](265-15-PILOT-ENTRY-TERMINAL-VERIFICATION-v1.md) confirms PID closure, exact allocation/store bytes and source/HEAD bindings, an empty charge ledger, one open time interval, and no result/terminal record. There is no actual retained result, no ordinary empirical verification, no successful pilot or selected200/128tier, and no league/freeze/formation credit. Record absence does not prove absence of all transient construction or unrecorded observations. The reviewed code places candidate loading before the slot/charge/provider loop, consistent with the observed uncharged prefix.
+
+Allocation root: `sha256:8520a35eb4a6af3f2d7760d819ce72eef9d8dd764a0a925a19fa7554db327980`. Every allocation, request, store byte and failed interval remains unchanged. V1's conservative unknown-interval accounting consumes its remaining envelope; no one may close, retry, fill, refund or reinterpret that route. Existing blanket approval permits distinct fresh same-scope routes, but not cumulative cap resets. Source-only diagnosis may propose an independently checked bounded carry-forward and lower-memory import path; any unsound/unbounded or materially enlarged resource decision requires the human.
+
+Disposition: **feasibility_not_established**, **requirementsComplete:false**. Plan265-15 and Phase265 are not passed;265-16 empirical work and266freeze remain unstarted. No formation/holdout opening, counted/public/production work or rule changes occurred in this attempt's retained evidence.

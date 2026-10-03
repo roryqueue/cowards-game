@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-15 fresh lean pilot prepared; exact allocation committed before unique root entry and retained verifier
+stopped_at: Plan265-15 root pilot closedexit134 uncharged; unique entry-terminal check closed; source-only memory/accounting diagnosis next
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Fresh eight-cell pilot allocation8520a35e prepared after final checked source; next unique root run with capped coordinator heap
+last_activity_desc: Pilot heap exhaustion before retained charge; immutable open interval/no result; no tier or empirical credit; sourcehold released after unique terminal check
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved lean experiment reset, 2026-10-03
+
+CURRENT: unique root pilot session36848/PID66239 CLOSEDexit134; native coordinator heap exhaustion under main's768MiBlaunch bound during candidate admission. Unique independent ENTRY-terminal-only verification CLOSED in265-15-PILOT-ENTRY-TERMINAL-VERIFICATION-v1.md: exact source/HEAD/allocation joins, PID absent, zero retainedcharges, one open time row, no actualresult/terminal. Never invoke ordinary empirical reader with fabricatedresult/head; never close/alter/resume/retry/refund this allocation/store/interval. V1 conservative unknown-interval rule exhausts remainingtime; no selectedtier/LEAG/freeze/formationcredit. The failed launch does not establish minimum memory or Strategy strength. Actualabsence is not proof of absence of all transient/unrecorded observations. Source/HEADhold is released after rootclosure+uniquecheck. Next is bounded GSD diagnosis-only of import memory and prospective crash accounting under unchanged15GB/8hour/300Match caps, with independently checked carry-forward before any distinct fresh route; no budgetreset. If bounded carry-forward cannot be soundly established, that new resource decision is human-only. Plan265-15/phase265 remain incomplete;265-16empirical and266freeze unstarted. Old and new consumed artifacts immutable; current-rules freeze-before-formation/privateholdout/no-public-counted-production unchanged.
+
+Previous prepared/start snapshot (historical, not an active command):
 
 Research and independent Plans265-15/16 checks complete. Final source92cc6bfe/root a37b17b1f58ae48e5cce5193716fe57199c8810f5a63797210bbe5f6bb6e6057 (861 entries) has clean independent REVIEW-v4. Original review findings and final narrow boundary integration repaired. Source checks:247 runner/runtime tests,88 scanner tests,12 Set-condition tests; focused/project types, dependency/strategy-lab builds; three1360-file scans zero violations; service strict/ownership zero with19 pre-existing report-only offenses. Interrupted first preparation PID64186/exit143 published no store/allocation/entry/charge; its request remains untouched. New request lean-pilot-request-20261003-v2.json binds checked source/review and S01/S03 historical candidate provenance only. Preparation session47074/PID65912 CLOSEDexit0, issuedfalse/preparation_only; new allocation sha256:8520a35eb4a6af3f2d7760d819ce72eef9d8dd764a0a925a19fa7554db327980. Fresh real0700store has empty charge/time ledgers. Commit exact canonicalallocation before unique root entry. Root command uses `node --max-old-space-size=768 --import tsx scripts/run-v1-38-lean-experiment.ts run-pilot --request .strategy-lab/lean-pilot-request-20261003-v2.json`: narrower coordinator heap bound only, unchanged1000ms guest/5000ms host/600000ms Match and2GBscratch envelope. Historical evidence reopening was read-only; no empirical credit. Hold source AND HEAD from unique entry through terminal and exactly one independent retained verifier; no competing heavy work or duplicate mode. All consumed historical artifacts and new allocation immutable. No formation/holdout opened. Shared15GB/eight-hour/full200-or-reduced128 bounds unchanged; phase/pilot completion pending, no old LEAG credit.
 
