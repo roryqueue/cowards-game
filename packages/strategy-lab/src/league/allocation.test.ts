@@ -50,6 +50,54 @@ export const prospectiveLifetimeFixture = () => {
   const create = allocationApi.createLeagueProspectiveAmendmentV2
   return { ...input, operations: policy.operations, amendment: create({ ...amendment, policy, lifetimeApproval: "265-PROSPECTIVE-LIFETIME-APPROVAL-20261002" }) }
 }
+const prospectiveHostReceiptFixture = () => {
+  const input = prospectiveLifetimeFixture(), { root: _root, schemaVersion: _schema, ...amendment } = input.amendment
+  const policy = { ...amendment.policy, operations: { ...amendment.policy.operations, hostResponseReceiptMilliseconds: 5000 } }
+  return { ...input, operations: policy.operations, amendment: allocationApi.createLeagueProspectiveAmendmentV3({ ...amendment, policy, lifetimeApproval: "265-PROSPECTIVE-LIFETIME-APPROVAL-20261002", hostReceiptApproval: "265-PROSPECTIVE-HOST-RECEIPT-APPROVAL-20261002" }) }
+}
+describe("prospective host response receipt", () => {
+  it("admits only the exactly approved V3 delta and preserves V1/V2 admissions", () => {
+    const input = prospectiveHostReceiptFixture(), createV3 = allocationApi.createProspectiveLeagueExecutionAllocationV3 as any
+    const v3 = createV3(input), v2Input = prospectiveLifetimeFixture(), v2 = allocationApi.createProspectiveLeagueExecutionAllocationV2(v2Input)
+    expect(v3.schemaVersion).toBe("league-prospective-execution-allocation-v3")
+    expect(v3.amendment.schemaVersion).toBe("league-prospective-measurement-amendment-v3")
+    expect(v3.amendment.policy.operations).toEqual({ ...v2.amendment.policy.operations, hostResponseReceiptMilliseconds: 5000 })
+    expect(v3.operations).toEqual({ ...v2.operations, hostResponseReceiptMilliseconds: 5000 })
+    expect(v3.operations.perMatchMilliseconds).toBe(600000)
+    expect(allocationApi.admitProspectiveLeagueExecutionAllocationV3(v3)).toEqual(v3)
+    expect(allocationApi.admitAnyLeagueExecutionAllocation(v3)).toEqual(v3)
+    expect(allocationApi.admitAnyLeagueExecutionAllocation(v2)).toEqual(v2)
+    expect(allocationApi.admitAnyLeagueExecutionAllocation(createProspectiveLeagueExecutionAllocation(prospectiveFixture()))).toEqual(createProspectiveLeagueExecutionAllocation(prospectiveFixture()))
+    expect(allocationApi.LEAGUE_APPROVED_PROSPECTIVE_POLICY_V3.operations.hostResponseReceiptMilliseconds).toBe(5000)
+    expect(allocationApi.LEAGUE_APPROVED_PROSPECTIVE_POLICY_V3.operations.perMatchMilliseconds).toBe(600000)
+  })
+
+  it("rejects scalar changes, partial/extra policy, wrong approval, and crossed V3 roots", () => {
+    const input = prospectiveHostReceiptFixture(), createV3 = allocationApi.createProspectiveLeagueExecutionAllocationV3 as any
+    for (const milliseconds of [4999, 5001, 5000.5]) expect(() => createV3({ ...input, operations: { ...input.operations, hostResponseReceiptMilliseconds: milliseconds } })).toThrow()
+    for (const mutate of [
+      (value: any) => delete value.operations.hostResponseReceiptMilliseconds,
+      (value: any) => value.operations.extra = 1,
+      (value: any) => value.amendment.hostReceiptApproval = "other",
+      (value: any) => value.amendment.policy.operations.hostResponseReceiptMilliseconds = 4999,
+      (value: any) => value.operations.perMatchMilliseconds = 599999,
+      (value: any) => value.amendment.schemaVersion = "league-prospective-measurement-amendment-v2",
+    ]) {
+      const changed = structuredClone(input); mutate(changed); expect(() => createV3(changed)).toThrow()
+    }
+    const v3 = createV3(input)
+    for (const mutate of [
+      (value: any) => value.root = root("crossed-v3-root"),
+      (value: any) => value.schemaVersion = "league-prospective-execution-allocation-v2",
+      (value: any) => value.implementationRoot = root("crossed-v3-implementation"),
+      (value: any) => value.amendment.sourceRoot = root("crossed-v3-source"),
+      (value: any) => value.extra = true,
+    ]) {
+      const changed = structuredClone(v3); mutate(changed); expect(() => allocationApi.admitAnyLeagueExecutionAllocation(changed)).toThrow()
+    }
+    expect(() => createV3({ ...input, amendment: { ...input.amendment, hostReceiptApproval: undefined } })).toThrow()
+  })
+})
 describe("prospective lifetime allocation", () => {
   it("rejects partial/extra/unknown policy documents and crossed capacity receipts", () => {
     const input = prospectiveLifetimeFixture(), allocation = allocationApi.createProspectiveLeagueExecutionAllocationV2(input)
