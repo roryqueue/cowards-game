@@ -99,7 +99,7 @@ const auditCompleteBaseline = (s: LeanCorrectionRetainedSnapshot, byRole: Map<st
   if (!same(s.artifacts["initial-selection.json"], { tactical, teacher, limitation: "one-match-per-tactical-variation-condition-confounded-no-strength-claim" }) || byRole.get("initial-tactical")?.sourceRoot !== tactical.selectedSourceRoot || byRole.get("initial-teacher")?.sourceRoot !== teacher.selectedSourceRoot) return fail("SELECTION")
   for (const candidate of final.candidates) {
     const expected = candidate.mechanism === "tactical" ? cells.slice(0, 4) : candidate.mechanism === "teacher" ? cells.slice(4, 8) : cells.slice(12, 20)
-    if (!same(candidate.trainingMatchRoots, expected.map(c => c.compact.executionRoot))) return fail("TRAINING_JOIN")
+    if (!same(candidate.trainingMatchRoots, expected.map(c => c.compact.executionRoot).sort())) return fail("TRAINING_JOIN")
     if (candidate.mechanism === "tactical" && !same(candidate.workRoots.tacticalInputs, s.reuse.proposals.tactical[0]!.inputRoots) || candidate.mechanism === "teacher" && (!same(candidate.workRoots.teacherNodes, s.reuse.proposals.teacherSearchNodeRoots) || !same(candidate.workRoots.distillationExamples, s.reuse.proposals.distillationExampleRoots))) return fail("WORK_VECTOR")
   }
   guard()
