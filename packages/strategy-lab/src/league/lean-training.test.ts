@@ -56,6 +56,17 @@ describe("bounded lean cold training", () => {
     expect(manifest.candidates.flatMap((candidate) => candidate.trainingMatchRoots)).toHaveLength(8)
   })
 
+  it("preserves a structural clone as rejected instead of inventing a replacement", () => {
+    const cloned = "export default {};"
+    const cloneBuilders = {
+      tactical: (values: readonly SoldierBrainInputV119[]) => ({ source: cloned, decision: "tactical-clone", evaluatedLegalInputRoots: values.map((value) => labRoot("runtime-input", value)), teacherSearchNodeRoots: [], distillationExampleRoots: [] }),
+      teacher: () => ({ source: cloned, decision: "teacher-clone", evaluatedLegalInputRoots: [], teacherSearchNodeRoots: Array.from({ length: 64 }, (_, index) => root(`node:${index}`)), distillationExampleRoots: Array.from({ length: 64 }, (_, index) => root(`distill:${index}`)) }),
+    }
+    const result = trainLeanInitialCandidates(input("clone"), cloneBuilders)
+    expect(result.candidates.map((candidate) => candidate.disposition)).toEqual(["accepted_for_evaluation", "clone_rejected"])
+    expect(result.candidates).toHaveLength(2)
+  })
+
   it("creates one response attempt against the frozen initial root and denies privileged fields", () => {
     const cold = input("one")
     const initial = trainLeanInitialCandidates(cold, builders)
