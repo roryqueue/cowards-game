@@ -19,6 +19,16 @@ export const correctionAllocationFixture = (route: "diagnostic" | "baseline" = "
 }
 
 describe("bounded correction source admission", () => {
+  it("admits only closed prospective setup cost identities before correction entry", () => {
+    const time = { active: false, starts: new Map([["correction-preparation", 2000], ["correction-request-data", 1000]]), closed: new Set(["correction-preparation", "correction-request-data"]) }
+    expect(accounting.admitsLeanPreEntryTime(true, time)).toBe(true)
+    expect(accounting.admitsLeanPreEntryTime(false, time)).toBe(false)
+    expect(accounting.admitsLeanPreEntryTime(true, { ...time, active: true })).toBe(false)
+    expect(accounting.admitsLeanPreEntryTime(true, { ...time, closed: new Set(["correction-preparation"]) })).toBe(false)
+    expect(accounting.admitsLeanPreEntryTime(true, { ...time, closed: new Set(["correction-preparation", "other"]) })).toBe(false)
+    expect(accounting.admitsLeanPreEntryTime(true, { active: false, starts: new Map([["other", 1000]]), closed: new Set(["other"]) })).toBe(false)
+    expect(accounting.admitsLeanPreEntryTime(false, { active: false, starts: new Map(), closed: new Set() })).toBe(true)
+  })
   it("closes the actual mocked ready-timeout seam without launching a provider", async () => {
     const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-child-ready-mock-")))
     vi.useFakeTimers()

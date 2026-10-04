@@ -984,11 +984,16 @@ export interface LeanChildEntryV2 { schemaVersion: "lean-child-entry-v2"; alloca
 export interface LeanChildTerminalV2 { schemaVersion: "lean-child-terminal-v2"; entryBytesRoot: LabRoot; allocationRoot: LabRoot; sourceRoot: LabRoot; head: string; parentPid: number; childPid: number; exitCode: number | null; signal: string | null; wallObservedMs: number; monotonicObservedNs: string; elapsedUpperBoundMs: number; status: "child_exited" | "child_failed"; parentRssBytes: number; childRssObservedBytes: number | null; physicalBytes: number; freeBytes: number | null }
 const monotonic = (v: string): bigint => /^\d{1,30}$/u.test(v) ? BigInt(v) : fail("MONOTONIC")
 const syncLeanDirectory = (path: string): void => { const fd = openSync(safeDirectory(path), constants.O_RDONLY); try { fsyncSync(fd) } finally { closeSync(fd) } }
+/** Correction-only setup costs must already be closed before runtime entry.
+ * Legacy allocations still require an empty pre-entry time journal. */
+export const admitsLeanPreEntryTime = (correction: boolean, time: Pick<ReturnType<typeof readLeanTimeAccounting>, "active" | "starts" | "closed">): boolean => correction
+  ? !time.active && time.starts.size === time.closed.size && [...time.starts.keys()].every(id => (id === "correction-preparation" || id === "correction-request-data") && time.closed.has(id))
+  : time.starts.size === 0 && !time.active && time.closed.size === 0
 export const publishLeanChildEntry = (ledger: LeanExperimentLedger, entry: LeanChildEntryV2): void => {
   if (!leanProspective(ledger.allocation) || !exactLabKeys(entry, ["schemaVersion", "allocationRoot", "sourceRoot", "requestBytesRoot", "head", "parentPid", "childPid", "handshakeRoot", "wallStartMs", "monotonicStartNs"]) || entry.schemaVersion !== "lean-child-entry-v2" || entry.allocationRoot !== ledger.allocation.root || entry.sourceRoot !== ledger.allocation.sourceRoot || !root(entry.requestBytesRoot) || !root(entry.handshakeRoot) || !/^[a-f0-9]{40}$/u.test(entry.head) || !natural(entry.parentPid) || entry.parentPid === 0 || !natural(entry.childPid) || entry.childPid === 0 || entry.parentPid === entry.childPid || !natural(entry.wallStartMs)) return fail("ENTRY")
   monotonic(entry.monotonicStartNs)
   const entryTime = readLeanTimeAccounting(ledger)
-  if (("route" in ledger.allocation ? entryTime.active || entryTime.starts.size !== entryTime.closed.size || [...entryTime.starts.keys()].some(id => id !== "correction-preparation") : entryTime.starts.size > 0) || readLeanLedger(ledger).events.length) return fail("ENTRY")
+  if (!admitsLeanPreEntryTime("route" in ledger.allocation, entryTime) || readLeanLedger(ledger).events.length) return fail("ENTRY")
   writeExclusive(join(safeDirectory(ledger.directory), "entry.json"), leanCanonicalBytes(entry)); syncLeanDirectory(ledger.directory)
 }
 export const readLeanChildEntry = (ledger: LeanExperimentLedger): LeanChildEntryV2 => {
