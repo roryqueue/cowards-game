@@ -21,6 +21,63 @@ const ALLOCATION = LEAN_BASELINE_WRITABLE_PATHS[1]
 const TEMP = resolve(LEAN_BASELINE_WRITABLE_PATHS[0])
 const PLAN = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-PLAN.md"
 const ROOT = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[a-f0-9]{64}$/u.test(v)
+export const LEAN_SUPERVISOR_REASON_FILE = "parent-supervisor-reasons.json" as const
+export const LEAN_SUPERVISOR_REASON_MAX_BYTES = 4096
+/** Codes describe the branch actually observed, never an inferred initiating cause. */
+export const LEAN_SUPERVISOR_REASON_CODES = Object.freeze([
+  "child_error", "malformed_ipc", "duplicate_failure_receipt", "resource_threshold",
+  "resource_sampling_exception", "deadline_timeout", "final_identity_mismatch",
+  "final_identity_exception", "failure_receipt_publication_uncertain",
+] as const)
+export type LeanSupervisorReasonCode = typeof LEAN_SUPERVISOR_REASON_CODES[number]
+// ChildProcess exit signals are finite host values. Never retain arbitrary text.
+const SUPERVISOR_EXIT_SIGNALS = ["SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "SIGTRAP", "SIGABRT", "SIGIOT", "SIGBUS", "SIGFPE", "SIGKILL", "SIGUSR1", "SIGSEGV", "SIGUSR2", "SIGPIPE", "SIGALRM", "SIGTERM", "SIGSTKFLT", "SIGCHLD", "SIGCONT", "SIGSTOP", "SIGTSTP", "SIGTTIN", "SIGTTOU", "SIGURG", "SIGXCPU", "SIGXFSZ", "SIGVTALRM", "SIGPROF", "SIGWINCH", "SIGIO", "SIGPOLL", "SIGPWR", "SIGSYS", "SIGUNUSED", "SIGBREAK", "SIGLOST", "SIGINFO"] as const
+export interface LeanSupervisorReasonEnvelope {
+  schemaVersion: "lean-parent-supervisor-reasons-v1"
+  allocationRoot: LabRoot
+  sourceRoot: LabRoot
+  requestBytesRoot: LabRoot
+  entryBytesRoot: LabRoot
+  head: string
+  parentPid: number
+  childPid: number
+  exitCode: number | null
+  signal: NodeJS.Signals | null
+  uncertain: boolean
+  reasons: readonly LeanSupervisorReasonCode[]
+  observations: {
+    entry: "published"
+    childReady: "observed"
+    resourceSampling: "observed" | "exception"
+    finalIdentity: "matched" | "mismatch" | "exception"
+    failureReceipt: "absent" | "published" | "publication_failed"
+    // This is only process exit, NOT provider/container cleanup acceptance.
+    cleanup: "child_exit_observed"
+    // Terminal publication and finally cleanup occur AFTER this snapshot.
+    terminalization: "unobserved"
+    initiatingCause: "unknown"
+  }
+  root: LabRoot
+}
+export const isLeanSupervisorReasonEnvelope = (value: unknown): value is LeanSupervisorReasonEnvelope => {
+  if (!value || typeof value !== "object" || !exactLabKeys(value, ["schemaVersion", "allocationRoot", "sourceRoot", "requestBytesRoot", "entryBytesRoot", "head", "parentPid", "childPid", "exitCode", "signal", "uncertain", "reasons", "observations", "root"])) return false
+  const v = value as unknown as LeanSupervisorReasonEnvelope, o = v.observations
+  if (v.schemaVersion !== "lean-parent-supervisor-reasons-v1" || ![v.allocationRoot, v.sourceRoot, v.requestBytesRoot, v.entryBytesRoot, v.root].every(ROOT) || typeof v.head !== "string" || !/^[a-f0-9]{40}$/u.test(v.head) || !Number.isSafeInteger(v.parentPid) || v.parentPid <= 0 || !Number.isSafeInteger(v.childPid) || v.childPid <= 0 || v.parentPid === v.childPid || (v.exitCode !== null && (!Number.isSafeInteger(v.exitCode) || v.exitCode < 0 || v.exitCode > 255)) || (v.signal !== null && !SUPERVISOR_EXIT_SIGNALS.includes(v.signal as typeof SUPERVISOR_EXIT_SIGNALS[number])) || typeof v.uncertain !== "boolean" || !Array.isArray(v.reasons) || v.reasons.length > LEAN_SUPERVISOR_REASON_CODES.length) return false
+  const indexes = v.reasons.map(reason => LEAN_SUPERVISOR_REASON_CODES.indexOf(reason))
+  if (indexes.some((index, i) => index < 0 || (i > 0 && index <= indexes[i - 1]!)) || v.uncertain !== (v.reasons.length > 0)) return false
+  if (!o || !exactLabKeys(o, ["entry", "childReady", "resourceSampling", "finalIdentity", "failureReceipt", "cleanup", "terminalization", "initiatingCause"]) || o.entry !== "published" || o.childReady !== "observed" || !["observed", "exception"].includes(o.resourceSampling) || !["matched", "mismatch", "exception"].includes(o.finalIdentity) || !["absent", "published", "publication_failed"].includes(o.failureReceipt) || o.cleanup !== "child_exit_observed" || o.terminalization !== "unobserved" || o.initiatingCause !== "unknown") return false
+  if ((o.resourceSampling === "exception") !== v.reasons.includes("resource_sampling_exception") || (o.finalIdentity === "mismatch") !== v.reasons.includes("final_identity_mismatch") || (o.finalIdentity === "exception") !== v.reasons.includes("final_identity_exception") || (o.failureReceipt === "publication_failed") !== v.reasons.includes("failure_receipt_publication_uncertain")) return false
+  const { root, ...body } = v
+  return root === labRoot("lean-parent-supervisor-reasons-v1", body) && leanCanonicalBytes(v).length <= LEAN_SUPERVISOR_REASON_MAX_BYTES
+}
+/** Validate exact canonical retained bytes; callers still MUST authenticate custody joins. */
+export const validateLeanSupervisorReasonBytes = (bytes: Uint8Array): LeanSupervisorReasonEnvelope => {
+  if (!(bytes instanceof Uint8Array) || bytes.length > LEAN_SUPERVISOR_REASON_MAX_BYTES) return fail("SUPERVISOR_REASONS")
+  let value: unknown
+  try { value = JSON.parse(Buffer.from(bytes).toString("utf8")) } catch { return fail("SUPERVISOR_REASONS") }
+  if (!isLeanSupervisorReasonEnvelope(value) || leanBytesRoot(bytes) !== leanBytesRoot(leanCanonicalBytes(value))) return fail("SUPERVISOR_REASONS")
+  return value
+}
 const SOURCE_PATHS = [
   "scripts/run-v1-38-lean-baseline.ts", "scripts/run-v1-38-lean-baseline.sh",
   "scripts/lib/v1-38-lean-baseline-pipeline.ts", "scripts/lib/v1-38-lean-baseline-source.ts",
@@ -232,7 +289,7 @@ export const waitLeanBoundedChildReady = (child: ReturnType<typeof fork>) => new
   child.once("message", message => { clearTimeout(timer); if (!message || typeof message !== "object" || !exactLabKeys(message, ["ready"]) || message.ready !== child.pid) { reject(new TypeError("LEAN_BASELINE_CHILD_READY")); return }; ready() })
   child.once("exit", () => { clearTimeout(timer); reject(new TypeError("LEAN_BASELINE_CHILD_EXIT_BEFORE_ENTRY")) })
 })
-export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string; prospectiveStart?: { wallStartMs: number; monotonicStartNs: string }; beforeRelease?: () => void; terminalReserveMs?: number }) => {
+export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string; prospectiveStart?: { wallStartMs: number; monotonicStartNs: string }; beforeRelease?: () => void; terminalReserveMs?: number; supervisorObservation?: true }) => {
   const { ledger, requestPath, store: STORE } = options, allocation = ledger.allocation
   const committed = execFileSync("git", ["show", `HEAD:${options.allocationPath}`], { maxBuffer: 262144 })
   if (leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(allocation)) || leanBytesRoot(committed) !== leanBytesRoot(safeBytes(options.allocationPath))) return fail("UNCOMMITTED_ALLOCATION")
@@ -243,10 +300,14 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
   const token = randomBytes(32).toString("hex")
   const child = fork(resolve(process.argv[1] ?? fail("ENTRY_PATH")), [options.childMode, "--request", requestPath], { execArgv: process.execArgv, stdio: ["ignore", "ignore", "ignore", "ipc"] })
   let entered = false, uncertain = false, childRssObservedBytes: number | null = null, childFailure: LeanChildFailureReceipt | null = null
-  child.on("error", () => { uncertain = true })
+  const reasons = new Set<LeanSupervisorReasonCode>()
+  const observe = (reason: LeanSupervisorReasonCode) => { if (options.supervisorObservation === true) reasons.add(reason) }
+  let finalIdentity: LeanSupervisorReasonEnvelope["observations"]["finalIdentity"] = "matched"
+  child.on("error", () => { uncertain = true; observe("child_error") })
   child.on("message", message => {
     if (message !== null && typeof message === "object" && exactLabKeys(message, ["ready"]) && message.ready === child.pid) return
-    if (!isLeanChildFailureReceipt(message) || childFailure !== null) { uncertain = true; return }
+    const validReceipt = isLeanChildFailureReceipt(message)
+    if (!validReceipt || childFailure !== null) { uncertain = true; observe(validReceipt ? "duplicate_failure_receipt" : "malformed_ipc"); return }
     childFailure = message
   })
   try {
@@ -266,18 +327,36 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
       try {
         const rss = rssOf(child.pid!)
         childRssObservedBytes = Math.max(childRssObservedBytes ?? 0, rss)
-        if (process.memoryUsage().rss + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes || currentLeanElapsedMs(ledger) >= LEAN_CAPS.elapsedMs) { uncertain = true; child.kill("SIGKILL") }
-      } catch { uncertain = true; child.kill("SIGKILL") }
+        if (process.memoryUsage().rss + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes || currentLeanElapsedMs(ledger) >= LEAN_CAPS.elapsedMs) { uncertain = true; observe("resource_threshold"); child.kill("SIGKILL") }
+      } catch { uncertain = true; observe("resource_sampling_exception"); child.kill("SIGKILL") }
     }, 250)
-    const timeout = setTimeout(() => { uncertain = true; child.kill("SIGKILL") }, Math.max(1, LEAN_CAPS.elapsedMs - currentLeanElapsedMs(ledger) - (options.terminalReserveMs ?? 0)))
+    const timeout = setTimeout(() => { uncertain = true; observe("deadline_timeout"); child.kill("SIGKILL") }, Math.max(1, LEAN_CAPS.elapsedMs - currentLeanElapsedMs(ledger) - (options.terminalReserveMs ?? 0)))
     const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => resolveExit({ code, signal })))
     clearInterval(period); clearTimeout(timeout)
-    try { if (head() !== fixedHead || options.manifestRoot() !== fixedManifest || requestBytesRoot(requestPath) !== fixedRequest) uncertain = true } catch { uncertain = true }
+    try { if (head() !== fixedHead || options.manifestRoot() !== fixedManifest || requestBytesRoot(requestPath) !== fixedRequest) { uncertain = true; observe("final_identity_mismatch"); finalIdentity = "mismatch" } } catch { uncertain = true; observe("final_identity_exception"); finalIdentity = "exception" }
     const terminalFs = statfsSync(STORE, { bigint: true }), terminalFree = terminalFs.bavail * terminalFs.bsize
     const terminal = publishChildTerminalAfterOptionalReceipt(childFailure,
       receipt => exclusive(join(STORE, "entry-failure.json"), receipt, ledger),
       receiptUncertain => {
-        if (receiptUncertain) uncertain = true
+        if (receiptUncertain) { uncertain = true; observe("failure_receipt_publication_uncertain") }
+        if (options.supervisorObservation === true) {
+          try {
+            const body: Omit<LeanSupervisorReasonEnvelope, "root"> = {
+              schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: allocation.root, sourceRoot: options.sourceRoot,
+              requestBytesRoot: fixedRequest, entryBytesRoot: leanBytesRoot(safeBytes(join(STORE, "entry.json"))), head: fixedHead,
+              parentPid: process.pid, childPid: child.pid!, exitCode: exit.code, signal: exit.signal, uncertain,
+              reasons: LEAN_SUPERVISOR_REASON_CODES.filter(reason => reasons.has(reason)),
+              observations: { entry: "published", childReady: "observed", resourceSampling: reasons.has("resource_sampling_exception") ? "exception" : "observed", finalIdentity, failureReceipt: childFailure === null ? "absent" : receiptUncertain ? "publication_failed" : "published", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" },
+            }
+            const envelope = { ...body, root: labRoot("lean-parent-supervisor-reasons-v1", body) }
+            if (!isLeanSupervisorReasonEnvelope(envelope)) return fail("SUPERVISOR_REASONS")
+            exclusive(join(STORE, LEAN_SUPERVISOR_REASON_FILE), envelope, ledger)
+          } catch {
+            // No retry or success override: existing terminal/cleanup attempts
+            // still run, while missing reason custody remains non-accepting.
+            uncertain = true
+          }
+        }
         const derived = deriveLeanChildTerminal(ledger, entry, { exitCode: exit.code, signal: exit.signal, wallObservedMs: Date.now(), monotonicObservedNs: process.hrtime.bigint().toString(), status: exit.code === 0 && !uncertain && childFailure === null ? "child_exited" : "child_failed", parentRssBytes: process.memoryUsage().rss, childRssObservedBytes, physicalBytes: cumulativeLeanPhysicalBytes(ledger) + 65_536, freeBytes: terminalFree <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(terminalFree) : null })
         publishLeanChildTerminal(ledger, derived)
         return derived

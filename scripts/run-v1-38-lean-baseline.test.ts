@@ -60,7 +60,7 @@ const exitParent = (child: ReturnType<typeof beginParent>["child"]) => { child.e
 describe("opt-in finite parent supervisor observations", () => {
   it("publishes actual custody before terminal without adding default artifacts", async () => {
     for (const enabled of [false, true]) {
-      const { child, settled } = beginParent(enabled, () => { if (code === "deadline_timeout") host.elapsed = LEAN_CAPS.elapsedMs - 1 })
+      const { child, settled } = beginParent(enabled)
       await readyParent(child); exitParent(child)
       expect((await settled).error).toBeNull()
       const bytes = host.files.get("parent-supervisor-reasons.json")
@@ -77,7 +77,7 @@ describe("opt-in finite parent supervisor observations", () => {
   it.each(["child_error", "malformed_ipc", "duplicate_failure_receipt", "resource_threshold", "resource_sampling_exception", "deadline_timeout", "final_identity_mismatch", "final_identity_exception", "failure_receipt_publication_uncertain"])("retains %s at its actual unchanged setter", async code => {
     const runs: any[] = []
     for (const enabled of [false, true]) {
-      const { child, settled } = beginParent(enabled)
+      const { child, settled } = beginParent(enabled, () => { if (code === "deadline_timeout") host.elapsed = LEAN_CAPS.elapsedMs - 1 })
       await readyParent(child)
       const receipt = { type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code: "UNKNOWN_INTERNAL_FAILURE", stage: "unknown" }
       if (code === "child_error") { child.emit("error", new Error("PRIVATE ERROR")); child.emit("error", new Error("PRIVATE ERROR")) }
@@ -127,6 +127,34 @@ describe("opt-in finite parent supervisor observations", () => {
     expect(value.observations.cleanup).toBe("child_exit_observed")
   })
 
+  it("publishes the failure receipt first without copying its asserted stage or code", async () => {
+    const { child, settled } = beginParent(true)
+    await readyParent(child)
+    child.emit("message", { type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code: "SOURCE_HOLD", stage: "match" })
+    exitParent(child)
+    expect((await settled).error).toBeInstanceOf(TypeError)
+    const bytes = host.files.get("parent-supervisor-reasons.json")!
+    const value = parentApi.validateLeanSupervisorReasonBytes(bytes)
+    expect(value.uncertain).toBe(false)
+    expect(value.reasons).toEqual([])
+    expect(value.observations.failureReceipt).toBe("published")
+    expect(Buffer.from(bytes).toString()).not.toMatch(/SOURCE_HOLD|"match"/u)
+    expect(host.order.indexOf("entry-failure.json")).toBeLessThan(host.order.indexOf("parent-supervisor-reasons.json"))
+    expect(host.terminal.status).toBe("child_failed")
+  })
+
+  it("keeps malformed ready and ready-timeout cleanup unchanged without inventing entry custody", async () => {
+    for (const mode of ["malformed", "timeout"]) for (const enabled of [false, true]) {
+      const { child, settled } = beginParent(enabled)
+      if (mode === "malformed") child.emit("message", { ready: -1 })
+      else await vi.advanceTimersByTimeAsync(30_000)
+      expect((await settled).error).toBeInstanceOf(TypeError)
+      expect(child.kills).toEqual(["SIGKILL"])
+      expect(host.entry).toBeNull()
+      expect(host.files.size).toBe(0)
+    }
+  })
+
   it("keeps pre-entry capacity refusal artifact-free and performs unchanged cleanup", async () => {
     for (const enabled of [false, true]) {
       const { child, settled } = beginParent(enabled, () => { host.capacityFailure = true })
@@ -141,7 +169,7 @@ describe("opt-in finite parent supervisor observations", () => {
     const { child, settled } = beginParent(true)
     await readyParent(child); exitParent(child); await settled
     const valid = parentApi.validateLeanSupervisorReasonBytes(host.files.get("parent-supervisor-reasons.json")!)
-    const mutate = (change: Record<string, unknown>) => { const { root: _root, ...body } = { ...valid, ...change }; return { ...body, root: labRoot("lean-parent-supervisor-reasons-v1", body) } }
+    const mutate = (change: Record<string, unknown>) => { const { root: _root, ...body } = { ...valid, ...change }; let mutatedRoot = root("invalid"); try { mutatedRoot = labRoot("lean-parent-supervisor-reasons-v1", body) } catch { /* Deliberately noncanonical mutation. */ }; return { ...body, root: mutatedRoot } }
     for (const change of [{ rawError: "PRIVATE" }, { reasons: ["arbitrary"] }, { sourceRoot: "bad" }, { exitCode: Infinity }, { parentPid: NaN }, { parentPid: 0 }, { signal: "PRIVATE" }, { reasons: ["child_error", "child_error"] }, { observations: { ...valid.observations, terminalization: "success" } }, { head: "a".repeat(5000) }]) expect(parentApi.isLeanSupervisorReasonEnvelope(mutate(change))).toBe(false)
     expect(parentApi.isLeanSupervisorReasonEnvelope({ ...valid, root: root("wrong") })).toBe(false)
     expect(() => parentApi.validateLeanSupervisorReasonBytes(Buffer.from(` ${Buffer.from(host.files.get("parent-supervisor-reasons.json")!).toString()}`))).toThrow()
