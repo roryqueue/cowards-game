@@ -26,6 +26,7 @@ const SOURCE_PATHS = [
   "scripts/lib/v1-38-lean-baseline-pipeline.ts", "scripts/lib/v1-38-lean-baseline-source.ts",
   "scripts/lib/v1-38-lean-baseline-match.ts", "scripts/lib/v1-38-lean-baseline-analysis.ts",
   "scripts/lib/v1-38-lean-baseline-retained.ts", "scripts/lib/v1-38-lean-cold-corpus.ts",
+  "scripts/lib/v1-38-lean-seal-metadata.ts",
   "scripts/lib/v1-38-lean-training-adapter.ts", "scripts/lib/v1-38-lean-experiment-authority.ts",
   "scripts/lib/v1-38-lean-baseline.ts", "packages/strategy-lab/src/league/lean-training.ts",
   "packages/strategy-lab/src/league/lean-experiment.ts", "scripts/run-v1-38-lean-experiment.ts",
@@ -153,7 +154,7 @@ const childBody = async (requestPath: string) => {
       checkpoint,
       freezeSource: source => { checkpoint(); publishLeanBaselineSource(ledger, source); checkpoint() },
       retainArtifact: (name, value) => {
-        if (!/^(?:cold-corpus|initial-proposals|initial-selection|initial-training|initial-analysis|response-work|response-training|current-analysis)\.json$/u.test(name)) return fail("ARTIFACT_NAME")
+        if (!/^(?:seal-metadata|cold-corpus|initial-proposals|initial-selection|initial-training|initial-analysis|response-work|response-training|current-analysis)\.json$/u.test(name)) return fail("ARTIFACT_NAME")
         checkpoint(); exclusive(join(STORE, name), value, ledger); checkpoint()
       },
       dispatch: async (slot, bottom, top, observedRole) => {
