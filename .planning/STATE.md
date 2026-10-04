@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-16 review findings repaired;87 source tests and applicable gates pass; independent re-review/source verification before baseline
+stopped_at: Plan265-16 source independently reviewed clean and source-verified; fresh36-slot request data review before preparation
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Smoke schedule, exact frozen-mixture admission, honest failure semantics and bounded metrics repaired;87tests/projecttypes/three1390-file boundary scans pass; no empirical route yet
+last_activity_desc: Independent review-v2 clean and source-verification-v1 source_verified8of8; freshbaseline requestfd136129 created; data-onlyreview active, noallocation orentry yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT VERIFIED SOURCE/DATA FRONTIER: independent265-16-SOURCE-REVIEW-v2 CLOSEDclean/zeroopenfindings at e7d0acda and source-verification-v1 CLOSEDsource_verified8/8 at41a49214, bothsamefunctional03e2a09d/876entries. Root87tests plusindependent13review/3sourcefixtures andapplicabletypes/shell/boundarygates pass; noempiricalcredit. Freshowner0600canonicalrequest .strategy-lab/lean-baseline-request-20261004-v1.json rawfd136129ea914eb59e73b05596c993ddfb64938e6dd4c623564c7aa198e50d17, seedlean-current-baseline-20261004-a, cold0ddc7020,36predeclaredcurrentSmoke intents/2nonlearnedmechanismroots created byactual/root. Actual independent /root/review_265_baseline_request data-onlyreview active; newstore andallocation observedabsent. Afterdata-onlyPASS: prepareexactfreshallocationONCE, commit/pushbefore ONE MAINentry andfreshSAMEPROCESScapacity everycharge/provider. No oldordinaryreader/newempiricalreader/Match yet. SourceandHEADmusthold through actualentryterminal plusONEappropriateunique independentretainedcheck; neverfabricatehead/result. Samecumulative9priorcharges/3305606ms/15GB/8h/300Matches/1000guest5000host600000Match; historicalpeaksunknown/survivordebitexplicit. Missingmetrics/unsupportedresponsecomparator/holdoutdeferral honest; noformation/public/counted/production authority. Previousfixfrontiersbelow historical.
 
 CURRENT FIXED SOURCE FRONTIER: reviewed-v1 findings repaired inebee4beb (all36Smoke), d30f8973 (failurecredit/actualboundedmetrics),26fd30f5 (metriccodepinned),7ea28b11 (exactresponsegate/independentreaderjoins). Functionalmanifest03e2a09d/876entries. Root14-file87-test source suite PASS with singleworker/30000ms test-only timeout; strategy-lab projecttypes/shell/diff and three1390-file boundary scans PASS. Strict imported-script typing still discloses inherited errors, not claimedgreen. Missing behavioral metrics remain explicit/inconclusive; unsupported identical-fresh-opponent strongest-pure comparator excludes response without losing its8pairings or addingMatches. Independent re-review and narrow source-only verification NEXT, before newrequest/allocation/uniqueMAINentry. No baseline Match or actual newreader yet. Originalreview-v1 preserved issues_found, oldconsumedroutes/readers untouched. Same15GB/8h/300Match/runtime/rules/privacy/freeze-beforeformation bounds. Earlier review/fix paragraph is history.
 
