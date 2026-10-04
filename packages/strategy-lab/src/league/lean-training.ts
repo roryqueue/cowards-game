@@ -225,9 +225,18 @@ export const trainLeanInitialCandidates = (input: LeanColdTrainingInput, builder
 }
 
 /** One response attempt. Source choices depend on legal response examples, not target labels or hidden state. */
-export const trainLeanResponse = (input: LeanResponseInput, onWork?: (work: LeanResponseWork) => void): LeanColdTrainingManifest => {
+export interface LeanResponseNodeReceipt {
+  readonly ordinal: number
+  readonly trainingMatchRoot: LabRoot
+  readonly allocation: number
+  readonly actualNodes: number
+  readonly inputRoot: LabRoot
+  readonly output: ReturnType<typeof selectPlannerActivations>
+  readonly nodeRoot: LabRoot
+}
+export const trainLeanResponse = (input: LeanResponseInput, onWork?: (work: LeanResponseWork) => void, onNodeReceipts?: (receipts: readonly LeanResponseNodeReceipt[]) => void): LeanColdTrainingManifest => {
   if (!exactKeys(input, ["coldRoot", "corpusRoot", "armRoot", "trainingExamples", "frozenTacticalInputs", "teacherSearchReceipts", "commonSourceRoot", "initial", "responseExamples", "responsePlannerNodes", "targetRoots", ...(input?.predecessorRoot === undefined ? [] : ["predecessorRoot"])]) ||
-      !exactKeys(input.initial, ["schemaVersion", "stage", "coldRoot", "corpusRoot", "armRoot", "candidates", "vector", "root"]) || !exactKeys(input.targetRoots, ["mixture", "strongestPure"]) || (onWork !== undefined && typeof onWork !== "function")) return fail("RESPONSE_INPUT_SCHEMA")
+      !exactKeys(input.initial, ["schemaVersion", "stage", "coldRoot", "corpusRoot", "armRoot", "candidates", "vector", "root"]) || !exactKeys(input.targetRoots, ["mixture", "strongestPure"]) || (onWork !== undefined && typeof onWork !== "function") || (onNodeReceipts !== undefined && typeof onNodeReceipts !== "function")) return fail("RESPONSE_INPUT_SCHEMA")
   if (input.initial.stage !== "initial" || !auditLeanTrainingVector(input.initial).valid || input.initial.coldRoot !== input.coldRoot || input.initial.corpusRoot !== input.corpusRoot || deriveLeanColdCorpusRoot(input.frozenTacticalInputs) !== input.corpusRoot || input.initial.armRoot !== input.armRoot || input.initial.candidates.length !== 2 || new Set(input.initial.candidates.map((candidate) => candidate.mechanism)).size !== 2 || !isRoot(input.targetRoots?.mixture) || !isRoot(input.targetRoots?.strongestPure)) return fail("INITIAL_JOIN")
   const examples = validateExamples(input.responseExamples, 8)
   const initialMatchRoots = new Set(input.initial.candidates.flatMap((candidate) => candidate.trainingMatchRoots))
@@ -245,6 +254,7 @@ export const trainLeanResponse = (input: LeanResponseInput, onWork?: (work: Lean
   let assignments = 0
   const nodeRoots: LabRoot[] = []
   const plannerEvidence: Readonly<Record<string, unknown>>[] = []
+  const nodeReceipts: LeanResponseNodeReceipt[] = []
   for (const [ordinal, node] of [...input.responsePlannerNodes].sort((a, b) => a.trainingMatchRoot.localeCompare(b.trainingMatchRoot)).entries()) {
     let legalInput: StrategyInputV119
     try { legalInput = StrategyInputV119Schema.parse(node.input) } catch { return fail("RESPONSE_LEGAL_INPUT") }
@@ -256,6 +266,7 @@ export const trainLeanResponse = (input: LeanResponseInput, onWork?: (work: Lean
     assignments += actualNodes
     const nodeRoot = labRoot("lean-response-planner-node-v1", { ordinal, trainingMatchRoot: node.trainingMatchRoot, allocation, actualNodes, inputRoot: labRoot("runtime-input", legalInput), output })
     nodeRoots.push(nodeRoot)
+    nodeReceipts.push({ ordinal, trainingMatchRoot: node.trainingMatchRoot, allocation, actualNodes, inputRoot: labRoot("runtime-input", legalInput), output, nodeRoot })
     plannerEvidence.push(Object.freeze({ trainingMatchRoot: node.trainingMatchRoot, allocation, actualNodes, nodeRoot }))
   }
   // The emitted planner's bounded expansion budget is selected from supervised
@@ -270,6 +281,7 @@ export const trainLeanResponse = (input: LeanResponseInput, onWork?: (work: Lean
   const disposition: LeanCandidateDisposition = score > 0 ? "accepted_for_evaluation" : "weak_preserved"
   const responseWork: LeanResponseWork = deepFreeze({ targetRoots: input.targetRoots, plannerEvidence, responseNodeCap: 128, actualAssignmentNodes: assignments, selectedPlannerBudget: selectedBudget, matchOutcomes: allocations.map((item) => ({ trainingMatchRoot: item.matchRoot, halfPoints: item.points, assignedNodes: item.allocation })), realizedTrainingHalfPoints: score, commonSourceRoot: input.commonSourceRoot, plannerNodeRoots: nodeRoots })
   onWork?.(responseWork)
+  onNodeReceipts?.(deepFreeze(nodeReceipts))
   const response = buildCandidate("response", { source, decision: responseWork, evaluatedLegalInputRoots: [], teacherSearchNodeRoots: [], distillationExampleRoots: [], responsePlannerNodeRoots: nodeRoots }, trainingMatchRoots, disposition)
   const combined = finish(input, [...input.initial.candidates.map((candidate) => ({ ...candidate })), response])
   return combined

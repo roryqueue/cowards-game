@@ -14,6 +14,7 @@ import { selectLeanBestTrainedProposal, selectLeanTrainedProposal } from "./v1-3
 import { validateLeanCorrectionOriginMetadata } from "./v1-38-lean-container-match-session.js"
 import { leanCorrectionSourceManifest, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
 import type { LeanBaselinePair } from "./v1-38-lean-experiment-authority.js"
+import { SoldierBrainInputV119Schema, StrategyInputV119Schema, StrategyResultSchema } from "@cowards/spec"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_CORRECTION_RETAINED_${code}`) }
 const same = (a: unknown, b: unknown) => labRoot("lean-correction-retained-exact-v1", a) === labRoot("lean-correction-retained-exact-v1", b)
@@ -59,6 +60,10 @@ export const auditLeanCorrectionRetained = (value: unknown, guard: () => void = 
     const kind = currentBaselineSlotKind(ordinal).kind
     if (kind === "initial_training" && !has(ordinal < 4 ? `tactical-${ordinal}` : "teacher-0", "cold-opponent") || (kind === "initial_matrix" || kind === "repeat") && !has("initial-tactical", "initial-teacher") || kind === "response_training" && !(slot.condition < 2 ? pair.bottomRole === "response-0" : pair.topRole === "response-0") || kind === "response_pairing" && !has("final-response", ordinal < 24 ? "initial-tactical" : "initial-teacher") || kind === "probe" && !(slot.condition < 2 ? pair.topRole === "probe" : pair.bottomRole === "probe")) return fail("SCHEDULE")
     if (!exactLabKeys(receipt, ["schemaVersion", "pairRoot", "cell", "root"]) || receipt.schemaVersion !== "lean-baseline-observation-v1" || receipt.pairRoot !== pairRoot || receipt.root !== labRoot("lean-baseline-observation-v1", { schemaVersion: receipt.schemaVersion, pairRoot, cell }) || !exactLabKeys(cell, ["ordinal", "slotRoot", "bottomRoot", "topRoot", "compact", "brainInputs", "strategyInputs", "trainingHalfPoints", "semanticRoot", "metrics", "decisionRoot", "diagnostic"]) || cell.ordinal !== ordinal || cell.slotRoot !== slot.root || cell.bottomRoot !== pair.bottomSourceRoot || cell.topRoot !== pair.topSourceRoot || !same(cell.compact, record.terminal?.record) || !rooted(cell.decisionRoot) || (record.status === "success" ? !rooted(cell.semanticRoot) || cell.diagnostic !== null : cell.semanticRoot !== null) || !Array.isArray(cell.brainInputs) || cell.brainInputs.length > 16 || !Array.isArray(cell.strategyInputs) || cell.strategyInputs.length > 16) return fail("OBSERVATION")
+    if ((kind === "initial_training" || kind === "response_training") && record.status === "success") {
+      const entrantSeat = slot.condition < 2 ? "bottom" : "top"
+      if (cell.trainingHalfPoints !== (cell.compact.outcome === "DRAW" ? 1 : cell.compact.outcome === entrantSeat ? 2 : 0)) return fail("TRAINING_OUTCOME")
+    }
     const { root: metricRoot, ...metricBody } = cell.metrics
     if (metricRoot !== labRoot("lean-baseline-match-metrics-v1", metricBody) || cell.metrics.executionRoot !== cell.compact.executionRoot || cell.metrics.formationComparison !== "inconclusive") return fail("METRIC")
   }
@@ -113,6 +118,31 @@ const auditCompleteBaseline = (s: LeanCorrectionRetainedSnapshot, byRole: Map<st
   const work = s.artifacts["response-work.json"] as LeanResponseWork
   const candidate = final.candidates.find(row => row.mechanism === "response")!
   if (!exactLabKeys(work, ["targetRoots", "plannerEvidence", "responseNodeCap", "actualAssignmentNodes", "selectedPlannerBudget", "matchOutcomes", "realizedTrainingHalfPoints", "commonSourceRoot", "plannerNodeRoots"]) || work.responseNodeCap !== 128 || !Number.isSafeInteger(work.actualAssignmentNodes) || work.actualAssignmentNodes < 0 || work.actualAssignmentNodes > 128 || candidate.decisionRoot !== labRoot("lean-training-decision-v1", work)) return fail("RESPONSE_WORK")
+  const snapshot = byRole.get("final-response")!, draft = byRole.get("response-0")!
+  if (snapshot.source !== candidate.source || snapshot.sourceRoot !== candidate.sourceRoot || snapshot.structureRoot !== candidate.structureRoot || work.commonSourceRoot !== s.allocation.coldRoot || !same(work.targetRoots, { mixture: labRoot("lean-frozen-initial-mixture-v1", initialAnalysis.mixture), strongestPure: initialAnalysis.selectedPureRoot })) return fail("RESPONSE_SOURCE_TARGET")
+  const sorted = [...cells.slice(12, 20)].sort((left, right) => left.compact.executionRoot.localeCompare(right.compact.executionRoot))
+  const totalWeight = sorted.reduce((sum, cell) => sum + points(cell) + 1, 0)
+  const assigned = sorted.map(cell => Math.floor(128 * (points(cell) + 1) / totalWeight))
+  let remaining = 128 - assigned.reduce((sum, count) => sum + count, 0)
+  for (let ordinal = 0; remaining > 0; ordinal = (ordinal + 1) % 8, remaining--) assigned[ordinal]!++
+  const expectedOutcomes = sorted.map((cell, index) => ({ trainingMatchRoot: cell.compact.executionRoot, halfPoints: points(cell), assignedNodes: assigned[index]! }))
+  const selectedBudget = Math.max(1, Math.min(128, Math.round(sorted.reduce((sum, cell, index) => sum + assigned[index]! * (points(cell) + 1), 0) / totalWeight)))
+  if (!same(work.matchOutcomes, expectedOutcomes) || work.realizedTrainingHalfPoints !== sorted.reduce((sum, cell) => sum + points(cell), 0) || work.selectedPlannerBudget !== selectedBudget || !draft.source.includes("selectPlannerActivations(input);") || candidate.source !== draft.source.replace("selectPlannerActivations(input);", `selectPlannerActivations(input, { maxExpansions: ${selectedBudget} });`)) return fail("RESPONSE_COUNTER_SOURCE")
+  const receipts = s.artifacts["response-node-receipts.json"] as readonly LeanResponseNodeReceipt[]
+  if (!Array.isArray(receipts) || receipts.length !== 8 || !Array.isArray(work.plannerEvidence) || work.plannerEvidence.length !== 8 || !same(work.plannerNodeRoots, candidate.workRoots.responseNodes)) return fail("RESPONSE_NODES")
+  let actualTotal = 0
+  for (let ordinal = 0; ordinal < 8; ordinal++) {
+    guard()
+    const receipt = receipts[ordinal]!, cell = sorted[ordinal]!, allocation = assigned[ordinal]!
+    if (!exactLabKeys(receipt, ["ordinal", "trainingMatchRoot", "allocation", "actualNodes", "inputRoot", "output", "nodeRoot"]) || receipt.ordinal !== ordinal || receipt.trainingMatchRoot !== cell.compact.executionRoot || receipt.allocation !== allocation || typeof receipt.actualNodes !== "number" || !Number.isSafeInteger(receipt.actualNodes) || receipt.actualNodes < 0 || receipt.actualNodes > allocation || !cell.brainInputs.length || !cell.strategyInputs.length) return fail("RESPONSE_NODE_RECEIPT")
+    const input = StrategyInputV119Schema.parse(cell.strategyInputs[0]), output = StrategyResultSchema.parse(receipt.output)
+    for (const brainInput of cell.brainInputs) if (!same(SoldierBrainInputV119Schema.parse(brainInput), brainInput)) return fail("RESPONSE_BRAIN_INPUT")
+    if (!same(input, cell.strategyInputs[0]) || !same(output, receipt.output) || receipt.inputRoot !== labRoot("runtime-input", input) || (output.strategyMemory as { planner?: { expansions?: unknown } } | undefined)?.planner?.expansions !== receipt.actualNodes) return fail("RESPONSE_NODE_INPUT_OUTPUT")
+    const { nodeRoot, ...nodeBody } = receipt
+    if (nodeRoot !== labRoot("lean-response-planner-node-v1", nodeBody) || work.plannerNodeRoots[ordinal] !== nodeRoot || !same(work.plannerEvidence[ordinal], { trainingMatchRoot: receipt.trainingMatchRoot, allocation, actualNodes: receipt.actualNodes, nodeRoot })) return fail("RESPONSE_NODE_ROOT")
+    actualTotal += receipt.actualNodes
+  }
+  if (work.actualAssignmentNodes !== actualTotal) return fail("RESPONSE_NODE_TOTAL")
 }
 /** Exactly one invocation; begin marker spends reader identity even on failure. */
 export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrectionRoute) => {
@@ -140,7 +170,7 @@ export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrection
     const observations = Array.from({ length: charged }, (_, i) => readLeanCorrectionJson(join(ledger.directory, `observation-${i}.json`), 8_388_608) as Observation)
     const pairs = Array.from({ length: charged }, (_, i) => readLeanCorrectionJson(join(ledger.directory, `pair-${i}.json`)) as LeanBaselinePair)
     const names = readdirSync(ledger.directory), sources = names.filter(name => /^source-[a-z0-9-]+\.json$/u.test(name)).map(name => readLeanBaselineSource(ledger.directory, name.slice(7, -5)))
-    const artifactNames = ["seal-metadata.json", "cold-corpus.json", "cold-reuse-grant.json", "initial-proposals.json", "initial-selection.json", "initial-training.json", "initial-analysis.json", "response-work.json", "response-training.json", "current-analysis.json"]
+    const artifactNames = ["seal-metadata.json", "cold-corpus.json", "cold-reuse-grant.json", "initial-proposals.json", "initial-selection.json", "initial-training.json", "initial-analysis.json", "response-work.json", "response-node-receipts.json", "response-training.json", "current-analysis.json"]
     const artifacts = Object.fromEntries(artifactNames.filter(name => names.includes(name)).map(name => [name, readLeanCorrectionJson(join(ledger.directory, name), 2_097_152)]))
     const allowed = new Set(["allocation.json", "ledger.ndjson", "time.ndjson", "entry.json", "child-terminal.json", "result.json", "cold-reuse.json", ...(route === "diagnostic" ? ["correction-origin.json"] : artifactNames), ...sources.map(source => `source-${source.role}.json`), ...pairs.flatMap(pair => [`pair-${pair.ordinal}.json`, `observation-${pair.ordinal}.json`]), ...evidence.records.filter(row => row.terminal?.replay).map(row => `${row.chargeRoot!.slice(7)}.gz`)])
     if (names.some(name => !allowed.has(name))) return fail("INVENTORY")

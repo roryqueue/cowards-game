@@ -137,7 +137,7 @@ const executeCurrentPipeline = async (input: LeanCurrentPipelineInput, reuse?: L
     responseTraining.push(cell)
   }
   if (responseTraining.some(cell => !cell.strategyInputs.length)) return partial("response_observation_missing", initial)
-  const trained = trainLeanResponse({ ...common, initial, responseExamples: observedExamples(responseTraining, 8), responsePlannerNodes: responseTraining.map(cell => ({ input: cell.strategyInputs[0]!, trainingMatchRoot: cell.compact.executionRoot })), targetRoots: { mixture: labRoot("lean-frozen-initial-mixture-v1", initialAnalysis.mixture), strongestPure: strongest.sourceRoot } }, work => input.retainArtifact("response-work.json", work))
+  const trained = trainLeanResponse({ ...common, initial, responseExamples: observedExamples(responseTraining, 8), responsePlannerNodes: responseTraining.map(cell => ({ input: cell.strategyInputs[0]!, trainingMatchRoot: cell.compact.executionRoot })), targetRoots: { mixture: labRoot("lean-frozen-initial-mixture-v1", initialAnalysis.mixture), strongestPure: strongest.sourceRoot } }, work => input.retainArtifact("response-work.json", work), reuse ? receipts => input.retainArtifact("response-node-receipts.json", receipts) : undefined)
   input.retainArtifact("response-training.json", trained)
   const responseCandidate = trained.candidates.find(c => c.mechanism === "response") ?? fail("RESPONSE")
   if (responseCandidate.disposition === "clone_rejected" || responseCandidate.disposition === "invalid_rejected" || responseCandidate.disposition === "weak_preserved") return partial("response_attempt_rejected_unused_pairings", trained)
