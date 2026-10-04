@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process"
 import { join } from "node:path"
 import { labRoot, exactLabKeys, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_CAPS, LEAN_CORRECTION_ROUTES, LEAN_EXTERNAL_SCRATCH_RESERVE, admitLeanAllocation, beginLeanInterval, closeLeanInterval, cumulativeLeanPhysicalBytes, currentLeanElapsedMs, openLeanLedger, readLeanChildEntry, readLeanChildTerminal, readLeanLedger, readLeanTimeAccounting, verifyLeanEvidence, currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCorrectionAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { auditLeanTrainingVector, type LeanColdTrainingManifest } from "../../packages/strategy-lab/src/league/lean-training.js"
+import { auditLeanTrainingVector, type LeanColdTrainingManifest, type LeanResponseWork, type LeanResponseNodeReceipt } from "../../packages/strategy-lab/src/league/lean-training.js"
 import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { compactLeanBaselineCell, leanBaselineMetricCoverage, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
@@ -110,8 +110,9 @@ const auditCompleteBaseline = (s: LeanCorrectionRetainedSnapshot, byRole: Map<st
   const response = analyseLeanResponseAdmission({ initialSources: initialRoots, frozenMixture: initialAnalysis.mixture, strongestPureRoot: initialAnalysis.selectedPureRoot, strongestInitialMinimumHalfPoints: initialAnalysis.pure[0]!.minimumHalfPoints, responseRoot, responseCells: cells.slice(20, 28).map(measured) })
   const eligible = response.admitted ? [...initialRoots, responseRoot] : initialRoots, selected = analysis.pure.find(row => eligible.includes(row.sourceRoot))?.sourceRoot
   if (!same(pipeline.response, { attemptCount: 1, ...response }) || !same(pipeline.eligiblePureRoots, [...eligible].sort()) || pipeline.selectedPureRoot !== selected || cells.slice(32, 36).some((cell, i) => cell.semanticRoot !== cells[i + 8]!.semanticRoot)) return fail("CLAIM")
-  const work = s.artifacts["response-work.json"] as { responseNodeCap: number; actualAssignmentNodes: number; root: LabRoot }
-  if (!work || work.responseNodeCap !== 128 || !Number.isSafeInteger(work.actualAssignmentNodes) || work.actualAssignmentNodes < 0 || work.actualAssignmentNodes > 128 || !rooted(work.root)) return fail("RESPONSE_WORK")
+  const work = s.artifacts["response-work.json"] as LeanResponseWork
+  const candidate = final.candidates.find(row => row.mechanism === "response")!
+  if (!exactLabKeys(work, ["targetRoots", "plannerEvidence", "responseNodeCap", "actualAssignmentNodes", "selectedPlannerBudget", "matchOutcomes", "realizedTrainingHalfPoints", "commonSourceRoot", "plannerNodeRoots"]) || work.responseNodeCap !== 128 || !Number.isSafeInteger(work.actualAssignmentNodes) || work.actualAssignmentNodes < 0 || work.actualAssignmentNodes > 128 || candidate.decisionRoot !== labRoot("lean-training-decision-v1", work)) return fail("RESPONSE_WORK")
 }
 /** Exactly one invocation; begin marker spends reader identity even on failure. */
 export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrectionRoute) => {
