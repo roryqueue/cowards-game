@@ -21,7 +21,8 @@ const ROOT = /^sha256:[0-9a-f]{64}$/u
 const fail = (code: string): never => { throw new TypeError(`LEAN_TRAINING_ADAPTER_${code}`) }
 const isRoot = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
 const sourceRoot = (source: string): LabRoot => `sha256:${createHash("sha256").update(source, "utf8").digest("hex")}` as LabRoot
-const json = (value: unknown): string => JSON.stringify(value)
+const sameCanonicalValue = (left: unknown, right: unknown): boolean =>
+  labRoot("lean-input-equality-v1", left) === labRoot("lean-input-equality-v1", right)
 
 export interface LeanInitialProposalInput {
   readonly commonSourceRoot: LabRoot
@@ -92,7 +93,7 @@ const parseTacticalInputs = (inputs: readonly SoldierBrainInputV119[]): readonly
   return Object.freeze(inputs.map((input) => {
     let parsed: SoldierBrainInputV119
     try { parsed = SoldierBrainInputV119Schema.parse(input) as SoldierBrainInputV119 } catch { return fail("TACTICAL_LEGAL_INPUT") }
-    if (json(parsed) !== json(input)) return fail("TACTICAL_INPUT_CANONICAL")
+    if (!sameCanonicalValue(parsed, input)) return fail("TACTICAL_INPUT_CANONICAL")
     return parsed
   }))
 }
@@ -102,15 +103,22 @@ const tacticalProposalBeam = (inputs: readonly SoldierBrainInputV119[], commonSo
   // One genuine tactical scorer evaluation per retained legal input. The candidate
   // parameter grid is evaluated against this cached vector; it triggers no replays.
   const evaluations = inputs.map((input, ordinal) => {
-    const action = actions[ordinal % actions.length]!
-    const rank = scoreTacticalAction(input, action, null, ordinal % actions.length)
+    const nearestEnemy = input.awarenessGrid.cells
+      .filter((cell) => cell.contents === "ENEMY_ACTIVE")
+      .sort((left, right) => Math.abs(left.dx) + Math.abs(left.dy) - Math.abs(right.dx) - Math.abs(right.dy) || left.dy - right.dy || left.dx - right.dx)[0]
+    const actionOrdinal = ((input.cycleIndex + (input.hasAdvancedThisActivation ? 4 : 0) + (nearestEnemy?.dx ?? 0) * 2 + (nearestEnemy?.dy ?? 0) + actions.length * 2) % actions.length + actions.length) % actions.length
+    const action = actions[actionOrdinal]!
+    const rank = scoreTacticalAction(input, action, null, actionOrdinal)
     return Object.freeze({ ordinal, inputRoot: labRoot("runtime-input", input), action, rank })
   })
   if (evaluations.length !== 64) return fail("TACTICAL_EVALUATION_COUNT")
   const grid = TACTICAL_ADAPTATION_PROFILES.map((profile) => admitTacticalAdaptationProfile(profile))
   const gridRoot = labRoot("lean-tactical-frozen-search-space-v1", grid.map((entry) => entry.root))
   const ranked = grid.map((profile) => {
-    const score = evaluations.reduce((sum, evaluation) => sum + evaluation.rank.soft + profile.actionWeights[evaluation.action.type], 0)
+    // Weight the cached scorer value by the frozen profile coefficient. The
+    // interaction preserves input-conditioned rankings; adding a coefficient
+    // alone would sum to a corpus-independent constant over action categories.
+    const score = evaluations.reduce((sum, evaluation) => sum + evaluation.rank.soft * profile.actionWeights[evaluation.action.type], 0)
     return { profile, score }
   }).sort((left, right) => right.score - left.score || left.profile.id.localeCompare(right.profile.id))
   const selected = ranked.slice(0, 4)

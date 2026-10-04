@@ -38,6 +38,17 @@ describe("trusted lean training mechanism adapter", () => {
     expect(new Set(first.tactical.map((candidate) => candidate.sourceRoot)).size).toBe(4)
     expect(first.tactical.every((candidate) => candidate.inputRoots.length === 64)).toBe(true)
     expect(first.tactical[0]!.source).not.toBe(first.tactical[1]!.source)
+    const reordered = Object.fromEntries(Object.entries(inputs[0]!).reverse()) as SoldierBrainInputV119
+    const reorderedInput = buildLeanInitialProposals({ commonSourceRoot: root("common"), tacticalInputs: [reordered, ...inputs.slice(1)], teacherSearchReceipts: [receipt()] })
+    expect(reorderedInput.root).toBe(first.root)
+  })
+
+  it("changes tactical profile selection when the canonical legal-input corpus changes", () => {
+    const varied = buildLeanInitialProposals({ commonSourceRoot: root("common"), tacticalInputs: Array.from({ length: 64 }, (_, index) => brain(index)), teacherSearchReceipts: [receipt()] })
+    const repeated = buildLeanInitialProposals({ commonSourceRoot: root("common"), tacticalInputs: Array.from({ length: 64 }, () => brain(0)), teacherSearchReceipts: [receipt()] })
+    expect(varied.tactical.map((candidate) => candidate.parameterRoot)).not.toEqual(repeated.tactical.map((candidate) => candidate.parameterRoot))
+    expect(varied.operations.tacticalEvaluations).toBe(64)
+    expect(repeated.operations.tacticalEvaluations).toBe(64)
   })
 
   it("uses exactly 64 canonical teacher nodes and honestly resamples only projected legal labels", () => {
