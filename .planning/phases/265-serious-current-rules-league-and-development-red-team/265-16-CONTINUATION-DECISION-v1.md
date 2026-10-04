@@ -1,9 +1,9 @@
 ---
 phase: 265
 plan: "16"
-status: proposed_pending_human_decision
-approved: false
-execution_authorized: false
+status: approved_source_gates_pending
+approved: true
+execution_authorized: conditional_on_checked_prospective_gates
 date: 2026-10-04
 ---
 
@@ -20,4 +20,8 @@ All historical and new costs carry under the same cumulative15,000,000,000B/28,8
 
 This is a single bounded prospective amendment, not indefinite retries, scope to rescue results, production authority or an increase to the overall envelope. A continued failure remains an honest partial/inconclusive result. Current baseline/evaluation/freeze still precedes any formation artifact; all populations freeze before holdout. No public/counted/production authority.
 
-The question is unanswered. `approved:false` and `execution_authorized:false` remain binding until a direct human decision is recorded. The alternative is truthful inconclusive closeout under the existing contract, not manufactured phase completion or a successful release tag.
+## Direct human decision
+
+On 2026-10-04 the human replied **“yes, approved”** to the bounded-correction question above. This approves exactly one fresh private one-cell diagnostic and, after appropriate diagnosis, checked repairs and source gates, at most one fresh baseline. It does not authorize execution before those prospective gates, increase the caps, alter old evidence or grant additional candidate/search opportunity. No repeat approval literal is required for these two distinct routes inside this scope.
+
+The truthful inconclusive closeout remains the fallback if the checked preparation cannot satisfy these bounds or the bounded correction fails. This approval does not manufacture phase completion or authorize a successful release tag.

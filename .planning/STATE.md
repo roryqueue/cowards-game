@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: awaiting_human_decision
-stopped_at: Plan265-16 source repair verified and pushed; prospective bounded correction amendment pending
+status: in_progress
+stopped_at: Plan265-16 bounded correction approved; scoped research and checked prospective gates next
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Repair4e71c9b6 clean review and5/5source verification; actualcauseunknown, no-replacement-rule amendment unanswered
+last_activity_desc: Human approved one fresh diagnostic and at most one checked fresh baseline; old costs and fixed candidate opportunity retained
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT APPROVED FRONTIER: the human directly replied “yes, approved” to265-16-CONTINUATION-DECISION-v1. Exactly ONE distinct fresh private one-cell crash diagnostic, then after appropriate diagnosis/checked repairs/gates at most ONE distinct fresh baseline, are prospectively approved under unchanged15GB/8h/300Match/guest1000-host5000-Match600000 bounds. Carry10priorcharges/3319046ms and all surviving predecessor files; historical peaks remain unknown. Old failed baseline and its unique reader remain CLOSED/immutable/spent. Candidate/search opportunity stays fixed: research and planning must establish authentic unchanged pre-training reuse, not extra tuning/work or invented receipts. No new request/allocation/entry/provider/Match/reader yet; no active entry/verifier or source hold. Proceed scoped research/checked existingPlan16 supplement/source implementation/review-fix/validate/verify before either new route; no repeat literal inside approved scope. Phase265 remains incomplete; baseline/evaluation/freeze BEFOREformation, unopenedholdout/no public-counted-production. All earlier pending paragraphs below are historical and superseded by this approval.
 
 CURRENT HUMAN-ONLY FRONTIER: cleanup repair4e71c9b6 is independently REVIEWEDclean/0findings and SOURCE-VERIFIED5/5 at5815eb7c. The repair preserves primary failures and incomplete cleanup, but actual baseline initiating cause remains UNKNOWN and empirical recovery is unproved. Plan265-16 SUMMARY records partial failure, not Phase265 completion; actual closed baseline still1currentcharge/0success/35unused,10cumulativecharges/3319046ms. The asynchronous bounded-correction question is UNANSWERED: proposed265-16-CONTINUATION-DECISION-v1 permits ONEfresh crash diagnostic and, after checked repair/gates, at most ONEfresh baseline with unchanged overall caps and fixed candidate/search opportunities. It is NOT yet approved/applied, and no new empirical allocation/entry/provider/Match/reader is authorized while pending. Every consumed route/authority/result/reader remains immutable; no replacement under the current fixed stop. Safe source work and reports are completed/committed for origin/main. No active entry/verifier; Phase266freeze/formation/holdout unstarted; no public/counted/production/success-tag credit. Actual human answer supersedes this pending frontier; do not ask repeat literals after applicable prospective approval or restart oldroutes. Earlierfrontiersbelowhistory.
 
