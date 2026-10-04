@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-16 current-only source integration and focused gates passed; independent source review next; no baseline entry yet
+stopped_at: Plan265-16 independent source review found three blockers and one telemetry warning; parallel source repair active; no baseline entry yet
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Plan265-16 real cold adapter and36-slot baseline wired;74focused source tests and3boundary scans pass; independent source review before prospective allocation
+last_activity_desc: Independent source review issues_found; correcting Smoke-only schedule, frozen-mixture response admission, failure semantics and bounded per-Match telemetry before prospective allocation
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT REVIEW/FIX FRONTIER: independent265-16-SOURCE-REVIEW-v1 over7e08232e/functional4a5c0784/875entries CLOSED issues_found (three BLOCKERs and one WARNING). Actual reduced schedule must use Smoke for every side/initiative; response admission must enforce frozen-mixture >0.55 and supported fresh strongest-pure comparator, otherwise preserve diagnostic response but exclude it; non-success semantic roots must consistently remain null; bounded all-Match telemetry needs genuine coverage and explicit missing/inconclusive dispositions. Parallel source-only workers repair those joins within existing Plan265-16, no new product/rules/resource decision. No baseline request/allocation/entry/Match/actual retained reader has been started. Historical review and all consumed evidence/readers remain immutable. Finish focused gates, independent re-review/source verification, then one prospective current-only baseline under standing approval and unchanged cumulative bounds. Older source-integration checkpoint below is history, not a passed independent review.
 
 CURRENT SOURCE-INTEGRATION FRONTIER: Plan265-16 source-only integration is committed through0343670d (root pipeline/match/source composition935f8a56, additiveclosed-v7 accountingb4591311, actualadapter2055dfd2/e4a3b68b, strictcontracts94ca4a0e/fdd10653/838fda1f, newCLI309966a7/4e417201/688215e6, unique-future-reader1a0739ab/0343670d). Root74focused tests/13files PASS before final reader follow-up; reader6tests/fullsynthetic36cell fixture PASS. Strategy-lab projecttypes/shell/diff and lab/factory/seriousleague boundary scans each zero over1388files PASS. Explicit-file strict script checks disclose inherited type errors, not claimed passed. No baseline request/allocation/entry/provider/Match or actual new reader yet; oldv6/v7readers NEVERrepeated. Next independent GSD source review/fix, final applicable gates/source-only verification, data-only request review, prepare NEW36currentallocation, commit before ONE MAINentry and fresh SAMEPROCESS capacity everycharge. Current-only cold adaptation and one response are actual mechanisms, fixtures NOTempiricalcredit. Canonical repeat comparison normalizes ONLYengine-owned runidentity and binds fullprivate runtime results; nonpositive response excluded fromfinalists. Public-seal metadata-only fallback explicitly defers holdout claims; no store/preimage opened or replacement originalcommitment. Same15GB/8h/300Match/guest1000-host5000-Match600000; carry9priorcharges/3305606ms/unknownhistoricalpeaks unchanged; no formation/public/counted/production. Priorpilot and older source checkpoints below are historical.
 
