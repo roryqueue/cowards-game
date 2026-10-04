@@ -8,7 +8,7 @@ import * as coldBuilder from "./v1-38-lean-cold-corpus.js"
 import * as proposalBuilder from "./v1-38-lean-training-adapter.js"
 import { executeLeanReusedCurrentPipeline, compactLeanBaselineCell, leanBaselineMetricCoverage, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
 import { buildLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
-import { auditLeanCorrectionRetained, type LeanCorrectionRetainedSnapshot } from "./v1-38-lean-correction-retained.js"
+import { auditLeanCorrectionRetained, validateLeanSupervisorReasonJoin, type LeanCorrectionRetainedSnapshot } from "./v1-38-lean-correction-retained.js"
 import { existsSync } from "node:fs"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_BASELINE_STORE, createLeanCorrectionAllocation, leanCanonicalBytes, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
@@ -16,6 +16,17 @@ import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY } from "./v1-38-lean
 import { correctionAllocationFixture } from "../run-v1-38-lean-correction.test.js"
 
 const reuseDirectory = process.env.LEAN_COLD_REUSE_FIXTURE_DIR ?? LEAN_BASELINE_STORE
+describe("supervisor reason actual custody joins", () => {
+  it("rejects canonical reasons that do not bind the actual parent entry and exit", () => {
+    const r = labRoot("mock-root", {}), entry = { allocationRoot: r, sourceRoot: r, requestBytesRoot: r, head: "a".repeat(40), parentPid: 12, childPid: 13 }
+    const terminal = { ...entry, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(entry)), exitCode: 0, signal: null, status: "child_exited" }
+    const body = { schemaVersion: "lean-parent-supervisor-reasons-v1", ...entry, entryBytesRoot: terminal.entryBytesRoot, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
+    const bytes = leanCanonicalBytes({ ...body, root: labRoot(body.schemaVersion, body) })
+    expect(() => validateLeanSupervisorReasonJoin(bytes, entry as never, terminal as never)).not.toThrow()
+    for (const key of ["allocationRoot", "sourceRoot", "requestBytesRoot", "head", "parentPid", "childPid"]) expect(() => validateLeanSupervisorReasonJoin(bytes, { ...entry, [key]: key.endsWith("Pid") ? 99 : r + "wrong" } as never, terminal as never)).toThrow()
+    expect(() => validateLeanSupervisorReasonJoin(bytes, entry as never, { ...terminal, exitCode: 1 } as never)).toThrow()
+  })
+})
 const fixture = () => {
   const allocationFixture = correctionAllocationFixture()
   const reuse = authenticateLeanColdReuse({ directory: reuseDirectory, newSourceRoot: allocationFixture.sourceRoot, amendmentRoot: LEAN_COLD_REUSE_HISTORY.amendmentRoot })
