@@ -1,5 +1,9 @@
 # Project Research Summary
 
+## Current prospective repair — 2026-10-04
+
+The human requested “could you fix the blocker then continue please?” after the failed lean v6 terminal report. Existing Plan265-15 supervisor repair is now authorized prospectively; the earlier no-further-corrections stop does not block this requested repair. The failed v6 result and its unique reader stay immutable and failed. Diagnose with source-only regressions/finite safe diagnostics, independently review/fix/validate/verify, then a distinct fresh route under the unchanged cumulative15GB/8h/300Match cap carrying2168630ms, one failed charge and surviving-file debit. No budget reset, bound/rule change, second v6 reader, premature baseline/freeze/formation or holdout opening. See265-15-SUPERVISOR-REPAIR-20261004.md and current STATE; earlier terminal/active snapshots below are history.
+
 ## Active approved lean replacement — 2026-10-03
 
 The operator approved [the15GB/shared eight-hour charter](/Users/roryquinlan/runtime/cowards-game/.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-EXPERIMENT-20261003.md). [The active prospective plan](/Users/roryquinlan/runtime/cowards-game/.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-REMAINING-PLAN-20261003.md) fixes200Matches total (8pilot+3×64), or a pilot-resource-selected complete matched128Match tier; maximum300, no budget resets. Exactly two cold-trained initial candidates and one automated adversarial response attempt per profile; model/human/external budgets zero equally. Compact every-Match accounting/results plus preselected compressed and failure replays; no exhaustive invocation transcripts or fullscale certification.

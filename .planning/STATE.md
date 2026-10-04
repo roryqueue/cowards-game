@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: blocked
-stopped_at: Final lean pilot and unique retained verifier closed feasibility_not_established; bounded stop reached, audit/reporting only
-last_updated: "2026-10-03"
-last_activity: 2026-10-03
-last_activity_desc: Finalv6 pilot1charged0success system/supervisorfailure; uniqueverifierclosed cumulative2168630ms; no furthercorrectionroutes or baseline/freeze/formation
+status: debugging
+stopped_at: Human requested prospective supervisor repair and continuation; source-only diagnosis active, no fresh empirical route
+last_updated: "2026-10-04"
+last_activity: 2026-10-04
+last_activity_desc: Debug manager traces lean v6 supervisor failure; carry2168630ms and one failed charge; old terminal and budgets unchanged
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — human-authorized repair, 2026-10-04
+
+The human explicitly asked “could you fix the blocker then continue please?” after the bounded-terminal report. Prospective supervisor diagnosis/repair and a distinct fresh same-scope route may continue without repeat literals after established source fix/finite diagnostics, independent review and applicable gates. Earlier no-more-corrections paragraphs are historical; consumed v6 remains failed and immutable. Active debug manager /root/debug_lean_v6_supervisor owns runtime wiring/diagnostics/source-only regressions; no importer/provider/Match/preflight/allocation/second retained reader is authorized during diagnosis. Carry at least2168630ms and one prior lean charge plus surviving-file/conservative disk debit under unchanged15GB/8h/300Match/guest1000-host5000-Match600000 bounds. No reset/refund/oldroute reuse. See265-15-SUPERVISOR-REPAIR-20261004.md and debug/lean-v6-supervisor-failure.md. Current baseline/freeze beforeformation, holdoutunopened/no public-counted-production. Earlier terminal reports/audits remain accurate snapshots.
 
 ## Current continuation — approved lean experiment reset, 2026-10-03
 

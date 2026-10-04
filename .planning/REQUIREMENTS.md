@@ -1,5 +1,9 @@
 # Requirements: Coward's Game v1.38 Competitive Strategy Factory and Adversarial League
 
+## Current prospective repair — 2026-10-04
+
+The human requested “could you fix the blocker then continue please?” after the failed lean v6 terminal report. Existing Plan265-15 supervisor repair is now authorized prospectively; the earlier no-further-corrections stop does not block this requested repair. The failed v6 result and its unique reader stay immutable and failed. Diagnose with source-only regressions/finite safe diagnostics, independently review/fix/validate/verify, then a distinct fresh route under the unchanged cumulative15GB/8h/300Match cap carrying2168630ms, one failed charge and surviving-file debit. No budget reset, bound/rule change, second v6 reader, premature baseline/freeze/formation or holdout opening. See265-15-SUPERVISOR-REPAIR-20261004.md and current STATE; earlier terminal/active snapshots below are history.
+
 ## Active approved lean replacement — 2026-10-03
 
 **Current empirical disposition:** Final corrected pilot and unique retained verification ended `feasibility_not_established`,1charged/0successful/7unused. No new requirement is checked complete by this result. Source/accounting subgoals are verified; all LEAG empirical, baseline/freeze, formation/equality/holdout and successful closure claims remainpending/deferred. The checked final correction stop has been reached; no further correction route, schedule tier, release archive or success tag is admitted. See Phase265's `265-LEAN-PILOT-RESULT.md` and `265-LEAN-TERMINAL-VERIFICATION.md`.

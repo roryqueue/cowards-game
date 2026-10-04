@@ -1,5 +1,9 @@
 # Roadmap: Coward's Game
 
+## Current prospective repair — 2026-10-04
+
+The human requested “could you fix the blocker then continue please?” after the failed lean v6 terminal report. Existing Plan265-15 supervisor repair is now authorized prospectively; the earlier no-further-corrections stop does not block this requested repair. The failed v6 result and its unique reader stay immutable and failed. Diagnose with source-only regressions/finite safe diagnostics, independently review/fix/validate/verify, then a distinct fresh route under the unchanged cumulative15GB/8h/300Match cap carrying2168630ms, one failed charge and surviving-file debit. No budget reset, bound/rule change, second v6 reader, premature baseline/freeze/formation or holdout opening. See265-15-SUPERVISOR-REPAIR-20261004.md and current STATE; earlier terminal/active snapshots below are history.
+
 ## Active approved lean replacement — 2026-10-03
 
 **Current bounded terminal:** Final corrected Plan265-15 pilot and its one retained verifier closed `feasibility_not_established`:1charged/0successful/7unused, system/supervisor failure, cleanup complete. Cumulative2,168,630ms includes all predecessor costs and verifier time. No200/128tier was admitted. The checked final correction stop forbids another correction/pilot route. Safe [pilot result](phases/265-serious-current-rules-league-and-development-red-team/265-LEAN-PILOT-RESULT.md), summary/UAT/verification/audit document an incomplete milestone, not a successful release.265-16 and baseline/freeze/formation/holdout remainunstarted. Earlier operational frontiers below are history.
