@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest"
 import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCurrentBaselineAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { leanColdProcedureRoot, compactLeanBaselineCell, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
+import { leanColdProcedureRoot, compactLeanBaselineCell, executeLeanCurrentPipeline, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
 import { auditLeanCurrentBaselineRetained, type LeanBaselineRetainedSnapshot } from "./v1-38-lean-baseline-retained.js"
+import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
+import { CANONICAL_ARENA_CATALOG_V1_37, type StrategyInputV119 } from "@cowards/spec"
+import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 
 const root = (name: string): LabRoot => labRoot("lean-retained-test-v1", name)
 const fixture = (): LeanBaselineRetainedSnapshot => {
@@ -37,6 +40,44 @@ const fixture = (): LeanBaselineRetainedSnapshot => {
   return { allocation, request, requestBytesRoot: entry.requestBytesRoot, head: entry.head, entry, terminal, evidence, ledgerEvents, time, result, pairs: [pair], observations: [observation], sources: sources as unknown as LeanBaselineRetainedSnapshot["sources"], artifacts: { "seal-metadata.json": seal } }
 }
 const changed = (edit: (copy: LeanBaselineRetainedSnapshot) => void) => { const copy = structuredClone(fixture()); edit(copy); return copy }
+const completeFixture = async (): Promise<LeanBaselineRetainedSnapshot> => {
+  const base = fixture(), allocation = base.allocation, corpus = buildLeanColdCorpus(allocation.seed)
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(item => item.status === "active")!
+  let machine = MATCH_KERNEL.createMachineV119({ matchId: "retained-source-only", seed: allocation.seed, arenaVariant: arena, bottomPlayerId: "fixture-bottom", topPlayerId: "fixture-top", bottomStrategyRevisionId: "fixture-bottom-revision", topStrategyRevisionId: "fixture-top-revision", initialInitiativePlayerId: "fixture-bottom" })
+  let strategyInput: StrategyInputV119 | null = null
+  for (let step = 0; step < 100 && !strategyInput; step++) {
+    const next = MATCH_KERNEL.stepMatch(machine, { kind: "advance" })
+    if (next.kind === "effect" && next.request.kind === "selectActivations") strategyInput = next.request.input as StrategyInputV119
+    else if (next.kind === "transition") machine = next.machine
+    else throw new Error("SOURCE_FIXTURE_INPUT")
+  }
+  if (!strategyInput) throw new Error("SOURCE_FIXTURE_INPUT")
+  const sources: LeanBaselineRetainedSnapshot["sources"] extends readonly (infer T)[] ? T[] : never = []
+  const artifacts: Record<string, unknown> = {}
+  const ledgerEvents: Array<Record<string, unknown>> = []
+  const pairs: unknown[] = [], observations: unknown[] = []
+  const records = allocation.slots.map(slot => ({ slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: null as LabRoot | null, terminal: null as Record<string, unknown> | null, status: "unused" }))
+  const pipeline = await executeLeanCurrentPipeline({ allocation, freezeSource: source => { sources.push(source) }, retainArtifact: (name, value) => { artifacts[name] = value }, checkpoint() {}, async dispatch(slot, bottom, top) {
+    const prior = Buffer.from(ledgerEvents.map(event => Buffer.from(leanCanonicalBytes(event)).toString("utf8") + "\n").join(""))
+    const pairBody = { schemaVersion: "lean-baseline-pair-v1" as const, ordinal: slot.ordinal, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: leanBytesRoot(prior), priorLedgerByteLength: prior.length, priorCharged: 9 + slot.ordinal, bottomRole: bottom.role, bottomSourceRoot: bottom.sourceRoot, bottomSnapshotRoot: bottom.root, topRole: top.role, topSourceRoot: top.sourceRoot, topSnapshotRoot: top.root }
+    const pair = { ...pairBody, root: labRoot("lean-baseline-pair-v1", pairBody) }; pairs.push(pair)
+    const chargeBody = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: allocation.root, slotRoot: slot.root, ordinal: slot.ordinal }
+    const charge = { ...chargeBody, root: labRoot("lean-slot-charge-v1", chargeBody) }
+    ledgerEvents.push({ kind: "charge", charge })
+    const compact = { classification: "success" as const, code: "OK" as const, outcome: "DRAW" as const, elapsedMs: 1, cleanupComplete: true, invocationCount: 2, accountingRoot: root(`accounting-${slot.ordinal}`), executionRoot: root(`execution-${slot.ordinal}`), telemetry: { transitions: 1, events: 1 } }
+    const terminal = { kind: "terminal", chargeRoot: charge.root, record: compact, replay: null }
+    ledgerEvents.push(terminal)
+    records[slot.ordinal] = { slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: charge.root, terminal, status: "success" }
+    const cell = { ordinal: slot.ordinal, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot, compact, brainInputs: [corpus.tacticalInputs[0]!], strategyInputs: [strategyInput!], trainingHalfPoints: 1 as const, semanticRoot: root(`repeat-${slot.ordinal >= 32 ? slot.ordinal - 24 : slot.ordinal}`), decisionRoot: root(`decision-${slot.ordinal}`), diagnostic: null }
+    const observationBody = { schemaVersion: "lean-baseline-observation-v1" as const, pairRoot: pair.root, cell }
+    observations.push({ ...observationBody, root: labRoot("lean-baseline-observation-v1", observationBody) })
+    return cell
+  } })
+  ledgerEvents.push({ kind: "stop", reason: "complete" })
+  const evidence = { ...base.evidence, records, charged: 45, elapsedMs: 3_305_706, root: root("complete-evidence") }
+  const result = { ...base.result, pipeline, evidenceRoot: evidence.root, charged: 45, successful: 36, status: "pending_independent_verification" }
+  return { ...base, sources, artifacts, pairs: pairs as LeanBaselineRetainedSnapshot["pairs"], observations: observations as LeanBaselineRetainedSnapshot["observations"], ledgerEvents: ledgerEvents as LeanBaselineRetainedSnapshot["ledgerEvents"], evidence: evidence as LeanBaselineRetainedSnapshot["evidence"], result }
+}
 
 describe("new current-baseline retained audit (synthetic source-only)", () => {
   it("retains an honest incomplete first-cell result without granting completion", () => {
@@ -61,4 +102,8 @@ describe("new current-baseline retained audit (synthetic source-only)", () => {
     active.time.elapsedMs = 28_800_001
     expect(() => auditLeanCurrentBaselineRetained(active)).toThrow("LEAN_BASELINE_RETAINED_ENTRY_TERMINAL")
   })
+  it("accepts a complete 36-cell synthetic source-only round with exact rebuilt training and solver", async () => {
+    const complete = await completeFixture()
+    expect(auditLeanCurrentBaselineRetained(complete)).toMatchObject({ complete: true, currentCharged: 36, successful: 36, claim: "no_robust_pure_claimed" })
+  }, 30000)
 })

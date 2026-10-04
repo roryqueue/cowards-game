@@ -4,15 +4,17 @@ import { constants, closeSync, lstatSync, openSync, readFileSync, realpathSync, 
 import { execFileSync } from "node:child_process"
 import { join, relative, resolve } from "node:path"
 import { exactLabKeys, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
-import { auditLeanTrainingVector, LEAN_INITIAL_TRAINING_VECTOR, LEAN_TRAINING_VECTOR, type LeanColdTrainingManifest } from "../../packages/strategy-lab/src/league/lean-training.js"
+import { auditLeanTrainingVector, trainLeanInitialCandidates, trainLeanResponse, LEAN_INITIAL_TRAINING_VECTOR, LEAN_TRAINING_VECTOR, type LeanColdTrainingManifest, type LeanColdTrainingInput, type LeanLegalExample } from "../../packages/strategy-lab/src/league/lean-training.js"
 import { LEAN_CAPS, LEAN_BASELINE_REQUEST, LEAN_BASELINE_STORE, LEAN_EXTERNAL_SCRATCH_RESERVE, beginLeanInterval, closeLeanInterval, currentBaselineSlotKind, currentLeanElapsedMs, cumulativeLeanPhysicalBytes, leanBytesRoot, leanCanonicalBytes, openLeanLedger, readLeanChildEntry, readLeanChildTerminal, readLeanLedger, readLeanTimeAccounting, verifyLeanEvidence, type LeanCurrentBaselineAllocation, type LeanExperimentLedger } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { analyseLeanDistinctPairs, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
+import { analyseLeanDistinctPairs, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
 import { leanColdProcedureRoot, compactLeanBaselineCell, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
 import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { inspectLeanSealMetadata } from "./v1-38-lean-seal-metadata.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
 import { buildLeanInitialProposals, selectLeanBestTrainedProposal, selectLeanTrainedProposal } from "./v1-38-lean-training-adapter.js"
 import { selectPlannerActivations } from "../../packages/strategy-lab/src/planner/assign.js"
+import { buildPlannerCandidate } from "../../packages/strategy-lab/src/planner/emit.js"
+import { emitTacticalSource } from "../../packages/strategy-oracle-tactical/src/emit.js"
 import { authenticateLeanBaselineReview, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselineSourceManifest } from "../run-v1-38-lean-baseline.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_RETAINED_${code}`) }
@@ -138,6 +140,10 @@ const measured = (cell: LeanBaselineObservedCell): LeanMeasuredPair => {
   if (cell.compact.classification !== "success" || !cell.compact.outcome || !cell.semanticRoot) return fail("MEASURED")
   return { ordinal: cell.ordinal, bottomSourceRoot: cell.bottomRoot, topSourceRoot: cell.topRoot, outcome: cell.compact.outcome, executionRoot: cell.compact.executionRoot, semanticRoot: cell.semanticRoot }
 }
+const observedExamples = (cells: readonly LeanBaselineObservedCell[], perMatch: number): LeanLegalExample[] => cells.flatMap(cell => {
+  if (!cell.brainInputs.length) return fail("TRAINING_EXAMPLES")
+  return Array.from({ length: perMatch }, (_, ordinal) => ({ input: cell.brainInputs[ordinal % cell.brainInputs.length]!, trainingHalfPoints: cell.trainingHalfPoints, trainingMatchRoot: cell.compact.executionRoot }))
+})
 const assertSealMetadata = (value: unknown): void => {
   if (!exactLabKeys(value, ["schemaVersion", "protocol", "originalPublicReference", "checkoutDirty", "originalCompatibleUnopenedSealVerified", "privateStoreOrPreimageRead", "newExploratorySealCreated", "reservedHoldoutPerProfile", "disposition", "reason", "claims", "root"])) return fail("SEAL_METADATA")
   const v = value as Record<string, unknown>
@@ -208,13 +214,31 @@ export const auditLeanCurrentBaselineRetained = (s: LeanBaselineRetainedSnapshot
     const proposals = buildLeanInitialProposals({ commonSourceRoot: a.coldRoot, tacticalInputs: corpus.tacticalInputs, teacherSearchReceipts: corpus.teacherSearchReceipts })
     guard()
     if (!same(s.artifacts["initial-proposals.json"], proposals)) return fail("INITIAL_PROPOSALS")
+    if (byRole.get("cold-opponent")?.source !== emitTacticalSource() || byRole.get("probe")?.source !== buildPlannerCandidate().source ||
+        byRole.get("response-0")?.source !== buildPlannerCandidate().source ||
+        proposals.tactical.some((proposal, index) => byRole.get(`tactical-${index}`)?.sourceRoot !== proposal.sourceRoot) ||
+        byRole.get("teacher-0")?.sourceRoot !== proposals.teacher.sourceRoot) return fail("COLD_SOURCE")
     const initialCells = s.observations.slice(0, 8).map(receipt => receipt.cell)
     const tacticalSelection = selectLeanBestTrainedProposal(proposals.tactical, initialCells.slice(0, 4).map((cell, index) => ({ proposalRoot: proposals.tactical[index]!.root, trainingMatchRoot: cell.compact.executionRoot, trainingHalfPoints: cell.trainingHalfPoints })))
     const teacherSelection = selectLeanTrainedProposal(proposals.teacher, initialCells.slice(4, 8).map(cell => ({ trainingMatchRoot: cell.compact.executionRoot, trainingHalfPoints: cell.trainingHalfPoints })))
     if (!same(s.artifacts["initial-selection.json"], { tactical: tacticalSelection, teacher: teacherSelection, limitation: "one-match-per-tactical-variation-condition-confounded-no-strength-claim" }) ||
         initial.candidates[0]!.sourceRoot !== tacticalSelection.selectedSourceRoot || initial.candidates[1]!.sourceRoot !== teacherSelection.selectedSourceRoot) return fail("INITIAL_SELECTION")
+    const common: LeanColdTrainingInput = { coldRoot: a.coldRoot, corpusRoot: corpus.corpusRoot, armRoot: labRoot("lean-current-arm-v1", a.coldRoot), commonSourceRoot: a.coldRoot, frozenTacticalInputs: corpus.tacticalInputs, teacherSearchReceipts: corpus.teacherSearchReceipts, trainingExamples: observedExamples(initialCells, 16) }
+    const rebuiltInitial = trainLeanInitialCandidates(common, {
+      tactical: () => ({ source: tacticalSelection.selectedSource, decision: { proposalSetRoot: proposals.root, selectionRoot: tacticalSelection.root, supervisedMatchRoots: initialCells.slice(0, 4).map(cell => cell.compact.executionRoot) }, evaluatedLegalInputRoots: proposals.tactical[0]!.inputRoots, teacherSearchNodeRoots: [], distillationExampleRoots: [] }),
+      teacher: () => ({ source: teacherSelection.selectedSource, decision: { proposalSetRoot: proposals.root, selectionRoot: teacherSelection.root, distinctLegalLabels: proposals.teacherProjectedDistinctLabelCount, resamplingRoot: proposals.teacherResamplingRoot }, evaluatedLegalInputRoots: [], teacherSearchNodeRoots: proposals.teacherSearchNodeRoots, distillationExampleRoots: proposals.distillationExampleRoots }),
+    })
+    guard()
+    if (!same(initial, rebuiltInitial)) return fail("REBUILT_INITIAL")
     const initially = [byRole.get("initial-tactical")!, byRole.get("initial-teacher")!], response = byRole.get("final-response")!
     if (initially.some(source => !source) || !response || initially.some((source, i) => source.sourceRoot !== initial.candidates[i]!.sourceRoot) || response.sourceRoot !== final.candidates[2]!.sourceRoot) return fail("TRAINED_SOURCE")
+    const initialAnalysis = analyseLeanDistinctPairs(initially.map(source => source.sourceRoot), s.observations.slice(8, 12).map(receipt => measured(receipt.cell)))
+    if (!initialAnalysis.mixture || !same(s.artifacts["initial-analysis.json"], initialAnalysis)) return fail("INITIAL_SOLVER")
+    for (let ordinal = 12; ordinal < 20; ordinal++) {
+      const targetRoot = ordinal < 16 ? selectLeanMixtureTarget(initialAnalysis.mixture, ordinal - 12) : initialAnalysis.selectedPureRoot
+      const pair = s.pairs[ordinal]!
+      if (pair.bottomSourceRoot !== targetRoot && pair.topSourceRoot !== targetRoot) return fail("RESPONSE_TARGET")
+    }
     const work = s.artifacts["response-work.json"] as Record<string, unknown>
     if (!exactLabKeys(work, ["targetRoots", "plannerEvidence", "responseNodeCap", "actualAssignmentNodes", "selectedPlannerBudget", "matchOutcomes", "realizedTrainingHalfPoints", "commonSourceRoot", "plannerNodeRoots"]) ||
         work.responseNodeCap !== 128 || !natural(work.actualAssignmentNodes) || work.actualAssignmentNodes > 128 ||
@@ -234,7 +258,10 @@ export const auditLeanCurrentBaselineRetained = (s: LeanBaselineRetainedSnapshot
       if (actualNodes !== evidence.actualNodes || evidence.nodeRoot !== labRoot("lean-response-planner-node-v1", { ordinal, trainingMatchRoot: row.trainingMatchRoot, allocation: evidence.allocation, actualNodes, inputRoot: labRoot("runtime-input", row.input), output })) return fail("RESPONSE_ACTUAL_WORK")
     }
     if (!same(work.plannerNodeRoots, plannerEvidence.map(row => row.nodeRoot)) || !same(final.candidates[2]!.workRoots.responseNodes, plannerEvidence.map(row => row.nodeRoot))) return fail("RESPONSE_NODE_ROOTS")
-    const initialAnalysis = analyseLeanDistinctPairs(initially.map(source => source.sourceRoot), s.observations.slice(8, 12).map(receipt => measured(receipt.cell)))
+    let rebuiltWork: unknown = null
+    const rebuiltFinal = trainLeanResponse({ ...common, initial: rebuiltInitial, responseExamples: observedExamples(responseTrainingCells, 8), responsePlannerNodes: responseTrainingCells.map(cell => ({ input: cell.strategyInputs[0]!, trainingMatchRoot: cell.compact.executionRoot })), targetRoots: { mixture: labRoot("lean-frozen-initial-mixture-v1", initialAnalysis.mixture), strongestPure: initialAnalysis.selectedPureRoot } }, candidateWork => { rebuiltWork = candidateWork })
+    guard()
+    if (!same(final, rebuiltFinal) || !same(work, rebuiltWork)) return fail("REBUILT_RESPONSE")
     const analysis = analyseLeanDistinctPairs([...initially.map(source => source.sourceRoot), response.sourceRoot], s.observations.slice(8, 12).concat(s.observations.slice(20, 28)).map(receipt => measured(receipt.cell)))
     guard()
     const responseCells = s.observations.slice(20, 28).map(receipt => receipt.cell)
