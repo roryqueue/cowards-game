@@ -6,8 +6,9 @@ import { join, relative, resolve } from "node:path"
 import { exactLabKeys, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { auditLeanTrainingVector, trainLeanInitialCandidates, trainLeanResponse, LEAN_INITIAL_TRAINING_VECTOR, LEAN_TRAINING_VECTOR, type LeanColdTrainingManifest, type LeanColdTrainingInput, type LeanLegalExample } from "../../packages/strategy-lab/src/league/lean-training.js"
 import { LEAN_CAPS, LEAN_BASELINE_REQUEST, LEAN_BASELINE_STORE, LEAN_EXTERNAL_SCRATCH_RESERVE, beginLeanInterval, closeLeanInterval, currentBaselineSlotKind, currentLeanElapsedMs, cumulativeLeanPhysicalBytes, leanBytesRoot, leanCanonicalBytes, openLeanLedger, readLeanChildEntry, readLeanChildTerminal, readLeanLedger, readLeanTimeAccounting, verifyLeanEvidence, type LeanCurrentBaselineAllocation, type LeanExperimentLedger } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { analyseLeanDistinctPairs, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
-import { leanColdProcedureRoot, compactLeanBaselineCell, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
+import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
+import { leanColdProcedureRoot, leanBaselineMetricCoverage, compactLeanBaselineCell, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
+import { LEAN_BASELINE_REQUIRED_METRICS } from "./v1-38-lean-baseline-metrics.js"
 import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { inspectLeanSealMetadata } from "./v1-38-lean-seal-metadata.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
@@ -140,9 +141,10 @@ const measured = (cell: LeanBaselineObservedCell): LeanMeasuredPair => {
   if (cell.compact.classification !== "success" || !cell.compact.outcome || !cell.semanticRoot) return fail("MEASURED")
   return { ordinal: cell.ordinal, bottomSourceRoot: cell.bottomRoot, topSourceRoot: cell.topRoot, outcome: cell.compact.outcome, executionRoot: cell.compact.executionRoot, semanticRoot: cell.semanticRoot }
 }
+const trainingPoints = (cell: LeanBaselineObservedCell): 0 | 1 | 2 => cell.trainingHalfPoints ?? fail("TRAINING_POINTS")
 const observedExamples = (cells: readonly LeanBaselineObservedCell[], perMatch: number): LeanLegalExample[] => cells.flatMap(cell => {
-  if (!cell.brainInputs.length) return fail("TRAINING_EXAMPLES")
-  return Array.from({ length: perMatch }, (_, ordinal) => ({ input: cell.brainInputs[ordinal % cell.brainInputs.length]!, trainingHalfPoints: cell.trainingHalfPoints, trainingMatchRoot: cell.compact.executionRoot }))
+  if (!cell.brainInputs.length || cell.trainingHalfPoints === null) return fail("TRAINING_EXAMPLES")
+  return Array.from({ length: perMatch }, (_, ordinal) => ({ input: cell.brainInputs[ordinal % cell.brainInputs.length]!, trainingHalfPoints: trainingPoints(cell), trainingMatchRoot: cell.compact.executionRoot }))
 })
 const assertSealMetadata = (value: unknown): void => {
   if (!exactLabKeys(value, ["schemaVersion", "protocol", "originalPublicReference", "checkoutDirty", "originalCompatibleUnopenedSealVerified", "privateStoreOrPreimageRead", "newExploratorySealCreated", "reservedHoldoutPerProfile", "disposition", "reason", "claims", "root"])) return fail("SEAL_METADATA")
@@ -183,19 +185,38 @@ export const auditLeanCurrentBaselineRetained = (s: LeanBaselineRetainedSnapshot
     const receipt = s.observations[i]!, cell = receipt.cell, pair = s.pairs[i]!, record = s.evidence.records[i]!
     if (!exactLabKeys(receipt, ["schemaVersion", "pairRoot", "cell", "root"]) || receipt.schemaVersion !== "lean-baseline-observation-v1" || receipt.pairRoot !== pair.root ||
         receipt.root !== labRoot("lean-baseline-observation-v1", { schemaVersion: receipt.schemaVersion, pairRoot: receipt.pairRoot, cell })) return fail("OBSERVATION_RECEIPT")
-    if (!exactLabKeys(cell, ["ordinal", "slotRoot", "bottomRoot", "topRoot", "compact", "brainInputs", "strategyInputs", "trainingHalfPoints", "semanticRoot", "decisionRoot", "diagnostic"]) ||
+    if (!exactLabKeys(cell, ["ordinal", "slotRoot", "bottomRoot", "topRoot", "compact", "brainInputs", "strategyInputs", "trainingHalfPoints", "semanticRoot", "metrics", "decisionRoot", "diagnostic"]) ||
         cell.ordinal !== i || cell.slotRoot !== a.slots[i]!.root || cell.bottomRoot !== pair.bottomSourceRoot || cell.topRoot !== pair.topSourceRoot ||
         !same(cell.compact, record.terminal?.record) || !rooted(cell.decisionRoot) ||
         (cell.compact.classification === "success" ? !cell.compact.cleanupComplete || !rooted(cell.semanticRoot) || cell.diagnostic !== null : cell.semanticRoot !== null) ||
         !same((pipeline.cells as unknown[])[i], compactLeanBaselineCell(cell))) return fail("OBSERVATION")
+    const metric = cell.metrics
+    const alwaysMissing = ["forced_evacuation", "first_contraction_unselected_reserves", "push_and_block_causes", "opening_normalized_entropy", "center_wing_convoy_turtle"] as const
+    if (!exactLabKeys(metric, ["schemaVersion", "source", "executionRoot", "measurements", "missing", "formationComparison", "root"]) ||
+        metric.schemaVersion !== "v1.38-lean-baseline-match-metrics-v1" || metric.executionRoot !== cell.compact.executionRoot ||
+        metric.source !== (cell.compact.classification === "success" ? "actual_canonical_trace" : "unavailable") ||
+        metric.formationComparison !== "inconclusive" || !Array.isArray(metric.missing) || new Set(metric.missing).size !== metric.missing.length ||
+        !same(metric.missing, LEAN_BASELINE_REQUIRED_METRICS.filter(key => metric.missing.includes(key))) ||
+        !alwaysMissing.every(key => metric.missing.includes(key)) ||
+        !exactLabKeys(metric.measurements, ["terminalLength", "terminalActivationCount", "cycleCount", "contractionCount", "activeSurvival", "firstEnemyAwarenessActivation", "firstContactActivation", "firstBackstabActivation", "firstPushActivation", "firstStoneActivation", "firstDecisiveActivation", "contractionFallCount", "advances", "stones", "pushes", "moveBlocks", "pushBlocks", "openingCluster"])) return fail("METRICS")
+    const m = metric.measurements
+    const numericKeys = ["terminalLength", "terminalActivationCount", "cycleCount", "contractionCount", "firstEnemyAwarenessActivation", "firstContactActivation", "firstBackstabActivation", "firstPushActivation", "firstStoneActivation", "firstDecisiveActivation", "contractionFallCount", "advances", "stones", "pushes", "moveBlocks", "pushBlocks"] as const
+    if (numericKeys.some(key => m[key] !== null && (!natural(m[key]) || Number(m[key]) > (key === "terminalLength" ? cell.compact.telemetry.transitions : cell.compact.telemetry.events))) ||
+        m.activeSurvival !== null && (!Array.isArray(m.activeSurvival) || m.activeSurvival.length !== 2 || m.activeSurvival.some(value => !natural(value) || value > 16)) ||
+        m.openingCluster !== null && !rooted(m.openingCluster) ||
+        m.openingCluster === null && !metric.missing.includes("opening_cluster") ||
+        metric.source === "unavailable" && (metric.missing.length !== LEAN_BASELINE_REQUIRED_METRICS.length || numericKeys.some(key => m[key] !== null) || m.activeSurvival !== null || m.openingCluster !== null)) return fail("METRICS_VALUES")
+    const { root: _metricRoot, ...metricBody } = metric
+    if (metric.root !== labRoot("lean-baseline-match-metrics-v1", metricBody)) return fail("METRICS_ROOT")
     const kind = currentBaselineSlotKind(i).kind
     const observedRole = kind === "initial_training" ? i < 4 ? `tactical-${i}` : "teacher-0" : kind === "response_training" ? "response-0" : null
     const observedSeat = observedRole === pair.bottomRole ? "bottom" : observedRole === pair.topRole ? "top" : null
-    const expectedPoints = cell.compact.outcome === "DRAW" ? 1 : observedSeat && cell.compact.outcome === observedSeat ? 2 : 0
+    const expectedPoints = cell.compact.classification !== "success" || cell.compact.outcome === null ? null : cell.compact.outcome === "DRAW" ? 1 : observedSeat && cell.compact.outcome === observedSeat ? 2 : 0
     if (cell.trainingHalfPoints !== expectedPoints || kind === "initial_training" && cell.compact.classification === "success" && cell.brainInputs.length === 0 ||
         kind === "response_training" && cell.compact.classification === "success" && cell.strategyInputs.length === 0) return fail("TRAINING_OBSERVATION")
   }
   if ((pipeline.cells as unknown[]).length !== newCharges) return fail("CELL_COUNT")
+  if (!same(pipeline.measurement, leanBaselineMetricCoverage(s.observations.map(receipt => receipt.cell)))) return fail("METRIC_COVERAGE")
   const complete = pipeline.status === "current_baseline_complete"
   if (complete) {
     guard()
@@ -219,8 +240,8 @@ export const auditLeanCurrentBaselineRetained = (s: LeanBaselineRetainedSnapshot
         proposals.tactical.some((proposal, index) => byRole.get(`tactical-${index}`)?.sourceRoot !== proposal.sourceRoot) ||
         byRole.get("teacher-0")?.sourceRoot !== proposals.teacher.sourceRoot) return fail("COLD_SOURCE")
     const initialCells = s.observations.slice(0, 8).map(receipt => receipt.cell)
-    const tacticalSelection = selectLeanBestTrainedProposal(proposals.tactical, initialCells.slice(0, 4).map((cell, index) => ({ proposalRoot: proposals.tactical[index]!.root, trainingMatchRoot: cell.compact.executionRoot, trainingHalfPoints: cell.trainingHalfPoints })))
-    const teacherSelection = selectLeanTrainedProposal(proposals.teacher, initialCells.slice(4, 8).map(cell => ({ trainingMatchRoot: cell.compact.executionRoot, trainingHalfPoints: cell.trainingHalfPoints })))
+    const tacticalSelection = selectLeanBestTrainedProposal(proposals.tactical, initialCells.slice(0, 4).map((cell, index) => ({ proposalRoot: proposals.tactical[index]!.root, trainingMatchRoot: cell.compact.executionRoot, trainingHalfPoints: trainingPoints(cell) })))
+    const teacherSelection = selectLeanTrainedProposal(proposals.teacher, initialCells.slice(4, 8).map(cell => ({ trainingMatchRoot: cell.compact.executionRoot, trainingHalfPoints: trainingPoints(cell) })))
     if (!same(s.artifacts["initial-selection.json"], { tactical: tacticalSelection, teacher: teacherSelection, limitation: "one-match-per-tactical-variation-condition-confounded-no-strength-claim" }) ||
         initial.candidates[0]!.sourceRoot !== tacticalSelection.selectedSourceRoot || initial.candidates[1]!.sourceRoot !== teacherSelection.selectedSourceRoot) return fail("INITIAL_SELECTION")
     const common: LeanColdTrainingInput = { coldRoot: a.coldRoot, corpusRoot: corpus.corpusRoot, armRoot: labRoot("lean-current-arm-v1", a.coldRoot), commonSourceRoot: a.coldRoot, frozenTacticalInputs: corpus.tacticalInputs, teacherSearchReceipts: corpus.teacherSearchReceipts, trainingExamples: observedExamples(initialCells, 16) }
@@ -265,10 +286,8 @@ export const auditLeanCurrentBaselineRetained = (s: LeanBaselineRetainedSnapshot
     const analysis = analyseLeanDistinctPairs([...initially.map(source => source.sourceRoot), response.sourceRoot], s.observations.slice(8, 12).concat(s.observations.slice(20, 28)).map(receipt => measured(receipt.cell)))
     guard()
     const responseCells = s.observations.slice(20, 28).map(receipt => receipt.cell)
-    const responsePoints = responseCells.map(cell => cell.compact.outcome === "DRAW" ? 1 : (cell.compact.outcome === "bottom" ? cell.bottomRoot : cell.topRoot) === response.sourceRoot ? 2 : 0)
-    const responseMean = responsePoints.reduce<number>((sum, points) => sum + points, 0) / 8
-    const improvement = responseMean - initialAnalysis.pure[0]!.minimumHalfPoints
-    const eligible = improvement > 0 ? [...initially, response] : initially
+    const responseAdmission = analyseLeanResponseAdmission({ initialSources: initially.map(source => source.sourceRoot), frozenMixture: initialAnalysis.mixture, strongestPureRoot: initialAnalysis.selectedPureRoot, strongestInitialMinimumHalfPoints: initialAnalysis.pure[0]!.minimumHalfPoints, responseRoot: response.sourceRoot, responseCells: responseCells.map(measured) })
+    const eligible = responseAdmission.admitted ? [...initially, response] : initially
     const selected = analysis.pure.find(row => eligible.some(source => source.sourceRoot === row.sourceRoot))?.sourceRoot
     const probePoints = s.observations.slice(28, 32).map(receipt => {
       const cell = receipt.cell
@@ -279,10 +298,8 @@ export const auditLeanCurrentBaselineRetained = (s: LeanBaselineRetainedSnapshot
         !same(pipeline.eligiblePureRoots, eligible.map(source => source.sourceRoot).sort()) ||
         !same(s.artifacts["initial-analysis.json"], initialAnalysis) || !same(s.artifacts["current-analysis.json"], analysis) ||
         !s.observations.slice(32, 36).every((receipt, i) => receipt.cell.semanticRoot === s.observations[8 + i]!.cell.semanticRoot)) return fail("SOLVER_REPEAT")
-    if (!exactLabKeys(pipeline.response, ["attemptCount", "freshPairings", "meanHalfPoints", "measuredImprovementOverInitialSecurity", "disposition"]) ||
-        (pipeline.response as Record<string, unknown>).attemptCount !== 1 || (pipeline.response as Record<string, unknown>).freshPairings !== 8 ||
-        (pipeline.response as Record<string, unknown>).meanHalfPoints !== responseMean || (pipeline.response as Record<string, unknown>).measuredImprovementOverInitialSecurity !== improvement ||
-        (pipeline.response as Record<string, unknown>).disposition !== (improvement > 0 ? "positive_observed_response" : "nonpositive_response_not_a_finalist") ||
+    if (!exactLabKeys(pipeline.response, ["attemptCount", ...Object.keys(responseAdmission)]) ||
+        !same(pipeline.response, { attemptCount: 1, ...responseAdmission }) ||
         !exactLabKeys(pipeline.probe, ["matches", "meanHalfPoints", "mechanismSharesPlannerWithResponse", "independenceStrengthClaim"]) ||
         (pipeline.probe as Record<string, unknown>).matches !== 4 || (pipeline.probe as Record<string, unknown>).meanHalfPoints !== probePoints.reduce<number>((sum, points) => sum + points, 0) / 4 ||
         (pipeline.probe as Record<string, unknown>).mechanismSharesPlannerWithResponse !== true || (pipeline.probe as Record<string, unknown>).independenceStrengthClaim !== false) return fail("CLAIM")
@@ -290,7 +307,7 @@ export const auditLeanCurrentBaselineRetained = (s: LeanBaselineRetainedSnapshot
   if (complete && r.status !== "pending_independent_verification") return fail("STATUS")
   const stop = s.ledgerEvents.at(-1)
   if (stop?.kind !== "stop" || stop.reason !== (complete ? "complete" : "failure")) return fail("STOP_DISPOSITION")
-  const report = { schemaVersion: "lean-current-baseline-retained-v1" as const, allocationRoot: a.root, evidenceRoot: s.evidence.root, pipelineRoot: pipeline.root as LabRoot, head: s.head, complete, charged: s.evidence.charged, currentCharged: newCharges, successful, cumulativeElapsedMs: s.time.elapsedMs, cumulativePhysicalBytes: s.evidence.physicalHighWaterBytes, scratchHighWaterBytes: s.evidence.scratchHighWaterBytes, claim: "no_robust_pure_claimed" as const, holdoutOpened: false as const, formationMaterialized: false as const }
+  const report = { schemaVersion: "lean-current-baseline-retained-v1" as const, allocationRoot: a.root, evidenceRoot: s.evidence.root, pipelineRoot: pipeline.root as LabRoot, head: s.head, complete, charged: s.evidence.charged, currentCharged: newCharges, successful, cumulativeElapsedMs: s.time.elapsedMs, cumulativePhysicalBytes: s.evidence.physicalHighWaterBytes, scratchHighWaterBytes: s.evidence.scratchHighWaterBytes, measurement: pipeline.measurement, claim: "no_robust_pure_claimed" as const, holdoutOpened: false as const, formationMaterialized: false as const }
   return Object.freeze({ ...report, root: labRoot("lean-current-baseline-retained-v1", report) })
 }
 

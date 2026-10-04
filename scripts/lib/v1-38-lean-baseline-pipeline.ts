@@ -7,7 +7,7 @@ import { type LeanCurrentBaselineAllocation, type LeanSlot } from "../../package
 import { buildLeanInitialProposals, selectLeanBestTrainedProposal, selectLeanTrainedProposal } from "./v1-38-lean-training-adapter.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
 import { buildLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
-import { analyseLeanDistinctPairs, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
+import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
 import type { runLeanBaselineMatch } from "./v1-38-lean-baseline-match.js"
 import { inspectLeanSealMetadata } from "./v1-38-lean-seal-metadata.js"
 
@@ -19,18 +19,25 @@ export const compactLeanBaselineCell = (cell: LeanBaselineObservedCell) => ({
   ordinal: cell.ordinal, slotRoot: cell.slotRoot, bottomRoot: cell.bottomRoot, topRoot: cell.topRoot,
   compact: cell.compact, trainingHalfPoints: cell.trainingHalfPoints,
   semanticRoot: cell.semanticRoot, decisionRoot: cell.decisionRoot,
+  metrics: cell.metrics,
   observationRoot: labRoot("lean-baseline-observation-v1", cell),
   brainInputCount: cell.brainInputs.length, strategyInputCount: cell.strategyInputs.length,
   diagnosticRoot: cell.diagnostic === null ? null : labRoot("lean-baseline-cell-diagnostic-v1", cell.diagnostic),
 })
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_PIPELINE_${code}`) }
+const trainingPoints = (cell: LeanBaselineObservedCell): 0 | 1 | 2 => cell.trainingHalfPoints ?? fail("TRAINING_POINTS")
+export const leanBaselineMetricCoverage = (cells: readonly LeanBaselineObservedCell[]) => ({
+  cells: cells.length,
+  missingByCell: cells.map(cell => ({ ordinal: cell.ordinal, missing: cell.metrics.missing })),
+  formationComparison: "inconclusive" as const,
+})
 export const leanColdProcedureRoot = (seed: string): LabRoot => labRoot("lean-common-nonlearned-procedure-v1", { seed, tuple: "current-canonical-v1.37", corpus: "canonical-prefix-turn-left-right-v1", teacher: { hypothesis: "aggressive", depth: 6, nodes: 64, resampling: "canonical-order-round-robin-v1" }, tactical: { evaluations: 64, beam: 4, space: "tactical-adaptation-25-v1" }, response: { attempt: 1, nodes: 128 }, budget: { initialTraining: 8, initialMatrix: 4, responseTraining: 8, responsePairing: 8, probe: 4, repeat: 4 }, modelHumanExternal: 0 })
 
 /** Resampling is explicit, deterministic and local to a completed Match. It
  * supplies legal observations, never additional Match or oracle evidence. */
 const observedExamples = (cells: readonly LeanBaselineObservedCell[], perMatch: number): LeanLegalExample[] => cells.flatMap(cell => {
-  if (cell.compact.classification !== "success" || !cell.brainInputs.length) return fail("TRAINING_OBSERVATION")
-  return Array.from({ length: perMatch }, (_, ordinal) => ({ input: cell.brainInputs[ordinal % cell.brainInputs.length]!, trainingHalfPoints: cell.trainingHalfPoints, trainingMatchRoot: cell.compact.executionRoot }))
+  if (cell.compact.classification !== "success" || cell.trainingHalfPoints === null || !cell.brainInputs.length) return fail("TRAINING_OBSERVATION")
+  return Array.from({ length: perMatch }, (_, ordinal) => ({ input: cell.brainInputs[ordinal % cell.brainInputs.length]!, trainingHalfPoints: trainingPoints(cell), trainingMatchRoot: cell.compact.executionRoot }))
 })
 const measured = (cell: LeanBaselineObservedCell): LeanMeasuredPair => {
   if (cell.compact.classification !== "success" || !cell.compact.outcome || !cell.semanticRoot) return fail("PAIR_EVIDENCE")
@@ -74,7 +81,7 @@ export const executeLeanCurrentPipeline = async (input: {
     return cell
   }
   const partial = (stage: string, training: LeanColdTrainingManifest | null) => {
-    const body = { status: "partial_or_failed_baseline" as const, stage, training, cells: cells.map(compactLeanBaselineCell), sources: [...sources.values()].map(s => ({ role: s.role, sourceRoot: s.sourceRoot, snapshotRoot: s.root })), holdoutOpened: false, formationMaterialized: false }
+    const body = { status: "partial_or_failed_baseline" as const, stage, training, cells: cells.map(compactLeanBaselineCell), measurement: leanBaselineMetricCoverage(cells), sources: [...sources.values()].map(s => ({ role: s.role, sourceRoot: s.sourceRoot, snapshotRoot: s.root })), holdoutOpened: false, formationMaterialized: false }
     return { ...body, root: labRoot("lean-current-baseline-pipeline-v1", body) }
   }
   const tacticalTraining: LeanBaselineObservedCell[] = [], teacherTraining: LeanBaselineObservedCell[] = []
@@ -84,8 +91,8 @@ export const executeLeanCurrentPipeline = async (input: {
     if (!cell) return partial("initial_training", null)
     ;(ordinal < 4 ? tacticalTraining : teacherTraining).push(cell)
   }
-  const tacticalSelection = selectLeanBestTrainedProposal(proposals.tactical, tacticalTraining.map((cell, index) => ({ proposalRoot: proposals.tactical[index]!.root, trainingMatchRoot: cell.compact.executionRoot, trainingHalfPoints: cell.trainingHalfPoints })))
-  const teacherSelection = selectLeanTrainedProposal(proposals.teacher, teacherTraining.map(cell => ({ trainingMatchRoot: cell.compact.executionRoot, trainingHalfPoints: cell.trainingHalfPoints })))
+  const tacticalSelection = selectLeanBestTrainedProposal(proposals.tactical, tacticalTraining.map((cell, index) => ({ proposalRoot: proposals.tactical[index]!.root, trainingMatchRoot: cell.compact.executionRoot, trainingHalfPoints: trainingPoints(cell) })))
+  const teacherSelection = selectLeanTrainedProposal(proposals.teacher, teacherTraining.map(cell => ({ trainingMatchRoot: cell.compact.executionRoot, trainingHalfPoints: trainingPoints(cell) })))
   input.retainArtifact("initial-selection.json", { tactical: tacticalSelection, teacher: teacherSelection, limitation: "one-match-per-tactical-variation-condition-confounded-no-strength-claim" })
   const common: LeanColdTrainingInput = { coldRoot: allocation.coldRoot, corpusRoot: corpus.corpusRoot, armRoot: labRoot("lean-current-arm-v1", allocation.coldRoot), commonSourceRoot: allocation.coldRoot, frozenTacticalInputs: corpus.tacticalInputs, teacherSearchReceipts: corpus.teacherSearchReceipts, trainingExamples: [...observedExamples(tacticalTraining, 16), ...observedExamples(teacherTraining, 16)] }
   const initial = trainLeanInitialCandidates(common, {
@@ -132,12 +139,10 @@ export const executeLeanCurrentPipeline = async (input: {
   const matrix = [...initialMatrix, ...responseMatrix]
   const analysis = analyseLeanDistinctPairs([tactical.sourceRoot, teacher.sourceRoot, response.sourceRoot], matrix.map(measured))
   input.retainArtifact("current-analysis.json", analysis)
-  const responsePoints: number[] = responseMatrix.map(cell => cell.compact.outcome === "DRAW" ? 1 : (cell.compact.outcome === "bottom" ? cell.bottomRoot : cell.topRoot) === response.sourceRoot ? 2 : 0)
-  const responseMean = responsePoints.reduce((sum, value) => sum + value, 0) / responsePoints.length
-  const responseImprovement = responseMean - initialAnalysis.pure[0]!.minimumHalfPoints
-  // Preserve every measured response row in the diagnostic matrix, but a
-  // nonpositive response cannot become a finalist through a tie-break.
-  const eligible = responseImprovement > 0 ? [tactical, teacher, response] : [tactical, teacher]
+  const responseAdmission = analyseLeanResponseAdmission({ initialSources: [tactical.sourceRoot, teacher.sourceRoot], frozenMixture: initialAnalysis.mixture, strongestPureRoot: strongest.sourceRoot, strongestInitialMinimumHalfPoints: initialAnalysis.pure[0]!.minimumHalfPoints, responseRoot: response.sourceRoot, responseCells: responseMatrix.map(measured) })
+  // Preserve all eight response rows and the three-source diagnostic matrix.
+  // The missing strongest-pure self-pair is not repaired with extra Matches.
+  const eligible = responseAdmission.admitted ? [tactical, teacher, response] : [tactical, teacher]
   const selectedRanking = analysis.pure.find(row => eligible.some(s => s.sourceRoot === row.sourceRoot)) ?? fail("SELECTED_PURE")
   const selected = eligible.find(s => s.sourceRoot === selectedRanking.sourceRoot) ?? fail("SELECTED_PURE")
   const probes: LeanBaselineObservedCell[] = []
@@ -154,6 +159,6 @@ export const executeLeanCurrentPipeline = async (input: {
   }
   const repeatEqual = repeats.every((cell, index) => cell.semanticRoot === initialMatrix[index]!.semanticRoot)
   const probePoints: number[] = probes.map(cell => cell.compact.outcome === "DRAW" ? 1 : (cell.compact.outcome === "bottom" ? cell.bottomRoot : cell.topRoot) === selected.sourceRoot ? 2 : 0)
-  const body = { status: repeatEqual ? "current_baseline_complete" as const : "partial_or_failed_baseline" as const, stage: repeatEqual ? "complete" : "deterministic_repeat_mismatch", training: trained, cells: cells.map(compactLeanBaselineCell), sources: [...sources.values()].map(s => ({ role: s.role, sourceRoot: s.sourceRoot, snapshotRoot: s.root })), initialAnalysisRoot: initialAnalysis.root, analysisRoot: analysis.root, selectedPureRoot: selected.sourceRoot, eligiblePureRoots: eligible.map(s => s.sourceRoot).sort(), response: { attemptCount: 1, freshPairings: 8, meanHalfPoints: responseMean, measuredImprovementOverInitialSecurity: responseImprovement, disposition: responseImprovement > 0 ? "positive_observed_response" : "nonpositive_response_not_a_finalist" }, probe: { matches: 4, meanHalfPoints: probePoints.reduce((sum, value) => sum + value, 0) / 4, mechanismSharesPlannerWithResponse: true, independenceStrengthClaim: false }, repeat: { matches: 4, semanticEqual: repeatEqual }, solver: { completeDistinctPairCells: 12, repeatsExcluded: true, noHistoricalFullSnapshotCredit: true }, claim: "no_robust_pure_claimed", holdoutOpened: false, formationMaterialized: false }
+  const body = { status: repeatEqual ? "current_baseline_complete" as const : "partial_or_failed_baseline" as const, stage: repeatEqual ? "complete" : "deterministic_repeat_mismatch", training: trained, cells: cells.map(compactLeanBaselineCell), measurement: leanBaselineMetricCoverage(cells), sources: [...sources.values()].map(s => ({ role: s.role, sourceRoot: s.sourceRoot, snapshotRoot: s.root })), initialAnalysisRoot: initialAnalysis.root, analysisRoot: analysis.root, selectedPureRoot: selected.sourceRoot, eligiblePureRoots: eligible.map(s => s.sourceRoot).sort(), response: { attemptCount: 1, ...responseAdmission }, probe: { matches: 4, meanHalfPoints: probePoints.reduce((sum, value) => sum + value, 0) / 4, mechanismSharesPlannerWithResponse: true, independenceStrengthClaim: false }, repeat: { matches: 4, semanticEqual: repeatEqual }, solver: { completeDistinctPairCells: 12, repeatsExcluded: true, noHistoricalFullSnapshotCredit: true }, claim: "no_robust_pure_claimed", holdoutOpened: false, formationMaterialized: false }
   return { ...body, root: labRoot("lean-current-baseline-pipeline-v1", body) }
 }

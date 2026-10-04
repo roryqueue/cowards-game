@@ -6,8 +6,14 @@ import { auditLeanCurrentBaselineRetained, type LeanBaselineRetainedSnapshot } f
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
 import { CANONICAL_ARENA_CATALOG_V1_37, type StrategyInputV119 } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
+import { LEAN_BASELINE_REQUIRED_METRICS, type LeanBaselineMetricReceipt } from "./v1-38-lean-baseline-metrics.js"
 
 const root = (name: string): LabRoot => labRoot("lean-retained-test-v1", name)
+const syntheticMetrics = (executionRoot: LabRoot, success = true): LeanBaselineMetricReceipt => {
+  const body = { schemaVersion: "v1.38-lean-baseline-match-metrics-v1" as const, source: success ? "actual_canonical_trace" as const : "unavailable" as const,
+    executionRoot, measurements: { terminalLength: null, terminalActivationCount: null, cycleCount: null, contractionCount: null, activeSurvival: null, firstEnemyAwarenessActivation: null, firstContactActivation: null, firstBackstabActivation: null, firstPushActivation: null, firstStoneActivation: null, firstDecisiveActivation: null, contractionFallCount: null, advances: null, stones: null, pushes: null, moveBlocks: null, pushBlocks: null, openingCluster: null }, missing: [...LEAN_BASELINE_REQUIRED_METRICS], formationComparison: "inconclusive" as const }
+  return { ...body, root: labRoot("lean-baseline-match-metrics-v1", body) }
+}
 const fixture = (): LeanBaselineRetainedSnapshot => {
   const seed = "source-only-fixture", coldRoot = leanColdProcedureRoot(seed), sourceRoot = root("source")
   const requestRoots = Array.from({ length: 36 }, (_, i) => root(`request-${i}`))
@@ -20,12 +26,12 @@ const fixture = (): LeanBaselineRetainedSnapshot => {
   const source = (role: string) => ({ role, coldRoot, implementationRoot: sourceRoot, sourceRoot: root(`source-${role}`), root: root(`snapshot-${role}`) })
   const bottom = source("tactical-0"), top = source("cold-opponent"), sources = [top, bottom]
   const compact = { classification: "success", code: "OK", outcome: "bottom", elapsedMs: 100, cleanupComplete: true, invocationCount: 2, accountingRoot: root("accounting"), executionRoot: root("execution"), telemetry: { transitions: 1, events: 1 } } as const
-  const cell = { ordinal: 0, slotRoot: slots[0]!.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot, compact, brainInputs: [{}], strategyInputs: [], trainingHalfPoints: 2, semanticRoot: root("semantic"), decisionRoot: root("decision"), diagnostic: null } as unknown as LeanBaselineObservedCell
+  const cell = { ordinal: 0, slotRoot: slots[0]!.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot, compact, brainInputs: [{}], strategyInputs: [], trainingHalfPoints: 2, semanticRoot: root("semantic"), metrics: syntheticMetrics(compact.executionRoot), decisionRoot: root("decision"), diagnostic: null } as unknown as LeanBaselineObservedCell
   const pairBody = { schemaVersion: "lean-baseline-pair-v1" as const, ordinal: 0, slotRoot: slots[0]!.root, requestRoot: slots[0]!.requestRoot, priorLedgerBytesRoot: leanBytesRoot(new Uint8Array()), priorLedgerByteLength: 0, priorCharged: 9, bottomRole: bottom.role, bottomSourceRoot: bottom.sourceRoot, bottomSnapshotRoot: bottom.root, topRole: top.role, topSourceRoot: top.sourceRoot, topSnapshotRoot: top.root }
   const pair = { ...pairBody, root: labRoot("lean-baseline-pair-v1", pairBody) }
   const observationBody = { schemaVersion: "lean-baseline-observation-v1" as const, pairRoot: pair.root, cell }
   const observation = { ...observationBody, root: labRoot("lean-baseline-observation-v1", observationBody) }
-  const pipelineBody = { status: "partial_or_failed_baseline", stage: "initial_training", training: null, cells: [compactLeanBaselineCell(cell)], sources: sources.map(s => ({ role: s.role, sourceRoot: s.sourceRoot, snapshotRoot: s.root })), holdoutOpened: false, formationMaterialized: false }
+  const pipelineBody = { status: "partial_or_failed_baseline", stage: "initial_training", training: null, cells: [compactLeanBaselineCell(cell)], measurement: { cells: 1, missingByCell: [{ ordinal: 0, missing: cell.metrics.missing }], formationComparison: "inconclusive" }, sources: sources.map(s => ({ role: s.role, sourceRoot: s.sourceRoot, snapshotRoot: s.root })), holdoutOpened: false, formationMaterialized: false }
   const pipeline = { ...pipelineBody, root: labRoot("lean-current-baseline-pipeline-v1", pipelineBody) }
   const chargeBody = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: allocation.root, slotRoot: slots[0]!.root, ordinal: 0 }
   const charge = { ...chargeBody, root: labRoot("lean-slot-charge-v1", chargeBody) }
@@ -40,7 +46,25 @@ const fixture = (): LeanBaselineRetainedSnapshot => {
   return { allocation, request, requestBytesRoot: entry.requestBytesRoot, head: entry.head, entry, terminal, evidence, ledgerEvents, time, result, pairs: [pair], observations: [observation], sources: sources as unknown as LeanBaselineRetainedSnapshot["sources"], artifacts: { "seal-metadata.json": seal } }
 }
 const changed = (edit: (copy: LeanBaselineRetainedSnapshot) => void) => { const copy = structuredClone(fixture()); edit(copy); return copy }
-const completeFixture = async (): Promise<LeanBaselineRetainedSnapshot> => {
+const failedFirstCell = (classification: "player_violation" | "system_failure", code: "PLAYER_VIOLATION" | "SUPERVISOR_FAILURE" | "CLEANUP", outcome: "bottom" | null, cleanupComplete: boolean): LeanBaselineRetainedSnapshot => {
+  const s = structuredClone(fixture())
+  const receipt = s.observations[0]! as unknown as Record<string, unknown>, cell = receipt.cell as Record<string, unknown>
+  const compact: Record<string, unknown> = { ...(cell.compact as Record<string, unknown>), classification, code, outcome, cleanupComplete }
+  cell.compact = compact; cell.trainingHalfPoints = null; cell.semanticRoot = null; cell.metrics = syntheticMetrics(compact.executionRoot as LabRoot, false)
+  receipt.root = labRoot("lean-baseline-observation-v1", { schemaVersion: receipt.schemaVersion, pairRoot: receipt.pairRoot, cell })
+  const terminal = (s.ledgerEvents[1] as unknown as Record<string, unknown>); terminal.record = compact
+  const evidenceRecord = s.evidence.records[0] as unknown as Record<string, unknown>
+  evidenceRecord.terminal = { ...(evidenceRecord.terminal as Record<string, unknown>), record: compact }
+  evidenceRecord.status = classification
+  const pipeline = s.result.pipeline as Record<string, unknown>
+  pipeline.cells = [compactLeanBaselineCell(cell as unknown as LeanBaselineObservedCell)]
+  pipeline.measurement = { cells: 1, missingByCell: [{ ordinal: 0, missing: (cell.metrics as LeanBaselineMetricReceipt).missing }], formationComparison: "inconclusive" }
+  const { root: _ignored, ...pipelineBody } = pipeline
+  pipeline.root = labRoot("lean-current-baseline-pipeline-v1", pipelineBody)
+  s.result.successful = 0
+  return s
+}
+const completeFixture = async (outcomeForSlot: (ordinal: number, entrantSeat: "bottom" | "top") => "bottom" | "top" | "DRAW" = () => "DRAW"): Promise<LeanBaselineRetainedSnapshot> => {
   const base = fixture(), allocation = base.allocation, corpus = buildLeanColdCorpus(allocation.seed)
   const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(item => item.status === "active")!
   let machine = MATCH_KERNEL.createMachineV119({ matchId: "retained-source-only", seed: allocation.seed, arenaVariant: arena, bottomPlayerId: "fixture-bottom", topPlayerId: "fixture-top", bottomStrategyRevisionId: "fixture-bottom-revision", topStrategyRevisionId: "fixture-top-revision", initialInitiativePlayerId: "fixture-bottom" })
@@ -64,11 +88,11 @@ const completeFixture = async (): Promise<LeanBaselineRetainedSnapshot> => {
     const chargeBody = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: allocation.root, slotRoot: slot.root, ordinal: slot.ordinal }
     const charge = { ...chargeBody, root: labRoot("lean-slot-charge-v1", chargeBody) }
     ledgerEvents.push({ kind: "charge", charge })
-    const compact = { classification: "success" as const, code: "OK" as const, outcome: "DRAW" as const, elapsedMs: 1, cleanupComplete: true, invocationCount: 2, accountingRoot: root(`accounting-${slot.ordinal}`), executionRoot: root(`execution-${slot.ordinal}`), telemetry: { transitions: 1, events: 1 } }
+    const compact = { classification: "success" as const, code: "OK" as const, outcome: outcomeForSlot(slot.ordinal, slot.condition < 2 ? "bottom" : "top"), elapsedMs: 1, cleanupComplete: true, invocationCount: 2, accountingRoot: root(`accounting-${slot.ordinal}`), executionRoot: root(`execution-${slot.ordinal}`), telemetry: { transitions: 1, events: 1 } }
     const terminal = { kind: "terminal", chargeRoot: charge.root, record: compact, replay: null }
     ledgerEvents.push(terminal)
     records[slot.ordinal] = { slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: charge.root, terminal, status: "success" }
-    const cell = { ordinal: slot.ordinal, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot, compact, brainInputs: [corpus.tacticalInputs[0]!], strategyInputs: [strategyInput!], trainingHalfPoints: 1 as const, semanticRoot: root(`repeat-${slot.ordinal >= 32 ? slot.ordinal - 24 : slot.ordinal}`), decisionRoot: root(`decision-${slot.ordinal}`), diagnostic: null }
+    const cell = { ordinal: slot.ordinal, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot, compact, brainInputs: [corpus.tacticalInputs[0]!], strategyInputs: [strategyInput!], trainingHalfPoints: (compact.outcome === "DRAW" ? 1 : 0) as 0 | 1, semanticRoot: root(`repeat-${slot.ordinal >= 32 ? slot.ordinal - 24 : slot.ordinal}`), metrics: syntheticMetrics(compact.executionRoot), decisionRoot: root(`decision-${slot.ordinal}`), diagnostic: null }
     const observationBody = { schemaVersion: "lean-baseline-observation-v1" as const, pairRoot: pair.root, cell }
     observations.push({ ...observationBody, root: labRoot("lean-baseline-observation-v1", observationBody) })
     return cell
@@ -82,6 +106,19 @@ const completeFixture = async (): Promise<LeanBaselineRetainedSnapshot> => {
 describe("new current-baseline retained audit (synthetic source-only)", () => {
   it("retains an honest incomplete first-cell result without granting completion", () => {
     expect(auditLeanCurrentBaselineRetained(fixture())).toMatchObject({ complete: false, currentCharged: 1, successful: 1, claim: "no_robust_pure_claimed" })
+  })
+  it("retains completed player violation, system failure, and cleanup failure as charged partials", () => {
+    for (const row of [
+      ["player_violation", "PLAYER_VIOLATION", "bottom", true],
+      ["system_failure", "SUPERVISOR_FAILURE", null, true],
+      ["system_failure", "CLEANUP", "bottom", false],
+    ] as const) {
+      const snapshot = failedFirstCell(row[0], row[1], row[2], row[3])
+      expect(auditLeanCurrentBaselineRetained(snapshot)).toMatchObject({ complete: false, currentCharged: 1, successful: 0, formationMaterialized: false })
+      expect(snapshot.evidence.records.slice(1).every(record => record.status === "unused")).toBe(true)
+      expect(snapshot.observations[0]!.cell.trainingHalfPoints).toBeNull()
+      expect(snapshot.observations[0]!.cell.semanticRoot).toBeNull()
+    }
   })
   it("rejects missing observations and extra result keys", () => {
     expect(() => auditLeanCurrentBaselineRetained(changed(s => { (s as unknown as { observations: unknown[] }).observations = [] }))).toThrow(/PAIR_COUNT|ACCOUNTING/)
@@ -105,5 +142,37 @@ describe("new current-baseline retained audit (synthetic source-only)", () => {
   it("accepts a complete 36-cell synthetic source-only round with exact rebuilt training and solver", async () => {
     const complete = await completeFixture()
     expect(auditLeanCurrentBaselineRetained(complete)).toMatchObject({ complete: true, currentCharged: 36, successful: 36, claim: "no_robust_pure_claimed" })
+  }, 30000)
+  it("recomputes frozen-mixture admission and rejects the eight-pairing security-gap counterexample", async () => {
+    const counterexample = await completeFixture((ordinal, entrantSeat) => {
+      if (ordinal === 8 || ordinal === 9) return entrantSeat
+      if (ordinal === 10 || ordinal >= 20 && ordinal < 24) return "DRAW"
+      if (ordinal === 11) return entrantSeat === "bottom" ? "top" : "bottom"
+      if (ordinal >= 24 && ordinal < 28) return entrantSeat
+      return "DRAW"
+    })
+    const pipeline = counterexample.result.pipeline as Record<string, unknown>
+    expect((pipeline.cells as unknown[]).slice(20, 28)).toHaveLength(8)
+    expect(pipeline.eligiblePureRoots).toHaveLength(2)
+    expect(pipeline.response).toMatchObject({ unweightedSecurityDiagnostic: { gapHalfPoints: 0.25 }, frozenMixtureNormalizedScore: { numerator: "1", denominator: "2", passed: false }, strongestPureFreshComparator: { status: "unsupported" }, admitted: false })
+    expect(auditLeanCurrentBaselineRetained(counterexample)).toMatchObject({ complete: true, currentCharged: 36, measurement: { formationComparison: "inconclusive" } })
+    const forged = structuredClone(counterexample)
+    const forgedPipeline = forged.result.pipeline as Record<string, unknown>
+    ;(forgedPipeline.response as Record<string, unknown>).admitted = true
+    const { root: _ignored, ...body } = forgedPipeline
+    forgedPipeline.root = labRoot("lean-current-baseline-pipeline-v1", body)
+    expect(() => auditLeanCurrentBaselineRetained(forged)).toThrow("LEAN_BASELINE_RETAINED_CLAIM")
+  }, 30000)
+  it("independently excludes an above-threshold response when exact strongest-pure comparison is unsupported", async () => {
+    const snapshot = await completeFixture((ordinal, entrantSeat) => {
+      if (ordinal === 8 || ordinal === 9 || ordinal >= 20 && ordinal < 23 || ordinal >= 24 && ordinal < 28) return entrantSeat
+      if (ordinal === 11) return entrantSeat === "bottom" ? "top" : "bottom"
+      return "DRAW"
+    })
+    const pipeline = snapshot.result.pipeline as Record<string, unknown>
+    expect((pipeline.cells as unknown[]).slice(20, 28)).toHaveLength(8)
+    expect(pipeline.eligiblePureRoots).toHaveLength(2)
+    expect(pipeline.response).toMatchObject({ frozenMixtureNormalizedScore: { numerator: "7", denominator: "8", passed: true }, strongestPureFreshComparator: { status: "unsupported", reason: "strongest_pure_self_pair_not_allocated" }, admitted: false, disposition: "fresh_strongest_pure_comparator_unsupported" })
+    expect(auditLeanCurrentBaselineRetained(snapshot)).toMatchObject({ complete: true, currentCharged: 36 })
   }, 30000)
 })

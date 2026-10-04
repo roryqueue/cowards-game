@@ -6,6 +6,7 @@ import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { currentBaselineSlotKind, type LeanCurrentBaselineAllocation, type LeanSlot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
 import { executeLeanCurrentPipeline, leanColdProcedureRoot, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
+import { LEAN_BASELINE_REQUIRED_METRICS, type LeanBaselineMetricReceipt } from "./v1-38-lean-baseline-metrics.js"
 
 const seed = "lean-source-fixture-only"
 const arenas = CANONICAL_ARENA_CATALOG_V1_37.arenas.filter(a => a.status === "active").sort((a, b) => a.semanticGeometryHash.localeCompare(b.semanticGeometryHash))
@@ -26,6 +27,11 @@ const allocation = (): LeanCurrentBaselineAllocation => ({
     return { ordinal, condition: kind.condition, arenaHash: arenas[kind.arenaIndex]!.semanticGeometryHash, requestRoot: labRoot("source-only-request", ordinal), root: labRoot("source-only-slot", ordinal) }
   }),
 } as unknown as LeanCurrentBaselineAllocation)
+const syntheticMetrics = (executionRoot: string, success: boolean): LeanBaselineMetricReceipt => {
+  const body = { schemaVersion: "v1.38-lean-baseline-match-metrics-v1" as const, source: success ? "actual_canonical_trace" as const : "unavailable" as const,
+    executionRoot: executionRoot as `sha256:${string}`, measurements: { terminalLength: null, terminalActivationCount: null, cycleCount: null, contractionCount: null, activeSurvival: null, firstEnemyAwarenessActivation: null, firstContactActivation: null, firstBackstabActivation: null, firstPushActivation: null, firstStoneActivation: null, firstDecisiveActivation: null, contractionFallCount: null, advances: null, stones: null, pushes: null, moveBlocks: null, pushBlocks: null, openingCluster: null }, missing: [...LEAN_BASELINE_REQUIRED_METRICS], formationComparison: "inconclusive" as const }
+  return { ...body, root: labRoot("lean-baseline-match-metrics-v1", body) }
+}
 
 describe("current-only staged baseline wiring (synthetic source tests)", () => {
   it("finishes exactly 36 calls, freezes sources at stages, and retains compact observation joins", async () => {
@@ -40,7 +46,7 @@ describe("current-only staged baseline wiring (synthetic source tests)", () => {
         return { ordinal: slot.ordinal, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot,
           compact: { classification: "success", code: "OK", outcome: "DRAW", elapsedMs: 1, cleanupComplete: true, invocationCount: 2, accountingRoot: labRoot("source-only-accounting", slot.ordinal), executionRoot: labRoot("source-only-execution", slot.ordinal), telemetry: { transitions: 1, events: 1 } },
           brainInputs: [corpus.tacticalInputs[0]!], strategyInputs: [strategyInput], trainingHalfPoints: 1,
-          semanticRoot: labRoot("source-only-repeat", slot.ordinal >= 32 ? slot.ordinal - 24 : slot.ordinal), decisionRoot: labRoot("source-only-decision", slot.ordinal), diagnostic: null }
+          semanticRoot: labRoot("source-only-repeat", slot.ordinal >= 32 ? slot.ordinal - 24 : slot.ordinal), metrics: syntheticMetrics(labRoot("source-only-execution", slot.ordinal), true), decisionRoot: labRoot("source-only-decision", slot.ordinal), diagnostic: null }
       },
     })
     expect(calls).toBe(36)
@@ -62,11 +68,42 @@ describe("current-only staged baseline wiring (synthetic source tests)", () => {
       calls++
       return { ordinal: slot.ordinal, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot,
         compact: { classification: "system_failure", code: "SUPERVISOR_FAILURE", outcome: null, elapsedMs: 1, cleanupComplete: true, invocationCount: 0, accountingRoot: labRoot("source-only-failed-accounting", 0), executionRoot: labRoot("source-only-failed-execution", 0), telemetry: { transitions: 0, events: 0 } },
-        brainInputs: [], strategyInputs: [], trainingHalfPoints: 0, semanticRoot: null, decisionRoot: labRoot("source-only-empty-decisions", 0), diagnostic: null }
+        brainInputs: [], strategyInputs: [], trainingHalfPoints: null, semanticRoot: null, metrics: syntheticMetrics(labRoot("source-only-failed-execution", 0), false), decisionRoot: labRoot("source-only-empty-decisions", 0), diagnostic: null }
     } })
     expect(calls).toBe(1)
     expect(result).toMatchObject({ status: "partial_or_failed_baseline", stage: "initial_training", training: null })
     expect(result.cells).toHaveLength(1)
     expect(result.root).toMatch(/^sha256:/)
   })
+  it("keeps all eight fresh response pairings below and above mixture threshold without unsupported admission", async () => {
+    const corpus = buildLeanColdCorpus(seed), strategyInput = initialStrategyInput()
+    for (const variant of ["security_gap_counterexample", "above_mixture_threshold"] as const) {
+    let calls = 0
+    const result = await executeLeanCurrentPipeline({ allocation: allocation(), freezeSource() {}, retainArtifact() {}, checkpoint() {}, async dispatch(slot, bottom, top): Promise<LeanBaselineObservedCell> {
+      calls++
+      const entrantSeat = slot.condition < 2 ? "bottom" : "top"
+      const initialOutcome = slot.ordinal === 8 || slot.ordinal === 9 ? entrantSeat : slot.ordinal === 10 ? "DRAW" : entrantSeat === "bottom" ? "top" : "bottom"
+      const responseVsStrongest = variant === "above_mixture_threshold" && slot.ordinal < 23 ? entrantSeat : "DRAW"
+      const outcome = slot.ordinal >= 8 && slot.ordinal < 12 ? initialOutcome : slot.ordinal >= 20 && slot.ordinal < 24 ? responseVsStrongest : slot.ordinal >= 24 && slot.ordinal < 28 ? entrantSeat : "DRAW"
+      return { ordinal: slot.ordinal, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot,
+        compact: { classification: "success", code: "OK", outcome, elapsedMs: 1, cleanupComplete: true, invocationCount: 2, accountingRoot: labRoot("response-test-accounting", slot.ordinal), executionRoot: labRoot("response-test-execution", slot.ordinal), telemetry: { transitions: 1, events: 1 } },
+        brainInputs: [corpus.tacticalInputs[0]!], strategyInputs: [strategyInput], trainingHalfPoints: outcome === "DRAW" ? 1 : 0,
+        semanticRoot: labRoot("response-test-repeat", slot.ordinal >= 32 ? slot.ordinal - 24 : slot.ordinal), metrics: syntheticMetrics(labRoot("response-test-execution", slot.ordinal), true), decisionRoot: labRoot("response-test-decision", slot.ordinal), diagnostic: null }
+    } })
+    expect(calls).toBe(36)
+    expect(result.status).toBe("current_baseline_complete")
+    if (!("response" in result)) throw new Error("SOURCE_ONLY_RESPONSE_NOT_REACHED")
+    expect(result.cells.slice(20, 28)).toHaveLength(8)
+    expect(result.eligiblePureRoots).toHaveLength(2)
+    if (variant === "security_gap_counterexample") {
+      expect(result.response.unweightedSecurityDiagnostic.gapHalfPoints).toBe(0.25)
+      expect(result.response.frozenMixtureNormalizedScore).toMatchObject({ numerator: "1", denominator: "2", passed: false })
+      expect(result.response.disposition).toBe("frozen_mixture_threshold_not_met")
+    } else {
+      expect(result.response.frozenMixtureNormalizedScore).toMatchObject({ numerator: "7", denominator: "8", passed: true })
+      expect(result.response.disposition).toBe("fresh_strongest_pure_comparator_unsupported")
+    }
+    expect(result.response).toMatchObject({ admitted: false, strongestPureFreshComparator: { status: "unsupported", reason: "strongest_pure_self_pair_not_allocated" } })
+    }
+  }, 45000)
 })
