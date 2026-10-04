@@ -3,11 +3,19 @@ import { execFileSync } from "node:child_process"
 import { resolve } from "node:path"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { currentBaselineSlotKind } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { assertLeanBaselineWritableScope, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselinePair, leanBaselineSourceManifest, parseLeanBaselineCommand } from "./run-v1-38-lean-baseline.js"
+import { admitsLeanBaselineReviewAgents, assertLeanBaselineWritableScope, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselinePair, leanBaselineSourceManifest, parseLeanBaselineCommand } from "./run-v1-38-lean-baseline.js"
 
 const root = (name: string) => labRoot("baseline-cli-test", name)
 
 describe("current-only baseline CLI source contracts", () => {
+  it("allows the real root author only with a distinct subagent reviewer", () => {
+    expect(admitsLeanBaselineReviewAgents("/root", "/root/review_265_lean_baseline")).toBe(true)
+    expect(admitsLeanBaselineReviewAgents("/root/entry", "/root/review_265_lean_baseline")).toBe(true)
+    expect(admitsLeanBaselineReviewAgents("/root", "/root")).toBe(false)
+    expect(admitsLeanBaselineReviewAgents("/root/review_265_lean_baseline", "/root/review_265_lean_baseline")).toBe(false)
+    expect(admitsLeanBaselineReviewAgents("someone-else", "/root/review_265_lean_baseline")).toBe(false)
+  })
+
   it("admits only the prospective prepare/run/retained-reader surface", () => {
     expect(parseLeanBaselineCommand(["prepare-current", "--request", "a"]).mode).toBe("prepare-current")
     expect(parseLeanBaselineCommand(["run-current", "--request", "a"]).mode).toBe("run-current")

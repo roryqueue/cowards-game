@@ -65,6 +65,8 @@ const requireScope = () => assertLeanBaselineWritableScope({ cacheDisabled: proc
 const head = () => execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim()
 const safeBytes = (path: string, max = 262144) => readLeanSafeFile(path, max)
 const exact = (a: unknown, b: unknown) => labRoot("lean-baseline-exact-join-v1", a) === labRoot("lean-baseline-exact-join-v1", b)
+export const admitsLeanBaselineReviewAgents = (author: unknown, reviewer: unknown): boolean =>
+  typeof author === "string" && (author === "/root" || author.startsWith("/root/")) && typeof reviewer === "string" && reviewer.startsWith("/root/") && reviewer !== author
 export const authenticateLeanBaselineReview = (path: string, expected: LabRoot, source: LabRoot): void => {
   if (typeof path !== "string" || !resolve(path).startsWith(`${resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team")}/`)) return fail("REVIEW")
   const bytes = safeBytes(path), value = Buffer.from(bytes).toString("utf8")
@@ -72,7 +74,7 @@ export const authenticateLeanBaselineReview = (path: string, expected: LabRoot, 
   const front = value.split("\n---", 2)[0]!
   const field = (key: string) => front.match(new RegExp(`^${key}: ([^\\n]+)$`, "mu"))?.[1]?.replace(/^['"]|['"]$/gu, "")
   const commit = field("source_commit"), reviewer = field("reviewer_agent"), author = field("author_agent")
-  if (field("status") !== "clean" || field("source_root") !== source || !commit || !/^[a-f0-9]{40}$/u.test(commit) || !reviewer?.startsWith("/root/") || !author?.startsWith("/root/") || reviewer === author || field("independently_reviewed") !== "true") return fail("REVIEW")
+  if (field("status") !== "clean" || field("source_root") !== source || !commit || !/^[a-f0-9]{40}$/u.test(commit) || !admitsLeanBaselineReviewAgents(author, reviewer) || field("independently_reviewed") !== "true") return fail("REVIEW")
   const manifest = leanBaselineSourceManifest()
   if (manifest.root !== source) return fail("REVIEW_SOURCE")
   try { execFileSync("git", ["diff", "--exit-code", commit, "--", ...manifest.entries.map(e => e.path)], { maxBuffer: 1024, stdio: "pipe" }) } catch { return fail("REVIEW_SOURCE") }
