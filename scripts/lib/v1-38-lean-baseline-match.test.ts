@@ -6,7 +6,7 @@ import { buildPlannerCandidate } from "../../packages/strategy-lab/src/planner/e
 import { emitTacticalSource } from "../../packages/strategy-oracle-tactical/src/emit.js"
 import { type LeanSlot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { buildLeanBaselineSource } from "./v1-38-lean-baseline-source.js"
-import { leanBaselineMatchSeed, leanBaselineScenario, leanBaselineSemanticRoot } from "./v1-38-lean-baseline-match.js"
+import { bindLeanCorrectionInvocation, leanBaselineMatchSeed, leanBaselineScenario, leanBaselineSemanticRoot, leanCorrectionInvocationTransportBinding } from "./v1-38-lean-baseline-match.js"
 import type { LabMatchExecution } from "../../packages/strategy-lab/src/runtime-bridge.js"
 
 describe("current canonical baseline scenario, without provider execution", () => {
@@ -45,5 +45,32 @@ describe("current canonical baseline scenario, without provider execution", () =
     if (changed.kind !== "completed") throw new Error("SOURCE_ONLY_PREFIX")
     changed.result.state.players[0]!.strategyMemory = { matchId: "private-user-key-preserved" }
     expect(leanBaselineSemanticRoot(changed)).not.toBe(leanBaselineSemanticRoot(one))
+  })
+})
+
+describe("finite correction diagnostic invocation binding", () => {
+  it("joins origin to the actual failed invocation and rejects a re-rooted different invocation", () => {
+    const root = (letter: string) => `sha256:${letter.repeat(64)}` as const
+    const source = "export function selectActivations(){ return [] }"
+    const input = { observation: { tick: 7 } }
+    const transport = leanCorrectionInvocationTransportBinding({ methodName: "selectActivations", source, input, requestOrdinal: 3 })
+    const evidence = {
+      identity: { sourceRoot: root("a"), executableRoot: transport.executableRoot },
+      requestId: "request-3", method: "selectActivations", inputRoot: transport.inputRoot,
+      ordinal: 2, invocationRoot: root("b"), result: { ok: false, systemFailure: { code: "SUBPROCESS_SIGNAL", retryable: false } },
+    } as any
+    const privateDiagnostic = { stage: "stream_exchange", reason: "wait_timeout", ...evidence } as any
+    const origin = {
+      schemaVersion: "v1.38-lean-correction-origin-v1", requestOrdinal: 3, requestRoot: transport.requestRoot,
+      transportMethod: "docker_exec_stream", brokerMode: "legacy", brokerBranch: "legacy_deadline",
+      signalBufferState: "not_done", waitDisposition: "timed_out", workerLifecycle: "unknown",
+      transportSignal: "broker_synthetic_sigkill", terminationDisposition: "worker_terminate_completed", elapsedBucket: "unknown",
+    } as const
+    expect(bindLeanCorrectionInvocation(origin, transport, evidence, privateDiagnostic, "bottom")).toMatchObject({
+      requestOrdinal: 3, ordinal: 2, method: "selectActivations", requestRoot: transport.requestRoot,
+      payloadRoot: transport.payloadRoot, inputRoot: transport.inputRoot, seat: "bottom", invocationRoot: evidence.invocationRoot,
+    })
+    expect(() => bindLeanCorrectionInvocation({ ...origin, requestRoot: root("c") }, transport, evidence, privateDiagnostic, "bottom")).toThrow("LEAN_CORRECTION_INVOCATION_JOIN")
+    expect(() => bindLeanCorrectionInvocation(origin, { ...transport, method: "soldierBrain" }, evidence, privateDiagnostic, "bottom")).toThrow("LEAN_CORRECTION_INVOCATION_JOIN")
   })
 })
