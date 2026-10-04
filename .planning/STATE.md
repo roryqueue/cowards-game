@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: V7 eight-cell pilot and unique verifier passed reduced tier; source hold released; execute Plan265-16 current baseline
+stopped_at: Plan265-16 current-only source integration and focused gates passed; independent source review next; no baseline entry yet
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Actual8freshsuccesses/9cumulativecharges;3305606ms spent; reduced128 schedule frozen;265-15 complete and265-16 next
+last_activity_desc: Plan265-16 real cold adapter and36-slot baseline wired;74focused source tests and3boundary scans pass; independent source review before prospective allocation
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT SOURCE-INTEGRATION FRONTIER: Plan265-16 source-only integration is committed through0343670d (root pipeline/match/source composition935f8a56, additiveclosed-v7 accountingb4591311, actualadapter2055dfd2/e4a3b68b, strictcontracts94ca4a0e/fdd10653/838fda1f, newCLI309966a7/4e417201/688215e6, unique-future-reader1a0739ab/0343670d). Root74focused tests/13files PASS before final reader follow-up; reader6tests/fullsynthetic36cell fixture PASS. Strategy-lab projecttypes/shell/diff and lab/factory/seriousleague boundary scans each zero over1388files PASS. Explicit-file strict script checks disclose inherited type errors, not claimed passed. No baseline request/allocation/entry/provider/Match or actual new reader yet; oldv6/v7readers NEVERrepeated. Next independent GSD source review/fix, final applicable gates/source-only verification, data-only request review, prepare NEW36currentallocation, commit before ONE MAINentry and fresh SAMEPROCESS capacity everycharge. Current-only cold adaptation and one response are actual mechanisms, fixtures NOTempiricalcredit. Canonical repeat comparison normalizes ONLYengine-owned runidentity and binds fullprivate runtime results; nonpositive response excluded fromfinalists. Public-seal metadata-only fallback explicitly defers holdout claims; no store/preimage opened or replacement originalcommitment. Same15GB/8h/300Match/guest1000-host5000-Match600000; carry9priorcharges/3305606ms/unknownhistoricalpeaks unchanged; no formation/public/counted/production. Priorpilot and older source checkpoints below are historical.
 
 CURRENT VERIFIED PILOT FRONTIER: V7 MAINroot93965(parent96838/child96867) and ONE ordinaryretainedverifier43152(chunkf90146) BOTH CLOSEDexit0. Actual8freshsuccesses/allcleanup,9cumulativecharges includesoldv6failed1; pilot_complete/tierreduced, maximum75186ms/274432B. Cumulative3305606ms, scratch1510182912B/physicalhigh1511010304B, unknownhistoricalpeaks unchanged. Resultab4d351b/evidenceb653736b/emptydiagnostics08eaa142; allocationd884bda8/requestcc0dffaf/source75ce00e4/83abe344 heldHEAD5aa4c4a1 unchangedthrough uniquecheck. SourceANDHEAD hold RELEASED. Plan265-15 complete; frozenreduced128 schedule BEFOREcompetitivecomparisons. NEXT265-16 current-only coldadaptation/one adversarialround via checkedexistingplan/source review/gates and separatelygatedactualbaseline. No LEAGstrength/Phase265/freeze/formation/holdout/public credit. Priorv6failedimmutable/no secondreader/reset/refund/recredit. Same15GB/8h/300Matches/guest1000-host5000-Match600000/rules/privacy. Earlier active/prepared/source/debug paragraphs history.
 

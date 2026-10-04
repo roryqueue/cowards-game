@@ -2,12 +2,18 @@
 phase: 265-serious-current-rules-league-and-development-red-team
 plan: "16"
 stage: source
-status: checkpoint
-source_commit: 1bbd9985
+status: integrated_pending_independent_review
+source_commit: 0343670d
 empirical_execution: not_started
 ---
 
 # Plan265-16 SOURCE checkpoint
+
+Current continuation (2026-10-04): real cold-corpus/tactical/teacher/planner adapters, private immutable source snapshots, 36-current-cell staged pipeline, additive closed-v7 accounting, supervised MAIN parent/child CLI, and a new one-shot retained reader are integrated through0343670d. No baseline empirical route has started. Root74focused tests/13files pass; the final reader follow-up adds a passing full synthetic36-cell verifier fixture (6reader tests). Strategy-lab projecttypes, shell syntax, whitespace and three1388-file boundary scans pass. Strict explicit-file script checks expose inherited unrelated type errors and are not reported as passed. Independent review/fix and source-only verification remain gates before prospective request/allocation/actual entry. The original initial checkpoint below is preserved as an implementation history, not the current state.
+
+The response-work receipt discloses actual assignment expansions under the128 cap; the320 heterogeneous-channel vector is not equal compute time. The cold legal-input corpus discloses repeated observations and teacher labels are explicitly resampled, not claimed64independent positions. Tactical beam selection has one Match per variation and is condition-confounded; no strength claim follows. Nonpositive responses remain diagnostic evidence but cannot become finalists through tie-breaks. Exact counted repeats normalize only engine-owned Match identity and preserve all private user memory/runtime values. Full legal observations stay in bounded rooted private files; final summaries contain only compact joins.
+
+Original seal compatibility is not established. Metadata-only inventory runs before learned output; it never reads any seal store/preimage or substitutes an original commitment. The existing clean-checkout seal prerequisite is not satisfied while immutable historical user artifacts remain untracked, so all4reserved cells/profile stay unused and holdout-dependent claims are explicitly deferred under the approved fallback. This is not proof that no external seal exists. Formation remains prohibited until actual current baseline and independent266freeze.
 
 This is an implementation handoff, not a plan summary or completion claim. The v7 pilot and its unique retained verifier are closed, and the prior source hold is released. This work did not import candidates, prepare/publish an allocation, run capacity admission, invoke a native provider, launch a Match, open holdout, or materialize formation state.
 
