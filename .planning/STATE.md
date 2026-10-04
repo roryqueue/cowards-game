@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: debugging
-stopped_at: Human requested prospective supervisor repair and continuation; source-only diagnosis active, no fresh empirical route
+status: executing
+stopped_at: Reviewed prospective diagnostic repair and closed-v6 carry complete; fresh v7 request gate closing, no empirical entry yet
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Debug manager traces lean v6 supervisor failure; carry2168630ms and one failed charge; old terminal and budgets unchanged
+last_activity_desc: Source75ce00e4 clean independent review and narrow verification;160 focused tests pass; new private v7 route carries2168630ms and one failed charge
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT SOURCE GATES CLOSED: source75ce00e483f214d496b9912f42b38206436395f7/manifest83abe344f7d71bf4cd2aa78c2f73fbb8a59c40996c0999536e534b5245f7a590/863, independent SUPERVISOR-REVIEW-v1 clean and SUPERVISOR-SOURCE-VERIFICATION-v1 source-repair-verified. Root160 focused tests/changed-file and package types/shell/three1364-file zero boundary scans PASS. Broader tsc-b has two disclosed pre-existing runtime-service test errors, not a passed gate. Prospective failure-attribution loss repaired; initiating consumedv6 cause UNKNOWN. New v7 route uses v8request/private v7store/allocation/temp, exact oldmetadata carry2168630ms/one charge/conservative516096B debit (measured208896), pastpeaksunknown. No empirical entry or fresh admission/Match yet. Finish independently checked data-onlyrequest, prepare once, commit exact new allocation before unique MAINentry and fresh SAMEPROCESS capacity. SourceANDHEAD hold through terminal+ONE appropriate retained verifier. Same15GB/8h/300Match/rules/runtime/privacy, no oldreuse/reset/refund; baseline/freeze beforeformation, holdoutunopened/no public-counted-production. Previous active debug paragraph is history.
 
 The human explicitly asked “could you fix the blocker then continue please?” after the bounded-terminal report. Prospective supervisor diagnosis/repair and a distinct fresh same-scope route may continue without repeat literals after established source fix/finite diagnostics, independent review and applicable gates. Earlier no-more-corrections paragraphs are historical; consumed v6 remains failed and immutable. Active debug manager /root/debug_lean_v6_supervisor owns runtime wiring/diagnostics/source-only regressions; no importer/provider/Match/preflight/allocation/second retained reader is authorized during diagnosis. Carry at least2168630ms and one prior lean charge plus surviving-file/conservative disk debit under unchanged15GB/8h/300Match/guest1000-host5000-Match600000 bounds. No reset/refund/oldroute reuse. See265-15-SUPERVISOR-REPAIR-20261004.md and debug/lean-v6-supervisor-failure.md. Current baseline/freeze beforeformation, holdoutunopened/no public-counted-production. Earlier terminal reports/audits remain accurate snapshots.
 
