@@ -9,7 +9,7 @@ import { auditLeanTrainingVector, type LeanColdTrainingManifest, type LeanRespon
 import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { compactLeanBaselineCell, leanBaselineMetricCoverage, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
-import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
+import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
 import { selectLeanBestTrainedProposal, selectLeanTrainedProposal } from "./v1-38-lean-training-adapter.js"
 import { validateLeanCorrectionOriginMetadata } from "./v1-38-lean-container-match-session.js"
 import { leanCorrectionSourceManifest, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
@@ -43,6 +43,7 @@ export const auditLeanCorrectionRetained = (value: unknown, guard: () => void = 
   if (events.at(-1)?.kind !== "stop" || s.evidence.root !== labRoot("lean-evidence-v1", { allocationRoot: a.root, events, records: s.evidence.records }) || events.filter(e => e.kind === "charge").length !== charged || events.filter(e => e.kind === "terminal").length !== charged) return fail("EVIDENCE")
   if (s.evidence.charged !== a.predecessor.chargedMatches + charged || charged !== s.pairs.length || charged !== s.observations.length || charged > a.slots.length || s.time.elapsedMs < a.predecessor.elapsedUpperBoundMs || s.time.elapsedMs > LEAN_CAPS.elapsedMs || s.evidence.scratchHighWaterBytes > LEAN_CAPS.scratchBytes) return fail("ACCOUNTING")
   const byRole = new Map(s.sources.map(source => [source.role, source]))
+  let frozenInitial: ReturnType<typeof analyseLeanDistinctPairs> | undefined, selectedProbe: LabRoot | undefined
   if (byRole.size !== s.sources.length || s.sources.some(source => source.coldRoot !== a.coldRoot || source.implementationRoot !== a.sourceRoot && !reuse.sources.some(original => original.root === source.root && original.role === source.role))) return fail("SOURCE")
   for (let ordinal = 0; ordinal < charged; ordinal++) {
     guard()
@@ -58,6 +59,28 @@ export const auditLeanCorrectionRetained = (value: unknown, guard: () => void = 
     }
     const has = (entrant: string, target: string) => slot.condition < 2 ? pair.bottomRole === entrant && pair.topRole === target : pair.topRole === entrant && pair.bottomRole === target
     const kind = currentBaselineSlotKind(ordinal).kind
+    if (ordinal === 12) {
+      const initialRoots = [byRole.get("initial-tactical")?.sourceRoot, byRole.get("initial-teacher")?.sourceRoot]
+      if (!initialRoots.every(rooted)) return fail("INITIAL_SCHEDULE")
+      frozenInitial = analyseLeanDistinctPairs(initialRoots as LabRoot[], s.observations.slice(8, 12).map(row => measuredRetained(row.cell)))
+      if (!frozenInitial.mixture || !same(s.artifacts["initial-analysis.json"], frozenInitial)) return fail("INITIAL_SCHEDULE")
+    }
+    if (kind === "response_training") {
+      if (!frozenInitial?.mixture) return fail("RESPONSE_SCHEDULE")
+      const target = ordinal < 16 ? selectLeanMixtureTarget(frozenInitial.mixture, ordinal - 12) : frozenInitial.selectedPureRoot
+      if (!has("response-0", byRole.get("initial-tactical")?.sourceRoot === target ? "initial-tactical" : "initial-teacher")) return fail("RESPONSE_SCHEDULE")
+    }
+    if (ordinal === 28) {
+      const initialRoots = [byRole.get("initial-tactical")!.sourceRoot, byRole.get("initial-teacher")!.sourceRoot], responseRoot = byRole.get("final-response")!.sourceRoot
+      if (!frozenInitial?.mixture) return fail("PROBE_SCHEDULE")
+      const responseCells = s.observations.slice(20, 28).map(row => measuredRetained(row.cell))
+      const analysis = analyseLeanDistinctPairs([...initialRoots, responseRoot], s.observations.slice(8, 12).map(row => measuredRetained(row.cell)).concat(responseCells))
+      const admission = analyseLeanResponseAdmission({ initialSources: initialRoots, frozenMixture: frozenInitial.mixture, strongestPureRoot: frozenInitial.selectedPureRoot, strongestInitialMinimumHalfPoints: frozenInitial.pure[0]!.minimumHalfPoints, responseRoot, responseCells })
+      const eligible = admission.admitted ? [...initialRoots, responseRoot] : initialRoots
+      selectedProbe = analysis.pure.find(row => eligible.includes(row.sourceRoot))?.sourceRoot
+      if (!selectedProbe || !same(s.artifacts["current-analysis.json"], analysis)) return fail("PROBE_SCHEDULE")
+    }
+    if (kind === "probe" && (!selectedProbe || !(slot.condition < 2 ? pair.bottomSourceRoot === selectedProbe && pair.topRole === "probe" : pair.topSourceRoot === selectedProbe && pair.bottomRole === "probe"))) return fail("PROBE_SCHEDULE")
     if (kind === "initial_training" && !has(ordinal < 4 ? `tactical-${ordinal}` : "teacher-0", "cold-opponent") || (kind === "initial_matrix" || kind === "repeat") && !has("initial-tactical", "initial-teacher") || kind === "response_training" && !(slot.condition < 2 ? pair.bottomRole === "response-0" : pair.topRole === "response-0") || kind === "response_pairing" && !has("final-response", ordinal < 24 ? "initial-tactical" : "initial-teacher") || kind === "probe" && !(slot.condition < 2 ? pair.topRole === "probe" : pair.bottomRole === "probe")) return fail("SCHEDULE")
     if (!exactLabKeys(receipt, ["schemaVersion", "pairRoot", "cell", "root"]) || receipt.schemaVersion !== "lean-baseline-observation-v1" || receipt.pairRoot !== pairRoot || receipt.root !== labRoot("lean-baseline-observation-v1", { schemaVersion: receipt.schemaVersion, pairRoot, cell }) || !exactLabKeys(cell, ["ordinal", "slotRoot", "bottomRoot", "topRoot", "compact", "brainInputs", "strategyInputs", "trainingHalfPoints", "semanticRoot", "metrics", "decisionRoot", "diagnostic"]) || cell.ordinal !== ordinal || cell.slotRoot !== slot.root || cell.bottomRoot !== pair.bottomSourceRoot || cell.topRoot !== pair.topSourceRoot || !same(cell.compact, record.terminal?.record) || !rooted(cell.decisionRoot) || (record.status === "success" ? !rooted(cell.semanticRoot) || cell.diagnostic !== null : cell.semanticRoot !== null) || !Array.isArray(cell.brainInputs) || cell.brainInputs.length > 16 || !Array.isArray(cell.strategyInputs) || cell.strategyInputs.length > 16) return fail("OBSERVATION")
     if ((kind === "initial_training" || kind === "response_training") && record.status === "success") {
@@ -91,6 +114,10 @@ export const auditLeanCorrectionRetained = (value: unknown, guard: () => void = 
   const cleanupComplete = s.evidence.records.filter(row => row.terminal !== null).every(row => row.terminal!.record.cleanupComplete)
   const body = { schemaVersion: "lean-correction-retained-v1" as const, status: "retained_valid" as const, route, allocationRoot: a.root, sourceRoot: a.sourceRoot, resultRoot: resultRoot as LabRoot, reuseGrantRoot: reuse.grant.root, evidenceRoot: s.evidence.root, head: s.entry.head, currentCharged: charged, cumulativeCharged: s.evidence.charged, successful, cleanupComplete, originRoot, observedOrigin, initiatingNativeCause: "unknown" as const, complete: route === "baseline" && pipeline.status === "current_baseline_complete", claim: "no_robust_pure_claimed" as const, phaseComplete: false, freezeAdmitted: false, holdoutOpened: false, formationMaterialized: false, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const }
   return { ...body, root: labRoot("lean-correction-retained-v1", body) }
+}
+const measuredRetained = (cell: LeanBaselineObservedCell): LeanMeasuredPair => {
+  if (cell.compact.classification !== "success" || !cell.compact.cleanupComplete || !cell.compact.outcome || !cell.semanticRoot) return fail("SCHEDULE_EVIDENCE")
+  return { ordinal: cell.ordinal, bottomSourceRoot: cell.bottomRoot, topSourceRoot: cell.topRoot, outcome: cell.compact.outcome, executionRoot: cell.compact.executionRoot, semanticRoot: cell.semanticRoot }
 }
 const auditCompleteBaseline = (s: LeanCorrectionRetainedSnapshot, byRole: Map<string, LeanBaselineSource>, guard: () => void) => {
   const cells = s.observations.map(row => row.cell), pipeline = s.result.pipeline as Record<string, unknown>
