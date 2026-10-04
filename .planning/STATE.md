@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-16 source independently reviewed clean and source-verified; fresh36-slot request data review before preparation
+stopped_at: Plan265-16 fresh allocation prepared and independently checked; commit before uniqueMAIN current baseline entry
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Independent review-v2 clean and source-verification-v1 source_verified8of8; freshbaseline requestfd136129 created; data-onlyreview active, noallocation orentry yet
+last_activity_desc: Uniqueprepare61654 closed preparation_only; newallocation92c856a0/raw9726cb9f, owner0700store/emptyjournals independentlychecked; noMatch yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT PREPARED BASELINE FRONTIER: uniqueMAIN preparation61654/chunke3e650 CLOSEDexit0/preparation_only. NEW36currentallocation92c856a0e1944fcc429e0c7da2f40851ce8914b66cf8f4e63aa7ba2545aa422f, canonical/private raw9726cb9fa5b93c5c46c6c2a835da2c45d8e1fd31f518619cc69ee2ec1d94d894; exactrequestfd136129/source03e2a09d/cold0ddc7020/review22bf9a1d. Actual /root/review_265_baseline_request independentdatareview CLOSED, including later exactpreparedstore metadata check: real0700 .strategy-lab/lean-baseline-20261004-v1 withallocation pluszero-byteledger/time ONLY, owner0600files, noentry/result/terminal/charges. Its initialwrongstorepath check is explicitlycorrected; root's actualconstantabsence observation precededexclusivepreparation, notretroactivelyattributedtoreviewer. Commit/push thisexactallocation+gates BEFORE ONE MAINrun-current. FreshSAMEPROCESScapacity everycharge/provider; holdSOURCEANDHEADthroughactualterminal andONEappropriateunique independentretainedcheck. No oldreader/consumedroute reuse; noempiricalcreditfrompreparation. Carry9priorcharges/3305606ms, same15GB8h300Matches/1000guest5000host600000Match/rules/privacy. Noformation/holdout/public/counted/production authority. Earlierdatafrontierbelow history.
 
 CURRENT VERIFIED SOURCE/DATA FRONTIER: independent265-16-SOURCE-REVIEW-v2 CLOSEDclean/zeroopenfindings at e7d0acda and source-verification-v1 CLOSEDsource_verified8/8 at41a49214, bothsamefunctional03e2a09d/876entries. Root87tests plusindependent13review/3sourcefixtures andapplicabletypes/shell/boundarygates pass; noempiricalcredit. Freshowner0600canonicalrequest .strategy-lab/lean-baseline-request-20261004-v1.json rawfd136129ea914eb59e73b05596c993ddfb64938e6dd4c623564c7aa198e50d17, seedlean-current-baseline-20261004-a, cold0ddc7020,36predeclaredcurrentSmoke intents/2nonlearnedmechanismroots created byactual/root. Actual independent /root/review_265_baseline_request data-onlyreview active; newstore andallocation observedabsent. Afterdata-onlyPASS: prepareexactfreshallocationONCE, commit/pushbefore ONE MAINentry andfreshSAMEPROCESScapacity everycharge/provider. No oldordinaryreader/newempiricalreader/Match yet. SourceandHEADmusthold through actualentryterminal plusONEappropriateunique independentretainedcheck; neverfabricatehead/result. Samecumulative9priorcharges/3305606ms/15GB/8h/300Matches/1000guest5000host600000Match; historicalpeaksunknown/survivordebitexplicit. Missingmetrics/unsupportedresponsecomparator/holdoutdeferral honest; noformation/public/counted/production authority. Previousfixfrontiersbelow historical.
 
