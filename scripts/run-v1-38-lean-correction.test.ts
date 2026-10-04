@@ -11,6 +11,29 @@ import { LEAN_CORRECTION_ROUTES, assertLeanCorrectionResources, parseLeanCorrect
 import { deriveLeanBaselineCandidateRoots, waitLeanBoundedChildReady } from "./run-v1-38-lean-baseline.js"
 import { LEAN_COLD_REUSE_HISTORY } from "./lib/v1-38-lean-baseline-reuse.js"
 
+describe("supervisor v2 source-only admission", () => {
+  it("has disjoint explicit commands and preserves the v1 parser", () => {
+    expect(parseLeanCorrectionCommand(["run-diagnostic", "--request", LEAN_CORRECTION_ROUTES.diagnostic.request]).route).toBe("diagnostic")
+    const routes = accounting.LEAN_SUPERVISOR_CORRECTION_ROUTES
+    for (const route of ["diagnostic", "baseline"] as const) {
+      for (const mode of ["prepare", "run", "verify"] as const) expect(parseLeanCorrectionCommand([`${mode}-supervisor-${route}-v2`, "--request", routes[route].request])).toMatchObject({ route, supervisor: true })
+      expect(() => parseLeanCorrectionCommand([`run-supervisor-${route}-v2`, "--request", LEAN_CORRECTION_ROUTES[route].request])).toThrow()
+    }
+  })
+  it("admits the actual 11-charge carry, never the stale accounting prefix", () => {
+    const old = correctionAllocationFixture(), { root: _r, ...p } = old.predecessor
+    const predecessor = { ...p, chargedMatches: 11, elapsedUpperBoundMs: 5282046 }
+    const input = { sourceRoot: old.sourceRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot, planRoot: old.planRoot, candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, seed: old.seed, route: "diagnostic" as const, reuseGrantRoot: old.reuseGrantRoot, supervisorDecisionRoot: labRoot("mock-approved-decision", {}), acceptedCheckRoot: null, predecessor: { ...predecessor, root: labRoot(p.schemaVersion, predecessor) } }
+    const allocation = accounting.createLeanSupervisorCorrectionAllocation(input)
+    expect(admitLeanAllocation(allocation)).toEqual(allocation)
+    expect(leanWritablePaths(allocation)).toContain(accounting.LEAN_SUPERVISOR_CORRECTION_ROUTES.diagnostic.request)
+    for (const changed of [{ chargedMatches: 10 }, { elapsedUpperBoundMs: 4846168 }, { survivors: [...predecessor.survivors, ...predecessor.survivors] }]) {
+      const body = { ...predecessor, ...changed }
+      expect(() => accounting.createLeanSupervisorCorrectionAllocation({ ...input, predecessor: { ...body, root: labRoot(p.schemaVersion, body) } })).toThrow()
+    }
+  })
+})
+
 export const correctionAllocationFixture = (route: "diagnostic" | "baseline" = "diagnostic") => {
   const sourceRoot = labRoot("source-mock-only", {}), planRoot = labRoot("plan-mock-only", {})
   const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: route === "diagnostic" ? 10 : 11, elapsedUpperBoundMs: route === "diagnostic" ? 3319046 : 3400000, allocatedDiskBytes: 8192, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: labRoot("history-mock-only", {}), survivors: [{ identity: ".strategy-lab/mock-survivor", allocatedBytes: 4096 }] }
