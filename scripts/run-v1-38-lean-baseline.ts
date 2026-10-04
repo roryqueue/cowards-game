@@ -227,13 +227,19 @@ export const runLeanCurrent = async (requestPath: string) => {
 }
 /** Shared parent lifecycle only. Callers still own strict source/request/allocation
  * admission; this does not create or substitute a route. */
-export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string }) => {
+export const waitLeanBoundedChildReady = (child: ReturnType<typeof fork>) => new Promise<void>((ready, reject) => {
+  const timer = setTimeout(() => reject(new TypeError("LEAN_BASELINE_CHILD_READY")), 30_000)
+  child.once("message", message => { clearTimeout(timer); if (!message || typeof message !== "object" || !exactLabKeys(message, ["ready"]) || message.ready !== child.pid) { reject(new TypeError("LEAN_BASELINE_CHILD_READY")); return }; ready() })
+  child.once("exit", () => { clearTimeout(timer); reject(new TypeError("LEAN_BASELINE_CHILD_EXIT_BEFORE_ENTRY")) })
+})
+export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string; prospectiveStart?: { wallStartMs: number; monotonicStartNs: string }; beforeRelease?: () => void; terminalReserveMs?: number }) => {
   const { ledger, requestPath, store: STORE } = options, allocation = ledger.allocation
   const committed = execFileSync("git", ["show", `HEAD:${options.allocationPath}`], { maxBuffer: 262144 })
   if (leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(allocation)) || leanBytesRoot(committed) !== leanBytesRoot(safeBytes(options.allocationPath))) return fail("UNCOMMITTED_ALLOCATION")
   if (readLeanLedger(ledger).events.length || readLeanTimeAccounting(ledger).active || readLeanTimeAccounting(ledger).starts.has("pilot-entry") || readdirSync(STORE).some(name => ["entry.json", "child-terminal.json", "result.json", "entry-failure.json"].includes(name))) return fail("ALLOCATION_USED")
   const fixedHead = head(), fixedManifest = options.manifestRoot(), fixedRequest = requestBytesRoot(requestPath)
   if (fixedManifest !== options.sourceRoot) return fail("SOURCE_HOLD")
+  options.beforeRelease?.()
   const token = randomBytes(32).toString("hex")
   const child = fork(resolve(process.argv[1] ?? fail("ENTRY_PATH")), [options.childMode, "--request", requestPath], { execArgv: process.execArgv, stdio: ["ignore", "ignore", "ignore", "ipc"] })
   let entered = false, uncertain = false, childRssObservedBytes: number | null = null, childFailure: LeanChildFailureReceipt | null = null
@@ -244,17 +250,14 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     childFailure = message
   })
   try {
-    await new Promise<void>((ready, reject) => {
-      const timer = setTimeout(() => reject(new TypeError("LEAN_BASELINE_CHILD_READY")), 30_000)
-      child.once("message", message => { clearTimeout(timer); if (!message || typeof message !== "object" || !exactLabKeys(message, ["ready"]) || message.ready !== child.pid) { reject(new TypeError("LEAN_BASELINE_CHILD_READY")); return }; ready() })
-      child.once("exit", () => { clearTimeout(timer); reject(new TypeError("LEAN_BASELINE_CHILD_EXIT_BEFORE_ENTRY")) })
-    })
+    await waitLeanBoundedChildReady(child)
     if (!child.pid) return fail("CHILD_PID")
     childRssObservedBytes = rssOf(child.pid)
     if (process.memoryUsage().rss + childRssObservedBytes + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes) return fail("PREFIX_CAPACITY")
     const fs = statfsSync(STORE, { bigint: true }), free = fs.bavail * fs.bsize
     if (free > BigInt(Number.MAX_SAFE_INTEGER) || free < BigInt(LEAN_CAPS.totalBytes - cumulativeLeanPhysicalBytes(ledger))) return fail("PREFIX_CAPACITY")
-    const entry: LeanChildEntryV2 = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: options.sourceRoot, requestBytesRoot: fixedRequest, head: fixedHead, parentPid: process.pid, childPid: child.pid, handshakeRoot: leanBytesRoot(Buffer.from(token, "hex")), wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }
+    options.beforeRelease?.()
+    const entry: LeanChildEntryV2 = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: options.sourceRoot, requestBytesRoot: fixedRequest, head: fixedHead, parentPid: process.pid, childPid: child.pid, handshakeRoot: leanBytesRoot(Buffer.from(token, "hex")), wallStartMs: options.prospectiveStart?.wallStartMs ?? Date.now(), monotonicStartNs: options.prospectiveStart?.monotonicStartNs ?? process.hrtime.bigint().toString() }
     publishLeanChildEntry(ledger, entry)
     beginLeanInterval(ledger, "pilot-entry", entry.wallStartMs)
     entered = true
@@ -266,7 +269,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
         if (process.memoryUsage().rss + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes || currentLeanElapsedMs(ledger) >= LEAN_CAPS.elapsedMs) { uncertain = true; child.kill("SIGKILL") }
       } catch { uncertain = true; child.kill("SIGKILL") }
     }, 250)
-    const timeout = setTimeout(() => { uncertain = true; child.kill("SIGKILL") }, Math.max(1, LEAN_CAPS.elapsedMs - currentLeanElapsedMs(ledger)))
+    const timeout = setTimeout(() => { uncertain = true; child.kill("SIGKILL") }, Math.max(1, LEAN_CAPS.elapsedMs - currentLeanElapsedMs(ledger) - (options.terminalReserveMs ?? 0)))
     const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => resolveExit({ code, signal })))
     clearInterval(period); clearTimeout(timeout)
     try { if (head() !== fixedHead || options.manifestRoot() !== fixedManifest || requestBytesRoot(requestPath) !== fixedRequest) uncertain = true } catch { uncertain = true }
@@ -281,7 +284,18 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
       })
     if (terminal.status !== "child_exited") return fail("CHILD_FAILED")
     return { issued: false, evidenceClass: "exploratory_current_only", status: "child_exited_pending_independent_verification", allocationRoot: allocation.root, terminalElapsedUpperBoundMs: terminal.elapsedUpperBoundMs }
-  } finally { if (!entered && child.exitCode === null) child.kill("SIGKILL") }
+  } finally {
+    if (options.prospectiveStart && child.exitCode === null && child.signalCode === null) {
+      // Accounting closes only after bounded child cleanup, including a ready
+      // timeout or a failed post-ready admission. Old parent behavior is intact.
+      const cleanup = new Promise<void>((done, reject) => {
+        const timer = setTimeout(() => reject(new TypeError("LEAN_BASELINE_CHILD_CLEANUP_UNCERTAIN")), 30000)
+        child.once("exit", () => { clearTimeout(timer); done() })
+      })
+      child.kill("SIGKILL")
+      await cleanup
+    } else if (!entered && child.exitCode === null) child.kill("SIGKILL")
+  }
 }
 export const leanBaselineMain = async (args: readonly string[]) => {
   const command = parseLeanBaselineCommand(args)

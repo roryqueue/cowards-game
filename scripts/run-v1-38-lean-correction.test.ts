@@ -1,8 +1,14 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { EventEmitter } from "node:events"
+import type { ChildProcess } from "node:child_process"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { LEAN_CAPS, createLeanCorrectionAllocation, admitLeanAllocation, leanWritablePaths, type LeanCorrectionPredecessor } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { LEAN_CORRECTION_ROUTES, assertLeanCorrectionResources, parseLeanCorrectionCommand, validateLeanCorrectionDiagnosis, deriveLeanCorrectionRequestRoots } from "./run-v1-38-lean-correction.js"
-import { deriveLeanBaselineCandidateRoots } from "./run-v1-38-lean-baseline.js"
+import * as accounting from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_CORRECTION_ROUTES, assertLeanCorrectionResources, parseLeanCorrectionCommand, validateLeanCorrectionDiagnosis, deriveLeanCorrectionRequestRoots, beginLeanCorrectionAdmission, closeLeanCorrectionAdmission, leanCorrectionAdmissionElapsed, assertLeanCorrectionAdmissionTime } from "./run-v1-38-lean-correction.js"
+import { deriveLeanBaselineCandidateRoots, waitLeanBoundedChildReady } from "./run-v1-38-lean-baseline.js"
 import { LEAN_COLD_REUSE_HISTORY } from "./lib/v1-38-lean-baseline-reuse.js"
 
 export const correctionAllocationFixture = (route: "diagnostic" | "baseline" = "diagnostic") => {
@@ -13,6 +19,64 @@ export const correctionAllocationFixture = (route: "diagnostic" | "baseline" = "
 }
 
 describe("bounded correction source admission", () => {
+  it("closes the actual mocked ready-timeout seam without launching a provider", async () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-child-ready-mock-")))
+    vi.useFakeTimers()
+    try {
+      const carrier = beginLeanCorrectionAdmission("diagnostic", "run", directory, { wallStartMs: 1000, monotonicStartNs: "1000000000" })
+      const child = Object.assign(new EventEmitter(), { pid: 123 }) as ChildProcess
+      const failure = expect(waitLeanBoundedChildReady(child)).rejects.toThrow("CHILD_READY")
+      await vi.advanceTimersByTimeAsync(30000)
+      await failure
+      expect(closeLeanCorrectionAdmission(carrier, null, { wallStartMs: 31000, monotonicStartNs: "31000000000" }).elapsedUpperBoundMs).toBe(30000)
+    } finally { vi.useRealTimers(); rmSync(directory, { recursive: true, force: true }) }
+  })
+  it.each([0, 40000, 70000])("imports only the unaccounted tail after %dms mock entry cost", importedMs => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-transfer-mock-")))
+    try {
+      const carrier = beginLeanCorrectionAdmission("diagnostic", "run", directory, { wallStartMs: 1000, monotonicStartNs: "1000000000" })
+      const time = { elapsedMs: 3319046 + importedMs, closedElapsedMs: 3319046 + importedMs, active: false, starts: new Map(importedMs ? [["pilot-entry", 1000]] : []), closed: new Set(importedMs ? ["pilot-entry"] : []), closes: new Map(importedMs ? [["pilot-entry", 1000 + importedMs]] : []) }
+      vi.spyOn(accounting, "readLeanTimeAccounting").mockReturnValue(time)
+      const begin = vi.spyOn(accounting, "beginLeanInterval").mockImplementation(() => {})
+      const close = vi.spyOn(accounting, "closeLeanInterval").mockReturnValue(time)
+      const ledger = { allocation: correctionAllocationFixture(), directory } as accounting.LeanExperimentLedger
+      const receipt = closeLeanCorrectionAdmission(carrier, ledger, { wallStartMs: 71000, monotonicStartNs: "71000000000" })
+      expect(receipt.elapsedUpperBoundMs).toBe(70000)
+      expect(receipt.importedMs).toBe(importedMs)
+      expect(begin).toHaveBeenCalledWith(ledger, "correction-run-finalization", 1000 + importedMs)
+      expect(close).toHaveBeenCalledWith(ledger, "correction-run-finalization", 71000)
+      expect(importedMs + (71000 - (1000 + importedMs))).toBe(70000)
+    } finally { vi.restoreAllMocks(); rmSync(directory, { recursive: true, force: true }) }
+  })
+  it("persists a ready-timeout cost before failed ledger import", () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-ready-timeout-mock-")))
+    try {
+      const carrier = beginLeanCorrectionAdmission("diagnostic", "run", directory, { wallStartMs: 1000, monotonicStartNs: "1000000000" })
+      vi.spyOn(accounting, "readLeanTimeAccounting").mockImplementation(() => { throw new TypeError("mock ledger unavailable after ready timeout") })
+      const ledger = { allocation: correctionAllocationFixture(), directory } as accounting.LeanExperimentLedger
+      expect(() => closeLeanCorrectionAdmission(carrier, ledger, { wallStartMs: 31000, monotonicStartNs: "31000000000" })).toThrow("mock ledger unavailable")
+      expect(JSON.parse(readFileSync(join(directory, "admission-run-close.json"), "utf8"))).toMatchObject({ elapsedUpperBoundMs: 30000, allocationRoot: ledger.allocation.root, ledgerInterval: null })
+    } finally { vi.restoreAllMocks(); rmSync(directory, { recursive: true, force: true }) }
+  })
+  it.each(["prepare", "run"] as const)("retains slow failed %s admission before a ledger or child exists", mode => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-admission-mock-")))
+    try {
+      const start = { wallStartMs: 1000, monotonicStartNs: "1000000000" }
+      const carrier = beginLeanCorrectionAdmission("diagnostic", mode, directory, start)
+      expect(() => beginLeanCorrectionAdmission("diagnostic", mode, directory, start)).toThrow()
+      expect(leanCorrectionAdmissionElapsed(carrier, { wallStartMs: 1001, monotonicStartNs: "41000000000" })).toBe(40000)
+      const close = closeLeanCorrectionAdmission(carrier, null, { wallStartMs: 1001, monotonicStartNs: "41000000000" })
+      expect(close.elapsedUpperBoundMs).toBe(40000)
+      expect(close.ledgerInterval).toBeNull()
+      expect(JSON.parse(readFileSync(join(directory, `admission-${mode}-close.json`), "utf8"))).toEqual(close)
+      expect(() => closeLeanCorrectionAdmission(carrier, null)).toThrow()
+    } finally { rmSync(directory, { recursive: true, force: true }) }
+  })
+  it("subtracts slow admission and unchanged reserves before releasing a mock ready child", () => {
+    const carrier = { wallStartMs: 1000, monotonicStartNs: "1000000000" }
+    expect(() => assertLeanCorrectionAdmissionTime(LEAN_CAPS.elapsedMs - 1_860_001, carrier, { wallStartMs: 31000, monotonicStartNs: "31000000000" })).toThrow("ADMISSION_TIME")
+    expect(assertLeanCorrectionAdmissionTime(3319046, carrier, { wallStartMs: 31000, monotonicStartNs: "31000000000" })).toBe(3349046)
+  })
   it("has two distinct fixed routes and never accepts a spent command", () => {
     expect(new Set(Object.values(LEAN_CORRECTION_ROUTES).flatMap(r => [r.store, r.request, r.allocation, r.check])).size).toBe(8)
     expect(parseLeanCorrectionCommand(["prepare-diagnostic", "--request", LEAN_CORRECTION_ROUTES.diagnostic.request]).route).toBe("diagnostic")
