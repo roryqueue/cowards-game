@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Plan265-16 bounded diagnostic consumed; invalid parent terminal; human prospective stop/admission decision needed
+stopped_at: Plan265-16 approved supervisor-observation continuation; scoped research and checked source revision next
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: One observed successful cell but failed parent custody; unique reader refused and terminal check closed; source diagnosis inconclusive
+last_activity_desc: Human approved one fresh supervisor-reason diagnostic and conditional clean-diagnostic baseline admission; old routes immutable
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT APPROVED FRONTIER: The human directly answered “approved” to 265-16-CORRECTION-SUPERVISOR-DECISION-v1. Exactly ONE distinct fresh private cause-logged diagnostic is prospectively authorized after scoped research, checked existing Plan16 supplement, source implementation and independent review/validation/verification. At most ONE fresh36-cell baseline is then permitted ONLY after that diagnostic has clean parent terminal and its unique ordinary retained check accepts complete evidence/custody/cleanup; older initiating causes may remain unknown. No new route is started yet. Carry11priorcharges/5282046ms plus every new cost and surviving predecessor file under unchanged15GB/8h/300Matches/guest1000/host5000/Match600000. Authenticate unchanged192spent/128future cold/search opportunity; no regeneration or tuning. Old consumed diagnostic and unique reader/terminal check remain immutable, invalid and spent; no recredit, refund or re-reader. No active entry/verifier/source hold. New diagnostic failure/refusal ends this envelope; baseline failure remains partial. Serious current-rules baseline/evaluation/freeze precede formation; holdout unopened, no public/counted/production/fullLEAG/release credit. Earlier pending/closed snapshots below are historical and superseded only within this approved prospective scope.
 
 CURRENT CLOSED / HUMAN-ONLY FRONTIER: approved exactly-one diagnostic is CONSUMED. UniqueMAIN20715 parent47339/child47375 CLOSED, rootexit1; actualonecell compactsuccessOK/cleanuptrue/449invocations/68182ms but parentterminalchild_failed/exitCode0/signalnull, actualinitiatingparentcauseUNKNOWN. Actualresult574e8df0/root3051dd5d andterminaledb78754 remain immutable. ONE actualnewreader invokedby /root/verify_265_correction_diagnostic_retained exited1 beforeaudit onterminalcustody; acceptedcheckABSENT, no rerun. Uniqueappropriatefinite terminal-custody check CLOSEDgaps_found4/5; authorizedterminal-verifierinterval435878ms closed, cumulative5282046ms/11charges/inactive; originaljournalprefixunchanged, finalraw5224cd85. Actualsource/HEADff4f9c8f unchangedthroughbothclosures; HOLD RELEASED. Source-onlyGSDdiagnosis CLOSEDinconclusive, no specificsourcefaultestablished/no speculativefix. No additionalroute/Match/reader is authorized by the consumed bounded amendment; baseline remainsdenied. New prospective SUPERVISOR-DECISION-v1 is PENDING/unapplied: proposesonefreshcause-loggeddiagnostic and allowsbaselineONLYafterafullyacceptedclean diagnosticsuccess, whileoldcause mayremainunknown. Do notinferapprovalfromearlierblanket orone-shotdecision, changeadmissionguard, dispatchnewroute, reinterpret/refund/recreditoldsuccess-shaped evidence, orduplicateclosedreaders. Safe reports/source-only work maycontinue withoutheavyunchangedscans. Preserve15GB/8h/300Matches/guest1000-host5000-Match600000/allotherbounds; sourceopportunity unchanged. Phase265incomplete, freeze266/formation/holdoutunstarted; no public/counted/production/fullLEAG/successfultag. Earlierprepared/sourcefrontiersbelowhistory.
 
