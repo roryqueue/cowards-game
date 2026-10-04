@@ -2,12 +2,14 @@
 phase: 265-serious-current-rules-league-and-development-red-team
 plan: "16"
 stage: source
-status: integrated_pending_independent_review
-source_commit: 0343670d
+status: findings_repaired_pending_independent_rereview
+source_commit: 7ea28b11
 empirical_execution: not_started
 ---
 
 # Plan265-16 SOURCE checkpoint
+
+Latest continuation: independent source review-v1 is preserved `issues_found`. Its three blockers and telemetry warning have source repairs inebee4beb,d30f8973,26fd30f5,7ea28b11. All36reduced slots are canonicalSmoke; exact rational frozen-mixture score must exceed11/20, while an unsupported identical-fresh-opponent strongest-pure comparison excludes the response honestly and retains its8pairings. Failedcells carry null semantic/training-score credit and remain auditable. Every actualcell retains bounded first-event/count/survival/opening metrics with explicit missing classifier/entropy/evacuation coverage and `formationComparison: inconclusive`; no sampledreplay/full-coverage substitution. Functionalmanifest `sha256:03e2a09d1a79aff27fb1ecfd6a6f52d307aeb5b7303139b6e7a5b3f58a019781`,876entries. Root87source tests/14files, package types, shell/diff and allthree1390-file boundary scans pass. Independent re-review/source verification remain required; no empirical baseline route has started. Priorcheckpoint paragraphs below remain history.
 
 Current continuation (2026-10-04): real cold-corpus/tactical/teacher/planner adapters, private immutable source snapshots, 36-current-cell staged pipeline, additive closed-v7 accounting, supervised MAIN parent/child CLI, and a new one-shot retained reader are integrated through0343670d. No baseline empirical route has started. Root74focused tests/13files pass; the final reader follow-up adds a passing full synthetic36-cell verifier fixture (6reader tests). Strategy-lab projecttypes, shell syntax, whitespace and three1388-file boundary scans pass. Strict explicit-file script checks expose inherited unrelated type errors and are not reported as passed. Independent review/fix and source-only verification remain gates before prospective request/allocation/actual entry. The original initial checkpoint below is preserved as an implementation history, not the current state.
 

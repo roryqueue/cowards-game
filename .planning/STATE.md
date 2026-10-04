@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-16 independent source review found three blockers and one telemetry warning; parallel source repair active; no baseline entry yet
+stopped_at: Plan265-16 review findings repaired;87 source tests and applicable gates pass; independent re-review/source verification before baseline
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Independent source review issues_found; correcting Smoke-only schedule, frozen-mixture response admission, failure semantics and bounded per-Match telemetry before prospective allocation
+last_activity_desc: Smoke schedule, exact frozen-mixture admission, honest failure semantics and bounded metrics repaired;87tests/projecttypes/three1390-file boundary scans pass; no empirical route yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT FIXED SOURCE FRONTIER: reviewed-v1 findings repaired inebee4beb (all36Smoke), d30f8973 (failurecredit/actualboundedmetrics),26fd30f5 (metriccodepinned),7ea28b11 (exactresponsegate/independentreaderjoins). Functionalmanifest03e2a09d/876entries. Root14-file87-test source suite PASS with singleworker/30000ms test-only timeout; strategy-lab projecttypes/shell/diff and three1390-file boundary scans PASS. Strict imported-script typing still discloses inherited errors, not claimedgreen. Missing behavioral metrics remain explicit/inconclusive; unsupported identical-fresh-opponent strongest-pure comparator excludes response without losing its8pairings or addingMatches. Independent re-review and narrow source-only verification NEXT, before newrequest/allocation/uniqueMAINentry. No baseline Match or actual newreader yet. Originalreview-v1 preserved issues_found, oldconsumedroutes/readers untouched. Same15GB/8h/300Match/runtime/rules/privacy/freeze-beforeformation bounds. Earlier review/fix paragraph is history.
 
 CURRENT REVIEW/FIX FRONTIER: independent265-16-SOURCE-REVIEW-v1 over7e08232e/functional4a5c0784/875entries CLOSED issues_found (three BLOCKERs and one WARNING). Actual reduced schedule must use Smoke for every side/initiative; response admission must enforce frozen-mixture >0.55 and supported fresh strongest-pure comparator, otherwise preserve diagnostic response but exclude it; non-success semantic roots must consistently remain null; bounded all-Match telemetry needs genuine coverage and explicit missing/inconclusive dispositions. Parallel source-only workers repair those joins within existing Plan265-16, no new product/rules/resource decision. No baseline request/allocation/entry/Match/actual retained reader has been started. Historical review and all consumed evidence/readers remain immutable. Finish focused gates, independent re-review/source verification, then one prospective current-only baseline under standing approval and unchanged cumulative bounds. Older source-integration checkpoint below is history, not a passed independent review.
 
