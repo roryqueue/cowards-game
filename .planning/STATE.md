@@ -5,23 +5,27 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Reviewed prospective diagnostic repair and closed-v6 carry complete; fresh v7 request gate closing, no empirical entry yet
+stopped_at: V7 eight-cell pilot and unique verifier passed reduced tier; source hold released; execute Plan265-16 current baseline
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Source75ce00e4 clean independent review and narrow verification;160 focused tests pass; new private v7 route carries2168630ms and one failed charge
+last_activity_desc: Actual8freshsuccesses/9cumulativecharges;3305606ms spent; reduced128 schedule frozen;265-15 complete and265-16 next
 progress:
   total_phases: 9
   completed_phases: 3
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 33
-current_plan: 15
+current_plan: 16
 total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT VERIFIED PILOT FRONTIER: V7 MAINroot93965(parent96838/child96867) and ONE ordinaryretainedverifier43152(chunkf90146) BOTH CLOSEDexit0. Actual8freshsuccesses/allcleanup,9cumulativecharges includesoldv6failed1; pilot_complete/tierreduced, maximum75186ms/274432B. Cumulative3305606ms, scratch1510182912B/physicalhigh1511010304B, unknownhistoricalpeaks unchanged. Resultab4d351b/evidenceb653736b/emptydiagnostics08eaa142; allocationd884bda8/requestcc0dffaf/source75ce00e4/83abe344 heldHEAD5aa4c4a1 unchangedthrough uniquecheck. SourceANDHEAD hold RELEASED. Plan265-15 complete; frozenreduced128 schedule BEFOREcompetitivecomparisons. NEXT265-16 current-only coldadaptation/one adversarialround via checkedexistingplan/source review/gates and separatelygatedactualbaseline. No LEAGstrength/Phase265/freeze/formation/holdout/public credit. Priorv6failedimmutable/no secondreader/reset/refund/recredit. Same15GB/8h/300Matches/guest1000-host5000-Match600000/rules/privacy. Earlier active/prepared/source/debug paragraphs history.
+
+ACTUAL UNIQUE V7 ENTRY ACTIVE: MAINroot93965, parent96838/child96867, wallStart1791113360855; heldHEAD5aa4c4a16548b0ac02ed2743b65217fc92d21057/source75ce00e4/manifest83abe344/863, exactrequestcc0dffaf andallocationd884bda8/raw41a60f63. SourceANDHEAD hold through actualclosure and ONE appropriate independent retained verifier. No duplicateentry/helper/reader or heavytests/sourceedits/commits while held. Initial chargejournal empty; entry is not import/capacity/Match success. Actualresult→ordinary verify-retained ONCE against realfixedHEAD; absentresult→entry-terminal-only ONCE, neverfabricatedhead/result. Priorv6 ordinaryreaderclosed/neverrepeat. All priorcostscarried2168630ms/1charge/516096disk; same15GB/8h/300Match/rules/runtime/privacy. Baseline/freeze beforeformation, privateholdoutunopened/no public-counted-production. This activehandoff stays uncommitted untilholdreleased. Earlier preparedsnapshot history.
 
 NEW V7 PREPARATION CLOSED: unique root46119 exited0/preparation_only after independent source and data-only request gates. NEW allocationd884bda81501efd67a9570ae2bb316c652b6958eb3f9e3f0144d24c294b740fe, new v8requestcc0dffaf655b0ed408ae6d7b1fef6dcf9cfd59206224da7ac3084a867bb2c92d, source75ce00e4/83abe344/863. Private real0700v7store has allocation and empty charge/time journals; eight planned slots. Carry2168630ms/one failed charge/516096Bconservative disk/pastpeaksunknown. Preparation is not actual import/capacity/Match evidence. Commit/push exactNEWallocation before unique MAINentry; fresh SAMEPROCESS capacity before eachcharge/provider. Hold SOURCE+HEAD through actualterminal and ONEappropriateunique verifier. No oldroute reuse/reset/refund/retrocredit; sameallcaps/currentrules/freeze-beforeformation/holdoutunopened/no public-counted-production. Underlying v6causeunknown; finite v7diagnostics prospectiveonly. Earlier source-gates paragraph is completed snapshot.
 

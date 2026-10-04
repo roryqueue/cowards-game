@@ -1,4 +1,10 @@
-# Lean pilot: feasibility not established
+# Lean pilot: eight verified successes, reduced matched schedule
+
+Current2026-10-04 frontier: newv7pilot completed8/8success/allcleanup at source75ce00e4/83abe344/863, heldHEAD5aa4c4a1. Unique independent verifier43152 exited0/pilot_complete/reduced. Cumulative9charges includesoldv6failed1; all priorcosts retained,3305606ms spent, maximumcell75186ms/274432B, scratchhigh1510182912B/physicalhigh1511010304B. Reduced128Match schedule frozen beforecomparativeoutcomes; full200 didnotfit the pre-agreed conservative resource forecast. Newallocationd884bda8, requestcc0dffaf, resultab4d351b, evidenceb653736b; exactfullroots/provenance/verification in265-15-PILOT-RETAINED-VERIFICATION-v2.md.
+
+Source/HEADhold released afterentryandONEuniqueverifierclosed. Plan265-15 complete; separatelychecked265-16 current-only cold training/adversarial baseline next. No strength/LEAG/Phase265/freeze/formation/holdout/public credit; same15GB/8h/300Match/runtime/rules/privacy. Historicalpeaks unknown, originalv6failure initiatingcauseunknown, allconsumedbytesimmutable/no reuse/refund/reset. The humanrepairrequest reopenedprospectivecontinuationonly. Earlier v6 boundedterminal below remains historical evidence, not current instruction.
+
+## Historical v6 bounded terminal (unchanged body)
 
 The final corrected private pilot and its one independent retained-result verifier are closed. Outcome: **feasibility_not_established**, one of eight cells charged, zero successful, seven unused. The compact failed cell is `system_failure` / `SUPERVISOR_FAILURE`, outcome null, two invocations, zero transitions/events, cleanup complete. The allowlisted code does not establish the underlying cause. A normal coordinator exit is not a successful Match or pilot.
 

@@ -1,5 +1,5 @@
 ---
-status: investigating
+status: resolved
 trigger: "could you fix the blocker then continue please?"
 created: 2026-10-04
 updated: 2026-10-04
@@ -7,6 +7,10 @@ scope: prospective source diagnosis and repair; consumed v6 unchanged
 ---
 
 # Lean v6 supervisor failure
+
+## Prospective resolution —2026-10-04
+
+Diagnostic-attribution loss is repaired at source75ce00e4 with clean independent review and source verification. New v7 pilot completed8/8 supervised cells with complete cleanup and ONE retained verifier passed reducedtier. The initiating historical v6cause is still unknown; its result/charge/reader remain failed and immutable, not retroactively fixed. This closes the prospective blocker without claiming the past runtime cause was identified. Current baseline training/freeze remain separate next steps. See265-15-PILOT-RETAINED-VERIFICATION-v2.md.
 
 ## Symptoms
 

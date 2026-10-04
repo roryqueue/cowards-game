@@ -2,6 +2,8 @@
 
 ## Current prospective repair — 2026-10-04
 
+CURRENT VERIFIED FRONTIER: On2026-10-04 the distinct v7 pilot and its ONE ordinary retained verifier passed:8freshsuccesses/allcleanup,9cumulativecharges includingpriorv6failure, reduced128Match matched schedule frozen before competitive comparison. Cumulative3,305,606ms, maxcell75,186ms/maxphysical274,432B, same15GB/8h/300Match and unchanged rules/runtime/privacy. Plan265-15 complete; Plan265-16 current-only cold training and one adversarial baseline round next through separate gates. No strength/LEAG/Phase265/freeze/formation/holdout/public credit. Source75ce00e4/83abe344, heldHEAD5aa4c4a1 remainedfixedthroughcheck andholdnowreleased. Priorfailedv6 immutable andcauseunknown. See265-15-PILOT-RETAINED-VERIFICATION-v2.md. Earlier repair/terminal snapshots below are history.
+
 The human requested “could you fix the blocker then continue please?” after the failed lean v6 terminal report. Existing Plan265-15 supervisor repair is now authorized prospectively; the earlier no-further-corrections stop does not block this requested repair. The failed v6 result and its unique reader stay immutable and failed. Diagnose with source-only regressions/finite safe diagnostics, independently review/fix/validate/verify, then a distinct fresh route under the unchanged cumulative15GB/8h/300Match cap carrying2168630ms, one failed charge and surviving-file debit. No budget reset, bound/rule change, second v6 reader, premature baseline/freeze/formation or holdout opening. See265-15-SUPERVISOR-REPAIR-20261004.md and current STATE; earlier terminal/active snapshots below are history.
 
 ## Active approved lean replacement — 2026-10-03
@@ -1299,7 +1301,7 @@ Cross-cutting constraints: canonical unchanged kernel and supervised hostile-sou
 | 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 approved retry passed | Complete; independently verified16/16 | 2026-09-09 |
 | 263. Legal Planner and Deterministic Runner Feasibility | 7/7 | Complete; independently verified10/10 | 2026-09-13 |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 8/8 | Complete — 5/5 truths,11/11 requirements,7/7 private UAT | 2026-09-14 |
-| 265. Serious Current-Rules League and Development Red Team | 12/14 | First retry-v4 diagnostic valid; fresh full-league allocation needed; LEAG-01–09 unmet | - |
+| 265. Serious Current-Rules League and Development Red Team | 13/14 active | Eight-cell pilot verified; reduced128 tier frozen; Plan265-16 baseline next; no strength/LEAG credit yet | - |
 | 266. Content-Addressed Current-League Freeze | 0/6 | Plan06 isolated source-only work remains partial; real freeze awaits complete Phase265 evidence | - |
 | 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; awaits Phase266 freeze | - |
 | 268. Equal-Compute Retraining and Branch Freezes | 0/TBD | Discussion complete; awaits Phase267 | - |
