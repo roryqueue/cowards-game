@@ -122,9 +122,9 @@ it("sanitizes Node and TSX at a pre-Node shell boundary and rechecks inherited s
     const launcher = resolve("scripts/run-v1-38-lean-experiment.sh")
     const output = execFileSync("sh", [launcher, "--probe-launch-scope"], { cwd: p, encoding: "utf8", env: { PATH: process.env.PATH ?? "", LEAN_LAUNCH_PROBE: "1", NODE_OPTIONS: "--report-on-fatalerror --report-directory=/tmp/unowned", NODE_COMPILE_CACHE: "/tmp/unowned", NODE_REDIRECT_WARNINGS: "/tmp/unowned", NODE_V8_COVERAGE: "/tmp/unowned" } })
     expect(output).toContain("cache=1 compile=1 node_options=unset compile_cache=unset warnings=unset coverage=unset core=0")
-    expect(output).toContain(`tmp=${join(p, ".strategy-lab", "lean-experiment-20261003-v4-tmp")}`)
+    expect(output).toContain(`tmp=${join(p, ".strategy-lab", "lean-experiment-20261003-v5-tmp")}`)
   } finally { rmSync(p, { recursive: true, force: true }) }
-  const safe = { cacheDisabled: "1", compileDisabled: "1", tempDirectory: resolve(".strategy-lab/lean-experiment-20261003-v4-tmp") }
+  const safe = { cacheDisabled: "1", compileDisabled: "1", tempDirectory: resolve(".strategy-lab/lean-experiment-20261003-v5-tmp") }
   assertLeanProspectiveWritableScope(safe, "0")
   for (const changed of [{ ...safe, nodeOptions: "--report-on-fatalerror" }, { ...safe, compileCache: "/tmp/cache" }, { ...safe, warningRedirect: "/tmp/warnings" }, { ...safe, coverage: "/tmp/coverage" }, { ...safe, tempDirectory: "/tmp/unowned" }, { ...safe, cacheDisabled: undefined }]) expect(() => assertLeanProspectiveWritableScope(changed, "0")).toThrow("WRITABLE_SCOPE")
   expect(() => assertLeanProspectiveWritableScope(safe, "unlimited")).toThrow("WRITABLE_SCOPE")

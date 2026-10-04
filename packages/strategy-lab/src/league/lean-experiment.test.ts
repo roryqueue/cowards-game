@@ -3,7 +3,7 @@ import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { afterEach, expect, it } from "vitest"
 import { labRoot, LAB_ADMITTED_ROOTS } from "../contracts.js"
-import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, LEAN_FAILED_PREFIX, LEAN_DISK_APPROVAL, LEAN_PROSPECTIVE_WRITABLE_PATHS, LEAN_SUCCESSOR_WRITABLE_PATHS, LEAN_V4_WRITABLE_PATHS, LEAN_CLOSED_V2, LEAN_CLOSED_V3, createLeanProspectiveDiskBasis, verifyLeanProspectiveDiskBasis, createLeanClosedV2Predecessor, verifyLeanClosedV2Predecessor, createLeanClosedV3Predecessor, verifyLeanClosedV3Predecessor, leanWritablePaths, verifyLeanFailedPrefix, verifyLeanFailedWriteInventory, deriveLeanChildTerminal, readLeanChildTerminal, readLeanCumulativeAccounting, leanBytesRoot, leanCanonicalBytes, type LeanExperimentAllocationV2, type LeanExperimentAllocationV3, type LeanExperimentAllocationV4, type LeanExperimentLedger } from "./lean-experiment.js"
+import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, LEAN_FAILED_PREFIX, LEAN_DISK_APPROVAL, LEAN_PROSPECTIVE_WRITABLE_PATHS, LEAN_SUCCESSOR_WRITABLE_PATHS, LEAN_V4_WRITABLE_PATHS, LEAN_V5_WRITABLE_PATHS, LEAN_CLOSED_V2, LEAN_CLOSED_V3, LEAN_CLOSED_V4, createLeanProspectiveDiskBasis, verifyLeanProspectiveDiskBasis, createLeanClosedV2Predecessor, verifyLeanClosedV2Predecessor, createLeanClosedV3Predecessor, verifyLeanClosedV3Predecessor, createLeanClosedV4Predecessor, verifyLeanClosedV4Predecessor, leanWritablePaths, verifyLeanFailedPrefix, verifyLeanFailedWriteInventory, deriveLeanChildTerminal, readLeanChildTerminal, readLeanCumulativeAccounting, leanBytesRoot, leanCanonicalBytes, type LeanExperimentAllocationV2, type LeanExperimentAllocationV3, type LeanExperimentAllocationV4, type LeanExperimentAllocationV5, type LeanExperimentLedger } from "./lean-experiment.js"
 import { assertLeanPublicationCapacity } from "./lean-experiment.js"
 import { writeLeanAll, createLeanAllocation, chargeLeanSlot, createLeanLedger, retainLeanMatch, verifyLeanEvidence, chooseLeanTier, encodeLeanReplay, decodeLeanReplay, leanSchedule, readLeanLedger } from "./lean-experiment.js"
 
@@ -65,6 +65,54 @@ const inertClosedV3 = () => {
     ],
   }
 }
+const inertClosedV4 = () => {
+  const c = LEAN_CLOSED_V4
+  return {
+    raw: { allocation: c.allocationBytesRoot, canonical: c.allocationBytesRoot, request: c.requestBytesRoot, entry: c.entryBytesRoot, receipt: c.receiptBytesRoot, terminal: c.terminalBytesRoot, time: c.timeBytesRoot, charge: c.emptyChargeBytesRoot, report: c.terminalReportBytesRoot },
+    storeFiles: ["allocation.json", "child-terminal.json", "entry-failure.json", "entry.json", "ledger.ndjson", "time.ndjson"], allocationRoot: c.allocationRoot, sourceRoot: c.sourceRoot, heldHead: c.heldHead,
+    entry: { allocationRoot: c.allocationRoot, sourceRoot: c.sourceRoot, requestBytesRoot: c.requestBytesRoot, head: c.heldHead, parentPid: 19433, childPid: 19465 },
+    terminal: { entryBytesRoot: c.entryBytesRoot, allocationRoot: c.allocationRoot, sourceRoot: c.sourceRoot, head: c.heldHead, parentPid: 19433, childPid: 19465, elapsedUpperBoundMs: c.terminalElapsedUpperBoundMs, physicalBytes: c.terminalPhysicalBytes, status: "child_failed", signal: null, exitCode: 1 },
+    receipt: { type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code: "FACTORY_ASSESSMENT_IMPORT_PROJECTION_LIMIT", stage: "unknown" },
+    timeElapsedMs: c.elapsedUpperBoundMs, timeStarts: 1, timeCloses: 1, chargedMatches: 0, resultExists: false,
+    priorPredecessorRoot: c.priorPredecessorRoot, priorMeasuredSurvivingAllocatedBytes: c.priorMeasuredSurvivingAllocatedBytes, priorConservativeAllocatedBytes: c.priorConservativeAllocatedBytes,
+    v4Survivors: [
+      { identity: c.storeIdentity, allocatedBytes: 0 },
+      { identity: `${c.storeIdentity}/allocation.json`, allocatedBytes: 8192 },
+      { identity: `${c.storeIdentity}/child-terminal.json`, allocatedBytes: 4096 },
+      { identity: `${c.storeIdentity}/entry-failure.json`, allocatedBytes: 4096 },
+      { identity: `${c.storeIdentity}/entry.json`, allocatedBytes: 4096 },
+      { identity: `${c.storeIdentity}/ledger.ndjson`, allocatedBytes: 0 },
+      { identity: `${c.storeIdentity}/time.ndjson`, allocatedBytes: 4096 },
+      { identity: c.requestIdentity, allocatedBytes: 4096 },
+      { identity: c.canonicalIdentity, allocatedBytes: 8192 },
+      { identity: LEAN_V4_WRITABLE_PATHS[0], allocatedBytes: 0 },
+    ],
+  }
+}
+it("binds closed v4 projection-limit receipt and carries all prior cost once", () => {
+  const observed = inertClosedV4(), p = createLeanClosedV4Predecessor(observed)
+  expect(p).toMatchObject({ elapsedUpperBoundMs: 1_402_442, chargedMatches: 0, historicalPeakDiskBytes: "unknown", priorMeasuredSurvivingAllocatedBytes: 90_112, priorConservativeAllocatedBytes: 212_992, v4SurvivingAllocatedBytes: 36_864, measuredSurvivingAllocatedBytes: 126_976, cumulativeConservativeFloorBytes: 249_856, terminalPhysicalBytes: 311_296, allocatedDiskBytes: 311_296 })
+  expect(verifyLeanClosedV4Predecessor(p, observed).root).toBe(p.root)
+  for (const changed of [
+    { ...observed, raw: { ...observed.raw, report: pin } },
+    { ...observed, raw: { ...observed.raw, receipt: pin } },
+    { ...observed, receipt: { ...observed.receipt, code: "UNKNOWN_INTERNAL_FAILURE" } },
+    { ...observed, heldHead: "b".repeat(40) },
+    { ...observed, entry: { ...observed.entry, requestBytesRoot: pin } },
+    { ...observed, terminal: { ...observed.terminal, childPid: 1 } },
+    { ...observed, terminal: { ...observed.terminal, elapsedUpperBoundMs: 0 } },
+    { ...observed, timeElapsedMs: 1_362_476 },
+    { ...observed, chargedMatches: 1 },
+    { ...observed, priorPredecessorRoot: pin },
+    { ...observed, priorConservativeAllocatedBytes: 0 },
+    { ...observed, storeFiles: observed.storeFiles.slice(1) },
+    { ...observed, resultExists: true },
+    { ...observed, v4Survivors: [...observed.v4Survivors.slice(0, 9), observed.v4Survivors[8]!] },
+  ]) expect(() => createLeanClosedV4Predecessor(changed)).toThrow("SUCCESSOR_PREDECESSOR")
+  const drift = { ...observed, v4Survivors: observed.v4Survivors.map((item, i) => i === 3 ? { ...item, allocatedBytes: 8192 } : item) }
+  expect(() => verifyLeanClosedV4Predecessor(p, drift)).toThrow("SUCCESSOR_PREDECESSOR")
+  expect(() => verifyLeanClosedV4Predecessor({ ...p, allocatedDiskBytes: 249_856 }, observed)).toThrow("SUCCESSOR_PREDECESSOR")
+})
 it("binds closed v3 failure receipt and report without resetting time or double-counting old floors", () => {
   const observed = inertClosedV3(), p = createLeanClosedV3Predecessor(observed)
   expect(p).toMatchObject({ elapsedUpperBoundMs: 1_362_476, chargedMatches: 0, historicalPeakDiskBytes: "unknown", priorMeasuredSurvivingAllocatedBytes: 53_248, priorConservativeAllocatedBytes: 114_688, v3SurvivingAllocatedBytes: 36_864, measuredSurvivingAllocatedBytes: 90_112, terminalPhysicalBytes: 212_992, allocatedDiskBytes: 212_992 })
@@ -240,21 +288,45 @@ const v4Ledger = (): LeanExperimentLedger => {
   writeFileSync(join(directory, "time.ndjson"), "")
   return { directory, allocation: a }
 }
+const v5Ledger = (): LeanExperimentLedger => {
+  const p = realpathSync(mkdtempSync(join(tmpdir(), "lean-v5-test-"))); dirs.push(p)
+  const { root: _v1Root, schemaVersion: _v1Version, ...base } = allocation()
+  const predecessor = createLeanClosedV4Predecessor(inertClosedV4())
+  const body = { ...base, schemaVersion: "lean-experiment-allocation-v5" as const, predecessor }
+  const a: LeanExperimentAllocationV5 = { ...body, root: labRoot("lean-experiment-allocation-v5", body) }
+  const directory = join(p, "evidence"); mkdirSync(directory, { mode: 0o700 })
+  writeFileSync(join(directory, "allocation.json"), leanCanonicalBytes(a))
+  writeFileSync(join(directory, "ledger.ndjson"), "")
+  writeFileSync(join(directory, "time.ndjson"), "")
+  return { directory, allocation: a }
+}
 it("routes future disk strictly by allocation version and never refunds closed predecessor budgets", () => {
-  const old = ledger(), middle = v2Ledger(), successor = v3Ledger(), next = v4Ledger()
+  const old = ledger(), middle = v2Ledger(), successor = v3Ledger(), next = v4Ledger(), fifth = v5Ledger()
   expect(leanWritablePaths(old.allocation)).toEqual([])
   expect(leanWritablePaths(middle.allocation)).toEqual(LEAN_PROSPECTIVE_WRITABLE_PATHS)
   expect(leanWritablePaths(successor.allocation)).toEqual(LEAN_SUCCESSOR_WRITABLE_PATHS)
   expect(leanWritablePaths(next.allocation)).toEqual(LEAN_V4_WRITABLE_PATHS)
-  expect(new Set([...LEAN_PROSPECTIVE_WRITABLE_PATHS, ...LEAN_SUCCESSOR_WRITABLE_PATHS, ...LEAN_V4_WRITABLE_PATHS]).size).toBe(9)
+  expect(leanWritablePaths(fifth.allocation)).toEqual(LEAN_V5_WRITABLE_PATHS)
+  expect(new Set([...LEAN_PROSPECTIVE_WRITABLE_PATHS, ...LEAN_SUCCESSOR_WRITABLE_PATHS, ...LEAN_V4_WRITABLE_PATHS, ...LEAN_V5_WRITABLE_PATHS]).size).toBe(12)
   expect(readLeanTimeAccounting(successor).elapsedMs).toBe(1_323_030)
   expect(readLeanTimeAccounting(next).elapsedMs).toBe(1_362_476)
+  expect(readLeanTimeAccounting(fifth).elapsedMs).toBe(1_402_442)
   expect(() => assertLeanPublicationCapacity(successor, 8192, 12_000_000_000 - 114_688 - 4096)).toThrow("RESOURCE")
   expect(() => assertLeanPublicationCapacity(next, 8192, 12_000_000_000 - 212_992 - 4096)).toThrow("RESOURCE")
+  expect(() => assertLeanPublicationCapacity(fifth, 8192, 12_000_000_000 - 311_296 - 4096)).toThrow("RESOURCE")
   beginLeanInterval(successor, "pilot-entry", 1_791_065_426_248)
   expect(readLeanTimeAccounting(successor).elapsedMs).toBe(28_800_000)
   beginLeanInterval(next, "pilot-entry", 1_791_068_676_374)
   expect(readLeanTimeAccounting(next).elapsedMs).toBe(28_800_000)
+  beginLeanInterval(fifth, "pilot-entry", 1_791_107_663_980)
+  expect(readLeanTimeAccounting(fifth).elapsedMs).toBe(28_800_000)
+})
+it("rejects a near-cap v5 store before any write or predecessor reader", () => {
+  const fixture = v5Ledger(), destination = join(dirname(fixture.directory), "denied-v5")
+  const a = fixture.allocation as LeanExperimentAllocationV5
+  const nearCap = { ...a, predecessor: { ...a.predecessor, allocatedDiskBytes: 12_000_000_000 - 4096 } }
+  expect(() => createLeanLedger(destination, nearCap)).toThrow("RESOURCE")
+  expect(existsSync(destination)).toBe(false)
 })
 it("rejects a near-cap v4 store before any write or predecessor reader", () => {
   const fixture = v4Ledger(), destination = join(dirname(fixture.directory), "denied-v4")

@@ -137,6 +137,7 @@ export const createBoundedFactoryProjectionPool = (ceiling = LEAN_FACTORY_PROJEC
   }
   const project = <T>(value: T): T => {
     if (failed) return fail("IMPORT_PROJECTION_LIMIT")
+    reserve(128) // Per-call active-set/visitor bookkeeping before construction.
     const active = new WeakSet<object>()
     const visit = (item: unknown, depth: number): unknown => {
       if (depth > 128) { failed = true; return fail("IMPORT_PROJECTION_LIMIT") }
@@ -151,8 +152,11 @@ export const createBoundedFactoryProjectionPool = (ceiling = LEAN_FACTORY_PROJEC
         active.delete(item)
         return Object.freeze(output)
       }
+      let keyCount = 0
+      for (const key in item) if (Object.hasOwn(item, key)) keyCount++
+      // Reserve the key-list header/slots before constructing Object.keys.
+      reserve(192 + keyCount * 48)
       const keys = Object.keys(item)
-      reserve(128 + keys.length * 32) // Container, active-set entry and properties.
       const output: Record<string, unknown> = {}
       for (const key of keys) {
         reserve(64) // Property-name reference, even when its payload is shared.
