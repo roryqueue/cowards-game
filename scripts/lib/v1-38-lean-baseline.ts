@@ -31,6 +31,8 @@ export interface LeanCurrentBaselineEvidence {
   readonly scheduleRoot: LabRoot
   readonly sourceRoot: LabRoot
   readonly trainingRoots: readonly LabRoot[]
+  readonly trainingStage: "initial" | "response_complete"
+  readonly responseDisposition: LeanColdTrainingManifest["candidates"][number]["disposition"] | null
   readonly terminals: readonly LeanBaselineTerminal[]
   readonly launchedHoldoutSlots: 0
   readonly root: LabRoot
@@ -53,6 +55,8 @@ const COUNTS: ReadonlyArray<readonly [LeanBaselineCellKind, number]> = [
 ]
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_${code}`) }
 const isRoot = (value: unknown): value is LabRoot => typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value)
+const exactKeys = (value: unknown, keys: readonly string[]): boolean => value !== null && typeof value === "object" && !Array.isArray(value) &&
+  Object.keys(value).sort().join("\0") === [...keys].sort().join("\0")
 const freeze = <T>(value: T): T => {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {
     for (const child of Object.values(value as Record<string, unknown>)) freeze(child)
@@ -76,37 +80,72 @@ export const createLeanCurrentBaselineSchedule = (): LeanBaselineSchedule => {
   return freeze({ ...value, root: labRoot("lean-current-baseline-schedule-v1", value) })
 }
 
-const validTerminal = (terminal: LeanBaselineTerminal, slot: LeanBaselineSlot): boolean => terminal.slotRoot === slot.root && isRoot(terminal.accountingRoot) &&
+const isCanonicalSchedule = (value: unknown): value is LeanBaselineSchedule => {
+  if (!exactKeys(value, ["schemaVersion", "tier", "perProfile", "slots", "root"])) return false
+  const expected = createLeanCurrentBaselineSchedule()
+  if (value.schemaVersion !== expected.schemaVersion || value.tier !== expected.tier || value.root !== expected.root ||
+      JSON.stringify(value.perProfile) !== JSON.stringify(expected.perProfile) || !Array.isArray(value.slots) || value.slots.length !== expected.slots.length) return false
+  return value.slots.every((slot: unknown, index: number) => exactKeys(slot, ["id", "profile", "kind", "ordinal", "preHoldout", "root"]) &&
+    JSON.stringify(slot) === JSON.stringify(expected.slots[index]))
+}
+
+const validTerminal = (terminal: LeanBaselineTerminal, slot: LeanBaselineSlot): boolean => exactKeys(terminal, ["slotRoot", "matchRoot", "status", "safeCode", "cleanupComplete", "accountingRoot", "replayRoot"]) &&
+  terminal.slotRoot === slot.root && isRoot(terminal.accountingRoot) && typeof terminal.cleanupComplete === "boolean" &&
   (terminal.matchRoot === null || isRoot(terminal.matchRoot)) && (terminal.replayRoot === null || isRoot(terminal.replayRoot)) &&
   ((terminal.status === "success" && terminal.safeCode === "OK" && terminal.matchRoot !== null && terminal.cleanupComplete) ||
    (terminal.status === "player_violation" && terminal.safeCode === "PLAYER_VIOLATION" && terminal.matchRoot !== null && terminal.cleanupComplete) ||
-   (terminal.status === "system_failure" && terminal.safeCode === "SYSTEM_FAILURE" && terminal.cleanupComplete) ||
+   (terminal.status === "system_failure" && terminal.safeCode === "SYSTEM_FAILURE") ||
    (terminal.status === "unlaunched" && terminal.safeCode === "NOT_LAUNCHED" && terminal.matchRoot === null && !terminal.cleanupComplete))
+const validCurrentLaunchPrefix = (terminals: readonly LeanBaselineTerminal[], schedule: LeanBaselineSchedule): boolean => {
+  let stopped = false
+  for (const [index, slot] of schedule.slots.entries()) {
+    if (slot.profile !== "current" || !slot.preHoldout) continue
+    const terminal = terminals[index]!
+    if (stopped && terminal.status !== "unlaunched") return false
+    if (terminal.status !== "success") stopped = true
+  }
+  return true
+}
 
 /** Builds the authenticated compact terminal ledger; never accepts invocation/source/memory/error payloads. */
 export const createLeanBaselineEvidence = (input: { schedule: LeanBaselineSchedule; sourceRoot: LabRoot; training: readonly LeanColdTrainingManifest[]; terminals: readonly LeanBaselineTerminal[] }): LeanCurrentBaselineEvidence => {
-  if (input.schedule.tier !== "reduced" || !isRoot(input.sourceRoot) || input.training.length !== 3 || new Set(input.training.map((manifest) => manifest.armRoot)).size !== 3 || input.training.some((manifest) => !auditLeanTrainingVector(manifest).valid)) return fail("EVIDENCE_INPUT")
+  if (!exactKeys(input, ["schedule", "sourceRoot", "training", "terminals"]) || !isCanonicalSchedule(input.schedule) || !isRoot(input.sourceRoot) || !Array.isArray(input.training) || input.training.length !== 1 || input.training.some((manifest) => !auditLeanTrainingVector(manifest).valid)) return fail("EVIDENCE_INPUT")
   const slots = input.schedule.slots
   if (input.terminals.length !== slots.length || input.terminals.some((terminal, index) => !validTerminal(terminal, slots[index]!)) || input.terminals.some((terminal, index) => terminal.slotRoot !== slots[index]!.root)) return fail("TERMINAL_BIJECTION")
   if (input.terminals.some((terminal, index) => slots[index]!.kind === "reserved_holdout" && terminal.status !== "unlaunched")) return fail("HOLDOUT_OPENED")
+  if (!validCurrentLaunchPrefix(input.terminals, input.schedule)) return fail("TERMINAL_STOP_ORDER")
+  if (input.terminals.some((terminal, index) => (slots[index]!.profile !== "current" || !slots[index]!.preHoldout) && terminal.status !== "unlaunched")) return fail("NONCURRENT_LAUNCHED")
   const value = { schemaVersion: "lean-current-baseline-evidence-v1" as const, scheduleRoot: input.schedule.root, sourceRoot: input.sourceRoot, trainingRoots: input.training.map((manifest) => manifest.root).sort(), terminals: Object.freeze([...input.terminals]), launchedHoldoutSlots: 0 as const }
-  return freeze({ ...value, root: labRoot("lean-current-baseline-evidence-v1", value) })
+  const manifest = input.training[0]!
+  const responseDisposition = manifest.stage === "response_complete" ? manifest.candidates.find((candidate) => candidate.mechanism === "response")?.disposition ?? null : null
+  if (manifest.stage === "response_complete" && responseDisposition === null) return fail("RESPONSE_MANIFEST")
+  const rooted = { ...value, trainingStage: manifest.stage, responseDisposition }
+  return freeze({ ...rooted, root: labRoot("lean-current-baseline-evidence-v1", rooted) })
 }
 
-export const verifyLeanCurrentBaseline = (evidence: LeanCurrentBaselineEvidence, schedule: LeanBaselineSchedule): Readonly<{ complete: boolean; successfulPreHoldout: number; failedOrMissing: number; holdoutUntouched: true; root: LabRoot }> => {
-  if (!evidence || evidence.schemaVersion !== "lean-current-baseline-evidence-v1" || evidence.scheduleRoot !== schedule.root || evidence.launchedHoldoutSlots !== 0 || evidence.terminals.length !== schedule.slots.length) return fail("VERIFY_JOIN")
+export const verifyLeanCurrentBaseline = (evidence: LeanCurrentBaselineEvidence, schedule: LeanBaselineSchedule): Readonly<{ complete: boolean; successfulPreHoldout: number; failedOrMissing: number; unusedSlots: number; holdoutUntouched: true; root: LabRoot }> => {
+  if (!exactKeys(evidence, ["schemaVersion", "scheduleRoot", "sourceRoot", "trainingRoots", "trainingStage", "responseDisposition", "terminals", "launchedHoldoutSlots", "root"]) || !isCanonicalSchedule(schedule) || evidence.schemaVersion !== "lean-current-baseline-evidence-v1" || evidence.scheduleRoot !== schedule.root || !isRoot(evidence.sourceRoot) || !Array.isArray(evidence.trainingRoots) || evidence.trainingRoots.length !== 1 || !evidence.trainingRoots.every(isRoot) || !["initial", "response_complete"].includes(evidence.trainingStage) || (evidence.trainingStage === "initial" ? evidence.responseDisposition !== null : !["accepted_for_evaluation", "clone_rejected", "invalid_rejected", "weak_preserved"].includes(String(evidence.responseDisposition))) || evidence.launchedHoldoutSlots !== 0 || !Array.isArray(evidence.terminals) || evidence.terminals.length !== schedule.slots.length) return fail("VERIFY_JOIN")
   const { root: _discard, ...body } = evidence
   if (labRoot("lean-current-baseline-evidence-v1", body) !== evidence.root) return fail("VERIFY_ROOT")
   const terminals = evidence.terminals
-  if (terminals.some((terminal, index) => !validTerminal(terminal, schedule.slots[index]!)) || terminals.some((terminal, index) => schedule.slots[index]!.kind === "reserved_holdout" && terminal.status !== "unlaunched")) return fail("VERIFY_TERMINAL")
-  const complete = terminals.every((terminal, index) => schedule.slots[index]!.kind === "reserved_holdout" ? terminal.status === "unlaunched" : terminal.status === "success" && terminal.cleanupComplete)
-  const successfulPreHoldout = terminals.filter((terminal, index) => schedule.slots[index]!.preHoldout && terminal.status === "success" && terminal.cleanupComplete).length
-  const failedOrMissing = terminals.filter((terminal, index) => schedule.slots[index]!.preHoldout && terminal.status !== "success").length
-  return Object.freeze({ complete, successfulPreHoldout, failedOrMissing, holdoutUntouched: true, root: labRoot("lean-current-baseline-verification-v1", { evidenceRoot: evidence.root, complete, successfulPreHoldout, failedOrMissing, holdoutUntouched: true }) })
+  if (terminals.some((terminal, index) => !validTerminal(terminal, schedule.slots[index]!))) return fail("VERIFY_TERMINAL")
+  if (terminals.some((terminal, index) => schedule.slots[index]!.kind === "reserved_holdout" && terminal.status !== "unlaunched")) return fail("VERIFY_HOLDOUT_OPENED")
+  if (terminals.some((terminal, index) => (schedule.slots[index]!.profile !== "current" || !schedule.slots[index]!.preHoldout) && terminal.status !== "unlaunched")) return fail("VERIFY_NONCURRENT_LAUNCHED")
+  if (!validCurrentLaunchPrefix(terminals, schedule)) return fail("VERIFY_STOP_ORDER")
+  const currentSlots = schedule.slots.filter((slot) => slot.profile === "current" && slot.preHoldout)
+  const currentSucceeded = terminals.filter((terminal, index) => schedule.slots[index]!.profile === "current" && schedule.slots[index]!.preHoldout && terminal.status === "success" && terminal.cleanupComplete).length
+  const complete = currentSucceeded === 36 && evidence.trainingStage === "response_complete" && evidence.responseDisposition === "accepted_for_evaluation" && terminals.every((terminal, index) => {
+    const slot = schedule.slots[index]!
+    return slot.profile === "current" && slot.preHoldout ? terminal.status === "success" && terminal.cleanupComplete : terminal.status === "unlaunched"
+  })
+  const successfulPreHoldout = currentSucceeded
+  const failedOrMissing = currentSlots.length - currentSucceeded
+  const unusedSlots = terminals.filter((terminal) => terminal.status === "unlaunched").length
+  return Object.freeze({ complete, successfulPreHoldout, failedOrMissing, unusedSlots, holdoutUntouched: true, root: labRoot("lean-current-baseline-verification-v1", { evidenceRoot: evidence.root, complete, successfulPreHoldout, failedOrMissing, unusedSlots, holdoutUntouched: true }) })
 }
 
 export const buildLeanBaselineHandoff = (input: { evidence: LeanCurrentBaselineEvidence | null; currentSourceRoot: LabRoot; currentPopulationRoot: LabRoot }): LeanBaselineHandoff => {
-  if (!isRoot(input.currentSourceRoot) || !isRoot(input.currentPopulationRoot)) return fail("HANDOFF_ROOT")
+  if (!exactKeys(input, ["evidence", "currentSourceRoot", "currentPopulationRoot"]) || !isRoot(input.currentSourceRoot) || !isRoot(input.currentPopulationRoot)) return fail("HANDOFF_ROOT")
   const schedule = createLeanCurrentBaselineSchedule()
   const verification = input.evidence ? verifyLeanCurrentBaseline(input.evidence, schedule) : null
   const limitation = input.evidence === null ? "source_only_no_empirical_evidence" as const : verification?.complete ? "empirical_evidence_requires_retained_verification" as const : "partial_or_failed_baseline" as const
@@ -120,16 +159,17 @@ export const runLeanCurrentBaseline = async (input: {
   capacityBeforeCharge: (slot: LeanBaselineSlot) => Promise<boolean>
   dispatchHostIssuedMatch: (slot: LeanBaselineSlot) => Promise<LeanBaselineTerminal>
 }): Promise<readonly LeanBaselineTerminal[]> => {
+  if (!exactKeys(input, ["schedule", "capacityBeforeCharge", "dispatchHostIssuedMatch"]) || !isCanonicalSchedule(input.schedule) || typeof input.capacityBeforeCharge !== "function" || typeof input.dispatchHostIssuedMatch !== "function") return fail("RUN_INPUT")
   const records: LeanBaselineTerminal[] = []
-  for (const slot of input.schedule.slots.filter((entry) => entry.preHoldout)) {
-    if (!(await input.capacityBeforeCharge(slot))) {
-      for (const remaining of input.schedule.slots.slice(records.length, input.schedule.slots.filter((entry) => entry.preHoldout).length)) records.push(Object.freeze({ slotRoot: remaining.root, matchRoot: null, status: "unlaunched", safeCode: "NOT_LAUNCHED", cleanupComplete: false, accountingRoot: labRoot("lean-baseline-unlaunched-accounting-v1", remaining.root), replayRoot: null }))
-      break
-    }
+  let stopped = false
+  const appendUnlaunched = (slot: LeanBaselineSlot) => records.push(Object.freeze({ slotRoot: slot.root, matchRoot: null, status: "unlaunched" as const, safeCode: "NOT_LAUNCHED" as const, cleanupComplete: false, accountingRoot: labRoot("lean-baseline-unlaunched-accounting-v1", slot.root), replayRoot: null }))
+  for (const slot of input.schedule.slots) {
+    if (slot.profile !== "current" || !slot.preHoldout || stopped) { appendUnlaunched(slot); continue }
+    if (!(await input.capacityBeforeCharge(slot))) { appendUnlaunched(slot); stopped = true; continue }
     const terminal = await input.dispatchHostIssuedMatch(slot)
-    if (terminal.slotRoot !== slot.root || terminal.status === "unlaunched") return fail("DISPATCH_TERMINAL")
+    if (!validTerminal(terminal, slot)) return fail("DISPATCH_TERMINAL")
     records.push(terminal)
+    if (terminal.status !== "success") stopped = true
   }
-  for (const slot of input.schedule.slots.filter((entry) => !entry.preHoldout)) records.push(Object.freeze({ slotRoot: slot.root, matchRoot: null, status: "unlaunched", safeCode: "NOT_LAUNCHED", cleanupComplete: false, accountingRoot: labRoot("lean-baseline-reserved-accounting-v1", slot.root), replayRoot: null }))
   return Object.freeze(records)
 }
