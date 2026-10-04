@@ -278,10 +278,18 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const initialOwner = inspectOwner(); if (initialOwner === "owned" || initialOwner === "foreign") throw new TypeError("LEAN_CONTAINER_SESSION_NAME_COLLISION"); if (initialOwner !== "absent") throw new TypeError("LEAN_CONTAINER_SESSION_NAME_CHECK_FAILED")
   const remove = (): LeanContainerSessionCloseResult => {
     if (cleanupResult !== undefined) return cleanupResult
-    const streamClosed = stream === undefined ? true : (() => { const receipt = stream!.close(cleanupTimeout); return receipt.error === undefined && receipt.signal === null && receipt.status === 0 && receipt.stderr.byteLength === 0 })()
-    const removed = transport(dockerPath, ["rm", "--force", options.containerName], { timeoutMilliseconds: cleanupTimeout, maxBufferBytes: CONTROL_BUFFER_BYTES })
-    const absent = inspectOwner() === "absent"
-    cleanupResult = streamClosed && removed.error === undefined && removed.signal === null && removed.status === 0 && removed.stderr.byteLength === 0 && absent ? { cleanupComplete: true, orphanedChild: false } : { cleanupComplete: false, orphanedChild: true }
+    // Cleanup must not replace the primary failure or skip later cleanup steps.
+    // Any thrown operation stays incomplete, even if final absence is confirmed.
+    let streamClosed = stream === undefined, removedClean = false, absent = false
+    try {
+      if (stream !== undefined) { const receipt = stream.close(cleanupTimeout); streamClosed = receipt.error === undefined && receipt.signal === null && receipt.status === 0 && receipt.stderr.byteLength === 0 }
+    } catch { streamClosed = false }
+    try {
+      const removed = transport(dockerPath, ["rm", "--force", options.containerName], { timeoutMilliseconds: cleanupTimeout, maxBufferBytes: CONTROL_BUFFER_BYTES })
+      removedClean = removed.error === undefined && removed.signal === null && removed.status === 0 && removed.stderr.byteLength === 0
+    } catch { removedClean = false }
+    try { absent = inspectOwner() === "absent" } catch { absent = false }
+    cleanupResult = streamClosed && removedClean && absent ? { cleanupComplete: true, orphanedChild: false } : { cleanupComplete: false, orphanedChild: true }
     return cleanupResult
   }
   const created = transport(dockerPath, createArgs(options.image, options.containerName, options.ownershipLabel, options.infrastructureProfile), { timeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: CONTROL_BUFFER_BYTES })
