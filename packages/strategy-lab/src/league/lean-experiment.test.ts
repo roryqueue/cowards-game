@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { afterEach, expect, it } from "vitest"
+import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { labRoot, LAB_ADMITTED_ROOTS } from "../contracts.js"
 import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, LEAN_CAPS, LEAN_FAILED_PREFIX, LEAN_DISK_APPROVAL, LEAN_PROSPECTIVE_WRITABLE_PATHS, LEAN_SUCCESSOR_WRITABLE_PATHS, LEAN_V4_WRITABLE_PATHS, LEAN_V5_WRITABLE_PATHS, LEAN_V6_WRITABLE_PATHS, LEAN_V7_WRITABLE_PATHS, LEAN_CLOSED_V2, LEAN_CLOSED_V3, LEAN_CLOSED_V4, LEAN_CLOSED_V5, LEAN_CLOSED_V6, LEAN_CLOSED_V7, LEAN_BASELINE_WRITABLE_PATHS, createLeanProspectiveDiskBasis, verifyLeanProspectiveDiskBasis, createLeanClosedV2Predecessor, verifyLeanClosedV2Predecessor, createLeanClosedV3Predecessor, verifyLeanClosedV3Predecessor, createLeanClosedV4Predecessor, verifyLeanClosedV4Predecessor, createLeanClosedV5Predecessor, verifyLeanClosedV5Predecessor, createLeanClosedV6Predecessor, verifyLeanClosedV6Predecessor, inspectLeanClosedV6Predecessor, createLeanClosedV7Predecessor, createLeanCurrentBaselineAllocation, currentBaselineSlotKind, createLeanAllocationV7, leanWritablePaths, verifyLeanFailedPrefix, verifyLeanFailedWriteInventory, deriveLeanChildTerminal, readLeanChildTerminal, readLeanCumulativeAccounting, leanBytesRoot, leanCanonicalBytes, type LeanExperimentAllocationV2, type LeanExperimentAllocationV3, type LeanExperimentAllocationV4, type LeanExperimentAllocationV5, type LeanExperimentAllocationV6, type LeanExperimentAllocationV7, type LeanClosedV7Observation, type LeanExperimentLedger } from "./lean-experiment.js"
 import { assertLeanPublicationCapacity } from "./lean-experiment.js"
@@ -55,7 +56,18 @@ it("carries closed v7 pilot time, nine cumulative charges, and surviving disk wi
   expect(leanWritablePaths(allocation)).toEqual(LEAN_BASELINE_WRITABLE_PATHS)
   expect([0, 7, 8, 11, 12, 19, 20, 27, 28, 31, 32, 35].map(n => currentBaselineSlotKind(n).kind)).toEqual(["initial_training", "initial_training", "initial_matrix", "initial_matrix", "response_training", "response_training", "response_pairing", "response_pairing", "probe", "probe", "repeat", "repeat"])
   expect(Object.fromEntries(["initial_training", "initial_matrix", "response_training", "response_pairing", "probe", "repeat"].map(kind => [kind, allocation.slots.filter(s => currentBaselineSlotKind(s.ordinal).kind === kind).length]))).toEqual({ initial_training: 8, initial_matrix: 4, response_training: 8, response_pairing: 8, probe: 4, repeat: 4 })
-  for (let start = 0; start < 36; start += 4) expect(Array.from({ length: 4 }, (_, offset) => currentBaselineSlotKind(start + offset).arenaIndex)).toEqual([0, 0, 1, 1])
+  const activeArenas = CANONICAL_ARENA_CATALOG_V1_37.arenas.filter(a => a.status === "active" && a.schedulable).sort((a, b) => a.semanticGeometryHash.localeCompare(b.semanticGeometryHash))
+  const smokeHash = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(a => a.id === "arena:smoke:v1" && a.status === "active")!.semanticGeometryHash
+  expect(allocation.slots.every(slot => slot.arenaHash === smokeHash)).toBe(true)
+  for (let start = 0; start < 36; start += 4) {
+    const block = allocation.slots.slice(start, start + 4)
+    expect(block.map(slot => slot.condition)).toEqual([0, 1, 2, 3])
+    expect(new Set(block.map(slot => slot.arenaHash))).toEqual(new Set([smokeHash]))
+    expect(new Set(block.map(slot => slot.condition < 2 ? "entrant-bottom" : "entrant-top"))).toEqual(new Set(["entrant-bottom", "entrant-top"]))
+    expect(new Set(block.map(slot => slot.condition % 2 === 0 ? "bottom-initiative" : "top-initiative"))).toEqual(new Set(["bottom-initiative", "top-initiative"]))
+    expect(block.every(slot => activeArenas[currentBaselineSlotKind(slot.ordinal).arenaIndex]!.semanticGeometryHash === smokeHash)).toBe(true)
+  }
+  for (let offset = 0; offset < 4; offset++) expect(allocation.slots[32 + offset]).toMatchObject({ arenaHash: allocation.slots[8 + offset]!.arenaHash, condition: allocation.slots[8 + offset]!.condition })
   expect(allocation.slots.filter(s => s.condition === 0)).toHaveLength(9)
   expect(() => createLeanCurrentBaselineAllocation({ ...input, requestRoots: input.requestRoots.slice(1) }, predecessor)).toThrow("BASELINE_ALLOCATION")
   expect(() => createLeanCurrentBaselineAllocation({ ...input, requestRoots: [...input.requestRoots.slice(0, 35), input.requestRoots[0]!] }, predecessor)).toThrow("BASELINE_ALLOCATION")

@@ -595,6 +595,14 @@ export interface LeanExperimentAllocationV7 extends Omit<LeanExperimentAllocatio
 export type LeanCurrentBaselineSlotKind = "initial_training" | "initial_matrix" | "response_training" | "response_pairing" | "probe" | "repeat"
 const LEAN_BASELINE_SLOT_GROUPS = Object.freeze([8, 4, 8, 8, 4, 4] as const)
 const LEAN_BASELINE_SLOT_KINDS = Object.freeze(["initial_training", "initial_matrix", "response_training", "response_pairing", "probe", "repeat"] as const)
+const currentBaselineArenas = () => CANONICAL_ARENA_CATALOG_V1_37.arenas.filter(a => a.status === "active" && a.schedulable).sort((a, b) => a.semanticGeometryHash.localeCompare(b.semanticGeometryHash))
+const currentBaselineSmokeArenaIndex = (): number => {
+  const arenas = currentBaselineArenas()
+  const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.filter(a => a.id === "arena:smoke:v1" && a.name === "Smoke" && a.status === "active" && a.schedulable)
+  if (arenas.length !== 2 || smoke.length !== 1) return fail("ARENA")
+  const index = arenas.findIndex(a => a.semanticGeometryHash === smoke[0]!.semanticGeometryHash)
+  return index < 0 ? fail("ARENA") : index
+}
 export const currentBaselineSlotKind = (ordinal: number): Readonly<{ kind: LeanCurrentBaselineSlotKind; localOrdinal: number; arenaIndex: number; condition: number }> => {
   if (!natural(ordinal) || ordinal >= 36) return fail("BASELINE_SLOT")
   let offset = 0
@@ -602,7 +610,7 @@ export const currentBaselineSlotKind = (ordinal: number): Readonly<{ kind: LeanC
     const count = LEAN_BASELINE_SLOT_GROUPS[i]!
     if (ordinal < offset + count) {
       const localOrdinal = ordinal - offset
-      return Object.freeze({ kind: LEAN_BASELINE_SLOT_KINDS[i]!, localOrdinal, arenaIndex: Math.floor(localOrdinal / 2) % 2, condition: localOrdinal % 4 })
+      return Object.freeze({ kind: LEAN_BASELINE_SLOT_KINDS[i]!, localOrdinal, arenaIndex: currentBaselineSmokeArenaIndex(), condition: localOrdinal % 4 })
     }
     offset += count
   }
@@ -674,8 +682,8 @@ export const createLeanAllocationV7 = (input: { sourceRoot: LabRoot; reviewRoot:
 export const createLeanCurrentBaselineAllocation = (input: LeanCurrentBaselineInput, predecessor: LeanClosedV7Predecessor = inspectLeanClosedV7Predecessor()): Readonly<LeanCurrentBaselineAllocation> => {
   if (!exactLabKeys(input, ["sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed"]) || !root(input.sourceRoot) || !root(input.reviewRoot) || !root(input.coldRoot) || !root(input.planRoot) || !Array.isArray(input.candidateRoots) || input.candidateRoots.length !== 2 || !input.candidateRoots.every(root) || new Set(input.candidateRoots).size !== 2 || !Array.isArray(input.requestRoots) || input.requestRoots.length !== 36 || !input.requestRoots.every(root) || new Set(input.requestRoots).size !== 36 || !/^[a-z0-9-]{1,100}$/u.test(input.seed) || predecessor.schemaVersion !== "lean-closed-v7-predecessor-v1" || predecessor.closed.allocationRoot !== LEAN_CLOSED_V7.allocationRoot || predecessor.elapsedUpperBoundMs !== LEAN_CLOSED_V7.elapsedUpperBoundMs || predecessor.chargedMatches !== LEAN_CLOSED_V7.chargedMatches || !natural(predecessor.allocatedDiskBytes)) return fail("BASELINE_ALLOCATION")
   const candidateRoots = [...input.candidateRoots].sort(), requestRoots = [...input.requestRoots]
-  const arenas = CANONICAL_ARENA_CATALOG_V1_37.arenas.filter(a => a.status === "active").sort((a, b) => a.semanticGeometryHash.localeCompare(b.semanticGeometryHash))
-  if (arenas.length !== 2 || new Set(arenas.map(a => a.semanticGeometryHash)).size !== 2) return fail("ARENA")
+  const arenas = currentBaselineArenas()
+  if (arenas.length !== 2 || new Set(arenas.map(a => a.semanticGeometryHash)).size !== 2 || arenas[currentBaselineSmokeArenaIndex()]!.id !== "arena:smoke:v1") return fail("ARENA")
   const slots = requestRoots.map((requestRoot, ordinal) => {
     const { arenaIndex, condition } = currentBaselineSlotKind(ordinal)
     const body = { ordinal, condition, arenaHash: arenas[arenaIndex]!.semanticGeometryHash, requestRoot }

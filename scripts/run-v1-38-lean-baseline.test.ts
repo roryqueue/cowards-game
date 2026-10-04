@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest"
 import { execFileSync } from "node:child_process"
 import { resolve } from "node:path"
+import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
-import { currentBaselineSlotKind } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { currentBaselineSlotKind, createLeanCurrentBaselineAllocation, LEAN_CLOSED_V7 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { admitsLeanBaselineReviewAgents, assertLeanBaselineWritableScope, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselinePair, leanBaselineSourceManifest, parseLeanBaselineCommand } from "./run-v1-38-lean-baseline.js"
+import { leanBaselineMatchSeed } from "./lib/v1-38-lean-baseline-match.js"
 
 const root = (name: string) => labRoot("baseline-cli-test", name)
 
@@ -36,6 +38,23 @@ describe("current-only baseline CLI source contracts", () => {
     expect(deriveLeanBaselineCandidateRoots(input.coldRoot)).toHaveLength(2)
     expect(new Set(deriveLeanBaselineCandidateRoots(input.coldRoot)).size).toBe(2)
     for (let ordinal = 0; ordinal < 36; ordinal++) expect(currentBaselineSlotKind(ordinal).condition).toBe((ordinal < 8 ? ordinal : ordinal < 12 ? ordinal - 8 : ordinal < 20 ? ordinal - 12 : ordinal < 28 ? ordinal - 20 : ordinal < 32 ? ordinal - 28 : ordinal - 32) % 4)
+
+    const activeArenas = CANONICAL_ARENA_CATALOG_V1_37.arenas.filter(a => a.status === "active" && a.schedulable).sort((a, b) => a.semanticGeometryHash.localeCompare(b.semanticGeometryHash))
+    const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(a => a.id === "arena:smoke:v1" && a.name === "Smoke" && a.status === "active" && a.schedulable)!
+    const predecessor = { schemaVersion: "lean-closed-v7-predecessor-v1", closed: { allocationRoot: LEAN_CLOSED_V7.allocationRoot }, elapsedUpperBoundMs: LEAN_CLOSED_V7.elapsedUpperBoundMs, chargedMatches: LEAN_CLOSED_V7.chargedMatches, allocatedDiskBytes: 0 } as never
+    const allocation = createLeanCurrentBaselineAllocation({ ...input, reviewRoot: root("review"), planRoot: input.planRoot, candidateRoots: deriveLeanBaselineCandidateRoots(input.coldRoot), requestRoots, seed: input.seed }, predecessor)
+    expect(allocation.slots).toHaveLength(36)
+    expect(allocation.slots.every((slot, ordinal) => slot.arenaHash === smoke.semanticGeometryHash && slot.arenaHash === activeArenas[currentBaselineSlotKind(ordinal).arenaIndex]!.semanticGeometryHash && slot.requestRoot === requestRoots[ordinal])).toBe(true)
+    for (let start = 0; start < 36; start += 4) {
+      const conditions = allocation.slots.slice(start, start + 4).map(slot => slot.condition)
+      expect(conditions).toEqual([0, 1, 2, 3])
+      expect(new Set(conditions.map(condition => condition < 2 ? "entrant-bottom" : "entrant-top"))).toEqual(new Set(["entrant-bottom", "entrant-top"]))
+      expect(new Set(conditions.map(condition => condition % 2 === 0 ? "bottom-initiative" : "top-initiative"))).toEqual(new Set(["bottom-initiative", "top-initiative"]))
+    }
+    for (let offset = 0; offset < 4; offset++) {
+      expect(allocation.slots[32 + offset]).toMatchObject({ arenaHash: allocation.slots[8 + offset]!.arenaHash, condition: allocation.slots[8 + offset]!.condition })
+      expect(leanBaselineMatchSeed(input.seed, 32 + offset)).toBe(leanBaselineMatchSeed(input.seed, 8 + offset))
+    }
   })
 
   it("roots the pre-charge byte prefix and frozen pair to each intended slot", () => {
