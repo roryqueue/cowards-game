@@ -140,6 +140,10 @@ const coreManifestDependencies: Readonly<Record<string, readonly string[]>> = {
 }
 const allowedUnresolved = (path: string, specifier: string | undefined): boolean =>
   (specifier === "typescript" && (reviewedAstTool(path) || ["scripts/check-v1-38-lab-boundaries.ts", "scripts/v1-38-factory-controls.ts", "scripts/v1-38-factory-source-audit.ts"].includes(path))) || (specifier !== undefined && allowedNode.has(specifier)) ||
+  // Match the lab monitor's existing static planner compiler allowance when
+  // lean reuse reaches it transitively. This exact path grants no other loader,
+  // source execution, or oracle route; unresolved/hostile edges still reject.
+  (specifier === "typescript" && path === "packages/strategy-lab/src/planner/emit.ts") ||
   (specifier === "node:zlib" && path === "packages/strategy-lab/src/league/lean-experiment.ts") ||
   (specifier === "node:child_process" && path === "scripts/run-v1-38-lean-experiment.ts") ||
   (specifier === "node:child_process" && path === "scripts/lib/v1-38-lean-container-match-session.ts") ||

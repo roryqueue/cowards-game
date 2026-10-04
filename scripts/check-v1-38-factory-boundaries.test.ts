@@ -15,6 +15,25 @@ describe("private factory dependency boundary", () => {
     expect(checkFactoryBoundaries({files:{...base,"packages/strategy-lab/src/factory/numeric-calibration.ts":'import ts from "typescript"; ts.createSourceFile("data.ts", text, 9);'}}).ok).toBe(true)
     expect(checkFactoryBoundaries({files:{...base,"packages/strategy-lab/src/factory/unknown.ts":'import ts from "typescript";'}}).ok).toBe(false)
   })
+  it.each(["scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-lean-experiment-authority.ts"])("admits the existing static planner emitter transitively from %s without opening other loaders", origin => {
+    const emitter = "packages/strategy-lab/src/planner/emit.ts"
+    const files = { ...base,
+      [origin]: 'import "@cowards/strategy-lab"',
+      "packages/strategy-lab/src/index.ts": 'export * from "./planner/emit.js"',
+      [emitter]: 'import * as ts from "typescript"; export const parse = ts.createSourceFile;',
+    }
+    expect(checkFactoryBoundaries({ files })).toEqual(expect.objectContaining({ ok: true, violations: [] }))
+    for (const denied of ['import "./missing.js"', 'import "node:child_process"', 'void import(loader)']) {
+      expect(checkFactoryBoundaries({ files: { ...files, [emitter]: `${files[emitter]} ${denied}` } }).violations)
+        .toContainEqual({ code: "PRIVATE_TRANSITIVE_UNRESOLVED", file: origin })
+    }
+    expect(checkFactoryBoundaries({ files: { ...files, [emitter]: `${files[emitter]} eval(source)` } }).violations)
+      .toContainEqual({ code: "PRIVATE_TRANSITIVE_HOSTILE_EXECUTION", file: origin })
+    expect(checkFactoryBoundaries({ files: { ...files,
+      [origin]: 'import "./unreviewed.js"',
+      [origin.replace(/[^/]+$/u, "unreviewed.ts")]: 'import ts from "typescript"',
+    } }).violations).toContainEqual({ code: "PRIVATE_TRANSITIVE_UNRESOLVED", file: origin })
+  })
   it("allows only the narrow packet contract from an oracle", () => {
     expect(checkFactoryBoundaries({ files: base })).toEqual(expect.objectContaining({ ok: true, violations: [] }))
   })
