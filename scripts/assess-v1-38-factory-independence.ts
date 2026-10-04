@@ -11,7 +11,7 @@ import { readFactorySupervisionArtifactRecords, readFactorySupervisionArtifactRe
 import { compareNumericEvidence, freezeNumericCalibrationThreshold, classifyNumericComparison, type NumericCalibrationEvidence, type NumericComparison, type NumericControlTable, type NumericControlId } from "../packages/strategy-lab/src/factory/numeric-calibration.js"
 import { readFactoryCanonicalRecord, readFreshFactoryCalibration, requireFactoryRecordRoot, remainingFreshWorkloadLifetime } from "./v1-38-factory-fresh-evidence.js"
 import { deriveFactorySharedHelperAudit, factoryEvidenceByteRoot, readFactoryExecutionEvidence, readHistoricalFactoryExecutionEvidence } from "./v1-38-factory-execution-evidence.js"
-import { createNumericObservationFromVerifiedCell, type VerifiedFactoryCellObservation } from "./v1-38-factory-observations.js"
+import { createNumericObservationFromVerifiedCell, type VerifiedFactoryCellObservation, type VerifiedFactoryCellObservationInput } from "./v1-38-factory-observations.js"
 import { auditFactorySource } from "./v1-38-factory-source-audit.js"
 import { FACTORY_CONTROL_BASES, type FactoryControlSlot } from "./v1-38-factory-controls.js"
 import type { FactorySourceSlot } from "./v1-38-factory-allocation.js"
@@ -127,6 +127,7 @@ export const createBoundedFactoryProjectionPool = (ceiling = LEAN_FACTORY_PROJEC
   }
   reserve(512) // Empty pool, bookkeeping and returned API, before construction.
   const strings = new Map<string, string>()
+  const projected = new WeakSet<object>()
   const intern = (text: string): string => {
     const shared = strings.get(text)
     if (shared !== undefined) return shared
@@ -144,19 +145,24 @@ export const createBoundedFactoryProjectionPool = (ceiling = LEAN_FACTORY_PROJEC
       reserve(64) // Every occurrence/reference, including shared strings.
       if (typeof item === "string") return intern(item)
       if (item === null || typeof item !== "object") return item
+      // Reuse only this pool's actual recursively frozen outputs, never an
+      // equal-but-unshared caller object. Every alias was charged above.
+      if (projected.has(item)) return item
       if (active.has(item)) { failed = true; return fail("IMPORT_PROJECTION_LIMIT") }
-      active.add(item)
       if (Array.isArray(item)) {
-        reserve(128 + item.length * 16) // Container, active-set entry and slots.
+        reserve(192 + item.length * 16) // Container, both set entries and slots.
+        active.add(item)
         const output = item.map(member => visit(member, depth + 1))
         active.delete(item)
-        return Object.freeze(output)
+        Object.freeze(output); projected.add(output)
+        return output
       }
       let keyCount = 0
       for (const key in item) if (Object.hasOwn(item, key)) keyCount++
       // Reserve the key-list header/slots before constructing Object.keys.
-      reserve(192 + keyCount * 48)
+      reserve(256 + keyCount * 48)
       const keys = Object.keys(item)
+      active.add(item)
       const output: Record<string, unknown> = {}
       for (const key of keys) {
         reserve(64) // Property-name reference, even when its payload is shared.
@@ -164,7 +170,8 @@ export const createBoundedFactoryProjectionPool = (ceiling = LEAN_FACTORY_PROJEC
         Object.defineProperty(output, name, { value: visit((item as Record<string, unknown>)[key], depth + 1), enumerable: true, configurable: false, writable: false })
       }
       active.delete(item)
-      return Object.freeze(output)
+      Object.freeze(output); projected.add(output)
+      return output
     }
     return visit(value, 0) as T
   }
@@ -187,7 +194,9 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
   const ordered = ledger.entries.map((entry) => ({...entry,accounting:readFactoryCanonicalRecord(repository,entry.start.resourceAccountingRoot)})).sort((left,right) => Number(left.accounting.ordinal)-Number(right.accounting.ordinal))
   if (!same(input.terminalRoots,ordered.map((entry) => entry.terminal.root))) return fail("TERMINAL_ROOTS")
   const observations = {} as Record<FactorySourceSlot,VerifiedFactoryCellObservation[]>
-  const projectionPool = options.boundedImport ? createBoundedFactoryProjectionPool() : null
+  type Reload = { root: LabRoot; receiptRoot: LabRoot; input: Omit<VerifiedFactoryCellObservationInput,"records"|"maxTokenChargeBytes">; facts: Pick<VerifiedFactoryCellObservation["facts"],"allSoldierBrainActionsStone"|"nonStoneToStoneCount"> }
+  const reloads = {} as Record<FactorySourceSlot, Reload[]>
+  let metadataBytes = 0
   const receiptByWorkload = new Map<LabRoot,LabRoot>(), observedSupervision:LabRoot[] = []
   let firstStart:number|null = null, previousStartedAtMs = -1
   for (const [ordinal,entry] of ordered.entries()) {
@@ -229,9 +238,17 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
     const baseSlot = Object.hasOwn(FACTORY_CONTROL_BASES,cell.slot) ? FACTORY_CONTROL_BASES[cell.slot as FactoryControlSlot] : cell.slot
     const lineageEdges = [{label:"emitted-by",from:"strategy",to:fresh.ingestions[baseSlot].producerIdentity},...(baseSlot === cell.slot ? [] : [{label:"derived-from",from:"control",to:"strategy"}])]
     if (options.boundedImport) options.beforeAllocation?.(4 * 64 * 1024 * 1024)
-    const observation = createNumericObservationFromVerifiedCell({sourceUtf8:ingestion.sourceUtf8,cell:{key:`${cell.slot}:${cell.block}:${cell.initialInitiative}`,block:cell.block === "A"?"block-a":"block-b",candidateSide:cell.candidateSide,initialInitiative:cell.initialInitiative},lineageEdges,dependencyEdges:sourceAudit.dependencyEdges,records:retained.records,...(options.boundedImport ? { maxTokenChargeBytes: 64 * 1024 * 1024 } : {})})
-    const retainedObservation = projectionPool ? projectionPool.project(observation) : observation
-    observations[cell.slot] = [...(observations[cell.slot]??[]),retainedObservation]
+    const projectionInput: Omit<VerifiedFactoryCellObservationInput,"records"|"maxTokenChargeBytes"> = {sourceUtf8:ingestion.sourceUtf8,cell:{key:`${cell.slot}:${cell.block}:${cell.initialInitiative}`,block:cell.block === "A"?"block-a":"block-b",candidateSide:cell.candidateSide,initialInitiative:cell.initialInitiative},lineageEdges,dependencyEdges:sourceAudit.dependencyEdges}
+    const observation = createNumericObservationFromVerifiedCell({...projectionInput,records:retained.records,...(options.boundedImport ? { maxTokenChargeBytes: 64 * 1024 * 1024 } : {})})
+    if (options.boundedImport) {
+      const descriptor: Reload = { root: supervisionRoot, receiptRoot: retained.descriptor.receiptRoot, input: projectionInput, facts: { allSoldierBrainActionsStone: observation.facts.allSoldierBrainActionsStone, nonStoneToStoneCount: observation.facts.nonStoneToStoneCount } }
+      // Count metadata/array slots before retention. Full cell projections are
+      // validated, but never retained across this first validation pass.
+      metadataBytes += boundedFactoryProjectionCharge(descriptor, LEAN_FACTORY_PROJECTION_CEILING_BYTES - metadataBytes) + 256
+      if (metadataBytes > LEAN_FACTORY_PROJECTION_CEILING_BYTES) return fail("IMPORT_PROJECTION_LIMIT")
+      boundedFactoryProjectionCharge(observation, LEAN_FACTORY_PROJECTION_CEILING_BYTES - metadataBytes)
+      ;(reloads[cell.slot] ??= []).push(descriptor)
+    } else observations[cell.slot] = [...(observations[cell.slot]??[]),observation]
     receiptByWorkload.set(workload.root,retained.descriptor.receiptRoot)
   }
   if (!same(input.supervisionArtifactRoots,observedSupervision) || new Set(observedSupervision).size !== observedSupervision.length) return fail("SUPERVISION_ROOTS")
@@ -261,27 +278,65 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
     reasons.push("timebox_exhausted")
   }
   const merged = {} as Record<FactorySourceSlot,NumericCalibrationEvidence>
+  let completeSlots = 0
   for (const slot of fresh.allocation.sourceSlots) {
-    const values = observations[slot]??[]
-    if (values.length !== 4) { reasons.push(`slot:${slot}:incomplete`); continue }
+    const values = observations[slot]??[], count = options.boundedImport ? (reloads[slot]??[]).length : values.length
+    if (count !== 4) { reasons.push(`slot:${slot}:incomplete`); continue }
+    completeSlots++
+    if (options.boundedImport) continue
     const combine = (field:"legalInputSamples"|"chronicleSamples"|"matchupSamples") => Object.assign({},...values.map((value) => value.evidence[field])) as Record<string,readonly string[]>
     merged[slot] = {...values[0]!.evidence,legalInputSamples:combine("legalInputSamples"),chronicleSamples:combine("chronicleSamples"),matchupSamples:combine("matchupSamples")}
   }
   // No numeric fitting or base comparisons from incomplete or failed data.
   let controls:NumericControlTable|null = null, baseEdges:Record<string,NumericComparison> = {}, thresholdArtifactRoot:LabRoot|null = null
-  const comparison = (id:string) => { const [left,right] = id.split("/") as [FactorySourceSlot,FactorySourceSlot]; return compareNumericEvidence(merged[left],merged[right]) }
+  const hasDivergentStone = (left:NumericCalibrationEvidence,right:NumericCalibrationEvidence,xOnly:boolean) => Object.entries(left.legalInputSamples).some(([key,tokens]) => {
+    const other = right.legalInputSamples[key]
+    return other && (!xOnly || key.startsWith("block-a:") && tokens.includes("request.self.position.x=2")) && same(tokens.filter((token) => token.startsWith("request.")),other.filter((token) => token.startsWith("request."))) && !tokens.includes("decision.action.type=TURN_TO_STONE") && tokens.some((token) => token.startsWith("decision.action.type=")) && other.includes("decision.action.type=TURN_TO_STONE")
+  })
+  type PairResult = { score: Readonly<NumericComparison>; positiveEqual: boolean; stone: boolean; stoneX: boolean }
+  const pairResults = new Map<string,PairResult>()
+  const boundedPair = (id:string): PairResult => {
+    const cached = pairResults.get(id); if (cached) return cached
+    const [leftSlot,rightSlot] = id.split("/") as [FactorySourceSlot,FactorySourceSlot]
+    if (!([...CONTROL_IDS,...BASE_EDGES] as readonly string[]).includes(id) || reloads[leftSlot]?.length !== 4 || reloads[rightSlot]?.length !== 4) return fail("IMPORT_PROJECTION_LIMIT")
+    options.beforeAllocation?.(4 * 64 * 1024 * 1024)
+    const pool = createBoundedFactoryProjectionPool(LEAN_FACTORY_PROJECTION_CEILING_BYTES - metadataBytes)
+    const load = (slot:FactorySourceSlot): NumericCalibrationEvidence => {
+      const values = reloads[slot].map(descriptor => {
+        options.beforeAllocation?.(4 * 64 * 1024 * 1024)
+        const retained = readFactorySupervisionArtifactRecordsBounded(repository,descriptor.root,{maxBytes:64*1024*1024,maxRecords:50000,beforeAllocation:options.beforeAllocation})
+        if (retained.descriptor.receiptRoot !== descriptor.receiptRoot) return fail("RECEIPT_BINDING")
+        return pool.project(createNumericObservationFromVerifiedCell({...descriptor.input,records:retained.records,maxTokenChargeBytes:64*1024*1024}))
+      })
+      const combine = (field:"legalInputSamples"|"chronicleSamples"|"matchupSamples") => {
+        let keys = 0
+        for (const value of values) for (const key in value.evidence[field]) if (Object.hasOwn(value.evidence[field],key)) keys++
+        // Account transient spread/key/reference slots before Object.assign;
+        // project then charges retained maps and reuses known frozen vectors.
+        options.beforeAllocation?.(256 + keys * 64)
+        return Object.assign({},...values.map(value=>value.evidence[field])) as Record<string,readonly string[]>
+      }
+      return pool.project({...values[0]!.evidence,legalInputSamples:combine("legalInputSamples"),chronicleSamples:combine("chronicleSamples"),matchupSamples:combine("matchupSamples")})
+    }
+    const left = load(leftSlot), right = load(rightSlot)
+    options.beforeAllocation?.(4 * 64 * 1024 * 1024) // Numeric Set/union scratch.
+    const result: PairResult = { score:compareNumericEvidence(left,right),positiveEqual:equalFactoryObservationMaps(left.legalInputSamples,right.legalInputSamples)&&equalFactoryObservationMaps(left.chronicleSamples,right.chronicleSamples),stone:hasDivergentStone(left,right,false),stoneX:hasDivergentStone(left,right,true) }
+    metadataBytes += boundedFactoryProjectionCharge({id,result},LEAN_FACTORY_PROJECTION_CEILING_BYTES-metadataBytes) + 256
+    if (metadataBytes + pool.chargedBytes() > LEAN_FACTORY_PROJECTION_CEILING_BYTES) return fail("IMPORT_PROJECTION_LIMIT")
+    pairResults.set(id,result)
+    return result // No graph/record/pool reference escapes into the cache.
+  }
+  const comparison = (id:string) => { const [left,right] = id.split("/") as [FactorySourceSlot,FactorySourceSlot]; return options.boundedImport ? boundedPair(id).score : compareNumericEvidence(merged[left],merged[right]) }
   const groundTruth:string[] = []
-  if (Object.keys(merged).length === 12) {
+  if (completeSlots === 12) {
     for (const pair of ["S01/S02","S03/S04","S05/S06"]) {
       const [left,right] = pair.split("/") as [FactorySourceSlot,FactorySourceSlot]
-      if (!equalFactoryObservationMaps(merged[left].legalInputSamples,merged[right].legalInputSamples) || !equalFactoryObservationMaps(merged[left].chronicleSamples,merged[right].chronicleSamples)) groundTruth.push(`positive_behavior:${pair}`)
+      if (options.boundedImport ? !boundedPair(pair).positiveEqual : !equalFactoryObservationMaps(merged[left].legalInputSamples,merged[right].legalInputSamples) || !equalFactoryObservationMaps(merged[left].chronicleSamples,merged[right].chronicleSamples)) groundTruth.push(`positive_behavior:${pair}`)
     }
-    const divergentStone = (left:FactorySourceSlot,right:FactorySourceSlot,xOnly:boolean) => Object.entries(merged[left].legalInputSamples).some(([key,tokens]) => {
-      const other = merged[right].legalInputSamples[key]
-      return other && (!xOnly || key.startsWith("block-a:") && tokens.includes("request.self.position.x=2")) && same(tokens.filter((token) => token.startsWith("request.")),other.filter((token) => token.startsWith("request."))) && !tokens.includes("decision.action.type=TURN_TO_STONE") && tokens.some((token) => token.startsWith("decision.action.type=")) && other.includes("decision.action.type=TURN_TO_STONE")
-    })
+    const divergentStone = (left:FactorySourceSlot,right:FactorySourceSlot,xOnly:boolean) => options.boundedImport ? (xOnly ? boundedPair(`${left}/${right}`).stoneX : boundedPair(`${left}/${right}`).stone) : hasDivergentStone(merged[left],merged[right],xOnly)
+    const stoneFacts = options.boundedImport ? reloads.S08.map(value=>value.facts) : observations.S08.map(value=>value.facts)
     if (!divergentStone("S01","S07",true)) groundTruth.push("near_x2_override_not_observed")
-    if (!divergentStone("S01","S08",false) || !observations.S08.every((value) => value.facts.allSoldierBrainActionsStone === true) || observations.S08.reduce((sum,value) => sum+value.facts.nonStoneToStoneCount,0) < 1) groundTruth.push("latent_stoning_not_observed")
+    if (!divergentStone("S01","S08",false) || !stoneFacts.every(value => value.allSoldierBrainActionsStone === true) || stoneFacts.reduce((sum,value) => sum+value.nonStoneToStoneCount,0) < 1) groundTruth.push("latent_stoning_not_observed")
     if (!divergentStone("S11","S12",false)) groundTruth.push("guard_contrast_not_observed")
     controls = Object.fromEntries(CONTROL_IDS.map((id) => [id,comparison(id)])) as unknown as NumericControlTable
     const fit = freezeNumericCalibrationThreshold(controls)

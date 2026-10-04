@@ -40,6 +40,14 @@ describe("finite factory independence decision", () => {
     expect(changed.evidence.samples.one[0]).toBe("request.self.position.x=3")
     expect(first.evidence.samples.one[0]).toBe("request.self.position.x=2")
     expect(changed).not.toEqual(first)
+    const sharedBefore = pool.chargedBytes()
+    expect(pool.project(first)).toBe(first)
+    expect(pool.chargedBytes() - sharedBefore).toBe(192)
+    const alias = pool.project({ tokens: first.evidence.samples.one })
+    expect(alias.tokens).toBe(first.evidence.samples.one)
+    const unshared = pool.project({ tokens: [...first.evidence.samples.one] })
+    expect(unshared.tokens).toEqual(alias.tokens)
+    expect(unshared.tokens).not.toBe(alias.tokens)
   })
   it("charges pool overhead before growth and never discounts reference-heavy projections", () => {
     const bounded = createBoundedFactoryProjectionPool(1000)
@@ -75,7 +83,7 @@ describe("finite factory independence decision", () => {
     let cells = 0, reservations = 0
     const ordinary = verifyHistoricalFactoryAssessmentForLeague(fixture.repository, fixture.assessment.assessmentArtifactRoot!)
     const bounded = verifyHistoricalFactoryAssessmentForLeague(fixture.repository, fixture.assessment.assessmentArtifactRoot!, { boundedImport: true, beforeCell: () => { cells++ }, beforeAllocation: () => { reservations++ } })
-    expect(cells).toBe(48); expect(reservations).toBeGreaterThan(48)
+    expect(cells).toBe(48); expect(reservations).toBeGreaterThan(120)
     expect(bounded).toEqual(ordinary)
     expect(bounded).toMatchObject({ issued: false, assessmentRoot: fixture.assessment.assessmentRoot, thresholdArtifactRoot: fixture.assessment.thresholdArtifactRoot })
     const saved = fixture.read(fixture.assessment.assessmentArtifactRoot!)
@@ -98,6 +106,21 @@ describe("finite factory independence decision", () => {
     corrupt(chunk.bytesRoot as LabRoot)
     corrupt(fixture.slots.S01)
     corrupt(fixture.slots.S08)
+    // Tamper only after the complete first validation pass: pairwise reopening
+    // must authenticate the bytes again rather than trust saved descriptors.
+    const reopenPath = join(fixture.directory, `factory-artifact-${(chunk.bytesRoot as LabRoot).slice(7)}.bin`), reopenOriginal = readFileSync(reopenPath)
+    let firstPassCells = 0, lastCellReservations = 0, tamperedBetweenPasses = false
+    try {
+      expect(() => verifyHistoricalFactoryAssessmentForLeague(fixture.repository, fixture.assessment.assessmentArtifactRoot!, {
+        boundedImport: true, beforeCell: () => { firstPassCells++ }, beforeAllocation: bytes => {
+          if (firstPassCells === 48 && bytes === 4 * 64 * 1024 * 1024 && ++lastCellReservations === 2) {
+            const changed = Buffer.from(reopenOriginal); changed[0] = changed[0] === 123 ? 91 : 123
+            writeFileSync(reopenPath, changed); tamperedBetweenPasses = true
+          }
+        },
+      })).toThrow()
+      expect(firstPassCells).toBe(48); expect(tamperedBetweenPasses).toBe(true)
+    } finally { writeFileSync(reopenPath, reopenOriginal) }
     expect(verifyHistoricalFactoryAssessmentForLeague(fixture.repository, fixture.assessment.assessmentArtifactRoot!, { boundedImport: true }).assessmentRoot).toBe(fixture.assessment.assessmentRoot)
   }, 180000)
   it("charges the complete 48-cell projection set without retaining raw streams", () => {
