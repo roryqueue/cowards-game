@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: executing
-stopped_at: Plan265-15 final bounded pairwise correction; independent review and narrow verification before one final pilot
+status: blocked
+stopped_at: Final lean pilot and unique retained verifier closed feasibility_not_established; bounded stop reached, audit/reporting only
 last_updated: "2026-10-03"
 last_activity: 2026-10-03
-last_activity_desc: Source005650cd/manifestb4245f41 passes18synthetic48parity and49accountingtests; carry1555387ms/zerocharges409600bytes; one finalv6 pilot after review gates
+last_activity_desc: Finalv6 pilot1charged0success system/supervisorfailure; uniqueverifierclosed cumulative2168630ms; no furthercorrectionroutes or baseline/freeze/formation
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,12 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved lean experiment reset, 2026-10-03
+
+CURRENT VERIFIED BOUNDED TERMINAL: finalv6root91074 andONEordinaryretainedverifierBOTH CLOSED. Uniquecheckreturnedfeasibility_not_established/tiernone,1charged/0successful/7unused; compactsystem_failure/SUPERVISOR_FAILURE/outcomenull/cleanupcomplete/twoinvocations/0transitions-events. Underlyingcauseunknown. Cumulative2168630ms includingallpriorcarry+uniqueverifierinterval; scratchhigh1501970432bytes/physicalhigh1502416896bytes, pastpeakdiskRSSunknown. HEAD/source/request/allocation/result/entry/terminal unchangedthroughcheck; sourceANDHEAD hold RELEASED. CheckedFINALcorrectionstop reached: NO furtherpilot/correctionroute/Match. SafeSUMMARY/UAT/verification/milestoneaudit only, commitpushafterholdrelease. Phase265andmilestoneINCOMPLETE;265-16/266freeze/formation/holdoutunstarted, no200/128tier/LEAGcredit/archive-success/tag. Newproduct/resource/experiment revision wouldbe genuinelyhuman-only, not repeatliteral. Allconsumedhistoryimmutable/no reuse/refund/reset/recredit; preserve15GB/8h/300Match/rules/runtime/privacybounds. Earlierpending/active/prepared snapshots history.
+
+FINAL V6 TERMINAL, UNIQUE RETAINED CHECK ACTIVE: root91074 CLOSEDexit0/child_exited,parent37210/child37239absent. Actualresult raw686a0e51 exists; producerreportsonechargedcell/zerosuccess/max6258ms, evidenceae82de48, resultelapsed2165100ms; terminalraw2a38ef91 elapsed611074ms/physical516096. Exit0 is NOTsuccessfulpilot/LEAGcredit. ONEordinaryretainedverify-retained reader active againstactualv7request/result/head, no fabricatedhead/terminal-onlysubstitution. HOLDsourceANDHEAD73b97a3d untilactualcheckclosure; no sourceedits/commits/heavywork/retry. ApprovedFINALpilot nonfeasibility stopsboundedexperiment honestlyfeasibility_not_established/no furthercorrectionroutes; downstreambaseline/freeze/formation/holdout remainunstarted. Allconsumedv6priorimmutable; precisefailure/accountingdisposition awaitsuniqueverifier. Earlieractive/prepared snapshots history.
+
+ACTUAL UNIQUE FINAL V6 ENTRY ACTIVE: root91074,parent37210/child37239, entrywall1791074955455. Heldcommitted/pushedHEAD73b97a3d390a66300713ec9a91fb3829b75e8173, reviewedsource005650cd/manifestb4245f41/863, actualv7request9c9c2d50 andNEWallocationedb27fbe/rawaa766ee3. Initialchargejournalempty; entryNOTactualimport/capacity/Matchproof. HOLD sourceANDHEAD throughactualterminal+ONEappropriateuniqueindependentverifier; no duplicateentry/helper/reader/heavywork/edits/commits. STATEhandoff staysuncommittedduringhold. Actualresult→ordinaryverify-retainedonce; absentresult→terminal-onlyonce/no fabricatedhead. Allv5priorconsumedimmutable; carries1555387ms/zerocharge409600disk/pastpeakunknown,sameallcaps. FINALcorrectedpilot nonfeasibility→honestterminalfeasibility_not_established/no furthercorrectionroute. Baseline/freeze beforeformation, holdoutunopened/no public-counted-production. Earlierprepared/source/closed snapshots history.
 
 LATEST V6 PREPARATION CLOSED: unique93139 exit0/preparation_only after R7clean, narrowverification-v4 andv7data-onlyrequestreview-v6PASS. Fixedsource005650cd/manifestb4245f41/863, requestraw9c9c2d50. NEWallocationedb27fbe/rawaa766ee3, real0700v6store has allocation+emptyledger/timeONLY/eightplannedslots. Carries1555387ms/zerocharges/409600disk/pastpeakunknown. No actualimport/capacity/Matchcredit. Commit/push exactNEWallocation+gates beforeONE MAINentry; hold sourceANDHEAD throughactualterminal+ONEappropriateunique verifier. This is theFINALcorrectedpilot: nonfeasibility→honestterminal/no furthercorrectionroute. Sameallcaps/currentrules/freeze-beforeformation/holdoutunopened/no public-counted-production; priorconsumedv5historyimmutable. Earlierfixedsource/closed/active snapshots history.
 

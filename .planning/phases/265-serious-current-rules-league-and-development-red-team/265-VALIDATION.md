@@ -5,13 +5,19 @@ status: partial
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
-updated: 2026-10-02
-source_reviewed: 9ffde3ffafd23c6508766e15c05b5004c0fe030f
-source_gate: host-receipt-v1-68733-complete-all8-pass-728league-22tactical
-empirical_validation: v11-consumed-process-invalid-four-charged-unique-retained-verifier72861-complete
+updated: 2026-10-04
+source_reviewed: 005650cdae79673dc4321c4c0fbabd63c1ec023a
+source_gate: lean-final-source-review-v7-verification-v4-67-focused-tests-types-shell-boundaries-pass
+empirical_validation: lean-v6-one-charged-zero-success-unique-retained-reader-closed-feasibility-not-established
 ---
 
 # Phase265 — Validation Strategy
+
+## Current bounded terminal — final lean v6
+
+Reviewed source005650cd passed67focused tests (18 importer +49accounting), types/shell and three1364-file boundary scans with zero violations, independently reviewed clean inREVIEW-v7 and source-verified inVERIFICATION-v4. These are source-only checks.
+
+Actual final pilot and its ONE retained reader are closed:1charged/0success/7unused, system/supervisor failure, cleanup complete, feasibility_not_established; no full/reduced tier or baseline/freeze. Whole-phase Nyquist remains partial/false and LEAG-01–09 receive no credit. Successful Match/replay realism and downstream empirical coverage are missing. The checked final-correction stop precludes another pilot or correction route. See265-LEAN-TERMINAL-VERIFICATION.md and the current distinctly named milestone/integration audits. Historical headers/results below remain snapshots, not active admission.
 
 ## Active approved lean replacement — 2026-10-03
 
