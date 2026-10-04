@@ -6,6 +6,11 @@ import { buildFeasibilityCorpus } from "../feasibility-protocol.js"
 import { describe, expect, it } from "vitest"
 
 const root = (value: string): LabRoot => `sha256:${createHash("sha256").update(value).digest("hex")}` as LabRoot
+const reverseObjectKeys = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(reverseObjectKeys)
+  if (value !== null && typeof value === "object") return Object.fromEntries(Object.entries(value).reverse().map(([key, child]) => [key, reverseObjectKeys(child)]))
+  return value
+}
 const soldier = (id: string, ownerPlayerId: string, x: number, y: number) => ({ id, ownerPlayerId, status: "ACTIVE" as const, position: { x, y }, facing: "RIGHT" as const, lastSuccessfulMoveDirection: null, soldierMemory: {} })
 const legalInput = (enemyX = 4): SoldierBrainInputV119 => SoldierBrainInputV119Schema.parse({
   self: soldier("self:a", "self", 1, 1),
@@ -47,6 +52,19 @@ describe("bounded lean cold training", () => {
     expect(ordinary.candidates[0]!.sourceRoot).not.toBe(shifted.candidates[0]!.sourceRoot)
   })
 
+  it("accepts schema-valid reordered object keys while preserving array order", () => {
+    const cold = input("order")
+    const reorderedCorpus = cold.frozenTacticalInputs.map((value, index) => index === 0 ? reverseObjectKeys(value) as SoldierBrainInputV119 : value)
+    expect(deriveLeanColdCorpusRoot(reorderedCorpus)).toBe(cold.corpusRoot)
+    const reorderedExamples = cold.trainingExamples.map((example, index) => index === 0 ? { ...example, input: reverseObjectKeys(example.input) as SoldierBrainInputV119 } : example)
+    const reorderedReceipt = { ...cold.teacherSearchReceipts[0] as Record<string, unknown>, selectedLegalTargets: (cold.teacherSearchReceipts[0] as { selectedLegalTargets: readonly unknown[] }).selectedLegalTargets.map((target, index) => index === 0 ? reverseObjectKeys(target) : target) }
+    const result = trainLeanInitialCandidates({ ...cold, frozenTacticalInputs: reorderedCorpus, trainingExamples: reorderedExamples, teacherSearchReceipts: [reorderedReceipt] }, builders)
+    expect(result.root).toBe(trainLeanInitialCandidates(cold, builders).root)
+
+    const reorderedArray = cold.frozenTacticalInputs.map((value, index) => index === 0 ? { ...value, awarenessGrid: { cells: [...value.awarenessGrid.cells].reverse() } } : value)
+    expect(deriveLeanColdCorpusRoot(reorderedArray)).not.toBe(cold.corpusRoot)
+  })
+
   it("uses the exact nonfungible per-arm vector and preserves weak attempts rather than replacing them", () => {
     expect(LEAN_INITIAL_TRAINING_VECTOR).toEqual({ tacticalEvaluations: 64, teacherSearchNodes: 64, distillationExamples: 64, responseNodes: 0, totalChannelOperations: 192 })
     expect(LEAN_TRAINING_VECTOR).toEqual({ tacticalEvaluations: 64, teacherSearchNodes: 64, distillationExamples: 64, responseNodes: 128, totalChannelOperations: 320 })
@@ -73,15 +91,25 @@ describe("bounded lean cold training", () => {
     const responseExamples = examples("response", 1, 8)
     const plannerCorpus = buildFeasibilityCorpus().selectActivations
     const responsePlannerNodes = Array.from({ length: 8 }, (_, index) => ({ input: plannerCorpus[index % plannerCorpus.length]!.input, trainingMatchRoot: responseExamples[index * 8]!.trainingMatchRoot }))
-    const response = trainLeanResponse({ ...cold, initial, responseExamples, responsePlannerNodes, targetRoots: { mixture: root("frozen-mixture"), strongestPure: root("strongest-pure") } })
+    const retainedWork: unknown[] = []
+    const response = trainLeanResponse({ ...cold, initial, responseExamples, responsePlannerNodes, targetRoots: { mixture: root("frozen-mixture"), strongestPure: root("strongest-pure") } }, (work) => retainedWork.push(work))
     expect(response.candidates).toHaveLength(3)
     expect(response.candidates[2]!.mechanism).toBe("response")
     expect(response.candidates[2]!.trainingMatchRoots).toHaveLength(8)
     expect(response.stage).toBe("response_complete")
     expect(response.vector).toEqual(LEAN_TRAINING_VECTOR)
+    expect(retainedWork).toHaveLength(1)
+    const work = retainedWork[0] as { responseNodeCap: number; actualAssignmentNodes: number; plannerEvidence: readonly { actualNodes: number }[] }
+    expect(work.responseNodeCap).toBe(128)
+    expect(work.actualAssignmentNodes).toBe(work.plannerEvidence.reduce((sum, row) => sum + row.actualNodes, 0))
+    expect(work.actualAssignmentNodes).toBeLessThanOrEqual(128)
+    expect(response.candidates[2]!.decisionRoot).toBe(labRoot("lean-training-decision-v1", retainedWork[0]))
     const responseDecision = JSON.parse(JSON.stringify(response.candidates[2]!.decisionRoot))
     expect(responseDecision).toMatch(/^sha256:/u)
     expect(auditLeanTrainingVector(response).valid).toBe(true)
+    const reorderedPlannerNodes = responsePlannerNodes.map((node, index) => index === 0 ? { ...node, input: reverseObjectKeys(node.input) as typeof node.input } : node)
+    const reorderedResponse = trainLeanResponse({ ...cold, initial, responseExamples: responseExamples.map((example, index) => index === 0 ? { ...example, input: reverseObjectKeys(example.input) as SoldierBrainInputV119 } : example), responsePlannerNodes: reorderedPlannerNodes, targetRoots: { mixture: root("frozen-mixture"), strongestPure: root("strongest-pure") } })
+    expect(reorderedResponse.root).toBe(response.root)
     const reusedRoots = initial.candidates.flatMap((candidate) => candidate.trainingMatchRoots).slice(0, 8)
     const reusedExamples = responseExamples.map((example, index) => ({ ...example, trainingMatchRoot: reusedRoots[Math.floor(index / 8)]!, trainingHalfPoints: (Math.floor(index / 8) % 3) as 0 | 1 | 2 }))
     const reusedPlannerNodes = responsePlannerNodes.map((node, index) => ({ ...node, trainingMatchRoot: reusedRoots[index]! }))

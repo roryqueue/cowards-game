@@ -57,6 +57,17 @@ export interface LeanResponseInput extends LeanColdTrainingInput {
   readonly responsePlannerNodes: readonly Readonly<{ input: StrategyInputV119; trainingMatchRoot: LabRoot }>[]
   readonly targetRoots: Readonly<{ mixture: LabRoot; strongestPure: LabRoot }>
 }
+export interface LeanResponseWork {
+  readonly targetRoots: Readonly<{ mixture: LabRoot; strongestPure: LabRoot }>
+  readonly plannerEvidence: readonly Readonly<Record<string, unknown>>[]
+  readonly responseNodeCap: 128
+  readonly actualAssignmentNodes: number
+  readonly selectedPlannerBudget: number
+  readonly matchOutcomes: readonly Readonly<{ trainingMatchRoot: LabRoot; halfPoints: number; assignedNodes: number }>[]
+  readonly realizedTrainingHalfPoints: number
+  readonly commonSourceRoot: LabRoot
+  readonly plannerNodeRoots: readonly LabRoot[]
+}
 export interface LeanMechanismBuild {
   readonly source: string
   readonly decision: unknown
@@ -75,12 +86,13 @@ const ROOT = /^sha256:[0-9a-f]{64}$/u
 const fail = (code: string): never => { throw new TypeError(`LEAN_TRAINING_${code}`) }
 const isRoot = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
 const exactKeys = (value: unknown, keys: readonly string[]): boolean => value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join("\0") === [...keys].sort().join("\0")
+const sameCanonicalValue = (left: unknown, right: unknown): boolean => labRoot("lean-canonical-value-equality-v1", left) === labRoot("lean-canonical-value-equality-v1", right)
 export const deriveLeanColdCorpusRoot = (inputs: readonly SoldierBrainInputV119[]): LabRoot => {
   if (!Array.isArray(inputs) || inputs.length !== 64) return fail("COLD_CORPUS_COUNT")
   const roots = inputs.map((raw) => {
     let parsed: SoldierBrainInputV119
     try { parsed = SoldierBrainInputV119Schema.parse(raw) as SoldierBrainInputV119 } catch { return fail("COLD_CORPUS_INPUT") }
-    if (JSON.stringify(parsed) !== JSON.stringify(raw)) return fail("COLD_CORPUS_CANONICAL")
+    if (!sameCanonicalValue(parsed, raw)) return fail("COLD_CORPUS_CANONICAL")
     return labRoot("runtime-input", parsed)
   })
   // Repeated observations still incur distinct counted scorer calls; the root
@@ -102,7 +114,7 @@ const validateExamples = (examples: readonly LeanLegalExample[], expectedMatches
     if (!exactKeys(example, ["input", "trainingHalfPoints", "trainingMatchRoot"]) || !isRoot(example.trainingMatchRoot) || ![0, 1, 2].includes(example.trainingHalfPoints)) return fail("MATCH_RECORD")
     let input: SoldierBrainInputV119
     try { input = SoldierBrainInputV119Schema.parse(example.input) as SoldierBrainInputV119 } catch { return fail("LEGAL_INPUT") }
-    if (JSON.stringify(input) !== JSON.stringify(example.input)) return fail("LEGAL_INPUT_CANONICAL")
+    if (!sameCanonicalValue(input, example.input)) return fail("LEGAL_INPUT_CANONICAL")
     roots.add(example.trainingMatchRoot)
     const priorScore = scores.get(example.trainingMatchRoot)
     if (priorScore !== undefined && priorScore !== example.trainingHalfPoints) return fail("MATCH_SCORE_BINDING")
@@ -139,12 +151,12 @@ const validateTeacherReceipts = (receipts: readonly unknown[]): readonly Readonl
         try {
           const input = SoldierBrainInputV119Schema.parse(row.input)
           ActionSchema.parse(row.target)
-          if (JSON.stringify(input) !== JSON.stringify(row.input)) return fail("TEACHER_TARGET")
+          if (!sameCanonicalValue(input, row.input)) return fail("TEACHER_TARGET")
         } catch { return fail("TEACHER_TARGET") }
       } else if (row.kind === "activation" && Object.keys(row).sort().join("\0") === ["input", "kind", "target"].sort().join("\0")) {
         try {
           const input = StrategyInputV119Schema.parse(row.input)
-          if (!new Set(["press", "screen"]).has(String(row.target)) || JSON.stringify(input) !== JSON.stringify(row.input)) return fail("TEACHER_TARGET")
+          if (!new Set(["press", "screen"]).has(String(row.target)) || !sameCanonicalValue(input, row.input)) return fail("TEACHER_TARGET")
         } catch { return fail("TEACHER_TARGET") }
       } else return fail("TEACHER_TARGET")
     }
@@ -191,7 +203,7 @@ export const trainLeanInitialCandidates = (input: LeanColdTrainingInput, builder
   const frozenTacticalInputs = input.frozenTacticalInputs.map((raw) => {
     let parsed: SoldierBrainInputV119
     try { parsed = SoldierBrainInputV119Schema.parse(raw) as SoldierBrainInputV119 } catch { return fail("FROZEN_TACTICAL_INPUTS") }
-    if (JSON.stringify(parsed) !== JSON.stringify(raw)) return fail("FROZEN_TACTICAL_INPUTS_CANONICAL")
+    if (!sameCanonicalValue(parsed, raw)) return fail("FROZEN_TACTICAL_INPUTS_CANONICAL")
     return parsed
   })
   if (deriveLeanColdCorpusRoot(frozenTacticalInputs) !== input.corpusRoot) return fail("COLD_CORPUS_ROOT")
@@ -213,9 +225,9 @@ export const trainLeanInitialCandidates = (input: LeanColdTrainingInput, builder
 }
 
 /** One response attempt. Source choices depend on legal response examples, not target labels or hidden state. */
-export const trainLeanResponse = (input: LeanResponseInput): LeanColdTrainingManifest => {
+export const trainLeanResponse = (input: LeanResponseInput, onWork?: (work: LeanResponseWork) => void): LeanColdTrainingManifest => {
   if (!exactKeys(input, ["coldRoot", "corpusRoot", "armRoot", "trainingExamples", "frozenTacticalInputs", "teacherSearchReceipts", "commonSourceRoot", "initial", "responseExamples", "responsePlannerNodes", "targetRoots", ...(input?.predecessorRoot === undefined ? [] : ["predecessorRoot"])]) ||
-      !exactKeys(input.initial, ["schemaVersion", "stage", "coldRoot", "corpusRoot", "armRoot", "candidates", "vector", "root"]) || !exactKeys(input.targetRoots, ["mixture", "strongestPure"])) return fail("RESPONSE_INPUT_SCHEMA")
+      !exactKeys(input.initial, ["schemaVersion", "stage", "coldRoot", "corpusRoot", "armRoot", "candidates", "vector", "root"]) || !exactKeys(input.targetRoots, ["mixture", "strongestPure"]) || (onWork !== undefined && typeof onWork !== "function")) return fail("RESPONSE_INPUT_SCHEMA")
   if (input.initial.stage !== "initial" || !auditLeanTrainingVector(input.initial).valid || input.initial.coldRoot !== input.coldRoot || input.initial.corpusRoot !== input.corpusRoot || deriveLeanColdCorpusRoot(input.frozenTacticalInputs) !== input.corpusRoot || input.initial.armRoot !== input.armRoot || input.initial.candidates.length !== 2 || new Set(input.initial.candidates.map((candidate) => candidate.mechanism)).size !== 2 || !isRoot(input.targetRoots?.mixture) || !isRoot(input.targetRoots?.strongestPure)) return fail("INITIAL_JOIN")
   const examples = validateExamples(input.responseExamples, 8)
   const initialMatchRoots = new Set(input.initial.candidates.flatMap((candidate) => candidate.trainingMatchRoots))
@@ -236,7 +248,7 @@ export const trainLeanResponse = (input: LeanResponseInput): LeanColdTrainingMan
   for (const [ordinal, node] of [...input.responsePlannerNodes].sort((a, b) => a.trainingMatchRoot.localeCompare(b.trainingMatchRoot)).entries()) {
     let legalInput: StrategyInputV119
     try { legalInput = StrategyInputV119Schema.parse(node.input) } catch { return fail("RESPONSE_LEGAL_INPUT") }
-    if (JSON.stringify(legalInput) !== JSON.stringify(node.input)) return fail("RESPONSE_LEGAL_INPUT_CANONICAL")
+    if (!sameCanonicalValue(legalInput, node.input)) return fail("RESPONSE_LEGAL_INPUT_CANONICAL")
     const allocation = allocationByRoot.get(node.trainingMatchRoot)!
     const output = selectPlannerActivations(legalInput, { maxExpansions: allocation })
     const actualNodes = Number((output.strategyMemory as { planner?: { expansions?: unknown } } | undefined)?.planner?.expansions)
@@ -256,7 +268,9 @@ export const trainLeanResponse = (input: LeanResponseInput): LeanColdTrainingMan
   const trainingMatchRoots = [...new Set(examples.map((example) => example.trainingMatchRoot))].sort()
   const score = [...matchScores.values()].reduce<number>((sum, points) => sum + points, 0)
   const disposition: LeanCandidateDisposition = score > 0 ? "accepted_for_evaluation" : "weak_preserved"
-  const response = buildCandidate("response", { source, decision: { targetRoots: input.targetRoots, plannerNodeRoots: nodeRoots, plannerEvidence, responseNodeCap: 128, actualAssignmentNodes: assignments, selectedPlannerBudget: selectedBudget, matchOutcomes: allocations.map((item) => ({ trainingMatchRoot: item.matchRoot, halfPoints: item.points, assignedNodes: item.allocation })), realizedTrainingHalfPoints: score, commonSourceRoot: input.commonSourceRoot }, evaluatedLegalInputRoots: [], teacherSearchNodeRoots: [], distillationExampleRoots: [], responsePlannerNodeRoots: nodeRoots }, trainingMatchRoots, disposition)
+  const responseWork: LeanResponseWork = deepFreeze({ targetRoots: input.targetRoots, plannerEvidence, responseNodeCap: 128, actualAssignmentNodes: assignments, selectedPlannerBudget: selectedBudget, matchOutcomes: allocations.map((item) => ({ trainingMatchRoot: item.matchRoot, halfPoints: item.points, assignedNodes: item.allocation })), realizedTrainingHalfPoints: score, commonSourceRoot: input.commonSourceRoot, plannerNodeRoots: nodeRoots })
+  onWork?.(responseWork)
+  const response = buildCandidate("response", { source, decision: responseWork, evaluatedLegalInputRoots: [], teacherSearchNodeRoots: [], distillationExampleRoots: [], responsePlannerNodeRoots: nodeRoots }, trainingMatchRoots, disposition)
   const combined = finish(input, [...input.initial.candidates.map((candidate) => ({ ...candidate })), response])
   return combined
 }
