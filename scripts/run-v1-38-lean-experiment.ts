@@ -14,19 +14,22 @@ import { createFactoryRepository } from "../packages/strategy-lab/src/factory/re
 import { readFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
 import { readCandidateClosure } from "../packages/strategy-lab/src/league/connected-runner.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../packages/strategy-lab/src/runtime-bridge.js"
-import { writeLeanAll, createLeanAllocationV6, createLeanLedger, openLeanLedger, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, measureLeanPhysicalBytes, readLeanLedger, readLeanCumulativeAccounting, stopLeanLedger, verifyLeanEvidence, chooseLeanTier, leanBytesRoot, leanCanonicalBytes, LEAN_CAPS, LEAN_V6_REQUEST, publishLeanChildEntry, readLeanChildEntry, deriveLeanChildTerminal, publishLeanChildTerminal, readLeanChildTerminal, cumulativeLeanPhysicalBytes, type LeanChildEntryV2, type LeanExperimentLedger, type LeanCompactMatchRecord, type LeanCharge } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { writeLeanAll, createLeanAllocationV7, createLeanLedger, openLeanLedger, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, measureLeanPhysicalBytes, readLeanLedger, readLeanCumulativeAccounting, stopLeanLedger, verifyLeanEvidence, chooseLeanTier, leanBytesRoot, leanCanonicalBytes, LEAN_CAPS, LEAN_V7_REQUEST, publishLeanChildEntry, readLeanChildEntry, deriveLeanChildTerminal, publishLeanChildTerminal, readLeanChildTerminal, cumulativeLeanPhysicalBytes, type LeanChildEntryV2, type LeanExperimentLedger, type LeanCompactMatchRecord, type LeanCharge } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { readLeanPilotInitialCandidates, observeLeagueAvailableMemoryBytes, type LeagueInitialCandidateSelection } from "./run-v1-38-serious-league.js"
 import { factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
 import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-runtime.js"
+import { getFactoryPrivateDiagnostic } from "./lib/v1-38-factory-supervised-runtime.js"
+import { isLeanPrivateFailureOrigin } from "./lib/v1-38-lean-container-match-session.js"
 import { issueLeanRuntimeAuthority } from "./lib/v1-38-lean-experiment-authority.js"
 import { prospectiveLeagueRuntimeBinding } from "./lib/v1-38-league-prospective-lifetime.js"
 import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, currentLeanElapsedMs, LEAN_EXTERNAL_SCRATCH_RESERVE, assertLeanPublicationCapacity, boundLeanReplayFrame } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanChildFailureReceipt, publishChildTerminalAfterOptionalReceipt, resolveLeanChildCliTerminal, type LeanChildFailureReceipt } from "./lib/v1-38-lean-child-cli-terminal.js"
+import { SUBPROCESS_SYSTEM_FAILURE_CODES } from "../packages/runtime-js/src/subprocess-ipc.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_PILOT_${code}`) }
-const STORE = resolve(".strategy-lab/lean-experiment-20261003-v6")
-const ALLOCATION = ".planning/artifacts/v1.38-lean-pilot-allocation-v6.json"
-const LEAN_TEMP = resolve(".strategy-lab/lean-experiment-20261003-v6-tmp")
+const STORE = resolve(".strategy-lab/lean-experiment-20261004-v7")
+const ALLOCATION = ".planning/artifacts/v1.38-lean-pilot-allocation-v7.json"
+const LEAN_TEMP = resolve(".strategy-lab/lean-experiment-20261004-v7-tmp")
 /** These controls must be inherited before the tsx loader runs: checking them
  * inside the route alone cannot retroactively undo a loader-cache/core write. */
 export const assertLeanProspectiveWritableScope = (scope: { cacheDisabled?: string; compileDisabled?: string; nodeOptions?: string; compileCache?: string; warningRedirect?: string; coverage?: string; tempDirectory?: string }, coreSoftLimit: string): void => {
@@ -52,7 +55,7 @@ export const parseLeanCommand = (args: readonly string[]) => {
 }
 const readRequest = (path: string): Request => {
   const p = resolve(path)
-  if (p !== resolve(LEAN_V6_REQUEST)) return fail("REQUEST")
+  if (p !== resolve(LEAN_V7_REQUEST)) return fail("REQUEST")
   const s = lstatSync(p)
   if (s.isSymbolicLink() || !s.isFile() || s.size > 262144 || realpathSync(p) !== p) return fail("REQUEST")
   const r = JSON.parse(readFileSync(p, "utf8")) as Request
@@ -152,7 +155,7 @@ export const prepareLeanPilot = (requestPath: string) => {
     if (!root(publication?.candidate?.root)) return fail("CANDIDATE_HEADER")
     return publication.candidate.root
   })
-  const allocation = createLeanAllocationV6({ seed: request.seed, sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, candidateRoots })
+  const allocation = createLeanAllocationV7({ seed: request.seed, sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, candidateRoots })
   const ledger = createLeanLedger(STORE, allocation)
   exclusive(resolve(ALLOCATION), allocation)
   return { issued: false, evidenceClass: "preparation_only", allocationRoot: ledger.allocation.root, allocationPath: ALLOCATION, store: STORE }
@@ -162,7 +165,7 @@ const redactReplay = (value: unknown): unknown => {
   if (value !== null && typeof value === "object") return Object.fromEntries(Object.entries(value).filter(([key]) => !/(?:source|memory|objective|input|output|stdio|prompt)/iu.test(key)).map(([key, v]) => [key, redactReplay(v)]))
   return value
 }
-const compactExecution = (e: LabMatchExecution, elapsedMs: number, cleanupComplete: boolean, bottom: string): LeanCompactMatchRecord => {
+export const compactExecution = (e: LabMatchExecution, elapsedMs: number, cleanupComplete: boolean, bottom: string): LeanCompactMatchRecord => {
   boundLeanReplayFrame(e)
   const system = e.kind === "failure" || e.accounting.some(a => !a.result.ok && "systemFailure" in a.result)
   const player = e.accounting.some(a => !a.result.ok && !("systemFailure" in a.result))
@@ -170,7 +173,50 @@ const compactExecution = (e: LabMatchExecution, elapsedMs: number, cleanupComple
   const outcome = e.kind === "completed" && classification === "success" ? e.result.state.outcome : null
   return { classification, code: !cleanupComplete ? "CLEANUP" : system ? "SUPERVISOR_FAILURE" : player ? "PLAYER_VIOLATION" : "OK", outcome: outcome?.type === "DRAW" ? "DRAW" : outcome?.type === "WIN" ? outcome.winnerPlayerId === bottom ? "bottom" : "top" : null, elapsedMs, cleanupComplete, invocationCount: e.accounting.length, accountingRoot: labRoot("lean-accounting-v1", deriveFactoryOrderedRecordDescriptor("lean-accounting", e.accounting.map(a => ({ identity: a.identity, invocationRoot: a.invocationRoot, requestId: a.requestId, method: a.method, inputRoot: a.inputRoot, ordinal: a.ordinal, charged: a.charged, completed: a.completed, outputBytes: a.outputBytes, classification: a.result.ok ? "success" : "systemFailure" in a.result ? "system_failure" : "player_violation" })))), executionRoot: labRoot("lean-execution-v1", deriveFactoryExecutionCommitment(e)), telemetry: { transitions: e.transitions.length, events: e.kind === "completed" ? e.result.events.length : 0 } }
 }
+type LeanSupervisorDiagnosticStage = "provider_invoke" | "provider_verification" | "native_response" | "cleanup" | "unknown"
+type LeanSupervisorDiagnosticReason = "threw" | "rejected" | "incomplete" | "system_failure" | "stream_exchange" | "outer_frame" | "inner_response" | "executor" | "unknown"
+interface LeanSupervisorDiagnostic {
+  readonly schemaVersion: "lean-supervisor-diagnostic-v1"; readonly chargeRoot: LabRoot
+  readonly stage: LeanSupervisorDiagnosticStage; readonly reason: LeanSupervisorDiagnosticReason
+  readonly code: typeof SUBPROCESS_SYSTEM_FAILURE_CODES[number] | null
+  readonly method: "selectActivations" | "soldierBrain" | null; readonly ordinal: number | null
+}
+interface LeanSupervisorObservation { readonly stage: LeanSupervisorDiagnosticStage; readonly reason: LeanSupervisorDiagnosticReason; readonly code?: unknown; readonly method?: unknown; readonly ordinal?: unknown }
+const isRuntimeFailureCode = (value: unknown): value is typeof SUBPROCESS_SYSTEM_FAILURE_CODES[number] => typeof value === "string" && (SUBPROCESS_SYSTEM_FAILURE_CODES as readonly string[]).includes(value)
+/** Exact, privacy-safe v7 sidecar projection. Unknown inputs never become strings in the artifact. */
+export const deriveLeanSupervisorDiagnostic = (chargeRoot: LabRoot, execution: LabMatchExecution, observed?: LeanSupervisorObservation): LeanSupervisorDiagnostic => {
+  const account = execution.accounting.find(entry => !entry.result.ok && "systemFailure" in entry.result)
+  const fallback: LeanSupervisorObservation | undefined = account ? { stage: "native_response", reason: "system_failure", code: account.result.ok || !("systemFailure" in account.result) ? undefined : account.result.systemFailure.code, method: account.method, ordinal: account.ordinal } : undefined
+  const source = observed ?? fallback
+  const stages: readonly LeanSupervisorDiagnosticStage[] = ["provider_invoke", "provider_verification", "native_response", "cleanup", "unknown"]
+  const reasons: readonly LeanSupervisorDiagnosticReason[] = ["threw", "rejected", "incomplete", "system_failure", "stream_exchange", "outer_frame", "inner_response", "executor", "unknown"]
+  const stage = source && stages.includes(source.stage) ? source.stage : "unknown"
+  const reason = source && reasons.includes(source.reason) ? source.reason : "unknown"
+  const code = source && isRuntimeFailureCode(source.code) ? source.code : null
+  const method = source?.method === "selectActivations" || source?.method === "soldierBrain" ? source.method : null
+  const ordinal = Number.isSafeInteger(source?.ordinal) && Number(source?.ordinal) >= 0 && Number(source?.ordinal) < 24800 ? Number(source?.ordinal) : null
+  return { schemaVersion: "lean-supervisor-diagnostic-v1", chargeRoot, stage, reason, code, method, ordinal }
+}
+/** New-route diagnostics are authenticated separately, never inserted into old
+ * compact records. Missing, extra, noncanonical or unlisted values fail closed. */
+export const readLeanDiagnostics = (directory: string, records: readonly { chargeRoot: LabRoot | null; terminal: { record: LeanCompactMatchRecord } | null }[]) => {
+  const expected = records.filter(r => r.terminal && (r.terminal.record.classification !== "success" || !r.terminal.record.cleanupComplete))
+  const names = expected.map(r => `diagnostic-${r.chargeRoot?.slice(7)}.json`).sort()
+  const actual = readdirSync(directory).filter(name => name.startsWith("diagnostic-")).sort()
+  if (JSON.stringify(actual) !== JSON.stringify(names)) return fail("DIAGNOSTIC")
+  const diagnostics = expected.map(record => {
+    if (!root(record.chargeRoot)) return fail("DIAGNOSTIC")
+    const bytes = readLeanSafeFile(join(directory, `diagnostic-${record.chargeRoot.slice(7)}.json`), 2048)
+    const value = JSON.parse(Buffer.from(bytes).toString("utf8")) as LeanSupervisorDiagnostic
+    if (!exactLabKeys(value, ["schemaVersion", "chargeRoot", "stage", "reason", "code", "method", "ordinal"]) || value.schemaVersion !== "lean-supervisor-diagnostic-v1" || value.chargeRoot !== record.chargeRoot) return fail("DIAGNOSTIC")
+    const admitted = deriveLeanSupervisorDiagnostic(record.chargeRoot, { accounting: [] } as unknown as LabMatchExecution, value)
+    if (leanBytesRoot(bytes) !== leanBytesRoot(leanCanonicalBytes(admitted))) return fail("DIAGNOSTIC")
+    return admitted
+  })
+  return { diagnostics, diagnosticRoot: labRoot("lean-pilot-diagnostics-v1", diagnostics) }
+}
 /** Native construction only, after the immutable charge is independently reopened. */
+const leanDiagnosticReaders = new WeakMap<object, (evidence: Parameters<typeof getFactoryPrivateDiagnostic>[1]) => ReturnType<typeof getFactoryPrivateDiagnostic>>()
 const nativeLeanProvider = (ledger: LeanExperimentLedger, charge: LeanCharge, candidate: ReturnType<typeof readCandidates>[number], seat: "bottom" | "top", trackBuffer: () => void, cellBegan: number): FactorySupervisionProvider => {
   const closure = readCandidateClosure(candidate.closure)
   const admission = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet: closure.packet, proposal: closure.proposal, sourceBytes: closure.sourceBytes }), validation: closure.validation })
@@ -182,11 +228,13 @@ const nativeLeanProvider = (ledger: LeanExperimentLedger, charge: LeanCharge, ca
   const authority = issueLeanRuntimeAuthority(ledger, charge, candidate.closure, binding)
   const provider = createFactorySupervisedRuntime({ admission, sourceBytes: closure.sourceBytes, leanExperimentAuthority: authority, matchId, containerName, ownershipLabel, attemptRoot: charge.root, budgetRoot: ledger.allocation.root, image: LAB_ADMITTED_ROOTS.image, invocationLimit: 24800, factoryLifetimeMs: 600000 })
   if (provider.identity.sourceRoot !== admission.sourceRoot || provider.identity.revisionId !== revision.id || provider.identity.budgetRoot !== ledger.allocation.root || provider.identity.attemptRoot !== charge.root || provider.identity.tupleRoot !== ledger.allocation.tupleRoot || provider.identity.runtimeLimitsRoot !== ledger.allocation.runtimeRoot || provider.identity.executableRoot !== runtime.executableRoot) { provider.close(); return fail("IDENTITY") }
-  return { identity: provider.identity, verify: evidence => provider.verify(evidence), close: () => provider.close(), invoke(request, identity) { if (performance.now() - cellBegan >= LEAN_CAPS.matchMs) { provider.close(); return fail("MATCH_DEADLINE") }; trackBuffer(); const evidence = provider.invoke(request, identity); trackBuffer(); return evidence } }
+  const native: FactorySupervisionProvider = { identity: provider.identity, verify: evidence => provider.verify(evidence), close: () => provider.close(), invoke(request, identity) { if (performance.now() - cellBegan >= LEAN_CAPS.matchMs) { provider.close(); return fail("MATCH_DEADLINE") }; trackBuffer(); const evidence = provider.invoke(request, identity); trackBuffer(); return evidence } }
+  leanDiagnosticReaders.set(native, evidence => getFactoryPrivateDiagnostic(provider, evidence))
+  return native
 }
 const runLeanPilotBody = async (requestPath: string) => {
   const began = performance.now(), request = readRequest(requestPath), ledger = openLeanLedger(STORE)
-  if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v6" || ledger.allocation.sourceRoot !== request.sourceRoot || ledger.allocation.reviewRoot !== request.reviewRoot || ledger.allocation.seed !== request.seed || readLeanLedger(ledger).events.length) return fail("ALLOCATION")
+  if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v7" || ledger.allocation.sourceRoot !== request.sourceRoot || ledger.allocation.reviewRoot !== request.reviewRoot || ledger.allocation.seed !== request.seed || readLeanLedger(ledger).events.length) return fail("ALLOCATION")
   const priorMs = ledger.allocation.predecessor.elapsedUpperBoundMs
   const committed = execFileSync("git", ["show", `HEAD:${ALLOCATION}`], { maxBuffer: 262144 })
   if (leanBytesRoot(committed) !== leanBytesRoot(readFileSync(resolve(ALLOCATION))) || leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(ledger.allocation))) return fail("UNCOMMITTED_ALLOCATION")
@@ -212,17 +260,56 @@ const runLeanPilotBody = async (requestPath: string) => {
     const charge = chargeLeanSlot(ledger, slot, { freeBytes: Number(freeBytes), availableMemoryBytes: observeLeagueAvailableMemoryBytes() })
     const cellBegan = performance.now(), opened: FactorySupervisionProvider[] = []
     let cleanupComplete = true, actual: LabMatchExecution
+    const supervisorObservations: LeanSupervisorObservation[] = []
     try {
       const side = slot.condition < 2 ? candidates : [...candidates].reverse()
       const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(a => a.status === "active" && a.semanticGeometryHash === slot.arenaHash) ?? fail("ARENA")
       const bottomPlayerId = `lean-${side[0]!.admission.candidate.root.slice(7)}`, topPlayerId = `lean-${side[1]!.admission.candidate.root.slice(7)}`
       const scenario = createSetScenarioV137({ arenaCatalogVersion: CANONICAL_ARENA_CATALOG_V1_37.catalogVersion, arenaSemanticGeometryHash: slot.arenaHash, entrantA: { entrantKey: candidates[0]!.admission.candidate.root, playerId: `lean-${candidates[0]!.admission.candidate.root.slice(7)}` }, entrantB: { entrantKey: candidates[1]!.admission.candidate.root, playerId: `lean-${candidates[1]!.admission.candidate.root.slice(7)}` }, baseSeed: request.seed })
       const condition = scenario.conditions[slot.condition]!
+      const observeProvider = (provider: FactorySupervisionProvider): FactorySupervisionProvider => ({
+        identity: provider.identity,
+        async invoke(request, identity) {
+          try {
+            const evidence = await provider.invoke(request, identity)
+            if (!evidence.result.ok && "systemFailure" in evidence.result) {
+              const privateOrigin = leanDiagnosticReaders.get(provider)?.(evidence)
+              const reason = privateOrigin && isLeanPrivateFailureOrigin(privateOrigin) && ["stream_exchange", "outer_frame", "inner_response", "executor"].includes(privateOrigin.stage) ? privateOrigin.stage as LeanSupervisorDiagnosticReason : "system_failure"
+              supervisorObservations.push({ stage: "native_response", reason, code: evidence.result.systemFailure.code, method: evidence.method, ordinal: evidence.ordinal })
+            }
+            return evidence
+          } catch {
+            supervisorObservations.push({ stage: "provider_invoke", reason: "threw", method: request.kind })
+            throw new TypeError("LEAN_PILOT_PROVIDER_INVOKE")
+          }
+        },
+        verify(evidence) {
+          try {
+            const verified = provider.verify(evidence)
+            if (!verified) supervisorObservations.push({ stage: "provider_verification", reason: "rejected", method: evidence.method, ordinal: evidence.ordinal })
+            return verified
+          } catch {
+            supervisorObservations.push({ stage: "provider_verification", reason: "threw", method: evidence.method, ordinal: evidence.ordinal })
+            return false
+          }
+        },
+        close() {
+          try {
+            const result = provider.close()
+            if (!result.cleanupComplete || result.orphanedChild) supervisorObservations.push({ stage: "cleanup", reason: "incomplete" })
+            return result
+          } catch {
+            supervisorObservations.push({ stage: "cleanup", reason: "threw" })
+            throw new TypeError("LEAN_PILOT_PROVIDER_CLEANUP")
+          }
+        },
+      })
       trackBuffer(); const bottom = nativeLeanProvider(ledger, charge, side[0]!, "bottom", trackBuffer, cellBegan); opened.push(bottom); parent.register(bottom)
       trackBuffer(); const top = nativeLeanProvider(ledger, charge, side[1]!, "top", trackBuffer, cellBegan); opened.push(top); parent.register(top)
-      actual = await runCanonicalLabMatch({ match: { matchId: `lean-${charge.root.slice(7, 31)}`, seed: condition.baseSeed, arenaVariant: arena, bottomPlayerId, topPlayerId, initialInitiativePlayerId: condition.initialInitiativePlayerId, bottomStrategyRevisionId: bottom.identity.revisionId, topStrategyRevisionId: top.identity.revisionId }, providers: { [bottomPlayerId]: bottom, [topPlayerId]: top } })
+      const supervisedBottom = observeProvider(bottom), supervisedTop = observeProvider(top)
+      actual = await runCanonicalLabMatch({ match: { matchId: `lean-${charge.root.slice(7, 31)}`, seed: condition.baseSeed, arenaVariant: arena, bottomPlayerId, topPlayerId, initialInitiativePlayerId: condition.initialInitiativePlayerId, bottomStrategyRevisionId: supervisedBottom.identity.revisionId, topStrategyRevisionId: supervisedTop.identity.revisionId }, providers: { [bottomPlayerId]: supervisedBottom, [topPlayerId]: supervisedTop } })
     } catch { actual = { kind: "failure", privacy: "private_offline", unchangedState: null, transitions: [], accounting: [], failure: { classification: "system_failure", code: "LEAN_SUPERVISOR_FAILURE" } } }
-    finally { for (const p of opened) { parent.unregister(p); try { const closed = p.close(); cleanupComplete = cleanupComplete && closed.cleanupComplete && !closed.orphanedChild } catch { cleanupComplete = false } } }
+    finally { for (const p of opened) { parent.unregister(p); try { const closed = p.close(); if (!closed.cleanupComplete || closed.orphanedChild) supervisorObservations.push({ stage: "cleanup", reason: "incomplete" }); cleanupComplete = cleanupComplete && closed.cleanupComplete && !closed.orphanedChild } catch { supervisorObservations.push({ stage: "cleanup", reason: "threw" }); cleanupComplete = false } } }
     parent.assert()
     const elapsedMs = Math.ceil(performance.now() - cellBegan), bottom = slot.condition < 2 ? candidates[0]! : candidates[1]!
     const record = compactExecution(actual, elapsedMs, cleanupComplete, `lean-${bottom.admission.candidate.root.slice(7)}`)
@@ -232,6 +319,10 @@ const runLeanPilotBody = async (requestPath: string) => {
     }
     const frames = replayFrames()
     retainLeanMatch(ledger, charge, record, frames)
+    if (record.classification !== "success" || !cleanupComplete) {
+      const diagnostic = deriveLeanSupervisorDiagnostic(charge.root, actual, supervisorObservations[0])
+      exclusive(join(STORE, `diagnostic-${charge.root.slice(7)}.json`), diagnostic)
+    }
     trackBuffer(); maximumCellMs = Math.max(maximumCellMs, elapsedMs)
     checkpointLeanResources(ledger, Math.max(currentLeanElapsedMs(ledger), priorMs + Math.ceil(performance.now() - began)), bufferHighWater, LEAN_EXTERNAL_SCRATCH_RESERVE)
     if (record.classification !== "success" || !cleanupComplete) { clean = false; break }
@@ -242,7 +333,8 @@ const runLeanPilotBody = async (requestPath: string) => {
   if (leanSourceManifest().root !== request.sourceRoot || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim() !== head) return fail("SOURCE_HOLD")
   checkpointLeanResources(ledger, currentLeanElapsedMs(ledger), bufferHighWater, LEAN_EXTERNAL_SCRATCH_RESERVE)
   const verified = verifyLeanEvidence(ledger)
-  const result = { schemaVersion: "lean-pilot-result-v2", issued: false, evidenceClass: "feasibility_only", allocationRoot: ledger.allocation.root, sourceRoot: request.sourceRoot, head, evidenceRoot: verified.root, charged: verified.charged, successful: verified.records.filter(r => r.status === "success").length, tier: "pending_independent_verification", maximumCellMs, maximumCellPhysicalBytes, elapsedMs: verified.elapsedMs, physicalHighWaterBytes: verified.physicalHighWaterBytes, scratchHighWaterBytes: verified.scratchHighWaterBytes }
+  const { diagnosticRoot } = readLeanDiagnostics(STORE, verified.records)
+  const result = { schemaVersion: "lean-pilot-result-v3", issued: false, evidenceClass: "feasibility_only", allocationRoot: ledger.allocation.root, sourceRoot: request.sourceRoot, head, evidenceRoot: verified.root, diagnosticRoot, charged: verified.charged, successful: verified.records.filter(r => r.status === "success").length, tier: "pending_independent_verification", maximumCellMs, maximumCellPhysicalBytes, elapsedMs: verified.elapsedMs, physicalHighWaterBytes: verified.physicalHighWaterBytes, scratchHighWaterBytes: verified.scratchHighWaterBytes }
   exclusive(join(STORE, "result.json"), result); return result
   } finally { process.off("disconnect", onDisconnect) }
 }
@@ -267,7 +359,7 @@ export const runLeanPilotChild = async (requestPath: string) => {
 export const runLeanPilot = async (requestPath: string) => {
   requireLeanProspectiveWritableScope()
   const request = readRequest(requestPath), ledger = openLeanLedger(STORE)
-  if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v6" || ledger.allocation.sourceRoot !== request.sourceRoot || ledger.allocation.reviewRoot !== request.reviewRoot || ledger.allocation.seed !== request.seed || readLeanLedger(ledger).events.length || readLeanTimeAccounting(ledger).starts.size || readdirSync(STORE).some(name => ["entry.json", "child-terminal.json", "result.json", "entry-failure.json"].includes(name))) return fail("ALLOCATION")
+  if (ledger.allocation.schemaVersion !== "lean-experiment-allocation-v7" || ledger.allocation.sourceRoot !== request.sourceRoot || ledger.allocation.reviewRoot !== request.reviewRoot || ledger.allocation.seed !== request.seed || readLeanLedger(ledger).events.length || readLeanTimeAccounting(ledger).starts.size || readdirSync(STORE).some(name => ["entry.json", "child-terminal.json", "result.json", "entry-failure.json"].includes(name))) return fail("ALLOCATION")
   const committed = execFileSync("git", ["show", `HEAD:${ALLOCATION}`], { maxBuffer: 262144 })
   if (leanBytesRoot(committed) !== leanBytesRoot(readLeanSafeFile(ALLOCATION)) || leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(ledger.allocation))) return fail("UNCOMMITTED_ALLOCATION")
   const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim()
@@ -336,10 +428,11 @@ const readLeanPilotResultBody = (requestPath: string) => {
   if (terminal.status !== "child_exited" || entry.head !== head || entry.sourceRoot !== request.sourceRoot || entry.requestBytesRoot !== leanBytesRoot(readLeanSafeFile(requestPath)) || leanBytesRoot(committed) !== leanBytesRoot(readLeanSafeFile(resolve(ALLOCATION))) || leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(ledger.allocation)) || !readLeanLedger(ledger).stopped) return fail("RETAINED_ENTRY")
   const records = verified.records.flatMap(r => r.terminal ? [r.terminal.record] : []), maximumCellMs = Math.max(0, ...records.map(r => r.elapsedMs))
   const maximumCellPhysicalBytes = derivePilotPhysicalMaximum(ledger)
-  const expected = { schemaVersion: "lean-pilot-result-v2", issued: false, evidenceClass: "feasibility_only", allocationRoot: ledger.allocation.root, sourceRoot: request.sourceRoot, head, evidenceRoot: verified.root, charged: verified.charged, successful: records.filter(r => r.classification === "success").length, tier: "pending_independent_verification", maximumCellMs, maximumCellPhysicalBytes, elapsedMs: verified.elapsedMs, physicalHighWaterBytes: verified.physicalHighWaterBytes, scratchHighWaterBytes: verified.scratchHighWaterBytes }
+  const { diagnosticRoot, diagnostics } = readLeanDiagnostics(STORE, verified.records)
+  const expected = { schemaVersion: "lean-pilot-result-v3", issued: false, evidenceClass: "feasibility_only", allocationRoot: ledger.allocation.root, sourceRoot: request.sourceRoot, head, evidenceRoot: verified.root, diagnosticRoot, charged: verified.charged, successful: records.filter(r => r.classification === "success").length, tier: "pending_independent_verification", maximumCellMs, maximumCellPhysicalBytes, elapsedMs: verified.elapsedMs, physicalHighWaterBytes: verified.physicalHighWaterBytes, scratchHighWaterBytes: verified.scratchHighWaterBytes }
   validateLeanResult(result, expected)
   if (currentLeanElapsedMs(ledger) > LEAN_CAPS.elapsedMs || verified.physicalHighWaterBytes > LEAN_CAPS.totalBytes || readLeanTimeAccounting(ledger).elapsedMs > LEAN_CAPS.elapsedMs) return fail("TIME_CAP")
-  return { issued: false, evidenceClass: "feasibility_only", allocationRoot: ledger.allocation.root, evidenceRoot: verified.root, charged: verified.charged, maximumCellMs, maximumCellPhysicalBytes, scratchHighWaterBytes: verified.scratchHighWaterBytes, status: verified.records.every(r => r.status === "success") ? "pilot_complete" : "feasibility_not_established" }
+  return { issued: false, evidenceClass: "feasibility_only", allocationRoot: ledger.allocation.root, evidenceRoot: verified.root, diagnosticRoot, diagnostics, charged: verified.charged, maximumCellMs, maximumCellPhysicalBytes, scratchHighWaterBytes: verified.scratchHighWaterBytes, status: verified.records.every(r => r.status === "success") ? "pilot_complete" : "feasibility_not_established" }
 }
 export const validateLeanResult = (result: unknown, expected: Record<string, unknown>) => {
   if (!exactLabKeys(result, Object.keys(expected)) || labRoot("lean-result-admission", result) !== labRoot("lean-result-admission", expected)) return fail("RETAINED_RESULT")

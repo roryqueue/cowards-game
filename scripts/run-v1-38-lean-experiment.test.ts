@@ -3,7 +3,7 @@ import { mkdtempSync, realpathSync, rmSync, mkdirSync, writeFileSync, symlinkSyn
 import { execFileSync, fork } from "node:child_process"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
-import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult, assessLeanPrefixCapacity, admitLeanChildRelease, assertLeanEntryBinding, createLeanParentObservationGuard, assertLeanBoundParentObservation, assertLeanProspectiveWritableScope } from "./run-v1-38-lean-experiment.js"
+import { parseLeanCommand, leanSourceManifest, authenticateLeanReview, readLeanSafeFile, validateLeanResult, assessLeanPrefixCapacity, admitLeanChildRelease, assertLeanEntryBinding, createLeanParentObservationGuard, assertLeanBoundParentObservation, assertLeanProspectiveWritableScope, compactExecution, deriveLeanSupervisorDiagnostic, readLeanDiagnostics } from "./run-v1-38-lean-experiment.js"
 import { claimLeanRuntimeAuthority, issueLeanRuntimeAuthority, deriveLeanCandidateRuntime } from "./lib/v1-38-lean-experiment-authority.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../packages/strategy-lab/src/factory/contracts.js"
 import { deriveFactoryOraclePacketRoot } from "../packages/strategy-lab/src/factory/identity.js"
@@ -122,9 +122,9 @@ it("sanitizes Node and TSX at a pre-Node shell boundary and rechecks inherited s
     const launcher = resolve("scripts/run-v1-38-lean-experiment.sh")
     const output = execFileSync("sh", [launcher, "--probe-launch-scope"], { cwd: p, encoding: "utf8", env: { PATH: process.env.PATH ?? "", LEAN_LAUNCH_PROBE: "1", NODE_OPTIONS: "--report-on-fatalerror --report-directory=/tmp/unowned", NODE_COMPILE_CACHE: "/tmp/unowned", NODE_REDIRECT_WARNINGS: "/tmp/unowned", NODE_V8_COVERAGE: "/tmp/unowned" } })
     expect(output).toContain("cache=1 compile=1 node_options=unset compile_cache=unset warnings=unset coverage=unset core=0")
-    expect(output).toContain(`tmp=${join(p, ".strategy-lab", "lean-experiment-20261003-v6-tmp")}`)
+    expect(output).toContain(`tmp=${join(p, ".strategy-lab", "lean-experiment-20261004-v7-tmp")}`)
   } finally { rmSync(p, { recursive: true, force: true }) }
-  const safe = { cacheDisabled: "1", compileDisabled: "1", tempDirectory: resolve(".strategy-lab/lean-experiment-20261003-v6-tmp") }
+  const safe = { cacheDisabled: "1", compileDisabled: "1", tempDirectory: resolve(".strategy-lab/lean-experiment-20261004-v7-tmp") }
   assertLeanProspectiveWritableScope(safe, "0")
   for (const changed of [{ ...safe, nodeOptions: "--report-on-fatalerror" }, { ...safe, compileCache: "/tmp/cache" }, { ...safe, warningRedirect: "/tmp/warnings" }, { ...safe, coverage: "/tmp/coverage" }, { ...safe, tempDirectory: "/tmp/unowned" }, { ...safe, cacheDisabled: undefined }]) expect(() => assertLeanProspectiveWritableScope(changed, "0")).toThrow("WRITABLE_SCOPE")
   expect(() => assertLeanProspectiveWritableScope(safe, "unlimited")).toThrow("WRITABLE_SCOPE")
@@ -139,6 +139,34 @@ it("denies caller-forged runtime authorities before native construction", () => 
   expect(() => claimLeanRuntimeAuthority({ schemaVersion: "lean-runtime-authority-v1" } as never, {} as never, "factory")).toThrow("AUTHORITY")
   expect(() => createLeanContainerMatchSession({ leanExperimentAuthority: {} } as never)).toThrow("BINDING")
   expect(admitFactorySupervisorLifetime({} as never)).toBe(120000)
+})
+it("projects only trusted allowlisted supervisor diagnostics without widening the compact record", () => {
+  const chargeRoot = labRoot("diagnostic-charge", 1)
+  const execution = { kind: "failure", privacy: "private_offline", unchangedState: null, transitions: [], failure: { classification: "system_failure", code: "LAB_SUPERVISOR_FAILURE" }, accounting: [{ identity: {}, invocationRoot: labRoot("invocation", 1), requestId: "request", method: "selectActivations", ordinal: 0, inputRoot: labRoot("input", 1), charged: true, completed: false, outputBytes: 0, result: { ok: false, violation: { type: "INVALID_OUTPUT", message: "redacted" }, systemFailure: { code: "MALFORMED_IPC", retryable: false } } }] }
+  const compact = compactExecution(execution as never, 1, true, "bottom")
+  expect(compact).toMatchObject({ classification: "system_failure", code: "SUPERVISOR_FAILURE", invocationCount: 1 })
+  expect(compact).not.toHaveProperty("systemFailureCode")
+  const diagnostic = deriveLeanSupervisorDiagnostic(chargeRoot, execution as never)
+  expect(diagnostic).toEqual({ schemaVersion: "lean-supervisor-diagnostic-v1", chargeRoot, stage: "native_response", reason: "system_failure", code: "MALFORMED_IPC", method: "selectActivations", ordinal: 0 })
+  expect(Object.keys(diagnostic).sort()).toEqual(["chargeRoot", "code", "method", "ordinal", "reason", "schemaVersion", "stage"])
+  const unknown = deriveLeanSupervisorDiagnostic(chargeRoot, { ...execution, accounting: [] } as never, { stage: "untrusted-stage", reason: "private text", code: "PRIVATE_ERROR", method: "private method", ordinal: -1 } as never)
+  expect(unknown).toEqual({ schemaVersion: "lean-supervisor-diagnostic-v1", chargeRoot, stage: "unknown", reason: "unknown", code: null, method: null, ordinal: null })
+})
+it("authenticates every failed-cell diagnostic and rejects missing, extra, private and altered bytes", () => {
+  const p = realpathSync(mkdtempSync(join(tmpdir(), "lean-diagnostic-"))), chargeRoot = labRoot("diagnostic", 1)
+  const record = { chargeRoot, terminal: { record: { classification: "system_failure", cleanupComplete: true } } } as never
+  const value = deriveLeanSupervisorDiagnostic(chargeRoot, { accounting: [] } as never)
+  const file = join(p, `diagnostic-${chargeRoot.slice(7)}.json`)
+  try {
+    expect(() => readLeanDiagnostics(p, [record])).toThrow("DIAGNOSTIC")
+    writeFileSync(file, leanCanonicalBytes(value))
+    expect(readLeanDiagnostics(p, [record])).toEqual({ diagnostics: [value], diagnosticRoot: labRoot("lean-pilot-diagnostics-v1", [value]) })
+    expect(() => readLeanDiagnostics(p, [])).toThrow("DIAGNOSTIC")
+    for (const tampered of [{ ...value, privateError: "private" }, { ...value, reason: "raw private error" }, { ...value, code: "NOT_ALLOWLISTED" }, { ...value, chargeRoot: labRoot("other", 1) }, { ...value, ordinal: 24800 }]) {
+      writeFileSync(file, leanCanonicalBytes(tampered)); expect(() => readLeanDiagnostics(p, [record])).toThrow("DIAGNOSTIC")
+    }
+    writeFileSync(file, JSON.stringify(value, null, 2)); expect(() => readLeanDiagnostics(p, [record])).toThrow("DIAGNOSTIC")
+  } finally { rmSync(p, { recursive: true, force: true }) }
 })
 const candidateFixture = (directory: string, name: string) => {
   mkdirSync(join(directory, `factory-${name}`), { mode: 0o700 })
