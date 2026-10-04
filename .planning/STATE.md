@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-16 fresh allocation prepared and independently checked; commit before uniqueMAIN current baseline entry
+stopped_at: Plan265-16 baseline and unique retained check closed partial failure; source-only diagnosis next
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Uniqueprepare61654 closed preparation_only; newallocation92c856a0/raw9726cb9f, owner0700store/emptyjournals independentlychecked; noMatch yet
+last_activity_desc: Baseline77660 and unique verifier37314 closed; one current failed charge, zero successes,35unused; source/HEAD hold released
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT CLOSED BASELINE FRONTIER: unique MAIN entry77660 (parent32979/child33010) CLOSEDexit0 after publishing an honest partial; ONE actual retained verifier37314 CLOSEDexit0 with report ace1f5df26e2d1bd9f4895fe76725b207ea0fdc789dce2dd4f63112e22bc4962. Source/HEAD hold RELEASED after both actual closures. Fixed HEAD05d3cb8732906f37e3125be856fb815ed2603f66/source03e2a09d/876entries, requestfd136129, allocation92c856a0/raw9726cb9f, actual result raw5aa36738, entry/terminal/charge bytes unchanged through verification; only authorized time append. Current baseline one charged/zero successes/35unused, cumulative10charges/3319046ms; physical1507794944B/scratch1506455552B, historical peaks remain unknown. Cell0 system_failure/SUPERVISOR_FAILURE/cleanuptrue/5083ms; independently authenticated finite diagnostic SUBPROCESS_SIGNAL/native_response/selectActivations/executor/ordinal0, underlying cause UNKNOWN. No current training, matrix, finalist, LEAG or freeze completion credit. Consumed allocation/result/request/store/unique reader are immutable and spent; no retry, replacement Match, fabricated head or re-reader. User's repair request permits SOURCE-ONLY scientific diagnosis and bounded fixes/mock regressions, not reinterpretation of this failed run or rescue scope. Checked failure/closeout and dependency review may continue after source diagnosis; same15GB/8h/300Matches/guest1000-host5000-Match600000/rules/privacy. Phase266freeze, formation and holdout remain unstarted; no public/counted/production authority. Prepared and earlier paragraphs below are historical snapshots, not active entries.
 
 CURRENT PREPARED BASELINE FRONTIER: uniqueMAIN preparation61654/chunke3e650 CLOSEDexit0/preparation_only. NEW36currentallocation92c856a0e1944fcc429e0c7da2f40851ce8914b66cf8f4e63aa7ba2545aa422f, canonical/private raw9726cb9fa5b93c5c46c6c2a835da2c45d8e1fd31f518619cc69ee2ec1d94d894; exactrequestfd136129/source03e2a09d/cold0ddc7020/review22bf9a1d. Actual /root/review_265_baseline_request independentdatareview CLOSED, including later exactpreparedstore metadata check: real0700 .strategy-lab/lean-baseline-20261004-v1 withallocation pluszero-byteledger/time ONLY, owner0600files, noentry/result/terminal/charges. Its initialwrongstorepath check is explicitlycorrected; root's actualconstantabsence observation precededexclusivepreparation, notretroactivelyattributedtoreviewer. Commit/push thisexactallocation+gates BEFORE ONE MAINrun-current. FreshSAMEPROCESScapacity everycharge/provider; holdSOURCEANDHEADthroughactualterminal andONEappropriateunique independentretainedcheck. No oldreader/consumedroute reuse; noempiricalcreditfrompreparation. Carry9priorcharges/3305606ms, same15GB8h300Matches/1000guest5000host600000Match/rules/privacy. Noformation/holdout/public/counted/production authority. Earlierdatafrontierbelow history.
 
