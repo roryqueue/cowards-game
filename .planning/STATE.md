@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Plan265-16 baseline and unique retained check closed partial failure; source-only diagnosis next
+stopped_at: Plan265-16 bounded source repair independently reviewed; source verification and prospective continuation decision
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Baseline77660 and unique verifier37314 closed; one current failed charge, zero successes,35unused; source/HEAD hold released
+last_activity_desc: Cleanup error-precedence repair4e71c9b6 clean independent review; actual baseline crash cause unknown, no empirical retry
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT SOURCE REPAIR / HUMAN DECISION FRONTIER: source-only debug closed at4e71c9b60fb05cc832c2b83b3eb6f3c692254cfd; a mock-proved cleanup exception could mask the primary native error. Narrow repair contains each cleanup operation, preserves primary error/origin, still attempts removal/absence and marks any thrown cleanup incomplete. Independent265-16-SUBPROCESS-REVIEW-v1 CLOSEDclean/0BLOCKER/0WARNING;16newmocks+51selectedexistingmocks PASS(57skipped), ownedstrict types/diff PASS. This defect was NOT observed in the actual failed baseline (cleanuptrue and signal code retained); initiating cause remains UNKNOWN and empirical unblock is NOT proved. Independent source verification next, no actual provider/Match/reader. Root requested a NEW prospective decision asynchronously: amend fixed no-replacement stop for ONEfresh crash diagnostic and, after checked repairs, ONEfresh baseline under same15GB/8h/300Match cap, all costs carried, fixed candidate/search opportunity and unchanged rules/privacy. This amendment is PENDING until a direct human answer; standing route approval does not alone amend the later fixed-schedule stop. All consumed routes/readers remain immutable/spent; Phase266freeze/formation/holdout unstarted. Do not start a route while pending or duplicate active source verifier. Earlierclosed/prepared/frontiers below history.
 
 CURRENT CLOSED BASELINE FRONTIER: unique MAIN entry77660 (parent32979/child33010) CLOSEDexit0 after publishing an honest partial; ONE actual retained verifier37314 CLOSEDexit0 with report ace1f5df26e2d1bd9f4895fe76725b207ea0fdc789dce2dd4f63112e22bc4962. Source/HEAD hold RELEASED after both actual closures. Fixed HEAD05d3cb8732906f37e3125be856fb815ed2603f66/source03e2a09d/876entries, requestfd136129, allocation92c856a0/raw9726cb9f, actual result raw5aa36738, entry/terminal/charge bytes unchanged through verification; only authorized time append. Current baseline one charged/zero successes/35unused, cumulative10charges/3319046ms; physical1507794944B/scratch1506455552B, historical peaks remain unknown. Cell0 system_failure/SUPERVISOR_FAILURE/cleanuptrue/5083ms; independently authenticated finite diagnostic SUBPROCESS_SIGNAL/native_response/selectActivations/executor/ordinal0, underlying cause UNKNOWN. No current training, matrix, finalist, LEAG or freeze completion credit. Consumed allocation/result/request/store/unique reader are immutable and spent; no retry, replacement Match, fabricated head or re-reader. User's repair request permits SOURCE-ONLY scientific diagnosis and bounded fixes/mock regressions, not reinterpretation of this failed run or rescue scope. Checked failure/closeout and dependency review may continue after source diagnosis; same15GB/8h/300Matches/guest1000-host5000-Match600000/rules/privacy. Phase266freeze, formation and holdout remain unstarted; no public/counted/production authority. Prepared and earlier paragraphs below are historical snapshots, not active entries.
 
