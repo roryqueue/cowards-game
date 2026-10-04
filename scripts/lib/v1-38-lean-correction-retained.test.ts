@@ -39,12 +39,42 @@ const fixture = () => {
   const terminal = { entryBytesRoot: leanBytesRoot(leanCanonicalBytes(entry)), allocationRoot: a.root, sourceRoot: a.sourceRoot, head, status: "child_exited", exitCode: 0, signal: null }
   const metadata = { schemaVersion: "v1.38-lean-correction-origin-v1", requestOrdinal: 1, requestRoot: labRoot("mock-request", {}), transportMethod: "docker_exec_stream", brokerMode: "legacy", brokerBranch: "legacy_deadline", signalBufferState: "not_done", waitDisposition: "timed_out", workerLifecycle: "unknown", transportSignal: "broker_synthetic_sigkill", terminationDisposition: "worker_terminate_completed", elapsedBucket: "unknown" }
   const originBody = { schemaVersion: "lean-correction-origin-envelope-v1", allocationRoot: a.root, sourceRoot: a.sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins: [{ metadata, sourceRoot: bottom.sourceRoot, seat: "bottom", binding: transport }] }, origin = { ...originBody, root: labRoot("lean-correction-origin-envelope-v1", originBody) }
-  const pipeline = { status: "diagnostic_only", cells: [cell], training: null, holdoutOpened: false, formationMaterialized: false }
+  const pipeline = { status: "diagnostic_only", cells: [{ ordinal: cell.ordinal, slotRoot: cell.slotRoot, compact: cell.compact }], training: null, holdoutOpened: false, formationMaterialized: false }
   const resultBody = { schemaVersion: "lean-correction-result-v1", privacy: "private_offline", issued: false, route: "diagnostic", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: entry.requestBytesRoot, head, reuseGrantRoot: reuse.grant.root, pipeline, evidenceRoot: evidence.root, cumulativeCharged: 11, holdoutOpened: false, formationMaterialized: false, phaseComplete: false }
   return { schemaVersion: "lean-correction-retained-snapshot-v1", allocation: a, request, entry, terminal, evidence, time: { active: false, elapsedMs: 3324046, closed: new Set(["pilot-entry"]) }, result: { ...resultBody, root: labRoot("lean-correction-result-v1", resultBody) }, reuse, pairs: [pair], observations: [observation], sources: [bottom, top], artifacts: {}, origin, journalBytes: Buffer.concat(events.map(e => Buffer.concat([leanCanonicalBytes(e), Buffer.from("\n")]))) }
 }
 
 describe("new correction retained admission", () => {
+  it.skipIf(!existsSync(reuseDirectory))("closes successful diagnostic wins and draw without claiming training or a known cause", () => {
+    const original = fixture()
+    for (const outcome of ["bottom", "top", "DRAW"] as const) {
+      const s = structuredClone(original) as unknown as {
+        observations: Array<{ cell: LeanBaselineObservedCell; root: string; schemaVersion: string; pairRoot: string }>;
+        evidence: { records: Array<{ status: string; terminal: { record: LeanBaselineObservedCell["compact"] } }>; root: string };
+        journalBytes: Uint8Array; allocation: { root: string }; result: Record<string, unknown>;
+        origin: { origins: unknown[]; root: string }
+      }
+      const cell = s.observations[0]!.cell
+      const changed = { ...cell, compact: { ...cell.compact, classification: "success" as const, code: "OK" as const, outcome }, trainingHalfPoints: outcome === "DRAW" ? 1 as const : 0 as const, semanticRoot: labRoot("mock-success-semantic", outcome), diagnostic: null }
+      s.observations[0]!.cell = changed
+      s.evidence.records[0]!.status = "success"
+      s.evidence.records[0]!.terminal!.record = changed.compact
+      const events = Buffer.from(s.journalBytes).toString("utf8").trim().split("\n").map(line => JSON.parse(line))
+      events[1].record = changed.compact
+      s.journalBytes = Buffer.concat(events.map(event => Buffer.concat([leanCanonicalBytes(event), Buffer.from("\n")])))
+      s.evidence.root = labRoot("lean-evidence-v1", { allocationRoot: s.allocation.root, events, records: s.evidence.records })
+      s.result.evidenceRoot = s.evidence.root
+      s.result.pipeline = { ...(s.result.pipeline as Record<string, unknown>), cells: [{ ordinal: changed.ordinal, slotRoot: changed.slotRoot, compact: changed.compact }] }
+      const { root: _observationRoot, ...observationBody } = s.observations[0]!
+      s.observations[0]!.root = labRoot("lean-baseline-observation-v1", observationBody)
+      s.origin.origins = []
+      const { root: _originRoot, ...originBody } = s.origin
+      s.origin.root = labRoot("lean-correction-origin-envelope-v1", originBody)
+      const { root: _resultRoot, ...resultBody } = s.result
+      s.result.root = labRoot("lean-correction-result-v1", resultBody)
+      expect(auditLeanCorrectionRetained(s)).toMatchObject({ successful: 1, observedOrigin: "unknown", complete: false, phaseComplete: false, freezeAdmitted: false })
+    }
+  }, 20000)
   it("rejects absent actual result and unknown custody without cold recomputation", () => {
     expect(() => auditLeanCorrectionRetained({})).toThrow()
     expect(() => auditLeanCorrectionRetained({ schemaVersion: "lean-current-baseline-result-v1" })).toThrow()
