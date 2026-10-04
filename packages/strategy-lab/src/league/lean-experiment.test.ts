@@ -3,13 +3,63 @@ import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { afterEach, expect, it } from "vitest"
 import { labRoot, LAB_ADMITTED_ROOTS } from "../contracts.js"
-import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, LEAN_CAPS, LEAN_FAILED_PREFIX, LEAN_DISK_APPROVAL, LEAN_PROSPECTIVE_WRITABLE_PATHS, LEAN_SUCCESSOR_WRITABLE_PATHS, LEAN_V4_WRITABLE_PATHS, LEAN_V5_WRITABLE_PATHS, LEAN_V6_WRITABLE_PATHS, LEAN_V7_WRITABLE_PATHS, LEAN_CLOSED_V2, LEAN_CLOSED_V3, LEAN_CLOSED_V4, LEAN_CLOSED_V5, LEAN_CLOSED_V6, createLeanProspectiveDiskBasis, verifyLeanProspectiveDiskBasis, createLeanClosedV2Predecessor, verifyLeanClosedV2Predecessor, createLeanClosedV3Predecessor, verifyLeanClosedV3Predecessor, createLeanClosedV4Predecessor, verifyLeanClosedV4Predecessor, createLeanClosedV5Predecessor, verifyLeanClosedV5Predecessor, createLeanClosedV6Predecessor, verifyLeanClosedV6Predecessor, inspectLeanClosedV6Predecessor, createLeanAllocationV7, leanWritablePaths, verifyLeanFailedPrefix, verifyLeanFailedWriteInventory, deriveLeanChildTerminal, readLeanChildTerminal, readLeanCumulativeAccounting, leanBytesRoot, leanCanonicalBytes, type LeanExperimentAllocationV2, type LeanExperimentAllocationV3, type LeanExperimentAllocationV4, type LeanExperimentAllocationV5, type LeanExperimentAllocationV6, type LeanExperimentAllocationV7, type LeanExperimentLedger } from "./lean-experiment.js"
+import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, LEAN_CAPS, LEAN_FAILED_PREFIX, LEAN_DISK_APPROVAL, LEAN_PROSPECTIVE_WRITABLE_PATHS, LEAN_SUCCESSOR_WRITABLE_PATHS, LEAN_V4_WRITABLE_PATHS, LEAN_V5_WRITABLE_PATHS, LEAN_V6_WRITABLE_PATHS, LEAN_V7_WRITABLE_PATHS, LEAN_CLOSED_V2, LEAN_CLOSED_V3, LEAN_CLOSED_V4, LEAN_CLOSED_V5, LEAN_CLOSED_V6, LEAN_CLOSED_V7, LEAN_BASELINE_WRITABLE_PATHS, createLeanProspectiveDiskBasis, verifyLeanProspectiveDiskBasis, createLeanClosedV2Predecessor, verifyLeanClosedV2Predecessor, createLeanClosedV3Predecessor, verifyLeanClosedV3Predecessor, createLeanClosedV4Predecessor, verifyLeanClosedV4Predecessor, createLeanClosedV5Predecessor, verifyLeanClosedV5Predecessor, createLeanClosedV6Predecessor, verifyLeanClosedV6Predecessor, inspectLeanClosedV6Predecessor, createLeanClosedV7Predecessor, createLeanCurrentBaselineAllocation, currentBaselineSlotKind, createLeanAllocationV7, leanWritablePaths, verifyLeanFailedPrefix, verifyLeanFailedWriteInventory, deriveLeanChildTerminal, readLeanChildTerminal, readLeanCumulativeAccounting, leanBytesRoot, leanCanonicalBytes, type LeanExperimentAllocationV2, type LeanExperimentAllocationV3, type LeanExperimentAllocationV4, type LeanExperimentAllocationV5, type LeanExperimentAllocationV6, type LeanExperimentAllocationV7, type LeanClosedV7Observation, type LeanExperimentLedger } from "./lean-experiment.js"
 import { assertLeanPublicationCapacity } from "./lean-experiment.js"
 import { writeLeanAll, createLeanAllocation, chargeLeanSlot, createLeanLedger, retainLeanMatch, verifyLeanEvidence, chooseLeanTier, encodeLeanReplay, decodeLeanReplay, leanSchedule, readLeanLedger } from "./lean-experiment.js"
 
 const dirs: string[] = []
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }) })
 const pin = labRoot("test", 1)
+const closedV7Observation = (): LeanClosedV7Observation => {
+  const c = LEAN_CLOSED_V7
+  return {
+    raw: { allocation: c.allocationBytesRoot, canonical: c.allocationBytesRoot, request: c.requestBytesRoot, result: c.resultBytesRoot, ledger: c.ledgerBytesRoot, time: c.timeBytesRoot, entry: c.entryBytesRoot, terminal: c.terminalBytesRoot, replay: c.replayBytesRoot, report: c.reportBytesRoot },
+    storeFiles: [c.replayName, "allocation.json", "child-terminal.json", "entry.json", "ledger.ndjson", "result.json", "time.ndjson"],
+    allocationRoot: c.allocationRoot, sourceRoot: c.sourceRoot, heldHead: c.heldHead, priorPredecessorRoot: c.priorPredecessorRoot,
+    priorMeasuredSurvivingAllocatedBytes: c.priorMeasuredSurvivingAllocatedBytes, priorConservativeAllocatedBytes: c.priorConservativeAllocatedBytes,
+    entry: { allocationRoot: c.allocationRoot, sourceRoot: c.sourceRoot, requestBytesRoot: c.requestBytesRoot, head: c.heldHead, parentPid: 96838, childPid: 96867 },
+    terminal: { entryBytesRoot: c.entryBytesRoot, allocationRoot: c.allocationRoot, sourceRoot: c.sourceRoot, head: c.heldHead, parentPid: 96838, childPid: 96867, status: "child_exited", exitCode: 0, signal: null, physicalBytes: c.terminalPhysicalBytes },
+    result: { allocationRoot: c.allocationRoot, sourceRoot: c.sourceRoot, head: c.heldHead, charged: 9, successful: 8, elapsedMs: 3_296_898, tier: "pending_independent_verification", issued: false, evidenceClass: "feasibility_only" },
+    timeEvents: [
+      { kind: "start", id: "pilot-entry", atMs: 1791113360855 },
+      { kind: "close", id: "pilot-entry", atMs: 1791114493388 },
+      { kind: "start", id: "pilot-retained-verifier", atMs: 1791114550374 },
+      { kind: "close", id: "pilot-retained-verifier", atMs: 1791114554817 },
+    ],
+    survivors: [
+      { identity: c.storeIdentity, allocatedBytes: 0 },
+      ...[c.replayName, "allocation.json", "child-terminal.json", "entry.json", "ledger.ndjson", "result.json", "time.ndjson"].map((name, i) => ({ identity: `${c.storeIdentity}/${name}`, allocatedBytes: i === 0 ? 270_336 : i === 1 ? 8192 : i === 4 ? 12_288 : 4096 })),
+      { identity: c.requestIdentity, allocatedBytes: 4096 },
+      { identity: c.canonicalIdentity, allocatedBytes: 8192 },
+      { identity: LEAN_V7_WRITABLE_PATHS[0], allocatedBytes: 0 },
+    ],
+  }
+}
+it("carries closed v7 pilot time, nine cumulative charges, and surviving disk without another reader", () => {
+  const observed = closedV7Observation(), predecessor = createLeanClosedV7Predecessor(observed)
+  expect(predecessor).toMatchObject({ elapsedUpperBoundMs: 3_305_606, chargedMatches: 9, successfulMatches: 8, historicalPeakDiskBytes: "unknown", historicalPeakRssBytes: "unknown" })
+  expect(predecessor.allocatedDiskBytes).toBeGreaterThanOrEqual(LEAN_CLOSED_V7.terminalPhysicalBytes)
+  for (const changed of [
+    { ...observed, raw: { ...observed.raw, ledger: pin } },
+    { ...observed, raw: { ...observed.raw, report: pin } },
+    { ...observed, result: { ...observed.result, successful: 9 } },
+    { ...observed, timeEvents: observed.timeEvents.slice(0, 2) },
+    { ...observed, survivors: observed.survivors.slice(1) },
+    { ...observed, terminal: { ...observed.terminal, exitCode: 1 } },
+  ]) expect(() => createLeanClosedV7Predecessor(changed)).toThrow("BASELINE_PREDECESSOR")
+  const input = { sourceRoot: pin, reviewRoot: labRoot("review", 1), coldRoot: labRoot("cold", 1), planRoot: labRoot("plan", 1), candidateRoots: [labRoot("mechanism", 1), labRoot("mechanism", 2)], requestRoots: Array.from({ length: 36 }, (_, n) => labRoot("baseline-request", n)), seed: "current-baseline" }
+  const allocation = createLeanCurrentBaselineAllocation(input, predecessor)
+  expect(allocation).toMatchObject({ schemaVersion: "lean-current-baseline-allocation-v1", predecessor: { chargedMatches: 9, elapsedUpperBoundMs: 3_305_606 }, caps: LEAN_CAPS })
+  expect(allocation.slots).toHaveLength(36)
+  expect(allocation.sampleSlotRoots).toHaveLength(6)
+  expect(leanWritablePaths(allocation)).toEqual(LEAN_BASELINE_WRITABLE_PATHS)
+  expect([0, 7, 8, 11, 12, 19, 20, 27, 28, 31, 32, 35].map(n => currentBaselineSlotKind(n).kind)).toEqual(["initial_training", "initial_training", "initial_matrix", "initial_matrix", "response_training", "response_training", "response_pairing", "response_pairing", "probe", "probe", "repeat", "repeat"])
+  expect(Object.fromEntries(["initial_training", "initial_matrix", "response_training", "response_pairing", "probe", "repeat"].map(kind => [kind, allocation.slots.filter(s => currentBaselineSlotKind(s.ordinal).kind === kind).length]))).toEqual({ initial_training: 8, initial_matrix: 4, response_training: 8, response_pairing: 8, probe: 4, repeat: 4 })
+  for (let start = 0; start < 36; start += 4) expect(Array.from({ length: 4 }, (_, offset) => currentBaselineSlotKind(start + offset).arenaIndex)).toEqual([0, 0, 1, 1])
+  expect(allocation.slots.filter(s => s.condition === 0)).toHaveLength(9)
+  expect(() => createLeanCurrentBaselineAllocation({ ...input, requestRoots: input.requestRoots.slice(1) }, predecessor)).toThrow("BASELINE_ALLOCATION")
+  expect(() => createLeanCurrentBaselineAllocation({ ...input, requestRoots: [...input.requestRoots.slice(0, 35), input.requestRoots[0]!] }, predecessor)).toThrow("BASELINE_ALLOCATION")
+})
 const closedV6Observation = () => ({
   raw: { allocation: LEAN_CLOSED_V6.allocationBytesRoot, canonical: LEAN_CLOSED_V6.allocationBytesRoot, request: LEAN_CLOSED_V6.requestBytesRoot, result: LEAN_CLOSED_V6.resultBytesRoot, ledger: LEAN_CLOSED_V6.ledgerBytesRoot, time: LEAN_CLOSED_V6.timeBytesRoot, entry: LEAN_CLOSED_V6.entryBytesRoot, terminal: LEAN_CLOSED_V6.terminalBytesRoot, replay: LEAN_CLOSED_V6.replayBytesRoot, report: LEAN_CLOSED_V6.terminalReportBytesRoot, erratum: LEAN_CLOSED_V6.erratumBytesRoot },
   storeFiles: ["78905d6e33daf981ff164488f9b6cbc1be5fb347d316cc4332733c64213ec3c9.gz", "allocation.json", "child-terminal.json", "entry.json", "ledger.ndjson", "result.json", "time.ndjson"],
