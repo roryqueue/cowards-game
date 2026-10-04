@@ -112,6 +112,60 @@ export const boundedFactoryProjectionCharge = (value: unknown, ceiling = LEAN_FA
   visit(value)
   return charged
 }
+
+/** Lean-only retained representation. Equal strings are returned from one
+ * canonical pool; token contents/order and comparison semantics do not change.
+ * Conservatively charge every reference, container/property slot and pool
+ * entry, plus eight bytes per character of each actual shared payload. The
+ * separate per-cell emission limit still charges every generated token. */
+export const createBoundedFactoryProjectionPool = (ceiling = LEAN_FACTORY_PROJECTION_CEILING_BYTES) => {
+  if (!Number.isSafeInteger(ceiling) || ceiling < 1 || ceiling > LEAN_FACTORY_PROJECTION_CEILING_BYTES) return fail("IMPORT_PROJECTION_LIMIT")
+  let charged = 0, failed = false
+  const reserve = (bytes: number): void => {
+    if (failed || !Number.isSafeInteger(bytes) || bytes < 0 || bytes > ceiling - charged) { failed = true; return fail("IMPORT_PROJECTION_LIMIT") }
+    charged += bytes
+  }
+  reserve(512) // Empty pool, bookkeeping and returned API, before construction.
+  const strings = new Map<string, string>()
+  const intern = (text: string): string => {
+    const shared = strings.get(text)
+    if (shared !== undefined) return shared
+    // Includes string/header, map node, key/value references and pool index.
+    reserve(256 + text.length * 8)
+    strings.set(text, text)
+    return text
+  }
+  const project = <T>(value: T): T => {
+    if (failed) return fail("IMPORT_PROJECTION_LIMIT")
+    const active = new WeakSet<object>()
+    const visit = (item: unknown, depth: number): unknown => {
+      if (depth > 128) { failed = true; return fail("IMPORT_PROJECTION_LIMIT") }
+      reserve(64) // Every occurrence/reference, including shared strings.
+      if (typeof item === "string") return intern(item)
+      if (item === null || typeof item !== "object") return item
+      if (active.has(item)) { failed = true; return fail("IMPORT_PROJECTION_LIMIT") }
+      active.add(item)
+      if (Array.isArray(item)) {
+        reserve(128 + item.length * 16) // Container, active-set entry and slots.
+        const output = item.map(member => visit(member, depth + 1))
+        active.delete(item)
+        return Object.freeze(output)
+      }
+      const keys = Object.keys(item)
+      reserve(128 + keys.length * 32) // Container, active-set entry and properties.
+      const output: Record<string, unknown> = {}
+      for (const key of keys) {
+        reserve(64) // Property-name reference, even when its payload is shared.
+        const name = intern(key)
+        Object.defineProperty(output, name, { value: visit((item as Record<string, unknown>)[key], depth + 1), enumerable: true, configurable: false, writable: false })
+      }
+      active.delete(item)
+      return Object.freeze(output)
+    }
+    return visit(value, 0) as T
+  }
+  return Object.freeze({ project, chargedBytes: () => charged })
+}
 const assessBoundFactoryIndependence = (repository: FactoryRepository, input: FactoryAssessmentInput, options: {persist?: boolean; correctionArtifactRoot?: LabRoot; boundedImport?: boolean; beforeCell?: (ordinal: number) => void; beforeAllocation?: (reserveBytes: number) => void} = {}, historicalImport?: FactoryHistoricalImportContext): FactoryAssessmentResult => {
   const persist = options.persist !== false, reasons:string[] = []
   if (historicalImport && persist) return fail("IMPORT_READ_ONLY")
@@ -129,7 +183,7 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
   const ordered = ledger.entries.map((entry) => ({...entry,accounting:readFactoryCanonicalRecord(repository,entry.start.resourceAccountingRoot)})).sort((left,right) => Number(left.accounting.ordinal)-Number(right.accounting.ordinal))
   if (!same(input.terminalRoots,ordered.map((entry) => entry.terminal.root))) return fail("TERMINAL_ROOTS")
   const observations = {} as Record<FactorySourceSlot,VerifiedFactoryCellObservation[]>
-  let projectionBytes = 0
+  const projectionPool = options.boundedImport ? createBoundedFactoryProjectionPool() : null
   const receiptByWorkload = new Map<LabRoot,LabRoot>(), observedSupervision:LabRoot[] = []
   let firstStart:number|null = null, previousStartedAtMs = -1
   for (const [ordinal,entry] of ordered.entries()) {
@@ -172,8 +226,8 @@ const assessBoundFactoryIndependence = (repository: FactoryRepository, input: Fa
     const lineageEdges = [{label:"emitted-by",from:"strategy",to:fresh.ingestions[baseSlot].producerIdentity},...(baseSlot === cell.slot ? [] : [{label:"derived-from",from:"control",to:"strategy"}])]
     if (options.boundedImport) options.beforeAllocation?.(4 * 64 * 1024 * 1024)
     const observation = createNumericObservationFromVerifiedCell({sourceUtf8:ingestion.sourceUtf8,cell:{key:`${cell.slot}:${cell.block}:${cell.initialInitiative}`,block:cell.block === "A"?"block-a":"block-b",candidateSide:cell.candidateSide,initialInitiative:cell.initialInitiative},lineageEdges,dependencyEdges:sourceAudit.dependencyEdges,records:retained.records,...(options.boundedImport ? { maxTokenChargeBytes: 64 * 1024 * 1024 } : {})})
-    if (options.boundedImport) projectionBytes += boundedFactoryProjectionCharge(observation, LEAN_FACTORY_PROJECTION_CEILING_BYTES - projectionBytes)
-    observations[cell.slot] = [...(observations[cell.slot]??[]),observation]
+    const retainedObservation = projectionPool ? projectionPool.project(observation) : observation
+    observations[cell.slot] = [...(observations[cell.slot]??[]),retainedObservation]
     receiptByWorkload.set(workload.root,retained.descriptor.receiptRoot)
   }
   if (!same(input.supervisionArtifactRoots,observedSupervision) || new Set(observedSupervision).size !== observedSupervision.length) return fail("SUPERVISION_ROOTS")

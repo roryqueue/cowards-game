@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { assessFactoryIndependence, boundedFactoryProjectionCharge, decideFactoryIndependence, factoryWorkloadResourceViolations, LEAN_FACTORY_PROJECTION_CEILING_BYTES, readLeanFactoryInventoryNames, readRetainedFactoryLedger, verifyRetainedFactoryAssessment, verifyHistoricalFactoryAssessmentForLeague } from "./assess-v1-38-factory-independence.js"
+import { assessFactoryIndependence, boundedFactoryProjectionCharge, createBoundedFactoryProjectionPool, decideFactoryIndependence, factoryWorkloadResourceViolations, LEAN_FACTORY_PROJECTION_CEILING_BYTES, readLeanFactoryInventoryNames, readRetainedFactoryLedger, verifyRetainedFactoryAssessment, verifyHistoricalFactoryAssessmentForLeague } from "./assess-v1-38-factory-independence.js"
 import { readFactoryCanonicalRecord } from "./v1-38-factory-fresh-evidence.js"
 import { NUMERIC_DIMENSIONS, type NumericComparison, type NumericControlTable } from "../packages/strategy-lab/src/factory/numeric-calibration.js"
 import { createFactoryRepository, recordFactoryAttemptStart, publishFactoryAttemptTerminal, publishFactoryArtifact, resumeFactoryAttemptInventory } from "../packages/strategy-lab/src/factory/repository.js"
@@ -24,6 +24,41 @@ const score = (n: number): NumericComparison => ({ dimensions: Object.fromEntrie
 const controls: NumericControlTable = { "S01/S02":score(.9), "S03/S04":score(.95), "S05/S06":score(.9), "S01/S07":score(.7), "S01/S08":score(.3), "S11/S12":score(.7) }
 const edges = {"S01/S03":score(.1),"S01/S05":score(.2),"S03/S05":score(.25)}
 describe("finite factory independence decision", () => {
+  it("retains exact immutable projections with explicitly shared string payloads", () => {
+    const pool = createBoundedFactoryProjectionPool()
+    const input = { evidence: { samples: { one: ["request.self.position.x=2", "decision.action.type=MOVE"] } }, facts: { count: 1, marker: null, valid: true } }
+    const first = pool.project(input), before = pool.chargedBytes()
+    const second = pool.project(input), secondCharge = pool.chargedBytes() - before
+    expect(first).toEqual(input); expect(second).toEqual(input)
+    expect(first).not.toBe(input); expect(second).not.toBe(first)
+    expect(Object.isFrozen(first.evidence.samples.one)).toBe(true)
+    expect(Object.isFrozen(first.facts)).toBe(true)
+    // Containers/references are still charged, but string payloads and pool
+    // entries are paid only once because the retained graph uses pool values.
+    expect(secondCharge).toBeGreaterThan(0); expect(secondCharge).toBeLessThan(before)
+    const changed = pool.project({ ...input, evidence: { samples: { one: ["request.self.position.x=3", "decision.action.type=MOVE"] } } })
+    expect(changed.evidence.samples.one[0]).toBe("request.self.position.x=3")
+    expect(first.evidence.samples.one[0]).toBe("request.self.position.x=2")
+    expect(changed).not.toEqual(first)
+  })
+  it("charges pool overhead before growth and never discounts reference-heavy projections", () => {
+    const bounded = createBoundedFactoryProjectionPool(1000)
+    expect(() => bounded.project("x".repeat(1000))).toThrow("IMPORT_PROJECTION_LIMIT")
+    expect(bounded.chargedBytes()).toBeLessThanOrEqual(1000)
+    const refs = createBoundedFactoryProjectionPool(4096)
+    expect(() => refs.project(Array.from({ length: 100 }, () => "same"))).toThrow("IMPORT_PROJECTION_LIMIT")
+    expect(refs.chargedBytes()).toBeLessThanOrEqual(4096)
+    expect(() => refs.project("same")).toThrow("IMPORT_PROJECTION_LIMIT")
+    const exact = createBoundedFactoryProjectionPool(1000)
+    expect(exact.chargedBytes()).toBe(512)
+    exact.project("same"); expect(exact.chargedBytes()).toBe(864)
+    exact.project("same"); expect(exact.chargedBytes()).toBe(928)
+    exact.project("same"); expect(exact.chargedBytes()).toBe(992)
+    expect(() => exact.project("same")).toThrow("IMPORT_PROJECTION_LIMIT")
+    expect(() => createBoundedFactoryProjectionPool(LEAN_FACTORY_PROJECTION_CEILING_BYTES + 1)).toThrow("IMPORT_PROJECTION_LIMIT")
+    const cycle: unknown[] = []; cycle.push(cycle)
+    expect(() => createBoundedFactoryProjectionPool().project(cycle)).toThrow("IMPORT_PROJECTION_LIMIT")
+  })
   it("denies over-48 lean attempt filenames before parsing malformed bodies", () => {
     const repository = store()
     for (let ordinal = 0; ordinal < 49; ordinal++) writeFileSync(join(repository.directory, `factory-attempt-${ordinal.toString(16).padStart(64, "0")}.started.json`), "not canonical JSON")
