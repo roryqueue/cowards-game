@@ -6,12 +6,13 @@ import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { admitFactory, authorizeFactorySupervision, type FactorySupervisionProvider } from "../../packages/strategy-lab/src/factory/admission.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../../packages/strategy-lab/src/runtime-bridge.js"
-import { LEAN_CAPS, type LeanExperimentLedger, type LeanCharge, type LeanSlot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_CAPS, type LeanExperimentLedger, type LeanCharge, type LeanSlot, type LeanCompactMatchRecord } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { compactExecution, deriveLeanSupervisorDiagnostic } from "../run-v1-38-lean-experiment.js"
 import { createFactorySupervisedRuntime, getFactoryPrivateDiagnostic } from "./v1-38-factory-supervised-runtime.js"
 import { prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { issueLeanBaselineRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
 import { validateLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
+import { collectLeanBaselineMetrics } from "./v1-38-lean-baseline-metrics.js"
 
 const fail = (): never => { throw new TypeError("LEAN_BASELINE_MATCH") }
 export const leanBaselineMatchSeed = (seed: string, ordinal: number): string => `${seed}-${ordinal >= 32 ? ordinal - 24 : ordinal}`
@@ -42,6 +43,14 @@ export const leanBaselineSemanticRoot = (actual: LabMatchExecution): LabRoot | n
   const runtimeRoots = actual.accounting.map(evidence => labRoot("lean-baseline-repeat-runtime-v1", { sourceRoot: evidence.identity.sourceRoot, revisionId: evidence.identity.revisionId, method: evidence.method, ordinal: evidence.ordinal, inputRoot: evidence.inputRoot, result: evidence.result }))
   return labRoot("lean-baseline-canonical-repeat-v1", { finalStateRoot: labRoot("lean-baseline-repeat-state-v1", normalizeState(actual.result.state as unknown as Readonly<Record<string, unknown>>)), transitionRoots, runtimeRoots })
 }
+
+/** Pure producer projection used by the actual dispatch and source-only
+ * failure fixtures. A completed gameplay state is not by itself success. */
+export const leanBaselineMatchEvidence = (actual: LabMatchExecution, compact: LeanCompactMatchRecord, observedSeat: "bottom" | "top" | null) => ({
+  trainingHalfPoints: compact.classification !== "success" || compact.outcome === null ? null : compact.outcome === "DRAW" ? 1 as const : observedSeat && compact.outcome === observedSeat ? 2 as const : 0 as const,
+  semanticRoot: compact.classification === "success" && compact.cleanupComplete ? leanBaselineSemanticRoot(actual) : null,
+  metrics: collectLeanBaselineMetrics(actual, compact),
+})
 
 export const runLeanBaselineMatch = async (input: {
   ledger: LeanExperimentLedger; charge: LeanCharge; slot: LeanSlot; seed: string
@@ -100,8 +109,7 @@ export const runLeanBaselineMatch = async (input: {
   input.checkpoint()
   const elapsedMs = Math.ceil(performance.now() - began), compact = compactExecution(actual, elapsedMs, cleanupComplete, scenario.bottomPlayerId)
   const observedSeat = input.observedRole === bottomSource.role ? "bottom" : input.observedRole === topSource.role ? "top" : null
-  const trainingHalfPoints = compact.outcome === "DRAW" ? 1 as const : observedSeat && compact.outcome === observedSeat ? 2 as const : 0 as const
-  const semanticRoot = leanBaselineSemanticRoot(actual)
+  const { trainingHalfPoints, semanticRoot, metrics } = leanBaselineMatchEvidence(actual, compact, observedSeat)
   function* replayFrames() {
     if (actual.kind === "completed") {
       yield redact({ kind: "final-state", value: actual.result.state })
@@ -112,6 +120,6 @@ export const runLeanBaselineMatch = async (input: {
   const provider = failedEvidence && opened.find(p => p.identity.sourceRoot === failedEvidence.identity.sourceRoot)
   const origin = provider && failedEvidence ? diagnosticProviders.get(provider)?.(failedEvidence) : undefined
   const diagnostic = compact.classification !== "success" ? deriveLeanSupervisorDiagnostic(input.charge.root, actual, origin ? { stage: "native_response", reason: ["stream_exchange", "outer_frame", "inner_response", "executor"].includes(origin.stage) ? origin.stage as "stream_exchange" | "outer_frame" | "inner_response" | "executor" : "system_failure", method: failedEvidence!.method, ordinal: failedEvidence!.ordinal, code: !failedEvidence!.result.ok && "systemFailure" in failedEvidence!.result ? failedEvidence!.result.systemFailure.code : undefined } : undefined) : null
-  return { compact, replayFrames: replayFrames(), brainInputs, strategyInputs, trainingHalfPoints, semanticRoot, decisionRoot: labRoot("lean-baseline-observed-decisions-v1", decisionRows), diagnostic }
+  return { compact, replayFrames: replayFrames(), brainInputs, strategyInputs, trainingHalfPoints, semanticRoot, metrics, decisionRoot: labRoot("lean-baseline-observed-decisions-v1", decisionRows), diagnostic }
 }
 const diagnosticProviders = new WeakMap<object, (evidence: Parameters<typeof getFactoryPrivateDiagnostic>[1]) => ReturnType<typeof getFactoryPrivateDiagnostic>>()
