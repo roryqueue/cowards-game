@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Plan265-16 exactly-one diagnostic prepared and reviewed; commit allocation then unique MAIN entry
+stopped_at: Plan265-16 bounded diagnostic consumed; invalid parent terminal; human prospective stop/admission decision needed
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Diagnostic prepared7ce7ea81; independent data and prepared-prefix checks pass; MAIN composition reviewed; no empirical entry yet
+last_activity_desc: One observed successful cell but failed parent custody; unique reader refused and terminal check closed; source diagnosis inconclusive
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT CLOSED / HUMAN-ONLY FRONTIER: approved exactly-one diagnostic is CONSUMED. UniqueMAIN20715 parent47339/child47375 CLOSED, rootexit1; actualonecell compactsuccessOK/cleanuptrue/449invocations/68182ms but parentterminalchild_failed/exitCode0/signalnull, actualinitiatingparentcauseUNKNOWN. Actualresult574e8df0/root3051dd5d andterminaledb78754 remain immutable. ONE actualnewreader invokedby /root/verify_265_correction_diagnostic_retained exited1 beforeaudit onterminalcustody; acceptedcheckABSENT, no rerun. Uniqueappropriatefinite terminal-custody check CLOSEDgaps_found4/5; authorizedterminal-verifierinterval435878ms closed, cumulative5282046ms/11charges/inactive; originaljournalprefixunchanged, finalraw5224cd85. Actualsource/HEADff4f9c8f unchangedthroughbothclosures; HOLD RELEASED. Source-onlyGSDdiagnosis CLOSEDinconclusive, no specificsourcefaultestablished/no speculativefix. No additionalroute/Match/reader is authorized by the consumed bounded amendment; baseline remainsdenied. New prospective SUPERVISOR-DECISION-v1 is PENDING/unapplied: proposesonefreshcause-loggeddiagnostic and allowsbaselineONLYafterafullyacceptedclean diagnosticsuccess, whileoldcause mayremainunknown. Do notinferapprovalfromearlierblanket orone-shotdecision, changeadmissionguard, dispatchnewroute, reinterpret/refund/recreditoldsuccess-shaped evidence, orduplicateclosedreaders. Safe reports/source-only work maycontinue withoutheavyunchangedscans. Preserve15GB/8h/300Matches/guest1000-host5000-Match600000/allotherbounds; sourceopportunity unchanged. Phase265incomplete, freeze266/formation/holdoutunstarted; no public/counted/production/fullLEAG/successfultag. Earlierprepared/sourcefrontiersbelowhistory.
 
 CURRENT PREPARED DIAGNOSTIC FRONTIER: no activeempiricalentry/verifier/hold. Exactlyonefreshdiagnostic preparation38929 CLOSEDexit0, allocation7ce7ea8108a389806547d8c9a91dd64110b8cef5e73d3d6b843d7073d889223c/raw5e15dbb38072015d5c0e984acbdc295c4b1d03f3bdff954e371050c2350df992. Canonicalrequestraw2d158a6e, independentdatareview-v2rawbe6bc23a, reviewedsource18ff084c/functional5a9cb582/880entries; REVIEW-v5clean/sourceverification-v2 verifiesnarrowdelta+original7/7. Real0700newstore onlyallocation/emptychargeledger/time. Independentprepared-prefixcheckpass:10prior/0currentcharges,4105057ms CLOSEDprefix (includes779536msrequestdata+6475msprepare),1384448Bphysical; notcurrentalltime/capacity. MAIN privatecompositionhelperraw39be76f0/independentreview963a3641/receipt110d0057 uses EXISTING reviewedparentAPI explicitprospectiveStart atactualprepareclosure, thus entirepostprepareadministrative/review/commit/push/loadergap counts in newrun-associatedupperclock BEFORE release/charge; nooldtime mutation/refund ornewintervalid. ExactreviewedchildCLI/mode/authority/capacity/heldsourceHEAD/terminalprotocolunchanged. Commit/push exactallocation+gates BEFOREONE MAINentry usingthatreviewedhelper; preservehelper/receiptthroughhold. Actualsameprocesscapacitymustpassbeforecharge/provider. HoldsourceANDHEADthroughactualterminal+ONEappropriateindependentnewretainedcheck. Originalconsumedhistoryunchanged; no formation/holdout/public/counting/production/LEAGcredit. Unknown/unclean/nonactionable diagnostic deniesconditionalbaseline, nosecond diagnostic. Earlierparagraphshistory.
 
