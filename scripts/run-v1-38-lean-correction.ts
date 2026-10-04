@@ -26,9 +26,13 @@ const AMENDMENT = ".planning/phases/265-serious-current-rules-league-and-develop
 export const LEAN_CORRECTION_RESERVE = Object.freeze({ cleanupMs: 30_000, terminalMs: 30_000, checkMs: 600_000, replayMs: 600_000, bufferBytes: 320 * 1024 * 1024, terminalBytes: 65_536 })
 type AdmissionClock = { wallStartMs: number; monotonicStartNs: string }
 const admissionClock = (): AdmissionClock => ({ wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() })
+const processAdmissionClock = (): AdmissionClock => {
+  const now = admissionClock(), uptimeNs = BigInt(Math.ceil(process.uptime() * 1_000_000_000))
+  return { wallStartMs: now.wallStartMs - Number((uptimeNs + 999999n) / 1000000n), monotonicStartNs: (BigInt(now.monotonicStartNs) - uptimeNs).toString() }
+}
 /** Exclusive host custody precedes source authentication and child startup.
  * An interrupted start is never refunded; a spent command cannot be reopened. */
-export const beginLeanCorrectionAdmission = (route: LeanCorrectionRoute, mode: "prepare" | "run", directory = resolve(LEAN_CORRECTION_ROUTES[route].temp), clock = admissionClock()) => {
+export const beginLeanCorrectionAdmission = (route: LeanCorrectionRoute, mode: "prepare" | "run", directory = resolve(LEAN_CORRECTION_ROUTES[route].temp), clock = processAdmissionClock()) => {
   const stat = lstatSync(directory)
   if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || (stat.mode & 0o777) !== 0o700 || realpathSync(directory) !== resolve(directory)) return fail("ADMISSION_DIRECTORY")
   const body = { schemaVersion: "lean-correction-admission-v1", route, mode, parentPid: process.pid, ...clock }
@@ -272,8 +276,8 @@ export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrec
     const fs = statfsSync(ledger.directory, { bigint: true }), free = fs.bavail * fs.bsize
     if (free > BigInt(Number.MAX_SAFE_INTEGER)) return fail("CAPACITY")
     const charge = chargeLeanSlot(ledger, slot, { freeBytes: Number(free), availableMemoryBytes: observeLeagueAvailableMemoryBytes() })
-    const origins: Array<{ metadata: LeanCorrectionOriginMetadata; sourceRoot: LabRoot; seat: "bottom" | "top" }> = []
-    const execution = await runLeanBaselineMatch({ ledger, charge, slot, seed: request.seed, bottom, top, ...(observedRole === undefined ? {} : { observedRole }), checkpoint, register: parent.register, unregister: parent.unregister, correction: { reuse, ...(route === "diagnostic" ? { observe: (metadata: LeanCorrectionOriginMetadata, sourceRoot: LabRoot, seat: "bottom" | "top") => { if (origins.length >= 2) return fail("ORIGIN_LIMIT"); origins.push({ metadata: validateLeanCorrectionOriginMetadata(metadata), sourceRoot, seat }) } } : {}) } })
+    const origins: Array<{ metadata: LeanCorrectionOriginMetadata; sourceRoot: LabRoot; seat: "bottom" | "top"; binding: unknown }> = []
+    const execution = await runLeanBaselineMatch({ ledger, charge, slot, seed: request.seed, bottom, top, ...(observedRole === undefined ? {} : { observedRole }), checkpoint, register: parent.register, unregister: parent.unregister, correction: { reuse, ...(route === "diagnostic" ? { observe: (metadata: LeanCorrectionOriginMetadata, sourceRoot: LabRoot, seat: "bottom" | "top", binding: unknown) => { if (origins.length >= 2) return fail("ORIGIN_LIMIT"); origins.push({ metadata: validateLeanCorrectionOriginMetadata(metadata), sourceRoot, seat, binding }) } } : {}) } })
     retainLeanMatch(ledger, charge, execution.compact, execution.replayFrames)
     const { replayFrames: _frames, ...body } = execution, cell = { ...body, ordinal: slot.ordinal, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot }
     const observationBody = { schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }

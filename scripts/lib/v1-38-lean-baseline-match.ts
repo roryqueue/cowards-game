@@ -119,6 +119,7 @@ export const runLeanBaselineMatch = async (input: {
     const defaults = defaultRuntimeMetadata("typescript")
     const revision = buildStrategyRevision({ source: snapshot.source, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
     if (!revision.validation.valid || !revision.metadata.sourceArtifact) return fail()
+    const executableSource = Buffer.from(revision.metadata.sourceArtifact.bytesBase64 ?? fail(), "base64").toString("utf8")
     const matchId = `lean-${input.charge.root.slice(7, 31)}`, containerName = `lean-${input.charge.root.slice(7, 25)}-${seat}`, ownershipLabel = `lean-${input.ledger.allocation.root.slice(7, 25)}`
     const runtime = prospectiveLeagueRuntimeBinding(admission, { revisionId: revision.id, sourceRoot: snapshot.sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image })
     const binding = { budgetRoot: input.ledger.allocation.root, attemptRoot: input.charge.root, matchId, containerName, ownershipLabel, seat, runtime }
@@ -135,7 +136,7 @@ export const runLeanBaselineMatch = async (input: {
         if (performance.now() - began >= LEAN_CAPS.matchMs) { provider.close(); return fail() }
         input.checkpoint()
         requestOrdinal += 1
-        if (input.correction?.observe) activeTransportBinding = leanCorrectionInvocationTransportBinding({ methodName: request.kind, source: snapshot.source, input: request.input, outputByteLimit: CORRECTION_RUNTIME_OUTPUT_BYTES, requestOrdinal })
+        if (input.correction?.observe) activeTransportBinding = leanCorrectionInvocationTransportBinding({ methodName: request.kind, source: executableSource, input: request.input, outputByteLimit: CORRECTION_RUNTIME_OUTPUT_BYTES, requestOrdinal })
         const evidence = await native.invoke(request, identity)
         activeTransportBinding = undefined
         if (observed && native.verify(evidence) && evidence.result.ok) {

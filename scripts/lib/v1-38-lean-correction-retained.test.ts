@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
+import { defaultRuntimeMetadata } from "@cowards/spec"
+import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { CANONICAL_ARENA_CATALOG_V1_37, type StrategyInputV119 } from "@cowards/spec"
 import * as planner from "../../packages/strategy-lab/src/planner/assign.js"
@@ -27,12 +29,16 @@ const fixture = () => {
   const evidence = { records, charged: 11, elapsedMs: 3324046, physicalHighWaterBytes: 16384, scratchHighWaterBytes: 1024, root: labRoot("lean-evidence-v1", { allocationRoot: a.root, events, records }) }
   const pairBody = { schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: leanBytesRoot(Buffer.alloc(0)), priorLedgerByteLength: 0, priorCharged: 10, bottomRole: bottom.role, bottomSourceRoot: bottom.sourceRoot, bottomSnapshotRoot: bottom.root, topRole: top.role, topSourceRoot: top.sourceRoot, topSnapshotRoot: top.root }, pair = { ...pairBody, root: labRoot("lean-baseline-pair-v1", pairBody) }
   const metricBody = { executionRoot: compact.executionRoot, formationComparison: "inconclusive" }, metrics = { ...metricBody, root: labRoot("lean-baseline-match-metrics-v1", metricBody) }
-  const cell = { ordinal: 0, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot, compact, brainInputs: [], strategyInputs: [], trainingHalfPoints: null, semanticRoot: null, metrics, decisionRoot: labRoot("mock-decision", {}), diagnostic: null }
+  const defaults = defaultRuntimeMetadata("typescript")
+  const revision = buildStrategyRevision({ source: bottom.source, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
+  const transport = { method: "selectActivations", requestOrdinal: 1, requestRoot: labRoot("mock-request", {}), payloadRoot: labRoot("mock-payload", {}), inputRoot: labRoot("mock-input", {}), executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}` }
+  const invocationBinding = { schemaVersion: "v1.38-lean-correction-invocation-binding-v1", ...transport, sourceRoot: bottom.sourceRoot, seat: "bottom", requestId: "synthetic-request", ordinal: 0, invocationRoot: labRoot("mock-invocation", {}) }
+  const cell = { ordinal: 0, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot, compact, brainInputs: [], strategyInputs: [], trainingHalfPoints: null, semanticRoot: null, metrics, decisionRoot: labRoot("mock-decision", {}), diagnostic: { schemaVersion: "lean-supervisor-diagnostic-v1", chargeRoot: charge.root, stage: "native_response", reason: "executor", code: "SUBPROCESS_SIGNAL", method: "selectActivations", ordinal: 0, invocationBinding } }
   const observationBody = { schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }, observation = { ...observationBody, root: labRoot("lean-baseline-observation-v1", observationBody) }
   const head = "a".repeat(40), entry = { allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), head }
   const terminal = { entryBytesRoot: leanBytesRoot(leanCanonicalBytes(entry)), allocationRoot: a.root, sourceRoot: a.sourceRoot, head, status: "child_exited", exitCode: 0, signal: null }
   const metadata = { schemaVersion: "v1.38-lean-correction-origin-v1", requestOrdinal: 1, requestRoot: labRoot("mock-request", {}), transportMethod: "docker_exec_stream", brokerMode: "legacy", brokerBranch: "legacy_deadline", signalBufferState: "not_done", waitDisposition: "timed_out", workerLifecycle: "unknown", transportSignal: "broker_synthetic_sigkill", terminationDisposition: "worker_terminate_completed", elapsedBucket: "unknown" }
-  const originBody = { schemaVersion: "lean-correction-origin-envelope-v1", allocationRoot: a.root, sourceRoot: a.sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins: [{ metadata, sourceRoot: bottom.sourceRoot, seat: "bottom" }] }, origin = { ...originBody, root: labRoot("lean-correction-origin-envelope-v1", originBody) }
+  const originBody = { schemaVersion: "lean-correction-origin-envelope-v1", allocationRoot: a.root, sourceRoot: a.sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins: [{ metadata, sourceRoot: bottom.sourceRoot, seat: "bottom", binding: transport }] }, origin = { ...originBody, root: labRoot("lean-correction-origin-envelope-v1", originBody) }
   const pipeline = { status: "diagnostic_only", cells: [cell], training: null, holdoutOpened: false, formationMaterialized: false }
   const resultBody = { schemaVersion: "lean-correction-result-v1", privacy: "private_offline", issued: false, route: "diagnostic", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: entry.requestBytesRoot, head, reuseGrantRoot: reuse.grant.root, pipeline, evidenceRoot: evidence.root, cumulativeCharged: 11, holdoutOpened: false, formationMaterialized: false, phaseComplete: false }
   return { schemaVersion: "lean-correction-retained-snapshot-v1", allocation: a, request, entry, terminal, evidence, time: { active: false, elapsedMs: 3324046, closed: new Set(["pilot-entry"]) }, result: { ...resultBody, root: labRoot("lean-correction-result-v1", resultBody) }, reuse, pairs: [pair], observations: [observation], sources: [bottom, top], artifacts: {}, origin, journalBytes: Buffer.concat(events.map(e => Buffer.concat([leanCanonicalBytes(e), Buffer.from("\n")]))) }
@@ -49,6 +55,11 @@ describe("new correction retained admission", () => {
     expect(report.observedOrigin).toBe("legacy_deadline")
     expect(report.initiatingNativeCause).toBe("unknown")
     expect(report.complete).toBe(false)
+    const changedInvocation = structuredClone(s)
+    changedInvocation.origin.origins[0]!.metadata.requestOrdinal = 2
+    const { root: _oldOriginRoot, ...changedOriginBody } = changedInvocation.origin
+    changedInvocation.origin.root = labRoot("lean-correction-origin-envelope-v1", changedOriginBody)
+    expect(() => auditLeanCorrectionRetained(changedInvocation)).toThrow("ORIGIN_INVOCATION")
     for (const changed of [{ entry: { ...s.entry, head: "b".repeat(40) } }, { origin: null }, { observations: [] }, { evidence: { ...s.evidence, charged: 0 } }, { result: { ...s.result, phaseComplete: true } }, { reuse: { ...s.reuse, grant: { ...s.reuse.grant, opportunity: { ...s.reuse.grant.opportunity, prospectiveResponseNodes: 129 } } } }]) expect(() => auditLeanCorrectionRetained({ ...s, ...changed })).toThrow()
   }, 20000)
 })

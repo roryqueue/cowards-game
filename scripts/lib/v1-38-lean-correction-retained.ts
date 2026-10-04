@@ -3,6 +3,8 @@
 import { readdirSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { join } from "node:path"
+import { defaultRuntimeMetadata } from "@cowards/spec"
+import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { labRoot, exactLabKeys, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_CAPS, LEAN_CORRECTION_ROUTES, LEAN_EXTERNAL_SCRATCH_RESERVE, admitLeanAllocation, beginLeanInterval, closeLeanInterval, cumulativeLeanPhysicalBytes, currentLeanElapsedMs, openLeanLedger, readLeanChildEntry, readLeanChildTerminal, readLeanLedger, readLeanTimeAccounting, verifyLeanEvidence, currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCorrectionAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { auditLeanTrainingVector, type LeanColdTrainingManifest, type LeanResponseWork, type LeanResponseNodeReceipt } from "../../packages/strategy-lab/src/league/lean-training.js"
@@ -100,9 +102,18 @@ export const auditLeanCorrectionRetained = (value: unknown, guard: () => void = 
     const { root: oRoot, ...originBody } = origin
     if (oRoot !== labRoot("lean-correction-origin-envelope-v1", originBody)) return fail("ORIGIN_ROOT")
     originRoot = oRoot as LabRoot
-    for (const row of origin.origins as { metadata: unknown; sourceRoot: LabRoot; seat: string }[]) {
-      if (!exactLabKeys(row, ["metadata", "sourceRoot", "seat"]) || !["bottom", "top"].includes(row.seat) || row.sourceRoot !== (row.seat === "bottom" ? s.pairs[0]!.bottomSourceRoot : s.pairs[0]!.topSourceRoot)) return fail("ORIGIN_SOURCE")
+    for (const row of origin.origins as { metadata: unknown; sourceRoot: LabRoot; seat: string; binding: Record<string, unknown> }[]) {
+      if (!exactLabKeys(row, ["metadata", "sourceRoot", "seat", "binding"]) || !["bottom", "top"].includes(row.seat) || row.sourceRoot !== (row.seat === "bottom" ? s.pairs[0]!.bottomSourceRoot : s.pairs[0]!.topSourceRoot)) return fail("ORIGIN_SOURCE")
       const metadata = validateLeanCorrectionOriginMetadata(row.metadata)
+      const diagnostic = s.observations[0]!.cell.diagnostic as unknown as Record<string, unknown> | null
+      const binding = diagnostic?.invocationBinding as Record<string, unknown> | undefined
+      const transport = row.binding
+      if (!binding || !exactLabKeys(binding, ["schemaVersion", "method", "requestOrdinal", "requestRoot", "payloadRoot", "inputRoot", "executableRoot", "sourceRoot", "seat", "requestId", "ordinal", "invocationRoot"]) || binding.schemaVersion !== "v1.38-lean-correction-invocation-binding-v1" || !exactLabKeys(transport, ["method", "requestOrdinal", "requestRoot", "payloadRoot", "inputRoot", "executableRoot"]) || !["selectActivations", "soldierBrain"].includes(String(binding.method)) || binding.method !== diagnostic?.method || binding.ordinal !== diagnostic?.ordinal || diagnostic?.chargeRoot !== s.evidence.records[0]!.chargeRoot || !Number.isSafeInteger(binding.ordinal) || Number(binding.ordinal) < 0 || binding.requestOrdinal !== Number(binding.ordinal) + 1 || Number(binding.ordinal) >= s.observations[0]!.cell.compact.invocationCount || binding.requestOrdinal !== metadata.requestOrdinal || binding.requestRoot !== metadata.requestRoot || binding.sourceRoot !== row.sourceRoot || binding.seat !== row.seat || typeof binding.requestId !== "string" || binding.requestId.length < 1 || binding.requestId.length > 256 || ![binding.requestRoot, binding.payloadRoot, binding.inputRoot, binding.executableRoot, binding.invocationRoot].every(rooted) || Object.entries(transport).some(([key, value]) => binding[key] !== value)) return fail("ORIGIN_INVOCATION")
+      const source = byRole.get(row.seat === "bottom" ? s.pairs[0]!.bottomRole : s.pairs[0]!.topRole)
+      if (!source) return fail("ORIGIN_EXECUTABLE")
+      const defaults = defaultRuntimeMetadata("typescript")
+      const revision = buildStrategyRevision({ source: source.source, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
+      if (!revision.validation.valid || !revision.metadata.sourceArtifact || binding.executableRoot !== `sha256:${revision.metadata.sourceArtifact.hash}`) return fail("ORIGIN_EXECUTABLE")
       if (metadata.brokerBranch === "legacy_deadline" && metadata.waitDisposition === "timed_out" && metadata.transportSignal === "broker_synthetic_sigkill" && metadata.terminationDisposition === "worker_terminate_completed") observedOrigin = "legacy_deadline"
     }
   } else {
@@ -178,7 +189,9 @@ export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrection
   const terminal = readLeanChildTerminal(ledger), entry = readLeanChildEntry(ledger)
   if (terminal.status !== "child_exited") return fail("TERMINAL_ONLY_REQUIRED")
   const interval = `correction-${route}-verifier`
-  beginLeanInterval(ledger, interval)
+  // Include loader and pre-reader custody work; source fixtures do not spend
+  // this actual one-shot reader identity.
+  beginLeanInterval(ledger, interval, Date.now() - Math.ceil(process.uptime() * 1000))
   let scratchPeak = 0
   const guard = () => {
     scratchPeak = Math.max(scratchPeak, process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024)
