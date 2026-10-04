@@ -223,11 +223,19 @@ export const runLeanCurrentChild = async (requestPath: string) => {
 export const runLeanCurrent = async (requestPath: string) => {
   requireScope()
   const request = readLeanBaselineRequest(requestPath), { ledger, allocation } = allocationFor(request)
-  existingStart(ledger); committedAllocation(ledger)
-  const fixedHead = head(), fixedManifest = leanBaselineSourceManifest().root, fixedRequest = requestBytesRoot(requestPath)
-  if (fixedManifest !== request.sourceRoot) return fail("SOURCE_HOLD")
+  return runLeanBoundedParent({ ledger, requestPath, allocationPath: ALLOCATION, store: STORE, sourceRoot: request.sourceRoot, manifestRoot: () => leanBaselineSourceManifest().root, childMode: "child-current" })
+}
+/** Shared parent lifecycle only. Callers still own strict source/request/allocation
+ * admission; this does not create or substitute a route. */
+export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string }) => {
+  const { ledger, requestPath, store: STORE } = options, allocation = ledger.allocation
+  const committed = execFileSync("git", ["show", `HEAD:${options.allocationPath}`], { maxBuffer: 262144 })
+  if (leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(allocation)) || leanBytesRoot(committed) !== leanBytesRoot(safeBytes(options.allocationPath))) return fail("UNCOMMITTED_ALLOCATION")
+  if (readLeanLedger(ledger).events.length || readLeanTimeAccounting(ledger).active || readLeanTimeAccounting(ledger).starts.has("pilot-entry") || readdirSync(STORE).some(name => ["entry.json", "child-terminal.json", "result.json", "entry-failure.json"].includes(name))) return fail("ALLOCATION_USED")
+  const fixedHead = head(), fixedManifest = options.manifestRoot(), fixedRequest = requestBytesRoot(requestPath)
+  if (fixedManifest !== options.sourceRoot) return fail("SOURCE_HOLD")
   const token = randomBytes(32).toString("hex")
-  const child = fork(resolve(process.argv[1] ?? fail("ENTRY_PATH")), ["child-current", "--request", requestPath], { execArgv: process.execArgv, stdio: ["ignore", "ignore", "ignore", "ipc"] })
+  const child = fork(resolve(process.argv[1] ?? fail("ENTRY_PATH")), [options.childMode, "--request", requestPath], { execArgv: process.execArgv, stdio: ["ignore", "ignore", "ignore", "ipc"] })
   let entered = false, uncertain = false, childRssObservedBytes: number | null = null, childFailure: LeanChildFailureReceipt | null = null
   child.on("error", () => { uncertain = true })
   child.on("message", message => {
@@ -246,7 +254,7 @@ export const runLeanCurrent = async (requestPath: string) => {
     if (process.memoryUsage().rss + childRssObservedBytes + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes) return fail("PREFIX_CAPACITY")
     const fs = statfsSync(STORE, { bigint: true }), free = fs.bavail * fs.bsize
     if (free > BigInt(Number.MAX_SAFE_INTEGER) || free < BigInt(LEAN_CAPS.totalBytes - cumulativeLeanPhysicalBytes(ledger))) return fail("PREFIX_CAPACITY")
-    const entry: LeanChildEntryV2 = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: request.sourceRoot, requestBytesRoot: fixedRequest, head: fixedHead, parentPid: process.pid, childPid: child.pid, handshakeRoot: leanBytesRoot(Buffer.from(token, "hex")), wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }
+    const entry: LeanChildEntryV2 = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: options.sourceRoot, requestBytesRoot: fixedRequest, head: fixedHead, parentPid: process.pid, childPid: child.pid, handshakeRoot: leanBytesRoot(Buffer.from(token, "hex")), wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }
     publishLeanChildEntry(ledger, entry)
     beginLeanInterval(ledger, "pilot-entry", entry.wallStartMs)
     entered = true
@@ -258,10 +266,10 @@ export const runLeanCurrent = async (requestPath: string) => {
         if (process.memoryUsage().rss + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes || currentLeanElapsedMs(ledger) >= LEAN_CAPS.elapsedMs) { uncertain = true; child.kill("SIGKILL") }
       } catch { uncertain = true; child.kill("SIGKILL") }
     }, 250)
-    const timeout = setTimeout(() => { uncertain = true; child.kill("SIGKILL") }, Math.max(1, LEAN_CAPS.elapsedMs - allocation.predecessor.elapsedUpperBoundMs))
+    const timeout = setTimeout(() => { uncertain = true; child.kill("SIGKILL") }, Math.max(1, LEAN_CAPS.elapsedMs - currentLeanElapsedMs(ledger)))
     const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => resolveExit({ code, signal })))
     clearInterval(period); clearTimeout(timeout)
-    try { if (head() !== fixedHead || leanBaselineSourceManifest().root !== fixedManifest || requestBytesRoot(requestPath) !== fixedRequest) uncertain = true } catch { uncertain = true }
+    try { if (head() !== fixedHead || options.manifestRoot() !== fixedManifest || requestBytesRoot(requestPath) !== fixedRequest) uncertain = true } catch { uncertain = true }
     const terminalFs = statfsSync(STORE, { bigint: true }), terminalFree = terminalFs.bavail * terminalFs.bsize
     const terminal = publishChildTerminalAfterOptionalReceipt(childFailure,
       receipt => exclusive(join(STORE, "entry-failure.json"), receipt, ledger),

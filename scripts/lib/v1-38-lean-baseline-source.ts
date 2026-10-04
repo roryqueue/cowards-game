@@ -9,6 +9,7 @@ import { deriveFactoryOraclePacketRoot, deriveFactoryValidationRoot } from "../.
 import { deriveFactorySourceStructureRoot } from "../../packages/strategy-lab/src/factory/fingerprint.js"
 import { admitFactory, authorizeFactorySupervision } from "../../packages/strategy-lab/src/factory/admission.js"
 import { leanBytesRoot, leanCanonicalBytes, writeLeanAll, assertLeanPublicationCapacity, type LeanExperimentLedger } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 
 const fail = (): never => { throw new TypeError("LEAN_BASELINE_SOURCE") }
 const root = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[a-f0-9]{64}$/u.test(v)
@@ -67,7 +68,29 @@ export const validateLeanBaselineSource = (value: unknown): LeanBaselineSource =
 export const publishLeanBaselineSource = (ledger: LeanExperimentLedger, value: LeanBaselineSource): void => {
   const v = validateLeanBaselineSource(value), bytes = leanCanonicalBytes(v)
   const allocation = ledger.allocation as unknown as { schemaVersion: string; coldRoot?: LabRoot; sourceRoot: LabRoot }
-  if (allocation.schemaVersion !== "lean-current-baseline-allocation-v1" || v.coldRoot !== allocation.coldRoot || v.implementationRoot !== allocation.sourceRoot) return fail()
+  if (!["lean-current-baseline-allocation-v1", "lean-correction-baseline-allocation-v1"].includes(allocation.schemaVersion) || v.coldRoot !== allocation.coldRoot || v.implementationRoot !== allocation.sourceRoot) return fail()
+  publishSourceBytes(ledger, v, bytes)
+}
+
+/** A checked outer grant, never a relabelled packet, admits only its exact seven
+ * original snapshots. Default publication above still requires current provenance. */
+export const publishLeanReusedBaselineSource = (ledger: LeanExperimentLedger, value: LeanBaselineSource, reuse: LeanColdReuse): void => {
+  const allocation = ledger.allocation as unknown as { schemaVersion: string; coldRoot?: LabRoot; sourceRoot: LabRoot; seed?: string }
+  const admitted = validateLeanColdReuse(reuse, allocation.sourceRoot), v = validateLeanBaselineSource(value)
+  if (!["lean-current-baseline-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-diagnostic-allocation-v1"].includes(allocation.schemaVersion) || allocation.coldRoot !== admitted.grant.coldRoot || allocation.seed !== admitted.grant.seed || !admitted.sources.some(original => original.root === v.root && original.role === v.role)) return fail()
+  publishSourceBytes(ledger, v, leanCanonicalBytes(v))
+}
+
+/** Pure current-admission seam for a correction dispatcher/reader. This returns
+ * the original snapshot, not a newly authored packet or a runtime capability. */
+export const validateLeanReusedBaselineSource = (value: unknown, reuse: LeanColdReuse, newSourceRoot: LabRoot): LeanBaselineSource => {
+  const admitted = validateLeanColdReuse(reuse, newSourceRoot), source = validateLeanBaselineSource(value)
+  const original = admitted.sources.find(snapshot => snapshot.root === source.root && snapshot.role === source.role)
+  if (!original) return fail()
+  return original
+}
+
+const publishSourceBytes = (ledger: LeanExperimentLedger, v: LeanBaselineSource, bytes: Uint8Array): void => {
   assertLeanPublicationCapacity(ledger, bytes.length)
   const fd = openSync(join(ledger.directory, `source-${v.role}.json`), constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
   try { writeLeanAll(fd, bytes); fsyncSync(fd) } finally { closeSync(fd) }

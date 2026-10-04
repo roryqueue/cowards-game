@@ -3,13 +3,14 @@ import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts
 import { buildPlannerCandidate } from "../../packages/strategy-lab/src/planner/emit.js"
 import { emitTacticalSource } from "../../packages/strategy-oracle-tactical/src/emit.js"
 import { trainLeanInitialCandidates, trainLeanResponse, type LeanColdTrainingInput, type LeanColdTrainingManifest, type LeanLegalExample } from "../../packages/strategy-lab/src/league/lean-training.js"
-import { type LeanCurrentBaselineAllocation, type LeanSlot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { type LeanCurrentBaselineAllocation, type LeanCorrectionAllocation, type LeanSlot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { buildLeanInitialProposals, selectLeanBestTrainedProposal, selectLeanTrainedProposal } from "./v1-38-lean-training-adapter.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
 import { buildLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
 import type { runLeanBaselineMatch } from "./v1-38-lean-baseline-match.js"
 import { inspectLeanSealMetadata } from "./v1-38-lean-seal-metadata.js"
+import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 
 type Observed = Awaited<ReturnType<typeof runLeanBaselineMatch>>
 export interface LeanBaselineObservedCell extends Omit<Observed, "replayFrames"> { readonly ordinal: number; readonly slotRoot: LabRoot; readonly bottomRoot: LabRoot; readonly topRoot: LabRoot }
@@ -44,13 +45,22 @@ const measured = (cell: LeanBaselineObservedCell): LeanMeasuredPair => {
   return { ordinal: cell.ordinal, bottomSourceRoot: cell.bottomRoot, topSourceRoot: cell.topRoot, outcome: cell.compact.outcome, executionRoot: cell.compact.executionRoot, semanticRoot: cell.semanticRoot }
 }
 
-export const executeLeanCurrentPipeline = async (input: {
-  allocation: LeanCurrentBaselineAllocation
+export interface LeanCurrentPipelineInput {
+  allocation: LeanCurrentBaselineAllocation | LeanCorrectionAllocation
   freezeSource: (source: LeanBaselineSource) => void
   retainArtifact: (name: string, value: unknown) => void
   checkpoint: () => void
   dispatch: (slot: LeanSlot, bottom: LeanBaselineSource, top: LeanBaselineSource, observedRole?: string) => Promise<LeanBaselineObservedCell>
-}) => {
+}
+export const executeLeanCurrentPipeline = async (input: LeanCurrentPipelineInput) => executeCurrentPipeline(input)
+/** Explicit reuse only: admission precedes retention, source publication and dispatch.
+ * The original entry has no fallback or configurable reuse authority. */
+export const executeLeanReusedCurrentPipeline = async (input: LeanCurrentPipelineInput & { reuse: LeanColdReuse }) => {
+  const reuse = validateLeanColdReuse(input.reuse, input.allocation.sourceRoot)
+  if (input.allocation.seed !== reuse.grant.seed || input.allocation.coldRoot !== reuse.grant.coldRoot) return fail("REUSE_ALLOCATION")
+  return executeCurrentPipeline(input, reuse)
+}
+const executeCurrentPipeline = async (input: LeanCurrentPipelineInput, reuse?: LeanColdReuse) => {
   const allocation = input.allocation
   if (allocation.coldRoot !== leanColdProcedureRoot(allocation.seed) || allocation.slots.length !== 36) return fail("ALLOCATION")
   const sources = new Map<string, LeanBaselineSource>(), cells: LeanBaselineObservedCell[] = []
@@ -59,15 +69,18 @@ export const executeLeanCurrentPipeline = async (input: {
   input.retainArtifact("seal-metadata.json", inspectLeanSealMetadata())
   const freeze = (role: string, source: string) => {
     if (sources.has(role)) return fail("SOURCE_REFREEZE")
-    const snapshot = buildLeanBaselineSource({ role, source, coldRoot: allocation.coldRoot, implementationRoot: allocation.sourceRoot })
+    const original = reuse?.sources.find(snapshot => snapshot.role === role)
+    if (original && original.source !== source) return fail("REUSE_SOURCE")
+    const snapshot = original ?? buildLeanBaselineSource({ role, source, coldRoot: allocation.coldRoot, implementationRoot: allocation.sourceRoot })
     input.freezeSource(snapshot); sources.set(role, snapshot); return snapshot
   }
   // Opponent and probe are independently frozen before candidate outputs.
-  const opponent = freeze("cold-opponent", emitTacticalSource())
-  const probe = freeze("probe", buildPlannerCandidate().source)
-  const corpus = buildLeanColdCorpus(allocation.seed)
+  const opponent = freeze("cold-opponent", reuse ? reuse.sources[0]!.source : emitTacticalSource())
+  const probe = freeze("probe", reuse ? reuse.sources[1]!.source : buildPlannerCandidate().source)
+  const corpus = reuse ? reuse.corpus : buildLeanColdCorpus(allocation.seed)
   input.checkpoint(); input.retainArtifact("cold-corpus.json", corpus)
-  const proposals = buildLeanInitialProposals({ commonSourceRoot: allocation.coldRoot, tacticalInputs: corpus.tacticalInputs, teacherSearchReceipts: corpus.teacherSearchReceipts })
+  const proposals = reuse ? reuse.proposals : buildLeanInitialProposals({ commonSourceRoot: allocation.coldRoot, tacticalInputs: corpus.tacticalInputs, teacherSearchReceipts: corpus.teacherSearchReceipts })
+  if (reuse) input.retainArtifact("cold-reuse-grant.json", reuse.grant)
   input.retainArtifact("initial-proposals.json", proposals)
   const tacticalVariants = proposals.tactical.map((proposal, ordinal) => freeze(`tactical-${ordinal}`, proposal.source))
   const teacherVariant = freeze("teacher-0", proposals.teacher.source)

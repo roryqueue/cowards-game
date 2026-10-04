@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer"
-import { claimLeanRuntimeAuthority, type LeanRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { claimLeanRuntimeAuthority, isLeanCorrectionRuntimeAuthority, type LeanRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import { Worker } from "node:worker_threads"
@@ -33,6 +33,8 @@ export interface LeanContainerMatchSessionOptions {
   readonly prospectiveHostReceiptBinding?: ProspectiveLeagueLifetimeProviderBinding
   /** Private trusted coordinator only. Omitted by every historical caller. */
   readonly privateObserver?: LeanPrivateObserver | undefined
+  /** Correction-only, private, host-owned finite failure receipt. Omitted by all legacy callers. */
+  readonly correctionOriginObserver?: { observe(metadata: LeanCorrectionOriginMetadata): void } | undefined
   readonly infrastructureProfile?: LeanInfrastructureProfile | undefined
   readonly matchId: string; readonly containerName: string; readonly ownershipLabel: string; readonly image: string
   readonly dockerPath?: string | undefined; readonly transport?: LeanContainerMatchTransport | undefined
@@ -47,6 +49,28 @@ export interface LeanPrivateObserver {
   harnessSource: string;
   binding(request: StrategyExecutionRequest): LeanTimingBinding;
   observe(observation: LeanTimingObservation, transportMs: number): void;
+}
+export interface LeanCorrectionOriginMetadata {
+  readonly schemaVersion: "v1.38-lean-correction-origin-v1"
+  readonly requestOrdinal: number
+  readonly requestRoot: string
+  readonly transportMethod: "docker_exec_stream"
+  readonly brokerMode: "legacy"
+  readonly brokerBranch: "legacy_deadline"
+  readonly signalBufferState: "not_done" | "done"
+  readonly waitDisposition: "timed_out" | "changed_without_completion" | "unavailable"
+  readonly workerLifecycle: "unknown"
+  readonly transportSignal: "broker_synthetic_sigkill" | "observed_sigint" | "observed_sigterm" | "observed_sigkill" | "none"
+  readonly terminationDisposition: "worker_terminate_completed" | "worker_terminate_failed" | "unknown"
+  readonly elapsedBucket: "unknown"
+}
+const correctionOriginKeys = ["schemaVersion", "requestOrdinal", "requestRoot", "transportMethod", "brokerMode", "brokerBranch", "signalBufferState", "waitDisposition", "workerLifecycle", "transportSignal", "terminationDisposition", "elapsedBucket"] as const
+/** Strict allowlist for an owner-only correction diagnostic; never accepts raw execution payloads. */
+export const validateLeanCorrectionOriginMetadata = (value: unknown, expected?: { readonly requestOrdinal: number; readonly requestRoot: string }): LeanCorrectionOriginMetadata => {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !exactKeys(value as Record<string, unknown>, correctionOriginKeys) || Buffer.byteLength(JSON.stringify(value)) > 4096) throw new TypeError("LEAN_CORRECTION_ORIGIN_INVALID")
+  const r = value as LeanCorrectionOriginMetadata
+  if (r.schemaVersion !== "v1.38-lean-correction-origin-v1" || !Number.isSafeInteger(r.requestOrdinal) || r.requestOrdinal < 1 || !/^sha256:[a-f0-9]{64}$/u.test(r.requestRoot) || r.transportMethod !== "docker_exec_stream" || r.brokerMode !== "legacy" || r.brokerBranch !== "legacy_deadline" || !["not_done", "done"].includes(r.signalBufferState) || !["timed_out", "changed_without_completion", "unavailable"].includes(r.waitDisposition) || r.workerLifecycle !== "unknown" || !["broker_synthetic_sigkill", "observed_sigint", "observed_sigterm", "observed_sigkill", "none"].includes(r.transportSignal) || !["worker_terminate_completed", "worker_terminate_failed", "unknown"].includes(r.terminationDisposition) || r.elapsedBucket !== "unknown" || (expected !== undefined && (r.requestOrdinal !== expected.requestOrdinal || r.requestRoot !== expected.requestRoot))) throw new TypeError("LEAN_CORRECTION_ORIGIN_INVALID")
+  return Object.freeze({ ...r })
 }
 const timingKeys = ["invocationRoot", "sourceRoot", "executableRoot", "inputRoot", "method", "tupleId", "harnessRoot", "profileRoot"] as const
 export const validateLeanTimingObservation = (value: unknown, expected: LeanTimingBinding): LeanTimingObservation => {
@@ -166,6 +190,28 @@ export const buildLeanObserverBrokerSource = (harnessSource: string): string => 
   return source
 }
 
+/** Opt-in diagnostic clone: only the legacy broker deadline adds a finite receipt. */
+export const buildLeanCorrectionOriginBrokerSource = (harnessSource?: string): string => {
+  const replace = (source: string, before: string, after: string) => {
+    if (!source.includes(before) || source.indexOf(before) !== source.lastIndexOf(before)) throw new TypeError("LEAN_CORRECTION_ORIGIN_SEAM_DRIFT")
+    return source.replace(before, after)
+  }
+  let source = harnessSource === undefined ? LEAN_CONTAINER_BROKER_SOURCE : buildLeanObserverBrokerSource(harnessSource)
+  source = replace(source,
+    'if(wait==="timed-out"||Atomics.load(signal,0)!==1){await terminate(worker,100);port1.close();return {status:null,signal:"SIGKILL",out:Buffer.alloc(0),err:Buffer.alloc(0)}}',
+    'if(wait==="timed-out"||Atomics.load(signal,0)!==1){const signalBufferState=Atomics.load(signal,0)===1?"done":"not_done";await terminate(worker,100);port1.close();return {status:null,signal:"SIGKILL",out:Buffer.alloc(0),err:Buffer.alloc(0),correctionOrigin:{schemaVersion:"v1.38-lean-correction-origin-v1",requestOrdinal:q.correctionOrigin.requestOrdinal,requestRoot:q.correctionOrigin.requestRoot,transportMethod:"docker_exec_stream",brokerMode:"legacy",brokerBranch:"legacy_deadline",signalBufferState,waitDisposition:wait==="timed-out"?"timed_out":"changed_without_completion",workerLifecycle:"unknown",transportSignal:"broker_synthetic_sigkill",terminationDisposition:"worker_terminate_completed",elapsedBucket:"unknown"}}}')
+  source = harnessSource === undefined
+    ? replace(source, 'exact(q,["requestId","mode","payloadBase64","timeoutMilliseconds","stdoutByteLimit","stderrByteLimit"])', 'exact(q,["requestId","mode","payloadBase64","timeoutMilliseconds","stdoutByteLimit","stderrByteLimit","correctionOrigin"])')
+    : replace(source, 'exact(q,["requestId","mode","payloadBase64","timeoutMilliseconds","stdoutByteLimit","stderrByteLimit","timingBinding"])', 'exact(q,["requestId","mode","payloadBase64","timeoutMilliseconds","stdoutByteLimit","stderrByteLimit","timingBinding","correctionOrigin"])')
+  source = harnessSource === undefined
+    ? replace(source, 'q.requestId!==expected||!(q.mode in harnesses)', 'q.requestId!==expected||q.mode!=="legacy"||!q.correctionOrigin||q.correctionOrigin.requestOrdinal!==q.requestId||!/^sha256:[a-f0-9]{64}$/.test(q.correctionOrigin.requestRoot)')
+    : replace(source, 'q.requestId!==expected||q.mode!=="legacy"||!q.timingBinding||q.timingBinding.method!==JSON.parse(Buffer.from(q.payloadBase64,"base64").toString("utf8")).methodName', 'q.requestId!==expected||q.mode!=="legacy"||!q.timingBinding||q.timingBinding.method!==JSON.parse(Buffer.from(q.payloadBase64,"base64").toString("utf8")).methodName||!q.correctionOrigin||q.correctionOrigin.requestOrdinal!==q.requestId||!/^sha256:[a-f0-9]{64}$/.test(q.correctionOrigin.requestRoot)')
+  source = harnessSource === undefined
+    ? replace(source, 'stderrBase64:result.err.toString("base64")}', 'stderrBase64:result.err.toString("base64"),...(result.correctionOrigin===undefined?{}:{correctionOrigin:result.correctionOrigin})}')
+    : replace(source, 'stderrBase64:result.err.toString("base64"),timing:result.timing}', 'stderrBase64:result.err.toString("base64"),timing:result.timing,...(result.correctionOrigin===undefined?{}:{correctionOrigin:result.correctionOrigin})}')
+  return source
+}
+
 /** Exact bytes of the existing broker's authenticatedHarness transformation. */
 export const buildLeanAuthenticatedHarnessSource = (source: string): string => {
   const marker = 'import { workerData } from "node:worker_threads"'
@@ -250,6 +296,7 @@ const strictJsonResponse = (stdout: Buffer, byteLimit: number, origins: WeakMap<
 
 export const createLeanContainerMatchSession = (options: LeanContainerMatchSessionOptions): LeanContainerMatchSession => {
   const origins = new WeakMap<object, LeanPrivateFailureOrigin>()
+  if (options.correctionOriginObserver !== undefined && (options.infrastructureProfile !== "closeout" || options.prospectiveHostReceiptAuthority !== undefined || options.prospectiveHostReceiptBinding !== undefined || (options.leanExperimentAuthority !== undefined || options.leanExperimentBinding !== undefined) && !isLeanCorrectionRuntimeAuthority(options.leanExperimentAuthority))) throw new TypeError("LEAN_CORRECTION_ORIGIN_PROFILE")
   let hostResponseReceiptMilliseconds: 5000 | undefined
   if ("hostResponseReceiptMilliseconds" in options) throw new TypeError("LEAN_HOST_RECEIPT_SCALAR")
   if ("leanExperimentAuthority" in options || "leanExperimentBinding" in options) {
@@ -299,7 +346,8 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const poison = (): void => { state = "poisoned"; remove() }
   try {
     const started = transport(dockerPath, ["start", containerId], { timeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: CONTROL_BUFFER_BYTES }); assertCleanControlResult(started, "LEAN_CONTAINER_SESSION_START_FAILED")
-    stream = streamFactory(dockerPath, ["exec", "-i", containerId, "node", "--input-type=module", "--eval", options.privateObserver === undefined ? LEAN_CONTAINER_BROKER_SOURCE : buildLeanObserverBrokerSource(options.privateObserver.harnessSource)], { startupTimeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: STREAM_FRAME_LIMIT_BYTES })
+    const brokerSource = options.correctionOriginObserver !== undefined ? buildLeanCorrectionOriginBrokerSource(options.privateObserver?.harnessSource) : options.privateObserver === undefined ? LEAN_CONTAINER_BROKER_SOURCE : buildLeanObserverBrokerSource(options.privateObserver.harnessSource)
+    stream = streamFactory(dockerPath, ["exec", "-i", containerId, "node", "--input-type=module", "--eval", brokerSource], { startupTimeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: STREAM_FRAME_LIMIT_BYTES })
   } catch { poison(); throw new TypeError("LEAN_CONTAINER_SESSION_START_FAILED") }
   const assertActive = (): void => { if (state === "poisoned") throw new TypeError("LEAN_CONTAINER_SESSION_POISONED"); if (state === "closed") throw new TypeError("LEAN_CONTAINER_SESSION_CLOSED") }
   const runMethod = (request: StrategyExecutionRequest, mode: "legacy" | "v117", timeoutMilliseconds: number, stdoutLimit: number, stderrLimit: number, input: string | Uint8Array): LeanContainerTransportResult => {
@@ -307,9 +355,12 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
     if (hostResponseReceiptMilliseconds !== undefined && (`sha256:${createHash("sha256").update(request.source).digest("hex")}` !== (options.leanExperimentAuthority ?? options.prospectiveHostReceiptAuthority)!.runtime.executableRoot || mode === "legacy" && timeoutMilliseconds !== 1000)) { poison(); throw new TypeError("LEAN_HOST_RECEIPT_REQUEST_BINDING") }
     if (inputBytes > STREAM_FRAME_LIMIT_BYTES / 2) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded payload cap") }
     const observer = options.privateObserver
+    if (options.correctionOriginObserver !== undefined && (mode !== "legacy" || timeoutMilliseconds !== 1000)) { poison(); throw new TypeError("LEAN_CORRECTION_ORIGIN_REQUEST_PROFILE") }
     const timingBinding = observer?.binding(request)
     if (observer && (mode !== "legacy" || timeoutMilliseconds !== 1000 || options.infrastructureProfile !== "closeout" || !timingBinding || timingBinding.method !== request.methodName)) { poison(); throw new TypeError("LEAN_OBSERVER_PROFILE") }
-    const payload = Buffer.from(input); const frame = `${JSON.stringify({ requestId, mode, payloadBase64: payload.toString("base64"), timeoutMilliseconds, stdoutByteLimit: stdoutLimit, stderrByteLimit: stderrLimit, ...(timingBinding === undefined ? {} : { timingBinding }) })}\n`
+    const payload = Buffer.from(input)
+    const correctionBinding = options.correctionOriginObserver === undefined ? undefined : { requestOrdinal: requestId, requestRoot: `sha256:${createHash("sha256").update(`v1.38-lean-correction-origin:${requestId}:`).update(payload).digest("hex")}` }
+    const frame = `${JSON.stringify({ requestId, mode, payloadBase64: payload.toString("base64"), timeoutMilliseconds, stdoutByteLimit: stdoutLimit, stderrByteLimit: stderrLimit, ...(timingBinding === undefined ? {} : { timingBinding }), ...(correctionBinding === undefined ? {} : { correctionOrigin: correctionBinding }) })}\n`
     if (Buffer.byteLength(frame) > STREAM_FRAME_LIMIT_BYTES) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded frame cap") }
     try {
       const transportStart = observer ? process.hrtime.bigint() : undefined
@@ -322,7 +373,8 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
       let parsed: unknown; try { parsed = JSON.parse(raw.subarray(0, -1).toString("utf8")) } catch { throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was malformed"), { stage: "outer_frame", reason: "json_invalid" }) }
       if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was invalid"), { stage: "outer_frame", reason: "object_invalid" })
       const value = parsed as Record<string, unknown>
-      if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64", ...(observer ? ["timing"] : [])]) || value.requestId !== requestId || !(value.status === null || Number.isSafeInteger(value.status)) || !(value.signal === null || typeof value.signal === "string") || typeof value.stdoutBase64 !== "string" || typeof value.stderrBase64 !== "string" || !canonicalBase64(value.stdoutBase64) || !canonicalBase64(value.stderrBase64)) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response correlation failed"), { stage: "outer_frame", reason: "correlation_invalid" })
+      if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64", ...(observer ? ["timing"] : []), ...(value.correctionOrigin === undefined ? [] : ["correctionOrigin"])]) || options.correctionOriginObserver === undefined && value.correctionOrigin !== undefined || options.correctionOriginObserver !== undefined && (value.signal !== null && value.correctionOrigin === undefined || value.correctionOrigin !== undefined && correctionBinding === undefined) || value.requestId !== requestId || !(value.status === null || Number.isSafeInteger(value.status)) || !(value.signal === null || typeof value.signal === "string") || typeof value.stdoutBase64 !== "string" || typeof value.stderrBase64 !== "string" || !canonicalBase64(value.stdoutBase64) || !canonicalBase64(value.stderrBase64)) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response correlation failed"), { stage: "outer_frame", reason: "correlation_invalid" })
+      if (value.correctionOrigin !== undefined && options.correctionOriginObserver !== undefined && correctionBinding !== undefined) options.correctionOriginObserver.observe(validateLeanCorrectionOriginMetadata(value.correctionOrigin, correctionBinding))
       const stdout = Buffer.from(value.stdoutBase64, "base64"); const stderr = Buffer.from(value.stderrBase64, "base64")
       if (stdout.byteLength > stdoutLimit || stderr.byteLength > stderrLimit || stderr.byteLength !== 0) throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Persistent response exceeded cap or emitted stderr")
       if (value.signal !== null) throw new SubprocessSystemFailure("SUBPROCESS_SIGNAL", "Container method was signalled")

@@ -12,8 +12,11 @@ import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-ba
 import { constants, openSync, closeSync, readFileSync, lstatSync, realpathSync, fstatSync } from "node:fs"
 import { resolve } from "node:path"
 import { leanCanonicalBytes, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 
 export interface LeanRuntimeAuthority { readonly schemaVersion: "lean-runtime-authority-v1"; readonly runtime: ProspectiveLeagueLifetimeProviderBinding["runtime"]; readonly seat: "bottom" | "top"; toJSON(): never }
+const correctionAuthorities = new WeakSet<object>()
+export const isLeanCorrectionRuntimeAuthority = (value: unknown): value is LeanRuntimeAuthority => typeof value === "object" && value !== null && correctionAuthorities.has(value)
 export interface LeanBaselinePair {
   readonly schemaVersion: "lean-baseline-pair-v1"; readonly ordinal: number; readonly slotRoot: LabRoot; readonly requestRoot: LabRoot
   readonly priorLedgerBytesRoot: LabRoot; readonly priorLedgerByteLength: number; readonly priorCharged: number
@@ -57,9 +60,11 @@ export const claimLeanRuntimeAuthority = (authority: LeanRuntimeAuthority, bindi
 /** Distinct current-baseline route. The old pilot issuer and its two-source
  * scheduling predicate are unchanged. A pair is retained before charge and
  * both independently validated immutable source snapshots are reopened here. */
-export const issueLeanBaselineRuntimeAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding): LeanRuntimeAuthority => {
+export const issueLeanBaselineRuntimeAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding): LeanRuntimeAuthority => issueBaselineAuthority(ledger, charge, snapshot, binding)
+export const issueLeanCorrectionRuntimeAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding, reuse: LeanColdReuse): LeanRuntimeAuthority => issueBaselineAuthority(ledger, charge, snapshot, binding, validateLeanColdReuse(reuse, ledger.allocation.sourceRoot))
+const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding, reuse?: LeanColdReuse): LeanRuntimeAuthority => {
   const allocation = ledger.allocation as unknown as { schemaVersion: string; coldRoot?: LabRoot; sourceRoot: LabRoot; predecessor?: { chargedMatches: number } }
-  if (allocation.schemaVersion !== "lean-current-baseline-allocation-v1") return fail()
+  if (reuse ? !["lean-correction-diagnostic-allocation-v1", "lean-correction-baseline-allocation-v1"].includes(allocation.schemaVersion) || !("reuseGrantRoot" in ledger.allocation) || ledger.allocation.reuseGrantRoot !== reuse.grant.root : allocation.schemaVersion !== "lean-current-baseline-allocation-v1") return fail()
   const state = readLeanLedger(ledger), retainedCharge = state.charges.get(charge.slotRoot)
   if (!retainedCharge || state.stopped || state.terminals.has(retainedCharge.root) || labRoot("lean-slot-charge", charge) !== labRoot("lean-slot-charge", retainedCharge)) return fail()
   const path = resolve(ledger.directory, `pair-${charge.ordinal}.json`), stat = lstatSync(path)
@@ -97,7 +102,7 @@ export const issueLeanBaselineRuntimeAuthority = (ledger: LeanExperimentLedger, 
   const expectedRoot = binding.seat === "bottom" ? pair.bottomSourceRoot : pair.topSourceRoot
   const expectedSnapshot = binding.seat === "bottom" ? pair.bottomSnapshotRoot : pair.topSnapshotRoot
   const source = readLeanBaselineSource(ledger.directory, expectedRole)
-  if (source.sourceRoot !== expectedRoot || source.root !== expectedSnapshot || source.root !== snapshot.root || source.coldRoot !== allocation.coldRoot || source.implementationRoot !== allocation.sourceRoot) return fail()
+  if (source.sourceRoot !== expectedRoot || source.root !== expectedSnapshot || source.root !== snapshot.root || source.coldRoot !== allocation.coldRoot || (source.implementationRoot !== allocation.sourceRoot && (!reuse || !reuse.sources.some(s => s.root === source.root && s.role === source.role)))) return fail()
   const sourceBytes = new TextEncoder().encode(source.source)
   const admission = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet: source.packet, proposal: source.proposal, sourceBytes }), validation: source.validation })
   const defaults = defaultRuntimeMetadata("typescript")
@@ -109,5 +114,6 @@ export const issueLeanBaselineRuntimeAuthority = (ledger: LeanExperimentLedger, 
   if (used.has(key)) return fail()
   const authority: LeanRuntimeAuthority = Object.freeze({ schemaVersion: "lean-runtime-authority-v1", runtime: freezeLabValue(structuredClone(runtime)), seat: binding.seat, toJSON: fail })
   issued.set(authority, { binding: freezeLabValue(structuredClone(binding)), claims: new Set() }); used.add(key)
+  if (reuse) correctionAuthorities.add(authority)
   return authority
 }

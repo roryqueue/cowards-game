@@ -1,11 +1,15 @@
 /** Source-contract fixtures only: these synthetic rows are never Match evidence. */
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
+import { existsSync } from "node:fs"
+import * as coldBuilder from "./v1-38-lean-cold-corpus.js"
+import * as proposalBuilder from "./v1-38-lean-training-adapter.js"
+import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY } from "./v1-38-lean-baseline-reuse.js"
 import { CANONICAL_ARENA_CATALOG_V1_37, type StrategyInputV119 } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { currentBaselineSlotKind, type LeanCurrentBaselineAllocation, type LeanSlot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
-import { executeLeanCurrentPipeline, leanColdProcedureRoot, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
+import { executeLeanCurrentPipeline, executeLeanReusedCurrentPipeline, leanColdProcedureRoot, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
 import { LEAN_BASELINE_REQUIRED_METRICS, type LeanBaselineMetricReceipt } from "./v1-38-lean-baseline-metrics.js"
 
 const seed = "lean-source-fixture-only"
@@ -34,6 +38,24 @@ const syntheticMetrics = (executionRoot: string, success: boolean): LeanBaseline
 }
 
 describe("current-only staged baseline wiring (synthetic source tests)", () => {
+  it.skipIf(!existsSync(".strategy-lab/lean-baseline-20261004-v1/cold-corpus.json"))("reuses all seven frozen old packets with zero cold builders and rejects forged authority before dispatch", async () => {
+    const current = { ...allocation(), seed: LEAN_COLD_REUSE_HISTORY.seed, coldRoot: LEAN_COLD_REUSE_HISTORY.coldRoot }
+    const reuse = authenticateLeanColdReuse({ directory: ".strategy-lab/lean-baseline-20261004-v1", newSourceRoot: current.sourceRoot, amendmentRoot: LEAN_COLD_REUSE_HISTORY.amendmentRoot })
+    const cold = vi.spyOn(coldBuilder, "buildLeanColdCorpus").mockImplementation(() => { throw new Error("FORBIDDEN_COLD_BUILDER") })
+    const proposals = vi.spyOn(proposalBuilder, "buildLeanInitialProposals").mockImplementation(() => { throw new Error("FORBIDDEN_PROPOSAL_BUILDER") })
+    const frozen: unknown[] = [], dispatch = vi.fn(async () => { throw new Error("FIRST_INITIAL_TRAINING_DISPATCH") })
+    try {
+      const input = { allocation: current, reuse, freezeSource: (source: unknown) => frozen.push(source), retainArtifact() {}, checkpoint() {}, dispatch }
+      await expect(executeLeanReusedCurrentPipeline(input)).rejects.toThrow("FIRST_INITIAL_TRAINING_DISPATCH")
+      expect(dispatch).toHaveBeenCalledOnce()
+      expect(frozen).toEqual(reuse.sources)
+      expect(cold).not.toHaveBeenCalled(); expect(proposals).not.toHaveBeenCalled()
+      dispatch.mockClear()
+      await expect(executeLeanReusedCurrentPipeline({ ...input, allocation: { ...current, seed: "forged" } })).rejects.toThrow()
+      await expect(executeLeanReusedCurrentPipeline({ ...input, reuse: { ...reuse, grant: { ...reuse.grant, newSourceRoot: labRoot("forged", 1) } } })).rejects.toThrow()
+      expect(dispatch).not.toHaveBeenCalled()
+    } finally { vi.restoreAllMocks() }
+  }, 20000)
   it("finishes exactly 36 calls, freezes sources at stages, and retains compact observation joins", async () => {
     const corpus = buildLeanColdCorpus(seed), strategyInput = initialStrategyInput()
     const frozen: Array<{ role: string; callsBeforeFreeze: number }> = [], names: string[] = []

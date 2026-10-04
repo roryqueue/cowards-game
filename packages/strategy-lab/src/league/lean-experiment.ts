@@ -52,6 +52,11 @@ export const LEAN_V7_WRITABLE_PATHS = Object.freeze([".strategy-lab/lean-experim
 export const LEAN_BASELINE_REQUEST = ".strategy-lab/lean-baseline-request-20261004-v1.json" as const
 export const LEAN_BASELINE_STORE = ".strategy-lab/lean-baseline-20261004-v1" as const
 export const LEAN_BASELINE_WRITABLE_PATHS = Object.freeze([".strategy-lab/lean-baseline-20261004-v1-tmp", ".planning/artifacts/v1.38-lean-current-baseline-allocation-v1.json", LEAN_BASELINE_REQUEST] as const)
+/** Exactly two prospective correction identities. Historical routes stay closed. */
+export const LEAN_CORRECTION_ROUTES = Object.freeze({
+  diagnostic: Object.freeze({ store: ".strategy-lab/lean-correction-diagnostic-20261004-v1", request: ".strategy-lab/lean-correction-diagnostic-request-20261004-v1.json", allocation: ".planning/artifacts/v1.38-lean-correction-diagnostic-allocation-v1.json", check: "correction-diagnostic-check.json", temp: ".strategy-lab/lean-correction-diagnostic-20261004-v1-tmp" }),
+  baseline: Object.freeze({ store: ".strategy-lab/lean-correction-baseline-20261004-v1", request: ".strategy-lab/lean-correction-baseline-request-20261004-v1.json", allocation: ".planning/artifacts/v1.38-lean-correction-baseline-allocation-v1.json", check: "correction-baseline-check.json", temp: ".strategy-lab/lean-correction-baseline-20261004-v1-tmp" }),
+})
 /** Closed v7 pilot identities are an accounting predecessor, not a second pilot verdict. */
 export const LEAN_CLOSED_V7 = Object.freeze({
   storeIdentity: ".strategy-lab/lean-experiment-20261004-v7" as const,
@@ -621,11 +626,20 @@ export interface LeanCurrentBaselineAllocation extends Omit<LeanExperimentAlloca
   predecessor: LeanClosedV7Predecessor; root: LabRoot
 }
 export type LeanCurrentBaselineInput = { sourceRoot: LabRoot; reviewRoot: LabRoot; coldRoot: LabRoot; planRoot: LabRoot; candidateRoots: readonly LabRoot[]; requestRoots: readonly LabRoot[]; seed: string }
-export type AnyLeanAllocation = LeanExperimentAllocation | LeanExperimentAllocationV2 | LeanExperimentAllocationV3 | LeanExperimentAllocationV4 | LeanExperimentAllocationV5 | LeanExperimentAllocationV6 | LeanExperimentAllocationV7 | LeanCurrentBaselineAllocation
-const leanProspective = (a: AnyLeanAllocation): a is LeanExperimentAllocationV2 | LeanExperimentAllocationV3 | LeanExperimentAllocationV4 | LeanExperimentAllocationV5 | LeanExperimentAllocationV6 | LeanExperimentAllocationV7 | LeanCurrentBaselineAllocation => a.schemaVersion === "lean-experiment-allocation-v2" || a.schemaVersion === "lean-experiment-allocation-v3" || a.schemaVersion === "lean-experiment-allocation-v4" || a.schemaVersion === "lean-experiment-allocation-v5" || a.schemaVersion === "lean-experiment-allocation-v6" || a.schemaVersion === "lean-experiment-allocation-v7" || a.schemaVersion === "lean-current-baseline-allocation-v1"
+export interface LeanCorrectionPredecessor {
+  schemaVersion: "lean-correction-predecessor-v1"; chargedMatches: number; elapsedUpperBoundMs: number; allocatedDiskBytes: number
+  historicalPeakDiskBytes: "unknown"; historicalPeakRssBytes: "unknown"; historyRoot: LabRoot
+  survivors: readonly { identity: string; allocatedBytes: number }[]; root: LabRoot
+}
+export interface LeanCorrectionAllocation extends Omit<LeanCurrentBaselineAllocation, "schemaVersion" | "predecessor"> {
+  schemaVersion: "lean-correction-diagnostic-allocation-v1" | "lean-correction-baseline-allocation-v1"
+  route: "diagnostic" | "baseline"; reuseGrantRoot: LabRoot; diagnosisRoot: LabRoot | null; predecessor: LeanCorrectionPredecessor
+}
+export type AnyLeanAllocation = LeanExperimentAllocation | LeanExperimentAllocationV2 | LeanExperimentAllocationV3 | LeanExperimentAllocationV4 | LeanExperimentAllocationV5 | LeanExperimentAllocationV6 | LeanExperimentAllocationV7 | LeanCurrentBaselineAllocation | LeanCorrectionAllocation
+const leanProspective = (a: AnyLeanAllocation): a is Exclude<AnyLeanAllocation, LeanExperimentAllocation> => a.schemaVersion !== "lean-experiment-allocation-v1"
 const leanPriorMs = (a: AnyLeanAllocation): number => leanProspective(a) ? a.predecessor.elapsedUpperBoundMs : 0
 const leanPriorBytes = (a: AnyLeanAllocation): number => leanProspective(a) ? a.predecessor.allocatedDiskBytes : 0
-export const leanWritablePaths = (a: AnyLeanAllocation): readonly string[] => a.schemaVersion === "lean-experiment-allocation-v2" ? LEAN_PROSPECTIVE_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v3" ? LEAN_SUCCESSOR_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v4" ? LEAN_V4_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v5" ? LEAN_V5_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v6" ? LEAN_V6_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v7" ? LEAN_V7_WRITABLE_PATHS : a.schemaVersion === "lean-current-baseline-allocation-v1" ? LEAN_BASELINE_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v1" ? [] : fail("ALLOCATION")
+export const leanWritablePaths = (a: AnyLeanAllocation): readonly string[] => "route" in a ? [LEAN_CORRECTION_ROUTES[a.route].temp, LEAN_CORRECTION_ROUTES[a.route].allocation, LEAN_CORRECTION_ROUTES[a.route].request] : a.schemaVersion === "lean-experiment-allocation-v2" ? LEAN_PROSPECTIVE_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v3" ? LEAN_SUCCESSOR_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v4" ? LEAN_V4_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v5" ? LEAN_V5_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v6" ? LEAN_V6_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v7" ? LEAN_V7_WRITABLE_PATHS : a.schemaVersion === "lean-current-baseline-allocation-v1" ? LEAN_BASELINE_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v1" ? [] : fail("ALLOCATION")
 export const createLeanAllocation = (input: { sourceRoot: LabRoot; reviewRoot: LabRoot; candidateRoots: readonly LabRoot[]; seed: string }): Readonly<LeanExperimentAllocation> => {
   if (!exactLabKeys(input, ["sourceRoot", "reviewRoot", "candidateRoots", "seed"]) || !root(input.sourceRoot) || !root(input.reviewRoot) || !Array.isArray(input.candidateRoots) || input.candidateRoots.length !== 2 || !input.candidateRoots.every(root) || new Set(input.candidateRoots).size !== 2 || !/^[a-z0-9-]{1,100}$/u.test(input.seed)) return fail("ALLOCATION")
   const candidateRoots = [...input.candidateRoots].sort()
@@ -693,7 +707,31 @@ export const createLeanCurrentBaselineAllocation = (input: LeanCurrentBaselineIn
   const body = { schemaVersion: "lean-current-baseline-allocation-v1" as const, privacy: "private_offline" as const, sourceRoot: input.sourceRoot, reviewRoot: input.reviewRoot, coldRoot: input.coldRoot, planRoot: input.planRoot, candidateRoots, requestRoots, seed: input.seed, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, caps: LEAN_CAPS, slots, sampleSlotRoots, predecessor }
   return freezeLabValue({ ...body, root: labRoot("lean-current-baseline-allocation-v1", body) })
 }
+export const createLeanCorrectionAllocation = (input: LeanCurrentBaselineInput & { route: "diagnostic" | "baseline"; reuseGrantRoot: LabRoot; diagnosisRoot: LabRoot | null; predecessor: LeanCorrectionPredecessor }): Readonly<LeanCorrectionAllocation> => {
+  if (!exactLabKeys(input, ["sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "route", "reuseGrantRoot", "diagnosisRoot", "predecessor"]) || !["diagnostic", "baseline"].includes(input.route) || !root(input.reuseGrantRoot) || (input.route === "diagnostic" ? input.diagnosisRoot !== null : !root(input.diagnosisRoot))) return fail("CORRECTION_ALLOCATION")
+  const p = input.predecessor
+  if (!exactLabKeys(p, ["schemaVersion", "chargedMatches", "elapsedUpperBoundMs", "allocatedDiskBytes", "historicalPeakDiskBytes", "historicalPeakRssBytes", "historyRoot", "survivors", "root"]) || p.schemaVersion !== "lean-correction-predecessor-v1" || !natural(p.chargedMatches) || p.chargedMatches < 10 || p.chargedMatches >= LEAN_CAPS.matches || !natural(p.elapsedUpperBoundMs) || p.elapsedUpperBoundMs < 3319046 || p.elapsedUpperBoundMs >= LEAN_CAPS.elapsedMs || !natural(p.allocatedDiskBytes) || p.allocatedDiskBytes > LEAN_CAPS.retainedBytes || p.historicalPeakDiskBytes !== "unknown" || p.historicalPeakRssBytes !== "unknown" || !root(p.historyRoot) || !Array.isArray(p.survivors) || !p.survivors.length) return fail("CORRECTION_PREDECESSOR")
+  const { root: predecessorRoot, ...predecessorBody } = p
+  if (predecessorRoot !== labRoot("lean-correction-predecessor-v1", predecessorBody) || new Set(p.survivors.map(s => s.identity)).size !== p.survivors.length || p.survivors.some(s => !exactLabKeys(s, ["identity", "allocatedBytes"]) || typeof s.identity !== "string" || !(s.identity.startsWith(".strategy-lab/") || s.identity === LEAN_BASELINE_WRITABLE_PATHS[1] || s.identity === LEAN_CORRECTION_ROUTES.diagnostic.allocation) || s.identity.includes("..") || !natural(s.allocatedBytes)) || p.survivors.reduce((n, s) => n + s.allocatedBytes, 0) > p.allocatedDiskBytes) return fail("CORRECTION_PREDECESSOR")
+  if (![input.sourceRoot, input.reviewRoot, input.coldRoot, input.planRoot].every(root) || !/^[a-z0-9-]{1,100}$/u.test(input.seed) || !Array.isArray(input.candidateRoots) || input.candidateRoots.length !== 2 || !input.candidateRoots.every(root) || new Set(input.candidateRoots).size !== 2 || !Array.isArray(input.requestRoots) || input.requestRoots.length !== (input.route === "diagnostic" ? 1 : 36) || !input.requestRoots.every(root) || new Set(input.requestRoots).size !== input.requestRoots.length || (input.route === "diagnostic" ? p.chargedMatches !== 10 : p.chargedMatches < 11)) return fail("CORRECTION_ALLOCATION")
+  const arenas = currentBaselineArenas()
+  const slots = input.requestRoots.map((requestRoot, ordinal) => {
+    const { arenaIndex, condition } = currentBaselineSlotKind(ordinal)
+    const body = { ordinal, condition, arenaHash: arenas[arenaIndex]!.semanticGeometryHash, requestRoot }
+    return { ...body, root: labRoot("lean-slot-v1", body) }
+  })
+  const sampleSlotRoots = input.route === "diagnostic" ? [slots[0]!.root] : LEAN_BASELINE_SLOT_KINDS.map(kind => slots.find(s => currentBaselineSlotKind(s.ordinal).kind === kind)!.root)
+  const body = { schemaVersion: input.route === "diagnostic" ? "lean-correction-diagnostic-allocation-v1" as const : "lean-correction-baseline-allocation-v1" as const, privacy: "private_offline" as const, sourceRoot: input.sourceRoot, reviewRoot: input.reviewRoot, coldRoot: input.coldRoot, planRoot: input.planRoot, seed: input.seed, candidateRoots: [...input.candidateRoots].sort(), requestRoots: [...input.requestRoots], tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, caps: LEAN_CAPS, route: input.route, reuseGrantRoot: input.reuseGrantRoot, diagnosisRoot: input.diagnosisRoot, slots, sampleSlotRoots, predecessor: p }
+  return freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
+}
 export const admitLeanAllocation = (value: unknown): Readonly<AnyLeanAllocation> => {
+  if (typeof value === "object" && value !== null && ["lean-correction-diagnostic-allocation-v1", "lean-correction-baseline-allocation-v1"].includes((value as { schemaVersion: string }).schemaVersion)) {
+    if (!exactLabKeys(value, ["schemaVersion", "privacy", "sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "tupleRoot", "runtimeRoot", "caps", "slots", "sampleSlotRoots", "predecessor", "route", "reuseGrantRoot", "diagnosisRoot", "root"])) return fail("CORRECTION_ALLOCATION")
+    const a = value as unknown as LeanCorrectionAllocation
+    const expected = createLeanCorrectionAllocation({ sourceRoot: a.sourceRoot, reviewRoot: a.reviewRoot, coldRoot: a.coldRoot, planRoot: a.planRoot, candidateRoots: a.candidateRoots, requestRoots: a.requestRoots, seed: a.seed, route: a.route, reuseGrantRoot: a.reuseGrantRoot, diagnosisRoot: a.diagnosisRoot, predecessor: a.predecessor })
+    if (labRoot("lean-admission", expected) !== labRoot("lean-admission", a)) return fail("CORRECTION_ALLOCATION")
+    return expected
+  }
   if (typeof value === "object" && value !== null && (value as { schemaVersion?: unknown }).schemaVersion === "lean-current-baseline-allocation-v1") {
     if (!exactLabKeys(value, ["schemaVersion", "privacy", "sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "tupleRoot", "runtimeRoot", "caps", "slots", "sampleSlotRoots", "predecessor", "root"])) return fail("BASELINE_ALLOCATION")
     const a = value as unknown as LeanCurrentBaselineAllocation
@@ -949,7 +987,8 @@ const syncLeanDirectory = (path: string): void => { const fd = openSync(safeDire
 export const publishLeanChildEntry = (ledger: LeanExperimentLedger, entry: LeanChildEntryV2): void => {
   if (!leanProspective(ledger.allocation) || !exactLabKeys(entry, ["schemaVersion", "allocationRoot", "sourceRoot", "requestBytesRoot", "head", "parentPid", "childPid", "handshakeRoot", "wallStartMs", "monotonicStartNs"]) || entry.schemaVersion !== "lean-child-entry-v2" || entry.allocationRoot !== ledger.allocation.root || entry.sourceRoot !== ledger.allocation.sourceRoot || !root(entry.requestBytesRoot) || !root(entry.handshakeRoot) || !/^[a-f0-9]{40}$/u.test(entry.head) || !natural(entry.parentPid) || entry.parentPid === 0 || !natural(entry.childPid) || entry.childPid === 0 || entry.parentPid === entry.childPid || !natural(entry.wallStartMs)) return fail("ENTRY")
   monotonic(entry.monotonicStartNs)
-  if (readLeanTimeAccounting(ledger).starts.size || readLeanLedger(ledger).events.length) return fail("ENTRY")
+  const entryTime = readLeanTimeAccounting(ledger)
+  if (("route" in ledger.allocation ? entryTime.active || entryTime.starts.size !== entryTime.closed.size || [...entryTime.starts.keys()].some(id => id !== "correction-preparation") : entryTime.starts.size > 0) || readLeanLedger(ledger).events.length) return fail("ENTRY")
   writeExclusive(join(safeDirectory(ledger.directory), "entry.json"), leanCanonicalBytes(entry)); syncLeanDirectory(ledger.directory)
 }
 export const readLeanChildEntry = (ledger: LeanExperimentLedger): LeanChildEntryV2 => {
@@ -972,7 +1011,7 @@ export const publishLeanChildTerminal = (ledger: LeanExperimentLedger, terminal:
   const expected = deriveLeanChildTerminal(ledger, entry, observation)
   if (labRoot("lean-terminal-admission", terminal) !== labRoot("lean-terminal-admission", expected)) return fail("TERMINAL")
   const time = readLeanTimeAccounting(ledger)
-  if (!time.active || time.starts.size !== 1 || time.closed.size !== 0 || time.starts.get("pilot-entry") !== entry.wallStartMs) return fail("TERMINAL")
+  if (!time.active || ("route" in ledger.allocation ? time.starts.size !== time.closed.size + 1 : time.starts.size !== 1 || time.closed.size !== 0) || time.starts.get("pilot-entry") !== entry.wallStartMs) return fail("TERMINAL")
   writeExclusive(join(safeDirectory(ledger.directory), "child-terminal.json"), leanCanonicalBytes(terminal)); syncLeanDirectory(ledger.directory)
   closeLeanInterval(ledger, "pilot-entry", entry.wallStartMs + terminal.elapsedUpperBoundMs)
 }

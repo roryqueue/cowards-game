@@ -8,7 +8,7 @@ vi.mock("node:worker_threads", async (original) => {
   return { ...actual, Worker: vi.fn(function (...args: any[]) { if (nativeStreamMock.worker) { Atomics.store(new Int32Array(args[1].workerData.start), 0, 1); return nativeStreamMock.worker }; throw Error("unexpected native Worker construction") }) }
 })
 afterEach(() => { nativeStreamMock.worker = undefined; vi.restoreAllMocks() })
-import { buildLeanAuthenticatedHarnessSource, buildLeanObserverBrokerSource, createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, validateLeanTimingObservation, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult, type LeanTimingBinding } from "./v1-38-lean-container-match-session.js"
+import { buildLeanAuthenticatedHarnessSource, buildLeanCorrectionOriginBrokerSource, buildLeanObserverBrokerSource, createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, validateLeanCorrectionOriginMetadata, validateLeanTimingObservation, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult, type LeanTimingBinding } from "./v1-38-lean-container-match-session.js"
 import { LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js"
 import { WORKER_HARNESS_SOURCE, WORKER_HARNESS_V117_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { buildAdvancedStrategyRevision, findAdvancedStrategy } from "../../packages/persistence/src/advanced-strategies.js"
@@ -220,6 +220,67 @@ describe("private IPC diagnostics injected session", () => {
     expect((success.session as any).failureOrigin?.(error)).toBeUndefined(); success.session.close()
   })
 })
+
+describe("finite correction-only host origin metadata", () => {
+  const valid = {
+    schemaVersion: "v1.38-lean-correction-origin-v1",
+    requestOrdinal: 1,
+    requestRoot: `sha256:${"a".repeat(64)}`,
+    transportMethod: "docker_exec_stream",
+    brokerMode: "legacy",
+    brokerBranch: "legacy_deadline",
+    signalBufferState: "not_done",
+    waitDisposition: "timed_out",
+    workerLifecycle: "unknown",
+    transportSignal: "broker_synthetic_sigkill",
+    terminationDisposition: "worker_terminate_completed",
+    elapsedBucket: "unknown",
+  }
+  it("accepts only exact bounded metadata, distinguishing synthetic termination from native signal", () => {
+    expect(validateLeanCorrectionOriginMetadata(valid)).toEqual(valid)
+    expect(validateLeanCorrectionOriginMetadata({ ...valid, transportSignal: "observed_sigterm" })).toMatchObject({ transportSignal: "observed_sigterm" })
+    expect(validateLeanCorrectionOriginMetadata({ ...valid, workerLifecycle: "unknown", waitDisposition: "unavailable" })).toMatchObject({ workerLifecycle: "unknown" })
+    expect(() => validateLeanCorrectionOriginMetadata({ ...valid, privateText: "PRIVATE_CANARY" })).toThrow()
+    expect(() => validateLeanCorrectionOriginMetadata({ ...valid, requestRoot: "x".repeat(5000) })).toThrow()
+    expect(() => validateLeanCorrectionOriginMetadata({ ...valid, requestOrdinal: Number.POSITIVE_INFINITY })).toThrow()
+    expect(() => validateLeanCorrectionOriginMetadata({ ...valid, elapsedBucket: 0.5 })).toThrow()
+    expect(() => validateLeanCorrectionOriginMetadata(valid, { requestOrdinal: 1, requestRoot: `sha256:${"b".repeat(64)}` })).toThrow()
+  })
+  it("binds opt-in receipts to the exact request and rejects forged metadata", () => {
+    const name = "correction-opt-in", label = `v1.38-lean-owner:${name}`
+    const control = fakeTransport([absent(name), result(`${name}-id\n`), owned(label), result(), result(), absent(name)])
+    const observed: unknown[] = []
+    const persistent: LeanContainerPersistentStreamFactory = () => ({
+      exchange(frame) {
+        const request = JSON.parse(frame) as { requestId: number; correctionOrigin: { requestOrdinal: number; requestRoot: string } }
+        const metadata = { ...valid, requestOrdinal: request.correctionOrigin.requestOrdinal, requestRoot: request.correctionOrigin.requestRoot }
+        return Buffer.from(`${JSON.stringify({ requestId: request.requestId, status: null, signal: "SIGKILL", stdoutBase64: "", stderrBase64: "", correctionOrigin: metadata })}\n`)
+      }, close: () => result(),
+    })
+    const session = createLeanContainerMatchSession({ matchId: name, containerName: name, ownershipLabel: label, image: LEAN_CONTAINER_IMAGE, infrastructureProfile: "closeout", transport: control.transport, streamFactory: persistent, correctionOriginObserver: { observe: (value) => observed.push(value) } })
+    expect(() => session.adapter.execute({ source: "fixture", methodName: "selectActivations", input: {}, timeoutMs: 1000 })).toThrow("Container method was signalled")
+    expect(observed).toHaveLength(1)
+    expect(observed[0]).toMatchObject({ brokerBranch: "legacy_deadline", transportSignal: "broker_synthetic_sigkill", workerLifecycle: "unknown" })
+    session.close()
+
+  })
+  it("leaves the historical constructor default and broker source unchanged", () => {
+    expect(LEAN_CONTAINER_BROKER_SOURCE).not.toContain("correctionOrigin")
+    const { session, persistent } = create("correction-default", [response(1, [])])
+    expect(session.adapter.execute({ source: "fixture", methodName: "selectActivations", input: {}, timeoutMs: 1000 })).toEqual({ ok: true, value: [] })
+    expect(JSON.parse(persistent.frames[0]!)).not.toHaveProperty("correctionOrigin")
+    session.close()
+  })
+  it("builds syntactically valid correction broker source with or without the timing observer", () => {
+    for (const source of [buildLeanCorrectionOriginBrokerSource(), buildLeanCorrectionOriginBrokerSource(WORKER_HARNESS_SOURCE)]) {
+      const parsed = ts.createSourceFile("correction-broker.mjs", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
+      expect(parsed.parseDiagnostics).toEqual([])
+      expect(source).toContain("broker_synthetic_sigkill")
+      expect(source).toContain("workerLifecycle:\"unknown\"")
+    }
+  })
+})
+
 const runBroker = (requests: readonly Record<string, unknown>[], brokerSource = LEAN_CONTAINER_BROKER_SOURCE, timeout = 5_000) => {
   const input = requests.map((request) => JSON.stringify(request)).join("\n") + "\n"
   const broker = spawnSync(process.execPath, ["--input-type=module", "--eval", brokerSource], { input, encoding: "utf8", timeout, maxBuffer: 1_048_576 })

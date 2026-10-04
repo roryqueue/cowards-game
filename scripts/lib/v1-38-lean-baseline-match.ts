@@ -10,7 +10,9 @@ import { LEAN_CAPS, type LeanExperimentLedger, type LeanCharge, type LeanSlot, t
 import { compactExecution, deriveLeanSupervisorDiagnostic } from "../run-v1-38-lean-experiment.js"
 import { createFactorySupervisedRuntime, getFactoryPrivateDiagnostic } from "./v1-38-factory-supervised-runtime.js"
 import { prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
-import { issueLeanBaselineRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { issueLeanBaselineRuntimeAuthority, issueLeanCorrectionRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
+import { type LeanCorrectionOriginMetadata } from "./v1-38-lean-container-match-session.js"
 import { validateLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { collectLeanBaselineMetrics } from "./v1-38-lean-baseline-metrics.js"
 
@@ -55,6 +57,7 @@ export const leanBaselineMatchEvidence = (actual: LabMatchExecution, compact: Le
 export const runLeanBaselineMatch = async (input: {
   ledger: LeanExperimentLedger; charge: LeanCharge; slot: LeanSlot; seed: string
   bottom: LeanBaselineSource; top: LeanBaselineSource; observedRole?: string
+  correction?: { reuse: LeanColdReuse; observe?: (metadata: LeanCorrectionOriginMetadata, sourceRoot: LabRoot, seat: "bottom" | "top") => void }
   checkpoint: () => void
   register: (provider: Pick<FactorySupervisionProvider, "close">) => void
   unregister: (provider: Pick<FactorySupervisionProvider, "close">) => void
@@ -74,8 +77,9 @@ export const runLeanBaselineMatch = async (input: {
     if (!revision.validation.valid || !revision.metadata.sourceArtifact) return fail()
     const matchId = `lean-${input.charge.root.slice(7, 31)}`, containerName = `lean-${input.charge.root.slice(7, 25)}-${seat}`, ownershipLabel = `lean-${input.ledger.allocation.root.slice(7, 25)}`
     const runtime = prospectiveLeagueRuntimeBinding(admission, { revisionId: revision.id, sourceRoot: snapshot.sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image })
-    const authority = issueLeanBaselineRuntimeAuthority(input.ledger, input.charge, snapshot, { budgetRoot: input.ledger.allocation.root, attemptRoot: input.charge.root, matchId, containerName, ownershipLabel, seat, runtime })
-    const native = createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, matchId, containerName, ownershipLabel, attemptRoot: input.charge.root, budgetRoot: input.ledger.allocation.root, image: LAB_ADMITTED_ROOTS.image, invocationLimit: 24800, factoryLifetimeMs: 600000 })
+    const binding = { budgetRoot: input.ledger.allocation.root, attemptRoot: input.charge.root, matchId, containerName, ownershipLabel, seat, runtime }
+    const authority = input.correction ? issueLeanCorrectionRuntimeAuthority(input.ledger, input.charge, snapshot, binding, input.correction.reuse) : issueLeanBaselineRuntimeAuthority(input.ledger, input.charge, snapshot, binding)
+    const native = createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, matchId, containerName, ownershipLabel, attemptRoot: input.charge.root, budgetRoot: input.ledger.allocation.root, image: LAB_ADMITTED_ROOTS.image, invocationLimit: 24800, factoryLifetimeMs: 600000, ...(input.correction?.observe ? { correctionOriginObserver: { observe: (metadata: LeanCorrectionOriginMetadata) => input.correction!.observe!(metadata, snapshot.sourceRoot, seat) } } : {}) })
     let closed: ReturnType<FactorySupervisionProvider["close"]> | undefined
     const observed = snapshot.role === input.observedRole
     const provider: FactorySupervisionProvider = {
