@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: executing
-stopped_at: Plan265-16 bounded source repair independently reviewed; source verification and prospective continuation decision
+status: awaiting_human_decision
+stopped_at: Plan265-16 source repair verified and pushed; prospective bounded correction amendment pending
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Cleanup error-precedence repair4e71c9b6 clean independent review; actual baseline crash cause unknown, no empirical retry
+last_activity_desc: Repair4e71c9b6 clean review and5/5source verification; actualcauseunknown, no-replacement-rule amendment unanswered
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT HUMAN-ONLY FRONTIER: cleanup repair4e71c9b6 is independently REVIEWEDclean/0findings and SOURCE-VERIFIED5/5 at5815eb7c. The repair preserves primary failures and incomplete cleanup, but actual baseline initiating cause remains UNKNOWN and empirical recovery is unproved. Plan265-16 SUMMARY records partial failure, not Phase265 completion; actual closed baseline still1currentcharge/0success/35unused,10cumulativecharges/3319046ms. The asynchronous bounded-correction question is UNANSWERED: proposed265-16-CONTINUATION-DECISION-v1 permits ONEfresh crash diagnostic and, after checked repair/gates, at most ONEfresh baseline with unchanged overall caps and fixed candidate/search opportunities. It is NOT yet approved/applied, and no new empirical allocation/entry/provider/Match/reader is authorized while pending. Every consumed route/authority/result/reader remains immutable; no replacement under the current fixed stop. Safe source work and reports are completed/committed for origin/main. No active entry/verifier; Phase266freeze/formation/holdout unstarted; no public/counted/production/success-tag credit. Actual human answer supersedes this pending frontier; do not ask repeat literals after applicable prospective approval or restart oldroutes. Earlierfrontiersbelowhistory.
 
 CURRENT SOURCE REPAIR / HUMAN DECISION FRONTIER: source-only debug closed at4e71c9b60fb05cc832c2b83b3eb6f3c692254cfd; a mock-proved cleanup exception could mask the primary native error. Narrow repair contains each cleanup operation, preserves primary error/origin, still attempts removal/absence and marks any thrown cleanup incomplete. Independent265-16-SUBPROCESS-REVIEW-v1 CLOSEDclean/0BLOCKER/0WARNING;16newmocks+51selectedexistingmocks PASS(57skipped), ownedstrict types/diff PASS. This defect was NOT observed in the actual failed baseline (cleanuptrue and signal code retained); initiating cause remains UNKNOWN and empirical unblock is NOT proved. Independent source verification next, no actual provider/Match/reader. Root requested a NEW prospective decision asynchronously: amend fixed no-replacement stop for ONEfresh crash diagnostic and, after checked repairs, ONEfresh baseline under same15GB/8h/300Match cap, all costs carried, fixed candidate/search opportunity and unchanged rules/privacy. This amendment is PENDING until a direct human answer; standing route approval does not alone amend the later fixed-schedule stop. All consumed routes/readers remain immutable/spent; Phase266freeze/formation/holdout unstarted. Do not start a route while pending or duplicate active source verifier. Earlierclosed/prepared/frontiers below history.
 
