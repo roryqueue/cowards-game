@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Fresh v3 check closed refused; envelope ended; bounded source-only reader repair
+status: awaiting_human_decision
+stopped_at: Source-only reader repair reviewed and verified; fresh saved-evidence diagnostic decision required
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Sole reader45725 closed1/no acceptedcheck; twelve cumulative charges; sourcehold released; finite repair only
+last_activity_desc: Reader repairb4b80640/726ae66f clean;72worker+21MAINtests/types/threezero scans; saved-evidence diagnosis recommended
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved distinct v3, 2026-10-05
+
+CURRENT HUMAN-ONLY FRONTIER: Boundedsource-only READER-REPAIR closed GREENb4b806408c207b875d47d4321f82190a53fd14a1/manifestsha256:726ae66ff9f656247af0992a6fbadf48c2b550a41d97b8b69363f10e91262add/886. Actualindependent smallerreviewer scopedREVIEW-v1 clean/0findings; MAIN narrowSOURCE-VERIFICATION-v1 verified. Worker72tests143.33s+focused6; MAIN21tests27.79s/project+labtypes/three1398zero scans/whitespacePASS. Privacy-safe trustedv3guardcodes and prospectiveauthenticatedgap/closing accounting repaired; exactoldrefusalcauseUNKNOWN, mockedwhole-loaderlimitsdisclosed. NOempiricalacceptance/phasecredit. Alloldv3andpriorartifact/readersimmutable, twelvechargesspent; approvalenvelopeENDED/baselineDENIED. MAINwallobservation1791207248025 gives17153071msminimumcumulative including116942omittedgap+all2096942latercosts throughobservation; everylatercostmustcarry, same15GB/8h/300. No activeentry/verifier/heavywork/sourcehold. SAVED-EVIDENCE-DIAGNOSTIC-DECISION-v1 recommendsONE DISTINCTnon-authorizingreadonlydiagnostic ofsavedv3data, notoldordinaryreaderretry/acceptedreport/recredit/newMatch. This prospectivepass is NOTapproved. Awaitdirectnewhumanchoice; no repeatedheavychecks/knownfailingrun. Phase265incomplete; baseline/freeze/formation/holdoutunstarted; nopublic/counting/production/fullLEAG/releasecredit. Earlierfrontiers historical.
 
 V3 CLOSED / SOURCE-ONLY: UniqueMAIN66680 CLOSED0 and sole ordinaryreader45725 CLOSED1/refused, no acceptedcheck/checkfile. Actual readerinterval1791205144755→1791205151083/6328ms inactive; closedjournal14939187ms/rawsha256:7a7362cf73ff72b275bf63a7d8b10f4a1b6b6b4c5c7118aabc206f2fee6f5691. Current1/cumulative12charges, compactSUCCESS/OK/top/cleanuptrue but NOTacceptedempiricalevidence. Known runclose→readerstart116942ms missingfromsummedintervals mustcarryseparately, minimum15056129msbeforealllaterreport/source/admin. Reportrawsha256:2e3b00cfa839e30f3eee7aade0aa9a2f15edc23726b7b473e43d8636b2392325, cumulativephysical4231168B, reasonclean/failureabsent. ExactthrowpointUNKNOWN/nofinitefailurecodemarker; no inventedcause. SourceANDHEADhold RELEASED afteractualclosure+solecheck. Approvedonefreshenvelope ENDED, baselineFORBIDDEN/no furtherempiricalauthority. Bounded SOURCE-ONLY READER-REPAIR-PLAN-v1 addresses definite diagnosticwithholding/prospectivegap accounting with synthetictests; no oldreader, artifacts/timejournalmutation/refund/recredit/newroute. Alloldbytesimmutable; samecaps/boundaries. Phase265incomplete; freeze/formation/holdout/public/counting/production/fullLEAGunadmitted. Earlierlive/checksnapshots history.
 
