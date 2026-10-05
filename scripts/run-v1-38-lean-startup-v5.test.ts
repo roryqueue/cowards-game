@@ -4,6 +4,7 @@ import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { parseLeanCorrectionCommand, assertLeanCorrectionResources } from "./run-v1-38-lean-correction.js"
 import { assessLeanPrefixCapacity } from "./run-v1-38-lean-experiment.js"
 import * as session from "./lib/v1-38-lean-container-match-session.js"
+import { superviseLeanStartupV5 as checkedStartupSupervisorV5 } from "./lib/v1-38-lean-startup-supervisor.mjs"
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, realpathSync, mkdirSync, symlinkSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -111,6 +112,20 @@ const fakeHost = (startupMs: number, guestMs: number, receiptMs = 0, terminateFa
   return { host, waits, cancellations, executed: () => executed, now: () => now, state: (n: number) => { state = n } }
 }
 describe("runtime control", () => {
+  it("statically shares exact checked JavaScript without host dynamic compilation", () => {
+    expect(session.superviseLeanStartupV5).toBe(checkedStartupSupervisorV5)
+    const checked = readFileSync("scripts/lib/v1-38-lean-startup-supervisor.mjs", "utf8")
+    expect(session.buildLeanContainerBrokerSourceV5()).toContain(checked)
+    const host = ts.createSourceFile("host.ts", readFileSync("scripts/lib/v1-38-lean-container-match-session.ts", "utf8"), ts.ScriptTarget.Latest, true)
+    const dynamic: string[] = []
+    const visit = (node: ts.Node) => {
+      if ((ts.isCallExpression(node) || ts.isNewExpression(node)) && ts.isIdentifier(node.expression) && ["Function", "eval"].includes(node.expression.text)) dynamic.push(node.expression.text)
+      ts.forEachChild(node, visit)
+    }
+    visit(host); expect(dynamic).toEqual([])
+    const manifest = leanCorrectionSourceManifest("v5")
+    for (const path of ["scripts/lib/v1-38-lean-startup-supervisor.mjs", "scripts/lib/v1-38-lean-startup-supervisor.d.mts"]) expect(manifest.entries.find(entry => entry.path === path)?.root).toBe(lean.leanBytesRoot(readFileSync(path)))
+  })
   it("constructs closure-free broker bytes under the actual inert tsx loader", async () => {
     // This one known trusted Node import builds strings only: no broker, guest,
     // Worker, transport, provider or CLI entry is evaluated in the subprocess.

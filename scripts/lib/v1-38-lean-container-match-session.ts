@@ -1,4 +1,6 @@
 import { Buffer } from "node:buffer"
+import { readFileSync } from "node:fs"
+export { superviseLeanStartupV5 } from "./v1-38-lean-startup-supervisor.mjs"
 import { LEAN_STARTUP_POLICY_V5, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { claimLeanRuntimeAuthority, isLeanCorrectionRuntimeAuthority, type LeanRuntimeAuthority, type LeanStartupGrantV5 } from "./v1-38-lean-experiment-authority.js"
@@ -259,56 +261,14 @@ export interface LeanStartupSupervisorHostV5 {
   now(): number; construct(): void; load(): number; compareExchange(before: number, after: number): number; notify(): void;
   wait(state: number, ms: number): string; reconcile(ms: number): Promise<unknown>; terminate(ms: number): Promise<void>; close(): void;
 }
-/** Checked-in closure-free trusted JavaScript, shared by broker and fake-host tests.
- * Function compiles only this fixed trusted control source, never Strategy code. */
-const LEAN_STARTUP_SUPERVISOR_SOURCE_V5 = `async function superviseLeanStartupV5(binding, hostBudgetMs, host) {
-  const entered = host.now(), deadline = entered + Math.min(5000, hostBudgetMs), startupDeadline = Math.min(deadline, entered + 2500)
-  let completed
-  let ready = false, go = false, worker = false, wait = "unavailable", stage = "startup", branch = "construction_failure", termination = "unknown", unknown = true
-  const remaining = () => Math.max(0, Math.floor(deadline - host.now()))
-  try {
-    if (!Number.isFinite(hostBudgetMs) || hostBudgetMs <= 0 || hostBudgetMs > 5000) throw new Error("HOST_BUDGET_V5")
-    worker = true; host.construct()
-    while (host.load() === 0 && host.now() < startupDeadline) { const result = host.wait(0, Math.min(remaining(), Math.max(0, startupDeadline - host.now()))); wait = result === "timed-out" ? "timed_out" : "changed" }
-    if (host.now() >= startupDeadline) { branch = "startup_expired"; wait = "timed_out" }
-    else if (host.load() !== 1) branch = "inconsistent_state"
-    else {
-      ready = true
-      if (remaining() < 2500) branch = "go_refused"
-      else {
-        const guestDeadline = host.now() + 1000
-        branch = "inconsistent_state"
-        if (host.compareExchange(1, 2) !== 1) throw new Error("GO_STATE_V5")
-        go = true; stage = "guest"; host.notify()
-        while (host.load() === 2 && host.now() < guestDeadline) { const result = host.wait(2, Math.min(remaining(), Math.max(0, guestDeadline - host.now()))); wait = result === "timed-out" ? "timed_out" : "changed" }
-        if (host.now() >= guestDeadline) { branch = "guest_expired"; wait = "timed_out"; unknown = false }
-        else if (host.load() !== 3) branch = "inconsistent_state"
-        else {
-          stage = "receipt"; branch = "lifecycle_failure"
-          const output = await host.reconcile(remaining())
-          if (remaining() <= 0) { stage = "host"; branch = "host_expired" }
-          else { termination = "not_required"; unknown = false; branch = "complete"; completed = { output } }
-        }
-      }
-    }
-  } catch { unknown = true }
-  finally {
-    if (termination !== "not_required" && worker) { const began = host.now(); try { const budget = Math.min(100, remaining()); if (budget <= 0) throw new Error("TERMINATION_BUDGET_V5"); await host.terminate(budget); termination = host.now() - began <= budget && remaining() > 0 ? "completed" : "failed" } catch { termination = "failed" } if (termination === "failed") unknown = true }
-    try { host.close() } catch { termination = "failed"; unknown = true; completed = undefined; branch = "lifecycle_failure" }
-  }
-  if (completed && remaining() <= 0) { completed = undefined; stage = "host"; branch = "host_expired"; termination = "unknown"; unknown = true }
-  if (completed) return { ok: true, output: completed.output, origin: { ...binding, schemaVersion: "v1.38-lean-startup-origin-v5", stage, branch, ready, go, wait, termination, unknown } }
-  return { ok: false, output: undefined, origin: { ...binding, schemaVersion: "v1.38-lean-startup-origin-v5", stage, branch, ready, go, wait, termination, unknown } }
-}
-`
-export const superviseLeanStartupV5 = Function(`"use strict";return (${LEAN_STARTUP_SUPERVISOR_SOURCE_V5})`)() as (
-  binding: LeanStartupBindingV5, hostBudgetMs: number, host: LeanStartupSupervisorHostV5
-) => Promise<{ ok: boolean; output: unknown; origin: LeanStartupOriginV5 }>
+/** Read the same statically imported module's checked-in JavaScript bytes.
+ * No host dynamic compilation or transformed-function serialization. */
+const LEAN_STARTUP_SUPERVISOR_SOURCE_V5 = readFileSync(new URL("./v1-38-lean-startup-supervisor.mjs", import.meta.url), "utf8")
 export const buildLeanContainerBrokerSourceV5 = (): string => {
   let source = LEAN_CONTAINER_BROKER_SOURCE.replace('import { createInterface } from "node:readline";', 'import { createInterface } from "node:readline";import { createHash as startupHashV5 } from "node:crypto";')
   const before = source.slice(source.indexOf("const runLegacy="), source.indexOf("const runV117="))
   const control = LEAN_STARTUP_SUPERVISOR_SOURCE_V5
-  const run = `const superviseLeanStartupV5=${control};
+  const run = `${control}
 const runLegacy=async(q,request)=>{
 const binding=q.startup.binding;const entered=now();let worker,port,signal,reconcile;
 if((!exact(request,["source","methodName","input"])&&!exact(request,["source","methodName","input","outputByteLimit"]))||typeof request.source!=="string"||!["selectActivations","soldierBrain"].includes(request.methodName)||request.outputByteLimit!==undefined&&(!Number.isSafeInteger(request.outputByteLimit)||request.outputByteLimit<1||request.outputByteLimit>262144)||!exact(binding,["allocationRoot","chargeRoot","seat","policyRoot","harnessRoot","requestOrdinal","requestRoot","method","inputRoot","sourceRoot","executableRoot"])||![binding.allocationRoot,binding.chargeRoot,binding.inputRoot,binding.sourceRoot,binding.executableRoot].every(v=>typeof v==="string"&&/^sha256:[a-f0-9]{64}$/.test(v))||!["bottom","top"].includes(binding.seat)||binding.method!==request.methodName||binding.harnessRoot!==${JSON.stringify(leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())))}||binding.requestRoot!=="sha256:"+startupHashV5("sha256").update("v1.38-lean-startup-v5:"+q.requestId+":").update(Buffer.from(q.payloadBase64,"base64")).digest("hex")||binding.executableRoot!=="sha256:"+startupHashV5("sha256").update(request.source).digest("hex"))throw new Error("STARTUP_BINDING_V5");
