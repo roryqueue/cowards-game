@@ -8,7 +8,7 @@ import * as coldBuilder from "./v1-38-lean-cold-corpus.js"
 import * as proposalBuilder from "./v1-38-lean-training-adapter.js"
 import { executeLeanReusedCurrentPipeline, compactLeanBaselineCell, leanBaselineMetricCoverage, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
 import { buildLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
-import { auditLeanCorrectionRetained, authenticateLeanSupervisorDiagnosticCheck, validateLeanSupervisorReasonJoin, type LeanCorrectionRetainedSnapshot } from "./v1-38-lean-correction-retained.js"
+import { auditLeanCorrectionRetained, authenticateLeanSupervisorDiagnosticCheck, verifyLeanCorrectionRetained, validateLeanSupervisorReasonJoin, type LeanCorrectionRetainedSnapshot } from "./v1-38-lean-correction-retained.js"
 import * as correctionIO from "../run-v1-38-lean-correction.js"
 import * as ledgerIO from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as fileIO from "node:fs"
@@ -25,6 +25,21 @@ import { correctionAllocationFixture } from "../run-v1-38-lean-correction.test.j
 
 const reuseDirectory = process.env.LEAN_COLD_REUSE_FIXTURE_DIR ?? LEAN_BASELINE_STORE
 describe("supervisor reason actual custody joins", () => {
+  it("spends and closes only the v3 loader interval before version or terminal refusal", () => {
+    const begin = vi.spyOn(ledgerIO, "beginLeanInterval").mockImplementation(() => {}), close = vi.spyOn(ledgerIO, "closeLeanInterval").mockImplementation(() => {})
+    const opened = vi.spyOn(ledgerIO, "openLeanLedger").mockReturnValue({ directory: "mock-only", allocation: { route: "baseline", schemaVersion: "lean-correction-supervisor-baseline-allocation-v2" } } as never)
+    try {
+      expect(() => verifyLeanCorrectionRetained("mock-only", "diagnostic", "v3")).toThrow("ALLOCATION")
+      expect(begin).toHaveBeenCalledExactlyOnceWith(expect.anything(), "correction-supervisor-diagnostic-v3-verifier", expect.any(Number))
+      expect(close).toHaveBeenCalledExactlyOnceWith(expect.anything(), "correction-supervisor-diagnostic-v3-verifier")
+      expect(begin.mock.invocationCallOrder[0]).toBeLessThan(close.mock.invocationCallOrder[0]!)
+      opened.mockReturnValue({ directory: "mock-only", allocation: { route: "diagnostic", schemaVersion: "lean-correction-supervisor-diagnostic-allocation-v3" } } as never)
+      vi.spyOn(ledgerIO, "readLeanChildTerminal").mockReturnValue({ status: "child_failed" } as never)
+      vi.spyOn(ledgerIO, "readLeanChildEntry").mockReturnValue({} as never)
+      expect(() => verifyLeanCorrectionRetained("mock-only", "diagnostic", "v3")).toThrow("TERMINAL_ONLY_REQUIRED")
+      expect(begin).toHaveBeenCalledTimes(2); expect(close).toHaveBeenCalledTimes(2)
+    } finally { vi.restoreAllMocks() }
+  })
   it("rejects canonical reasons that do not bind the actual parent entry and exit", () => {
     const r = labRoot("mock-root", {}), entry = { allocationRoot: r, sourceRoot: r, requestBytesRoot: r, head: "a".repeat(40), parentPid: 12, childPid: 13 }
     const terminal = { ...entry, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(entry)), exitCode: 0, signal: null, status: "child_exited" }
@@ -172,7 +187,7 @@ const dispatchedSources: Array<{ bottom: LeanBaselineSource; top: LeanBaselineSo
  * provider, empirical reader, or authority-bearing check identity. */
 const supervisorFixture = (input: unknown, version: 2 | 3 = 2): LeanCorrectionRetainedSnapshot => {
   const s = structuredClone(input) as LeanCorrectionRetainedSnapshot, old = s.allocation, { root: _priorRoot, ...prior } = old.predecessor
-  const predecessorBody = { ...prior, chargedMatches: old.route === "diagnostic" ? 11 : 12, elapsedUpperBoundMs: version === 3 ? 10888046 : 5282046 }
+  const predecessorBody = { ...prior, chargedMatches: old.route === "diagnostic" ? 11 : 12, elapsedUpperBoundMs: version === 3 ? 10888046 : 5282046, allocatedDiskBytes: version === 3 ? 2179072 : prior.allocatedDiskBytes }
   const request = { ...s.request, schemaVersion: `lean-correction-supervisor-request-v${version}` as const, diagnosis: null, supervisorDecisionRoot: labRoot("mock-approved-decision", {}), acceptedCheckRoot: old.route === "diagnostic" ? null : labRoot("mock-check-no-authority", {}), setupAccountingPath: "mock-source-fixture-only", setupAccountingRoot: labRoot("mock-setup-witness", {}) }
   const a = createLeanSupervisorCorrectionAllocation({ sourceRoot: old.sourceRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot, planRoot: old.planRoot, candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, seed: old.seed, route: old.route, reuseGrantRoot: old.reuseGrantRoot, supervisorDecisionRoot: request.supervisorDecisionRoot, acceptedCheckRoot: request.acceptedCheckRoot, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), dataReviewRoot: request.dataReviewRoot, setupAccountingRoot: request.setupAccountingRoot, predecessor: { ...predecessorBody, root: labRoot(prior.schemaVersion, predecessorBody) } }, version)
   s.allocation = a; s.schemaVersion = `lean-correction-supervisor-retained-snapshot-v${version}`
