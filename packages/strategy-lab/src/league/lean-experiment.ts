@@ -1355,13 +1355,18 @@ export const checkpointLeanResources = (ledger: LeanExperimentLedger, elapsedMs:
 export const stopLeanLedger = (ledger: LeanExperimentLedger, reason: "complete" | "failure" | "capacity" | "integrity") => { readLeanLedger(ledger); append(ledger, { kind: "stop", reason }) }
 export const verifyLeanEvidence = (ledger: LeanExperimentLedger) => {
   const state = readLeanLedger(ledger)
+  const validationOnly = (ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v5" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v5") && leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v5"
   const records = ledger.allocation.slots.map(slot => {
     const c = state.charges.get(slot.root), terminal = c && state.terminals.get(c.root)
     if (c && !terminal) return fail("TERMINAL_MISSING")
     if (terminal) {
       const selected = ledger.allocation.sampleSlotRoots.includes(slot.root) || terminal.record.classification !== "success" || !terminal.record.cleanupComplete
       if (selected !== (terminal.replay !== null)) return fail("REPLAY_MISSING")
-      if (terminal.replay) decodeLeanReplay(terminal.replay, readSafe(join(ledger.directory, `${c!.root.slice(7)}.gz`)))
+      if (terminal.replay) {
+        const bytes = readSafe(join(ledger.directory, `${c!.root.slice(7)}.gz`))
+        if (validationOnly) validateLeanReplay(terminal.replay, bytes)
+        else decodeLeanReplay(terminal.replay, bytes)
+      }
     }
     return { slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: c?.root ?? null, terminal: terminal ?? null, status: c ? terminal!.record.classification : "unused" }
   })
