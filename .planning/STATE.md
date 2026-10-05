@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V5 baseline resource stop verified; bounded source-only diagnosis next
+stopped_at: Replay-validation source repair verified; fresh bounded empirical continuation needs approval
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: V5 baseline failed before charge; unique terminal-only verification closed, no result or credit
+last_activity_desc: Replay repair reviewed and source-verified with 70 passing tests; prior one-shot envelope consumed
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT HUMAN-ONLY FRONTIER / SOURCE REPAIR COMPLETE: Replay-validation Plan16 supplement is independently sourceVERIFIED4/4 at e6382a12, cleanSOURCE-REVIEW-v1, VALIDATION-v1 and MAIN-GATES-v1;70/70syntheticfixtures/zero skips, package noEmit0/factory1407zero/diff0. Rawimplementation6372438d/fixturef4e10b81; separatelyboundfixtureoutsideunchangedruntimemanifest disclosed. Fullbufferinflate/allfullaudits remain, noRSS/nativefeasibilityguarantee. Olddecoder/defaultpaths/caps/policy/authoritybytes unchanged. V5diagnosticaccepted a6b50ff7, v5baseline resource_threshold/SIGKILL beforeanyrecordednewcharge; bothuniquechecksCLOSED/immutable, noactiveentry/verifier/hold. New REPLAY-REPAIR-CONTINUATION-DECISION-v1 proposes (NOTapproved) ONEdistinctnewprivate diagnostic plus conditionalONEfresh36baseline under SAMEremaining12h15GB300limits/24spentcharges/carryallsurvivors. Norepeatlongliteralrequired; human must authorize newbounded envelope because previoussingle-useenvelopeENDED. No new request/allocation/Match/oldreaderretry/resume/refund/recredit. Observedcarry36069167ms at1791244579000, remaining7130833 beforeALLlatercosts; futurehumanidle excludedonlyby boundedturncustody. Phase265/LEAGincomplete,266freeze/formation/holdout/public/counting/production gated. All earlierfrontiers history.
 
 CURRENT V5 BASELINE FAILED / SOURCE DIAGNOSIS: UniqueMAIN84884 CLOSEDexit1; ONEindependentterminal-onlycheck CLOSED gaps_found, report STARTUP-BASELINE-TERMINAL-VERIFICATION-v1. Actualterminalchild_failed/null exit/SIGKILL/96096ms, finiteparentreasonresource_threshold, cleanupobserved/parentchildabsent. Result/checkabsent,current0recordedcharges/observations; ordinaryreaderNOTinvoked. All3timeintervalsclosed33812347ms/latestclose1791242322180; allocationbytes0a765ce8/HEADf2df613f/sourcea0940a8a unchangedthroughcheck. SOURCE+HEADhold RELEASED; approvedonebaselineenvelopeENDED, noautomaticnewroute. Readonlysource GSDdiagnosis v5-baseline-resource-stop may trace redundant precharge audits; terminalRSS observations not an exactfailure-sample receipt, initiatingcauseUNKNOWN. Alllatercostcarry33812347+now−1791242322180 under12h/same15GB300/24spentMatches. Alloldbytes/authority/readersimmutable; no retry/resume/refund/recredit. Phase265/freeze/formation/holdout/public/counting/production remaingated. Priorfrontiershistory.
 
