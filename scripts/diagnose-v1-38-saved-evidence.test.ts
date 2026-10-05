@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   assertNoOriginRows,
   diagnosticInventoryVisitGuard,
+  diagnosticDirectoryNames,
   diagnoseSavedEvidence,
   type SavedEvidenceDiagnosticDependencies,
 } from "./diagnose-v1-38-saved-evidence.js"
@@ -51,6 +52,13 @@ const makeDeps = (
 }
 
 describe("saved v3 evidence diagnostic source-only boundary", () => {
+  it("streams at most 65 directory entries and closes even on refusal", () => {
+    const readSync = vi.fn(() => ({ name: "synthetic" })), closeSync = vi.fn()
+    expect(() => diagnosticDirectoryNames("synthetic", () => {}, () => ({ readSync, closeSync }))).toThrow("INPUT_BOUND")
+    expect(readSync).toHaveBeenCalledTimes(65)
+    expect(closeSync).toHaveBeenCalledTimes(1)
+  })
+
   it("bounds accumulated directory and file visits, not just each directory", () => {
     const check = vi.fn(), visit = diagnosticInventoryVisitGuard(check)
     for (let ordinal = 0; ordinal < 64; ordinal++) visit(ordinal % 6)

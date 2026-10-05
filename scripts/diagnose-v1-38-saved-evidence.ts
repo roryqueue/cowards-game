@@ -14,7 +14,7 @@ import {
   openSync,
   readFileSync,
   realpathSync,
-  readdirSync,
+  opendirSync,
   writeFileSync,
 } from "node:fs"
 import { join, relative, resolve } from "node:path"
@@ -533,6 +533,25 @@ export const diagnosticInventoryVisitGuard = (guard: () => void) => {
   }
 }
 
+export const diagnosticDirectoryNames = (
+  path: string,
+  guard: () => void,
+  open: (path: string) => { readSync(): { name: string } | null; closeSync(): void } =
+    path => opendirSync(path, { bufferSize: 1 }),
+): string[] => {
+  guard()
+  const directory = open(path), names: string[] = []
+  try {
+    while (true) {
+      guard()
+      const entry = directory.readSync()
+      if (!entry) return names.sort()
+      if (names.length === FILE_LIMIT) throw new Error("INPUT_BOUND")
+      names.push(entry.name)
+    }
+  } finally { directory.closeSync() }
+}
+
 const scanInputs = (guard: () => void): SafeInputInventory => {
   const visitGuard = diagnosticInventoryVisitGuard(guard)
   const identities = [
@@ -577,7 +596,7 @@ const scanInputs = (guard: () => void): SafeInputInventory => {
         ].join(":"),
         size: 0,
       })
-      const children = readdirSync(absolute)
+      const children = diagnosticDirectoryNames(absolute, guard)
       guard()
       if (children.length + files.length > FILE_LIMIT)
         throw new Error("INPUT_BOUND")
@@ -716,7 +735,7 @@ const loadFixedSnapshot = (guard: () => void) => {
       8_388_608,
     ) as never,
   ])
-  const names = readAt("source_snapshots", () => readdirSync(ledger.directory))
+  const names = readAt("source_snapshots", () => diagnosticDirectoryNames(ledger.directory, guard))
   const sources = readAt("source_snapshots", () =>
     names
       .filter((name) => /^source-[a-z0-9-]+\.json$/u.test(name))
