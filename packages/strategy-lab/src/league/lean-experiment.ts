@@ -887,6 +887,26 @@ export const decodeLeanReplay = (container: LeanReplayContainer, bytes: Uint8Arr
   if (lines.pop() !== "" || lines.length !== container.frames) return fail("REPLAY")
   return lines.map(line => parse(Buffer.from(line)))
 }
+/** Validate all frames without retaining decoded text, line or frame collections.
+ * Inflate remains synchronous and fully buffered under the original 4× guard. */
+export const validateLeanReplay = (container: LeanReplayContainer, bytes: Uint8Array, maximumBytes = REPLAY_MAX): void => {
+  if (!exactLabKeys(container, ["schemaVersion", "privacy", "codec", "compressedRoot", "uncompressedRoot", "compressedBytes", "uncompressedBytes", "frames", "root"]) || container.schemaVersion !== "lean-sampled-replay-gzip-v1" || container.privacy !== "private_offline" || container.codec !== "gzip-node-v1" || ![container.compressedRoot, container.uncompressedRoot, container.root].every(root) || ![container.compressedBytes, container.uncompressedBytes, container.frames].every(natural) || container.uncompressedBytes > Math.min(maximumBytes, REPLAY_MAX) || container.compressedBytes !== bytes.length || leanBytesRoot(bytes) !== container.compressedRoot) return fail("REPLAY")
+  const { root: claimed, ...body } = container
+  if (claimed !== labRoot("lean-sampled-replay-gzip-v1", body)) return fail("REPLAY")
+  let plain: Buffer
+  assertTransient(container.uncompressedBytes * 4)
+  try { plain = gunzipSync(bytes, { maxOutputLength: Math.max(1, Math.min(maximumBytes, REPLAY_MAX)) }) } catch { return fail("REPLAY_LIMIT") }
+  if (plain.length !== container.uncompressedBytes || leanBytesRoot(plain) !== container.uncompressedRoot) return fail("REPLAY")
+  let count = 0
+  for (let i = 0; i < plain.length; i++) if (plain[i] === 0x0a) count++
+  if ((plain.length > 0 && plain[plain.length - 1] !== 0x0a) || count !== container.frames) return fail("REPLAY")
+  let start = 0
+  for (let i = 0; i < plain.length; i++) if (plain[i] === 0x0a) {
+    // Match decodeLeanReplay's UTF-8 replacement and re-encoding semantics.
+    parse(Buffer.from(plain.subarray(start, i).toString("utf8")))
+    start = i + 1
+  }
+}
 export interface LeanCompactMatchRecord { classification: "success" | "player_violation" | "system_failure"; code: "OK" | "PLAYER_VIOLATION" | "SUPERVISOR_FAILURE" | "CAPACITY" | "CLEANUP"; outcome: "bottom" | "top" | "DRAW" | null; elapsedMs: number; cleanupComplete: boolean; invocationCount: number; accountingRoot: LabRoot; executionRoot: LabRoot; telemetry: { transitions: number; events: number } }
 export interface LeanCharge { schemaVersion: "lean-slot-charge-v1"; allocationRoot: LabRoot; slotRoot: LabRoot; ordinal: number; root: LabRoot }
 type Event = { kind: "charge"; charge: LeanCharge } | { kind: "terminal"; chargeRoot: LabRoot; record: LeanCompactMatchRecord; replay: LeanReplayContainer | null } | { kind: "resource"; elapsedMs: number; physicalBytes: number; bufferBytes: number; scratchBytes: number } | { kind: "stop"; reason: string }

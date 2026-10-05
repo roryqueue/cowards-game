@@ -58,6 +58,9 @@ const rawReplay = (plain: Uint8Array | string, frames: number) => {
   return { bytes, container: { ...body, root: labRoot(body.schemaVersion, body) } }
 }
 const reroot = (container: lean.LeanReplayContainer, patch: Record<string, unknown>): lean.LeanReplayContainer => {
+  // Invalid outer roots/unsafe counts must reach metadata admission, not
+  // be repaired or rejected early by the trusted fixture's root builder.
+  if ("root" in patch || Object.values(patch).some(value => typeof value === "number" && !Number.isSafeInteger(value))) return { ...container, ...patch } as lean.LeanReplayContainer
   const { root: _claimed, ...body } = { ...container, ...patch }
   return { ...body, root: labRoot("lean-sampled-replay-gzip-v1", body) } as lean.LeanReplayContainer
 }
