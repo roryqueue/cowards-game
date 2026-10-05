@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Approved prospective startup and twelve-hour envelope; checked Plan16 source supplement next
+stopped_at: Startup v5 source verified; fresh reviewed diagnostic data and allocation next
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Human approved distinct prospective startup readiness and cumulative twelve-hour envelope; no new route started
+last_activity_desc: Startup source repair independently verified with 37 passing fixtures; no new empirical route started
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT SOURCE-VERIFIED FRONTIER (2026-10-05): Plan16 startup supplement source is independently VERIFIED at23bf081c/source sha256:a0940a8a76119a8e2f0033bd91d24473acd383d97ca17d108395bccabb7d8873/890entries. SOURCE-REVIEW-v3 clean; NEW265-16-STARTUP-SOURCE-VERIFICATION-v1 scores5/5 with37/37 dedicated fixtures; MAIN configured31 type tasks and factory1406-file boundary scan pass. Wider standalone-script typing retains nine inherited diagnostics, not claimed clean. No source gap or active verifier/entry/hold remains. Next MAIN authors prospective v5 setup/request/authorization/helper, independently reviewed before exactlyONE preparation/new immutable committed allocation and unique MAIN diagnostic entry; fresh SAMEPROCESS capacity precedes charge. At mostONE conditional fresh36baseline after complete accepted diagnostic. Source approval/verification does not itself admit empirical execution or Phase265/freeze credit. Every cost carries26634447ms plus active turn elapsed from1791235144280 under43200000ms;23 prior charges/same15GB/300Match. Historical artifacts/readers/caps remain immutable; guest1000/absolute host5000/Match600000 unchanged. Older frontiers below are history.
 
 CURRENT APPROVED FRONTIER (2026-10-05): Direct human approval is recorded in265-16-STARTUP-APPROVAL-20261005.md. Research and checked existing Plan16 supplement may implement DISTINCT prospective trusted startup readiness inside unchanged5000ms host receipt, guest execution1000ms/Match600000ms unchanged, and cumulative cap43200000ms carrying all costs/23 charges/surviving files under same15GB/300Match. Carry26634447ms before current turn1791235144280; every later cost counts. At mostONE new diagnostic plus conditionalONE new36baseline after complete accepted diagnostic/fresh SAMEPROCESS capacity. No request/allocation/entry/verifier/sourcehold active yet. Old v4 partial baseline and all consumed bytes/readers remain immutable/uncredited; original initiating failure UNKNOWN. Independent source gates precede fresh data/allocation committed before unique MAINentry; failure/refusal ends this envelope. Phase265 incomplete;266freeze/formation/holdout/public/counting/production remain gated. The pending paragraphs below are historical snapshots superseded by this approval, not current blockers.
 
