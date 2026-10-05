@@ -86,8 +86,8 @@ export type LeanPrivateFailureOrigin =
   | { readonly stage: "stream_exchange"; readonly reason: "wait_timeout" | "non_success_state" | "unknown" }
   | { readonly stage: "outer_frame"; readonly reason: "single_frame_invalid" | "frame_cap_exceeded" | "json_invalid" | "object_invalid" | "correlation_invalid" }
   | { readonly stage: "inner_response"; readonly reason: "json_invalid" | "object_invalid" | "keys_invalid" | "schema_invalid" }
-  | { readonly stage: "executor"; readonly reason: "unknown" }
-const originReasons = { stream_exchange: ["wait_timeout", "non_success_state", "unknown"], outer_frame: ["single_frame_invalid", "frame_cap_exceeded", "json_invalid", "object_invalid", "correlation_invalid"], inner_response: ["json_invalid", "object_invalid", "keys_invalid", "schema_invalid"], executor: ["unknown"] } as const
+  | { readonly stage: "executor"; readonly reason: "unknown" | "broker_timed_out" | "broker_changed_without_completion" }
+const originReasons = { stream_exchange: ["wait_timeout", "non_success_state", "unknown"], outer_frame: ["single_frame_invalid", "frame_cap_exceeded", "json_invalid", "object_invalid", "correlation_invalid"], inner_response: ["json_invalid", "object_invalid", "keys_invalid", "schema_invalid"], executor: ["unknown", "broker_timed_out", "broker_changed_without_completion"] } as const
 /** Data validation only; no issuance follows from a matching pair. */
 export const isLeanPrivateFailureOrigin = (value: unknown): boolean => {
   if (!value || typeof value !== "object") return false
@@ -374,10 +374,21 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
       if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was invalid"), { stage: "outer_frame", reason: "object_invalid" })
       const value = parsed as Record<string, unknown>
       if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64", ...(observer ? ["timing"] : []), ...(value.correctionOrigin === undefined ? [] : ["correctionOrigin"])]) || options.correctionOriginObserver === undefined && value.correctionOrigin !== undefined || options.correctionOriginObserver !== undefined && (value.signal !== null && value.correctionOrigin === undefined || value.correctionOrigin !== undefined && correctionBinding === undefined) || value.requestId !== requestId || !(value.status === null || Number.isSafeInteger(value.status)) || !(value.signal === null || typeof value.signal === "string") || typeof value.stdoutBase64 !== "string" || typeof value.stderrBase64 !== "string" || !canonicalBase64(value.stdoutBase64) || !canonicalBase64(value.stderrBase64)) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response correlation failed"), { stage: "outer_frame", reason: "correlation_invalid" })
-      if (value.correctionOrigin !== undefined && options.correctionOriginObserver !== undefined && correctionBinding !== undefined) options.correctionOriginObserver.observe(validateLeanCorrectionOriginMetadata(value.correctionOrigin, correctionBinding))
+      const correctionOrigin = value.correctionOrigin !== undefined && options.correctionOriginObserver !== undefined && correctionBinding !== undefined ? validateLeanCorrectionOriginMetadata(value.correctionOrigin, correctionBinding) : undefined
+      if (correctionOrigin !== undefined) options.correctionOriginObserver!.observe(correctionOrigin)
       const stdout = Buffer.from(value.stdoutBase64, "base64"); const stderr = Buffer.from(value.stderrBase64, "base64")
       if (stdout.byteLength > stdoutLimit || stderr.byteLength > stderrLimit || stderr.byteLength !== 0) throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Persistent response exceeded cap or emitted stderr")
-      if (value.signal !== null) throw new SubprocessSystemFailure("SUBPROCESS_SIGNAL", "Container method was signalled")
+      if (value.signal !== null) {
+        const error = new SubprocessSystemFailure("SUBPROCESS_SIGNAL", "Container method was signalled")
+        // This is the opted-in broker's synthetic sentinel, not proof of an OS
+        // signal, OOM or guest-timeout cause. Missing/unavailable provenance and
+        // every other response keep their historical unknown origin.
+        if (value.status === null && value.signal === "SIGKILL" && stdout.byteLength === 0 && correctionOrigin?.transportSignal === "broker_synthetic_sigkill" && correctionOrigin.terminationDisposition === "worker_terminate_completed") {
+          if (correctionOrigin.waitDisposition === "timed_out") observeFailure(origins, error, { stage: "executor", reason: "broker_timed_out" })
+          else if (correctionOrigin.waitDisposition === "changed_without_completion" && correctionOrigin.signalBufferState === "not_done") observeFailure(origins, error, { stage: "executor", reason: "broker_changed_without_completion" })
+        }
+        throw error
+      }
       if (value.status !== 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Container method exited nonzero")
       if (observer && timingBinding) {
         if (Buffer.byteLength(JSON.stringify(value.timing)) > 2048) throw new TypeError("LEAN_TIMING_CAP")

@@ -43,10 +43,13 @@ const fixture = (optIn: boolean, mutate: (value: Record<string, unknown>, frame:
 }
 
 describe("strict opt-in synthetic broker signal provenance", () => {
-  it.each(["timed_out", "changed_without_completion"] as const)("registers only correlated %s signal on the exact error", waitDisposition => {
+  it.each([
+    ["timed_out", "selectActivations"], ["timed_out", "soldierBrain"],
+    ["changed_without_completion", "selectActivations"], ["changed_without_completion", "soldierBrain"],
+  ] as const)("registers only correlated %s / %s signal on the exact error", (waitDisposition, method) => {
     const f = fixture(true, value => { value.correctionOrigin = { ...(value.correctionOrigin as object), waitDisposition } }, true)
     expect(f.invoke()).toEqual({ ok: true, value: [] })
-    const error = f.capture("soldierBrain")
+    const error = f.capture(method)
     expect(error).toBeInstanceOf(SubprocessSystemFailure); expect(error).toMatchObject({ code: "SUBPROCESS_SIGNAL" })
     const origin = { stage: "executor", reason: waitDisposition === "timed_out" ? "broker_timed_out" : "broker_changed_without_completion" }
     expect(f.session.failureOrigin(error)).toEqual(origin); expect(isLeanPrivateFailureOrigin(origin)).toBe(true)
@@ -54,7 +57,7 @@ describe("strict opt-in synthetic broker signal provenance", () => {
     expect(f.session.failureOrigin({ ...(error as object) })).toBeUndefined()
     expect(f.observed).toHaveLength(1); expect(f.observed[0]!.requestOrdinal).toBe(2)
     expect(f.frames[1]!.correctionOrigin!.requestRoot).not.toBe(f.frames[0]!.correctionOrigin!.requestRoot)
-    expect(JSON.parse(Buffer.from(f.frames[1]!.payloadBase64, "base64").toString()).methodName).toBe("soldierBrain")
+    expect(JSON.parse(Buffer.from(f.frames[1]!.payloadBase64, "base64").toString()).methodName).toBe(method)
     expect(f.session.close()).toEqual({ cleanupComplete: true, orphanedChild: false }); expect(f.closes).toBe(1)
   })
   it.each(["ordinal", "root", "extra", "missing", "outer-request"])("refuses hostile %s receipt without detailed provenance", fault => {
@@ -70,14 +73,17 @@ describe("strict opt-in synthetic broker signal provenance", () => {
     expect(f.observed).toEqual([]); expect(f.session.failureOrigin(error)?.reason ?? "unknown").not.toMatch(/^broker_/)
     expect(f.session.state).toBe("poisoned"); expect(f.session.close().cleanupComplete).toBe(true)
   })
-  it.each(["unavailable", "observed-signal", "not-signal", "stderr", "status"])("does not invent synthetic origin for %s", fault => {
+  it.each(["unavailable", "observed-signal", "not-signal", "stderr", "stdout", "status", "termination-unknown", "changed-but-done"])("does not invent synthetic origin for %s", fault => {
     const f = fixture(true, value => {
       const r = value.correctionOrigin as Record<string, unknown>
       if (fault === "unavailable") r.waitDisposition = "unavailable"
       if (fault === "observed-signal") { r.transportSignal = "observed_sigterm"; value.signal = "SIGTERM" }
       if (fault === "not-signal") { value.signal = null; value.status = 70 }
       if (fault === "stderr") value.stderrBase64 = Buffer.from("synthetic stderr").toString("base64")
+      if (fault === "stdout") value.stdoutBase64 = Buffer.from("synthetic stdout").toString("base64")
       if (fault === "status") value.status = 70
+      if (fault === "termination-unknown") r.terminationDisposition = "unknown"
+      if (fault === "changed-but-done") { r.waitDisposition = "changed_without_completion"; r.signalBufferState = "done" }
     })
     const error = f.capture(); expect(f.session.failureOrigin(error)).toBeUndefined(); expect(f.session.close().cleanupComplete).toBe(true)
     if (fault === "unavailable" || fault === "observed-signal" || fault === "status") expect(error).toMatchObject({ code: "SUBPROCESS_SIGNAL" })
