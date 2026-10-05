@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: blocked
-stopped_at: Plan265-16 consumer repair source verified; ended one-test envelope requires new prospective operator decision
-last_updated: "2026-10-04"
-last_activity: 2026-10-04
-last_activity_desc: Three missed consumer joins fixed db4f503b; independent review clean/source verification5of5; root116tests/types/scans pass; new empirical authority pending
+status: in_progress
+stopped_at: Approved distinct v3 diagnostic and conditional baseline; checked source supplement next
+last_updated: "2026-10-05"
+last_activity: 2026-10-05
+last_activity_desc: Direct approval recorded; fresh v3 source research/plan/check with exact prior repair and current setup carry
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — approved distinct v3, 2026-10-05
+
+The operator directly approved ONE distinct fresh private diagnostic over independently reviewed repaired source and conditional at mostONE distinct36-Match baseline ONLY after complete clean new retained acceptance. Approval/FRESH-SUPERVISOR-RESEARCH-PLAN-v1 and clock custody are additive existingPlan16 documents. Source-only actualworker /root/execute_265_supervisor_routes_reader owns explicit disjointv3 plumbing and ALLthree real consumer joins/tests; MAIN owns independent review and actualentry. No new request/preparation/allocation/entry/provider/Match/verifier or sourcehold yet. Consumedv2 remains failed/immutable/0current11cumulativecharges, closed10230553ms/rawtime29aad4a2. Actualapp priorcompletion upper1791161283000 adds657493msrepair/admin =>10888046msbefore currentsetup starting1791200983000; every newcost/survivor carries under unchanged15GB/8h/300. Historicalpeaksunknown; cold192spent128future unchanged. Any newdiagnostic failure/refusal ends this envelope; no oldreader/refund/recredit/coldregeneration. Phase265incomplete,266freeze/formation/holdoutunstarted; no public/counting/production/fullLEAG/releasecredit. Earlier pending/consumed paragraphs below are historical, not current approval status.
 
 ## Current continuation — human-authorized repair, 2026-10-04
 
