@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Conditional v5 baseline prepared; commit allocation before unique MAIN entry
+stopped_at: V5 baseline resource stop verified; bounded source-only diagnosis next
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Independently reviewed fresh 36-cell v5 baseline prepared with zero current charges
+last_activity_desc: V5 baseline failed before charge; unique terminal-only verification closed, no result or credit
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V5 BASELINE FAILED / SOURCE DIAGNOSIS: UniqueMAIN84884 CLOSEDexit1; ONEindependentterminal-onlycheck CLOSED gaps_found, report STARTUP-BASELINE-TERMINAL-VERIFICATION-v1. Actualterminalchild_failed/null exit/SIGKILL/96096ms, finiteparentreasonresource_threshold, cleanupobserved/parentchildabsent. Result/checkabsent,current0recordedcharges/observations; ordinaryreaderNOTinvoked. All3timeintervalsclosed33812347ms/latestclose1791242322180; allocationbytes0a765ce8/HEADf2df613f/sourcea0940a8a unchangedthroughcheck. SOURCE+HEADhold RELEASED; approvedonebaselineenvelopeENDED, noautomaticnewroute. Readonlysource GSDdiagnosis v5-baseline-resource-stop may trace redundant precharge audits; terminalRSS observations not an exactfailure-sample receipt, initiatingcauseUNKNOWN. Alllatercostcarry33812347+now−1791242322180 under12h/same15GB300/24spentMatches. Alloldbytes/authority/readersimmutable; no retry/resume/refund/recredit. Phase265/freeze/formation/holdout/public/counting/production remaingated. Priorfrontiershistory.
+
+V5 BASELINE ENTRY CLOSED / TERMINAL-ONLY CHECK NEXT: UNIQUE MAIN84884 CLOSEDexit1/detailswithheld; finiteledger showszero currentcharges/zeroobservations and childterminalexists. No resultobserved; source+HEADHOLD f2df613f/a0940a8a remains pendingONEindependentENTRY-terminal-onlycheck. Ordinaryretainedempiricalreader MUSTNOTbeinvoked withouteligibleactualresult; nofabricatedhead/evidence. No automaticnewroute/retry/refund/recredit; approvedenvelopefailureendsit. Historicalabsence is notproof ofabsenceofalltransientwork. PriorACTIVEparagraphhistory.
+
+ACTUAL V5 BASELINE ENTRY ACTIVE: UniqueMAINrun started overcommitted/pushedHEADf2df613f/sourcea0940a8a/allocation602a7e1b/raw0a765ce8/request65085fdf. SOURCE+HEADHOLD throughactualterminal+ONEappropriateuniquecheck; no commits/edits/competingheavywork/duplicateentry/helper/reader. This STATEhandoff remainsuncommittedduringhold. EntryisNOTactualcapacity/charge/acceptanceproof. SAMEPROCESScapacity precedescharge; allcurrentcostcarries within43200000ms/same15GB300Matches. Complete36+fullrequiredcheck beforebaseline/Phase265/freezecredit; partial/failure endsapprovedenvelope, nofurtherautomaticroute. Current-rulesleague/freeze beforeformation, holdoutunopened, nopublic/counting/production. Earlierpreparedfrontierhistory.
 
 CURRENT V5 BASELINE PREPARED: Acceptednewdiagnostica6b50ff7 remainsimmutable. ActualMAINdraft81606/finalize35932 and independent STARTUP-BASELINE-DATA-REVIEW-v1 clean; exactrequestraw65085fdf/data6c3f4581 binds36freshslots/coldcandidates/sourcea0940a8a. ExactlyONEpreparation85544 CLOSED0 allocation602a7e1b2869935b03a683943c220d0d7581a10119aa273ef1197633cb3a2d02/raw0a765ce8e2b91a880c27ed69dbcb235de2ab7c1e12de0c99da4a10e8ecc62111. Current0/prior24charges, closedinactive33716126ms/priorphysical10432512B; checkedreal0700store onlyallocation/emptyledger/time. No baselineentry/check/hold yet. Commit/push allocation+review beforeONEMAINrun. Fresh actualSAMEPROCESScapacity beforecharge, SOURCE+HEADfixed throughterminal andONEappropriateuniquecheck. Same12h15GB300Match/guest1000/host5000/Match600000; allcostscarry. Complete36notpromised underremainingtime; partial/failurecannotearnPhase265/freezecredit. This is lastconditionalbaseline inapprovedenvelope; failure/refusal ends it. Oldcells/diagnostics/readers neverreuse/retry/refund/recredit; formation/holdout/public/counting/production gated. Olderfrontiershistory.
 
