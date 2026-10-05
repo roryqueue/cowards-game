@@ -291,7 +291,7 @@ export const authenticateLeanSupervisorDiagnosticCheck = (supervisor: true | "v3
   if (check.schemaVersion !== `lean-correction-supervisor-retained-v${leanSupervisorVersion(supervisor)}` || checkRoot !== labRoot(`lean-correction-supervisor-retained-v${leanSupervisorVersion(supervisor)}`, checkBody) || check.readerInterval !== interval || check.readerStartMs !== time.starts.get(interval) || !Number.isSafeInteger(check.readerObservedMs) || Number(check.readerObservedMs) < Number(check.readerStartMs) || Number(check.readerObservedMs) > time.closes.get(interval)!) return fail("ACCEPTED_CHECK_CUSTODY")
   const { request, reuse } = readLeanCorrectionRequest(paths.request, "diagnostic", supervisor)
   const evidence = verifyLeanEvidence(ledger), state = readLeanLedger(ledger)
-  if (!state.stopped || state.charges.size !== 1 || state.charged !== 12) return fail("ACCEPTED_CHARGE")
+  if (!state.stopped || state.charges.size !== 1 || state.charged !== (supervisor === "v4" ? 13 : 12)) return fail("ACCEPTED_CHARGE")
   const result = readLeanCorrectionJson(join(ledger.directory, "result.json"), 8_388_608) as Record<string, unknown>
   const retainedReuse = readLeanCorrectionJson(join(ledger.directory, "cold-reuse.json"), 4_194_304)
   if (!same(retainedReuse, reuse)) return fail("ACCEPTED_REUSE")
