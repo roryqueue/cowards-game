@@ -2,6 +2,8 @@
 phase: 265-serious-current-rules-league-and-development-red-team
 plan: "16"
 status: approved
+approved: true
+execution_authorized: true
 scope: fresh_v4_diagnostic_then_conditional_baseline
 ---
 
