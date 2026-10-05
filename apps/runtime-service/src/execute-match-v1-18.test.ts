@@ -103,8 +103,14 @@ const nestedRequest: RuntimeExecutionServiceRequest =
     }),
   })
 
-const standardCrossNestedRequest = (): RuntimeExecutionServiceRequest => {
-  const candidateMatch = nestedRequest.match.candidateMatch
+type RoutedFixtureRequest = RuntimeExecutionServiceRequest & {
+  readonly match: RuntimeExecutionServiceRequest["match"] & {
+    readonly initialInitiativePlayerId?: string | undefined
+    readonly candidateMatch?: RuntimeExecutionCandidateMatchAuthorityV119 | undefined
+  }
+}
+const standardCrossNestedRequest = (): RoutedFixtureRequest => {
+  const candidateMatch = (nestedRequest.match as RoutedFixtureRequest["match"]).candidateMatch
   if (candidateMatch === undefined) {
     return {
       ...nestedRequest,
