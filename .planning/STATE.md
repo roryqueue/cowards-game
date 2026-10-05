@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh repaired-reader v4 diagnostic and conditional baseline approved; source plan check underway
+stopped_at: Fresh v4 diagnostic prepared; allocation commit/push precedes unique MAIN entry
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Human approved one distinct diagnostic and conditional36 baseline; immutable carry20,471,046ms plus current setup,12 prior charges
+last_activity_desc: Reviewed repaired sourcecf9096; prepared allocationf2acf554;12 prior0currentcharges;22685519ms closed prefix
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT PREPARED V4: Source RED5ef0c3d3/GREEN2a8574ec and CR01 RED e3f617c3/GREEN31e0e379 reviewedclean SOURCE-REVIEW-v2; actual functionalrootcf9096c6. Worker90tests/11explicitprivatefixture skips/types31/31/three1402zero scans; MAIN8focused+3real-authenticator synthetic testsPASS, narrowSOURCE-VERIFICATION source-only. Actual helper/data reviews clean; request c1ee0af5/data7fa4904d/setupsemantic81c9f3bf/raw7074bf17. ExactlyONE preparation33673 CLOSED0; allocation semanticf2acf55470bfc4c40dd182274980b3431cbdcb3a8afb3676f836d60cb1fef91d/rawa075bbc744e5559c636331f4f42c8bb116c39f690c32ec3cfdbf2cf8357b8e25. Finiteprefix12prior0current/22685519msCLOSEDinactive/6356992Bphysical/real0700store onlyallocation,emptyledger,time. No actualentry/verifier/hold/provider/Match yet. Commit/push exactallocation andreview before unique MAIN run; fresh SAMEPROCESS capacity BEFORE charge, SOURCE+HEADhold throughactualterminal andONEuniqueappropriatecheck. Conditional36baselineONLYfullacceptedfreshdiagnostic and remainingbudget; refusalendsenvelope. All oldroutes/readers/savedpassimmutableunaccepted; no recredit, no caps/rules/coldregen/downstreamauthority. All latercostscarry; phases265/266freeze/formation/holdout remainuncompleted. Olderparagraphs history.
 
 CURRENT APPROVED FRONTIER: Human approved 265-16-FRESH-READER-APPROVAL-20261005.md: ONE DISTINCT v4 private diagnostic and at most ONE36baseline ONLY after complete unique new diagnostic acceptance. Existing Plan16 source supplement/check underway; no actual request/allocation/entry/verifier/hold yet. Carry20,471,046ms before current turn1791225186000 and EVERY later cost under same15GB/8h/300/12 spent charges. All consumed routes/readers and saved-data diagnostic immutable/unaccepted; never rerun or recredit. Repaired exact-byte reader applies prospectively. All strict real consumers must join v4, old default/v1/v2/v3 unchanged. No new caps/rules/search regeneration, freeze/formation/holdout/public/counting/production credit. Prior pending paragraphs are historical only.
 
