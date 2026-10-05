@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V4 baseline and unique retained verifier CLOSED; 10/36 partial; source-only diagnosis
+stopped_at: Provenance repair source-verified; pending new prospective startup/time resource decision
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: V4 baseline retained_valid but incomplete; 23 cumulative charges; subprocess-signal diagnosis only
+last_activity_desc: V4 partial baseline preserved; narrow provenance repair verified; no new empirical authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT HUMAN-ONLY FRONTIER: Narrow provenance repair RED371f151d/GREENb700dacb/source2d099e9d is source-verified, independent limited fallback review clean, MAIN34 no-native tests/configured31cached type tasks/factory1403zero/shell/whitespace PASS; no empirical or performance repair claim. Diagnosis finds synthetic broker sentinel loses finite origin; exact initiating cause UNKNOWN, not physical OSsignal/OOM proven. No baseline instrumentation, defaultbroker/schema/codes, guest1000/host5000/Match600000/caps/rules changes. Source/HEAD holds RELEASED, all workers/readers closed. New PROSPECTIVE-CONTINUATION-DECISION-v1 proposes (NOTapproved/applied) distinct private startup readiness accounting inside existing5000host,1000Strategy execution unchanged; four additional cumulative hours8→12 carrying all spent work; at mostONE fresh diagnostic plus conditionalONE36baseline after checkedsource/freshcapacity. This is a materially NEW resource decision, not inferred from old approvals. Current carry26484319ms at1791231199273 leaves2315681ms before EVERY latercost;23charges/same15GB/8h/300 untilnewdecision. Consumedv4 envelope/oldartifacts/journals/authority/readers immutable, no furtherMatch/retry/refund/recredit. Phase265/Plan16 incomplete,266freeze/formation/holdout/public/counting/production/fullLEAG/archive-success/tag gated. While pending, no unchangedknown-failing run or repeated heavy scans. Earlier frontiers historical only.
 
 CURRENT CLOSED FRONTIER (2026-10-05): Unique MAIN baseline84983 CLOSED exit0 and ONE ordinary retained verifier26989 CLOSED exit0. Actual checkcca10fe3/raw57a69723 is accepted/retained_valid/limited_exploratory BUT complete=false: 10/36 cells, nine successes and one system failure, all cleanup=true; no robust claim or phase/freeze credit. Diagnostic v4 acceptancea323f13f remains immutable. HeldHEAD74e072c1/sourcecf9096 unchanged through both closures; SOURCE+HEAD hold now RELEASED, no active run/reader. Report FRESH-READER-BASELINE-VERIFICATION-v1 records exact roots. Closed accounting24910444ms at1791229625398, 23 cumulative charges, retained9617408B, scratchhighwater1201831936B; EVERY later source/report/admin cost carries, same15GB/28800000ms/300Match. Approved ONE diagnostic plus conditional ONE baseline envelope is consumed; no new Match, repeat reader, resume/refund/recredit or altered old bytes. New finite inspection of observation9 cell.diagnostic finds SUBPROCESS_SIGNAL/native_response/executor/selectActivations/ordinal0 with compact7358ms, NOT evidence of Match600000ms ceiling or hidden broadcatch exception. Exact signal/cause remains unknown. Source-only GSD diagnosis may continue using finite metadata and static source, no private payloads or execution. Later asynchronous proposal to add four future hours is NOT approved/applied. Phase265/Plan16 incomplete;266freeze/formation/holdout/public/counting/production/fullLEAG/archive-success/tag remain gated. All following live/prepared paragraphs are historical snapshots, not current instructions.
 
