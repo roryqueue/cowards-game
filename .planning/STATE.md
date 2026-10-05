@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Startup v5 diagnostic accepted; conditional fresh baseline data next
+stopped_at: Conditional v5 baseline prepared; commit allocation before unique MAIN entry
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Unique v5 diagnostic and retained reader closed with accepted one-cell result and 24 cumulative charges
+last_activity_desc: Independently reviewed fresh 36-cell v5 baseline prepared with zero current charges
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V5 BASELINE PREPARED: Acceptednewdiagnostica6b50ff7 remainsimmutable. ActualMAINdraft81606/finalize35932 and independent STARTUP-BASELINE-DATA-REVIEW-v1 clean; exactrequestraw65085fdf/data6c3f4581 binds36freshslots/coldcandidates/sourcea0940a8a. ExactlyONEpreparation85544 CLOSED0 allocation602a7e1b2869935b03a683943c220d0d7581a10119aa273ef1197633cb3a2d02/raw0a765ce8e2b91a880c27ed69dbcb235de2ab7c1e12de0c99da4a10e8ecc62111. Current0/prior24charges, closedinactive33716126ms/priorphysical10432512B; checkedreal0700store onlyallocation/emptyledger/time. No baselineentry/check/hold yet. Commit/push allocation+review beforeONEMAINrun. Fresh actualSAMEPROCESScapacity beforecharge, SOURCE+HEADfixed throughterminal andONEappropriateuniquecheck. Same12h15GB300Match/guest1000/host5000/Match600000; allcostscarry. Complete36notpromised underremainingtime; partial/failurecannotearnPhase265/freezecredit. This is lastconditionalbaseline inapprovedenvelope; failure/refusal ends it. Oldcells/diagnostics/readers neverreuse/retry/refund/recredit; formation/holdout/public/counting/production gated. Olderfrontiershistory.
 
 CURRENT V5 DIAGNOSTIC ACCEPTED: UniqueMAIN16769 CLOSED0/429458ms and ONEordinaryreader36914 CLOSED0. Actualchecka6b50ff7/raw424ada4a acceptedtrue/retained_valid/limited_exploratory, current1success/cumulative24/cleanuptrue; diagnosticcompletefieldfalse is notbaselinecompletion and does not change its one-cell acceptance. Final effective readerClose1791241883648/closedelapsed33373815ms, noactiveintervals; heldHEADf6e0a806/sourcea0940a8a unchanged throughcheck. SOURCE+HEADhold RELEASED, noactiveentry/reader. STARTUP-DIAGNOSTIC-VERIFICATION-v1 records fullroots. ConditionalONEfresh36baseline prerequisite passes; newdatareview/immutablecommittedallocation/freshSAMEPROCESScapacity/uniqueMAINentry stillrequired. Everylatercostcarries fromclosedelapsed+timeafterreaderClose under43200000ms/same15GB300Matches. No baseline/Phase265/freeze/formation/holdout/public/counted/production credit. All diagnostic and older consumedhistory immutable; no repeatreader/retry/refund/recredit.
 
