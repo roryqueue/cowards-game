@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Approved one non-authorizing saved-v3 diagnostic; source-only helper and independent review next
+stopped_at: Saved-v3 diagnostic source verified; one approved read-only MAIN pass next
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Human approved saved-data diagnostic only; no Matches or old-reader retry; setup costs carry from1791215127000
+last_activity_desc: Ten synthetic tests and independent review clean; source-only verification closed; no actual pass yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved distinct v3, 2026-10-05
+
+SOURCE READY FOR ONE SAVED-DATA PASS: Helper97931233/sha2561698789e229356f69949915f8cbeef412e49db1ceaab3162ec984dd8732b548e; actual independent REVIEW-v3 clean/0findings, MAIN10synthetic tests3.64s/diffPASS and narrow SOURCE-VERIFICATION-v1 verified. Source authoring/debug manager is closed. No actual saved-data pass yet. Commit/push exact helper/review before unique MAIN invocation with external60s alarm/cappedNode768/cachesoff/core0. Fixed source/HEAD throughout actual pass; no competing heavy work or other reader. Same one non-authorizing diagnosis-only approval, oldbytes/readers/journals immutable; no Match/baseline/acceptance authority. All costs from1791215127000 plus17324046prior carry,12charges unchanged. Earlier paragraphs are snapshots.
 
 CURRENT APPROVED SAVED-DATA DIAGNOSIS: Directhuman"yes, approved" turn01a10cbd-cb18-7991-8426-5c82c2e8b1fe authorizesONE DISTINCTnon-authorizingreadonlydiagnostic pass ofsavedv3evidence, fixedindependentlyreviewedchecker/newexclusiveoutput. Approval20261005 and GSDdebugsession saved-v3-checker-refusal additiveexistingPlan16. No actualpass/helperinvocation yet. No oldordinaryreaderretry/acceptedcheck/recredit/refund/newMatch/provider/Strategyexecution/baselineauthority; alloldbytes/readers/journalsimmutable. Source-onlyhelper/TDD/review/gates first, thenONEactualpass; no rawprivatepayload/errors. Actualapp priorcompletionupper1791207419000 adds166975ms toprior17153071floor =>17324046msbefore currentsetup1791215127000; allnewwork carries, interturnhumanidleonlyexcluded, twelvecharges/same15GB/8h/300. No activeentry/verifier/sourcehold/heavywork. Phase265incomplete, freeze/formation/holdout/public/counting/production/LEAGunadmitted. Previouspendingparagraph below historical, superseded only within this newdiagnosis-onlyscope.
 
