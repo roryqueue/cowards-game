@@ -29,7 +29,27 @@ export const LEAN_FRESH_SUPERVISOR_SETUP_CUSTODY = ".planning/phases/265-serious
 const supervisorDocuments = (mode: LeanSupervisorMode) => mode === "v3" ? { decision: LEAN_FRESH_SUPERVISOR_DECISION, plan: LEAN_FRESH_SUPERVISOR_PLAN, setup: LEAN_FRESH_SUPERVISOR_SETUP_WITNESS, custody: LEAN_FRESH_SUPERVISOR_SETUP_CUSTODY } : { decision: LEAN_SUPERVISOR_DECISION, plan: LEAN_SUPERVISOR_PLAN, setup: LEAN_SUPERVISOR_SETUP_WITNESS, custody: LEAN_SUPERVISOR_SETUP_CUSTODY }
 export const admitsLeanSupervisorReviewAgents = (author: unknown, reviewer: unknown) => typeof author === "string" && typeof reviewer === "string" && /^\/root(?:\/[a-z0-9_]+)*$/u.test(author) && /^\/root(?:\/[a-z0-9_]+)*$/u.test(reviewer) && author !== reviewer
 export type LeanCorrectionRoute = keyof typeof LEAN_CORRECTION_ROUTES
-const fail = (code: string): never => { throw new TypeError(`LEAN_CORRECTION_${code}`) }
+// Only errors created by these trusted static guards can cross the private
+// v3 verifier diagnostic boundary. Message-shaped runtime errors are untrusted.
+const trustedGuardCodes = new Set([
+  ..."ACCEPTED_CHECK ADMISSION_CLOCK ADMISSION_CUSTODY ADMISSION_DIRECTORY ADMISSION_INTERRUPTED_NO_REFUND ADMISSION_TIME ADMISSION_UNCLOSED_ENTRY ALLOCATION ALLOCATION_REQUEST_CUSTODY ALLOCATION_VERSION ARGUMENTS ARTIFACT CANONICAL CAPACITY COORDINATOR_HEAP_BOUND DIAGNOSIS DIAGNOSTIC_CHECK DIAGNOSTIC_CUSTODY DIAGNOSTIC_UNCLOSED DIAGNOSTIC_UNKNOWN_OR_UNCLEAN FRESH_ADMISSION_CUSTODY FRESH_HISTORY HISTORY ORIGIN_LIMIT PAIR PARENT_LOST PREDECESSOR_DRIFT PREPARATION_CLOSURE PRIVATE_FILE REQUEST REQUEST_PATH REQUEST_ROOTS REUSE REVIEW REVIEW_SOURCE ROUTE_ALIAS SETUP_WITNESS SOURCE_HOLD SPENT_DESTINATION SUPERVISOR_ACCOUNTING_CLOCK SUPERVISOR_DECISION SUPERVISOR_HISTORY SUPERVISOR_REQUEST SURVIVOR SURVIVOR_CHANGED SURVIVOR_DUPLICATE SURVIVOR_LIMIT UNCOMMITTED_ALLOCATION WRITABLE_SCOPE".split(" ").map(code => `LEAN_CORRECTION_${code}`),
+  ..."ACCEPTED_ALLOCATION ACCEPTED_CHARGE ACCEPTED_CHECK_CUSTODY ACCEPTED_FULL_AUDIT ACCEPTED_INVENTORY ACCEPTED_READER_CLOSURE ACCEPTED_REUSE ACCOUNTING ALLOCATION CLAIM CUSTODY DIAGNOSTIC DIAGNOSTIC_NOT_ACCEPTED EVIDENCE HOLD_OR_CAPACITY INCOMPLETE_SOLVER INITIAL_SCHEDULE INVENTORY JOURNAL METRIC OBSERVATION ORIGIN ORIGIN_EXECUTABLE ORIGIN_INVOCATION ORIGIN_ROOT ORIGIN_SOURCE PAIR PAIR_ROOT PAIR_SOURCE PIPELINE POINTS PRECHARGE PROBE_SCHEDULE RESPONSE_BRAIN_INPUT RESPONSE_COUNTER_SOURCE RESPONSE_NODES RESPONSE_NODE_INPUT_OUTPUT RESPONSE_NODE_RECEIPT RESPONSE_NODE_ROOT RESPONSE_NODE_TOTAL RESPONSE_SCHEDULE RESPONSE_SOURCE_TARGET RESPONSE_WORK RESULT RESULT_ROOT REUSE REUSED_PIPELINE SCHEDULE SCHEDULE_EVIDENCE SELECTION SNAPSHOT SOLVER SOURCE STATUS SUPERVISOR_REASON_CUSTODY SUPERVISOR_REQUEST TERMINAL_ONLY_REQUIRED TRAINING TRAINING_JOIN TRAINING_OUTCOME UNCLOSED WORK_VECTOR READER_GAP_CUSTODY".split(" ").map(code => `LEAN_CORRECTION_RETAINED_${code}`)
+])
+const trustedGuardErrors = new WeakMap<object, string>()
+export const leanCorrectionTrustedGuardError = (code: string): TypeError => {
+  const error = new TypeError(code)
+  if (trustedGuardCodes.has(code)) trustedGuardErrors.set(error, code)
+  return error
+}
+export const leanCorrectionCliFailure = (args: readonly string[], error: unknown): string => {
+  const withheld = "LEAN_CORRECTION_FAILED_DETAILS_WITHHELD\n"
+  const command = args[0], route = command === "verify-supervisor-diagnostic-v3" ? "diagnostic" : command === "verify-supervisor-baseline-v3" ? "baseline" : null
+  if (!route || args.length !== 3 || args[1] !== "--request" || args[2] !== leanCorrectionRoutePaths(route, "v3").request || typeof error !== "object" || error === null) return withheld
+  const code = trustedGuardErrors.get(error)
+  if (!code || Object.getOwnPropertyDescriptor(error, "message")?.value !== code) return withheld
+  return `${code}\n`
+}
+const fail = (code: string): never => { throw leanCorrectionTrustedGuardError(`LEAN_CORRECTION_${code}`) }
 const root = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[a-f0-9]{64}$/u.test(v)
 const same = (a: unknown, b: unknown) => labRoot("lean-correction-exact-v1", a) === labRoot("lean-correction-exact-v1", b)
 const PLAN = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-BOUNDED-CORRECTION-PLAN-v1.md"
@@ -503,5 +523,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const args = process.argv.slice(2), supervisor: LeanSupervisorMode = /^child-supervisor-(diagnostic|baseline)-v[23]$/u.test(args[0] ?? "") ? args[0]!.endsWith("-v3") ? "v3" : true : false, childRoute = supervisor ? (args[0]!.includes("-diagnostic-") ? "diagnostic" : "baseline") : args[0] === "child-diagnostic" ? "diagnostic" : args[0] === "child-baseline" ? "baseline" : null
   const action = childRoute !== null && args.length === 3 && args[1] === "--request" && args[2] === leanCorrectionRoutePaths(childRoute, supervisor).request ? child(args[2], childRoute, supervisor) : leanCorrectionMain(args)
   if (childRoute) void resolveLeanChildCliTerminal(action)
-  else void action.then(value => process.stdout.write(`${JSON.stringify(value)}\n`)).catch(() => { process.stderr.write("LEAN_CORRECTION_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
+  else void action.then(value => process.stdout.write(`${JSON.stringify(value)}\n`)).catch(error => { process.stderr.write(leanCorrectionCliFailure(args, error)); process.exitCode = 1 })
 }

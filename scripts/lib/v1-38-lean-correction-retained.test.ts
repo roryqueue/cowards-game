@@ -14,6 +14,11 @@ import * as ledgerIO from "../../packages/strategy-lab/src/league/lean-experimen
 import * as fileIO from "node:fs"
 import * as sourceIO from "./v1-38-lean-baseline-source.js"
 import * as retainedIO from "./v1-38-lean-correction-retained.js"
+import { execFileSync } from "node:child_process"
+import { mkdtempSync, realpathSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join, resolve } from "node:path"
+import { pathToFileURL } from "node:url"
 vi.mock("node:fs", async importOriginal => {
   const original = await importOriginal<typeof import("node:fs")>()
   return { ...original, readdirSync: vi.fn(original.readdirSync) }
@@ -26,6 +31,13 @@ import { correctionAllocationFixture } from "../run-v1-38-lean-correction.test.j
 
 const reuseDirectory = process.env.LEAN_COLD_REUSE_FIXTURE_DIR ?? LEAN_BASELINE_STORE
 describe("prospective v3 authenticated reader gap", () => {
+  it("brands the actual reader static guard across modules without projecting an untrusted lookalike", () => {
+    const args = ["verify-supervisor-diagnostic-v3", "--request", ledgerIO.leanCorrectionRoutePaths("diagnostic", "v3").request]
+    let actual: unknown
+    try { auditLeanCorrectionRetained(null) } catch (error) { actual = error }
+    expect(correctionIO.leanCorrectionCliFailure(args, actual)).toBe("LEAN_CORRECTION_RETAINED_SNAPSHOT\n")
+    expect(correctionIO.leanCorrectionCliFailure(args, new TypeError("LEAN_CORRECTION_RETAINED_SNAPSHOT"))).toBe("LEAN_CORRECTION_FAILED_DETAILS_WITHHELD\n")
+  })
   const custody = () => {
     const allocation = { root: labRoot("mock-new-allocation", {}) }
     const startBody = { schemaVersion: "lean-correction-supervisor-admission-v3", route: "diagnostic", mode: "run", parentPid: 123, wallStartMs: 1000, monotonicStartNs: "1000000000" }
@@ -45,24 +57,57 @@ describe("prospective v3 authenticated reader gap", () => {
     expect(() => call(c.start, { ...c.close, root: labRoot("forged", {}) })).toThrow("READER_GAP_CUSTODY")
     expect(() => call(c.start, c.close, { ...c.time, closed: new Set(["pilot-entry"]) })).toThrow("READER_GAP_CUSTODY")
     expect(() => call(c.start, c.close, c.time, 1109)).toThrow("READER_GAP_CUSTODY")
+    expect(() => call(c.start, c.close, { ...c.time, starts: new Map([...c.time.starts, ["already-debited-gap", 1150]]), closes: new Map([...c.time.closes, ["already-debited-gap", 1190]]) })).toThrow("READER_GAP_CUSTODY")
     expect(() => call({ ...c.start, parentPid: 0 })).toThrow("READER_GAP_CUSTODY")
     expect(() => call(null, null)).toThrow("READER_GAP_CUSTODY")
+  })
+  it("joins real producer publication, private receipt loading and append-only exact-once gap/closing accounting", () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-reader-source-only-")))
+    const modules = ["../../packages/strategy-lab/src/league/lean-experiment.ts", "../run-v1-38-lean-correction.ts", "./v1-38-lean-correction-retained.ts"].map(path => new URL(path, import.meta.url).href)
+    const a = correctionAllocationFixture()
+    try {
+      const script = `
+        import * as a from ${JSON.stringify(modules[0])}; import * as p from ${JSON.stringify(modules[1])}; import * as r from ${JSON.stringify(modules[2])};
+        import { mkdirSync, writeFileSync, readFileSync, symlinkSync, unlinkSync } from 'node:fs';
+        import { labRoot } from ${JSON.stringify(pathToFileURL(resolve("packages/strategy-lab/src/contracts.ts")).href)};
+        const allocation=${JSON.stringify(a)}, directory=${JSON.stringify(directory)}, ledger={directory,allocation};
+        writeFileSync(directory+'/time.ndjson','',{mode:0o600});
+        const run=p.beginLeanCorrectionAdmission('diagnostic','run',directory,{wallStartMs:1000,monotonicStartNs:'1000000000'},'v3');
+        a.beginLeanInterval(ledger,'pilot-entry',1000); a.closeLeanInterval(ledger,'pilot-entry',1100);
+        p.closeLeanCorrectionAdmission(run,ledger,{wallStartMs:1110,monotonicStartNs:'1100000000'});
+        const before=readFileSync(directory+'/time.ndjson','utf8');
+        a.beginLeanInterval(ledger,'correction-supervisor-diagnostic-v3-verifier',1200);
+        const gap=r.readLeanFreshSupervisorReaderGap(ledger,'diagnostic',1200,directory);
+        let tick=0;r.closeLeanFreshSupervisorReader(ledger,'diagnostic',gap,()=>[1250,1255][tick++]);
+        const time=a.readLeanTimeAccounting(ledger), rows=readFileSync(directory+'/time.ndjson','utf8');
+        let duplicate=false;try{r.closeLeanFreshSupervisorReader(ledger,'diagnostic',gap)}catch{duplicate=true}
+        unlinkSync(directory+'/admission-run-close.json');let missing=false;try{r.readLeanFreshSupervisorReaderGap(ledger,'diagnostic',1200,directory)}catch{missing=true}
+        symlinkSync(directory+'/admission-run-start.json',directory+'/admission-run-close.json');let alias=false;try{r.readLeanFreshSupervisorReaderGap(ledger,'diagnostic',1200,directory)}catch{alias=true}
+        process.stdout.write(JSON.stringify({gap,time:time.elapsedMs-allocation.predecessor.elapsedUpperBoundMs,active:time.active,prefixUnchanged:rows.startsWith(before),gapClosed:time.closed.has('correction-supervisor-diagnostic-v3-reader-gap'),closingClosed:time.closed.has('correction-supervisor-diagnostic-v3-reader-close'),duplicate,missing,alias}));
+      `
+      const output = execFileSync(process.execPath, ["--max-old-space-size=768", "--import", import.meta.resolve("tsx"), "--input-type=module", "-e", script], { cwd: directory, encoding: "utf8", env: { ...process.env, TSX_DISABLE_CACHE: "1", NODE_DISABLE_COMPILE_CACHE: "1" }, timeout: 30000, maxBuffer: 2048 })
+      expect(JSON.parse(output)).toEqual({ gap: { runCloseMs: 1110, readerStartMs: 1200, gapMs: 90 }, time: 255, active: false, prefixUnchanged: true, gapClosed: true, closingClosed: true, duplicate: true, missing: true, alias: true })
+    } finally { rmSync(directory, { recursive: true, force: true }) }
   })
 })
 describe("supervisor reason actual custody joins", () => {
   it("spends and closes only the v3 loader interval before version or terminal refusal", () => {
     const begin = vi.spyOn(ledgerIO, "beginLeanInterval").mockImplementation(() => {}), close = vi.spyOn(ledgerIO, "closeLeanInterval").mockReturnValue({ elapsedMs: 0, closedElapsedMs: 0, active: false, starts: new Map(), closes: new Map(), closed: new Set() })
     const opened = vi.spyOn(ledgerIO, "openLeanLedger").mockReturnValue({ directory: "mock-only", allocation: { route: "baseline", schemaVersion: "lean-correction-supervisor-baseline-allocation-v2" } } as never)
+    vi.spyOn(correctionIO, "readLeanCorrectionJson").mockImplementation(() => { throw new TypeError("MOCK_MISSING_PROSPECTIVE_RECEIPT") })
     try {
       expect(() => verifyLeanCorrectionRetained("mock-only", "diagnostic", "v3")).toThrow("ALLOCATION")
-      expect(begin).toHaveBeenCalledExactlyOnceWith(expect.anything(), "correction-supervisor-diagnostic-v3-verifier", expect.any(Number))
-      expect(close).toHaveBeenCalledExactlyOnceWith(expect.anything(), "correction-supervisor-diagnostic-v3-verifier")
+      expect(begin.mock.calls[0]).toEqual([expect.anything(), "correction-supervisor-diagnostic-v3-verifier", expect.any(Number)])
+      expect(close.mock.calls[0]).toEqual([expect.anything(), "correction-supervisor-diagnostic-v3-verifier", expect.any(Number)])
       expect(begin.mock.invocationCallOrder[0]).toBeLessThan(close.mock.invocationCallOrder[0]!)
       opened.mockReturnValue({ directory: "mock-only", allocation: { route: "diagnostic", schemaVersion: "lean-correction-supervisor-diagnostic-allocation-v3" } } as never)
       vi.spyOn(ledgerIO, "readLeanChildTerminal").mockReturnValue({ status: "child_failed" } as never)
       vi.spyOn(ledgerIO, "readLeanChildEntry").mockReturnValue({} as never)
-      expect(() => verifyLeanCorrectionRetained("mock-only", "diagnostic", "v3")).toThrow("TERMINAL_ONLY_REQUIRED")
-      expect(begin).toHaveBeenCalledTimes(2); expect(close).toHaveBeenCalledTimes(2)
+      // Missing new prospective receipt fails closed, still spending/closing
+      // the reader before either terminal acceptance or any mocked audit.
+      expect(() => verifyLeanCorrectionRetained("mock-only", "diagnostic", "v3")).toThrow("READER_GAP_CUSTODY")
+      expect(begin.mock.calls.filter(([, id]) => id === "correction-supervisor-diagnostic-v3-verifier")).toHaveLength(2)
+      expect(close.mock.calls.filter(([, id]) => id === "correction-supervisor-diagnostic-v3-verifier")).toHaveLength(2)
     } finally { vi.restoreAllMocks() }
   })
   it("rejects canonical reasons that do not bind the actual parent entry and exit", () => {
@@ -262,6 +307,11 @@ describe("v2 complete audit, not a reason-only gate", () => {
     const body = { ...auditedBody, cumulativeElapsedMs: s.time.elapsedMs + 100, cumulativePhysicalBytes: 16384, readerScratchHighWaterBytes: 512000000, readerInterval: interval, readerStartMs: 2000, readerObservedMs: 2100 }
     let check: Record<string, unknown> = { ...body, root: labRoot(body.schemaVersion, body) }
     let time = { ...s.time, active: false, elapsedMs: s.time.elapsedMs + 200, closedElapsedMs: s.time.elapsedMs + 200, starts: new Map([["pilot-entry", 1000], [interval, 2000]]), closes: new Map([["pilot-entry", 2000], [interval, 2200]]), closed: new Set(["pilot-entry", interval]) }
+    const startBody = { schemaVersion: "lean-correction-supervisor-admission-v3", route: "diagnostic", mode: "run", parentPid: 123, wallStartMs: 1000, monotonicStartNs: "1000000000" }, start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
+    const endBody = { schemaVersion: "lean-correction-supervisor-admission-close-v3", startRoot: start.root, route: "diagnostic", mode: "run", elapsedUpperBoundMs: 1000, monotonicObservedNs: "2000000000", wallObservedMs: 2000, allocationRoot: s.allocation.root, ledgerInterval: "correction-run-finalization", importedMs: 1000 }, end = { ...endBody, root: labRoot(endBody.schemaVersion, endBody) }
+    if (version === 3) {
+      for (const [id, from, to] of [["correction-run-finalization", 2000, 2000], ["correction-supervisor-diagnostic-v3-reader-gap", 2000, 2000], ["correction-supervisor-diagnostic-v3-reader-close", 2200, 2200]] as const) { time.starts.set(id, from); time.closes.set(id, to); time.closed.add(id) }
+    }
     const names = ["allocation.json", "ledger.ndjson", "time.ndjson", "entry.json", "child-terminal.json", "result.json", "cold-reuse.json", "correction-origin.json", "pair-0.json", "observation-0.json", "source-tactical-0.json", "source-cold-opponent.json", ledgerIO.LEAN_SUPERVISOR_CORRECTION_ROUTES.diagnostic.reason, paths.check]
     try {
       vi.spyOn(ledgerIO, "openLeanLedger").mockReturnValue({ directory: paths.store, allocation: s.allocation })
@@ -273,6 +323,8 @@ describe("v2 complete audit, not a reason-only gate", () => {
       vi.spyOn(fileIO, "readdirSync").mockReturnValue(names as never)
       vi.spyOn(sourceIO, "readLeanBaselineSource").mockImplementation((_directory, role) => s.sources.find(source => source.role === role)!)
       vi.spyOn(correctionIO, "readLeanCorrectionJson").mockImplementation(path => {
+        if (path.endsWith("admission-run-start.json")) return start
+        if (path.endsWith("admission-run-close.json")) return end
         if (path.endsWith(paths.check)) return check
         if (path.endsWith("result.json")) return s.result
         if (path.endsWith("cold-reuse.json")) return s.reuse
@@ -283,6 +335,11 @@ describe("v2 complete audit, not a reason-only gate", () => {
       })
       vi.spyOn(correctionIO, "readLeanCorrectionPrivateBytes").mockImplementation(path => path.endsWith("ledger.ndjson") ? s.journalBytes : path.endsWith(ledgerIO.LEAN_SUPERVISOR_CORRECTION_ROUTES.diagnostic.reason) ? s.supervisorReasonBytes! : path.endsWith(paths.check) ? leanCanonicalBytes(check) : (() => { throw new Error("MOCK_UNEXPECTED_READ") })())
       expect(authenticateLeanSupervisorDiagnosticCheck(mode)).toMatchObject({ root: check.root, closedElapsedMs: time.elapsedMs, readerCloseMs: 2200 })
+      if (version === 3) {
+        time.closed.delete("correction-supervisor-diagnostic-v3-reader-gap")
+        expect(() => authenticateLeanSupervisorDiagnosticCheck(mode)).toThrow("ACCEPTED_READER_CLOSURE")
+        time.closed.add("correction-supervisor-diagnostic-v3-reader-gap")
+      }
       expect(() => authenticateLeanSupervisorDiagnosticCheck(version === 3 ? true : "v3")).toThrow("ACCEPTED_ALLOCATION")
       const good = structuredClone(check)
       for (const changed of [{ schemaVersion: "lean-correction-retained-v1" }, { schemaVersion: `lean-correction-supervisor-retained-v${version === 3 ? 2 : 3}` }, { readerInterval: `correction-supervisor-diagnostic-v${version === 3 ? 2 : 3}-verifier` }, { accepted: false }, { currentCharged: 0 }, { sourceRoot: labRoot("wrong", {}) }, { reasonRoot: labRoot("wrong-reason", {}) }, { head: "b".repeat(40) }, { readerStartMs: 1999 }, { cleanupComplete: false }]) {

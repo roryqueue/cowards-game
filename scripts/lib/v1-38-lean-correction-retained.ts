@@ -14,12 +14,12 @@ import { compactLeanBaselineCell, leanBaselineMetricCoverage, type LeanBaselineO
 import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
 import { selectLeanBestTrainedProposal, selectLeanTrainedProposal } from "./v1-38-lean-training-adapter.js"
 import { validateLeanCorrectionOriginMetadata } from "./v1-38-lean-container-match-session.js"
-import { leanCorrectionSourceManifest, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
+import { leanCorrectionSourceManifest, leanCorrectionAdmissionElapsed, leanCorrectionTrustedGuardError, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
 import { validateLeanSupervisorReasonBytes, LEAN_SUPERVISOR_REASON_FILE, LEAN_SUPERVISOR_REASON_MAX_BYTES } from "../run-v1-38-lean-baseline.js"
 import type { LeanBaselinePair } from "./v1-38-lean-experiment-authority.js"
 import { SoldierBrainInputV119Schema, StrategyInputV119Schema, StrategyResultSchema } from "@cowards/spec"
 
-const fail = (code: string): never => { throw new TypeError(`LEAN_CORRECTION_RETAINED_${code}`) }
+const fail = (code: string): never => { throw leanCorrectionTrustedGuardError(`LEAN_CORRECTION_RETAINED_${code}`) }
 const same = (a: unknown, b: unknown) => labRoot("lean-correction-retained-exact-v1", a) === labRoot("lean-correction-retained-exact-v1", b)
 const rooted = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[a-f0-9]{64}$/u.test(v)
 interface Observation { schemaVersion: "lean-baseline-observation-v1"; pairRoot: LabRoot; cell: LeanBaselineObservedCell; root: LabRoot }
@@ -193,6 +193,41 @@ const auditCompleteBaseline = (s: LeanCorrectionRetainedSnapshot, byRole: Map<st
   }
   if (work.actualAssignmentNodes !== actualTotal) return fail("RESPONSE_NODE_TOTAL")
 }
+export interface LeanFreshSupervisorReaderGap { runCloseMs: number; readerStartMs: number; gapMs: number }
+/** Pure producer-to-reader join. Wall observations are actual custody; elapsed
+ * upper bounds may conservatively advance the close by monotonic rounding. */
+export const validateLeanFreshSupervisorReaderGap = (startValue: unknown, closeValue: unknown, allocationRoot: LabRoot, route: LeanCorrectionRoute, time: Pick<ReturnType<typeof readLeanTimeAccounting>, "starts" | "closes" | "closed">, readerStartMs: number): LeanFreshSupervisorReaderGap => {
+  const start = startValue as Record<string, unknown>, end = closeValue as Record<string, unknown>
+  const natural = (n: unknown): n is number => Number.isSafeInteger(n) && Number(n) >= 0
+  if (!start || !end || !exactLabKeys(start, ["schemaVersion", "route", "mode", "parentPid", "wallStartMs", "monotonicStartNs", "root"]) || !exactLabKeys(end, ["schemaVersion", "startRoot", "route", "mode", "elapsedUpperBoundMs", "monotonicObservedNs", "wallObservedMs", "allocationRoot", "ledgerInterval", "importedMs", "root"]) || start.schemaVersion !== "lean-correction-supervisor-admission-v3" || end.schemaVersion !== "lean-correction-supervisor-admission-close-v3" || start.route !== route || end.route !== route || start.mode !== "run" || end.mode !== "run" || !natural(start.parentPid) || start.parentPid === 0 || !natural(start.wallStartMs) || !natural(end.wallObservedMs) || !natural(end.elapsedUpperBoundMs) || !natural(end.importedMs) || !natural(readerStartMs)) return fail("READER_GAP_CUSTODY")
+  const { root: startRoot, ...startBody } = start, { root: closeRoot, ...closeBody } = end
+  if (startRoot !== labRoot(String(start.schemaVersion), startBody) || closeRoot !== labRoot(String(end.schemaVersion), closeBody) || end.startRoot !== startRoot || end.allocationRoot !== allocationRoot || end.ledgerInterval !== "correction-run-finalization" || time.starts.get("pilot-entry") !== start.wallStartMs || !time.closed.has("pilot-entry") || time.closes.get("pilot-entry") !== start.wallStartMs + end.importedMs || !time.closed.has("correction-run-finalization") || time.starts.get("correction-run-finalization") !== start.wallStartMs + end.importedMs || time.closes.get("correction-run-finalization") !== start.wallStartMs + end.elapsedUpperBoundMs || end.importedMs > end.elapsedUpperBoundMs) return fail("READER_GAP_CUSTODY")
+  let elapsed: number
+  try { elapsed = leanCorrectionAdmissionElapsed(start as never, { wallStartMs: end.wallObservedMs, monotonicStartNs: end.monotonicObservedNs } as never) } catch { return fail("READER_GAP_CUSTODY") }
+  const runCloseMs = start.wallStartMs + end.elapsedUpperBoundMs
+  if (elapsed !== end.elapsedUpperBoundMs || end.wallObservedMs < start.wallStartMs || !natural(runCloseMs) || readerStartMs < runCloseMs || time.starts.get(`correction-supervisor-${route}-v3-verifier`) !== readerStartMs) return fail("READER_GAP_CUSTODY")
+  const gapId = `correction-supervisor-${route}-v3-reader-gap`
+  for (const [id, from] of time.starts) {
+    const to = time.closes.get(id)
+    if (id !== gapId && to !== undefined && to > runCloseMs && from < readerStartMs) return fail("READER_GAP_CUSTODY")
+  }
+  return { runCloseMs, readerStartMs, gapMs: readerStartMs - runCloseMs }
+}
+export const readLeanFreshSupervisorReaderGap = (ledger: Parameters<typeof readLeanTimeAccounting>[0], route: LeanCorrectionRoute, readerStartMs: number, directory = leanCorrectionRoutePaths(route, "v3").temp) => {
+  try { return validateLeanFreshSupervisorReaderGap(readLeanCorrectionJson(join(directory, "admission-run-start.json")), readLeanCorrectionJson(join(directory, "admission-run-close.json")), ledger.allocation.root, route, readLeanTimeAccounting(ledger), readerStartMs) } catch { return fail("READER_GAP_CUSTODY") }
+}
+/** Append only to this newly spent reader. Gap rows retain authenticated wall
+ * timestamps; a separate real closure interval debits import/closing work. */
+export const closeLeanFreshSupervisorReader = (ledger: Parameters<typeof closeLeanInterval>[0], route: LeanCorrectionRoute, gap: LeanFreshSupervisorReaderGap | null, clock = Date.now) => {
+  const interval = `correction-supervisor-${route}-v3-verifier`, closingStart = clock()
+  closeLeanInterval(ledger, interval, closingStart)
+  if (gap) {
+    const id = `correction-supervisor-${route}-v3-reader-gap`
+    beginLeanInterval(ledger, id, gap.runCloseMs); closeLeanInterval(ledger, id, gap.readerStartMs)
+  }
+  const closing = `correction-supervisor-${route}-v3-reader-close`
+  beginLeanInterval(ledger, closing, closingStart); closeLeanInterval(ledger, closing, clock())
+}
 /** Exactly one invocation; begin marker spends reader identity even on failure. */
 export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrectionRoute, supervisor: LeanSupervisorMode = false, precheck?: () => void) => {
   const paths = leanCorrectionRoutePaths(route, supervisor)
@@ -200,9 +235,11 @@ export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrection
   if (supervisor !== "v3" && (!("route" in allocation) || allocation.route !== route)) return fail("ALLOCATION")
   const interval = supervisor ? `correction-supervisor-${route}-v${leanSupervisorVersion(supervisor)}-verifier` : `correction-${route}-verifier`
   // V2 debits precheck/loader even when custody refuses ordinary acceptance.
-  if (supervisor) beginLeanInterval(ledger, interval, Date.now() - Math.ceil(process.uptime() * 1000))
+  const readerStartMs = Date.now() - Math.ceil(process.uptime() * 1000)
+  if (supervisor) beginLeanInterval(ledger, interval, readerStartMs)
+  let gap: LeanFreshSupervisorReaderGap | null = null
   let terminal: ReturnType<typeof readLeanChildTerminal>, entry: ReturnType<typeof readLeanChildEntry>
-  try { if (supervisor === "v3" && (!("route" in allocation) || allocation.route !== route || leanSupervisorAllocationMode(allocation) !== "v3")) return fail("ALLOCATION"); terminal = readLeanChildTerminal(ledger); entry = readLeanChildEntry(ledger); if (terminal.status !== "child_exited") return fail("TERMINAL_ONLY_REQUIRED") } catch (error) { if (supervisor) closeLeanInterval(ledger, interval); throw error }
+  try { if (supervisor === "v3") { if (!("route" in allocation) || allocation.route !== route || leanSupervisorAllocationMode(allocation) !== "v3") return fail("ALLOCATION"); gap = readLeanFreshSupervisorReaderGap(ledger, route, readerStartMs) } terminal = readLeanChildTerminal(ledger); entry = readLeanChildEntry(ledger); if (terminal.status !== "child_exited") return fail("TERMINAL_ONLY_REQUIRED") } catch (error) { if (supervisor === "v3") closeLeanFreshSupervisorReader(ledger, route, gap); else if (supervisor) closeLeanInterval(ledger, interval); throw error }
   // Include loader and pre-reader custody work; source fixtures do not spend
   // this actual one-shot reader identity.
   if (!supervisor) beginLeanInterval(ledger, interval, Date.now() - Math.ceil(process.uptime() * 1000))
@@ -210,7 +247,7 @@ export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrection
   const guard = () => {
     scratchPeak = Math.max(scratchPeak, process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024)
     const scratch = scratchPeak + LEAN_EXTERNAL_SCRATCH_RESERVE, physical = cumulativeLeanPhysicalBytes(ledger)
-    if (scratch > LEAN_CAPS.scratchBytes || physical + 65536 > LEAN_CAPS.retainedBytes || scratch + physical + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || currentLeanElapsedMs(ledger) >= LEAN_CAPS.elapsedMs || leanCorrectionSourceManifest(supervisor).root !== allocation.sourceRoot || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim() !== entry.head) return fail("HOLD_OR_CAPACITY")
+    if (scratch > LEAN_CAPS.scratchBytes || physical + 65536 > LEAN_CAPS.retainedBytes || scratch + physical + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || currentLeanElapsedMs(ledger) + (gap?.gapMs ?? 0) >= LEAN_CAPS.elapsedMs || leanCorrectionSourceManifest(supervisor).root !== allocation.sourceRoot || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim() !== entry.head) return fail("HOLD_OR_CAPACITY")
   }
   let report: ReturnType<typeof auditLeanCorrectionRetained>
   try {
@@ -232,11 +269,11 @@ export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrection
     report = auditLeanCorrectionRetained({ schemaVersion: supervisor ? `lean-correction-supervisor-retained-snapshot-v${leanSupervisorVersion(supervisor)}` as const : "lean-correction-retained-snapshot-v1", ...(supervisor ? { supervisorReasonBytes: readLeanCorrectionPrivateBytes(join(ledger.directory, LEAN_SUPERVISOR_REASON_FILE), LEAN_SUPERVISOR_REASON_MAX_BYTES) } : {}), allocation, request, entry, terminal, evidence, time: { ...readLeanTimeAccounting(ledger), active: false, elapsedMs: currentLeanElapsedMs(ledger) }, result, reuse: retainedReuse, pairs, observations, sources, artifacts, origin: route === "diagnostic" ? readLeanCorrectionJson(join(ledger.directory, "correction-origin.json")) : null, journalBytes: readLeanCorrectionPrivateBytes(join(ledger.directory, "ledger.ndjson"), 4_194_304) }, guard)
     guard()
     const { root: _root, ...body } = report
-    const final = { ...body, cumulativeElapsedMs: currentLeanElapsedMs(ledger), cumulativePhysicalBytes: cumulativeLeanPhysicalBytes(ledger), readerScratchHighWaterBytes: scratchPeak + LEAN_EXTERNAL_SCRATCH_RESERVE, ...(supervisor ? { readerInterval: interval, readerStartMs: readLeanTimeAccounting(ledger).starts.get(interval)!, readerObservedMs: Date.now() } : {}) }
+    const final = { ...body, cumulativeElapsedMs: currentLeanElapsedMs(ledger) + (gap?.gapMs ?? 0), cumulativePhysicalBytes: cumulativeLeanPhysicalBytes(ledger), readerScratchHighWaterBytes: scratchPeak + LEAN_EXTERNAL_SCRATCH_RESERVE, ...(supervisor ? { readerInterval: interval, readerStartMs: readLeanTimeAccounting(ledger).starts.get(interval)!, readerObservedMs: Date.now() } : {}) }
     const checked = { ...final, root: labRoot(final.schemaVersion, final) }
     publishLeanCorrection(join(ledger.directory, paths.check), checked, ledger)
     return checked
-  } finally { closeLeanInterval(ledger, interval) }
+  } finally { if (supervisor === "v3") closeLeanFreshSupervisorReader(ledger, route, gap); else closeLeanInterval(ledger, interval) }
 }
 /** Admission reopens immutable bytes; it never dispatches/retries an empirical
  * reader. Caller booleans and mock audit reports cannot grant this authority. */
@@ -245,6 +282,10 @@ export const authenticateLeanSupervisorDiagnosticCheck = (supervisor: true | "v3
   if (leanSupervisorAllocationMode(allocation) !== supervisor || !("route" in allocation) || allocation.route !== "diagnostic") return fail("ACCEPTED_ALLOCATION")
   const entry = readLeanChildEntry(ledger), terminal = readLeanChildTerminal(ledger), time = readLeanTimeAccounting(ledger), interval = `correction-supervisor-diagnostic-v${leanSupervisorVersion(supervisor)}-verifier`
   if (time.active || !time.closed.has(interval) || [...time.starts.keys()].filter(id => id.includes("verifier")).join("|") !== interval) return fail("ACCEPTED_READER_CLOSURE")
+  if (supervisor === "v3") {
+    const gap = readLeanFreshSupervisorReaderGap(ledger, "diagnostic", time.starts.get(interval)!), gapId = "correction-supervisor-diagnostic-v3-reader-gap", closing = "correction-supervisor-diagnostic-v3-reader-close"
+    if (!time.closed.has(gapId) || time.starts.get(gapId) !== gap.runCloseMs || time.closes.get(gapId) !== gap.readerStartMs || !time.closed.has(closing) || time.starts.get(closing) !== time.closes.get(interval) || time.closes.get(closing)! < time.closes.get(interval)!) return fail("ACCEPTED_READER_CLOSURE")
+  }
   const check = readLeanCorrectionJson(join(ledger.directory, paths.check)) as Record<string, unknown>
   const { root: checkRoot, ...checkBody } = check
   if (check.schemaVersion !== `lean-correction-supervisor-retained-v${leanSupervisorVersion(supervisor)}` || checkRoot !== labRoot(`lean-correction-supervisor-retained-v${leanSupervisorVersion(supervisor)}`, checkBody) || check.readerInterval !== interval || check.readerStartMs !== time.starts.get(interval) || !Number.isSafeInteger(check.readerObservedMs) || Number(check.readerObservedMs) < Number(check.readerStartMs) || Number(check.readerObservedMs) > time.closes.get(interval)!) return fail("ACCEPTED_CHECK_CUSTODY")
@@ -262,5 +303,5 @@ export const authenticateLeanSupervisorDiagnosticCheck = (supervisor: true | "v3
   const { root: _root, ...body } = audited
   const extras = ["root", "cumulativeElapsedMs", "cumulativePhysicalBytes", "readerScratchHighWaterBytes", "readerInterval", "readerStartMs", "readerObservedMs"]
   if (!exactLabKeys(check, [...Object.keys(body), ...extras]) || Object.entries(body).some(([key, value]) => !same(check[key], value)) || !Number.isSafeInteger(check.cumulativeElapsedMs) || Number(check.cumulativeElapsedMs) < allocation.predecessor.elapsedUpperBoundMs || Number(check.cumulativeElapsedMs) > time.elapsedMs || !Number.isSafeInteger(check.cumulativePhysicalBytes) || Number(check.cumulativePhysicalBytes) > LEAN_CAPS.retainedBytes || !Number.isSafeInteger(check.readerScratchHighWaterBytes) || Number(check.readerScratchHighWaterBytes) > LEAN_CAPS.scratchBytes) return fail("ACCEPTED_FULL_AUDIT")
-  return Object.freeze({ root: checkRoot as LabRoot, bytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, paths.check))), allocationRoot: allocation.root, readerInterval: interval, closedElapsedMs: time.elapsedMs, readerCloseMs: time.closes.get(interval)! })
+  return Object.freeze({ root: checkRoot as LabRoot, bytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, paths.check))), allocationRoot: allocation.root, readerInterval: interval, closedElapsedMs: time.elapsedMs, readerCloseMs: time.closes.get(supervisor === "v3" ? "correction-supervisor-diagnostic-v3-reader-close" : interval)! })
 }
