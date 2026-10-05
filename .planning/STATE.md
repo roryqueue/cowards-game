@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Approved distinct v3 diagnostic and conditional baseline; checked source supplement next
+stopped_at: Fresh v3 source independently reviewed and verified; new data review/preparation next
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Direct approval recorded; fresh v3 source research/plan/check with exact prior repair and current setup carry
+last_activity_desc: Final source f776c1f2/1087ef46/886; independent clean review; root134tests/types/threezero scans pass
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved distinct v3, 2026-10-05
+
+CURRENT SOURCE VERIFIED: Freshv3 f776c1f261b45046d975a5e3af0e8cc40623e867/manifestsha256:1087ef46736e1406bd0febf10755d5ec890f1c388a3a567d45479e251152ccb5/886 independently reviewedclean byactualsmaller-model /root/review_265_fresh_supervisor_v3. Initialdiskfindingwithdrawn asfalsepositive/additivereviewsretainhistory; realfile exactlyonce/nearcap/aliasproofadded, no speculativeproductionfix. MAIN134tests160.44s/project+labtypes/three1398zero scans/whitespacePASS, narrow SOURCE-VERIFICATION-v1 verified. No actualrequest/preparation/allocation/entry/reader/provider/Match/hold yet; datareviewnext. Onefreshdiagnostic/conditionalone36baseline approved; allcosts/11charges carry, samecaps/runtime/opportunity/no downstreamcredit. Earlier source-research frontier below superseded only by these completed source gates.
 
 The operator directly approved ONE distinct fresh private diagnostic over independently reviewed repaired source and conditional at mostONE distinct36-Match baseline ONLY after complete clean new retained acceptance. Approval/FRESH-SUPERVISOR-RESEARCH-PLAN-v1 and clock custody are additive existingPlan16 documents. Source-only actualworker /root/execute_265_supervisor_routes_reader owns explicit disjointv3 plumbing and ALLthree real consumer joins/tests; MAIN owns independent review and actualentry. No new request/preparation/allocation/entry/provider/Match/verifier or sourcehold yet. Consumedv2 remains failed/immutable/0current11cumulativecharges, closed10230553ms/rawtime29aad4a2. Actualapp priorcompletion upper1791161283000 adds657493msrepair/admin =>10888046msbefore currentsetup starting1791200983000; every newcost/survivor carries under unchanged15GB/8h/300. Historicalpeaksunknown; cold192spent128future unchanged. Any newdiagnostic failure/refusal ends this envelope; no oldreader/refund/recredit/coldregeneration. Phase265incomplete,266freeze/formation/holdoutunstarted; no public/counting/production/fullLEAG/releasecredit. Earlier pending/consumed paragraphs below are historical, not current approval status.
 
