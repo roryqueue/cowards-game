@@ -4,6 +4,7 @@ import { fork, execFileSync } from "node:child_process"
 import { randomBytes } from "node:crypto"
 import { join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
+import { leanCapsForAllocation } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { exactLabKeys, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createLeanCurrentBaselineAllocation, createLeanLedger, openLeanLedger, readLeanLedger, readLeanTimeAccounting, readLeanChildEntry, publishLeanChildEntry, beginLeanInterval, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, stopLeanLedger, verifyLeanEvidence, deriveLeanChildTerminal, publishLeanChildTerminal, cumulativeLeanPhysicalBytes, assertLeanPublicationCapacity, currentLeanElapsedMs, currentBaselineSlotKind, leanCanonicalBytes, leanBytesRoot, writeLeanAll, LEAN_BASELINE_REQUEST, LEAN_BASELINE_STORE, LEAN_BASELINE_WRITABLE_PATHS, LEAN_CAPS, LEAN_EXTERNAL_SCRATCH_RESERVE, type LeanExperimentLedger, type LeanChildEntryV2, type LeanSlot } from "../packages/strategy-lab/src/league/lean-experiment.js"
@@ -183,7 +184,7 @@ export const assertLeanBaselinePrefixCapacity = (ledger: LeanExperimentLedger, p
   if (process.ppid !== parentPid || !process.connected) return fail("PARENT_LOST")
   const fs = statfsSync(ledger.directory, { bigint: true }), free = fs.bavail * fs.bsize
   if (free > BigInt(Number.MAX_SAFE_INTEGER)) return fail("PREFIX_CAPACITY")
-  return assessLeanPrefixCapacity({ childRss, parentRss, freeBytes: Number(free), allocatedBytes: cumulativeLeanPhysicalBytes(ledger), elapsedMs: currentLeanElapsedMs(ledger) }, reserveBytes)
+  return assessLeanPrefixCapacity({ childRss, parentRss, freeBytes: Number(free), allocatedBytes: cumulativeLeanPhysicalBytes(ledger), elapsedMs: currentLeanElapsedMs(ledger) }, reserveBytes, ledger.allocation)
 }
 export const leanBaselinePair = (input: { ordinal: number; slot: LeanSlot; priorLedgerBytesRoot: LabRoot; priorLedgerByteLength: number; priorCharged: number; bottom: { role: string; sourceRoot: LabRoot; root: LabRoot }; top: { role: string; sourceRoot: LabRoot; root: LabRoot } }) => {
   const body = { schemaVersion: "lean-baseline-pair-v1" as const, ordinal: input.ordinal, slotRoot: input.slot.root, requestRoot: input.slot.requestRoot, priorLedgerBytesRoot: input.priorLedgerBytesRoot, priorLedgerByteLength: input.priorLedgerByteLength, priorCharged: input.priorCharged, bottomRole: input.bottom.role, bottomSourceRoot: input.bottom.sourceRoot, bottomSnapshotRoot: input.bottom.root, topRole: input.top.role, topSourceRoot: input.top.sourceRoot, topSnapshotRoot: input.top.root }
@@ -327,10 +328,10 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
       try {
         const rss = rssOf(child.pid!)
         childRssObservedBytes = Math.max(childRssObservedBytes ?? 0, rss)
-        if (process.memoryUsage().rss + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes || currentLeanElapsedMs(ledger) >= LEAN_CAPS.elapsedMs) { uncertain = true; observe("resource_threshold"); child.kill("SIGKILL") }
+        if (process.memoryUsage().rss + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes || currentLeanElapsedMs(ledger) >= leanCapsForAllocation(allocation).elapsedMs) { uncertain = true; observe("resource_threshold"); child.kill("SIGKILL") }
       } catch { uncertain = true; observe("resource_sampling_exception"); child.kill("SIGKILL") }
     }, 250)
-    const timeout = setTimeout(() => { uncertain = true; observe("deadline_timeout"); child.kill("SIGKILL") }, Math.max(1, LEAN_CAPS.elapsedMs - currentLeanElapsedMs(ledger) - (options.terminalReserveMs ?? 0)))
+    const timeout = setTimeout(() => { uncertain = true; observe("deadline_timeout"); child.kill("SIGKILL") }, Math.max(1, leanCapsForAllocation(allocation).elapsedMs - currentLeanElapsedMs(ledger) - (options.terminalReserveMs ?? 0)))
     const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => resolveExit({ code, signal })))
     clearInterval(period); clearTimeout(timeout)
     try { if (head() !== fixedHead || options.manifestRoot() !== fixedManifest || requestBytesRoot(requestPath) !== fixedRequest) { uncertain = true; observe("final_identity_mismatch"); finalIdentity = "mismatch" } } catch { uncertain = true; observe("final_identity_exception"); finalIdentity = "exception" }
