@@ -46,7 +46,7 @@ const fixture = () => {
   return { ledger, charge, source, pair, pairPath, journal, binding }
 }
 describe("distinct baseline runtime authority", () => {
-  it.each(["lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-baseline-allocation-v2"])("joins the real %s issuer to exact mock pair/source/charge custody", schemaVersion => {
+  it.each(["lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v3"])("joins the real %s issuer to exact mock pair/source/charge custody", schemaVersion => {
     const f = fixture(), grantRoot = labRoot("mock-reuse-grant", f.charge.root)
     const reuse = { grant: { root: grantRoot }, sources: [f.source] } as unknown as LeanColdReuse
     const validation = vi.spyOn(reuseIO, "validateLeanColdReuse").mockReturnValue(reuse)

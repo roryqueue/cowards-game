@@ -16,7 +16,7 @@ vi.mock("../../packages/strategy-lab/src/league/lean-experiment.js", async impor
 
 const input = () => ({ role: "final-response", source: buildPlannerCandidate().source, coldRoot: labRoot("cold", "nonlearned"), implementationRoot: labRoot("implementation", "reviewed") })
 describe("prospective private baseline source snapshots", () => {
-  it.each(["lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-baseline-allocation-v2"])("publishes exact frozen mock bytes through the real %s consumer", schemaVersion => {
+  it.each(["lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v3"])("publishes exact frozen mock bytes through the real %s consumer", schemaVersion => {
     const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-publisher-source-test-")))
     const source = buildLeanBaselineSource(input()), newRoot = labRoot("mock-new-code", schemaVersion)
     const reuse = { grant: { coldRoot: source.coldRoot, seed: "mock-only", root: labRoot("mock-grant", schemaVersion) }, sources: [source] } as unknown as LeanColdReuse
@@ -30,14 +30,14 @@ describe("prospective private baseline source snapshots", () => {
       expect(() => publishLeanReusedBaselineSource({ ...ledger, allocation: { ...ledger.allocation, schemaVersion: "unapproved-v3" } } as unknown as LeanExperimentLedger, source, reuse)).toThrow("LEAN_BASELINE_SOURCE")
     } finally { validation.mockRestore(); rmSync(directory, { recursive: true, force: true }) }
   }, 20000)
-  it("publishes a current response only for supervisor baseline, never diagnostic", () => {
+  it.each([2, 3])("publishes a current response only for supervisor baseline v%d, never diagnostic", version => {
     const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-current-publisher-test-")))
     const source = buildLeanBaselineSource(input())
     try {
-      const ledger = { directory, allocation: { schemaVersion: "lean-correction-supervisor-baseline-allocation-v2", sourceRoot: source.implementationRoot, coldRoot: source.coldRoot } } as unknown as LeanExperimentLedger
+      const ledger = { directory, allocation: { schemaVersion: `lean-correction-supervisor-baseline-allocation-v${version}`, sourceRoot: source.implementationRoot, coldRoot: source.coldRoot } } as unknown as LeanExperimentLedger
       publishLeanBaselineSource(ledger, source)
       expect(readFileSync(join(directory, `source-${source.role}.json`))).toEqual(Buffer.from(leanCanonicalBytes(source)))
-      expect(() => publishLeanBaselineSource({ ...ledger, allocation: { ...ledger.allocation, schemaVersion: "lean-correction-supervisor-diagnostic-allocation-v2" } } as unknown as LeanExperimentLedger, source)).toThrow("LEAN_BASELINE_SOURCE")
+      expect(() => publishLeanBaselineSource({ ...ledger, allocation: { ...ledger.allocation, schemaVersion: `lean-correction-supervisor-diagnostic-allocation-v${version}` } } as unknown as LeanExperimentLedger, source)).toThrow("LEAN_BASELINE_SOURCE")
     } finally { rmSync(directory, { recursive: true, force: true }) }
   }, 20000)
   it("binds static validation and exact authored source without native execution", () => {

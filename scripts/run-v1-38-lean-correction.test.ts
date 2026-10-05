@@ -12,6 +12,15 @@ import { deriveLeanBaselineCandidateRoots, waitLeanBoundedChildReady } from "./r
 import { LEAN_COLD_REUSE_HISTORY } from "./lib/v1-38-lean-baseline-reuse.js"
 
 describe("supervisor v2 source-only admission", () => {
+  it("uses explicit disjoint v3 commands and preserves true-v2 defaults", () => {
+    for (const route of ["diagnostic", "baseline"] as const) {
+      const request = `.strategy-lab/lean-correction-supervisor-${route}-request-20261005-v3.json`
+      for (const mode of ["prepare", "run", "verify"] as const) expect(parseLeanCorrectionCommand([`${mode}-supervisor-${route}-v3`, "--request", request])).toMatchObject({ route, supervisor: "v3" })
+      expect(() => parseLeanCorrectionCommand([`run-supervisor-${route}-v3`, "--request", accounting.LEAN_SUPERVISOR_CORRECTION_ROUTES[route].request])).toThrow()
+      expect(accounting.leanCorrectionRoutePaths(route, true)).toEqual(accounting.LEAN_SUPERVISOR_CORRECTION_ROUTES[route])
+      expect(accounting.leanCorrectionRoutePaths(route, "v3")).toMatchObject({ request, store: `.strategy-lab/lean-correction-supervisor-${route}-20261005-v3` })
+    }
+  })
   it("counts recursive mock TMP survivors once and refuses links/duplicates", () => {
     const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-recursive-mock-")))
     try {
