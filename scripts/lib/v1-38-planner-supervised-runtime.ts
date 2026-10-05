@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { claimLeanRuntimeAuthority, type LeanRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { leanStartupAuthorityDescriptorV5, claimLeanRuntimeAuthority, type LeanRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
 import { claimProspectiveLeagueLifetimeAuthority, isProspectiveLeagueLifetimeFixture, type ProspectiveLeagueLifetimeAuthority, type ProspectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { performance } from "node:perf_hooks"
 import { claimProspectiveLeagueHostReceiptAuthority, isProspectiveLeagueHostReceiptFixture } from "./v1-38-league-host-receipt.js"
@@ -8,6 +8,7 @@ import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { createSelectedCurrentRuntimeFromRevisionV119 } from "../../packages/runtime-js/src/executor.js"
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
+import { buildLeanStartupWorkerHarnessV5 } from "./v1-38-lean-container-match-session.js"
 import { SubprocessSystemFailure, SUBPROCESS_SYSTEM_FAILURE_CODES } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import type { DiagnosticPilotLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
@@ -80,6 +81,7 @@ export const admitPlannerSupervisorLifetime = (options: Pick<PlannerSupervisedRu
 
 export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntimeOptions): PlannerSupervisedRuntime => {
   rejectRetiredDiagnosticLifetimeOptions(options)
+  if (["startup", "startupPolicy", "startupGrant", "startupMs"].some(key => key in options)) throw new TypeError("LAB_STARTUP_OPTION_V5")
   if (options.leanExperimentAuthority && ["prospectiveLifetimeAuthority", "prospectiveLifetimeMs", "prospectiveHostReceiptAuthority", "retryV4LifetimeGrant", "benchmarkLifetimeMs", "observerHarness", "privateObserver", "transport", "streamFactory"].some(key => key in options)) throw new TypeError("LAB_RUNTIME_LEAN_MODE")
   if ("hostResponseReceiptMilliseconds" in options || "prospectiveHostReceiptBinding" in options) throw new TypeError("LAB_RUNTIME_HOST_RECEIPT_OPTION")
   if ("prospectiveHostReceiptAuthority" in options && (!options.prospectiveHostReceiptAuthority || !options.prospectiveLifetimeAuthority || options.prospectiveLifetimeMs !== 600000 || ["retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "benchmarkLifetimeMs", "observerHarness", "privateObserver"].some((key) => key in options) || (options.transport !== undefined || options.streamFactory !== undefined) && !isProspectiveLeagueHostReceiptFixture(options.prospectiveHostReceiptAuthority))) throw new TypeError("LAB_RUNTIME_HOST_RECEIPT_MODE")
@@ -95,8 +97,10 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   const rebuilt = buildStrategyRevision({ source: revision.source, runtime: revision.runtime, ...(revision.strategyId === undefined ? {} : { strategyId: revision.strategyId }) })
   const artifact = revision.metadata.sourceArtifact
   if (!rebuilt.validation.valid || rebuilt.id !== revision.id || rebuilt.sourceHash !== revision.sourceHash || rebuilt.sourceBytes !== revision.sourceBytes || !artifact || labRoot("artifact", artifact) !== labRoot("artifact", rebuilt.metadata.sourceArtifact)) throw new TypeError("LAB_SOURCE_ADMISSION")
-  const harness = observerHarness?.source ?? WORKER_HARNESS_SOURCE
-  const harnessRoot = rawRoot(buildLeanAuthenticatedHarnessSource(harness))
+  const startup = options.leanExperimentAuthority && leanStartupAuthorityDescriptorV5(options.leanExperimentAuthority)
+  const harness = startup ? buildLeanStartupWorkerHarnessV5() : observerHarness?.source ?? WORKER_HARNESS_SOURCE
+  const harnessRoot = rawRoot(startup ? harness : buildLeanAuthenticatedHarnessSource(harness))
+  if (startup && startup.harnessRoot !== harnessRoot) throw new TypeError("LAB_STARTUP_HARNESS_V5")
   if (observerHarness && (harnessRoot !== observerHarness.expectedRoot || !/^sha256:[a-f0-9]{64}$/.test(observerHarness.machineRoot))) throw new TypeError("LAB_HARNESS_IDENTITY")
   const identity: LabRuntimeIdentity = freezeLabValue({ revisionId: revision.id, sourceRoot: rawRoot(revision.source), executableRoot: `sha256:${artifact.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: options.image, harnessRoot, budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot })
   const issued = new WeakSet<object>(); const timings = new WeakMap<object, PlannerTimingEvidence>(); const issuedTiming = new WeakSet<object>()

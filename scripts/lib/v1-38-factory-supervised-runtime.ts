@@ -62,6 +62,7 @@ export const admitFactorySupervisorLifetime = (options: Pick<FactorySupervisedRu
  */
 export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntimeOptions): FactorySupervisionProvider => {
   rejectRetiredDiagnosticLifetimeOptions(options)
+  if (["startup", "startupPolicy", "startupGrant", "startupMs"].some(key => key in options)) return fail("STARTUP_OPTION_V5")
   const supplied = options as unknown as Record<string, unknown>
   if (options.leanExperimentAuthority && ["createRuntime", "prospectiveLifetimeAuthority", "prospectiveLifetimeMs", "prospectiveHostReceiptAuthority", "retryV4LifetimeGrant", "observerHarness", "transport", "streamFactory"].some(key => key in supplied)) return fail("LEAN_MODE")
   if ("hostResponseReceiptMilliseconds" in supplied || "prospectiveHostReceiptBinding" in supplied) return fail("HOST_RECEIPT_OPTION")

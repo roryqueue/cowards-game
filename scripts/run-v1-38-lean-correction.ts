@@ -13,7 +13,7 @@ import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY, type LeanColdReuse 
 import { executeLeanReusedCurrentPipeline } from "./lib/v1-38-lean-baseline-pipeline.js"
 import { publishLeanBaselineSource, publishLeanReusedBaselineSource } from "./lib/v1-38-lean-baseline-source.js"
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
-import { validateLeanCorrectionOriginMetadata, type LeanCorrectionOriginMetadata } from "./lib/v1-38-lean-container-match-session.js"
+import { validateLeanPrivateCorrectionOrigin, type LeanPrivateCorrectionOrigin } from "./lib/v1-38-lean-container-match-session.js"
 import { resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
 import { authenticateLeanSupervisorDiagnosticCheck } from "./lib/v1-38-lean-correction-retained.js"
 
@@ -249,7 +249,7 @@ export const readLeanSupervisorCorrectionRequest = (path: string, route: LeanCor
   if (supervisor === "v5") {
     if (leanBytesRoot(decision) !== LEAN_STARTUP_APPROVAL_ROOT || leanBytesRoot(readFileSync(documents.plan)) !== LEAN_STARTUP_SUPPLEMENT_ROOT || request.startupPolicyRoot !== LEAN_STARTUP_POLICY_V5.root || typeof request.authorizationPath !== "string" || !request.authorizationPath.startsWith(".strategy-lab/lean-startup-v5-") || request.authorizationPath.includes("..") || !root(request.authorizationRoot)) return fail("SUPERVISOR_REQUEST")
     const authorization = readLeanCorrectionJson(request.authorizationPath) as Record<string, unknown>
-    if (!exactLabKeys(authorization, ["schemaVersion", "approved", "executionAuthorized", "route", "sourceRoot", "approvalRoot", "supplementRoot", "policyRoot", "requestDataRoot", "root"]) || authorization.schemaVersion !== "lean-startup-execution-authorization-v5" || authorization.approved !== true || authorization.executionAuthorized !== true || authorization.route !== route || authorization.sourceRoot !== request.sourceRoot || authorization.approvalRoot !== LEAN_STARTUP_APPROVAL_ROOT || authorization.supplementRoot !== LEAN_STARTUP_SUPPLEMENT_ROOT || authorization.policyRoot !== LEAN_STARTUP_POLICY_V5.root || authorization.requestDataRoot !== leanCorrectionRequestDataRoot({ ...request, authorizationRoot: undefined } as LeanCorrectionRequest)) return fail("SUPERVISOR_REQUEST")
+    if (!exactLabKeys(authorization, ["schemaVersion", "approved", "executionAuthorized", "route", "sourceRoot", "approvalRoot", "supplementRoot", "policyRoot", "requestDataRoot", "root"]) || authorization.schemaVersion !== "lean-startup-execution-authorization-v5" || authorization.approved !== true || authorization.executionAuthorized !== true || authorization.route !== route || authorization.sourceRoot !== request.sourceRoot || authorization.approvalRoot !== LEAN_STARTUP_APPROVAL_ROOT || authorization.supplementRoot !== LEAN_STARTUP_SUPPLEMENT_ROOT || authorization.policyRoot !== LEAN_STARTUP_POLICY_V5.root || authorization.requestDataRoot !== leanCorrectionRequestDataRoot(request)) return fail("SUPERVISOR_REQUEST")
     const { root: claimed, ...body } = authorization
     if (claimed !== labRoot("lean-startup-execution-authorization-v5", body) || request.authorizationRoot !== leanBytesRoot(leanCanonicalBytes(authorization))) return fail("SUPERVISOR_REQUEST")
   }
@@ -280,8 +280,13 @@ export const inventoryLeanSupervisorSurvivors = (identities: readonly string[]) 
   for (const path of roots) visit(path)
   return rows.sort((a, b) => a.identity.localeCompare(b.identity))
 }
-export const readLeanSupervisorSetupWitness = (supervisor: true | "v3" | "v4" | "v5" = true) => {
-  if (supervisor === "v5") return validateLeanStartupSetupWitnessV5(readLeanCorrectionJson(LEAN_STARTUP_V5_SETUP_PATH))
+export function readLeanSupervisorSetupWitness(supervisor: "v5"): ReturnType<typeof validateLeanStartupSetupWitnessV5>
+export function readLeanSupervisorSetupWitness(supervisor?: true | "v3" | "v4"): ReturnType<typeof readLeanLegacySupervisorSetupWitness>
+export function readLeanSupervisorSetupWitness(supervisor: true | "v3" | "v4" | "v5"): ReturnType<typeof validateLeanStartupSetupWitnessV5> | ReturnType<typeof readLeanLegacySupervisorSetupWitness>
+export function readLeanSupervisorSetupWitness(supervisor: true | "v3" | "v4" | "v5" = true) {
+  return supervisor === "v5" ? validateLeanStartupSetupWitnessV5(readLeanCorrectionJson(LEAN_STARTUP_V5_SETUP_PATH)) : readLeanLegacySupervisorSetupWitness(supervisor)
+}
+const readLeanLegacySupervisorSetupWitness = (supervisor: true | "v3" | "v4" = true) => {
   if (supervisor === "v4") return validateLeanRepairedReaderSetupWitness(readLeanCorrectionJson(LEAN_REPAIRED_READER_SETUP_WITNESS), leanBytesRoot(readFileSync(LEAN_REPAIRED_READER_DECISION)))
   if (supervisor === "v3") return validateLeanFreshSupervisorSetupWitness(readLeanCorrectionJson(LEAN_FRESH_SUPERVISOR_SETUP_WITNESS), leanBytesRoot(readFileSync(LEAN_FRESH_SUPERVISOR_DECISION)), leanBytesRoot(readFileSync(LEAN_FRESH_SUPERVISOR_SETUP_CUSTODY)))
   const v = readLeanCorrectionJson(LEAN_SUPERVISOR_SETUP_WITNESS) as { schemaVersion: string; startedAtMs: number; observedAtMs: number; source: string; threadId: string; turnId: string; decisionRoot: LabRoot; custodyRoot: LabRoot; root: LabRoot }
@@ -571,15 +576,15 @@ export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrec
     const fs = statfsSync(ledger.directory, { bigint: true }), free = fs.bavail * fs.bsize
     if (free > BigInt(Number.MAX_SAFE_INTEGER)) return fail("CAPACITY")
     const charge = chargeLeanSlot(ledger, slot, { freeBytes: Number(free), availableMemoryBytes: observeLeagueAvailableMemoryBytes() })
-    const origins: Array<{ metadata: LeanCorrectionOriginMetadata; sourceRoot: LabRoot; seat: "bottom" | "top"; binding: unknown }> = []
-    const execution = await runLeanBaselineMatch({ ledger, charge, slot, seed: request.seed, bottom, top, ...(observedRole === undefined ? {} : { observedRole }), checkpoint, register: parent.register, unregister: parent.unregister, correction: { reuse, ...(route === "diagnostic" ? { observe: (metadata: LeanCorrectionOriginMetadata, sourceRoot: LabRoot, seat: "bottom" | "top", binding: unknown) => { if (origins.length >= 2) return fail("ORIGIN_LIMIT"); origins.push({ metadata: validateLeanCorrectionOriginMetadata(metadata), sourceRoot, seat, binding }) } } : {}) } })
+    const origins: Array<{ metadata: LeanPrivateCorrectionOrigin; sourceRoot: LabRoot; seat: "bottom" | "top"; binding: unknown }> = []
+    const execution = await runLeanBaselineMatch({ ledger, charge, slot, seed: request.seed, bottom, top, ...(observedRole === undefined ? {} : { observedRole }), checkpoint, register: parent.register, unregister: parent.unregister, correction: { reuse, ...(route === "diagnostic" ? { observe: (metadata: LeanPrivateCorrectionOrigin, sourceRoot: LabRoot, seat: "bottom" | "top", binding: unknown) => { if (origins.length >= 2) return fail("ORIGIN_LIMIT"); origins.push({ metadata: validateLeanPrivateCorrectionOrigin(metadata), sourceRoot, seat, binding }) } } : {}) } })
     retainLeanMatch(ledger, charge, execution.compact, execution.replayFrames)
     const { replayFrames: _frames, ...body } = execution, cell = { ...body, ordinal: slot.ordinal, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot }
     const observationBody = { schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }
     publishLeanCorrection(join(ledger.directory, `observation-${slot.ordinal}.json`), { ...observationBody, root: labRoot("lean-baseline-observation-v1", observationBody) }, ledger)
     if (route === "diagnostic") {
-      const originBody = { schemaVersion: "lean-correction-origin-envelope-v1", allocationRoot: allocation.root, sourceRoot: request.sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins }
-      publishLeanCorrection(join(ledger.directory, "correction-origin.json"), { ...originBody, root: labRoot("lean-correction-origin-envelope-v1", originBody) }, ledger)
+      const originBody = { schemaVersion: supervisor === "v5" ? "lean-startup-origin-envelope-v5" : "lean-correction-origin-envelope-v1", allocationRoot: allocation.root, sourceRoot: request.sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins }
+      publishLeanCorrection(join(ledger.directory, "correction-origin.json"), { ...originBody, root: labRoot(originBody.schemaVersion, originBody) }, ledger)
     }
     checkpoint(); checkpointLeanResources(ledger, currentLeanElapsedMs(ledger), highWater, LEAN_EXTERNAL_SCRATCH_RESERVE)
     return cell

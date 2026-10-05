@@ -1,5 +1,7 @@
 import { Buffer } from "node:buffer"
-import { claimLeanRuntimeAuthority, isLeanCorrectionRuntimeAuthority, type LeanRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { LEAN_STARTUP_POLICY_V5, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
+import { claimLeanRuntimeAuthority, isLeanCorrectionRuntimeAuthority, type LeanRuntimeAuthority, type LeanStartupGrantV5 } from "./v1-38-lean-experiment-authority.js"
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import { Worker } from "node:worker_threads"
@@ -35,6 +37,7 @@ export interface LeanContainerMatchSessionOptions {
   readonly privateObserver?: LeanPrivateObserver | undefined
   /** Correction-only, private, host-owned finite failure receipt. Omitted by all legacy callers. */
   readonly correctionOriginObserver?: { observe(metadata: LeanCorrectionOriginMetadata): void } | undefined
+  readonly startupOriginObserver?: { observe(metadata: LeanStartupOriginV5): void } | undefined
   readonly infrastructureProfile?: LeanInfrastructureProfile | undefined
   readonly matchId: string; readonly containerName: string; readonly ownershipLabel: string; readonly image: string
   readonly dockerPath?: string | undefined; readonly transport?: LeanContainerMatchTransport | undefined
@@ -219,6 +222,98 @@ export const buildLeanAuthenticatedHarnessSource = (source: string): string => {
   if (!source.includes(marker) || source.indexOf(marker) !== source.lastIndexOf(marker)) throw new TypeError("LEAN_HARNESS_IDENTITY")
   return source.replace(marker, replacement)
 }
+export interface LeanStartupBindingV5 {
+  allocationRoot: LabRoot; chargeRoot: LabRoot; seat: "bottom" | "top"; policyRoot: LabRoot; harnessRoot: LabRoot;
+  requestOrdinal: number; requestRoot: LabRoot; method: "selectActivations" | "soldierBrain"; inputRoot: LabRoot; sourceRoot: LabRoot; executableRoot: LabRoot;
+}
+export interface LeanStartupOriginV5 extends LeanStartupBindingV5 {
+  schemaVersion: "v1.38-lean-startup-origin-v5"; stage: "startup" | "guest" | "receipt" | "host";
+  branch: "complete" | "startup_expired" | "guest_expired" | "go_refused" | "inconsistent_state" | "lifecycle_failure" | "host_expired" | "construction_failure";
+  ready: boolean; go: boolean; wait: "changed" | "timed_out" | "unavailable";
+  termination: "not_required" | "completed" | "failed" | "unknown"; unknown: boolean;
+}
+export type LeanPrivateCorrectionOrigin = LeanCorrectionOriginMetadata | LeanStartupOriginV5
+export const validateLeanPrivateCorrectionOrigin = (value: unknown): LeanPrivateCorrectionOrigin => (value as { schemaVersion?: unknown } | null)?.schemaVersion === "v1.38-lean-startup-origin-v5" ? validateLeanStartupOriginV5(value) : validateLeanCorrectionOriginMetadata(value)
+export const validateLeanStartupOriginV5 = (value: unknown, expected?: LeanStartupBindingV5): LeanStartupOriginV5 => {
+  const keys = ["allocationRoot", "chargeRoot", "seat", "policyRoot", "harnessRoot", "requestOrdinal", "requestRoot", "method", "inputRoot", "sourceRoot", "executableRoot", "schemaVersion", "stage", "branch", "ready", "go", "wait", "termination", "unknown"]
+  if (!value || typeof value !== "object" || Array.isArray(value) || !exactKeys(value as Record<string, unknown>, keys) || Buffer.byteLength(JSON.stringify(value)) > 4096) throw new TypeError("LEAN_STARTUP_ORIGIN_V5")
+  const v = value as LeanStartupOriginV5
+  if (v.schemaVersion !== "v1.38-lean-startup-origin-v5" || v.policyRoot !== LEAN_STARTUP_POLICY_V5.root || v.harnessRoot !== leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())) || !Number.isSafeInteger(v.requestOrdinal) || v.requestOrdinal < 1 || ![v.allocationRoot, v.chargeRoot, v.requestRoot, v.inputRoot, v.sourceRoot, v.executableRoot].every(r => /^sha256:[a-f0-9]{64}$/u.test(r)) || !["bottom", "top"].includes(v.seat) || !["selectActivations", "soldierBrain"].includes(v.method) || !["startup", "guest", "receipt", "host"].includes(v.stage) || !["complete", "startup_expired", "guest_expired", "go_refused", "inconsistent_state", "lifecycle_failure", "host_expired", "construction_failure"].includes(v.branch) || typeof v.ready !== "boolean" || typeof v.go !== "boolean" || typeof v.unknown !== "boolean" || !["changed", "timed_out", "unavailable"].includes(v.wait) || !["not_required", "completed", "failed", "unknown"].includes(v.termination) || v.go && !v.ready || v.branch === "guest_expired" && (!v.ready || !v.go || v.stage !== "guest" || v.wait !== "timed_out") || v.branch === "complete" && (!v.ready || !v.go || v.stage !== "receipt" || v.termination !== "not_required" || v.unknown) || v.branch === "startup_expired" && (v.go || v.stage !== "startup") || v.termination === "failed" && !v.unknown || expected && Object.keys(expected).some(k => v[k as keyof LeanStartupBindingV5] !== expected[k as keyof LeanStartupBindingV5])) throw new TypeError("LEAN_STARTUP_ORIGIN_V5")
+  return Object.freeze({ ...v })
+}
+/** The trusted gate runs before the original import/evaluation path, never inside the guest module. */
+export const buildLeanStartupWorkerHarnessV5 = (): string => {
+  const prefix = `import { workerData as rawWorkerData } from "node:worker_threads"
+const trustedLoadV5=Atomics.load.bind(Atomics),trustedStoreV5=Atomics.store.bind(Atomics),trustedNotifyV5=Atomics.notify.bind(Atomics),trustedWaitV5=Atomics.wait.bind(Atomics),trustedCasV5=Atomics.compareExchange.bind(Atomics);
+const trustedSerializeV5=JSON.stringify.bind(JSON),trustedParseV5=JSON.parse.bind(JSON),trustedNowV5=process.hrtime.bigint.bind(process.hrtime),trustedPortV5=rawWorkerData.port,trustedPostV5=trustedPortV5.postMessage.bind(trustedPortV5),trustedCloseV5=trustedPortV5.close.bind(trustedPortV5),trustedControlV5=new Int32Array(rawWorkerData.signalBuffer);
+if(trustedControlV5.length!==1||trustedLoadV5(trustedControlV5,0)!==0||!Number.isSafeInteger(rawWorkerData.requestId)||rawWorkerData.requestId<1||typeof rawWorkerData.source!=="string"||!["selectActivations","soldierBrain"].includes(rawWorkerData.methodName)||typeof rawWorkerData.goDeadlineNs!=="string"||rawWorkerData.policyRoot!==${JSON.stringify(LEAN_STARTUP_POLICY_V5.root)})throw new Error("STARTUP_DATA_V5");
+const trustedPublishReadyV5=()=>{if(trustedCasV5(trustedControlV5,0,0,1)!==0)throw new Error("STARTUP_STATE_V5");trustedNotifyV5(trustedControlV5,0)};
+const trustedWaitGoV5=()=>{const deadline=BigInt(rawWorkerData.goDeadlineNs);while(trustedLoadV5(trustedControlV5,0)===1){const left=Math.floor(Number(deadline-trustedNowV5())/1000000);if(left<=0)throw new Error("STARTUP_GO_EXPIRED_V5");trustedWaitV5(trustedControlV5,0,1,left)}if(trustedLoadV5(trustedControlV5,0)!==2)throw new Error("STARTUP_GO_STATE_V5")};
+trustedPublishReadyV5();trustedWaitGoV5();
+const workerData=Object.freeze({source:rawWorkerData.source,methodName:rawWorkerData.methodName,input:rawWorkerData.input,outputByteLimit:rawWorkerData.outputByteLimit,port:Object.freeze({postMessage(value){trustedPostV5({requestId:rawWorkerData.requestId,kind:"completion",value:trustedParseV5(trustedSerializeV5(value))})},close(){trustedCloseV5()}}),signalBuffer:rawWorkerData.signalBuffer});`
+  const marker = 'import { workerData } from "node:worker_threads"'
+  if (WORKER_HARNESS_SOURCE.indexOf(marker) !== WORKER_HARNESS_SOURCE.lastIndexOf(marker) || !WORKER_HARNESS_SOURCE.includes("Atomics.store(signal, 0, 1)")) throw new TypeError("LEAN_STARTUP_HARNESS_SEAM_V5")
+  return WORKER_HARNESS_SOURCE.replace(marker, prefix).replace("Atomics.store(signal, 0, 1)", 'if(trustedCasV5(trustedControlV5,0,2,3)!==2)throw new Error("STARTUP_DONE_STATE_V5")').replace("Atomics.notify(signal, 0)", "trustedNotifyV5(trustedControlV5,0)")
+}
+export interface LeanStartupSupervisorHostV5 {
+  now(): number; construct(): void; load(): number; compareExchange(before: number, after: number): number; notify(): void;
+  wait(state: number, ms: number): string; reconcile(ms: number): Promise<unknown>; terminate(ms: number): Promise<void>; close(): void;
+}
+/** This exact control path is embedded in the broker and exercised with fake host primitives. */
+export const superviseLeanStartupV5 = async (binding: LeanStartupBindingV5, hostBudgetMs: number, host: LeanStartupSupervisorHostV5) => {
+  const entered = host.now(), deadline = entered + Math.min(5000, hostBudgetMs), startupDeadline = Math.min(deadline, entered + 2500)
+  let completed: { output: unknown } | undefined
+  let ready = false, go = false, worker = false, wait: LeanStartupOriginV5["wait"] = "unavailable", stage: LeanStartupOriginV5["stage"] = "startup", branch: LeanStartupOriginV5["branch"] = "construction_failure", termination: LeanStartupOriginV5["termination"] = "unknown", unknown = true
+  const remaining = () => Math.max(0, Math.floor(deadline - host.now()))
+  try {
+    if (!Number.isFinite(hostBudgetMs) || hostBudgetMs <= 0 || hostBudgetMs > 5000) throw new Error("HOST_BUDGET_V5")
+    host.construct(); worker = true
+    while (host.load() === 0 && host.now() < startupDeadline) { const result = host.wait(0, Math.min(remaining(), Math.max(0, startupDeadline - host.now()))); wait = result === "timed-out" ? "timed_out" : "changed" }
+    if (host.now() >= startupDeadline) { branch = "startup_expired"; wait = "timed_out" }
+    else if (host.load() !== 1) branch = "inconsistent_state"
+    else {
+      ready = true
+      if (remaining() < 2500) branch = "go_refused"
+      else {
+        const guestDeadline = host.now() + 1000
+        if (host.compareExchange(1, 2) !== 1) throw new Error("GO_STATE_V5")
+        go = true; stage = "guest"; host.notify()
+        while (host.load() === 2 && host.now() < guestDeadline) { const result = host.wait(2, Math.min(remaining(), Math.max(0, guestDeadline - host.now()))); wait = result === "timed-out" ? "timed_out" : "changed" }
+        if (host.now() >= guestDeadline) { branch = "guest_expired"; wait = "timed_out"; unknown = false }
+        else if (host.load() !== 3) branch = "inconsistent_state"
+        else {
+          stage = "receipt"; branch = "lifecycle_failure"
+          const output = await host.reconcile(remaining())
+          if (remaining() <= 0) { stage = "host"; branch = "host_expired" }
+          else { termination = "not_required"; unknown = false; branch = "complete"; completed = { output } }
+        }
+      }
+    }
+  } catch { unknown = true }
+  finally {
+    if (termination !== "not_required" && worker) { const began = host.now(); try { const budget = Math.min(100, remaining()); if (budget <= 0) throw new Error("TERMINATION_BUDGET_V5"); await host.terminate(budget); termination = host.now() - began <= budget && remaining() > 0 ? "completed" : "failed" } catch { termination = "failed" } if (termination === "failed") unknown = true }
+    try { host.close() } catch { termination = "failed"; unknown = true; completed = undefined; branch = "lifecycle_failure" }
+  }
+  if (completed) return { ok: true as const, output: completed.output, origin: { ...binding, schemaVersion: "v1.38-lean-startup-origin-v5" as const, stage, branch, ready, go, wait, termination, unknown } }
+  return { ok: false as const, output: undefined, origin: { ...binding, schemaVersion: "v1.38-lean-startup-origin-v5" as const, stage, branch, ready, go, wait, termination, unknown } }
+}
+export const buildLeanContainerBrokerSourceV5 = (): string => {
+  let source = LEAN_CONTAINER_BROKER_SOURCE
+  const before = source.slice(source.indexOf("const runLegacy="), source.indexOf("const runV117="))
+  const control = superviseLeanStartupV5.toString()
+  const run = `const superviseLeanStartupV5=${control};
+const runLegacy=async(q,request)=>{
+const binding=q.startup.binding;const entered=now();let worker,port,signal,reconcile;
+const result=await superviseLeanStartupV5(binding,q.startup.hostBudgetMs,{
+now:()=>Number(now()-entered)/1000000,
+construct(){const signalBuffer=new SharedArrayBuffer(4);signal=new Int32Array(signalBuffer);const channel=new MessageChannel();port=channel.port1;worker=new Worker(workerUrl(${JSON.stringify(buildLeanStartupWorkerHarnessV5())}),{workerData:{requestId:q.requestId,source:request.source,methodName:request.methodName,input:request.input,outputByteLimit:request.outputByteLimit,port:channel.port2,signalBuffer,policyRoot:binding.policyRoot,goDeadlineNs:(entered+BigInt(Math.floor(q.startup.hostBudgetMs))*1000000n).toString()},transferList:[channel.port2],env:{},execArgv:[],resourceLimits:resources});reconcile=supervise(q,worker,port,entered+BigInt(Math.floor(q.startup.hostBudgetMs))*1000000n)},
+load:()=>Atomics.load(signal,0),compareExchange:(a,b)=>Atomics.compareExchange(signal,0,a,b),notify:()=>Atomics.notify(signal,0),wait:(state,ms)=>Atomics.wait(signal,0,state,ms),reconcile:()=>reconcile(),terminate:ms=>terminate(worker,ms),close:()=>port?.close()});
+return {status:result.ok?0:70,signal:null,out:result.ok?Buffer.from(JSON.stringify(result.output)):Buffer.alloc(0),err:Buffer.alloc(0),startupOrigin:result.origin};};
+`
+  if (!before.startsWith("const runLegacy=") || !before.length) throw new TypeError("LEAN_STARTUP_BROKER_SEAM_V5")
+  source = source.replace(before, run).replace('exact(q,["requestId","mode","payloadBase64","timeoutMilliseconds","stdoutByteLimit","stderrByteLimit"])', 'exact(q,["requestId","mode","payloadBase64","timeoutMilliseconds","stdoutByteLimit","stderrByteLimit","startup"])').replace('!(q.mode in harnesses)', 'q.mode!=="legacy"||q.timeoutMilliseconds!==1000||!q.startup||!exact(q.startup,["hostBudgetMs","binding"])||!Number.isFinite(q.startup.hostBudgetMs)||q.startup.hostBudgetMs<=0||q.startup.hostBudgetMs>5000||!q.startup.binding||q.startup.binding.requestOrdinal!==q.requestId||q.startup.binding.policyRoot!=='+JSON.stringify(LEAN_STARTUP_POLICY_V5.root)).replace('stderrBase64:result.err.toString("base64")}', 'stderrBase64:result.err.toString("base64"),startupOrigin:result.startupOrigin}')
+  return source
+}
 
 const STREAM_WORKER_SOURCE = `
 const { parentPort, workerData } = require("node:worker_threads");
@@ -298,11 +393,14 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const origins = new WeakMap<object, LeanPrivateFailureOrigin>()
   if (options.correctionOriginObserver !== undefined && (options.infrastructureProfile !== "closeout" || options.prospectiveHostReceiptAuthority !== undefined || options.prospectiveHostReceiptBinding !== undefined || (options.leanExperimentAuthority !== undefined || options.leanExperimentBinding !== undefined) && !isLeanCorrectionRuntimeAuthority(options.leanExperimentAuthority))) throw new TypeError("LEAN_CORRECTION_ORIGIN_PROFILE")
   let hostResponseReceiptMilliseconds: 5000 | undefined
+  let startup: Readonly<LeanStartupGrantV5> | undefined
+  if (["startup", "startupPolicy", "startupGrant", "startupMs"].some(key => key in options)) throw new TypeError("LEAN_STARTUP_OPTION_V5")
   if ("hostResponseReceiptMilliseconds" in options) throw new TypeError("LEAN_HOST_RECEIPT_SCALAR")
   if ("leanExperimentAuthority" in options || "leanExperimentBinding" in options) {
     const authority = options.leanExperimentAuthority, binding = options.leanExperimentBinding
     if (!authority || !binding || options.infrastructureProfile !== "closeout" || ["prospectiveHostReceiptAuthority", "prospectiveHostReceiptBinding", "transport", "streamFactory", "privateObserver"].some(key => key in options) || options.matchId !== binding.matchId || options.containerName !== binding.containerName || options.ownershipLabel !== binding.ownershipLabel || options.image !== binding.runtime.image) throw new TypeError("LEAN_EXPERIMENT_SESSION_BINDING")
-    hostResponseReceiptMilliseconds = claimLeanRuntimeAuthority(authority, binding, "session").receiptMs
+    const claim = claimLeanRuntimeAuthority(authority, binding, "session")
+    hostResponseReceiptMilliseconds = claim.receiptMs; startup = claim.startup
   }
   if ("prospectiveHostReceiptAuthority" in options || "prospectiveHostReceiptBinding" in options) {
     const authority = options.prospectiveHostReceiptAuthority, binding = options.prospectiveHostReceiptBinding
@@ -312,10 +410,11 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
     hostResponseReceiptMilliseconds = claimProspectiveLeagueHostReceiptAuthority(authority, binding, "session")
   }
   assertLeanInfrastructureProfile(options.infrastructureProfile)
+  if (options.startupOriginObserver && !startup || startup && (options.correctionOriginObserver || options.privateObserver)) throw new TypeError("LEAN_STARTUP_OBSERVER_V5")
   assertSafeIdentity("MATCH_ID", options.matchId); assertSafeIdentity("CONTAINER_NAME", options.containerName); assertSafeIdentity("OWNERSHIP_LABEL", options.ownershipLabel); assertSafeIdentity("IMAGE", options.image)
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$/u.test(options.containerName)) throw new TypeError("LEAN_CONTAINER_SESSION_CONTAINER_NAME_INVALID")
   const dockerPath = options.dockerPath ?? "docker"; const transport = options.transport ?? defaultTransport; const streamFactory = options.streamFactory ?? defaultStreamFactory; const cleanupTimeout = options.cleanupTimeoutMilliseconds ?? DEFAULT_CLEANUP_TIMEOUT_MS
-  let state: LeanContainerMatchSession["state"] = "active"; let cleanupResult: LeanContainerSessionCloseResult | undefined; let stream: LeanContainerPersistentStream | undefined; let nextRequestId = 1
+  let state: LeanContainerMatchSession["state"] = "active"; let cleanupResult: LeanContainerSessionCloseResult | undefined; let stream: LeanContainerPersistentStream | undefined; let nextRequestId = 1; let startupCleanupUncertain = false
   const inspectOwner = (): "absent" | "owned" | "foreign" | "unknown" => {
     const inspected = transport(dockerPath, ["inspect", "--format", `{{index .Config.Labels \"${OWNER_LABEL}\"}}`, options.containerName], { timeoutMilliseconds: cleanupTimeout, maxBufferBytes: CONTROL_BUFFER_BYTES })
     if (exactAbsent(inspected, options.containerName)) return "absent"
@@ -336,7 +435,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
       removedClean = removed.error === undefined && removed.signal === null && removed.status === 0 && removed.stderr.byteLength === 0
     } catch { removedClean = false }
     try { absent = inspectOwner() === "absent" } catch { absent = false }
-    cleanupResult = streamClosed && removedClean && absent ? { cleanupComplete: true, orphanedChild: false } : { cleanupComplete: false, orphanedChild: true }
+    cleanupResult = streamClosed && removedClean && absent && !startupCleanupUncertain ? { cleanupComplete: true, orphanedChild: false } : { cleanupComplete: false, orphanedChild: true }
     return cleanupResult
   }
   const created = transport(dockerPath, createArgs(options.image, options.containerName, options.ownershipLabel, options.infrastructureProfile), { timeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: CONTROL_BUFFER_BYTES })
@@ -346,11 +445,11 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const poison = (): void => { state = "poisoned"; remove() }
   try {
     const started = transport(dockerPath, ["start", containerId], { timeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: CONTROL_BUFFER_BYTES }); assertCleanControlResult(started, "LEAN_CONTAINER_SESSION_START_FAILED")
-    const brokerSource = options.correctionOriginObserver !== undefined ? buildLeanCorrectionOriginBrokerSource(options.privateObserver?.harnessSource) : options.privateObserver === undefined ? LEAN_CONTAINER_BROKER_SOURCE : buildLeanObserverBrokerSource(options.privateObserver.harnessSource)
+    const brokerSource = startup ? buildLeanContainerBrokerSourceV5() : options.correctionOriginObserver !== undefined ? buildLeanCorrectionOriginBrokerSource(options.privateObserver?.harnessSource) : options.privateObserver === undefined ? LEAN_CONTAINER_BROKER_SOURCE : buildLeanObserverBrokerSource(options.privateObserver.harnessSource)
     stream = streamFactory(dockerPath, ["exec", "-i", containerId, "node", "--input-type=module", "--eval", brokerSource], { startupTimeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: STREAM_FRAME_LIMIT_BYTES })
   } catch { poison(); throw new TypeError("LEAN_CONTAINER_SESSION_START_FAILED") }
   const assertActive = (): void => { if (state === "poisoned") throw new TypeError("LEAN_CONTAINER_SESSION_POISONED"); if (state === "closed") throw new TypeError("LEAN_CONTAINER_SESSION_CLOSED") }
-  const runMethod = (request: StrategyExecutionRequest, mode: "legacy" | "v117", timeoutMilliseconds: number, stdoutLimit: number, stderrLimit: number, input: string | Uint8Array): LeanContainerTransportResult => {
+  const runMethod = (request: StrategyExecutionRequest, mode: "legacy" | "v117", timeoutMilliseconds: number, stdoutLimit: number, stderrLimit: number, input: string | Uint8Array, hostDeadline?: bigint): LeanContainerTransportResult => {
     assertActive(); const requestId = nextRequestId++; const inputBytes = typeof input === "string" ? Buffer.byteLength(input) : input.byteLength
     if (hostResponseReceiptMilliseconds !== undefined && (`sha256:${createHash("sha256").update(request.source).digest("hex")}` !== (options.leanExperimentAuthority ?? options.prospectiveHostReceiptAuthority)!.runtime.executableRoot || mode === "legacy" && timeoutMilliseconds !== 1000)) { poison(); throw new TypeError("LEAN_HOST_RECEIPT_REQUEST_BINDING") }
     if (inputBytes > STREAM_FRAME_LIMIT_BYTES / 2) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded payload cap") }
@@ -359,13 +458,16 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
     const timingBinding = observer?.binding(request)
     if (observer && (mode !== "legacy" || timeoutMilliseconds !== 1000 || options.infrastructureProfile !== "closeout" || !timingBinding || timingBinding.method !== request.methodName)) { poison(); throw new TypeError("LEAN_OBSERVER_PROFILE") }
     const payload = Buffer.from(input)
+    const startupBinding: LeanStartupBindingV5 | undefined = startup ? { ...startup, requestOrdinal: requestId, requestRoot: `sha256:${createHash("sha256").update(`v1.38-lean-startup-v5:${requestId}:`).update(payload).digest("hex")}`, method: request.methodName as LeanStartupBindingV5["method"], inputRoot: labRoot("runtime-input", request.input), sourceRoot: options.leanExperimentAuthority!.runtime.sourceRoot, executableRoot: options.leanExperimentAuthority!.runtime.executableRoot } : undefined
+    const hostRemaining = () => hostDeadline === undefined ? 5000 : Math.max(0, Math.floor(Number(hostDeadline - process.hrtime.bigint()) / 1e6))
     const correctionBinding = options.correctionOriginObserver === undefined ? undefined : { requestOrdinal: requestId, requestRoot: `sha256:${createHash("sha256").update(`v1.38-lean-correction-origin:${requestId}:`).update(payload).digest("hex")}` }
-    const frame = `${JSON.stringify({ requestId, mode, payloadBase64: payload.toString("base64"), timeoutMilliseconds, stdoutByteLimit: stdoutLimit, stderrByteLimit: stderrLimit, ...(timingBinding === undefined ? {} : { timingBinding }), ...(correctionBinding === undefined ? {} : { correctionOrigin: correctionBinding }) })}\n`
+    const frame = `${JSON.stringify({ requestId, mode, payloadBase64: payload.toString("base64"), timeoutMilliseconds, stdoutByteLimit: stdoutLimit, stderrByteLimit: stderrLimit, ...(timingBinding === undefined ? {} : { timingBinding }), ...(correctionBinding === undefined ? {} : { correctionOrigin: correctionBinding }), ...(startupBinding === undefined ? {} : { startup: { binding: startupBinding, hostBudgetMs: hostRemaining() } }) })}\n`
     if (Buffer.byteLength(frame) > STREAM_FRAME_LIMIT_BYTES) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded frame cap") }
     try {
+      if (startup && hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
       const transportStart = observer ? process.hrtime.bigint() : undefined
       let raw: Buffer
-      try { raw = stream!.exchange(frame, { timeoutMilliseconds: hostResponseReceiptMilliseconds ?? timeoutMilliseconds, maxBufferBytes: Math.min(STREAM_FRAME_LIMIT_BYTES, Math.max(stdoutLimit, stderrLimit) * 2 + CONTROL_BUFFER_BYTES) }) }
+      try { raw = stream!.exchange(frame, { timeoutMilliseconds: startup ? hostRemaining() : hostResponseReceiptMilliseconds ?? timeoutMilliseconds, maxBufferBytes: Math.min(STREAM_FRAME_LIMIT_BYTES, Math.max(stdoutLimit, stderrLimit) * 2 + CONTROL_BUFFER_BYTES) }) }
       catch (error) { throw observeFailure(origins, error, objectKey(error) ? streamOrigins.get(stream!)?.get(error) ?? { stage: "stream_exchange", reason: "unknown" } : { stage: "stream_exchange", reason: "unknown" }) }
       const transportMs = transportStart === undefined ? 0 : Number(process.hrtime.bigint() - transportStart) / 1e6
       if (raw.byteLength > STREAM_FRAME_LIMIT_BYTES) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was not one frame"), { stage: "outer_frame", reason: "frame_cap_exceeded" })
@@ -373,10 +475,21 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
       let parsed: unknown; try { parsed = JSON.parse(raw.subarray(0, -1).toString("utf8")) } catch { throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was malformed"), { stage: "outer_frame", reason: "json_invalid" }) }
       if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was invalid"), { stage: "outer_frame", reason: "object_invalid" })
       const value = parsed as Record<string, unknown>
+      if (startupBinding) {
+        if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64", "startupOrigin"])) throw new TypeError("LEAN_STARTUP_FRAME_V5")
+        const metadata = validateLeanStartupOriginV5(value.startupOrigin, startupBinding)
+        if (hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
+        if (metadata.branch !== "complete") {
+          if (metadata.termination !== "completed") startupCleanupUncertain = true
+          options.startupOriginObserver?.observe(metadata)
+        } else if (value.status !== 0 || value.signal !== null) throw new TypeError("LEAN_STARTUP_COMPLETION_V5")
+        delete value.startupOrigin
+      } else if (value.startupOrigin !== undefined) throw new TypeError("LEAN_STARTUP_FRAME_V5")
       if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64", ...(observer ? ["timing"] : []), ...(value.correctionOrigin === undefined ? [] : ["correctionOrigin"])]) || options.correctionOriginObserver === undefined && value.correctionOrigin !== undefined || options.correctionOriginObserver !== undefined && (value.signal !== null && value.correctionOrigin === undefined || value.correctionOrigin !== undefined && correctionBinding === undefined) || value.requestId !== requestId || !(value.status === null || Number.isSafeInteger(value.status)) || !(value.signal === null || typeof value.signal === "string") || typeof value.stdoutBase64 !== "string" || typeof value.stderrBase64 !== "string" || !canonicalBase64(value.stdoutBase64) || !canonicalBase64(value.stderrBase64)) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response correlation failed"), { stage: "outer_frame", reason: "correlation_invalid" })
       const correctionOrigin = value.correctionOrigin !== undefined && options.correctionOriginObserver !== undefined && correctionBinding !== undefined ? validateLeanCorrectionOriginMetadata(value.correctionOrigin, correctionBinding) : undefined
       if (correctionOrigin !== undefined) options.correctionOriginObserver!.observe(correctionOrigin)
       const stdout = Buffer.from(value.stdoutBase64, "base64"); const stderr = Buffer.from(value.stderrBase64, "base64")
+      if (startup && hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
       if (stdout.byteLength > stdoutLimit || stderr.byteLength > stderrLimit || stderr.byteLength !== 0) throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Persistent response exceeded cap or emitted stderr")
       if (value.signal !== null) {
         const error = new SubprocessSystemFailure("SUBPROCESS_SIGNAL", "Container method was signalled")
@@ -400,9 +513,10 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const adapter: StrategyExecutionAdapterV117 = {
     metadata: containerSubprocessStrategyExecutionAdapterMetadata,
     execute(request) {
+      const hostDeadline = startup ? process.hrtime.bigint() + 5_000_000_000n : undefined
       const stdoutLimit = request.outputByteLimit ?? SUBPROCESS_STDOUT_BYTES, encoded = encodeSubprocessIpcRequest({ source: request.source, methodName: request.methodName, input: request.input, outputByteLimit: request.outputByteLimit })
-      const response = runMethod(request, "legacy", request.timeoutMs ?? RUNTIME_TIMEOUT_MS, stdoutLimit, SUBPROCESS_STDERR_BYTES, encoded)
-      try { return strictJsonResponse(response.stdout, stdoutLimit, origins) }
+      const response = runMethod(request, "legacy", request.timeoutMs ?? RUNTIME_TIMEOUT_MS, stdoutLimit, SUBPROCESS_STDERR_BYTES, encoded, hostDeadline)
+      try { const result = strictJsonResponse(response.stdout, stdoutLimit, origins); if (hostDeadline !== undefined && process.hrtime.bigint() >= hostDeadline) { poison(); throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted") }; return result }
       catch (error) {
         if (hostResponseReceiptMilliseconds !== undefined) { try { poison() } catch { /* Preserve the original inner admission error; state is already poisoned. */ } }
         throw error
