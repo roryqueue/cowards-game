@@ -11,7 +11,7 @@ import { buildLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-b
 import { auditLeanCorrectionRetained, validateLeanSupervisorReasonJoin, type LeanCorrectionRetainedSnapshot } from "./v1-38-lean-correction-retained.js"
 import { existsSync } from "node:fs"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
-import { LEAN_BASELINE_STORE, createLeanCorrectionAllocation, leanCanonicalBytes, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_STORE, createLeanCorrectionAllocation, createLeanSupervisorCorrectionAllocation, leanCanonicalBytes, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY } from "./v1-38-lean-baseline-reuse.js"
 import { correctionAllocationFixture } from "../run-v1-38-lean-correction.test.js"
 
@@ -159,6 +159,73 @@ const completeFixture = async () => {
   return { ...base, allocation: a, request, entry, terminal, evidence, time: { ...base.time, elapsedMs: 3500000 }, result: { ...body, root: labRoot("lean-correction-result-v1", body) }, pairs, observations, sources, artifacts, origin: null, journalBytes: Buffer.concat(events.map(event => Buffer.concat([leanCanonicalBytes(event), Buffer.from("\n")]))) }
 }
 const dispatchedSources: Array<{ bottom: LeanBaselineSource; top: LeanBaselineSource }> = []
+
+/** Upgrade synthetic retained evidence only, with no filesystem publication,
+ * provider, empirical reader, or authority-bearing check identity. */
+const supervisorFixture = (input: unknown): LeanCorrectionRetainedSnapshot => {
+  const s = structuredClone(input) as LeanCorrectionRetainedSnapshot, old = s.allocation, { root: _priorRoot, ...prior } = old.predecessor
+  const predecessorBody = { ...prior, chargedMatches: old.route === "diagnostic" ? 11 : 12, elapsedUpperBoundMs: 5282046 }
+  const a = createLeanSupervisorCorrectionAllocation({ sourceRoot: old.sourceRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot, planRoot: old.planRoot, candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, seed: old.seed, route: old.route, reuseGrantRoot: old.reuseGrantRoot, supervisorDecisionRoot: labRoot("mock-approved-decision", {}), acceptedCheckRoot: old.route === "diagnostic" ? null : labRoot("mock-check-no-authority", {}), predecessor: { ...predecessorBody, root: labRoot(prior.schemaVersion, predecessorBody) } })
+  s.allocation = a; s.schemaVersion = "lean-correction-supervisor-retained-snapshot-v2"
+  s.request = { ...s.request, schemaVersion: "lean-correction-supervisor-request-v2", diagnosis: null, supervisorDecisionRoot: a.supervisorDecisionRoot!, acceptedCheckRoot: a.acceptedCheckRoot! }
+  s.entry = { ...s.entry, schemaVersion: "lean-child-entry-v2", allocationRoot: a.root, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(s.request)), parentPid: 123, childPid: 124, handshakeRoot: labRoot("mock-handshake", {}), wallStartMs: 1000, monotonicStartNs: "1000000000" }
+  s.terminal = { ...s.terminal, schemaVersion: "lean-child-terminal-v2", entryBytesRoot: leanBytesRoot(leanCanonicalBytes(s.entry)), allocationRoot: a.root, parentPid: 123, childPid: 124, exitCode: 0, signal: null, status: "child_exited", wallObservedMs: 2000, monotonicObservedNs: "2000000000", elapsedUpperBoundMs: 1000, parentRssBytes: 4096, childRssObservedBytes: 4096, physicalBytes: 8192, freeBytes: 15000000000 }
+  const events = Buffer.from(s.journalBytes).toString("utf8").trim().split("\n").map(line => JSON.parse(line))
+  for (let i = 0; i < s.pairs.length; i++) {
+    const cell = s.observations[i]!.cell
+    if (a.route === "diagnostic") {
+      cell.compact = { ...cell.compact, classification: "success", code: "OK", outcome: "DRAW", cleanupComplete: true }
+      cell.semanticRoot = labRoot("mock-clean-semantic", {}); cell.diagnostic = null
+    }
+    const index = events.findIndex(event => event.kind === "charge" && event.charge.ordinal === i), charge = events[index].charge
+    const { root: _chargeRoot, ...chargeBody } = charge; Object.assign(charge, { allocationRoot: a.root, root: labRoot("lean-slot-charge-v1", { ...chargeBody, allocationRoot: a.root }) })
+    const terminalEvent = events.find(event => event.kind === "terminal" && event.chargeRoot === _chargeRoot)
+    terminalEvent.chargeRoot = charge.root; terminalEvent.record = cell.compact
+    Object.assign(s.evidence.records[i]!, { chargeRoot: charge.root, terminal: terminalEvent, status: "success" })
+    const prefix = Buffer.concat(events.slice(0, index).map(event => Buffer.concat([leanCanonicalBytes(event), Buffer.from("\n")])))
+    const { root: _pairRoot, ...pairBody } = s.pairs[i]!
+    const pair = { ...pairBody, priorCharged: a.predecessor.chargedMatches + i, priorLedgerBytesRoot: leanBytesRoot(prefix), priorLedgerByteLength: prefix.length }
+    Object.assign(s.pairs[i]!, pair, { root: labRoot("lean-baseline-pair-v1", pair) })
+    const obs = s.observations[i]!, obsBody = { schemaVersion: obs.schemaVersion, pairRoot: s.pairs[i]!.root, cell }
+    Object.assign(obs, obsBody, { root: labRoot("lean-baseline-observation-v1", obsBody) })
+  }
+  s.journalBytes = Buffer.concat(events.map(event => Buffer.concat([leanCanonicalBytes(event), Buffer.from("\n")])))
+  s.evidence = { ...s.evidence, charged: a.predecessor.chargedMatches + s.pairs.length, root: labRoot("lean-evidence-v1", { allocationRoot: a.root, events, records: s.evidence.records }) }
+  s.time = { ...s.time, elapsedMs: 5283046 }
+  if (a.route === "diagnostic") {
+    const originBody = { schemaVersion: "lean-correction-origin-envelope-v1", allocationRoot: a.root, sourceRoot: a.sourceRoot, pairRoot: s.pairs[0]!.root, chargeRoot: s.evidence.records[0]!.chargeRoot, origins: [] }
+    s.origin = { ...originBody, root: labRoot(originBody.schemaVersion, originBody) }
+    const diagnosticPipeline = s.result.pipeline as Record<string, unknown>
+    diagnosticPipeline.cells = s.observations.map(({ cell }) => ({ ordinal: cell.ordinal, slotRoot: cell.slotRoot, compact: cell.compact }))
+  }
+  const { root: _resultRoot, ...resultBody } = s.result
+  const body = { ...resultBody, schemaVersion: "lean-correction-supervisor-result-v2", allocationRoot: a.root, requestBytesRoot: s.entry.requestBytesRoot, cumulativeCharged: s.evidence.charged, evidenceRoot: s.evidence.root }
+  s.result = { ...body, root: labRoot(body.schemaVersion, body) }
+  const reasonBody = { schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: s.entry.requestBytesRoot, entryBytesRoot: s.terminal.entryBytesRoot, head: s.entry.head, parentPid: 123, childPid: 124, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
+  s.supervisorReasonBytes = leanCanonicalBytes({ ...reasonBody, root: labRoot(reasonBody.schemaVersion, reasonBody) })
+  return s
+}
+
+describe("v2 complete audit, not a reason-only gate", () => {
+  it.skipIf(!existsSync(reuseDirectory))("requires every one-cell evidence join despite unknown old cause", () => {
+    const s = supervisorFixture(fixture())
+    expect(auditLeanCorrectionRetained(s)).toMatchObject({ accepted: true, currentCharged: 1, cumulativeCharged: 12, successful: 1, observedOrigin: "unknown", complete: false, phaseComplete: false })
+    const mutations: Array<(s: LeanCorrectionRetainedSnapshot) => void> = [
+      s => { s.entry.parentPid++ }, s => { s.terminal.childPid++ }, s => { s.terminal.exitCode = 1 },
+      s => { s.supervisorReasonBytes = new Uint8Array(4097) }, s => { s.observations[0]!.cell.compact.cleanupComplete = false },
+      s => { s.time.active = true }, s => { s.journalBytes = new Uint8Array() }, s => { s.evidence.charged-- },
+      s => { s.request.acceptedCheckRoot = labRoot("unexpected", {}) }, s => { s.result.evidenceRoot = labRoot("wrong", {}) },
+    ]
+    for (const mutate of mutations) { const bad = structuredClone(s); mutate(bad); expect(() => auditLeanCorrectionRetained(bad)).toThrow() }
+  }, 30000)
+  it.skipIf(!existsSync(reuseDirectory))("runs all 36 mock baseline slots through the full training/solver audit", async () => {
+    const s = supervisorFixture(await completeFixture())
+    expect(auditLeanCorrectionRetained(s)).toMatchObject({ accepted: true, currentCharged: 36, cumulativeCharged: 48, complete: true, phaseComplete: false, freezeAdmitted: false })
+    const bad = structuredClone(s), work = bad.artifacts["response-work.json"] as { actualAssignmentNodes: number }
+    work.actualAssignmentNodes--
+    expect(() => auditLeanCorrectionRetained(bad)).toThrow()
+  }, 60000)
+})
 
 describe("synthetic complete retained correction (no empirical credit)", () => {
   it.skipIf(!existsSync(reuseDirectory))("joins all 36 cells and exact unrooted response work", async () => {

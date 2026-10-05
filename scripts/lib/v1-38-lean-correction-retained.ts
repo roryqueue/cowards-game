@@ -6,7 +6,7 @@ import { join } from "node:path"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { labRoot, exactLabKeys, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
-import { LEAN_CAPS, LEAN_CORRECTION_ROUTES, LEAN_EXTERNAL_SCRATCH_RESERVE, admitLeanAllocation, beginLeanInterval, closeLeanInterval, cumulativeLeanPhysicalBytes, currentLeanElapsedMs, openLeanLedger, readLeanChildEntry, readLeanChildTerminal, readLeanLedger, readLeanTimeAccounting, verifyLeanEvidence, currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCorrectionAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_CAPS, LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES, leanCorrectionRoutePaths, isLeanSupervisorAllocation, LEAN_EXTERNAL_SCRATCH_RESERVE, admitLeanAllocation, beginLeanInterval, closeLeanInterval, cumulativeLeanPhysicalBytes, currentLeanElapsedMs, openLeanLedger, readLeanChildEntry, readLeanChildTerminal, readLeanLedger, readLeanTimeAccounting, verifyLeanEvidence, currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCorrectionAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { auditLeanTrainingVector, type LeanColdTrainingManifest, type LeanResponseWork, type LeanResponseNodeReceipt } from "../../packages/strategy-lab/src/league/lean-training.js"
 import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
@@ -15,6 +15,7 @@ import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtu
 import { selectLeanBestTrainedProposal, selectLeanTrainedProposal } from "./v1-38-lean-training-adapter.js"
 import { validateLeanCorrectionOriginMetadata } from "./v1-38-lean-container-match-session.js"
 import { leanCorrectionSourceManifest, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
+import { validateLeanSupervisorReasonBytes, LEAN_SUPERVISOR_REASON_FILE, LEAN_SUPERVISOR_REASON_MAX_BYTES } from "../run-v1-38-lean-baseline.js"
 import type { LeanBaselinePair } from "./v1-38-lean-experiment-authority.js"
 import { SoldierBrainInputV119Schema, StrategyInputV119Schema, StrategyResultSchema } from "@cowards/spec"
 
@@ -22,21 +23,29 @@ const fail = (code: string): never => { throw new TypeError(`LEAN_CORRECTION_RET
 const same = (a: unknown, b: unknown) => labRoot("lean-correction-retained-exact-v1", a) === labRoot("lean-correction-retained-exact-v1", b)
 const rooted = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[a-f0-9]{64}$/u.test(v)
 interface Observation { schemaVersion: "lean-baseline-observation-v1"; pairRoot: LabRoot; cell: LeanBaselineObservedCell; root: LabRoot }
+export const validateLeanSupervisorReasonJoin = (bytes: Uint8Array, entry: ReturnType<typeof readLeanChildEntry>, terminal: ReturnType<typeof readLeanChildTerminal>) => {
+  const reason = validateLeanSupervisorReasonBytes(bytes)
+  if (reason.uncertain || reason.reasons.length || reason.observations.resourceSampling !== "observed" || reason.observations.finalIdentity !== "matched" || reason.observations.failureReceipt !== "absent" || reason.entryBytesRoot !== leanBytesRoot(leanCanonicalBytes(entry)) || reason.allocationRoot !== entry.allocationRoot || reason.sourceRoot !== entry.sourceRoot || reason.requestBytesRoot !== entry.requestBytesRoot || reason.head !== entry.head || reason.parentPid !== entry.parentPid || reason.childPid !== entry.childPid || terminal.entryBytesRoot !== reason.entryBytesRoot || terminal.allocationRoot !== reason.allocationRoot || terminal.sourceRoot !== reason.sourceRoot || terminal.head !== reason.head || terminal.parentPid !== reason.parentPid || terminal.childPid !== reason.childPid || terminal.exitCode !== reason.exitCode || terminal.signal !== reason.signal || terminal.status !== "child_exited" || reason.exitCode !== 0 || reason.signal !== null) return fail("SUPERVISOR_REASON_CUSTODY")
+  return reason
+}
 export interface LeanCorrectionRetainedSnapshot {
-  schemaVersion: "lean-correction-retained-snapshot-v1"; allocation: LeanCorrectionAllocation; request: LeanCorrectionRequest
+  schemaVersion: "lean-correction-retained-snapshot-v1" | "lean-correction-supervisor-retained-snapshot-v2"; supervisorReasonBytes?: Uint8Array; allocation: LeanCorrectionAllocation; request: LeanCorrectionRequest
   entry: ReturnType<typeof readLeanChildEntry>; terminal: ReturnType<typeof readLeanChildTerminal>; evidence: ReturnType<typeof verifyLeanEvidence>
   time: ReturnType<typeof readLeanTimeAccounting>; result: Record<string, unknown>; reuse: LeanColdReuse; pairs: readonly LeanBaselinePair[]
   observations: readonly Observation[]; sources: readonly LeanBaselineSource[]; artifacts: Readonly<Record<string, unknown>>; origin: Record<string, unknown> | null; journalBytes: Uint8Array
 }
 export const auditLeanCorrectionRetained = (value: unknown, guard: () => void = () => {}) => {
-  if (!exactLabKeys(value, ["schemaVersion", "allocation", "request", "entry", "terminal", "evidence", "time", "result", "reuse", "pairs", "observations", "sources", "artifacts", "origin", "journalBytes"])) return fail("SNAPSHOT")
+  const supervisor = (value as LeanCorrectionRetainedSnapshot | null)?.schemaVersion === "lean-correction-supervisor-retained-snapshot-v2"
+  if (!exactLabKeys(value, ["schemaVersion", "allocation", "request", "entry", "terminal", "evidence", "time", "result", "reuse", "pairs", "observations", "sources", "artifacts", "origin", "journalBytes", ...(supervisor ? ["supervisorReasonBytes"] : [])])) return fail("SNAPSHOT")
   const s = value as unknown as LeanCorrectionRetainedSnapshot, a = admitLeanAllocation(s.allocation), r = s.result
-  if (!("route" in a) || s.schemaVersion !== "lean-correction-retained-snapshot-v1") return fail("ALLOCATION")
+  if (!("route" in a) || isLeanSupervisorAllocation(a) !== supervisor || !supervisor && s.schemaVersion !== "lean-correction-retained-snapshot-v1") return fail("ALLOCATION")
+  const reason = supervisor ? validateLeanSupervisorReasonJoin(s.supervisorReasonBytes!, s.entry, s.terminal) : null
+  if (supervisor && (s.request.schemaVersion !== "lean-correction-supervisor-request-v2" || s.request.supervisorDecisionRoot !== a.supervisorDecisionRoot || s.request.acceptedCheckRoot !== a.acceptedCheckRoot || s.request.diagnosis !== null)) return fail("SUPERVISOR_REQUEST")
   const reuse = validateLeanColdReuse(s.reuse, a.sourceRoot), route = a.route
   if (!same(s.request.requestRoots, a.requestRoots) || s.request.route !== route || s.request.sourceRoot !== a.sourceRoot || s.request.reuseGrantRoot !== a.reuseGrantRoot || reuse.grant.root !== a.reuseGrantRoot || s.entry.allocationRoot !== a.root || s.entry.sourceRoot !== a.sourceRoot || s.entry.requestBytesRoot !== leanBytesRoot(leanCanonicalBytes(s.request)) || s.terminal.entryBytesRoot !== leanBytesRoot(leanCanonicalBytes(s.entry)) || s.terminal.allocationRoot !== a.root || s.terminal.sourceRoot !== a.sourceRoot || s.terminal.head !== s.entry.head || s.terminal.status !== "child_exited" || s.terminal.exitCode !== 0 || s.terminal.signal !== null || s.time.active || !s.time.closed.has("pilot-entry")) return fail("CUSTODY")
-  if (!exactLabKeys(r, ["schemaVersion", "privacy", "issued", "route", "allocationRoot", "sourceRoot", "requestBytesRoot", "head", "reuseGrantRoot", "pipeline", "evidenceRoot", "cumulativeCharged", "holdoutOpened", "formationMaterialized", "phaseComplete", "root"]) || r.schemaVersion !== "lean-correction-result-v1" || r.privacy !== "private_offline" || r.issued !== false || r.route !== route || r.allocationRoot !== a.root || r.sourceRoot !== a.sourceRoot || r.requestBytesRoot !== s.entry.requestBytesRoot || r.head !== s.entry.head || r.reuseGrantRoot !== reuse.grant.root || r.evidenceRoot !== s.evidence.root || r.cumulativeCharged !== s.evidence.charged || r.holdoutOpened !== false || r.formationMaterialized !== false || r.phaseComplete !== false) return fail("RESULT")
+  if (!exactLabKeys(r, ["schemaVersion", "privacy", "issued", "route", "allocationRoot", "sourceRoot", "requestBytesRoot", "head", "reuseGrantRoot", "pipeline", "evidenceRoot", "cumulativeCharged", "holdoutOpened", "formationMaterialized", "phaseComplete", "root"]) || r.schemaVersion !== (supervisor ? "lean-correction-supervisor-result-v2" : "lean-correction-result-v1") || r.privacy !== "private_offline" || r.issued !== false || r.route !== route || r.allocationRoot !== a.root || r.sourceRoot !== a.sourceRoot || r.requestBytesRoot !== s.entry.requestBytesRoot || r.head !== s.entry.head || r.reuseGrantRoot !== reuse.grant.root || r.evidenceRoot !== s.evidence.root || r.cumulativeCharged !== s.evidence.charged || r.holdoutOpened !== false || r.formationMaterialized !== false || r.phaseComplete !== false) return fail("RESULT")
   const { root: resultRoot, ...resultBody } = r
-  if (resultRoot !== labRoot("lean-correction-result-v1", resultBody)) return fail("RESULT_ROOT")
+  if (resultRoot !== labRoot(supervisor ? "lean-correction-supervisor-result-v2" : "lean-correction-result-v1", resultBody)) return fail("RESULT_ROOT")
   const charged = s.evidence.records.filter(row => row.chargeRoot !== null).length, successful = s.evidence.records.filter(row => row.status === "success").length
   if (!(s.journalBytes instanceof Uint8Array) || s.journalBytes.length > 4_194_304) return fail("JOURNAL")
   const journal = Buffer.from(s.journalBytes).toString("utf8")
@@ -123,8 +132,9 @@ export const auditLeanCorrectionRetained = (value: unknown, guard: () => void = 
     else if (pipeline.status !== "partial_or_failed_baseline") return fail("STATUS")
   }
   const cleanupComplete = s.evidence.records.filter(row => row.terminal !== null).every(row => row.terminal!.record.cleanupComplete)
-  const body = { schemaVersion: "lean-correction-retained-v1" as const, status: "retained_valid" as const, route, allocationRoot: a.root, sourceRoot: a.sourceRoot, resultRoot: resultRoot as LabRoot, reuseGrantRoot: reuse.grant.root, evidenceRoot: s.evidence.root, head: s.entry.head, currentCharged: charged, cumulativeCharged: s.evidence.charged, successful, cleanupComplete, originRoot, observedOrigin, initiatingNativeCause: "unknown" as const, complete: route === "baseline" && pipeline.status === "current_baseline_complete", claim: "no_robust_pure_claimed" as const, phaseComplete: false, freezeAdmitted: false, holdoutOpened: false, formationMaterialized: false, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const }
-  return { ...body, root: labRoot("lean-correction-retained-v1", body) }
+  if (supervisor && route === "diagnostic" && (successful !== 1 || !cleanupComplete)) return fail("DIAGNOSTIC_NOT_ACCEPTED")
+  const body = { schemaVersion: supervisor ? "lean-correction-supervisor-retained-v2" as const : "lean-correction-retained-v1" as const, ...(supervisor ? { evidenceClass: "limited_exploratory" as const, accepted: true, requestBytesRoot: s.entry.requestBytesRoot, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(s.entry)), terminalBytesRoot: leanBytesRoot(leanCanonicalBytes(s.terminal)), resultBytesRoot: leanBytesRoot(leanCanonicalBytes(r)), reasonRoot: reason!.root, reasonBytesRoot: leanBytesRoot(s.supervisorReasonBytes!), supervisorDecisionRoot: a.supervisorDecisionRoot!, acceptedCheckRoot: a.acceptedCheckRoot!, publicAuthorized: false, countedAuthorized: false, productionAuthorized: false } : {}), status: "retained_valid" as const, route, allocationRoot: a.root, sourceRoot: a.sourceRoot, resultRoot: resultRoot as LabRoot, reuseGrantRoot: reuse.grant.root, evidenceRoot: s.evidence.root, head: s.entry.head, currentCharged: charged, cumulativeCharged: s.evidence.charged, successful, cleanupComplete, originRoot, observedOrigin, initiatingNativeCause: "unknown" as const, complete: route === "baseline" && pipeline.status === "current_baseline_complete", claim: "no_robust_pure_claimed" as const, phaseComplete: false, freezeAdmitted: false, holdoutOpened: false, formationMaterialized: false, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const }
+  return { ...body, root: labRoot(body.schemaVersion, body) }
 }
 const measuredRetained = (cell: LeanBaselineObservedCell): LeanMeasuredPair => {
   if (cell.compact.classification !== "success" || !cell.compact.cleanupComplete || !cell.compact.outcome || !cell.semanticRoot) return fail("SCHEDULE_EVIDENCE")
@@ -183,25 +193,29 @@ const auditCompleteBaseline = (s: LeanCorrectionRetainedSnapshot, byRole: Map<st
   if (work.actualAssignmentNodes !== actualTotal) return fail("RESPONSE_NODE_TOTAL")
 }
 /** Exactly one invocation; begin marker spends reader identity even on failure. */
-export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrectionRoute) => {
-  const ledger = openLeanLedger(LEAN_CORRECTION_ROUTES[route].store), allocation = ledger.allocation
+export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrectionRoute, supervisor = false, precheck?: () => void) => {
+  const paths = leanCorrectionRoutePaths(route, supervisor)
+  const ledger = openLeanLedger(paths.store), allocation = ledger.allocation
   if (!("route" in allocation) || allocation.route !== route) return fail("ALLOCATION")
-  const terminal = readLeanChildTerminal(ledger), entry = readLeanChildEntry(ledger)
-  if (terminal.status !== "child_exited") return fail("TERMINAL_ONLY_REQUIRED")
-  const interval = `correction-${route}-verifier`
+  const interval = supervisor ? `correction-supervisor-${route}-v2-verifier` : `correction-${route}-verifier`
+  // V2 debits precheck/loader even when custody refuses ordinary acceptance.
+  if (supervisor) beginLeanInterval(ledger, interval, Date.now() - Math.ceil(process.uptime() * 1000))
+  let terminal: ReturnType<typeof readLeanChildTerminal>, entry: ReturnType<typeof readLeanChildEntry>
+  try { terminal = readLeanChildTerminal(ledger); entry = readLeanChildEntry(ledger); if (terminal.status !== "child_exited") return fail("TERMINAL_ONLY_REQUIRED") } catch (error) { if (supervisor) closeLeanInterval(ledger, interval); throw error }
   // Include loader and pre-reader custody work; source fixtures do not spend
   // this actual one-shot reader identity.
-  beginLeanInterval(ledger, interval, Date.now() - Math.ceil(process.uptime() * 1000))
+  if (!supervisor) beginLeanInterval(ledger, interval, Date.now() - Math.ceil(process.uptime() * 1000))
   let scratchPeak = 0
   const guard = () => {
     scratchPeak = Math.max(scratchPeak, process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024)
     const scratch = scratchPeak + LEAN_EXTERNAL_SCRATCH_RESERVE, physical = cumulativeLeanPhysicalBytes(ledger)
-    if (scratch > LEAN_CAPS.scratchBytes || physical + 65536 > LEAN_CAPS.retainedBytes || scratch + physical + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || currentLeanElapsedMs(ledger) >= LEAN_CAPS.elapsedMs || leanCorrectionSourceManifest().root !== allocation.sourceRoot || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim() !== entry.head) return fail("HOLD_OR_CAPACITY")
+    if (scratch > LEAN_CAPS.scratchBytes || physical + 65536 > LEAN_CAPS.retainedBytes || scratch + physical + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || currentLeanElapsedMs(ledger) >= LEAN_CAPS.elapsedMs || leanCorrectionSourceManifest(supervisor).root !== allocation.sourceRoot || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim() !== entry.head) return fail("HOLD_OR_CAPACITY")
   }
   let report: ReturnType<typeof auditLeanCorrectionRetained>
   try {
+    if (supervisor) precheck?.()
     guard()
-    const { request, reuse } = readLeanCorrectionRequest(path, route)
+    const { request, reuse } = readLeanCorrectionRequest(path, route, supervisor)
     const result = readLeanCorrectionJson(join(ledger.directory, "result.json"), 8_388_608) as Record<string, unknown>
     const retainedReuse = readLeanCorrectionJson(join(ledger.directory, "cold-reuse.json"), 4_194_304)
     if (!same(validateLeanColdReuse(retainedReuse, allocation.sourceRoot), reuse)) return fail("REUSE")
@@ -212,14 +226,40 @@ export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrection
     const names = readdirSync(ledger.directory), sources = names.filter(name => /^source-[a-z0-9-]+\.json$/u.test(name)).map(name => readLeanBaselineSource(ledger.directory, name.slice(7, -5)))
     const artifactNames = ["seal-metadata.json", "cold-corpus.json", "cold-reuse-grant.json", "initial-proposals.json", "initial-selection.json", "initial-training.json", "initial-analysis.json", "response-work.json", "response-node-receipts.json", "response-training.json", "current-analysis.json"]
     const artifacts = Object.fromEntries(artifactNames.filter(name => names.includes(name)).map(name => [name, readLeanCorrectionJson(join(ledger.directory, name), 2_097_152)]))
-    const allowed = new Set(["allocation.json", "ledger.ndjson", "time.ndjson", "entry.json", "child-terminal.json", "result.json", "cold-reuse.json", ...(route === "diagnostic" ? ["correction-origin.json"] : artifactNames), ...sources.map(source => `source-${source.role}.json`), ...pairs.flatMap(pair => [`pair-${pair.ordinal}.json`, `observation-${pair.ordinal}.json`]), ...evidence.records.filter(row => row.terminal?.replay).map(row => `${row.chargeRoot!.slice(7)}.gz`)])
+    const allowed = new Set(["allocation.json", "ledger.ndjson", "time.ndjson", "entry.json", "child-terminal.json", "result.json", "cold-reuse.json", ...(supervisor ? [LEAN_SUPERVISOR_REASON_FILE] : []), ...(route === "diagnostic" ? ["correction-origin.json"] : artifactNames), ...sources.map(source => `source-${source.role}.json`), ...pairs.flatMap(pair => [`pair-${pair.ordinal}.json`, `observation-${pair.ordinal}.json`]), ...evidence.records.filter(row => row.terminal?.replay).map(row => `${row.chargeRoot!.slice(7)}.gz`)])
     if (names.some(name => !allowed.has(name))) return fail("INVENTORY")
-    report = auditLeanCorrectionRetained({ schemaVersion: "lean-correction-retained-snapshot-v1", allocation, request, entry, terminal, evidence, time: { ...readLeanTimeAccounting(ledger), active: false, elapsedMs: currentLeanElapsedMs(ledger) }, result, reuse: retainedReuse, pairs, observations, sources, artifacts, origin: route === "diagnostic" ? readLeanCorrectionJson(join(ledger.directory, "correction-origin.json")) : null, journalBytes: readLeanCorrectionPrivateBytes(join(ledger.directory, "ledger.ndjson"), 4_194_304) }, guard)
+    report = auditLeanCorrectionRetained({ schemaVersion: supervisor ? "lean-correction-supervisor-retained-snapshot-v2" : "lean-correction-retained-snapshot-v1", ...(supervisor ? { supervisorReasonBytes: readLeanCorrectionPrivateBytes(join(ledger.directory, LEAN_SUPERVISOR_REASON_FILE), LEAN_SUPERVISOR_REASON_MAX_BYTES) } : {}), allocation, request, entry, terminal, evidence, time: { ...readLeanTimeAccounting(ledger), active: false, elapsedMs: currentLeanElapsedMs(ledger) }, result, reuse: retainedReuse, pairs, observations, sources, artifacts, origin: route === "diagnostic" ? readLeanCorrectionJson(join(ledger.directory, "correction-origin.json")) : null, journalBytes: readLeanCorrectionPrivateBytes(join(ledger.directory, "ledger.ndjson"), 4_194_304) }, guard)
     guard()
     const { root: _root, ...body } = report
-    const final = { ...body, cumulativeElapsedMs: currentLeanElapsedMs(ledger), cumulativePhysicalBytes: cumulativeLeanPhysicalBytes(ledger), readerScratchHighWaterBytes: scratchPeak + LEAN_EXTERNAL_SCRATCH_RESERVE }
-    const checked = { ...final, root: labRoot("lean-correction-retained-v1", final) }
-    publishLeanCorrection(join(ledger.directory, LEAN_CORRECTION_ROUTES[route].check), checked, ledger)
+    const final = { ...body, cumulativeElapsedMs: currentLeanElapsedMs(ledger), cumulativePhysicalBytes: cumulativeLeanPhysicalBytes(ledger), readerScratchHighWaterBytes: scratchPeak + LEAN_EXTERNAL_SCRATCH_RESERVE, ...(supervisor ? { readerInterval: interval, readerStartMs: readLeanTimeAccounting(ledger).starts.get(interval)!, readerObservedMs: Date.now() } : {}) }
+    const checked = { ...final, root: labRoot(final.schemaVersion, final) }
+    publishLeanCorrection(join(ledger.directory, paths.check), checked, ledger)
     return checked
   } finally { closeLeanInterval(ledger, interval) }
+}
+/** Admission reopens immutable bytes; it never dispatches/retries an empirical
+ * reader. Caller booleans and mock audit reports cannot grant this authority. */
+export const authenticateLeanSupervisorDiagnosticCheck = () => {
+  const paths = LEAN_SUPERVISOR_CORRECTION_ROUTES.diagnostic, ledger = openLeanLedger(paths.store), allocation = ledger.allocation
+  if (!isLeanSupervisorAllocation(allocation) || !("route" in allocation) || allocation.route !== "diagnostic") return fail("ACCEPTED_ALLOCATION")
+  const entry = readLeanChildEntry(ledger), terminal = readLeanChildTerminal(ledger), time = readLeanTimeAccounting(ledger), interval = "correction-supervisor-diagnostic-v2-verifier"
+  if (time.active || !time.closed.has(interval) || [...time.starts.keys()].filter(id => id.includes("verifier")).join("|") !== interval) return fail("ACCEPTED_READER_CLOSURE")
+  const check = readLeanCorrectionJson(join(ledger.directory, paths.check)) as Record<string, unknown>
+  const { root: checkRoot, ...checkBody } = check
+  if (check.schemaVersion !== "lean-correction-supervisor-retained-v2" || checkRoot !== labRoot("lean-correction-supervisor-retained-v2", checkBody) || check.readerInterval !== interval || check.readerStartMs !== time.starts.get(interval) || !Number.isSafeInteger(check.readerObservedMs) || Number(check.readerObservedMs) < Number(check.readerStartMs) || Number(check.readerObservedMs) > time.closes.get(interval)!) return fail("ACCEPTED_CHECK_CUSTODY")
+  const { request, reuse } = readLeanCorrectionRequest(paths.request, "diagnostic", true)
+  const evidence = verifyLeanEvidence(ledger), state = readLeanLedger(ledger)
+  if (!state.stopped || state.charges.size !== 1 || state.charged !== 12) return fail("ACCEPTED_CHARGE")
+  const result = readLeanCorrectionJson(join(ledger.directory, "result.json"), 8_388_608) as Record<string, unknown>
+  const retainedReuse = readLeanCorrectionJson(join(ledger.directory, "cold-reuse.json"), 4_194_304)
+  if (!same(retainedReuse, reuse)) return fail("ACCEPTED_REUSE")
+  const pair = readLeanCorrectionJson(join(ledger.directory, "pair-0.json")) as LeanBaselinePair, observation = readLeanCorrectionJson(join(ledger.directory, "observation-0.json"), 8_388_608) as Observation
+  const sources = ["tactical-0", "cold-opponent"].map(role => readLeanBaselineSource(ledger.directory, role))
+  const allowed = new Set(["allocation.json", "ledger.ndjson", "time.ndjson", "entry.json", "child-terminal.json", "result.json", "cold-reuse.json", "correction-origin.json", "pair-0.json", "observation-0.json", "source-tactical-0.json", "source-cold-opponent.json", paths.reason, paths.check, ...evidence.records.filter(row => row.terminal?.replay).map(row => `${row.chargeRoot!.slice(7)}.gz`)])
+  if (readdirSync(ledger.directory).some(name => !allowed.has(name))) return fail("ACCEPTED_INVENTORY")
+  const audited = auditLeanCorrectionRetained({ schemaVersion: "lean-correction-supervisor-retained-snapshot-v2", allocation, request, entry, terminal, evidence, time, result, reuse: retainedReuse, pairs: [pair], observations: [observation], sources, artifacts: {}, origin: readLeanCorrectionJson(join(ledger.directory, "correction-origin.json")), journalBytes: readLeanCorrectionPrivateBytes(join(ledger.directory, "ledger.ndjson"), 4_194_304), supervisorReasonBytes: readLeanCorrectionPrivateBytes(join(ledger.directory, paths.reason), LEAN_SUPERVISOR_REASON_MAX_BYTES) })
+  const { root: _root, ...body } = audited
+  const extras = ["root", "cumulativeElapsedMs", "cumulativePhysicalBytes", "readerScratchHighWaterBytes", "readerInterval", "readerStartMs", "readerObservedMs"]
+  if (!exactLabKeys(check, [...Object.keys(body), ...extras]) || Object.entries(body).some(([key, value]) => !same(check[key], value)) || !Number.isSafeInteger(check.cumulativeElapsedMs) || Number(check.cumulativeElapsedMs) < allocation.predecessor.elapsedUpperBoundMs || Number(check.cumulativeElapsedMs) > time.elapsedMs || !Number.isSafeInteger(check.cumulativePhysicalBytes) || Number(check.cumulativePhysicalBytes) > LEAN_CAPS.retainedBytes || !Number.isSafeInteger(check.readerScratchHighWaterBytes) || Number(check.readerScratchHighWaterBytes) > LEAN_CAPS.scratchBytes) return fail("ACCEPTED_FULL_AUDIT")
+  return Object.freeze({ root: checkRoot as LabRoot, bytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, paths.check))), allocationRoot: allocation.root, readerInterval: interval, closedElapsedMs: time.elapsedMs, readerCloseMs: time.closes.get(interval)! })
 }
