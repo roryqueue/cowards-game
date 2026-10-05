@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Startup v5 diagnostic prepared; commit allocation before unique MAIN entry
+stopped_at: Startup v5 diagnostic accepted; conditional fresh baseline data next
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Independently reviewed v5 request and exactly one preparation closed; zero new charges
+last_activity_desc: Unique v5 diagnostic and retained reader closed with accepted one-cell result and 24 cumulative charges
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V5 DIAGNOSTIC ACCEPTED: UniqueMAIN16769 CLOSED0/429458ms and ONEordinaryreader36914 CLOSED0. Actualchecka6b50ff7/raw424ada4a acceptedtrue/retained_valid/limited_exploratory, current1success/cumulative24/cleanuptrue; diagnosticcompletefieldfalse is notbaselinecompletion and does not change its one-cell acceptance. Final effective readerClose1791241883648/closedelapsed33373815ms, noactiveintervals; heldHEADf6e0a806/sourcea0940a8a unchanged throughcheck. SOURCE+HEADhold RELEASED, noactiveentry/reader. STARTUP-DIAGNOSTIC-VERIFICATION-v1 records fullroots. ConditionalONEfresh36baseline prerequisite passes; newdatareview/immutablecommittedallocation/freshSAMEPROCESScapacity/uniqueMAINentry stillrequired. Everylatercostcarries fromclosedelapsed+timeafterreaderClose under43200000ms/same15GB300Matches. No baseline/Phase265/freeze/formation/holdout/public/counted/production credit. All diagnostic and older consumedhistory immutable; no repeatreader/retry/refund/recredit.
+
+V5 DIAGNOSTIC ENTRY CLOSED / UNIQUE CHECK NEXT: MAIN16769 CLOSEDexit0, child_exited_pending_independent_verification, terminal429458ms/allocation352971f3. Actualresult/head exists; source+HEADHOLD f6e0a806/a0940a8a remains until ONEuniqueordinaryretainedcheck closes. No duplicateentry/helper/check or competingheavywork. Entryexit0 is NOT acceptance; baselineconditional gate stillpending. Allcostcarries; historicalartifactsimmutable. PreviousACTIVEparagraph is nowhistory.
+
+ACTUAL V5 DIAGNOSTIC ENTRY ACTIVE: UNIQUE MAINsession16769 overcommitted/pushedHEADf6e0a806/sourcea0940a8a/allocation352971f3/raw829b8ab8/request2ab4865c. SOURCE+HEADHOLD untilactualterminal andONEappropriateuniquecheck; no edits/commits/competingheavywork/duplicateentry/helper/reader. This handoff remainsuncommittedduringhold. ActualentryNOTcapacity/charge/acceptanceproof. ConditionalONE36baseline ONLYafterfullacceptednewdiagnostic; failure/refusal endsenvelope. Everylatercostcarries under43200000ms/same15GB300Matches. No Phase265/freeze/formation/holdout/public/counted/production credit; priorpreparedfrontierhistory.
 
 CURRENT V5 DIAGNOSTIC PREPARED: Actual MAIN draft16939/finalize12008 and independent STARTUP-DIAGNOSTIC-DATA-REVIEW-v1 clean; exactrequest raw2ab4865c/data84980f99/setupb212168f binds reviewedsourcea0940a8a/890. ExactlyONE preparation80979 CLOSED0, allocation352971f3390b42030b739eb785bc0e93d2c1ae241b4e9baa7f1907cb3a591ca2/raw829b8ab8cd85fd2dd8d09b7b24bd19551d392995c0d8824465690284aa410de2, planned1/current0/prior23. Preparationtime CLOSEDinactive32853885ms; priorphysical9621504B; checkedreal0700store contains onlyallocation/emptyledger/time. No entry/reader/hold/nativeprovider/Match yet. Commit/push exactnewallocation andreview before uniqueMAINentry via reviewedprivate main-entry.sh. SAMEPROCESScapacity must actually pass before charge; source AND HEAD held throughterminal plus ONEappropriateuniquecheck. Whole12hcarry includes allsource/review/admin/launch/checkcosts; same15GB/300Match/guest1000/host5000/Match600000. Diagnosticfailure/refusal ends envelope; conditionalONEfresh36baseline onlyafter complete accepteddiagnostic. All consumedhistory immutable; Phase265/freeze/formation/holdout/public/counted/production remainunadmitted. Olderfrontiers history.
 
