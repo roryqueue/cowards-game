@@ -326,16 +326,21 @@ describe("v2 complete audit, not a reason-only gate", () => {
       ]) { const bad = structuredClone(s); mutate(bad); expect(() => auditLeanCorrectionRetained(bad)).toThrow() }
     } finally { vi.restoreAllMocks() }
   }, 30000)
-  it.skipIf(!existsSync(reuseDirectory)).each([2, 3] as const)("authenticates only rooted full reports with the actual closed reader interval (all custody mocked) v%s", version => {
-    const s = supervisorFixture(fixture(), version), mode = version === 3 ? "v3" as const : true, paths = ledgerIO.leanCorrectionRoutePaths("diagnostic", mode), interval = `correction-supervisor-diagnostic-v${version}-verifier`
+  it.each([2, 3, 4] as const)("authenticates only rooted full reports with the actual closed reader interval (all custody mocked) v%s", version => {
+    const source = buildPlannerCandidate().source, coldRoot = LEAN_COLD_REUSE_HISTORY.coldRoot
+    const sources = ["tactical-0", "cold-opponent"].map(role => buildLeanBaselineSource({ role, source, coldRoot, implementationRoot: LEAN_COLD_REUSE_HISTORY.sourceRoot }))
+    const reuse = { grant: { root: labRoot("synthetic-accepted-check-reuse", {}), coldRoot, seed: LEAN_COLD_REUSE_HISTORY.seed, amendmentRoot: LEAN_COLD_REUSE_HISTORY.amendmentRoot }, sources } as unknown as ReturnType<typeof authenticateLeanColdReuse>
+    vi.spyOn(reuseIO, "authenticateLeanColdReuse").mockReturnValue(reuse)
+    vi.spyOn(reuseIO, "validateLeanColdReuse").mockImplementation(value => value as typeof reuse)
+    const s = supervisorFixture(fixture(), version), mode = version === 4 ? "v4" as const : version === 3 ? "v3" as const : true, paths = ledgerIO.leanCorrectionRoutePaths("diagnostic", mode), interval = `correction-supervisor-diagnostic-v${version}-verifier`
     const audited = auditLeanCorrectionRetained(s), { root: _root, ...auditedBody } = audited
     const body = { ...auditedBody, cumulativeElapsedMs: s.time.elapsedMs + 100, cumulativePhysicalBytes: 16384, readerScratchHighWaterBytes: 512000000, readerInterval: interval, readerStartMs: 2000, readerObservedMs: 2100 }
     let check: Record<string, unknown> = { ...body, root: labRoot(body.schemaVersion, body) }
     let time = { ...s.time, active: false, elapsedMs: s.time.elapsedMs + 200, closedElapsedMs: s.time.elapsedMs + 200, starts: new Map([["pilot-entry", 1000], [interval, 2000]]), closes: new Map([["pilot-entry", 2000], [interval, 2200]]), closed: new Set(["pilot-entry", interval]) }
-    const startBody = { schemaVersion: "lean-correction-supervisor-admission-v3", route: "diagnostic", mode: "run", parentPid: 123, wallStartMs: 1000, monotonicStartNs: "1000000000" }, start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
-    const endBody = { schemaVersion: "lean-correction-supervisor-admission-close-v3", startRoot: start.root, route: "diagnostic", mode: "run", elapsedUpperBoundMs: 1000, monotonicObservedNs: "2000000000", wallObservedMs: 2000, allocationRoot: s.allocation.root, ledgerInterval: "correction-run-finalization", importedMs: 1000 }, end = { ...endBody, root: labRoot(endBody.schemaVersion, endBody) }
-    if (version === 3) {
-      for (const [id, from, to] of [["correction-run-finalization", 2000, 2000], ["correction-supervisor-diagnostic-v3-reader-gap", 2000, 2000], ["correction-supervisor-diagnostic-v3-reader-close", 2200, 2200]] as const) { time.starts.set(id, from); time.closes.set(id, to); time.closed.add(id) }
+    const startBody = { schemaVersion: `lean-correction-supervisor-admission-v${version}`, route: "diagnostic", mode: "run", parentPid: 123, wallStartMs: 1000, monotonicStartNs: "1000000000" }, start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
+    const endBody = { schemaVersion: `lean-correction-supervisor-admission-close-v${version}`, startRoot: start.root, route: "diagnostic", mode: "run", elapsedUpperBoundMs: 1000, monotonicObservedNs: "2000000000", wallObservedMs: 2000, allocationRoot: s.allocation.root, ledgerInterval: "correction-run-finalization", importedMs: 1000 }, end = { ...endBody, root: labRoot(endBody.schemaVersion, endBody) }
+    if (version >= 3) {
+      for (const [id, from, to] of [["correction-run-finalization", 2000, 2000], [`correction-supervisor-diagnostic-v${version}-reader-gap`, 2000, 2000], [`correction-supervisor-diagnostic-v${version}-reader-close`, 2200, 2200]] as const) { time.starts.set(id, from); time.closes.set(id, to); time.closed.add(id) }
     }
     const names = ["allocation.json", "ledger.ndjson", "time.ndjson", "entry.json", "child-terminal.json", "result.json", "cold-reuse.json", "correction-origin.json", "pair-0.json", "observation-0.json", "source-tactical-0.json", "source-cold-opponent.json", ledgerIO.LEAN_SUPERVISOR_CORRECTION_ROUTES.diagnostic.reason, paths.check]
     try {
@@ -343,7 +348,8 @@ describe("v2 complete audit, not a reason-only gate", () => {
       vi.spyOn(ledgerIO, "readLeanChildEntry").mockReturnValue(s.entry); vi.spyOn(ledgerIO, "readLeanChildTerminal").mockReturnValue(s.terminal)
       vi.spyOn(ledgerIO, "readLeanTimeAccounting").mockImplementation(() => time)
       vi.spyOn(ledgerIO, "verifyLeanEvidence").mockReturnValue(s.evidence)
-      vi.spyOn(ledgerIO, "readLeanLedger").mockReturnValue({ stopped: true, charged: 12, charges: new Map([[s.allocation.slots[0]!.root, {}]]) } as never)
+      const state = { stopped: true, charged: version === 4 ? 13 : 12, charges: new Map([[s.allocation.slots[0]!.root, {}]]) }
+      vi.spyOn(ledgerIO, "readLeanLedger").mockReturnValue(state as never)
       vi.spyOn(correctionIO, "readLeanCorrectionRequest").mockReturnValue({ request: s.request, reuse: s.reuse })
       vi.spyOn(fileIO, "readdirSync").mockReturnValue(names as never)
       vi.spyOn(sourceIO, "readLeanBaselineSource").mockImplementation((_directory, role) => s.sources.find(source => source.role === role)!)
@@ -360,12 +366,15 @@ describe("v2 complete audit, not a reason-only gate", () => {
       })
       vi.spyOn(correctionIO, "readLeanCorrectionPrivateBytes").mockImplementation(path => path.endsWith("ledger.ndjson") ? s.journalBytes : path.endsWith(ledgerIO.LEAN_SUPERVISOR_CORRECTION_ROUTES.diagnostic.reason) ? s.supervisorReasonBytes! : path.endsWith(paths.check) ? leanCanonicalBytes(check) : (() => { throw new Error("MOCK_UNEXPECTED_READ") })())
       expect(authenticateLeanSupervisorDiagnosticCheck(mode)).toMatchObject({ root: check.root, closedElapsedMs: time.elapsedMs, readerCloseMs: 2200 })
-      if (version === 3) {
-        time.closed.delete("correction-supervisor-diagnostic-v3-reader-gap")
+      state.charged = version === 4 ? 12 : 13
+      expect(() => authenticateLeanSupervisorDiagnosticCheck(mode)).toThrow("ACCEPTED_CHARGE")
+      state.charged = version === 4 ? 13 : 12
+      if (version >= 3) {
+        time.closed.delete(`correction-supervisor-diagnostic-v${version}-reader-gap`)
         expect(() => authenticateLeanSupervisorDiagnosticCheck(mode)).toThrow("ACCEPTED_READER_CLOSURE")
-        time.closed.add("correction-supervisor-diagnostic-v3-reader-gap")
+        time.closed.add(`correction-supervisor-diagnostic-v${version}-reader-gap`)
       }
-      expect(() => authenticateLeanSupervisorDiagnosticCheck(version === 3 ? true : "v3")).toThrow("ACCEPTED_ALLOCATION")
+      for (const otherMode of [true, "v3", "v4"] as const) if (otherMode !== mode) expect(() => authenticateLeanSupervisorDiagnosticCheck(otherMode)).toThrow("ACCEPTED_ALLOCATION")
       const good = structuredClone(check)
       for (const changed of [{ schemaVersion: "lean-correction-retained-v1" }, { schemaVersion: `lean-correction-supervisor-retained-v${version === 3 ? 2 : 3}` }, { readerInterval: `correction-supervisor-diagnostic-v${version === 3 ? 2 : 3}-verifier` }, { accepted: false }, { currentCharged: 0 }, { sourceRoot: labRoot("wrong", {}) }, { reasonRoot: labRoot("wrong-reason", {}) }, { head: "b".repeat(40) }, { readerStartMs: 1999 }, { cleanupComplete: false }]) {
         const { root: _prior, ...mutated } = { ...good, ...changed } as Record<string, unknown>; check = { ...mutated, root: labRoot(`lean-correction-supervisor-retained-v${version}`, mutated) }
