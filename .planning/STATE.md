@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Plan265-16 sole diagnostic failed before charge; unique terminal check closed; source-only schema repair
+status: blocked
+stopped_at: Plan265-16 consumer repair source verified; ended one-test envelope requires new prospective operator decision
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Diagnostic55106 and unique terminal-only check closed; zero current charges, no result or baseline authority; direct consumer regressions RED
+last_activity_desc: Three missed consumer joins fixed db4f503b; independent review clean/source verification5of5; root116tests/types/scans pass; new empirical authority pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT HUMAN-ONLY FRONTIER / SAFE REPAIR CLOSED: Root source-only consumer repair db4f503b3f190c5a0a1b611b632c2be38ba8a59a fixesexactly3missedv2schemaallowlists, functionalmanifestsha256:cc3d171f698d5ad0de73ed9419acd8c44fe2e2c278f505e0e202792ff3eb6585/884entries. Actualdistinctchild REVIEWclean825e920e/0findings, SOURCE-VERIFICATION5/5a46b932d; independent9realconsumer testsPASS13.18s; root6files116testsPASS132.67s/project+labtypes/three1398-file0violations/whitespacePASS. Originalmockcoverage/rootreviewmiss explicitly disclosed; preciseactualthrowpoint stillunknown. No liveentry/verifier/hold or safe source work remains. The specifically approved ONE diagnostic55106 failedbeforeMatchcharge and itsONEterminal-onlycheck CLOSED; approvedenvelope CONSUMED/ended, baselineDENIED/no result/ordinaryacceptance. Everyconsumedartifact/request/allocation/authority/reader immutable, no retry/refund/recredit/newrequest/allocation/Match permitted. Closure10230553ms/11cumulative0currentcharges/rawtime29aad4a2 andphysical2179072B plusALLlaterrepair/admincost mustcarry intoany separately approvedfutureversion; do not mutateoldtime or resetbudget. Recommended pendingdecision in SUPERVISOR-CONSUMER-REPAIR-v1: ONE DISTINCT freshprivate diagnostic overreviewedrepairedsource, conditionalatmostONEfresh36-cellbaselineONLYafterfullcleanacceptednewcheck, every15GB/8h/300/guest1000-host5000-Match600000/192spent128future boundunchanged. This recommendation is NOTapproval. Wait fordirecthumanprospectivedecision, notoldblanketapproval overridinglaterexplicitterminalstop; no repeatedheavychecks/knownfailinglaunches whilepending. Phase265incomplete,266freeze/formation/holdoutunstarted; no public/counting/production/LEAG/successfulmilestone/tagcredit. Earlieractive/sourcefrontiers below history.
 
 CURRENT CLOSED V2 / SOURCE-ONLY REPAIR: ExactlyONE MAIN55106 CLOSEDexit1, parent92665/child92702 absent, actualchild_failed/exit1/nullsignal/terminalrawd8cf7c2c, reasonb6e7105a/reasons[]/uncertainfalse/failureReceiptpublished, childUNKNOWN_INTERNAL_FAILURE/stageunknown. Noresult, emptychargeledger,0current/11cumulativecharges, no ordinaryreader or acceptedcheck; initiatingthrowpointunknown. ONE actual terminal-only check CLOSED321030ms, finalrawtime29aad4a28078c2d3b9fb67bf8106d8ff3c0ec9f5cb81cb7178ea3786ce7eaf5c,10230553msclosedcumulative/inactive; disclosed metadata-field bookkeeping failure, notrestartedcheck or acceptance. Source/HEAD0d374eac/b657/884 heldthroughclosure; HOLD RELEASED. Approveddiagnosticenvelope CONSUMED/ended; conditionalbaseline DENIED, no furtherempiricalroute authorized. Safe static diagnosis identifies definite missedv2schemajoins in real source publishers and runtimeauthority issuer; five direct consumer regressions failexactlythoseguards (no actualprovider/Match). Root may finish narrow source-only correctness repair/review/gates, preserving oldsource/evidence/requests/results/charges/readers; no retry/refund/recredit/newallocation/Match until genuinelynewprospectiveauthority. Same15GB/8h/300/guest1000-host5000-Match600000,192spent/128future; historicalcause/peaksunknown. Phase265incomplete; freeze/formation/holdout/public/counting/production/LEAGunadmitted. Earlier prepared/sourcefrontiers retained history.
 
