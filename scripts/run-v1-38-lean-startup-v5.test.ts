@@ -4,7 +4,7 @@ import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { parseLeanCorrectionCommand, assertLeanCorrectionResources } from "./run-v1-38-lean-correction.js"
 import { assessLeanPrefixCapacity } from "./run-v1-38-lean-experiment.js"
 import * as session from "./lib/v1-38-lean-container-match-session.js"
-import { mkdtempSync, writeFileSync, readFileSync, rmSync, realpathSync } from "node:fs"
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, realpathSync, mkdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { defaultRuntimeMetadata, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
@@ -188,7 +188,102 @@ const issueFixture = (f: ReturnType<typeof verticalFixture>, seat: "bottom" | "t
   const binding = { budgetRoot: f.a.root, attemptRoot: charge.root, matchId: `lean-${charge.root.slice(7, 31)}`, containerName: `lean-${charge.root.slice(7, 25)}-${seat}`, ownershipLabel: `lean-${f.a.root.slice(7, 25)}`, seat, runtime }
   return { charge, admission, revision, binding, token: authority.issueLeanCorrectionRuntimeAuthority(f.ledger, charge, f.source, binding, f.reuse) }
 }
+const acceptedSnapshot = (exactRequest?: correctionIO.LeanCorrectionRequest, admitted?: ReturnType<typeof lean.createLeanSupervisorCorrectionAllocation>) => {
+    const f = verticalFixture(), base = admitted ?? f.a
+    const bottom = sources.buildLeanBaselineSource({ coldRoot: base.coldRoot!, implementationRoot: base.sourceRoot, role: "tactical-0", source: f.source.source })
+    const top = sources.buildLeanBaselineSource({ coldRoot: base.coldRoot!, implementationRoot: base.sourceRoot, role: "cold-opponent", source: f.source.source })
+    const request = exactRequest ?? { schemaVersion: "lean-correction-supervisor-request-v5", route: "diagnostic", sourceRoot: base.sourceRoot, planRoot: base.planRoot, coldRoot: base.coldRoot, seed: base.seed, candidateRoots: base.candidateRoots, requestRoots: base.requestRoots, diagnosis: null, supervisorDecisionRoot: base.supervisorDecisionRoot, acceptedCheckRoot: null, setupAccountingRoot: base.setupAccountingRoot, dataReviewRoot: base.dataReviewRoot, reuseGrantRoot: base.reuseGrantRoot, startupPolicyRoot: base.startupPolicyRoot, authorizationRoot: r("authorization") }
+    const a = admitted ?? lean.createLeanSupervisorCorrectionAllocation({ ...input(), seed: base.seed, requestBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(request)) }, 5), slot = a.slots[0]!
+    const chargeBody = { schemaVersion: "lean-slot-charge-v1", allocationRoot: a.root, slotRoot: slot.root, ordinal: 0 }, charge = { ...chargeBody, root: labRoot(chargeBody.schemaVersion, chargeBody) }
+    const compact = { classification: "success", code: "OK", outcome: "DRAW", elapsedMs: 5, cleanupComplete: true, invocationCount: 1, accountingRoot: r("accounting"), executionRoot: r("execution"), telemetry: { transitions: 0, events: 0 } }
+    const replay = lean.encodeLeanReplay([])
+    const events = [{ kind: "charge", charge }, { kind: "terminal", chargeRoot: charge.root, record: compact, replay: replay.container }, { kind: "stop", reason: "complete" }]
+    const records = [{ slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: charge.root, terminal: events[1], status: "success" }]
+    const evidence = { records, charged: 24, elapsedMs: 28_800_101, physicalHighWaterBytes: 9_617_408, scratchHighWaterBytes: 1, root: labRoot("lean-evidence-v1", { allocationRoot: a.root, events, records }) }
+    const pairBody = { schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: lean.leanBytesRoot(Buffer.alloc(0)), priorLedgerByteLength: 0, priorCharged: 23, bottomRole: bottom.role, bottomSourceRoot: bottom.sourceRoot, bottomSnapshotRoot: bottom.root, topRole: top.role, topSourceRoot: top.sourceRoot, topSnapshotRoot: top.root }, pair = { ...pairBody, root: labRoot(pairBody.schemaVersion, pairBody) }
+    const metricBody = { executionRoot: compact.executionRoot, formationComparison: "inconclusive" }, metrics = { ...metricBody, root: labRoot("lean-baseline-match-metrics-v1", metricBody) }
+    const cell = { ordinal: 0, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot, compact, brainInputs: [], strategyInputs: [], trainingHalfPoints: null, semanticRoot: r("semantic"), metrics, decisionRoot: r("decision"), diagnostic: null }
+    const obsBody = { schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }, observation = { ...obsBody, root: labRoot(obsBody.schemaVersion, obsBody) }
+    const head = "a".repeat(40), entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot, head, parentPid: 123, childPid: 124, handshakeRoot: r("handshake"), wallStartMs: 1000, monotonicStartNs: "1000000000" }
+    const terminal = { schemaVersion: "lean-child-terminal-v2", entryBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(entry)), allocationRoot: a.root, sourceRoot: a.sourceRoot, head, parentPid: 123, childPid: 124, status: "child_exited", exitCode: 0, signal: null, wallObservedMs: 1050, monotonicObservedNs: "1050000000", elapsedUpperBoundMs: 50, parentRssBytes: 1000, childRssObservedBytes: 1000, physicalBytes: a.predecessor.allocatedDiskBytes, freeBytes: 20000000000 }
+    const originBody = { schemaVersion: "lean-startup-origin-envelope-v5", allocationRoot: a.root, sourceRoot: a.sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins: [] }, origin = { ...originBody, root: labRoot(originBody.schemaVersion, originBody) }
+    const pipeline = { status: "diagnostic_only", cells: [{ ordinal: 0, slotRoot: slot.root, compact }], training: null, holdoutOpened: false, formationMaterialized: false }
+    const resultBody = { schemaVersion: "lean-correction-supervisor-result-v5", privacy: "private_offline", issued: false, route: "diagnostic", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot, head, reuseGrantRoot: a.reuseGrantRoot, pipeline, evidenceRoot: evidence.root, cumulativeCharged: 24, holdoutOpened: false, formationMaterialized: false, phaseComplete: false }
+    const reasonBody = { schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot, entryBytesRoot: terminal.entryBytesRoot, head, parentPid: 123, childPid: 124, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
+    const snapshot = { schemaVersion: "lean-correction-supervisor-retained-snapshot-v5", allocation: a, request, entry, terminal, evidence, time: { active: false, elapsedMs: 28_800_101, closed: new Set(["pilot-entry"]) }, result: { ...resultBody, root: labRoot(resultBody.schemaVersion, resultBody) }, reuse: f.reuse, pairs: [pair], observations: [observation], sources: [bottom, top], artifacts: {}, origin, journalBytes: Buffer.concat(events.flatMap(e => [lean.leanCanonicalBytes(e), Buffer.from("\n")])), supervisorReasonBytes: lean.leanCanonicalBytes({ ...reasonBody, root: labRoot(reasonBody.schemaVersion, reasonBody) }) }
+    return { f, a, request, bottom, top, terminal, entry, snapshot, replay, charge }
+}
+const publishAcceptedSnapshot = (s: ReturnType<typeof acceptedSnapshot>) => {
+  const ledger = { ...s.f.ledger, allocation: s.a }
+  const put = (name: string, value: unknown) => writeFileSync(join(ledger.directory, name), lean.leanCanonicalBytes(value), { mode: 0o600 })
+  for (const [name, value] of Object.entries({ "allocation.json": s.a, "entry.json": s.entry, "child-terminal.json": s.terminal, "result.json": s.snapshot.result, "cold-reuse.json": s.snapshot.reuse, "pair-0.json": s.snapshot.pairs[0], "observation-0.json": s.snapshot.observations[0], "correction-origin.json": s.snapshot.origin, "source-tactical-0.json": s.bottom, "source-cold-opponent.json": s.top })) put(name, value)
+  writeFileSync(join(ledger.directory, "ledger.ndjson"), s.snapshot.journalBytes)
+  writeFileSync(join(ledger.directory, "parent-supervisor-reasons.json"), s.snapshot.supervisorReasonBytes, { mode: 0o600 })
+  writeFileSync(join(ledger.directory, `${s.charge.root.slice(7)}.gz`), s.replay.bytes, { mode: 0o600 })
+  return { ledger, put }
+}
+const closeAcceptedReader = (s: ReturnType<typeof acceptedSnapshot>, wall = 1100) => {
+  const { ledger, put } = publishAcceptedSnapshot(s)
+  const paths = { ...lean.leanCorrectionRoutePaths("diagnostic", "v5"), store: ledger.directory, temp: join(ledger.directory, "..", "admission-" + fixtureIndex++) }
+  mkdirSync(paths.temp, { mode: 0o700 }); dirs.push(paths.temp)
+  vi.spyOn(lean, "leanCorrectionRoutePaths").mockReturnValue(paths)
+  vi.spyOn(reuseIO, "validateLeanColdReuse").mockImplementation((value, sourceRoot) => {
+    if (sourceRoot !== s.a.sourceRoot || labRoot("synthetic-reuse", value) !== labRoot("synthetic-reuse", s.f.reuse)) throw new Error("SYNTHETIC_REUSE_JOIN")
+    return s.f.reuse
+  })
+  let mono = 0n
+  vi.spyOn(process.hrtime, "bigint").mockImplementation(() => mono)
+  const carrier = correctionIO.beginLeanCorrectionAdmission("diagnostic", "run", paths.temp, { wallStartMs: 1000, monotonicStartNs: "1000000000" }, "v5")
+  lean.beginLeanInterval(ledger, "pilot-entry", 1000); lean.closeLeanInterval(ledger, "pilot-entry", 1050)
+  // Force rounding at finalization independently from the raw receipt clock.
+  vi.mocked(process.hrtime.bigint).mockImplementation(() => mono++)
+  const admission = correctionIO.closeLeanCorrectionAdmission(carrier, ledger, { wallStartMs: 1050, monotonicStartNs: "1050000000" })
+  expect(admission.ledgerCloseMs).toBe(1051)
+  vi.mocked(process.hrtime.bigint).mockImplementation(() => mono)
+  lean.beginLeanInterval(ledger, "correction-supervisor-diagnostic-v5-verifier", 1100)
+  const gap = retained.readLeanFreshSupervisorReaderGap(ledger, "diagnostic", 1100, paths.temp, 5)
+  mono += 1n
+  retained.closeLeanFreshSupervisorReader(ledger, "diagnostic", gap, () => wall, 5)
+  const time = lean.readLeanTimeAccounting(ledger), audited = retained.auditLeanCorrectionRetained({ ...s.snapshot, time })
+  const { root: _root, ...body } = audited
+  const checked = { ...body, cumulativeElapsedMs: time.elapsedMs, cumulativePhysicalBytes: 9617408, readerScratchHighWaterBytes: 1000, readerInterval: "correction-supervisor-diagnostic-v5-verifier", readerStartMs: 1100, readerObservedMs: 1100 }
+  put(paths.check, { ...checked, root: labRoot(checked.schemaVersion, checked) })
+  // Real filesystem reopen below; only the old cold-reuse grant is synthetic.
+  return { ledger, paths, time, put }
+}
 describe("closure", () => {
+  it("joins v5 terminal publication to its authenticated observation rather than a later clock sample", () => {
+    const s = acceptedSnapshot(), { ledger } = publishAcceptedSnapshot(s)
+    rmSync(join(ledger.directory, "child-terminal.json"))
+    let mono = 1000000000n
+    vi.spyOn(process.hrtime, "bigint").mockImplementation(() => mono)
+    lean.beginLeanInterval(ledger, "pilot-entry", 1000)
+    const { schemaVersion: _schema, entryBytesRoot: _bytes, allocationRoot: _allocation, sourceRoot: _source, head: _head, parentPid: _parent, childPid: _child, elapsedUpperBoundMs: _elapsed, ...observed } = s.terminal
+    const terminal = lean.deriveLeanChildTerminal(ledger, lean.readLeanChildEntry(ledger), { ...observed, status: "child_exited", wallObservedMs: 1000, monotonicObservedNs: "1000000001" })
+    mono += 2000000n
+    lean.publishLeanChildTerminal(ledger, terminal)
+    expect(lean.readLeanChildTerminal(ledger).elapsedUpperBoundMs).toBe(1)
+    expect(lean.readLeanTimeAccounting(ledger).closes.get("pilot-entry")).toBe(1001)
+  })
+  it.each([1100, 1099])("authenticates the complete rounded diagnostic once with wall %i", wall => {
+    const s = acceptedSnapshot(), closed = closeAcceptedReader(s, wall)
+    vi.spyOn(correctionIO, "readLeanCorrectionRequest").mockReturnValue({ request: s.request as correctionIO.LeanCorrectionRequest, reuse: s.f.reuse })
+    expect(retained.authenticateLeanSupervisorDiagnosticCheck("v5").closedElapsedMs).toBe(closed.time.elapsedMs)
+    expect(closed.time.starts.get("correction-supervisor-diagnostic-v5-reader-close")).toBe(closed.time.closes.get("correction-supervisor-diagnostic-v5-verifier"))
+  }, 20000)
+  it.each([[1000, 1n, 1001], [1001, 2000000n, 1002], [999, 2000000n, 1002]])("joins effective reader close for wall %i and monotonic %s", (wall, ns, expected) => {
+    const f = verticalFixture()
+    let mono = 0n
+    vi.spyOn(process.hrtime, "bigint").mockImplementation(() => mono)
+    lean.beginLeanInterval(f.ledger, "correction-supervisor-diagnostic-v5-verifier", 1000)
+    mono = ns
+    retained.closeLeanFreshSupervisorReader(f.ledger, "diagnostic", null, () => wall, 5)
+    const time = lean.readLeanTimeAccounting(f.ledger)
+    expect(time.closes.get("correction-supervisor-diagnostic-v5-verifier")).toBe(expected)
+    expect(time.starts.get("correction-supervisor-diagnostic-v5-reader-close")).toBe(expected)
+    expect(time.active).toBe(false)
+    expect(time.closedElapsedMs).toBe(f.a.predecessor.elapsedUpperBoundMs + expected - 1000)
+  })
   it("reaches actual bounded parent timer with admitted twelve-hour residual and mocked child", async () => {
     const f = verticalFixture(), requestPath = join(f.ledger.directory, "synthetic-request.json")
     writeFileSync(requestPath, lean.leanCanonicalBytes({ sourceRoot: f.a.sourceRoot }), { mode: 0o600 })
@@ -223,27 +318,8 @@ describe("closure", () => {
     expect(lean.readLeanLedger(f.ledger).charged).toBe(23)
   })
   it("fully audits an exact synthetic v5 diagnostic above eight hours and rejects changed custody/caps", () => {
-    const f = verticalFixture(), base = f.a
-    const bottom = sources.buildLeanBaselineSource({ coldRoot: base.coldRoot!, implementationRoot: base.sourceRoot, role: "tactical-0", source: f.source.source })
-    const top = sources.buildLeanBaselineSource({ coldRoot: base.coldRoot!, implementationRoot: base.sourceRoot, role: "cold-opponent", source: f.source.source })
-    const request = { schemaVersion: "lean-correction-supervisor-request-v5", route: "diagnostic", sourceRoot: base.sourceRoot, planRoot: base.planRoot, coldRoot: base.coldRoot, seed: base.seed, candidateRoots: base.candidateRoots, requestRoots: base.requestRoots, diagnosis: null, supervisorDecisionRoot: base.supervisorDecisionRoot, acceptedCheckRoot: null, setupAccountingRoot: base.setupAccountingRoot, dataReviewRoot: base.dataReviewRoot, reuseGrantRoot: base.reuseGrantRoot, startupPolicyRoot: base.startupPolicyRoot, authorizationRoot: r("authorization") }
-    const a = lean.createLeanSupervisorCorrectionAllocation({ ...input(), seed: base.seed, requestBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(request)) }, 5), slot = a.slots[0]!
-    const chargeBody = { schemaVersion: "lean-slot-charge-v1", allocationRoot: a.root, slotRoot: slot.root, ordinal: 0 }, charge = { ...chargeBody, root: labRoot(chargeBody.schemaVersion, chargeBody) }
-    const compact = { classification: "success", code: "OK", outcome: "DRAW", elapsedMs: 5, cleanupComplete: true, invocationCount: 1, accountingRoot: r("accounting"), executionRoot: r("execution"), telemetry: { transitions: 0, events: 0 } }
-    const events = [{ kind: "charge", charge }, { kind: "terminal", chargeRoot: charge.root, record: compact, replay: null }, { kind: "stop", reason: "complete" }]
-    const records = [{ slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: charge.root, terminal: events[1], status: "success" }]
-    const evidence = { records, charged: 24, elapsedMs: 28_800_101, physicalHighWaterBytes: 9_617_408, scratchHighWaterBytes: 1, root: labRoot("lean-evidence-v1", { allocationRoot: a.root, events, records }) }
-    const pairBody = { schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: lean.leanBytesRoot(Buffer.alloc(0)), priorLedgerByteLength: 0, priorCharged: 23, bottomRole: bottom.role, bottomSourceRoot: bottom.sourceRoot, bottomSnapshotRoot: bottom.root, topRole: top.role, topSourceRoot: top.sourceRoot, topSnapshotRoot: top.root }, pair = { ...pairBody, root: labRoot(pairBody.schemaVersion, pairBody) }
-    const metricBody = { executionRoot: compact.executionRoot, formationComparison: "inconclusive" }, metrics = { ...metricBody, root: labRoot("lean-baseline-match-metrics-v1", metricBody) }
-    const cell = { ordinal: 0, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot, compact, brainInputs: [], strategyInputs: [], trainingHalfPoints: null, semanticRoot: r("semantic"), metrics, decisionRoot: r("decision"), diagnostic: null }
-    const obsBody = { schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }, observation = { ...obsBody, root: labRoot(obsBody.schemaVersion, obsBody) }
-    const head = "a".repeat(40), entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot, head, parentPid: 123, childPid: 124, handshakeRoot: r("handshake"), wallStartMs: 1000, monotonicStartNs: "1000000000" }
-    const terminal = { schemaVersion: "lean-child-terminal-v2", entryBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(entry)), allocationRoot: a.root, sourceRoot: a.sourceRoot, head, parentPid: 123, childPid: 124, status: "child_exited", exitCode: 0, signal: null }
-    const originBody = { schemaVersion: "lean-startup-origin-envelope-v5", allocationRoot: a.root, sourceRoot: a.sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins: [] }, origin = { ...originBody, root: labRoot(originBody.schemaVersion, originBody) }
-    const pipeline = { status: "diagnostic_only", cells: [{ ordinal: 0, slotRoot: slot.root, compact }], training: null, holdoutOpened: false, formationMaterialized: false }
-    const resultBody = { schemaVersion: "lean-correction-supervisor-result-v5", privacy: "private_offline", issued: false, route: "diagnostic", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot, head, reuseGrantRoot: a.reuseGrantRoot, pipeline, evidenceRoot: evidence.root, cumulativeCharged: 24, holdoutOpened: false, formationMaterialized: false, phaseComplete: false }
-    const reasonBody = { schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot, entryBytesRoot: terminal.entryBytesRoot, head, parentPid: 123, childPid: 124, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
-    const snapshot = { schemaVersion: "lean-correction-supervisor-retained-snapshot-v5", allocation: a, request, entry, terminal, evidence, time: { active: false, elapsedMs: 28_800_101, closed: new Set(["pilot-entry"]) }, result: { ...resultBody, root: labRoot(resultBody.schemaVersion, resultBody) }, reuse: f.reuse, pairs: [pair], observations: [observation], sources: [bottom, top], artifacts: {}, origin, journalBytes: Buffer.concat(events.flatMap(e => [lean.leanCanonicalBytes(e), Buffer.from("\n")])), supervisorReasonBytes: lean.leanCanonicalBytes({ ...reasonBody, root: labRoot(reasonBody.schemaVersion, reasonBody) }) }
+    const { snapshot, a, request, terminal } = acceptedSnapshot()
+    const { evidence, origin } = snapshot
     const report = retained.auditLeanCorrectionRetained(snapshot)
     expect(report.cumulativeCharged).toBe(24); expect(report.startupPolicyRoot).toBe(lean.LEAN_STARTUP_POLICY_V5.root)
     expect(report.accepted).toBe(true); expect(report.complete).toBe(false)
@@ -317,7 +393,7 @@ describe("closure", () => {
   it("closes actual v5 reader/gap/closure accounting once and rejects cross-version custody", () => {
     const f = verticalFixture(), startBody = { schemaVersion: "lean-correction-supervisor-admission-v5", route: "diagnostic", mode: "run", parentPid: 1, wallStartMs: 1000, monotonicStartNs: "0" }
     const start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
-    const closeBody = { schemaVersion: "lean-correction-supervisor-admission-close-v5", startRoot: start.root, route: "diagnostic", mode: "run", elapsedUpperBoundMs: 100, monotonicObservedNs: "100000000", wallObservedMs: 1100, allocationRoot: f.a.root, ledgerInterval: "correction-run-finalization", importedMs: 50 }
+    const closeBody = { schemaVersion: "lean-correction-supervisor-admission-close-v5", startRoot: start.root, route: "diagnostic", mode: "run", elapsedUpperBoundMs: 100, monotonicObservedNs: "100000000", wallObservedMs: 1100, allocationRoot: f.a.root, ledgerInterval: "correction-run-finalization", importedMs: 50, ledgerCloseMs: 1100 }
     const close = { ...closeBody, root: labRoot(closeBody.schemaVersion, closeBody) }
     for (const [id, from, to] of [["pilot-entry", 1000, 1050], ["correction-run-finalization", 1050, 1100]] as const) { lean.beginLeanInterval(f.ledger, id, from); lean.closeLeanInterval(f.ledger, id, to) }
     lean.beginLeanInterval(f.ledger, "correction-supervisor-diagnostic-v5-verifier", 1200)

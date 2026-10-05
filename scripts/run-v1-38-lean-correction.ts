@@ -92,6 +92,29 @@ export const assertLeanCorrectionAdmissionTime = (priorMs: number, start: Admiss
 }
 export const closeLeanCorrectionAdmission = (carrier: ReturnType<typeof beginLeanCorrectionAdmission>, ledger: LeanExperimentLedger | null, now = admissionClock()) => {
   const elapsedUpperBoundMs = leanCorrectionAdmissionElapsed(carrier, now)
+  if (carrier.schemaVersion === "lean-correction-supervisor-admission-v5") {
+    // Raw clock observations authenticate elapsed; the effective ledger boundary
+    // may lead wall time after conservative monotonic rounding. Publish it only
+    // after importing/closing, so receipt and journal cannot disagree.
+    let importedMs = 0, ledgerInterval: string | null = null, ledgerCloseMs = carrier.wallStartMs + elapsedUpperBoundMs
+    if (ledger) {
+      let time = readLeanTimeAccounting(ledger)
+      if (time.active) {
+        if (time.starts.get("pilot-entry") !== carrier.wallStartMs) return fail("ADMISSION_UNCLOSED_ENTRY")
+        time = closeLeanInterval(ledger, "pilot-entry", ledgerCloseMs)
+      }
+      if (time.starts.has("pilot-entry") && time.starts.get("pilot-entry") !== carrier.wallStartMs) return fail("ADMISSION_CUSTODY")
+      importedMs = time.starts.has("pilot-entry") ? (time.closes.get("pilot-entry") ?? fail("ADMISSION_UNCLOSED_ENTRY")) - carrier.wallStartMs : 0
+      ledgerInterval = carrier.mode === "prepare" ? "correction-preparation" : "correction-run-finalization"
+      beginLeanInterval(ledger, ledgerInterval, carrier.wallStartMs + importedMs)
+      const closed = closeLeanInterval(ledger, ledgerInterval, ledgerCloseMs)
+      ledgerCloseMs = closed.closes.get(ledgerInterval)!
+    }
+    const body = { schemaVersion: "lean-correction-supervisor-admission-close-v5", startRoot: carrier.root, route: carrier.route, mode: carrier.mode, elapsedUpperBoundMs, monotonicObservedNs: now.monotonicStartNs, wallObservedMs: now.wallStartMs, allocationRoot: ledger?.allocation.root ?? null, ledgerInterval, importedMs, ledgerCloseMs }
+    const closed = { ...body, root: labRoot(body.schemaVersion, body) }
+    publishLeanCorrection(join(carrier.directory, `admission-${carrier.mode}-close.json`), closed)
+    return closed
+  }
   let ledgerInterval: string | null = null, importedMs = 0
   let ledgerFailure: unknown, closeActiveEntry = false
   if (ledger) {

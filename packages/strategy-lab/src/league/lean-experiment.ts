@@ -967,24 +967,34 @@ const appendTime = (ledger: LeanExperimentLedger, kind: "start" | "close", id: s
   const fd = openSync(join(safeDirectory(ledger.directory), "time.ndjson"), constants.O_APPEND | constants.O_WRONLY | constants.O_NOFOLLOW)
   try { writeLeanAll(fd, Buffer.concat([leanCanonicalBytes({ kind, id, atMs }), Buffer.from("\n")])); fsyncSync(fd) } finally { closeSync(fd) }
 }
-export const beginLeanInterval = (ledger: LeanExperimentLedger, id: string, atMs = Date.now()) => {
+export const beginLeanInterval = (ledger: LeanExperimentLedger, id: string, atMs = Date.now(), monotonicStartNs = process.hrtime.bigint()) => {
   const s = readLeanTimeAccounting(ledger)
   if (s.active || s.starts.has(id) || s.elapsedMs >= leanCapsForAllocation(ledger.allocation).elapsedMs || !natural(atMs) || !/^[a-z0-9-]{1,80}$/u.test(id)) return fail("TIME_ACTIVE")
   appendTime(ledger, "start", id, atMs)
-  activeTime.set(ledger.directory, { id, atMs, priorMs: s.elapsedMs, monotonicStartNs: process.hrtime.bigint() })
+  activeTime.set(ledger.directory, { id, atMs, priorMs: s.elapsedMs, monotonicStartNs })
 }
-export const closeLeanInterval = (ledger: LeanExperimentLedger, id: string, atMs = Date.now()) => {
+export const closeLeanInterval = (ledger: LeanExperimentLedger, id: string, atMs = Date.now(), monotonicObservedNs = process.hrtime.bigint()) => {
   const s = readLeanTimeAccounting(ledger), start = s.starts.get(id)
-  if (!s.active || start === undefined || s.closed.has(id) || !natural(atMs) || atMs < start) return fail("TIME")
+  const v5 = leanSupervisorAllocationMode(ledger.allocation) === "v5"
+  if (!s.active || start === undefined || s.closed.has(id) || !natural(atMs) || !v5 && atMs < start) return fail("TIME")
   const local = activeTime.get(ledger.directory)
-  if (leanSupervisorAllocationMode(ledger.allocation) === "v5" && local?.id === id) {
-    const mono = process.hrtime.bigint() - local.monotonicStartNs
+  if (v5) {
+    if (local?.id !== id) return fail("TIME")
+    const mono = monotonicObservedNs - local.monotonicStartNs
     if (mono < 0n || mono > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n) return fail("TIME")
-    atMs = start + Math.max(atMs - start, Number((mono + 999999n) / 1000000n))
+    atMs = start + Math.max(0, atMs - start, Number((mono + 999999n) / 1000000n))
     if (!natural(atMs)) return fail("TIME")
   }
   appendTime(ledger, "close", id, atMs)
   activeTime.delete(ledger.directory)
+  return readLeanTimeAccounting(ledger)
+}
+/** Import an already authenticated historical wall span, not a newly timed
+ * execution interval. Its append cost belongs to the caller's closure interval. */
+export const importLeanClosedInterval = (ledger: LeanExperimentLedger, id: string, startMs: number, closeMs: number) => {
+  const s = readLeanTimeAccounting(ledger)
+  if (s.active || s.starts.has(id) || !natural(startMs) || !natural(closeMs) || closeMs < startMs || !/^[a-z0-9-]{1,80}$/u.test(id) || s.elapsedMs >= leanCapsForAllocation(ledger.allocation).elapsedMs) return fail("TIME")
+  appendTime(ledger, "start", id, startMs); appendTime(ledger, "close", id, closeMs)
   return readLeanTimeAccounting(ledger)
 }
 export const currentLeanElapsedMs = (ledger: LeanExperimentLedger) => {
@@ -1000,8 +1010,8 @@ export const currentLeanElapsedMs = (ledger: LeanExperimentLedger) => {
     if (leanSupervisorAllocationMode(ledger.allocation) === "v5") {
       if (!local || local.atMs !== started) return LEAN_SUPERVISOR_V5_CAPS.elapsedMs
       const mono = process.hrtime.bigint() - local.monotonicStartNs, wall = Date.now() - started
-      if (wall < 0 || mono < 0n || mono > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n) return LEAN_SUPERVISOR_V5_CAPS.elapsedMs
-      const total = s.closedElapsedMs + Math.max(wall, Number((mono + 999999n) / 1000000n))
+      if (mono < 0n || mono > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n) return LEAN_SUPERVISOR_V5_CAPS.elapsedMs
+      const total = s.closedElapsedMs + Math.max(0, wall, Number((mono + 999999n) / 1000000n))
       return natural(total) ? total : LEAN_SUPERVISOR_V5_CAPS.elapsedMs
     }
     return s.closedElapsedMs + Math.max(0, Date.now() - started)
@@ -1086,7 +1096,11 @@ export const publishLeanChildTerminal = (ledger: LeanExperimentLedger, terminal:
   const time = readLeanTimeAccounting(ledger)
   if (!time.active || ("route" in ledger.allocation ? time.starts.size !== time.closed.size + 1 : time.starts.size !== 1 || time.closed.size !== 0) || time.starts.get("pilot-entry") !== entry.wallStartMs) return fail("TERMINAL")
   writeExclusive(join(safeDirectory(ledger.directory), "child-terminal.json"), leanCanonicalBytes(terminal)); syncLeanDirectory(ledger.directory)
-  closeLeanInterval(ledger, "pilot-entry", entry.wallStartMs + terminal.elapsedUpperBoundMs)
+  // V5 closes at the receipt's authenticated clock snapshot. Publication work
+  // after that observation is debited by admission finalization, not silently
+  // added to a close that must join the immutable terminal exactly.
+  if (leanSupervisorAllocationMode(ledger.allocation) === "v5") closeLeanInterval(ledger, "pilot-entry", entry.wallStartMs + terminal.elapsedUpperBoundMs, monotonic(terminal.monotonicObservedNs))
+  else closeLeanInterval(ledger, "pilot-entry", entry.wallStartMs + terminal.elapsedUpperBoundMs)
 }
 export const readLeanChildTerminal = (ledger: LeanExperimentLedger): LeanChildTerminalV2 => {
   const terminal = parse(readSafe(join(safeDirectory(ledger.directory), "child-terminal.json"))) as LeanChildTerminalV2

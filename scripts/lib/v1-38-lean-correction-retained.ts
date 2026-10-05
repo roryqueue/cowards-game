@@ -6,7 +6,7 @@ import { join } from "node:path"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { labRoot, exactLabKeys, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
-import { LEAN_CAPS, LEAN_STARTUP_POLICY_V5, leanCapsForAllocation, LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES, leanCorrectionRoutePaths, leanSupervisorAllocationMode, leanSupervisorVersion, type LeanSupervisorMode, LEAN_EXTERNAL_SCRATCH_RESERVE, admitLeanAllocation, beginLeanInterval, closeLeanInterval, cumulativeLeanPhysicalBytes, currentLeanElapsedMs, openLeanLedger, readLeanChildEntry, readLeanChildTerminal, readLeanLedger, readLeanTimeAccounting, verifyLeanEvidence, currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCorrectionAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_CAPS, LEAN_STARTUP_POLICY_V5, leanCapsForAllocation, LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES, leanCorrectionRoutePaths, leanSupervisorAllocationMode, leanSupervisorVersion, type LeanSupervisorMode, LEAN_EXTERNAL_SCRATCH_RESERVE, admitLeanAllocation, beginLeanInterval, closeLeanInterval, importLeanClosedInterval, cumulativeLeanPhysicalBytes, currentLeanElapsedMs, openLeanLedger, readLeanChildEntry, readLeanChildTerminal, readLeanLedger, readLeanTimeAccounting, verifyLeanEvidence, currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCorrectionAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { auditLeanTrainingVector, type LeanColdTrainingManifest, type LeanResponseWork, type LeanResponseNodeReceipt } from "../../packages/strategy-lab/src/league/lean-training.js"
 import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
@@ -203,13 +203,13 @@ export interface LeanFreshSupervisorReaderGap { runCloseMs: number; readerStartM
 export const validateLeanFreshSupervisorReaderGap = (startValue: unknown, closeValue: unknown, allocationRoot: LabRoot, route: LeanCorrectionRoute, time: Pick<ReturnType<typeof readLeanTimeAccounting>, "starts" | "closes" | "closed">, readerStartMs: number, version: 3 | 4 | 5 = 3): LeanFreshSupervisorReaderGap => {
   const start = startValue as Record<string, unknown>, end = closeValue as Record<string, unknown>
   const natural = (n: unknown): n is number => Number.isSafeInteger(n) && Number(n) >= 0
-  if (!start || !end || !exactLabKeys(start, ["schemaVersion", "route", "mode", "parentPid", "wallStartMs", "monotonicStartNs", "root"]) || !exactLabKeys(end, ["schemaVersion", "startRoot", "route", "mode", "elapsedUpperBoundMs", "monotonicObservedNs", "wallObservedMs", "allocationRoot", "ledgerInterval", "importedMs", "root"]) || ![3, 4, 5].includes(version) || start.schemaVersion !== `lean-correction-supervisor-admission-v${version}` || end.schemaVersion !== `lean-correction-supervisor-admission-close-v${version}` || start.route !== route || end.route !== route || start.mode !== "run" || end.mode !== "run" || !natural(start.parentPid) || start.parentPid === 0 || !natural(start.wallStartMs) || !natural(end.wallObservedMs) || !natural(end.elapsedUpperBoundMs) || !natural(end.importedMs) || !natural(readerStartMs)) return fail("READER_GAP_CUSTODY")
+  if (!start || !end || !exactLabKeys(start, ["schemaVersion", "route", "mode", "parentPid", "wallStartMs", "monotonicStartNs", "root"]) || !exactLabKeys(end, ["schemaVersion", "startRoot", "route", "mode", "elapsedUpperBoundMs", "monotonicObservedNs", "wallObservedMs", "allocationRoot", "ledgerInterval", "importedMs", "root", ...(version === 5 ? ["ledgerCloseMs"] : [])]) || ![3, 4, 5].includes(version) || start.schemaVersion !== `lean-correction-supervisor-admission-v${version}` || end.schemaVersion !== `lean-correction-supervisor-admission-close-v${version}` || start.route !== route || end.route !== route || start.mode !== "run" || end.mode !== "run" || !natural(start.parentPid) || start.parentPid === 0 || !natural(start.wallStartMs) || !natural(end.wallObservedMs) || !natural(end.elapsedUpperBoundMs) || !natural(end.importedMs) || !natural(readerStartMs)) return fail("READER_GAP_CUSTODY")
   const { root: startRoot, ...startBody } = start, { root: closeRoot, ...closeBody } = end
-  if (startRoot !== labRoot(String(start.schemaVersion), startBody) || closeRoot !== labRoot(String(end.schemaVersion), closeBody) || end.startRoot !== startRoot || end.allocationRoot !== allocationRoot || end.ledgerInterval !== "correction-run-finalization" || time.starts.get("pilot-entry") !== start.wallStartMs || !time.closed.has("pilot-entry") || time.closes.get("pilot-entry") !== start.wallStartMs + end.importedMs || !time.closed.has("correction-run-finalization") || time.starts.get("correction-run-finalization") !== start.wallStartMs + end.importedMs || time.closes.get("correction-run-finalization") !== start.wallStartMs + end.elapsedUpperBoundMs || end.importedMs > end.elapsedUpperBoundMs) return fail("READER_GAP_CUSTODY")
+  if (startRoot !== labRoot(String(start.schemaVersion), startBody) || closeRoot !== labRoot(String(end.schemaVersion), closeBody) || end.startRoot !== startRoot || end.allocationRoot !== allocationRoot || end.ledgerInterval !== "correction-run-finalization" || time.starts.get("pilot-entry") !== start.wallStartMs || !time.closed.has("pilot-entry") || time.closes.get("pilot-entry") !== start.wallStartMs + end.importedMs || !time.closed.has("correction-run-finalization") || time.starts.get("correction-run-finalization") !== start.wallStartMs + end.importedMs || time.closes.get("correction-run-finalization") !== (version === 5 ? end.ledgerCloseMs : start.wallStartMs + end.elapsedUpperBoundMs) || end.importedMs > (version === 5 ? Number(end.ledgerCloseMs) - start.wallStartMs : end.elapsedUpperBoundMs)) return fail("READER_GAP_CUSTODY")
   let elapsed: number
   try { elapsed = leanCorrectionAdmissionElapsed(start as never, { wallStartMs: end.wallObservedMs, monotonicStartNs: end.monotonicObservedNs } as never) } catch { return fail("READER_GAP_CUSTODY") }
-  const runCloseMs = start.wallStartMs + end.elapsedUpperBoundMs
-  if (elapsed !== end.elapsedUpperBoundMs || end.wallObservedMs < start.wallStartMs || !natural(runCloseMs) || readerStartMs < runCloseMs || time.starts.get(`correction-supervisor-${route}-v${version}-verifier`) !== readerStartMs) return fail("READER_GAP_CUSTODY")
+  const runCloseMs = version === 5 ? Number(end.ledgerCloseMs) : start.wallStartMs + end.elapsedUpperBoundMs
+  if (elapsed !== end.elapsedUpperBoundMs || version !== 5 && end.wallObservedMs < start.wallStartMs || !natural(runCloseMs) || runCloseMs < start.wallStartMs + end.elapsedUpperBoundMs || readerStartMs < runCloseMs || time.starts.get(`correction-supervisor-${route}-v${version}-verifier`) !== readerStartMs) return fail("READER_GAP_CUSTODY")
   const gapId = `correction-supervisor-${route}-v${version}-reader-gap`
   for (const [id, from] of time.starts) {
     const to = time.closes.get(id)
@@ -223,13 +223,22 @@ export const readLeanFreshSupervisorReaderGap = (ledger: Parameters<typeof readL
 /** Append only to this newly spent reader. Gap rows retain authenticated wall
  * timestamps; a separate real closure interval debits import/closing work. */
 export const closeLeanFreshSupervisorReader = (ledger: Parameters<typeof closeLeanInterval>[0], route: LeanCorrectionRoute, gap: LeanFreshSupervisorReaderGap | null, clock = Date.now, version: 3 | 4 | 5 = 3) => {
-  const interval = `correction-supervisor-${route}-v${version}-verifier`, closingStart = clock()
-  closeLeanInterval(ledger, interval, closingStart)
+  const interval = `correction-supervisor-${route}-v${version}-verifier`, observed = clock()
+  const closed = closeLeanInterval(ledger, interval, observed)
+  const closingStart = version === 5 ? closed.closes.get(interval)! : observed
+  const closing = `correction-supervisor-${route}-v${version}-reader-close`
+  if (version === 5) {
+    // The effective boundary may lead wall time. Time gap publication as real
+    // closing work, then import only the already authenticated historical span.
+    const closingMono = process.hrtime.bigint()
+    if (gap) importLeanClosedInterval(ledger, `correction-supervisor-${route}-v5-reader-gap`, gap.runCloseMs, gap.readerStartMs)
+    beginLeanInterval(ledger, closing, closingStart, closingMono)
+    return closeLeanInterval(ledger, closing, clock())
+  }
   if (gap) {
     const id = `correction-supervisor-${route}-v${version}-reader-gap`
     beginLeanInterval(ledger, id, gap.runCloseMs); closeLeanInterval(ledger, id, gap.readerStartMs)
   }
-  const closing = `correction-supervisor-${route}-v${version}-reader-close`
   beginLeanInterval(ledger, closing, closingStart); closeLeanInterval(ledger, closing, clock())
 }
 /** Exactly one invocation; begin marker spends reader identity even on failure. */
