@@ -21,7 +21,7 @@ plan: "16"
 hypothesis: the original refusal may have occurred in a producer/private-loader/retained-audit contract join, but the exact stage remains unknown
 test: commit only the helper, its synthetic tests, and this debug record; then return for independent source review before any actual saved-data pass
 expecting: commit contains only three owned files, helper hash remains 02280c184533edd4e692d1ca459a3cdb88e8dd306761acce5083333025a14a04, and no private input was read by this work
-next_action: stage exactly the two new scripts and `.planning/debug/saved-v3-checker-refusal.md`, inspect staged names, and create one source-only commit
+next_action: MAIN independently reviews the fixed-path helper; do not invoke it or read saved v3 inputs until MAIN explicitly dispatches the separately approved actual pass
 
 tdd_checkpoint:
   test_file: scripts/diagnose-v1-38-saved-evidence.test.ts
@@ -45,6 +45,7 @@ checkpoint: return RED test checkpoint first; after approval, implement and test
 - MAIN additionally requires exact full historical/current roots, the actual ledger `time.active`/`elapsedMs` values without normalization, leaf-level read-stage attribution, explicit mapping of historical result fields, and forwarding the bounded guard into the audit.
 - Final focused Vitest suite: 7/7 passed. `git diff --check` passed. Focused TypeScript invocation reports no errors in owned files; it exits 2 on pre-existing `feasibility-protocol.ts` and `planner/missions.ts` type errors.
 - Helper SHA-256: `02280c184533edd4e692d1ca459a3cdb88e8dd306761acce5083333025a14a04`. Actual saved-evidence pass not run.
+- Source-only commit: `0e30abf2f83a2d3b088341a4b223a2285e1a0882`, containing only the helper, synthetic test, and this debug record. The focused compile's non-owned errors remain unchanged.
 - Focused synthetic suite now passes 6/6, including a loader-failure mutation test; focused TypeScript compile reports only pre-existing errors in feasibility-protocol.ts and planner/missions.ts after owned-file type errors were corrected.
 - MAIN authorized source-only GREEN after the setup RED checkpoint; this authorization does not include the actual saved-data pass.
 
