@@ -26,7 +26,7 @@ import { correctionAllocationFixture } from "../run-v1-38-lean-correction.test.j
 const reuseDirectory = process.env.LEAN_COLD_REUSE_FIXTURE_DIR ?? LEAN_BASELINE_STORE
 describe("supervisor reason actual custody joins", () => {
   it("spends and closes only the v3 loader interval before version or terminal refusal", () => {
-    const begin = vi.spyOn(ledgerIO, "beginLeanInterval").mockImplementation(() => {}), close = vi.spyOn(ledgerIO, "closeLeanInterval").mockImplementation(() => {})
+    const begin = vi.spyOn(ledgerIO, "beginLeanInterval").mockImplementation(() => {}), close = vi.spyOn(ledgerIO, "closeLeanInterval").mockReturnValue({ elapsedMs: 0, closedElapsedMs: 0, active: false, starts: new Map(), closes: new Map(), closed: new Set() })
     const opened = vi.spyOn(ledgerIO, "openLeanLedger").mockReturnValue({ directory: "mock-only", allocation: { route: "baseline", schemaVersion: "lean-correction-supervisor-baseline-allocation-v2" } } as never)
     try {
       expect(() => verifyLeanCorrectionRetained("mock-only", "diagnostic", "v3")).toThrow("ALLOCATION")
@@ -237,7 +237,7 @@ describe("v2 complete audit, not a reason-only gate", () => {
     const body = { ...auditedBody, cumulativeElapsedMs: s.time.elapsedMs + 100, cumulativePhysicalBytes: 16384, readerScratchHighWaterBytes: 512000000, readerInterval: interval, readerStartMs: 2000, readerObservedMs: 2100 }
     let check: Record<string, unknown> = { ...body, root: labRoot(body.schemaVersion, body) }
     let time = { ...s.time, active: false, elapsedMs: s.time.elapsedMs + 200, closedElapsedMs: s.time.elapsedMs + 200, starts: new Map([["pilot-entry", 1000], [interval, 2000]]), closes: new Map([["pilot-entry", 2000], [interval, 2200]]), closed: new Set(["pilot-entry", interval]) }
-    const names = ["allocation.json", "ledger.ndjson", "time.ndjson", "entry.json", "child-terminal.json", "result.json", "cold-reuse.json", "correction-origin.json", "pair-0.json", "observation-0.json", "source-tactical-0.json", "source-cold-opponent.json", paths.reason, paths.check]
+    const names = ["allocation.json", "ledger.ndjson", "time.ndjson", "entry.json", "child-terminal.json", "result.json", "cold-reuse.json", "correction-origin.json", "pair-0.json", "observation-0.json", "source-tactical-0.json", "source-cold-opponent.json", ledgerIO.LEAN_SUPERVISOR_CORRECTION_ROUTES.diagnostic.reason, paths.check]
     try {
       vi.spyOn(ledgerIO, "openLeanLedger").mockReturnValue({ directory: paths.store, allocation: s.allocation })
       vi.spyOn(ledgerIO, "readLeanChildEntry").mockReturnValue(s.entry); vi.spyOn(ledgerIO, "readLeanChildTerminal").mockReturnValue(s.terminal)
@@ -256,10 +256,11 @@ describe("v2 complete audit, not a reason-only gate", () => {
         if (path.endsWith("correction-origin.json")) return s.origin
         throw new Error("MOCK_UNEXPECTED_READ")
       })
-      vi.spyOn(correctionIO, "readLeanCorrectionPrivateBytes").mockImplementation(path => path.endsWith("ledger.ndjson") ? s.journalBytes : path.endsWith(paths.reason) ? s.supervisorReasonBytes! : path.endsWith(paths.check) ? leanCanonicalBytes(check) : (() => { throw new Error("MOCK_UNEXPECTED_READ") })())
+      vi.spyOn(correctionIO, "readLeanCorrectionPrivateBytes").mockImplementation(path => path.endsWith("ledger.ndjson") ? s.journalBytes : path.endsWith(ledgerIO.LEAN_SUPERVISOR_CORRECTION_ROUTES.diagnostic.reason) ? s.supervisorReasonBytes! : path.endsWith(paths.check) ? leanCanonicalBytes(check) : (() => { throw new Error("MOCK_UNEXPECTED_READ") })())
       expect(authenticateLeanSupervisorDiagnosticCheck(mode)).toMatchObject({ root: check.root, closedElapsedMs: time.elapsedMs, readerCloseMs: 2200 })
+      expect(() => authenticateLeanSupervisorDiagnosticCheck(version === 3 ? true : "v3")).toThrow("ACCEPTED_ALLOCATION")
       const good = structuredClone(check)
-      for (const changed of [{ schemaVersion: "lean-correction-retained-v1" }, { accepted: false }, { currentCharged: 0 }, { sourceRoot: labRoot("wrong", {}) }, { reasonRoot: labRoot("wrong-reason", {}) }, { head: "b".repeat(40) }, { readerStartMs: 1999 }, { cleanupComplete: false }]) {
+      for (const changed of [{ schemaVersion: "lean-correction-retained-v1" }, { schemaVersion: `lean-correction-supervisor-retained-v${version === 3 ? 2 : 3}` }, { readerInterval: `correction-supervisor-diagnostic-v${version === 3 ? 2 : 3}-verifier` }, { accepted: false }, { currentCharged: 0 }, { sourceRoot: labRoot("wrong", {}) }, { reasonRoot: labRoot("wrong-reason", {}) }, { head: "b".repeat(40) }, { readerStartMs: 1999 }, { cleanupComplete: false }]) {
         const { root: _prior, ...mutated } = { ...good, ...changed } as Record<string, unknown>; check = { ...mutated, root: labRoot(`lean-correction-supervisor-retained-v${version}`, mutated) }
         expect(() => authenticateLeanSupervisorDiagnosticCheck(mode)).toThrow()
       }
