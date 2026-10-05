@@ -1,5 +1,5 @@
 ---
-status: investigating
+status: awaiting_prospective_scope_decision
 trigger: "yes, approved"
 created: 2026-10-05
 updated: 2026-10-05
@@ -17,6 +17,8 @@ plan: "16"
 - Reproduction: one pre-reviewed read-only diagnostic with a fresh exclusive entry/output; never invoke consumed verify/authenticate-check commands or write old stores/journals.
 
 ## Current Focus
+
+APPROVED SCOPE CLOSED: MAIN47782 one saved-data pass exited0 in3629ms with safe UNKNOWN/reuse_json before core audit,16inputfiles/706419bytes unchanged beforeafter. New diagnostic identity consumed; do not invoke again. Source-only RED8c2c2bbd/GREENa064a324 proves and repairs byte-array labRoot comparison failure in readLeanCorrectionJson using exact Buffer.equals with unchanged canonical encoding/caps. Independent review clean; MAIN40focused+7fixturetests and final projecttypes31of31PASS. Exact original consumed-reader cause and remaining evidence validity remain unestablished. SUMMARY-v1/STATE contain the prospective human-only frontier; earlier source-ready paragraphs are historical snapshots.
 
 hypothesis: the original refusal may have occurred in a producer/private-loader/retained-audit contract join, but the exact stage remains unknown
 test: commit only the helper, its synthetic tests, and this debug record; then return for independent source review before any actual saved-data pass
@@ -55,7 +57,7 @@ checkpoint: return RED test checkpoint first; after approval, implement and test
 
 ## Resolution
 
-root_cause: not yet established
-fix: diagnosis only; no original-run mutation or empirical authority
-verification: pending reviewed helper and one distinct pass
-files_changed: new diagnostic helper/test and additive planning/debug records only
+root_cause: definite canonical-file byte-comparison defect reproduced synthetically; original verifier exact cause not established
+fix: prospective exact byte comparison; test-only fixture typing; no original-run mutation or empirical authority
+verification: approved one diagnostic closed; source repairs reviewed and tested; actual evidence acceptance not established
+files_changed: helper/test, correction reader one line, real-file regression, runtime-service test-only types and additive planning/debug records

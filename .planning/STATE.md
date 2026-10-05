@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Saved-v3 diagnostic source verified; one approved read-only MAIN pass next
+status: blocked
+stopped_at: Approved saved-data pass closed; reader bug repaired; prospective experiment scope decision needed
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Ten synthetic tests and independent review clean; source-only verification closed; no actual pass yet
+last_activity_desc: Read-only diagnosis closed at reuse_json; reviewed byte comparison fix and fixture types; 47 tests and project typecheck pass
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved distinct v3, 2026-10-05
+
+CURRENT HUMAN-ONLY FRONTIER / DIAGNOSIS AND SAFE REPAIR CLOSED: Approved ONE non-authorizing saved-data pass MAIN47782 CLOSED0/3629ms, UNKNOWN atreuse_json beforecoreaudit;16inputs706419B/root4dece09d byte/custody inventory unchangedbeforeafter. NEWentryraw1b575f48/result raw88f16a7a now consumedimmutable; oldordinaryreader/oldbytes/journals untouched, no Match or acceptance. Exactoldthrowpoint still UNKNOWN. Syntheticrealfile reproduced definite byte-array labRoot comparison defect; RED8c2c2bbd/GREENa064a324 Buffer.equals exactcanonicalbytes repair reviewedclean. Test-only routedfixture typing6427a1aa also reviewedclean. MAIN40focusedtests9.06s+7fixturetests7.54s/finalprojecttypes31of31PASS6.587s/diffPASS. Source/HEADholdreleased afteractualpassclosed; no liveentry/verifier/heavywork. SUMMARY-v1 bindsactualreport/reviews/source-onlyverificationlimits. Accounting20239085ms atwall1791218042039,12charges/same15GB/8h/300; ALLlatercostscarry, oldjournalsunchanged, historicalpeaksunknown. Diagnosis-onlyauthority ENDED; no later savedpass/acceptedcheck/Match/baselineauthority. Recommendation ONE DISTINCTfreshprivate1cell overreviewedfixedsource and conditionalatmostONE36baseline only afterfullyacceptedfreshdiagnostic, carryallcosts and stoponfailure/refusal/timebox; NOTapproved. Phase265incomplete,266freeze/formation/holdoutunstarted; no LEAG/public/counting/production/fullmilestonecredit. Earlierparagraphs history.
 
 SOURCE READY FOR ONE SAVED-DATA PASS: Helper97931233/sha2561698789e229356f69949915f8cbeef412e49db1ceaab3162ec984dd8732b548e; actual independent REVIEW-v3 clean/0findings, MAIN10synthetic tests3.64s/diffPASS and narrow SOURCE-VERIFICATION-v1 verified. Source authoring/debug manager is closed. No actual saved-data pass yet. Commit/push exact helper/review before unique MAIN invocation with external60s alarm/cappedNode768/cachesoff/core0. Fixed source/HEAD throughout actual pass; no competing heavy work or other reader. Same one non-authorizing diagnosis-only approval, oldbytes/readers/journals immutable; no Match/baseline/acceptance authority. All costs from1791215127000 plus17324046prior carry,12charges unchanged. Earlier paragraphs are snapshots.
 
