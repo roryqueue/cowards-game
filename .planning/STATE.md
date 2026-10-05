@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh v3 source independently reviewed and verified; new data review/preparation next
+stopped_at: Fresh v3 diagnostic prepared; commit allocation before unique MAIN entry
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Final source f776c1f2/1087ef46/886; independent clean review; root134tests/types/threezero scans pass
+last_activity_desc: Clean actual data review; once-only preparation41547 closed0; aff06160 allocation; zero new charges
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved distinct v3, 2026-10-05
+
+PREPARED V3: Actual distinct child DATA-REVIEW-v1 clean/rawf5baf26e; MAIN final canonical request raw78acf116/dataRootbc2455f7 and owner0600 witnessedsetuped5f580d. ExactlyONE preparation41547 CLOSEDexit0/preparation_only. New allocation semanticsha256:aff06160f3852f3efd4fdc7a5ecd52b7025eda32c58e82d58e526c090fbd8cf5/rawsha256:adf7c4567e676abd33516b7e2e1d4b9470be041ebf1724ff7f812b8400d2f0b9; real0700store onlyallocation/emptycharges/closedtime. Root finite prefixcheck11prior0currentcharges/14713538msclosed/3506176Bconservativephysical. No entry/provider/Match/reader/hold yet. Commit/push exactallocation anddatareview beforeuniqueMAINrun; fresh SAMEPROCESScapacity beforecharge/provider, sourceANDHEADfixed throughterminal+ONEappropriateactualcheck. Anyfailure/refusalendsenvelope; conditionalONE36baselineONLYafterfullyacceptedNEWv3diagnostic. No oldreader/coldregeneration/refund/recredit or phase/freeze/formation/holdout/public/counting/production/fullLEAGcredit. Earlier source-only paragraphs are snapshots.
 
 CURRENT SOURCE VERIFIED: Freshv3 f776c1f261b45046d975a5e3af0e8cc40623e867/manifestsha256:1087ef46736e1406bd0febf10755d5ec890f1c388a3a567d45479e251152ccb5/886 independently reviewedclean byactualsmaller-model /root/review_265_fresh_supervisor_v3. Initialdiskfindingwithdrawn asfalsepositive/additivereviewsretainhistory; realfile exactlyonce/nearcap/aliasproofadded, no speculativeproductionfix. MAIN134tests160.44s/project+labtypes/three1398zero scans/whitespacePASS, narrow SOURCE-VERIFICATION-v1 verified. No actualrequest/preparation/allocation/entry/reader/provider/Match/hold yet; datareviewnext. Onefreshdiagnostic/conditionalone36baseline approved; allcosts/11charges carry, samecaps/runtime/opportunity/no downstreamcredit. Earlier source-research frontier below superseded only by these completed source gates.
 
