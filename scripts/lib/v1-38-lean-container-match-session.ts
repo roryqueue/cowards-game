@@ -259,11 +259,12 @@ export interface LeanStartupSupervisorHostV5 {
   now(): number; construct(): void; load(): number; compareExchange(before: number, after: number): number; notify(): void;
   wait(state: number, ms: number): string; reconcile(ms: number): Promise<unknown>; terminate(ms: number): Promise<void>; close(): void;
 }
-/** This exact control path is embedded in the broker and exercised with fake host primitives. */
-export const superviseLeanStartupV5 = async (binding: LeanStartupBindingV5, hostBudgetMs: number, host: LeanStartupSupervisorHostV5) => {
+/** Checked-in closure-free trusted JavaScript, shared by broker and fake-host tests.
+ * Function compiles only this fixed trusted control source, never Strategy code. */
+const LEAN_STARTUP_SUPERVISOR_SOURCE_V5 = `async function superviseLeanStartupV5(binding, hostBudgetMs, host) {
   const entered = host.now(), deadline = entered + Math.min(5000, hostBudgetMs), startupDeadline = Math.min(deadline, entered + 2500)
-  let completed: { output: unknown } | undefined
-  let ready = false, go = false, worker = false, wait: LeanStartupOriginV5["wait"] = "unavailable", stage: LeanStartupOriginV5["stage"] = "startup", branch: LeanStartupOriginV5["branch"] = "construction_failure", termination: LeanStartupOriginV5["termination"] = "unknown", unknown = true
+  let completed
+  let ready = false, go = false, worker = false, wait = "unavailable", stage = "startup", branch = "construction_failure", termination = "unknown", unknown = true
   const remaining = () => Math.max(0, Math.floor(deadline - host.now()))
   try {
     if (!Number.isFinite(hostBudgetMs) || hostBudgetMs <= 0 || hostBudgetMs > 5000) throw new Error("HOST_BUDGET_V5")
@@ -296,13 +297,17 @@ export const superviseLeanStartupV5 = async (binding: LeanStartupBindingV5, host
     try { host.close() } catch { termination = "failed"; unknown = true; completed = undefined; branch = "lifecycle_failure" }
   }
   if (completed && remaining() <= 0) { completed = undefined; stage = "host"; branch = "host_expired"; termination = "unknown"; unknown = true }
-  if (completed) return { ok: true as const, output: completed.output, origin: { ...binding, schemaVersion: "v1.38-lean-startup-origin-v5" as const, stage, branch, ready, go, wait, termination, unknown } }
-  return { ok: false as const, output: undefined, origin: { ...binding, schemaVersion: "v1.38-lean-startup-origin-v5" as const, stage, branch, ready, go, wait, termination, unknown } }
+  if (completed) return { ok: true, output: completed.output, origin: { ...binding, schemaVersion: "v1.38-lean-startup-origin-v5", stage, branch, ready, go, wait, termination, unknown } }
+  return { ok: false, output: undefined, origin: { ...binding, schemaVersion: "v1.38-lean-startup-origin-v5", stage, branch, ready, go, wait, termination, unknown } }
 }
+`
+export const superviseLeanStartupV5 = Function(`"use strict";return (${LEAN_STARTUP_SUPERVISOR_SOURCE_V5})`)() as (
+  binding: LeanStartupBindingV5, hostBudgetMs: number, host: LeanStartupSupervisorHostV5
+) => Promise<{ ok: boolean; output: unknown; origin: LeanStartupOriginV5 }>
 export const buildLeanContainerBrokerSourceV5 = (): string => {
   let source = LEAN_CONTAINER_BROKER_SOURCE.replace('import { createInterface } from "node:readline";', 'import { createInterface } from "node:readline";import { createHash as startupHashV5 } from "node:crypto";')
   const before = source.slice(source.indexOf("const runLegacy="), source.indexOf("const runV117="))
-  const control = superviseLeanStartupV5.toString()
+  const control = LEAN_STARTUP_SUPERVISOR_SOURCE_V5
   const run = `const superviseLeanStartupV5=${control};
 const runLegacy=async(q,request)=>{
 const binding=q.startup.binding;const entered=now();let worker,port,signal,reconcile;

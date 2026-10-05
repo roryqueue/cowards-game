@@ -107,6 +107,15 @@ const fakeHost = (startupMs: number, guestMs: number, receiptMs = 0, terminateFa
   return { host, waits, cancellations, executed: () => executed, now: () => now, state: (n: number) => { state = n } }
 }
 describe("runtime control", () => {
+  it("constructs closure-free broker bytes under the actual inert tsx loader", async () => {
+    // This one known trusted Node import builds strings only: no broker, guest,
+    // Worker, transport, provider or CLI entry is evaluated in the subprocess.
+    const trusted = await vi.importActual<typeof import("node:child_process")>("node:child_process")
+    const script = 'const m=await import("./scripts/lib/v1-38-lean-container-match-session.ts");const s=m.buildLeanContainerBrokerSourceV5();console.log(JSON.stringify({helper:s.includes("__name("),source:s}));'
+    const built = JSON.parse(trusted.execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", script], { encoding: "utf8", maxBuffer: 262144 }))
+    expect(built.helper).toBe(false)
+    expect(built.source).toContain("superviseLeanStartupV5")
+  })
   it.each([[2499, 999, true, "complete"], [2500, 0, false, "startup_expired"], [0, 1000, false, "guest_expired"], [0, 999, true, "complete"]])("bounds startup %ims and guest %ims without resetting host time", async (start, guest, ok, branch) => {
     const f = fakeHost(Number(start), Number(guest)), b = bindingV5()
     const result = await session.superviseLeanStartupV5(b, 5000, f.host)
