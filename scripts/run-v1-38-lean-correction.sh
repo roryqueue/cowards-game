@@ -7,6 +7,8 @@ export TSX_DISABLE_CACHE=1 NODE_DISABLE_COMPILE_CACHE=1
 case "${1:-}" in
   prepare-diagnostic|run-diagnostic|verify-diagnostic) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-diagnostic-20261004-v1-tmp" ;;
   prepare-baseline|run-baseline|verify-baseline) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-baseline-20261004-v1-tmp" ;;
+  prepare-supervisor-diagnostic-v4|run-supervisor-diagnostic-v4|verify-supervisor-diagnostic-v4) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-diagnostic-20261005-v4-tmp" ;;
+  prepare-supervisor-baseline-v4|run-supervisor-baseline-v4|verify-supervisor-baseline-v4) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-baseline-20261005-v4-tmp" ;;
   *) exit 1 ;;
 esac
 [ -d .strategy-lab ] && [ ! -L .strategy-lab ] && [ ! -L "$LEAN_CORRECTION_TEMP" ] || exit 1

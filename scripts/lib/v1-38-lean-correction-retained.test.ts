@@ -27,6 +27,8 @@ import { existsSync } from "node:fs"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_BASELINE_STORE, createLeanCorrectionAllocation, createLeanSupervisorCorrectionAllocation, leanCanonicalBytes, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY } from "./v1-38-lean-baseline-reuse.js"
+import * as reuseIO from "./v1-38-lean-baseline-reuse.js"
+import { buildPlannerCandidate } from "../../packages/strategy-lab/src/planner/emit.js"
 import { correctionAllocationFixture } from "../run-v1-38-lean-correction.test.js"
 
 const reuseDirectory = process.env.LEAN_COLD_REUSE_FIXTURE_DIR ?? LEAN_BASELINE_STORE
@@ -255,9 +257,9 @@ const dispatchedSources: Array<{ bottom: LeanBaselineSource; top: LeanBaselineSo
 
 /** Upgrade synthetic retained evidence only, with no filesystem publication,
  * provider, empirical reader, or authority-bearing check identity. */
-const supervisorFixture = (input: unknown, version: 2 | 3 = 2): LeanCorrectionRetainedSnapshot => {
+const supervisorFixture = (input: unknown, version: 2 | 3 | 4 = 2): LeanCorrectionRetainedSnapshot => {
   const s = structuredClone(input) as LeanCorrectionRetainedSnapshot, old = s.allocation, { root: _priorRoot, ...prior } = old.predecessor
-  const predecessorBody = { ...prior, chargedMatches: old.route === "diagnostic" ? 11 : 12, elapsedUpperBoundMs: version === 3 ? 10888046 : 5282046, allocatedDiskBytes: version === 3 ? 2179072 : prior.allocatedDiskBytes }
+  const predecessorBody = { ...prior, chargedMatches: old.route === "diagnostic" ? version === 4 ? 12 : 11 : version === 4 ? 13 : 12, elapsedUpperBoundMs: version === 4 ? 20471046 : version === 3 ? 10888046 : 5282046, allocatedDiskBytes: version === 4 ? 4231168 : version === 3 ? 2179072 : prior.allocatedDiskBytes }
   const request = { ...s.request, schemaVersion: `lean-correction-supervisor-request-v${version}` as const, diagnosis: null, supervisorDecisionRoot: labRoot("mock-approved-decision", {}), acceptedCheckRoot: old.route === "diagnostic" ? null : labRoot("mock-check-no-authority", {}), setupAccountingPath: "mock-source-fixture-only", setupAccountingRoot: labRoot("mock-setup-witness", {}) }
   const a = createLeanSupervisorCorrectionAllocation({ sourceRoot: old.sourceRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot, planRoot: old.planRoot, candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, seed: old.seed, route: old.route, reuseGrantRoot: old.reuseGrantRoot, supervisorDecisionRoot: request.supervisorDecisionRoot, acceptedCheckRoot: request.acceptedCheckRoot, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), dataReviewRoot: request.dataReviewRoot, setupAccountingRoot: request.setupAccountingRoot, predecessor: { ...predecessorBody, root: labRoot(prior.schemaVersion, predecessorBody) } }, version)
   s.allocation = a; s.schemaVersion = `lean-correction-supervisor-retained-snapshot-v${version}`
@@ -285,7 +287,7 @@ const supervisorFixture = (input: unknown, version: 2 | 3 = 2): LeanCorrectionRe
   }
   s.journalBytes = Buffer.concat(events.map(event => Buffer.concat([leanCanonicalBytes(event), Buffer.from("\n")])))
   s.evidence = { ...s.evidence, charged: a.predecessor.chargedMatches + s.pairs.length, root: labRoot("lean-evidence-v1", { allocationRoot: a.root, events, records: s.evidence.records }) }
-  s.time = { ...s.time, elapsedMs: version === 3 ? 10889046 : 5283046 }
+  s.time = { ...s.time, elapsedMs: version === 4 ? 20472046 : version === 3 ? 10889046 : 5283046 }
   if (a.route === "diagnostic") {
     const originBody = { schemaVersion: "lean-correction-origin-envelope-v1", allocationRoot: a.root, sourceRoot: a.sourceRoot, pairRoot: s.pairs[0]!.root, chargeRoot: s.evidence.records[0]!.chargeRoot, origins: [] }
     s.origin = { ...originBody, root: labRoot(originBody.schemaVersion, originBody) }
@@ -301,6 +303,29 @@ const supervisorFixture = (input: unknown, version: 2 | 3 = 2): LeanCorrectionRe
 }
 
 describe("v2 complete audit, not a reason-only gate", () => {
+  it("audits a fully synthetic v4 diagnostic with real source/pair/result guards and no historical reads", () => {
+    const source = buildPlannerCandidate().source, coldRoot = LEAN_COLD_REUSE_HISTORY.coldRoot
+    const sources = ["tactical-0", "cold-opponent"].map(role => buildLeanBaselineSource({ role, source, coldRoot, implementationRoot: LEAN_COLD_REUSE_HISTORY.sourceRoot }))
+    const reuse = { grant: { root: labRoot("synthetic-reuse-v4", {}), coldRoot, seed: LEAN_COLD_REUSE_HISTORY.seed, amendmentRoot: LEAN_COLD_REUSE_HISTORY.amendmentRoot }, sources } as unknown as ReturnType<typeof authenticateLeanColdReuse>
+    // Only the pre-existing sealed cold proof seam is mocked. Everything newly
+    // changed in v4 allocation/audit/source/pair/evidence/result is real.
+    vi.spyOn(reuseIO, "authenticateLeanColdReuse").mockReturnValue(reuse)
+    vi.spyOn(reuseIO, "validateLeanColdReuse").mockImplementation(value => value as typeof reuse)
+    try {
+      const s = supervisorFixture(fixture(), 4)
+      expect(auditLeanCorrectionRetained(s)).toMatchObject({ accepted: true, successful: 1, currentCharged: 1, cumulativeCharged: 13, complete: false, phaseComplete: false, freezeAdmitted: false })
+      for (const mutate of [
+        (s: LeanCorrectionRetainedSnapshot) => { s.schemaVersion = "lean-correction-supervisor-retained-snapshot-v3" },
+        (s: LeanCorrectionRetainedSnapshot) => { s.request.schemaVersion = "lean-correction-supervisor-request-v3" },
+        (s: LeanCorrectionRetainedSnapshot) => { s.result.schemaVersion = "lean-correction-supervisor-result-v3" },
+        (s: LeanCorrectionRetainedSnapshot) => { s.request.acceptedCheckRoot = labRoot("old-v3-check", {}) },
+        (s: LeanCorrectionRetainedSnapshot) => { s.terminal.childPid++ },
+        (s: LeanCorrectionRetainedSnapshot) => { s.observations[0]!.cell.compact.cleanupComplete = false },
+        (s: LeanCorrectionRetainedSnapshot) => { s.evidence.charged-- },
+        (s: LeanCorrectionRetainedSnapshot) => { s.journalBytes = new Uint8Array() },
+      ]) { const bad = structuredClone(s); mutate(bad); expect(() => auditLeanCorrectionRetained(bad)).toThrow() }
+    } finally { vi.restoreAllMocks() }
+  }, 30000)
   it.skipIf(!existsSync(reuseDirectory)).each([2, 3] as const)("authenticates only rooted full reports with the actual closed reader interval (all custody mocked) v%s", version => {
     const s = supervisorFixture(fixture(), version), mode = version === 3 ? "v3" as const : true, paths = ledgerIO.leanCorrectionRoutePaths("diagnostic", mode), interval = `correction-supervisor-diagnostic-v${version}-verifier`
     const audited = auditLeanCorrectionRetained(s), { root: _root, ...auditedBody } = audited
@@ -362,9 +387,9 @@ describe("v2 complete audit, not a reason-only gate", () => {
     ]
     for (const mutate of mutations) { const bad = structuredClone(s); mutate(bad); expect(() => auditLeanCorrectionRetained(bad)).toThrow() }
   }, 30000)
-  it.skipIf(!existsSync(reuseDirectory)).each([2, 3] as const)("runs all 36 mock baseline slots through the full training/solver audit v%s", async version => {
+  it.skipIf(!existsSync(reuseDirectory)).each([2, 3, 4] as const)("runs all 36 mock baseline slots through the full training/solver audit v%s", async version => {
     const s = supervisorFixture(await completeFixture(), version)
-    expect(auditLeanCorrectionRetained(s)).toMatchObject({ accepted: true, currentCharged: 36, cumulativeCharged: 48, complete: true, phaseComplete: false, freezeAdmitted: false })
+    expect(auditLeanCorrectionRetained(s)).toMatchObject({ accepted: true, currentCharged: 36, cumulativeCharged: version === 4 ? 49 : 48, complete: true, phaseComplete: false, freezeAdmitted: false })
     const bad = structuredClone(s), work = bad.artifacts["response-work.json"] as { actualAssignmentNodes: number }
     work.actualAssignmentNodes--
     expect(() => auditLeanCorrectionRetained(bad)).toThrow()
