@@ -13,6 +13,7 @@ import * as correctionIO from "../run-v1-38-lean-correction.js"
 import * as ledgerIO from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as fileIO from "node:fs"
 import * as sourceIO from "./v1-38-lean-baseline-source.js"
+import * as retainedIO from "./v1-38-lean-correction-retained.js"
 vi.mock("node:fs", async importOriginal => {
   const original = await importOriginal<typeof import("node:fs")>()
   return { ...original, readdirSync: vi.fn(original.readdirSync) }
@@ -24,6 +25,30 @@ import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY } from "./v1-38-lean
 import { correctionAllocationFixture } from "../run-v1-38-lean-correction.test.js"
 
 const reuseDirectory = process.env.LEAN_COLD_REUSE_FIXTURE_DIR ?? LEAN_BASELINE_STORE
+describe("prospective v3 authenticated reader gap", () => {
+  const custody = () => {
+    const allocation = { root: labRoot("mock-new-allocation", {}) }
+    const startBody = { schemaVersion: "lean-correction-supervisor-admission-v3", route: "diagnostic", mode: "run", parentPid: 123, wallStartMs: 1000, monotonicStartNs: "1000000000" }
+    const start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
+    const closeBody = { schemaVersion: "lean-correction-supervisor-admission-close-v3", startRoot: start.root, route: "diagnostic", mode: "run", elapsedUpperBoundMs: 110, monotonicObservedNs: "1100000000", wallObservedMs: 1110, allocationRoot: allocation.root, ledgerInterval: "correction-run-finalization", importedMs: 100 }
+    const close = { ...closeBody, root: labRoot(closeBody.schemaVersion, closeBody) }
+    const time = { active: true, starts: new Map([["pilot-entry", 1000], ["correction-run-finalization", 1100], ["correction-supervisor-diagnostic-v3-verifier", 1200]]), closes: new Map([["pilot-entry", 1100], ["correction-run-finalization", 1110]]), closed: new Set(["pilot-entry", "correction-run-finalization"]) }
+    return { allocation, start, close, time }
+  }
+  it("requires exact rooted producer receipts and actual closed ledger joins without invented monotonic history", () => {
+    const c = custody(), call = (start: unknown = c.start, close: unknown = c.close, time = c.time, readerStart = 1200) => retainedIO.validateLeanFreshSupervisorReaderGap(start, close, c.allocation.root, "diagnostic", time, readerStart)
+    expect(call()).toEqual({ runCloseMs: 1110, readerStartMs: 1200, gapMs: 90 })
+    for (const changed of [{ allocationRoot: labRoot("forged", {}) }, { startRoot: labRoot("forged", {}) }, { route: "baseline" }, { mode: "prepare" }, { schemaVersion: "lean-correction-supervisor-admission-close-v2" }, { importedMs: 99 }, { wallObservedMs: 1111 }, { ledgerInterval: "pilot-entry" }, { extra: "private" }]) {
+      const { root: _, ...body } = { ...c.close, ...changed }
+      expect(() => call(c.start, { ...body, root: labRoot(body.schemaVersion, body) })).toThrow("READER_GAP_CUSTODY")
+    }
+    expect(() => call(c.start, { ...c.close, root: labRoot("forged", {}) })).toThrow("READER_GAP_CUSTODY")
+    expect(() => call(c.start, c.close, { ...c.time, closed: new Set(["pilot-entry"]) })).toThrow("READER_GAP_CUSTODY")
+    expect(() => call(c.start, c.close, c.time, 1109)).toThrow("READER_GAP_CUSTODY")
+    expect(() => call({ ...c.start, parentPid: 0 })).toThrow("READER_GAP_CUSTODY")
+    expect(() => call(null, null)).toThrow("READER_GAP_CUSTODY")
+  })
+})
 describe("supervisor reason actual custody joins", () => {
   it("spends and closes only the v3 loader interval before version or terminal refusal", () => {
     const begin = vi.spyOn(ledgerIO, "beginLeanInterval").mockImplementation(() => {}), close = vi.spyOn(ledgerIO, "closeLeanInterval").mockReturnValue({ elapsedMs: 0, closedElapsedMs: 0, active: false, starts: new Map(), closes: new Map(), closed: new Set() })

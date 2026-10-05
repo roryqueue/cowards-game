@@ -12,6 +12,21 @@ import { deriveLeanBaselineCandidateRoots, waitLeanBoundedChildReady } from "./r
 import { LEAN_COLD_REUSE_HISTORY } from "./lib/v1-38-lean-baseline-reuse.js"
 import * as correction from "./run-v1-38-lean-correction.js"
 
+describe("private v3 verifier finite trusted diagnostics", () => {
+  it("projects only branded static guard codes for the exact private v3 verify commands", () => {
+    const args = ["verify-supervisor-diagnostic-v3", "--request", accounting.leanCorrectionRoutePaths("diagnostic", "v3").request]
+    const error = correction.leanCorrectionTrustedGuardError("LEAN_CORRECTION_RETAINED_INVENTORY")
+    expect(correction.leanCorrectionCliFailure(args, error)).toBe("LEAN_CORRECTION_RETAINED_INVENTORY\n")
+    for (const unsafe of [new TypeError(error.message), new Error("/private/Strategy source"), { message: error.message }, correction.leanCorrectionTrustedGuardError("LEAN_CORRECTION_RETAINED_FUTURE_UNKNOWN")]) expect(correction.leanCorrectionCliFailure(args, unsafe)).toBe("LEAN_CORRECTION_FAILED_DETAILS_WITHHELD\n")
+    for (const command of ["verify-diagnostic", "verify-supervisor-diagnostic-v2", "run-supervisor-diagnostic-v3"]) expect(correction.leanCorrectionCliFailure([command, "--request", args[2]!], error)).toBe("LEAN_CORRECTION_FAILED_DETAILS_WITHHELD\n")
+    expect(correction.leanCorrectionCliFailure([...args, "unexpected"], error)).toBe("LEAN_CORRECTION_FAILED_DETAILS_WITHHELD\n")
+    const hostile = new Proxy({}, { get: () => { throw new Error("PRIVATE_PAYLOAD") } })
+    expect(correction.leanCorrectionCliFailure(args, hostile)).toBe("LEAN_CORRECTION_FAILED_DETAILS_WITHHELD\n")
+    Object.defineProperty(error, "message", { get: () => { throw new Error("PRIVATE_PAYLOAD") } })
+    expect(correction.leanCorrectionCliFailure(args, error)).toBe("LEAN_CORRECTION_FAILED_DETAILS_WITHHELD\n")
+  })
+})
+
 describe("fresh v3 witnessed finite carry", () => {
   it("rejects refunded v3 predecessor time and disk while preserving v2", () => {
     const a = correctionAllocationFixture(), { root: _root, ...prior } = a.predecessor
