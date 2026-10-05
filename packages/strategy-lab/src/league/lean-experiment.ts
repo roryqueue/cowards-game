@@ -946,7 +946,7 @@ const append = (ledger: LeanExperimentLedger, event: Event) => {
 }
 /** Append-only trusted host intervals. Interrupted intervals conservatively burn the
  * remaining eight-hour envelope; no future stage may reset or recover that time. */
-const activeTime = new Map<string, { id: string; atMs: number; priorMs: number }>()
+const activeTime = new Map<string, { id: string; atMs: number; priorMs: number; monotonicStartNs: bigint }>()
 export const readLeanTimeAccounting = (ledger: LeanExperimentLedger) => {
   const priorMs = leanPriorMs(ledger.allocation)
   const text = Buffer.from(readSafe(join(safeDirectory(ledger.directory), "time.ndjson"))).toString("utf8")
@@ -957,7 +957,7 @@ export const readLeanTimeAccounting = (ledger: LeanExperimentLedger) => {
     const e = parse(Buffer.from(line)) as { kind: string; id: string; atMs: number }
     if (!exactLabKeys(e, ["kind", "id", "atMs"]) || !/^[a-z0-9-]{1,80}$/u.test(e.id) || !natural(e.atMs)) return fail("TIME")
     if (e.kind === "start") { if (starts.has(e.id) || starts.size !== closed.size) return fail("TIME_ACTIVE"); starts.set(e.id, e.atMs) }
-    else if (e.kind === "close") { const start = starts.get(e.id); if (start === undefined || closed.has(e.id) || e.atMs < start) return fail("TIME"); elapsedMs += e.atMs - start; closed.add(e.id); closes.set(e.id, e.atMs) }
+    else if (e.kind === "close") { const start = starts.get(e.id); if (start === undefined || closed.has(e.id) || e.atMs < start) return fail("TIME"); elapsedMs += e.atMs - start; if (leanSupervisorAllocationMode(ledger.allocation) === "v5" && !natural(elapsedMs)) return fail("TIME"); closed.add(e.id); closes.set(e.id, e.atMs) }
     else return fail("TIME")
   }
   return { elapsedMs: starts.size === closed.size ? elapsedMs : leanCapsForAllocation(ledger.allocation).elapsedMs, closedElapsedMs: elapsedMs, active: starts.size !== closed.size, starts, closed, closes }
@@ -971,11 +971,18 @@ export const beginLeanInterval = (ledger: LeanExperimentLedger, id: string, atMs
   const s = readLeanTimeAccounting(ledger)
   if (s.active || s.starts.has(id) || s.elapsedMs >= leanCapsForAllocation(ledger.allocation).elapsedMs || !natural(atMs) || !/^[a-z0-9-]{1,80}$/u.test(id)) return fail("TIME_ACTIVE")
   appendTime(ledger, "start", id, atMs)
-  activeTime.set(ledger.directory, { id, atMs, priorMs: s.elapsedMs })
+  activeTime.set(ledger.directory, { id, atMs, priorMs: s.elapsedMs, monotonicStartNs: process.hrtime.bigint() })
 }
 export const closeLeanInterval = (ledger: LeanExperimentLedger, id: string, atMs = Date.now()) => {
   const s = readLeanTimeAccounting(ledger), start = s.starts.get(id)
   if (!s.active || start === undefined || s.closed.has(id) || !natural(atMs) || atMs < start) return fail("TIME")
+  const local = activeTime.get(ledger.directory)
+  if (leanSupervisorAllocationMode(ledger.allocation) === "v5" && local?.id === id) {
+    const mono = process.hrtime.bigint() - local.monotonicStartNs
+    if (mono < 0n || mono > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n) return fail("TIME")
+    atMs = start + Math.max(atMs - start, Number((mono + 999999n) / 1000000n))
+    if (!natural(atMs)) return fail("TIME")
+  }
   appendTime(ledger, "close", id, atMs)
   activeTime.delete(ledger.directory)
   return readLeanTimeAccounting(ledger)
@@ -989,6 +996,13 @@ export const currentLeanElapsedMs = (ledger: LeanExperimentLedger) => {
       const entry = readLeanChildEntry(ledger), mono = process.hrtime.bigint() - monotonic(entry.monotonicStartNs)
       if (mono < 0n || mono > BigInt(Number.MAX_SAFE_INTEGER) * 1_000_000n) return leanCapsForAllocation(ledger.allocation).elapsedMs
       return s.closedElapsedMs + Math.max(0, Date.now() - started, Number((mono + 999_999n) / 1_000_000n))
+    }
+    if (leanSupervisorAllocationMode(ledger.allocation) === "v5") {
+      if (!local || local.atMs !== started) return LEAN_SUPERVISOR_V5_CAPS.elapsedMs
+      const mono = process.hrtime.bigint() - local.monotonicStartNs, wall = Date.now() - started
+      if (wall < 0 || mono < 0n || mono > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n) return LEAN_SUPERVISOR_V5_CAPS.elapsedMs
+      const total = s.closedElapsedMs + Math.max(wall, Number((mono + 999999n) / 1000000n))
+      return natural(total) ? total : LEAN_SUPERVISOR_V5_CAPS.elapsedMs
     }
     return s.closedElapsedMs + Math.max(0, Date.now() - started)
   }

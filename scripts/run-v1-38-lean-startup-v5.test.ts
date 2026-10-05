@@ -7,8 +7,8 @@ import * as session from "./lib/v1-38-lean-container-match-session.js"
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, realpathSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { defaultRuntimeMetadata } from "@cowards/spec"
-import { MATCH_KERNEL } from "../packages/engine/src/index.js"
+import { defaultRuntimeMetadata, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
+import { MATCH_KERNEL, createInitialGameState, createStrategyInputV119 } from "../packages/engine/src/index.js"
 import { buildStrategyRevision } from "../packages/runtime-js/src/revision.js"
 import { LAB_ADMITTED_ROOTS } from "../packages/strategy-lab/src/contracts.js"
 import { buildPlannerCandidate } from "../packages/strategy-lab/src/planner/emit.js"
@@ -23,14 +23,21 @@ import { createPlannerSupervisedRuntime } from "./lib/v1-38-planner-supervised-r
 import * as retained from "./lib/v1-38-lean-correction-retained.js"
 import { leanCorrectionSourceManifest, leanStartupCarryElapsedV5, validateLeanStartupSetupWitnessV5, LEAN_STARTUP_CARRY_V5 } from "./run-v1-38-lean-correction.js"
 import ts from "typescript"
+import { EventEmitter } from "node:events"
+import * as correctionIO from "./run-v1-38-lean-correction.js"
+import { runLeanBoundedParent } from "./run-v1-38-lean-baseline.js"
 
 const native = vi.hoisted(() => ({
   deny: () => { throw new Error("NO_NATIVE_STARTUP_V5_FIXTURE") },
   worker: undefined as undefined | ((source: string, options: unknown) => unknown),
   control: undefined as undefined | ((command: string, args: readonly string[]) => unknown),
+  exec: undefined as undefined | ((command: string, args: readonly string[]) => unknown),
+  fork: undefined as undefined | (() => unknown),
+  space: undefined as undefined | (() => unknown),
 }))
 vi.mock("node:worker_threads", async original => ({ ...await original<typeof import("node:worker_threads")>(), Worker: function(source: string, options: unknown) { return native.worker ? native.worker(source, options) : native.deny() } }))
-vi.mock("node:child_process", async original => ({ ...await original<typeof import("node:child_process")>(), fork: native.deny, spawn: native.deny, spawnSync: (command: string, args: readonly string[]) => native.control ? native.control(command, args) : native.deny(), execFile: native.deny, execFileSync: native.deny, exec: native.deny, execSync: native.deny }))
+vi.mock("node:child_process", async original => ({ ...await original<typeof import("node:child_process")>(), fork: () => native.fork ? native.fork() : native.deny(), spawn: native.deny, spawnSync: (command: string, args: readonly string[]) => native.control ? native.control(command, args) : native.deny(), execFile: native.deny, execFileSync: (command: string, args: readonly string[]) => native.exec ? native.exec(command, args) : native.deny(), exec: native.deny, execSync: native.deny }))
+vi.mock("node:fs", async original => ({ ...await original<typeof import("node:fs")>(), statfsSync: () => native.space ? native.space() : native.deny() }))
 const r = (name: string) => labRoot("startup-v5-test", name)
 const predecessor = (elapsedUpperBoundMs = 28_800_001, chargedMatches = 23) => {
   const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches, elapsedUpperBoundMs, allocatedDiskBytes: 9_617_408, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r("history"), survivors: [{ identity: ".strategy-lab/synthetic-history", allocatedBytes: 4096 }] }
@@ -38,7 +45,7 @@ const predecessor = (elapsedUpperBoundMs = 28_800_001, chargedMatches = 23) => {
 }
 const input = () => ({ sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: lean.LEAN_STARTUP_SUPPLEMENT_ROOT, candidateRoots: [r("a"), r("b")], requestRoots: [r("request")], seed: "synthetic-v5", route: "diagnostic" as const, reuseGrantRoot: r("reuse"), supervisorDecisionRoot: lean.LEAN_STARTUP_APPROVAL_ROOT, acceptedCheckRoot: null, requestBytesRoot: r("bytes"), dataReviewRoot: r("data"), setupAccountingRoot: r("setup"), predecessor: predecessor(), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root })
 const dirs: string[] = []
-afterEach(() => { native.worker = undefined; native.control = undefined; vi.restoreAllMocks(); for (const directory of dirs.splice(0)) rmSync(directory, { recursive: true, force: true }) })
+afterEach(() => { native.worker = undefined; native.control = undefined; native.exec = undefined; native.fork = undefined; native.space = undefined; vi.restoreAllMocks(); for (const directory of dirs.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 describe("contracts", () => {
   it("selects twelve hours only for strictly admitted prospective v5", () => {
     expect(lean.LEAN_CAPS.elapsedMs).toBe(28_800_000)
@@ -164,7 +171,7 @@ const issueFixture = (f: ReturnType<typeof verticalFixture>, seat: "bottom" | "t
   const charge = { ...body, root: labRoot(body.schemaVersion, body) }
   const pairBody = { schemaVersion: "lean-baseline-pair-v1" as const, ordinal: 0, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: lean.leanBytesRoot(Buffer.alloc(0)), priorLedgerByteLength: 0, priorCharged: f.a.predecessor.chargedMatches, bottomRole: f.source.role, bottomSourceRoot: f.source.sourceRoot, bottomSnapshotRoot: f.source.root, topRole: f.source.role, topSourceRoot: f.source.sourceRoot, topSnapshotRoot: f.source.root }
   writeFileSync(join(f.ledger.directory, "pair-0.json"), lean.leanCanonicalBytes({ ...pairBody, root: labRoot(pairBody.schemaVersion, pairBody) }), { mode: 0o600 })
-  writeFileSync(join(f.ledger.directory, "ledger.ndjson"), Buffer.from(JSON.stringify({ kind: "charge", charge }) + "\n"))
+  writeFileSync(join(f.ledger.directory, "ledger.ndjson"), Buffer.concat([lean.leanCanonicalBytes({ kind: "charge", charge }), Buffer.from("\n")]))
   const admission = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet: f.source.packet, proposal: f.source.proposal, sourceBytes: Buffer.from(f.source.source) }), validation: f.source.validation })
   const defaults = defaultRuntimeMetadata("typescript")
   const revision = buildStrategyRevision({ source: f.source.source, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
@@ -173,6 +180,148 @@ const issueFixture = (f: ReturnType<typeof verticalFixture>, seat: "bottom" | "t
   return { charge, admission, revision, binding, token: authority.issueLeanCorrectionRuntimeAuthority(f.ledger, charge, f.source, binding, f.reuse) }
 }
 describe("closure", () => {
+  it("reaches actual bounded parent timer with admitted twelve-hour residual and mocked child", async () => {
+    const f = verticalFixture(), requestPath = join(f.ledger.directory, "synthetic-request.json")
+    writeFileSync(requestPath, lean.leanCanonicalBytes({ sourceRoot: f.a.sourceRoot }), { mode: 0o600 })
+    vi.spyOn(lean, "cumulativeLeanPhysicalBytes").mockReturnValue(9_617_408)
+    native.space = () => ({ bavail: 20_000_000_000n, bsize: 1n })
+    native.exec = (command, args) => {
+      if (command === "git" && args[0] === "show") return Buffer.from(lean.leanCanonicalBytes(f.a))
+      if (command === "git" && args[0] === "rev-parse") return "a".repeat(40) + "\n"
+      if (command === "ps" && args[0] === "-o") return "1\n"
+      return native.deny()
+    }
+    const child = Object.assign(new EventEmitter(), { pid: process.pid + 100000, exitCode: null as number | null, signalCode: null, send() { queueMicrotask(() => { child.exitCode = 0; child.emit("exit", 0, null) }) }, kill() { queueMicrotask(() => { child.exitCode = 1; child.emit("exit", 1, "SIGKILL") }); return true } })
+    native.fork = () => { queueMicrotask(() => child.emit("message", { ready: child.pid })); return child }
+    const timer = vi.spyOn(globalThis, "setTimeout"), release = vi.fn()
+    await runLeanBoundedParent({ ledger: f.ledger, requestPath, allocationPath: join(f.ledger.directory, "allocation.json"), store: f.ledger.directory, sourceRoot: f.a.sourceRoot, manifestRoot: () => f.a.sourceRoot, childMode: "synthetic", beforeRelease: release, terminalReserveMs: 1000 })
+    expect(release).toHaveBeenCalledTimes(2)
+    const deadlines = timer.mock.calls.map(row => Number(row[1])).filter(ms => ms > 1_000_000)
+    expect(deadlines).toHaveLength(1); expect(deadlines[0]).toBeGreaterThan(14_000_000); expect(deadlines[0]).toBeLessThanOrEqual(43_200_000 - f.a.predecessor.elapsedUpperBoundMs - 1000)
+    expect(lean.readLeanTimeAccounting(f.ledger).active).toBe(false)
+  })
+  it("reaches actual retained reader refusal and closes spent accounting without acceptance", () => {
+    const f = verticalFixture()
+    vi.spyOn(lean, "openLeanLedger").mockReturnValue(f.ledger)
+    vi.spyOn(process, "uptime").mockReturnValue(0)
+    vi.spyOn(lean, "readLeanChildTerminal").mockImplementation(() => { throw new TypeError("SYNTHETIC_TERMINAL_REFUSAL") })
+    // Missing producer gap custody is a finite refusal; the actual finally path closes its identity.
+    expect(() => retained.verifyLeanCorrectionRetained(lean.leanCorrectionRoutePaths("diagnostic", "v5").request, "diagnostic", "v5")).toThrow("READER_GAP_CUSTODY")
+    const time = lean.readLeanTimeAccounting(f.ledger)
+    expect(time.active).toBe(false); expect(time.closed.has("correction-supervisor-diagnostic-v5-verifier")).toBe(true)
+    expect(time.closed.has("correction-supervisor-diagnostic-v5-reader-close")).toBe(true)
+    expect(() => retained.authenticateLeanSupervisorDiagnosticCheck("v5")).toThrow()
+    expect(lean.readLeanLedger(f.ledger).charged).toBe(23)
+  })
+  it("fully audits an exact synthetic v5 diagnostic above eight hours and rejects changed custody/caps", () => {
+    const f = verticalFixture(), base = f.a
+    const bottom = sources.buildLeanBaselineSource({ coldRoot: base.coldRoot!, implementationRoot: base.sourceRoot, role: "tactical-0", source: f.source.source })
+    const top = sources.buildLeanBaselineSource({ coldRoot: base.coldRoot!, implementationRoot: base.sourceRoot, role: "cold-opponent", source: f.source.source })
+    const request = { schemaVersion: "lean-correction-supervisor-request-v5", route: "diagnostic", sourceRoot: base.sourceRoot, planRoot: base.planRoot, coldRoot: base.coldRoot, seed: base.seed, candidateRoots: base.candidateRoots, requestRoots: base.requestRoots, diagnosis: null, supervisorDecisionRoot: base.supervisorDecisionRoot, acceptedCheckRoot: null, setupAccountingRoot: base.setupAccountingRoot, dataReviewRoot: base.dataReviewRoot, reuseGrantRoot: base.reuseGrantRoot, startupPolicyRoot: base.startupPolicyRoot, authorizationRoot: r("authorization") }
+    const a = lean.createLeanSupervisorCorrectionAllocation({ ...input(), seed: base.seed, requestBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(request)) }, 5), slot = a.slots[0]!
+    const chargeBody = { schemaVersion: "lean-slot-charge-v1", allocationRoot: a.root, slotRoot: slot.root, ordinal: 0 }, charge = { ...chargeBody, root: labRoot(chargeBody.schemaVersion, chargeBody) }
+    const compact = { classification: "success", code: "OK", outcome: "DRAW", elapsedMs: 5, cleanupComplete: true, invocationCount: 1, accountingRoot: r("accounting"), executionRoot: r("execution"), telemetry: { transitions: 0, events: 0 } }
+    const events = [{ kind: "charge", charge }, { kind: "terminal", chargeRoot: charge.root, record: compact, replay: null }, { kind: "stop", reason: "complete" }]
+    const records = [{ slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: charge.root, terminal: events[1], status: "success" }]
+    const evidence = { records, charged: 24, elapsedMs: 28_800_101, physicalHighWaterBytes: 9_617_408, scratchHighWaterBytes: 1, root: labRoot("lean-evidence-v1", { allocationRoot: a.root, events, records }) }
+    const pairBody = { schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: lean.leanBytesRoot(Buffer.alloc(0)), priorLedgerByteLength: 0, priorCharged: 23, bottomRole: bottom.role, bottomSourceRoot: bottom.sourceRoot, bottomSnapshotRoot: bottom.root, topRole: top.role, topSourceRoot: top.sourceRoot, topSnapshotRoot: top.root }, pair = { ...pairBody, root: labRoot(pairBody.schemaVersion, pairBody) }
+    const metricBody = { executionRoot: compact.executionRoot, formationComparison: "inconclusive" }, metrics = { ...metricBody, root: labRoot("lean-baseline-match-metrics-v1", metricBody) }
+    const cell = { ordinal: 0, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot, compact, brainInputs: [], strategyInputs: [], trainingHalfPoints: null, semanticRoot: r("semantic"), metrics, decisionRoot: r("decision"), diagnostic: null }
+    const obsBody = { schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }, observation = { ...obsBody, root: labRoot(obsBody.schemaVersion, obsBody) }
+    const head = "a".repeat(40), entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot, head, parentPid: 123, childPid: 124, handshakeRoot: r("handshake"), wallStartMs: 1000, monotonicStartNs: "1000000000" }
+    const terminal = { schemaVersion: "lean-child-terminal-v2", entryBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(entry)), allocationRoot: a.root, sourceRoot: a.sourceRoot, head, parentPid: 123, childPid: 124, status: "child_exited", exitCode: 0, signal: null }
+    const originBody = { schemaVersion: "lean-startup-origin-envelope-v5", allocationRoot: a.root, sourceRoot: a.sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins: [] }, origin = { ...originBody, root: labRoot(originBody.schemaVersion, originBody) }
+    const pipeline = { status: "diagnostic_only", cells: [{ ordinal: 0, slotRoot: slot.root, compact }], training: null, holdoutOpened: false, formationMaterialized: false }
+    const resultBody = { schemaVersion: "lean-correction-supervisor-result-v5", privacy: "private_offline", issued: false, route: "diagnostic", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot, head, reuseGrantRoot: a.reuseGrantRoot, pipeline, evidenceRoot: evidence.root, cumulativeCharged: 24, holdoutOpened: false, formationMaterialized: false, phaseComplete: false }
+    const reasonBody = { schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot, entryBytesRoot: terminal.entryBytesRoot, head, parentPid: 123, childPid: 124, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
+    const snapshot = { schemaVersion: "lean-correction-supervisor-retained-snapshot-v5", allocation: a, request, entry, terminal, evidence, time: { active: false, elapsedMs: 28_800_101, closed: new Set(["pilot-entry"]) }, result: { ...resultBody, root: labRoot(resultBody.schemaVersion, resultBody) }, reuse: f.reuse, pairs: [pair], observations: [observation], sources: [bottom, top], artifacts: {}, origin, journalBytes: Buffer.concat(events.flatMap(e => [lean.leanCanonicalBytes(e), Buffer.from("\n")])), supervisorReasonBytes: lean.leanCanonicalBytes({ ...reasonBody, root: labRoot(reasonBody.schemaVersion, reasonBody) }) }
+    const report = retained.auditLeanCorrectionRetained(snapshot)
+    expect(report.cumulativeCharged).toBe(24); expect(report.startupPolicyRoot).toBe(lean.LEAN_STARTUP_POLICY_V5.root)
+    expect(report.accepted).toBe(true); expect(report.complete).toBe(false)
+    expect(report.publicAuthorized).toBe(false); expect(report.phaseComplete).toBe(false)
+    for (const patch of [{ request: { ...request, startupPolicyRoot: r("foreign") } }, { allocation: { ...a, caps: lean.LEAN_CAPS } }, { terminal: { ...terminal, head: "b".repeat(40) } }, { time: { ...snapshot.time, elapsedMs: 43_200_001 } }, { evidence: { ...evidence, charged: 23 } }, { origin: { ...origin, source: "PRIVATE_CANARY" } }]) expect(() => retained.auditLeanCorrectionRetained({ ...snapshot, ...patch })).toThrow()
+    expect(JSON.stringify(report)).not.toContain("PRIVATE_CANARY")
+  }, 20000)
+  it("preserves the pre-edit legacy builder/harness source bytes and strict origin-v1", () => {
+    const text = readFileSync("scripts/lib/v1-38-lean-container-match-session.ts", "utf8"), parsed = ts.createSourceFile("legacy.ts", text, ts.ScriptTarget.Latest, true)
+    const roots: Record<string, string> = { LEAN_CONTAINER_BROKER_SOURCE: "sha256:8e33ab083275694184a76b2e1325046994d50f55264ba47e82d419176c81f700", buildLeanCorrectionOriginBrokerSource: "sha256:b69866e265990f05e8a9ab0e4bedfc0fae8916d264bb4a54db152de83cdecea9", buildLeanAuthenticatedHarnessSource: "sha256:3d9d1728c6d3efcab8ff99530e54f8d5b2f7f273e565bf0ad2d540fb7bc1e8c7" }
+    for (const statement of parsed.statements) if (ts.isVariableStatement(statement)) for (const declaration of statement.declarationList.declarations) if (roots[declaration.name.getText(parsed)]) expect(lean.leanBytesRoot(Buffer.from(declaration.initializer!.getText(parsed)))).toBe(roots[declaration.name.getText(parsed)])
+    expect(lean.leanBytesRoot(readFileSync("packages/runtime-js/src/worker-harness.ts"))).toBe("sha256:10d3d6a5b78870492f3ff36a044455808e1fbcd7eda4502d918bfa6489f438da")
+    const old = { schemaVersion: "v1.38-lean-correction-origin-v1", requestOrdinal: 1, requestRoot: r("legacy"), transportMethod: "docker_exec_stream", brokerMode: "legacy", brokerBranch: "legacy_deadline", signalBufferState: "not_done", waitDisposition: "timed_out", workerLifecycle: "unknown", transportSignal: "broker_synthetic_sigkill", terminationDisposition: "worker_terminate_completed", elapsedBucket: "unknown" }
+    expect(session.validateLeanCorrectionOriginMetadata(old)).toEqual(old)
+    expect(() => session.validateLeanCorrectionOriginMetadata({ ...old, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root })).toThrow()
+  })
+  it.each(["complete", "foreign", "termination_failed", "late_parse"])("reaches real issuer/factory/planner/session with only fake OS surfaces: %s", async fault => {
+    const f = verticalFixture(); sources.publishLeanReusedBaselineSource(f.ledger, f.source, f.reuse)
+    const issued = issueFixture(f), frames: Record<string, any>[] = [], origins: session.LeanStartupOriginV5[] = []
+    let owned = false
+    native.control = (_command, args) => {
+      if (!["inspect", "create", "start", "rm"].includes(args[0]!)) return native.deny()
+      if (args[0] === "inspect") return owned ? { status: 0, signal: null, stdout: Buffer.from(issued.binding.ownershipLabel + "\n"), stderr: Buffer.alloc(0) } : { status: 1, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.from("Error: No such object: " + issued.binding.containerName + "\n") }
+      if (args[0] === "create") owned = true
+      if (args[0] === "rm") owned = false
+      return { status: 0, signal: null, stdout: Buffer.from(args[0] === "create" ? "synthetic-container\n" : ""), stderr: Buffer.alloc(0) }
+    }
+    const originalNow = process.hrtime.bigint
+    let late = false
+    if (fault === "late_parse") vi.spyOn(process.hrtime, "bigint").mockImplementation(() => originalNow() + (late ? 5_000_000_000n : 0n))
+    native.worker = (source, options) => {
+      if (!source.includes('const { parentPort, workerData } = require("node:worker_threads")')) return native.deny()
+      const opts = options as { workerData: { start: SharedArrayBuffer; args: string[] } }
+      expect(opts.workerData.args.at(-1)).toBe(session.buildLeanContainerBrokerSourceV5())
+      Atomics.store(new Int32Array(opts.workerData.start), 0, 1)
+      return {
+        terminate: async () => 0,
+        postMessage(message: any) {
+          let bytes = Buffer.alloc(0)
+          if (message.type === "exchange") {
+            const q = JSON.parse(Buffer.from(message.request).toString("utf8")); frames.push(q)
+            const request = JSON.parse(Buffer.from(q.payloadBase64, "base64").toString("utf8"))
+            const metadata = { ...q.startup.binding, schemaVersion: "v1.38-lean-startup-origin-v5", stage: fault === "termination_failed" ? "startup" : "receipt", branch: fault === "termination_failed" ? "startup_expired" : "complete", ready: fault !== "termination_failed", go: fault !== "termination_failed", wait: fault === "termination_failed" ? "timed_out" : "changed", termination: fault === "termination_failed" ? "failed" : "not_required", unknown: fault === "termination_failed" }
+            if (fault === "foreign") metadata.requestRoot = r("cross-request")
+            const inner = { ok: true, value: { activationOrders: [], strategyMemory: request.input.strategyMemory } }
+            bytes = Buffer.from(JSON.stringify({ requestId: q.requestId, status: fault === "termination_failed" ? 70 : 0, signal: null, stdoutBase64: fault === "termination_failed" ? "" : Buffer.from(JSON.stringify(inner)).toString("base64"), stderrBase64: "", startupOrigin: metadata }) + "\n")
+            if (fault === "late_parse") late = true
+          }
+          new Uint8Array(message.response).set(bytes); const control = new Int32Array(message.control); Atomics.store(control, 1, bytes.length); Atomics.store(control, 0, 1)
+        },
+      }
+    }
+    const provider = createFactorySupervisedRuntime({ admission: issued.admission, sourceBytes: Buffer.from(f.source.source), ...issued.binding, leanExperimentAuthority: issued.token, factoryLifetimeMs: 600000, startupOriginObserver: { observe: value => origins.push(value) } })
+    expect(provider.identity.harnessRoot).toBe(bindingV5().harnessRoot)
+    const state = createInitialGameState({ matchId: "synthetic", seed: "synthetic", arenaVariant: CANONICAL_ARENA_CATALOG_V1_37.arenas.find(a => a.id === "arena:smoke:v1")!, bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: "synthetic-bottom", topStrategyRevisionId: "synthetic-top" })
+    const request = { kind: "selectActivations" as const, requestId: "synthetic:0", semanticTupleId: MATCH_KERNEL.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input: createStrategyInputV119(state, "bottom") }
+    const evidence = await provider.invoke(request as Parameters<typeof provider.invoke>[0], provider.identity)
+    expect(evidence.result.ok).toBe(fault === "complete")
+    expect(frames).toHaveLength(1); expect(frames[0]!.startup.binding.allocationRoot).toBe(f.a.root)
+    expect(frames[0]!.startup.hostBudgetMs).toBeLessThanOrEqual(5000)
+    expect(frames[0]!.timeoutMilliseconds).toBe(1000)
+    expect(provider.verify(evidence)).toBe(true)
+    const closed = provider.close()
+    expect(closed.cleanupComplete).toBe(fault !== "termination_failed")
+    expect(origins.length).toBe(fault === "termination_failed" ? 1 : 0)
+    expect(() => createFactorySupervisedRuntime({ admission: issued.admission, sourceBytes: Buffer.from(f.source.source), ...issued.binding, leanExperimentAuthority: issued.token, factoryLifetimeMs: 600000 })).toThrow()
+  }, 20000)
+  it("refuses public startup scalar/serialized authority at actual constructors", () => {
+    for (const construct of [createFactorySupervisedRuntime, createPlannerSupervisedRuntime, session.createLeanContainerMatchSession]) expect(() => construct({ startupMs: 2500 } as never)).toThrow()
+  })
+  it("closes actual v5 reader/gap/closure accounting once and rejects cross-version custody", () => {
+    const f = verticalFixture(), startBody = { schemaVersion: "lean-correction-supervisor-admission-v5", route: "diagnostic", mode: "run", parentPid: 1, wallStartMs: 1000, monotonicStartNs: "0" }
+    const start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
+    const closeBody = { schemaVersion: "lean-correction-supervisor-admission-close-v5", startRoot: start.root, route: "diagnostic", mode: "run", elapsedUpperBoundMs: 100, monotonicObservedNs: "100000000", wallObservedMs: 1100, allocationRoot: f.a.root, ledgerInterval: "correction-run-finalization", importedMs: 50 }
+    const close = { ...closeBody, root: labRoot(closeBody.schemaVersion, closeBody) }
+    for (const [id, from, to] of [["pilot-entry", 1000, 1050], ["correction-run-finalization", 1050, 1100]] as const) { lean.beginLeanInterval(f.ledger, id, from); lean.closeLeanInterval(f.ledger, id, to) }
+    lean.beginLeanInterval(f.ledger, "correction-supervisor-diagnostic-v5-verifier", 1200)
+    const gap = retained.validateLeanFreshSupervisorReaderGap(start, close, f.a.root, "diagnostic", lean.readLeanTimeAccounting(f.ledger), 1200, 5)
+    expect(gap.gapMs).toBe(100)
+    expect(() => retained.validateLeanFreshSupervisorReaderGap(start, close, f.a.root, "diagnostic", lean.readLeanTimeAccounting(f.ledger), 1200, 4)).toThrow()
+    let now = 1250
+    retained.closeLeanFreshSupervisorReader(f.ledger, "diagnostic", gap, () => now++, 5)
+    const time = lean.readLeanTimeAccounting(f.ledger)
+    expect(time.active).toBe(false); expect(time.closedElapsedMs).toBeGreaterThanOrEqual(f.a.predecessor.elapsedUpperBoundMs + 251)
+    expect(time.closed.has("correction-supervisor-diagnostic-v5-reader-close")).toBe(true)
+    expect(() => retained.closeLeanFreshSupervisorReader(f.ledger, "diagnostic", gap, () => now++, 5)).toThrow()
+  })
   it("publishes exact v5 baseline and reused diagnostic bytes through real consumers", () => {
     const f = verticalFixture("baseline")
     sources.publishLeanBaselineSource(f.ledger, f.source)
@@ -201,6 +350,7 @@ describe("closure", () => {
   })
   it("includes every owned consumer in the actual source manifest", () => {
     const manifest = leanCorrectionSourceManifest("v5")
+    console.info("STARTUP_V5_SOURCE_CLOSURE", manifest.root, "HARNESS", lean.leanBytesRoot(Buffer.from(session.buildLeanStartupWorkerHarnessV5())), "BROKER", lean.leanBytesRoot(Buffer.from(session.buildLeanContainerBrokerSourceV5())))
     for (const path of ["scripts/run-v1-38-lean-startup-v5.test.ts", "scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-lean-baseline-match.ts", "scripts/lib/v1-38-lean-correction-retained.ts"]) expect(manifest.entries.some(entry => entry.path === path)).toBe(true)
     expect(manifest.root).not.toBe(leanCorrectionSourceManifest("v4").root)
     expect(lean.LEAN_CAPS.matches).toBe(300)

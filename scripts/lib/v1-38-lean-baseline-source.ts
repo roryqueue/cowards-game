@@ -8,7 +8,7 @@ import { factoryProposalFromPacket, FactoryOraclePacketSchema, FactoryValidation
 import { deriveFactoryOraclePacketRoot, deriveFactoryValidationRoot } from "../../packages/strategy-lab/src/factory/identity.js"
 import { deriveFactorySourceStructureRoot } from "../../packages/strategy-lab/src/factory/fingerprint.js"
 import { admitFactory, authorizeFactorySupervision } from "../../packages/strategy-lab/src/factory/admission.js"
-import { leanBytesRoot, leanCanonicalBytes, writeLeanAll, assertLeanPublicationCapacity, type LeanExperimentLedger } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { leanCapsForAllocation, leanBytesRoot, leanCanonicalBytes, writeLeanAll, assertLeanPublicationCapacity, type LeanExperimentLedger } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 
 const fail = (): never => { throw new TypeError("LEAN_BASELINE_SOURCE") }
@@ -68,7 +68,8 @@ export const validateLeanBaselineSource = (value: unknown): LeanBaselineSource =
 export const publishLeanBaselineSource = (ledger: LeanExperimentLedger, value: LeanBaselineSource): void => {
   const v = validateLeanBaselineSource(value), bytes = leanCanonicalBytes(v)
   const allocation = ledger.allocation as unknown as { schemaVersion: string; coldRoot?: LabRoot; sourceRoot: LabRoot }
-  if (!["lean-current-baseline-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-baseline-allocation-v4"].includes(allocation.schemaVersion) || v.coldRoot !== allocation.coldRoot || v.implementationRoot !== allocation.sourceRoot) return fail()
+  if (!["lean-current-baseline-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-baseline-allocation-v4", "lean-correction-supervisor-baseline-allocation-v5"].includes(allocation.schemaVersion) || v.coldRoot !== allocation.coldRoot || v.implementationRoot !== allocation.sourceRoot) return fail()
+  if (allocation.schemaVersion.endsWith("-v5")) leanCapsForAllocation(ledger.allocation)
   publishSourceBytes(ledger, v, bytes)
 }
 
@@ -77,7 +78,8 @@ export const publishLeanBaselineSource = (ledger: LeanExperimentLedger, value: L
 export const publishLeanReusedBaselineSource = (ledger: LeanExperimentLedger, value: LeanBaselineSource, reuse: LeanColdReuse): void => {
   const allocation = ledger.allocation as unknown as { schemaVersion: string; coldRoot?: LabRoot; sourceRoot: LabRoot; seed?: string }
   const admitted = validateLeanColdReuse(reuse, allocation.sourceRoot), v = validateLeanBaselineSource(value)
-  if (!["lean-current-baseline-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-diagnostic-allocation-v1", "lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-diagnostic-allocation-v4", "lean-correction-supervisor-baseline-allocation-v4"].includes(allocation.schemaVersion) || allocation.coldRoot !== admitted.grant.coldRoot || allocation.seed !== admitted.grant.seed || !admitted.sources.some(original => original.root === v.root && original.role === v.role)) return fail()
+  if (!["lean-current-baseline-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-diagnostic-allocation-v1", "lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-diagnostic-allocation-v4", "lean-correction-supervisor-diagnostic-allocation-v5", "lean-correction-supervisor-baseline-allocation-v4", "lean-correction-supervisor-baseline-allocation-v5"].includes(allocation.schemaVersion) || allocation.coldRoot !== admitted.grant.coldRoot || allocation.seed !== admitted.grant.seed || !admitted.sources.some(original => original.root === v.root && original.role === v.role)) return fail()
+  if (allocation.schemaVersion.endsWith("-v5")) leanCapsForAllocation(ledger.allocation)
   publishSourceBytes(ledger, v, leanCanonicalBytes(v))
 }
 

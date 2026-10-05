@@ -13,7 +13,7 @@ import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY, type LeanColdReuse 
 import { executeLeanReusedCurrentPipeline } from "./lib/v1-38-lean-baseline-pipeline.js"
 import { publishLeanBaselineSource, publishLeanReusedBaselineSource } from "./lib/v1-38-lean-baseline-source.js"
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
-import { validateLeanPrivateCorrectionOrigin, type LeanPrivateCorrectionOrigin } from "./lib/v1-38-lean-container-match-session.js"
+import { validateLeanPrivateCorrectionOrigin, buildLeanStartupWorkerHarnessV5, buildLeanContainerBrokerSourceV5, type LeanPrivateCorrectionOrigin } from "./lib/v1-38-lean-container-match-session.js"
 import { resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
 import { authenticateLeanSupervisorDiagnosticCheck } from "./lib/v1-38-lean-correction-retained.js"
 
@@ -130,7 +130,7 @@ export const leanCorrectionSourceManifest = (supervisor: LeanSupervisorMode = fa
   if (supervisor === "v4") for (const path of ["scripts/run-v1-38-lean-fresh-reader.test.ts", "scripts/run-v1-38-lean-correction-bytes.test.ts", "scripts/run-v1-38-lean-baseline.sh"]) entries.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
   if (supervisor === "v5") for (const path of ["scripts/run-v1-38-lean-startup-v5.test.ts", "scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-lean-baseline-match.ts"]) entries.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
   const sorted = [...entries.values()].sort((a, b) => a.path.localeCompare(b.path))
-  return { entries: sorted, root: labRoot(supervisor ? `lean-correction-supervisor-reviewed-source-v${leanSupervisorVersion(supervisor)}` : "lean-correction-reviewed-source-v1", sorted) }
+  return { entries: sorted, root: labRoot(supervisor ? `lean-correction-supervisor-reviewed-source-v${leanSupervisorVersion(supervisor)}` : "lean-correction-reviewed-source-v1", supervisor === "v5" ? { entries: sorted, policyRoot: LEAN_STARTUP_POLICY_V5.root, supplementRoot: LEAN_STARTUP_SUPPLEMENT_ROOT, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())), brokerRoot: leanBytesRoot(Buffer.from(buildLeanContainerBrokerSourceV5())) } : sorted) }
 }
 /** Bounded owner-only descriptor read; no symbolic links, aliases or custody drift. */
 export const readLeanCorrectionPrivateBytes = (path: string, limit = 262144): Uint8Array => {
