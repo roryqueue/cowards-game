@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh v4 diagnostic retained accepted; preparing conditional36 baseline under unchanged live timebox
+stopped_at: Conditional36 baseline prepared; commit/push allocation before unique MAIN entry
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Unique v4 diagnostic check accepted a323f13f;13 cumulativecharges/23073294ms closed; baseline still unstarted
+last_activity_desc: Accepted v4diagnostic; baselineallocation229b7738/13prior0currentcharges/23496195ms closed prefix
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT BASELINE PREPARED: Diagnosticaccepted a323f13f remainsimmutable. Actual MAIN baseline draft96956/finalize46041 and independentDATA-REVIEW-v1 clean; finalrequestraw8ae0658e/data5169617e binds36slotroots/2candidates/exactacceptednewv4check/samecold128futureopportunities. ExactlyONE preparation60269 CLOSED0, allocationsemantic229b7738fae7459489a2a6c7126b92c518db89755357bce32b769c435f2b2499/raw1d28bc2ecadc1b7ebe6b62d9e8bc11502656998a591c78a3080a3d33338e89ca. Finiteprefix13prior0current/23496195msCLOSEDinactive/7180288Bphysical/real0700storeonlyallocation,emptyledger,time. No baselineentry/verifier/hold/provider/Match yet. Commit/push exactallocation anddatareview BEFOREoneMAINrun; freshSAMEPROCESScapacity precedescharge. SOURCEcf9096+HEADheldthroughterminal+ONEuniqueordinaryreader ifactualeligible result/head, otherwiseterminalonly. No competingheavywork. Same15GB/8h/300/guest1000-host5000-Match600000, per-next-Match1.86Mmsreserve/liveguards; complete36notguaranteedwithinremainingbudget. No additionalbaseline/retry/refund/recredit. Allcost/survivorscarry, oldroutes/readersimmutable. Phase265/266freeze/formation/holdout/public/counting/production/fullLEAGcredit notadmitted. Olderparagraphshistory.
 
 CURRENT DIAGNOSTIC ACCEPTED / BASELINE NEXT: UniqueMAIN46233 CLOSED clean child_exited/exit0/nullsignal/225639ms. HeldHEADb401aac8/sourcecf9096 unchanged throughONEactual ordinaryreader by/root/review_265_saved_diagnostic, checkacceptedtrue/retained_valid/limited_exploratory/current1cumulative13success1cleanuptrue. Checksemantica323f13fa38805942202d79814c8bd5c3167eb98ab38f35d0e126120eaf4085e/raw0051fc05ff0eb3c3b42bbc60c505f5b4ba41d166cf91e461e9dd25a37c9b67de; readerclosed1791227788248, closedelapsed23073294ms/7081984Bphysical, inactive. Alluniqueverifier/gap/closingintervalsclosed; SOURCE+HEADholdreleased. ReportDIAGNOSTIC-VERIFICATION-v1 islimiteddiagnostic, NOTbaseline/phase/freezecompletion. SameapprovedatmostONE36baseline nowconditionaldiagnosticgatePASS. MAINreadonlyresourceinspection confirms admission reserves ONEmaxMatch+cleanup+terminal+check+replay=1860000ms, NOT36maxMatch sum; currentremaining>thatreserve. WholebaselinefinishNOTguaranteed; liveunchanged8hguards stopfailclosed/partial ifbudgetrunsout. Proceedfreshbaseline datareview/allocation/SAMEPROCESScapacity withinremainingtime, no capincrease/repeatliteral. Everylatercostcarriesfromreaderclose,13charges/same15GB/8h/300. Alloldroutes/readersandnewdiagnosticimmutable, neverrerun/recredit. Baseline/phase265/266freeze/formation/holdoutunstarted; no public/counting/production/fullLEAG/releasecredit. Priorparagraphshistory.
 
