@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Startup v5 source verified; fresh reviewed diagnostic data and allocation next
+stopped_at: Startup v5 diagnostic prepared; commit allocation before unique MAIN entry
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Startup source repair independently verified with 37 passing fixtures; no new empirical route started
+last_activity_desc: Independently reviewed v5 request and exactly one preparation closed; zero new charges
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V5 DIAGNOSTIC PREPARED: Actual MAIN draft16939/finalize12008 and independent STARTUP-DIAGNOSTIC-DATA-REVIEW-v1 clean; exactrequest raw2ab4865c/data84980f99/setupb212168f binds reviewedsourcea0940a8a/890. ExactlyONE preparation80979 CLOSED0, allocation352971f3390b42030b739eb785bc0e93d2c1ae241b4e9baa7f1907cb3a591ca2/raw829b8ab8cd85fd2dd8d09b7b24bd19551d392995c0d8824465690284aa410de2, planned1/current0/prior23. Preparationtime CLOSEDinactive32853885ms; priorphysical9621504B; checkedreal0700store contains onlyallocation/emptyledger/time. No entry/reader/hold/nativeprovider/Match yet. Commit/push exactnewallocation andreview before uniqueMAINentry via reviewedprivate main-entry.sh. SAMEPROCESScapacity must actually pass before charge; source AND HEAD held throughterminal plus ONEappropriateuniquecheck. Whole12hcarry includes allsource/review/admin/launch/checkcosts; same15GB/300Match/guest1000/host5000/Match600000. Diagnosticfailure/refusal ends envelope; conditionalONEfresh36baseline onlyafter complete accepteddiagnostic. All consumedhistory immutable; Phase265/freeze/formation/holdout/public/counted/production remainunadmitted. Olderfrontiers history.
 
 CURRENT SOURCE-VERIFIED FRONTIER (2026-10-05): Plan16 startup supplement source is independently VERIFIED at23bf081c/source sha256:a0940a8a76119a8e2f0033bd91d24473acd383d97ca17d108395bccabb7d8873/890entries. SOURCE-REVIEW-v3 clean; NEW265-16-STARTUP-SOURCE-VERIFICATION-v1 scores5/5 with37/37 dedicated fixtures; MAIN configured31 type tasks and factory1406-file boundary scan pass. Wider standalone-script typing retains nine inherited diagnostics, not claimed clean. No source gap or active verifier/entry/hold remains. Next MAIN authors prospective v5 setup/request/authorization/helper, independently reviewed before exactlyONE preparation/new immutable committed allocation and unique MAIN diagnostic entry; fresh SAMEPROCESS capacity precedes charge. At mostONE conditional fresh36baseline after complete accepted diagnostic. Source approval/verification does not itself admit empirical execution or Phase265/freeze credit. Every cost carries26634447ms plus active turn elapsed from1791235144280 under43200000ms;23 prior charges/same15GB/300Match. Historical artifacts/readers/caps remain immutable; guest1000/absolute host5000/Match600000 unchanged. Older frontiers below are history.
 
