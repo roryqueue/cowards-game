@@ -40,7 +40,7 @@ describe("supervisor v2 source-only admission", () => {
   it("admits the actual 11-charge carry, never the stale accounting prefix", () => {
     const old = correctionAllocationFixture(), { root: _r, ...p } = old.predecessor
     const predecessor = { ...p, chargedMatches: 11, elapsedUpperBoundMs: 5282046 }
-    const input = { sourceRoot: old.sourceRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot, planRoot: old.planRoot, candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, seed: old.seed, route: "diagnostic" as const, reuseGrantRoot: old.reuseGrantRoot, supervisorDecisionRoot: labRoot("mock-approved-decision", {}), acceptedCheckRoot: null, predecessor: { ...predecessor, root: labRoot(p.schemaVersion, predecessor) } }
+    const input = { sourceRoot: old.sourceRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot, planRoot: old.planRoot, candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, seed: old.seed, route: "diagnostic" as const, reuseGrantRoot: old.reuseGrantRoot, supervisorDecisionRoot: labRoot("mock-approved-decision", {}), acceptedCheckRoot: null, requestBytesRoot: labRoot("mock-request-bytes", {}), dataReviewRoot: labRoot("mock-data-review", {}), setupAccountingRoot: labRoot("mock-setup-witness", {}), predecessor: { ...predecessor, root: labRoot(p.schemaVersion, predecessor) } }
     const allocation = accounting.createLeanSupervisorCorrectionAllocation(input)
     expect(admitLeanAllocation(allocation)).toEqual(allocation)
     expect(leanWritablePaths(allocation)).toContain(accounting.LEAN_SUPERVISOR_CORRECTION_ROUTES.diagnostic.request)

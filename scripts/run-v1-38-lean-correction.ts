@@ -2,7 +2,7 @@
  * Import is inert. Historical requests, stores and empirical readers are never used. */
 import { constants, closeSync, existsSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, realpathSync, readdirSync, statfsSync } from "node:fs"
 import { execFileSync } from "node:child_process"
-import { join, resolve } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { exactLabKeys, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { LEAN_CAPS, LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES, leanCorrectionRoutePaths, isLeanSupervisorAllocation, createLeanSupervisorCorrectionAllocation, LEAN_EXTERNAL_SCRATCH_RESERVE, LEAN_BASELINE_STORE, LEAN_BASELINE_WRITABLE_PATHS, createLeanCorrectionAllocation, createLeanLedger, openLeanLedger, readLeanLedger, readLeanTimeAccounting, readLeanChildEntry, readLeanChildTerminal, beginLeanInterval, closeLeanInterval, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, stopLeanLedger, verifyLeanEvidence, currentLeanElapsedMs, cumulativeLeanPhysicalBytes, measureLeanPhysicalBytes, inspectLeanClosedV7Predecessor, leanBytesRoot, leanCanonicalBytes, writeLeanAll, assertLeanPublicationCapacity, type LeanCorrectionPredecessor, type LeanCorrectionAllocation, type LeanExperimentLedger } from "../packages/strategy-lab/src/league/lean-experiment.js"
@@ -256,7 +256,7 @@ export const inspectLeanSupervisorCorrectionPredecessor = (route: LeanCorrection
     identities.push(...Object.values(LEAN_SUPERVISOR_CORRECTION_ROUTES.diagnostic).filter(path => path.startsWith(".strategy-lab/") || path.startsWith(".planning/artifacts/")))
     historyRoots.push(accepted.root, leanBytesRoot(readLeanCorrectionPrivateBytes(join(diagnostic.directory, "time.ndjson"), 4_194_304)))
   }
-  if (!Number.isSafeInteger(accountingAtMs) || accountingAtMs < closedAt) return fail("SUPERVISOR_ACCOUNTING_CLOCK")
+  if (!Number.isSafeInteger(accountingAtMs) || accountingAtMs < closedAt || accountingAtMs < witness.observedAtMs) return fail("SUPERVISOR_ACCOUNTING_CLOCK")
   // The independently witnessed active-turn start covers new source/review/data
   // work, not earlier human-approval idle. No past monotonic clock is invented.
   elapsed += accountingAtMs - closedAt
@@ -315,6 +315,7 @@ export const inspectLeanCorrectionPredecessor = (route: LeanCorrectionRoute, act
 const scope = (route: LeanCorrectionRoute, supervisor = false) => {
   const temp = resolve(leanCorrectionRoutePaths(route, supervisor).temp), stat = lstatSync(temp)
   if (supervisor && !process.execArgv.includes("--max-old-space-size=768")) return fail("COORDINATOR_HEAP_BOUND")
+  if (supervisor) for (const path of [LEAN_SUPERVISOR_CORRECTION_ROUTES[route].store, LEAN_SUPERVISOR_CORRECTION_ROUTES[route].request, LEAN_SUPERVISOR_CORRECTION_ROUTES[route].allocation]) if (realpathSync(dirname(resolve(path))) !== dirname(resolve(path))) return fail("ROUTE_ALIAS")
   if (process.env.TSX_DISABLE_CACHE !== "1" || process.env.NODE_DISABLE_COMPILE_CACHE !== "1" || ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"].some(k => process.env[k] !== undefined) || process.env.TMPDIR !== temp || !stat.isDirectory() || stat.isSymbolicLink() || (stat.mode & 0o777) !== 0o700 || stat.uid !== process.getuid?.() || realpathSync(temp) !== temp || execFileSync("sh", ["-c", "ulimit -c"], { encoding: "utf8", timeout: 1000, maxBuffer: 128 }).trim() !== "0") return fail("WRITABLE_SCOPE")
 }
 export const prepareLeanCorrection = (path: string, route: LeanCorrectionRoute, supervisor = false) => {
@@ -323,10 +324,11 @@ export const prepareLeanCorrection = (path: string, route: LeanCorrectionRoute, 
   let ledger: LeanExperimentLedger | null = null
   try {
   scope(route, supervisor)
+  if (supervisor && (existsSync(paths.store) || existsSync(paths.allocation))) return fail("SPENT_DESTINATION")
   const { request, reuse } = readLeanCorrectionRequest(path, route, supervisor), predecessor = supervisor ? inspectLeanSupervisorCorrectionPredecessor(route, carrier.wallStartMs) : inspectLeanCorrectionPredecessor(route, carrier.root)
   assertLeanCorrectionAdmissionTime(predecessor.elapsedUpperBoundMs, carrier)
   const common = { sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route, reuseGrantRoot: reuse.grant.root, predecessor }
-  const allocation = supervisor ? createLeanSupervisorCorrectionAllocation({ ...common, supervisorDecisionRoot: request.supervisorDecisionRoot!, acceptedCheckRoot: request.acceptedCheckRoot! }) : createLeanCorrectionAllocation({ sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route, reuseGrantRoot: reuse.grant.root, diagnosisRoot: request.diagnosis?.root ?? null, predecessor })
+  const allocation = supervisor ? createLeanSupervisorCorrectionAllocation({ ...common, supervisorDecisionRoot: request.supervisorDecisionRoot!, acceptedCheckRoot: request.acceptedCheckRoot!, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), dataReviewRoot: request.dataReviewRoot, setupAccountingRoot: request.setupAccountingRoot! }) : createLeanCorrectionAllocation({ sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route, reuseGrantRoot: reuse.grant.root, diagnosisRoot: request.diagnosis?.root ?? null, predecessor })
   ledger = createLeanLedger(paths.store, allocation)
   publishLeanCorrection(paths.allocation, allocation, ledger)
   return { issued: false, evidenceClass: "preparation_only", route, allocationRoot: allocation.root, plannedCells: allocation.slots.length, charged: 0 }
@@ -334,6 +336,7 @@ export const prepareLeanCorrection = (path: string, route: LeanCorrectionRoute, 
 }
 const allocationFor = (path: string, route: LeanCorrectionRoute, supervisor = false) => {
   const { request, reuse } = readLeanCorrectionRequest(path, route, supervisor), ledger = openLeanLedger(leanCorrectionRoutePaths(route, supervisor).store)
+  if (supervisor && "route" in ledger.allocation && (ledger.allocation.requestBytesRoot !== leanBytesRoot(leanCanonicalBytes(request)) || ledger.allocation.dataReviewRoot !== request.dataReviewRoot || ledger.allocation.setupAccountingRoot !== request.setupAccountingRoot)) return fail("ALLOCATION_REQUEST_CUSTODY")
   if (isLeanSupervisorAllocation(ledger.allocation) !== supervisor || supervisor && ("supervisorDecisionRoot" in ledger.allocation && (ledger.allocation.supervisorDecisionRoot !== request.supervisorDecisionRoot || ledger.allocation.acceptedCheckRoot !== request.acceptedCheckRoot))) return fail("ALLOCATION_VERSION")
   if (!("route" in ledger.allocation) || ledger.allocation.route !== route || ledger.allocation.sourceRoot !== request.sourceRoot || ledger.allocation.reviewRoot !== request.reviewRoot || ledger.allocation.planRoot !== request.planRoot || ledger.allocation.reuseGrantRoot !== reuse.grant.root || ledger.allocation.diagnosisRoot !== (request.diagnosis?.root ?? null) || !same(ledger.allocation.requestRoots, request.requestRoots) || !same(ledger.allocation.candidateRoots, [...request.candidateRoots].sort())) return fail("ALLOCATION")
   return { request, reuse, ledger, allocation: ledger.allocation }

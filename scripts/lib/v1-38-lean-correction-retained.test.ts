@@ -8,7 +8,15 @@ import * as coldBuilder from "./v1-38-lean-cold-corpus.js"
 import * as proposalBuilder from "./v1-38-lean-training-adapter.js"
 import { executeLeanReusedCurrentPipeline, compactLeanBaselineCell, leanBaselineMetricCoverage, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
 import { buildLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
-import { auditLeanCorrectionRetained, validateLeanSupervisorReasonJoin, type LeanCorrectionRetainedSnapshot } from "./v1-38-lean-correction-retained.js"
+import { auditLeanCorrectionRetained, authenticateLeanSupervisorDiagnosticCheck, validateLeanSupervisorReasonJoin, type LeanCorrectionRetainedSnapshot } from "./v1-38-lean-correction-retained.js"
+import * as correctionIO from "../run-v1-38-lean-correction.js"
+import * as ledgerIO from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import * as fileIO from "node:fs"
+import * as sourceIO from "./v1-38-lean-baseline-source.js"
+vi.mock("node:fs", async importOriginal => {
+  const original = await importOriginal<typeof import("node:fs")>()
+  return { ...original, readdirSync: vi.fn(original.readdirSync) }
+})
 import { existsSync } from "node:fs"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_BASELINE_STORE, createLeanCorrectionAllocation, createLeanSupervisorCorrectionAllocation, leanCanonicalBytes, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
@@ -165,9 +173,10 @@ const dispatchedSources: Array<{ bottom: LeanBaselineSource; top: LeanBaselineSo
 const supervisorFixture = (input: unknown): LeanCorrectionRetainedSnapshot => {
   const s = structuredClone(input) as LeanCorrectionRetainedSnapshot, old = s.allocation, { root: _priorRoot, ...prior } = old.predecessor
   const predecessorBody = { ...prior, chargedMatches: old.route === "diagnostic" ? 11 : 12, elapsedUpperBoundMs: 5282046 }
-  const a = createLeanSupervisorCorrectionAllocation({ sourceRoot: old.sourceRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot, planRoot: old.planRoot, candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, seed: old.seed, route: old.route, reuseGrantRoot: old.reuseGrantRoot, supervisorDecisionRoot: labRoot("mock-approved-decision", {}), acceptedCheckRoot: old.route === "diagnostic" ? null : labRoot("mock-check-no-authority", {}), predecessor: { ...predecessorBody, root: labRoot(prior.schemaVersion, predecessorBody) } })
+  const request = { ...s.request, schemaVersion: "lean-correction-supervisor-request-v2" as const, diagnosis: null, supervisorDecisionRoot: labRoot("mock-approved-decision", {}), acceptedCheckRoot: old.route === "diagnostic" ? null : labRoot("mock-check-no-authority", {}), setupAccountingPath: "mock-source-fixture-only", setupAccountingRoot: labRoot("mock-setup-witness", {}) }
+  const a = createLeanSupervisorCorrectionAllocation({ sourceRoot: old.sourceRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot, planRoot: old.planRoot, candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, seed: old.seed, route: old.route, reuseGrantRoot: old.reuseGrantRoot, supervisorDecisionRoot: request.supervisorDecisionRoot, acceptedCheckRoot: request.acceptedCheckRoot, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), dataReviewRoot: request.dataReviewRoot, setupAccountingRoot: request.setupAccountingRoot, predecessor: { ...predecessorBody, root: labRoot(prior.schemaVersion, predecessorBody) } })
   s.allocation = a; s.schemaVersion = "lean-correction-supervisor-retained-snapshot-v2"
-  s.request = { ...s.request, schemaVersion: "lean-correction-supervisor-request-v2", diagnosis: null, supervisorDecisionRoot: a.supervisorDecisionRoot!, acceptedCheckRoot: a.acceptedCheckRoot! }
+  s.request = request
   s.entry = { ...s.entry, schemaVersion: "lean-child-entry-v2", allocationRoot: a.root, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(s.request)), parentPid: 123, childPid: 124, handshakeRoot: labRoot("mock-handshake", {}), wallStartMs: 1000, monotonicStartNs: "1000000000" }
   s.terminal = { ...s.terminal, schemaVersion: "lean-child-terminal-v2", entryBytesRoot: leanBytesRoot(leanCanonicalBytes(s.entry)), allocationRoot: a.root, parentPid: 123, childPid: 124, exitCode: 0, signal: null, status: "child_exited", wallObservedMs: 2000, monotonicObservedNs: "2000000000", elapsedUpperBoundMs: 1000, parentRssBytes: 4096, childRssObservedBytes: 4096, physicalBytes: 8192, freeBytes: 15000000000 }
   const events = Buffer.from(s.journalBytes).toString("utf8").trim().split("\n").map(line => JSON.parse(line))
@@ -207,6 +216,42 @@ const supervisorFixture = (input: unknown): LeanCorrectionRetainedSnapshot => {
 }
 
 describe("v2 complete audit, not a reason-only gate", () => {
+  it.skipIf(!existsSync(reuseDirectory))("authenticates only rooted full reports with the actual closed reader interval (all custody mocked)", () => {
+    const s = supervisorFixture(fixture()), paths = ledgerIO.LEAN_SUPERVISOR_CORRECTION_ROUTES.diagnostic, interval = "correction-supervisor-diagnostic-v2-verifier"
+    const audited = auditLeanCorrectionRetained(s), { root: _root, ...auditedBody } = audited
+    const body = { ...auditedBody, cumulativeElapsedMs: 5283146, cumulativePhysicalBytes: 16384, readerScratchHighWaterBytes: 512000000, readerInterval: interval, readerStartMs: 2000, readerObservedMs: 2100 }
+    let check: Record<string, unknown> = { ...body, root: labRoot(body.schemaVersion, body) }
+    let time = { ...s.time, active: false, elapsedMs: 5283246, closedElapsedMs: 5283246, starts: new Map([["pilot-entry", 1000], [interval, 2000]]), closes: new Map([["pilot-entry", 2000], [interval, 2200]]), closed: new Set(["pilot-entry", interval]) }
+    const names = ["allocation.json", "ledger.ndjson", "time.ndjson", "entry.json", "child-terminal.json", "result.json", "cold-reuse.json", "correction-origin.json", "pair-0.json", "observation-0.json", "source-tactical-0.json", "source-cold-opponent.json", paths.reason, paths.check]
+    try {
+      vi.spyOn(ledgerIO, "openLeanLedger").mockReturnValue({ directory: paths.store, allocation: s.allocation })
+      vi.spyOn(ledgerIO, "readLeanChildEntry").mockReturnValue(s.entry); vi.spyOn(ledgerIO, "readLeanChildTerminal").mockReturnValue(s.terminal)
+      vi.spyOn(ledgerIO, "readLeanTimeAccounting").mockImplementation(() => time)
+      vi.spyOn(ledgerIO, "verifyLeanEvidence").mockReturnValue(s.evidence)
+      vi.spyOn(ledgerIO, "readLeanLedger").mockReturnValue({ stopped: true, charged: 12, charges: new Map([[s.allocation.slots[0]!.root, {}]]) } as never)
+      vi.spyOn(correctionIO, "readLeanCorrectionRequest").mockReturnValue({ request: s.request, reuse: s.reuse })
+      vi.spyOn(fileIO, "readdirSync").mockReturnValue(names as never)
+      vi.spyOn(sourceIO, "readLeanBaselineSource").mockImplementation((_directory, role) => s.sources.find(source => source.role === role)!)
+      vi.spyOn(correctionIO, "readLeanCorrectionJson").mockImplementation(path => {
+        if (path.endsWith(paths.check)) return check
+        if (path.endsWith("result.json")) return s.result
+        if (path.endsWith("cold-reuse.json")) return s.reuse
+        if (path.endsWith("pair-0.json")) return s.pairs[0]
+        if (path.endsWith("observation-0.json")) return s.observations[0]
+        if (path.endsWith("correction-origin.json")) return s.origin
+        throw new Error("MOCK_UNEXPECTED_READ")
+      })
+      vi.spyOn(correctionIO, "readLeanCorrectionPrivateBytes").mockImplementation(path => path.endsWith("ledger.ndjson") ? s.journalBytes : path.endsWith(paths.reason) ? s.supervisorReasonBytes! : path.endsWith(paths.check) ? leanCanonicalBytes(check) : (() => { throw new Error("MOCK_UNEXPECTED_READ") })())
+      expect(authenticateLeanSupervisorDiagnosticCheck()).toMatchObject({ root: check.root, closedElapsedMs: time.elapsedMs, readerCloseMs: 2200 })
+      const good = structuredClone(check)
+      for (const changed of [{ schemaVersion: "lean-correction-retained-v1" }, { accepted: false }, { currentCharged: 0 }, { sourceRoot: labRoot("wrong", {}) }, { reasonRoot: labRoot("wrong-reason", {}) }, { head: "b".repeat(40) }, { readerStartMs: 1999 }, { cleanupComplete: false }]) {
+        const { root: _prior, ...mutated } = { ...good, ...changed } as Record<string, unknown>; check = { ...mutated, root: labRoot("lean-correction-supervisor-retained-v2", mutated) }
+        expect(() => authenticateLeanSupervisorDiagnosticCheck()).toThrow()
+      }
+      check = good; time = { ...time, active: true }
+      expect(() => authenticateLeanSupervisorDiagnosticCheck()).toThrow("ACCEPTED_READER_CLOSURE")
+    } finally { vi.restoreAllMocks() }
+  }, 30000)
   it.skipIf(!existsSync(reuseDirectory))("requires every one-cell evidence join despite unknown old cause", () => {
     const s = supervisorFixture(fixture())
     expect(auditLeanCorrectionRetained(s)).toMatchObject({ accepted: true, currentCharged: 1, cumulativeCharged: 12, successful: 1, observedOrigin: "unknown", complete: false, phaseComplete: false })
@@ -215,6 +260,7 @@ describe("v2 complete audit, not a reason-only gate", () => {
       s => { s.supervisorReasonBytes = new Uint8Array(4097) }, s => { s.observations[0]!.cell.compact.cleanupComplete = false },
       s => { s.time.active = true }, s => { s.journalBytes = new Uint8Array() }, s => { s.evidence.charged-- },
       s => { s.request.acceptedCheckRoot = labRoot("unexpected", {}) }, s => { s.result.evidenceRoot = labRoot("wrong", {}) },
+      s => { s.request.dataReviewRoot = labRoot("wrong-data-review", {}) }, s => { s.request.setupAccountingRoot = labRoot("wrong-setup", {}) },
     ]
     for (const mutate of mutations) { const bad = structuredClone(s); mutate(bad); expect(() => auditLeanCorrectionRetained(bad)).toThrow() }
   }, 30000)
