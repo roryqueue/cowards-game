@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: blocked
-stopped_at: Approved saved-data pass closed; reader bug repaired; prospective experiment scope decision needed
+status: in_progress
+stopped_at: Fresh repaired-reader v4 diagnostic and conditional baseline approved; source plan check underway
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Read-only diagnosis closed at reuse_json; reviewed byte comparison fix and fixture types; 47 tests and project typecheck pass
+last_activity_desc: Human approved one distinct diagnostic and conditional36 baseline; immutable carry20,471,046ms plus current setup,12 prior charges
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED FRONTIER: Human approved 265-16-FRESH-READER-APPROVAL-20261005.md: ONE DISTINCT v4 private diagnostic and at most ONE36baseline ONLY after complete unique new diagnostic acceptance. Existing Plan16 source supplement/check underway; no actual request/allocation/entry/verifier/hold yet. Carry20,471,046ms before current turn1791225186000 and EVERY later cost under same15GB/8h/300/12 spent charges. All consumed routes/readers and saved-data diagnostic immutable/unaccepted; never rerun or recredit. Repaired exact-byte reader applies prospectively. All strict real consumers must join v4, old default/v1/v2/v3 unchanged. No new caps/rules/search regeneration, freeze/formation/holdout/public/counting/production credit. Prior pending paragraphs are historical only.
 
 ## Current continuation — approved distinct v3, 2026-10-05
 
