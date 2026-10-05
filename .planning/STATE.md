@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: awaiting_human_decision
-stopped_at: Source-only reader repair reviewed and verified; fresh saved-evidence diagnostic decision required
+status: in_progress
+stopped_at: Approved one non-authorizing saved-v3 diagnostic; source-only helper and independent review next
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Reader repairb4b80640/726ae66f clean;72worker+21MAINtests/types/threezero scans; saved-evidence diagnosis recommended
+last_activity_desc: Human approved saved-data diagnostic only; no Matches or old-reader retry; setup costs carry from1791215127000
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved distinct v3, 2026-10-05
+
+CURRENT APPROVED SAVED-DATA DIAGNOSIS: Directhuman"yes, approved" turn01a10cbd-cb18-7991-8426-5c82c2e8b1fe authorizesONE DISTINCTnon-authorizingreadonlydiagnostic pass ofsavedv3evidence, fixedindependentlyreviewedchecker/newexclusiveoutput. Approval20261005 and GSDdebugsession saved-v3-checker-refusal additiveexistingPlan16. No actualpass/helperinvocation yet. No oldordinaryreaderretry/acceptedcheck/recredit/refund/newMatch/provider/Strategyexecution/baselineauthority; alloldbytes/readers/journalsimmutable. Source-onlyhelper/TDD/review/gates first, thenONEactualpass; no rawprivatepayload/errors. Actualapp priorcompletionupper1791207419000 adds166975ms toprior17153071floor =>17324046msbefore currentsetup1791215127000; allnewwork carries, interturnhumanidleonlyexcluded, twelvecharges/same15GB/8h/300. No activeentry/verifier/sourcehold/heavywork. Phase265incomplete, freeze/formation/holdout/public/counting/production/LEAGunadmitted. Previouspendingparagraph below historical, superseded only within this newdiagnosis-onlyscope.
 
 CURRENT HUMAN-ONLY FRONTIER: Boundedsource-only READER-REPAIR closed GREENb4b806408c207b875d47d4321f82190a53fd14a1/manifestsha256:726ae66ff9f656247af0992a6fbadf48c2b550a41d97b8b69363f10e91262add/886. Actualindependent smallerreviewer scopedREVIEW-v1 clean/0findings; MAIN narrowSOURCE-VERIFICATION-v1 verified. Worker72tests143.33s+focused6; MAIN21tests27.79s/project+labtypes/three1398zero scans/whitespacePASS. Privacy-safe trustedv3guardcodes and prospectiveauthenticatedgap/closing accounting repaired; exactoldrefusalcauseUNKNOWN, mockedwhole-loaderlimitsdisclosed. NOempiricalacceptance/phasecredit. Alloldv3andpriorartifact/readersimmutable, twelvechargesspent; approvalenvelopeENDED/baselineDENIED. MAINwallobservation1791207248025 gives17153071msminimumcumulative including116942omittedgap+all2096942latercosts throughobservation; everylatercostmustcarry, same15GB/8h/300. No activeentry/verifier/heavywork/sourcehold. SAVED-EVIDENCE-DIAGNOSTIC-DECISION-v1 recommendsONE DISTINCTnon-authorizingreadonlydiagnostic ofsavedv3data, notoldordinaryreaderretry/acceptedreport/recredit/newMatch. This prospectivepass is NOTapproved. Awaitdirectnewhumanchoice; no repeatedheavychecks/knownfailingrun. Phase265incomplete; baseline/freeze/formation/holdoutunstarted; nopublic/counting/production/fullLEAG/releasecredit. Earlierfrontiers historical.
 
