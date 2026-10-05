@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh v3 diagnostic prepared; commit allocation before unique MAIN entry
+stopped_at: Fresh v3 check closed refused; envelope ended; bounded source-only reader repair
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Clean actual data review; once-only preparation41547 closed0; aff06160 allocation; zero new charges
+last_activity_desc: Sole reader45725 closed1/no acceptedcheck; twelve cumulative charges; sourcehold released; finite repair only
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,12 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — approved distinct v3, 2026-10-05
+
+V3 CLOSED / SOURCE-ONLY: UniqueMAIN66680 CLOSED0 and sole ordinaryreader45725 CLOSED1/refused, no acceptedcheck/checkfile. Actual readerinterval1791205144755→1791205151083/6328ms inactive; closedjournal14939187ms/rawsha256:7a7362cf73ff72b275bf63a7d8b10f4a1b6b6b4c5c7118aabc206f2fee6f5691. Current1/cumulative12charges, compactSUCCESS/OK/top/cleanuptrue but NOTacceptedempiricalevidence. Known runclose→readerstart116942ms missingfromsummedintervals mustcarryseparately, minimum15056129msbeforealllaterreport/source/admin. Reportrawsha256:2e3b00cfa839e30f3eee7aade0aa9a2f15edc23726b7b473e43d8636b2392325, cumulativephysical4231168B, reasonclean/failureabsent. ExactthrowpointUNKNOWN/nofinitefailurecodemarker; no inventedcause. SourceANDHEADhold RELEASED afteractualclosure+solecheck. Approvedonefreshenvelope ENDED, baselineFORBIDDEN/no furtherempiricalauthority. Bounded SOURCE-ONLY READER-REPAIR-PLAN-v1 addresses definite diagnosticwithholding/prospectivegap accounting with synthetictests; no oldreader, artifacts/timejournalmutation/refund/recredit/newroute. Alloldbytesimmutable; samecaps/boundaries. Phase265incomplete; freeze/formation/holdout/public/counting/production/fullLEAGunadmitted. Earlierlive/checksnapshots history.
+
+V3 TERMINAL / UNIQUE CHECK ACTIVE: Actual MAIN66680 CLOSEDexit0, child_exited_pending_independent_verification, terminalElapsedUpperBoundMs219278. ExactlyONE actualdistinctchild ordinaryretainedcheck assigned /root/execute_265_supervisor_routes_reader for NEWv3 only, no repeatedreader or oldroute. SourceANDHEADb56ce9be/1087ef46 HOLD remains throughactualcheckclosure; no commits/edits/competingheavywork. Cleanprocessoutput is not yet acceptedempiricalcredit or conditionalbaselineadmission. Prior live snapshot history.
+
+ACTUAL V3 ENTRY ACTIVE: UniqueMAINsession66680/parent9736/child9779, wallentry1791204808492; held committed/pushedHEADb56ce9be6163556d88caa2995f36839fa49c0528/source1087ef46/886. Allocationaff06160/rawadf7c456 and request78acf116 fixed. SourceANDHEADHOLD throughactualterminal andONEappropriateuniqueactualcheck; no competingheavywork/commits/edits/duplicateentry/helper/reader. Entry itself is not capacity/import/Match/acceptance proof. Actualcleaneligibleresult permitsONEordinaryreader; absent/invalidcustody getsONEterminal-onlycheck, neverfabricatedhead/result. This handoff remains uncommittedduringhold. Anyfailure/refusalendsenvelope; conditionalbaselineONLYafterfullyacceptednewdiagnostic. Prior prepared snapshot belowhistory.
 
 PREPARED V3: Actual distinct child DATA-REVIEW-v1 clean/rawf5baf26e; MAIN final canonical request raw78acf116/dataRootbc2455f7 and owner0600 witnessedsetuped5f580d. ExactlyONE preparation41547 CLOSEDexit0/preparation_only. New allocation semanticsha256:aff06160f3852f3efd4fdc7a5ecd52b7025eda32c58e82d58e526c090fbd8cf5/rawsha256:adf7c4567e676abd33516b7e2e1d4b9470be041ebf1724ff7f812b8400d2f0b9; real0700store onlyallocation/emptycharges/closedtime. Root finite prefixcheck11prior0currentcharges/14713538msclosed/3506176Bconservativephysical. No entry/provider/Match/reader/hold yet. Commit/push exactallocation anddatareview beforeuniqueMAINrun; fresh SAMEPROCESScapacity beforecharge/provider, sourceANDHEADfixed throughterminal+ONEappropriateactualcheck. Anyfailure/refusalendsenvelope; conditionalONE36baselineONLYafterfullyacceptedNEWv3diagnostic. No oldreader/coldregeneration/refund/recredit or phase/freeze/formation/holdout/public/counting/production/fullLEAGcredit. Earlier source-only paragraphs are snapshots.
 
