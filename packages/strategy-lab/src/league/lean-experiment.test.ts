@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync, readFileSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
+import { execFileSync } from "node:child_process"
 import { afterEach, expect, it } from "vitest"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { labRoot, LAB_ADMITTED_ROOTS } from "../contracts.js"
@@ -12,6 +13,37 @@ import { writeLeanAll, createLeanAllocation, chargeLeanSlot, createLeanLedger, r
 const dirs: string[] = []
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }) })
 const pin = labRoot("test", 1)
+it("debits a real fresh witness once through owned capacity, never predecessor twice", () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v3-accounting-proof-"))); dirs.push(directory)
+  const moduleUrl = new URL("./lean-experiment.ts", import.meta.url).href
+  const contractUrl = new URL("../contracts.ts", import.meta.url).href
+  const code = `
+    import {mkdirSync,writeFileSync,lstatSync,symlinkSync,existsSync} from "node:fs";
+    import {resolve} from "node:path";
+    import {LEAN_CAPS,LEAN_FRESH_SUPERVISOR_SETUP_PATH,leanCorrectionRoutePaths,createLeanSupervisorCorrectionAllocation,createLeanLedger,leanProspectiveOwnedBytes,cumulativeLeanPhysicalBytes,measureLeanPhysicalBytes,assertLeanPublicationCapacity} from ${JSON.stringify(moduleUrl)};
+    import {labRoot} from ${JSON.stringify(contractUrl)};
+    const r = n => labRoot("source-only-witness-proof",n), paths=leanCorrectionRoutePaths("diagnostic","v3");
+    mkdirSync(".strategy-lab",{mode:0o700});mkdirSync(".planning/artifacts",{recursive:true,mode:0o700});mkdirSync(paths.temp,{mode:0o700});
+    const p={schemaVersion:"lean-correction-predecessor-v1",chargedMatches:11,elapsedUpperBoundMs:10888046,allocatedDiskBytes:2179072,historicalPeakDiskBytes:"unknown",historicalPeakRssBytes:"unknown",historyRoot:r(0),survivors:[{identity:".strategy-lab/mock-old-survivor",allocatedBytes:4096}]};
+    const input={sourceRoot:r(1),reviewRoot:r(2),coldRoot:r(3),planRoot:r(4),candidateRoots:[r(5),r(6)],requestRoots:[r(7)],seed:"source-only-proof",route:"diagnostic",reuseGrantRoot:r(8),supervisorDecisionRoot:r(9),acceptedCheckRoot:null,requestBytesRoot:r(10),dataReviewRoot:r(11),setupAccountingRoot:r(12),predecessor:{...p,root:labRoot(p.schemaVersion,p)}};
+    const allocation=createLeanSupervisorCorrectionAllocation(input,3), ledger=createLeanLedger(paths.store,allocation), before=cumulativeLeanPhysicalBytes(ledger), beforeOwned=leanProspectiveOwnedBytes(ledger);
+    const pending=Math.floor((LEAN_CAPS.retainedBytes-before-65536)/4096)*4096;
+    assertLeanPublicationCapacity(ledger,pending);
+    writeFileSync(LEAN_FRESH_SUPERVISOR_SETUP_PATH,"source-only synthetic witness",{mode:0o600,flag:"wx"});
+    const blocks=lstatSync(LEAN_FRESH_SUPERVISOR_SETUP_PATH).blocks*512, after=cumulativeLeanPhysicalBytes(ledger), afterOwned=leanProspectiveOwnedBytes(ledger);
+    let capacityDenied=false;try{assertLeanPublicationCapacity(ledger,pending)}catch{capacityDenied=true}
+    const ownedBeforeWitness=beforeOwned-measureLeanPhysicalBytes(ledger.directory), nearP={...p,allocatedDiskBytes:LEAN_CAPS.retainedBytes-ownedBeforeWitness-4096-131072};
+    const near=createLeanSupervisorCorrectionAllocation({...input,predecessor:{...nearP,root:labRoot(nearP.schemaVersion,nearP)}},3), refused=".strategy-lab/mock-admission-refused";
+    let admissionDenied=false;try{createLeanLedger(refused,near)}catch{admissionDenied=!existsSync(refused)}
+    symlinkSync(resolve(LEAN_FRESH_SUPERVISOR_SETUP_PATH),paths.temp+"/witness-alias");
+    let aliasDenied=false;try{cumulativeLeanPhysicalBytes(ledger)}catch{aliasDenied=true}
+    console.log(JSON.stringify({blocks,delta:after-before,ownedDelta:afterOwned-beforeOwned,priorUnchanged:allocation.predecessor.allocatedDiskBytes===2179072,capacityDenied,admissionDenied,aliasDenied}));
+  `
+  const output = execFileSync(process.execPath, ["--import", import.meta.resolve("tsx"), "--input-type=module", "-e", code], { cwd: directory, env: { ...process.env, TSX_DISABLE_CACHE: "1", NODE_DISABLE_COMPILE_CACHE: "1" }, timeout: 30000, maxBuffer: 4096, encoding: "utf8" })
+  const result = JSON.parse(output) as { blocks: number; delta: number; ownedDelta: number }
+  expect(result.blocks).toBeGreaterThan(0); expect(result.delta).toBe(result.blocks); expect(result.ownedDelta).toBe(result.blocks)
+  expect(result).toMatchObject({ priorUnchanged: true, capacityDenied: true, admissionDenied: true, aliasDenied: true })
+}, 35000)
 it("keeps fresh-v3 destinations disjoint and all legacy path selectors unchanged", () => {
   const destinations = (routes: typeof LEAN_CORRECTION_ROUTES | typeof LEAN_SUPERVISOR_CORRECTION_ROUTES | typeof LEAN_FRESH_SUPERVISOR_ROUTES) => Object.values(routes).flatMap(route => [route.store, route.request, route.allocation, route.check, route.temp])
   const old = [...destinations(LEAN_CORRECTION_ROUTES), ...destinations(LEAN_SUPERVISOR_CORRECTION_ROUTES)], fresh = destinations(LEAN_FRESH_SUPERVISOR_ROUTES)

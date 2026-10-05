@@ -54,8 +54,13 @@ describe("supervisor v2 source-only admission", () => {
     const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-recursive-mock-")))
     try {
       mkdirSync(join(directory, "tsx-501")); mkdirSync(join(directory, "nested")); writeFileSync(join(directory, "nested", "retained"), "mock", { mode: 0o600 })
-      const rows = inventoryLeanSupervisorSurvivors([directory, join(directory, "nested")])
-      expect(rows.map(row => row.identity)).toEqual([directory, join(directory, "nested"), join(directory, "nested", "retained"), join(directory, "tsx-501")])
+      const currentWitness = join(directory, "new-v3-witness")
+      writeFileSync(currentWitness, "source-only synthetic witness", { mode: 0o600 })
+      // Owned witness is deliberately outside the predecessor roots. Real
+      // recursive inventory counts only predecessor inodes, including TMP.
+      const rows = inventoryLeanSupervisorSurvivors([join(directory, "nested"), join(directory, "nested", "retained"), join(directory, "tsx-501")])
+      expect(rows.map(row => row.identity)).toEqual([join(directory, "nested"), join(directory, "nested", "retained"), join(directory, "tsx-501")])
+      expect(rows.some(row => row.identity === currentWitness)).toBe(false)
       expect(() => inventoryLeanSupervisorSurvivors([directory, directory])).toThrow("SURVIVOR_DUPLICATE")
       symlinkSync(join(directory, "nested", "retained"), join(directory, "alias"))
       expect(() => inventoryLeanSupervisorSurvivors([directory])).toThrow("SURVIVOR")
