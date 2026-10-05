@@ -12,7 +12,7 @@ verifier_agent: /root/execute_265_supervisor_routes_reader
 independently_verified: true
 dispatch: inline_distinct_implementation_author_agent_thread_limit
 independent_focused_tests: 9/9
-root_full_integration_tests: pending
+root_full_integration_tests: 116/116
 empirical_admitted: false
 baseline_admitted: false
 phase_complete: false
@@ -32,10 +32,10 @@ The actual child verifier is distinct from root, who authored this repair. This 
 
 Independent command `pnpm exec vitest run scripts/lib/v1-38-lean-baseline-source.test.ts scripts/lib/v1-38-lean-baseline-authority.test.ts --maxWorkers=1` closed exit0:2files/9tests pass,13.18s. Tests exercise the actual consumer publishers/issuer without executing hostile Strategy or provider code; capacity, outer reuse validation and ledger state alone are synthetic. This adds real consumer coverage that the prior mock pipeline/source-publication tests lacked.
 
-The independently recomputed fixed transitive manifest is `sha256:cc3d171f698d5ad0de73ed9419acd8c44fe2e2c278f505e0e202792ff3eb6585`/884entries; its full source closure diff against db4f503b is empty. Root separately reports project and strategy-lab types and all three1398-file boundary scans passing with0violations. Root's broader116-test/six-file suite is still pending at this document's publication and is not claimed passed here.
+The independently recomputed fixed transitive manifest is `sha256:cc3d171f698d5ad0de73ed9419acd8c44fe2e2c278f505e0e202792ff3eb6585`/884entries; its full source closure diff against db4f503b is empty. Root separately reports project and strategy-lab types, whitespace checks and all three1398-file boundary scans passing with0violations. After initial publication, root confirmed its broader116-test/six-file suite closed PASS in132.67s against the same fixed source. That result is root-executed evidence, separate from the verifier's independent9-test consumer run; no repeated heavy suite was performed.
 
 This closes five narrow source truths, not the empirical integration failure. The original real consumer allowlists omitted the new schemas; prior mocked publisher/dispatch coverage and root's earlier source review missed that incompatibility. The generic retained UNKNOWN_INTERNAL_FAILURE/stageunknown receipt does not independently establish the precise empirical thrown point, so initiating cause remains unknown. No result is fabricated or reinterpreted under the repaired revision. The ended approved envelope supplies no second diagnostic, baseline, retry or new Match authority, and no freeze/formation/holdout/public/counted/production/release/LEAG, phase or milestone credit.
 
 ## Self-Check: PASSED
 
-The exact repair commit/manifest, distinct implementation author/verifier identities, scoped real-consumer tests and all five source truths were checked. Broader pending verification is explicitly identified rather than treated as complete.
+The exact repair commit/manifest, distinct implementation author/verifier identities, scoped real-consumer tests and all five source truths were checked. Root's completed broader source verification is attributed separately from the independently executed focused consumer tests.
