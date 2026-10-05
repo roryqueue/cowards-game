@@ -3,6 +3,7 @@ import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { parseLeanCorrectionCommand, assertLeanCorrectionResources } from "./run-v1-38-lean-correction.js"
 import { assessLeanPrefixCapacity } from "./run-v1-38-lean-experiment.js"
+import * as session from "./lib/v1-38-lean-container-match-session.js"
 
 const native = vi.hoisted(() => ({ deny: () => { throw new Error("NO_NATIVE_STARTUP_V5_FIXTURE") } }))
 vi.mock("node:worker_threads", async original => ({ ...await original<typeof import("node:worker_threads")>(), Worker: native.deny }))
@@ -44,5 +45,13 @@ describe("contracts", () => {
     expect(() => assessLeanPrefixCapacity({ ...m, elapsedMs: 43_200_000 }, undefined, a)).toThrow()
   })
 })
-describe("runtime", () => { it("denies native execution by default", () => expect(native.deny).toThrow("NO_NATIVE")) })
+describe("runtime", () => {
+  it("denies native execution by default", () => expect(native.deny).toThrow("NO_NATIVE"))
+  it("gates original hostile evaluation behind trusted READY and GO", () => {
+    const source = session.buildLeanStartupWorkerHarnessV5()
+    expect(source.indexOf("trustedPublishReadyV5()")).toBeLessThan(source.indexOf("const runStrategy ="))
+    expect(source.indexOf("trustedWaitGoV5()")).toBeLessThan(source.indexOf("const runStrategy ="))
+    expect(session.buildLeanContainerBrokerSourceV5()).toContain("superviseLeanStartupV5")
+  })
+})
 describe("closure", () => { it("never treats source tests as empirical authority", () => expect(lean.LEAN_CAPS.matches).toBe(300)) })
