@@ -11,7 +11,9 @@ import { admitFactory, authorizeFactorySupervision } from "../../packages/strate
 import { buildPlannerCandidate } from "../../packages/strategy-lab/src/planner/emit.js"
 import { leanBytesRoot, leanCanonicalBytes, type LeanCharge, type LeanExperimentLedger } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { buildLeanBaselineSource } from "./v1-38-lean-baseline-source.js"
-import { claimLeanRuntimeAuthority, issueLeanBaselineRuntimeAuthority, type LeanBaselinePair } from "./v1-38-lean-experiment-authority.js"
+import { claimLeanRuntimeAuthority, issueLeanBaselineRuntimeAuthority, issueLeanCorrectionRuntimeAuthority, isLeanCorrectionRuntimeAuthority, type LeanBaselinePair } from "./v1-38-lean-experiment-authority.js"
+import * as reuseIO from "./v1-38-lean-baseline-reuse.js"
+import type { LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 
 const retained = vi.hoisted(() => ({ state: {} as unknown }))
@@ -44,6 +46,22 @@ const fixture = () => {
   return { ledger, charge, source, pair, pairPath, journal, binding }
 }
 describe("distinct baseline runtime authority", () => {
+  it.each(["lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-baseline-allocation-v2"])("joins the real %s issuer to exact mock pair/source/charge custody", schemaVersion => {
+    const f = fixture(), grantRoot = labRoot("mock-reuse-grant", f.charge.root)
+    const reuse = { grant: { root: grantRoot }, sources: [f.source] } as unknown as LeanColdReuse
+    const validation = vi.spyOn(reuseIO, "validateLeanColdReuse").mockReturnValue(reuse)
+    Object.assign(f.ledger.allocation, { schemaVersion, sourceRoot: labRoot("mock-successor-code", f.charge.root), reuseGrantRoot: grantRoot })
+    try {
+      const authority = issueLeanCorrectionRuntimeAuthority(f.ledger, f.charge, f.source, f.binding, reuse)
+      expect(isLeanCorrectionRuntimeAuthority(authority)).toBe(true)
+      for (const layer of ["factory", "planner", "session"] as const) expect(claimLeanRuntimeAuthority(authority, f.binding, layer)).toEqual({ lifetimeMs: 600000, receiptMs: 5000 })
+      expect(() => issueLeanCorrectionRuntimeAuthority(f.ledger, f.charge, f.source, f.binding, reuse)).toThrow()
+      Object.assign(f.ledger.allocation, { reuseGrantRoot: labRoot("forged-grant", 1) })
+      expect(() => issueLeanCorrectionRuntimeAuthority(f.ledger, f.charge, f.source, f.binding, reuse)).toThrow()
+      Object.assign(f.ledger.allocation, { reuseGrantRoot: grantRoot, schemaVersion: "unapproved-v3" })
+      expect(() => issueLeanCorrectionRuntimeAuthority(f.ledger, f.charge, f.source, f.binding, reuse)).toThrow()
+    } finally { validation.mockRestore() }
+  }, 20000)
   it("binds cumulative predecessor costs, precharge pair prefix and exact source/snapshot roots", () => {
     const f = fixture(), authority = issueLeanBaselineRuntimeAuthority(f.ledger, f.charge, f.source, f.binding)
     expect(() => claimLeanRuntimeAuthority(authority, f.binding, "planner")).toThrow()

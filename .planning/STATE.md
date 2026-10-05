@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Plan265-16 supervisor diagnostic prepared; commit allocation before sole MAIN entry
+stopped_at: Plan265-16 sole diagnostic failed before charge; unique terminal check closed; source-only schema repair
 last_updated: "2026-10-04"
 last_activity: 2026-10-04
-last_activity_desc: Clean independent data review and unique preparation closed; new allocation da940e2a, no new Match charges
+last_activity_desc: Diagnostic55106 and unique terminal-only check closed; zero current charges, no result or baseline authority; direct consumer regressions RED
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — human-authorized repair, 2026-10-04
+
+CURRENT CLOSED V2 / SOURCE-ONLY REPAIR: ExactlyONE MAIN55106 CLOSEDexit1, parent92665/child92702 absent, actualchild_failed/exit1/nullsignal/terminalrawd8cf7c2c, reasonb6e7105a/reasons[]/uncertainfalse/failureReceiptpublished, childUNKNOWN_INTERNAL_FAILURE/stageunknown. Noresult, emptychargeledger,0current/11cumulativecharges, no ordinaryreader or acceptedcheck; initiatingthrowpointunknown. ONE actual terminal-only check CLOSED321030ms, finalrawtime29aad4a28078c2d3b9fb67bf8106d8ff3c0ec9f5cb81cb7178ea3786ce7eaf5c,10230553msclosedcumulative/inactive; disclosed metadata-field bookkeeping failure, notrestartedcheck or acceptance. Source/HEAD0d374eac/b657/884 heldthroughclosure; HOLD RELEASED. Approveddiagnosticenvelope CONSUMED/ended; conditionalbaseline DENIED, no furtherempiricalroute authorized. Safe static diagnosis identifies definite missedv2schemajoins in real source publishers and runtimeauthority issuer; five direct consumer regressions failexactlythoseguards (no actualprovider/Match). Root may finish narrow source-only correctness repair/review/gates, preserving oldsource/evidence/requests/results/charges/readers; no retry/refund/recredit/newallocation/Match until genuinelynewprospectiveauthority. Same15GB/8h/300/guest1000-host5000-Match600000,192spent/128future; historicalcause/peaksunknown. Phase265incomplete; freeze/formation/holdout/public/counting/production/LEAGunadmitted. Earlier prepared/sourcefrontiers retained history.
 
 CURRENT PREPARED V2 DIAGNOSTIC: Independent actual child DATA-REVIEW-v1 clean/aea35247/raw5dcf4472; finalized root-authored canonical request raw4b8e01ee/dataRoot9299aac4. ExactlyONE preparation53571 CLOSEDexit0/preparation_only. New allocation semantic sha256:da940e2a1d151d80fb9b1e4c7389b5f06440b72407a87451c03a075235bc5c2d/rawsha256:016071d6a2065f00a1c0851b478d7e0ae6164fdbca7f1d8a690384d44db22974. Real0700store has onlyallocation/emptyledger/closedtime; root finite prefixcheckPASS,11prior/0currentcharges,9807902msclosed cumulative,2154496Bsurviving physical. Fixed reviewed source b339508a/manifestb6575317/884entries and all completed gates unchanged. No empirical entry/verifier/hold yet. Commit/push exact NEW allocation before ONE MAIN run; actual passing SAMEPROCESS capacity before charge/provider, sourceANDHEADfixed throughterminal+ONEappropriate independentactualcheck. Entire prepareclosure→run administrative gap debited by reviewed v2 carrier, no missing time or bespoke helper. New diagnostic failure/refusal ends envelope; baselineONLYafterfullyaccepted newclean check. Old consumed histories immutable; no oldreader/refund/recredit/coldregeneration/extra tuning, no formation/holdout/public/counting/production/freeze/LEAG authority. Prior source/pending paragraphs retained history.
 
