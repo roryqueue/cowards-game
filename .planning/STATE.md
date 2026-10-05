@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Conditional36 baseline prepared; commit/push allocation before unique MAIN entry
+stopped_at: V4 baseline and unique retained verifier CLOSED; 10/36 partial; source-only diagnosis
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: Accepted v4diagnostic; baselineallocation229b7738/13prior0currentcharges/23496195ms closed prefix
+last_activity_desc: V4 baseline retained_valid but incomplete; 23 cumulative charges; subprocess-signal diagnosis only
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CLOSED FRONTIER (2026-10-05): Unique MAIN baseline84983 CLOSED exit0 and ONE ordinary retained verifier26989 CLOSED exit0. Actual checkcca10fe3/raw57a69723 is accepted/retained_valid/limited_exploratory BUT complete=false: 10/36 cells, nine successes and one system failure, all cleanup=true; no robust claim or phase/freeze credit. Diagnostic v4 acceptancea323f13f remains immutable. HeldHEAD74e072c1/sourcecf9096 unchanged through both closures; SOURCE+HEAD hold now RELEASED, no active run/reader. Report FRESH-READER-BASELINE-VERIFICATION-v1 records exact roots. Closed accounting24910444ms at1791229625398, 23 cumulative charges, retained9617408B, scratchhighwater1201831936B; EVERY later source/report/admin cost carries, same15GB/28800000ms/300Match. Approved ONE diagnostic plus conditional ONE baseline envelope is consumed; no new Match, repeat reader, resume/refund/recredit or altered old bytes. New finite inspection of observation9 cell.diagnostic finds SUBPROCESS_SIGNAL/native_response/executor/selectActivations/ordinal0 with compact7358ms, NOT evidence of Match600000ms ceiling or hidden broadcatch exception. Exact signal/cause remains unknown. Source-only GSD diagnosis may continue using finite metadata and static source, no private payloads or execution. Later asynchronous proposal to add four future hours is NOT approved/applied. Phase265/Plan16 incomplete;266freeze/formation/holdout/public/counting/production/fullLEAG/archive-success/tag remain gated. All following live/prepared paragraphs are historical snapshots, not current instructions.
+
+ACTUAL BASELINE V4 ENTRY ACTIVE: UNIQUE MAINsession84983 started overcommitted/pushedHEAD74e072c1edc6da7d117ca21a61fe54d5e8a10e22 and reviewedsourcecf9096c6; exactallocation229b7738/raw1d28bc2e/request8ae0658e. SOURCE+HEADHOLD throughactualterminal+ONEappropriateuniquecheck, no edits/commits/competingheavytests or duplicateentry/helper/reader. This STATE handoff remainsuncommittedduringhold. ActualentryisNOTcapacity/charge/Match/acceptanceproof; actualpassingSAMEPROCESS gate precedesrelease. Fresh36routeadmittedbyhuman'sconditionalenvelopeafteracceptednewdiagnostic; no extraattempts/capchange/oldreuse. All currentadministrative/livecosts count. Eligibleactualresult/head permitsONEordinaryfullreader; absent/invalidresultgetsONEterminal-onlycheck, neverfabricatedinputs. Do notfinalizephase/freeze/formation/holdout/public/counted/production/fullLEAG beforeactualrequiredverification. Priorpreparedparagraph history.
 
 CURRENT BASELINE PREPARED: Diagnosticaccepted a323f13f remainsimmutable. Actual MAIN baseline draft96956/finalize46041 and independentDATA-REVIEW-v1 clean; finalrequestraw8ae0658e/data5169617e binds36slotroots/2candidates/exactacceptednewv4check/samecold128futureopportunities. ExactlyONE preparation60269 CLOSED0, allocationsemantic229b7738fae7459489a2a6c7126b92c518db89755357bce32b769c435f2b2499/raw1d28bc2ecadc1b7ebe6b62d9e8bc11502656998a591c78a3080a3d33338e89ca. Finiteprefix13prior0current/23496195msCLOSEDinactive/7180288Bphysical/real0700storeonlyallocation,emptyledger,time. No baselineentry/verifier/hold/provider/Match yet. Commit/push exactallocation anddatareview BEFOREoneMAINrun; freshSAMEPROCESScapacity precedescharge. SOURCEcf9096+HEADheldthroughterminal+ONEuniqueordinaryreader ifactualeligible result/head, otherwiseterminalonly. No competingheavywork. Same15GB/8h/300/guest1000-host5000-Match600000, per-next-Match1.86Mmsreserve/liveguards; complete36notguaranteedwithinremainingbudget. No additionalbaseline/retry/refund/recredit. Allcost/survivorscarry, oldroutes/readersimmutable. Phase265/266freeze/formation/holdout/public/counting/production/fullLEAGcredit notadmitted. Olderparagraphshistory.
 
