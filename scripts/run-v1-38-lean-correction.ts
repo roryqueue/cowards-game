@@ -139,7 +139,7 @@ export const readLeanCorrectionPrivateBytes = (path: string, limit = 262144): Ui
 }
 export const readLeanCorrectionJson = (path: string, limit = 262144): unknown => {
   const bytes = readLeanCorrectionPrivateBytes(path, limit), value: unknown = JSON.parse(Buffer.from(bytes).toString("utf8"))
-  if (!same([...bytes], [...leanCanonicalBytes(value)])) return fail("CANONICAL")
+  if (!Buffer.from(bytes).equals(Buffer.from(leanCanonicalBytes(value)))) return fail("CANONICAL")
   return value
 }
 export const publishLeanCorrection = (path: string, value: unknown, ledger?: LeanExperimentLedger): void => {
