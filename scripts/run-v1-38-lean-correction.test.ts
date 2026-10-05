@@ -10,6 +10,35 @@ import * as accounting from "../packages/strategy-lab/src/league/lean-experiment
 import { LEAN_CORRECTION_ROUTES, inventoryLeanSupervisorSurvivors, admitsLeanSupervisorReviewAgents, assertLeanCorrectionResources, parseLeanCorrectionCommand, validateLeanCorrectionDiagnosis, deriveLeanCorrectionRequestRoots, beginLeanCorrectionAdmission, closeLeanCorrectionAdmission, leanCorrectionAdmissionElapsed, assertLeanCorrectionAdmissionTime } from "./run-v1-38-lean-correction.js"
 import { deriveLeanBaselineCandidateRoots, waitLeanBoundedChildReady } from "./run-v1-38-lean-baseline.js"
 import { LEAN_COLD_REUSE_HISTORY } from "./lib/v1-38-lean-baseline-reuse.js"
+import * as correction from "./run-v1-38-lean-correction.js"
+
+describe("fresh v3 witnessed finite carry", () => {
+  it("rejects refunded v3 predecessor time and disk while preserving v2", () => {
+    const a = correctionAllocationFixture(), { root: _root, ...prior } = a.predecessor
+    const p = { ...prior, chargedMatches: 11, elapsedUpperBoundMs: 10888046, allocatedDiskBytes: 2179072 }
+    const input = { sourceRoot: a.sourceRoot, reviewRoot: a.reviewRoot, coldRoot: a.coldRoot, planRoot: a.planRoot, candidateRoots: a.candidateRoots, requestRoots: a.requestRoots, seed: a.seed, route: a.route, reuseGrantRoot: a.reuseGrantRoot, supervisorDecisionRoot: labRoot("mock-new-decision", {}), acceptedCheckRoot: null, requestBytesRoot: labRoot("mock-bytes", {}), dataReviewRoot: labRoot("mock-review", {}), setupAccountingRoot: labRoot("mock-setup", {}), predecessor: { ...p, root: labRoot(p.schemaVersion, p) } }
+    expect(admitLeanAllocation(accounting.createLeanSupervisorCorrectionAllocation(input, 3)).schemaVersion).toBe("lean-correction-supervisor-diagnostic-allocation-v3")
+    expect(leanWritablePaths(accounting.createLeanSupervisorCorrectionAllocation(input, 3))).toContain(accounting.LEAN_FRESH_SUPERVISOR_SETUP_PATH)
+    for (const changed of [{ elapsedUpperBoundMs: 10888045 }, { allocatedDiskBytes: 2179071 }]) {
+      const body = { ...p, ...changed }, stale = { ...input, predecessor: { ...body, root: labRoot(p.schemaVersion, body) } }
+      expect(() => accounting.createLeanSupervisorCorrectionAllocation(stale, 3)).toThrow()
+      expect(() => accounting.createLeanSupervisorCorrectionAllocation(stale)).not.toThrow()
+    }
+  })
+  it("pins consumed accounting roots and admits no old acceptance", () => {
+    const c = correction.LEAN_FRESH_SUPERVISOR_CARRY
+    const observation = { allocationRoot: c.allocationRoot, rawRoots: { allocation: c.allocationBytesRoot, entry: c.entryBytesRoot, terminal: c.terminalBytesRoot, reason: c.reasonBytesRoot, failure: c.failureBytesRoot, time: c.timeBytesRoot }, charged: 11, currentCharges: 0, elapsedMs: 10230553, active: false, resultExists: false, terminalStatus: "child_failed", exitCode: 1, signal: null, verifierIds: ["correction-supervisor-diagnostic-v2-terminal-verifier"], readerCloseMs: 1791160625507 }
+    expect(correction.validateLeanFreshSupervisorConsumedAccounting(observation)).toEqual({ charged: 11, elapsedUpperBoundMs: 10888046 })
+    for (const changed of [{ elapsedMs: 10230552 }, { currentCharges: 1 }, { active: true }, { resultExists: true }, { readerCloseMs: 1791160625506 }, { verifierIds: ["correction-supervisor-diagnostic-v2-verifier"] }, { rawRoots: { ...observation.rawRoots, time: labRoot("forged-time", {}) } }]) expect(() => correction.validateLeanFreshSupervisorConsumedAccounting({ ...observation, ...changed })).toThrow()
+  })
+  it("binds witnessed wall setup and prior repair instead of human idle or fake monotonic time", () => {
+    const c = correction.LEAN_FRESH_SUPERVISOR_CARRY, decisionRoot = labRoot("mock-fresh-decision", {}), custodyRoot = labRoot("mock-app-clock-custody", {})
+    const body = { schemaVersion: "lean-supervisor-setup-witness-v3", startedAtMs: c.setupStartMs, observedAtMs: c.setupStartMs + 1000, source: "codex-app-read-thread", threadId: "019fa652-915a-7183-9af1-3b3c05868d86", turnId: "01a10be5-f9b9-72f0-860c-31b82fc9b1b7", previousTurnId: "01a10932-a9e2-77a3-9083-229b602e9d48", priorCompletionUpperMs: c.completionUpperMs, priorCheckCloseMs: c.readerCloseMs, priorRepairMs: 657493, consumedTimeBytesRoot: c.timeBytesRoot, decisionRoot, custodyRoot }
+    const rooted = (body: object) => ({ ...body, root: labRoot("lean-supervisor-setup-witness-v3", body) })
+    expect(correction.validateLeanFreshSupervisorSetupWitness(rooted(body), decisionRoot, custodyRoot).startedAtMs).toBe(1791200983000)
+    for (const changed of [{ startedAtMs: 1791160625507 }, { priorRepairMs: 0 }, { observedAtMs: c.setupStartMs - 1 }, { monotonicStartNs: "1000" }, { consumedTimeBytesRoot: labRoot("forged", {}) }, { decisionRoot: labRoot("old-decision", {}) }]) expect(() => correction.validateLeanFreshSupervisorSetupWitness(rooted({ ...body, ...changed }), decisionRoot, custodyRoot)).toThrow()
+  })
+})
 
 describe("supervisor v2 source-only admission", () => {
   it("uses explicit disjoint v3 commands and preserves true-v2 defaults", () => {
