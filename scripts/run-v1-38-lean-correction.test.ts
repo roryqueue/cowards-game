@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs"
+import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { EventEmitter } from "node:events"
@@ -7,11 +7,28 @@ import type { ChildProcess } from "node:child_process"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { LEAN_CAPS, createLeanCorrectionAllocation, admitLeanAllocation, leanWritablePaths, type LeanCorrectionPredecessor } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import * as accounting from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { LEAN_CORRECTION_ROUTES, assertLeanCorrectionResources, parseLeanCorrectionCommand, validateLeanCorrectionDiagnosis, deriveLeanCorrectionRequestRoots, beginLeanCorrectionAdmission, closeLeanCorrectionAdmission, leanCorrectionAdmissionElapsed, assertLeanCorrectionAdmissionTime } from "./run-v1-38-lean-correction.js"
+import { LEAN_CORRECTION_ROUTES, inventoryLeanSupervisorSurvivors, admitsLeanSupervisorReviewAgents, assertLeanCorrectionResources, parseLeanCorrectionCommand, validateLeanCorrectionDiagnosis, deriveLeanCorrectionRequestRoots, beginLeanCorrectionAdmission, closeLeanCorrectionAdmission, leanCorrectionAdmissionElapsed, assertLeanCorrectionAdmissionTime } from "./run-v1-38-lean-correction.js"
 import { deriveLeanBaselineCandidateRoots, waitLeanBoundedChildReady } from "./run-v1-38-lean-baseline.js"
 import { LEAN_COLD_REUSE_HISTORY } from "./lib/v1-38-lean-baseline-reuse.js"
 
 describe("supervisor v2 source-only admission", () => {
+  it("counts recursive mock TMP survivors once and refuses links/duplicates", () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-recursive-mock-")))
+    try {
+      mkdirSync(join(directory, "tsx-501")); mkdirSync(join(directory, "nested")); writeFileSync(join(directory, "nested", "retained"), "mock", { mode: 0o600 })
+      const rows = inventoryLeanSupervisorSurvivors([directory, join(directory, "nested")])
+      expect(rows.map(row => row.identity)).toEqual([directory, join(directory, "nested"), join(directory, "nested", "retained"), join(directory, "tsx-501")])
+      expect(() => inventoryLeanSupervisorSurvivors([directory, directory])).toThrow("SURVIVOR_DUPLICATE")
+      symlinkSync(join(directory, "nested", "retained"), join(directory, "alias"))
+      expect(() => inventoryLeanSupervisorSurvivors([directory])).toThrow("SURVIVOR")
+    } finally { rmSync(directory, { recursive: true, force: true }) }
+  })
+  it("uses genuinely distinct root/child review roles only for the v2 path", () => {
+    expect(admitsLeanSupervisorReviewAgents("/root/author", "/root")).toBe(true)
+    expect(admitsLeanSupervisorReviewAgents("/root", "/root/reviewer")).toBe(true)
+    expect(admitsLeanSupervisorReviewAgents("/root", "/root")).toBe(false)
+    expect(admitsLeanSupervisorReviewAgents("fake-author", "/root")).toBe(false)
+  })
   it("has disjoint explicit commands and preserves the v1 parser", () => {
     expect(parseLeanCorrectionCommand(["run-diagnostic", "--request", LEAN_CORRECTION_ROUTES.diagnostic.request]).route).toBe("diagnostic")
     const routes = accounting.LEAN_SUPERVISOR_CORRECTION_ROUTES

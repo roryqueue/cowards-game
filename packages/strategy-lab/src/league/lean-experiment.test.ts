@@ -6,11 +6,18 @@ import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { labRoot, LAB_ADMITTED_ROOTS } from "../contracts.js"
 import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, LEAN_CAPS, LEAN_FAILED_PREFIX, LEAN_DISK_APPROVAL, LEAN_PROSPECTIVE_WRITABLE_PATHS, LEAN_SUCCESSOR_WRITABLE_PATHS, LEAN_V4_WRITABLE_PATHS, LEAN_V5_WRITABLE_PATHS, LEAN_V6_WRITABLE_PATHS, LEAN_V7_WRITABLE_PATHS, LEAN_CLOSED_V2, LEAN_CLOSED_V3, LEAN_CLOSED_V4, LEAN_CLOSED_V5, LEAN_CLOSED_V6, LEAN_CLOSED_V7, LEAN_BASELINE_WRITABLE_PATHS, createLeanProspectiveDiskBasis, verifyLeanProspectiveDiskBasis, createLeanClosedV2Predecessor, verifyLeanClosedV2Predecessor, createLeanClosedV3Predecessor, verifyLeanClosedV3Predecessor, createLeanClosedV4Predecessor, verifyLeanClosedV4Predecessor, createLeanClosedV5Predecessor, verifyLeanClosedV5Predecessor, createLeanClosedV6Predecessor, verifyLeanClosedV6Predecessor, inspectLeanClosedV6Predecessor, createLeanClosedV7Predecessor, createLeanCurrentBaselineAllocation, currentBaselineSlotKind, createLeanAllocationV7, leanWritablePaths, verifyLeanFailedPrefix, verifyLeanFailedWriteInventory, deriveLeanChildTerminal, readLeanChildTerminal, readLeanCumulativeAccounting, leanBytesRoot, leanCanonicalBytes, type LeanExperimentAllocationV2, type LeanExperimentAllocationV3, type LeanExperimentAllocationV4, type LeanExperimentAllocationV5, type LeanExperimentAllocationV6, type LeanExperimentAllocationV7, type LeanClosedV7Observation, type LeanExperimentLedger } from "./lean-experiment.js"
 import { assertLeanPublicationCapacity } from "./lean-experiment.js"
+import { LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES } from "./lean-experiment.js"
 import { writeLeanAll, createLeanAllocation, chargeLeanSlot, createLeanLedger, retainLeanMatch, verifyLeanEvidence, chooseLeanTier, encodeLeanReplay, decodeLeanReplay, leanSchedule, readLeanLedger } from "./lean-experiment.js"
 
 const dirs: string[] = []
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }) })
 const pin = labRoot("test", 1)
+it("keeps every supervisor-v2 destination disjoint from the consumed v1 routes", () => {
+  const old = Object.values(LEAN_CORRECTION_ROUTES).flatMap(route => [route.store, route.request, route.allocation, route.check, route.temp])
+  const next = Object.values(LEAN_SUPERVISOR_CORRECTION_ROUTES).flatMap(route => [route.store, route.request, route.allocation, route.check, route.temp])
+  expect(new Set(next).size).toBe(next.length)
+  expect(next.some(path => old.includes(path as never))).toBe(false)
+})
 const closedV7Observation = (): LeanClosedV7Observation => {
   const c = LEAN_CLOSED_V7
   return {
