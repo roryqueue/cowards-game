@@ -1,5 +1,9 @@
 # Roadmap: Coward's Game
 
+## Approved prospective Plan16 startup/time supplement — 2026-10-05
+
+Human approval in265-16-STARTUP-APPROVAL-20261005.md permits a distinct private v5 trusted pre-source startup allowance inside unchanged5000ms host receipt, with1000ms Strategy execution and600000ms Match unchanged. The cumulative prospective timebox is twelve hours43200000ms, carrying all spent time/23 charged Matches/surviving files under unchanged15GB/300Match. Old versions and consumed bytes retain old bounds and failures. Research and independent plan check passed for265-16-STARTUP-PLAN-v1.md: three serial source tasks, not a new numbered plan. Implementation/review/fix/validation/source verification precede at mostONE fresh diagnostic and conditionalONE36baseline after accepted diagnostic/fresh same-process capacity. No new empirical route started or phase/freeze credit; the prior baseline remains10/36 partial. Current-rules evaluation/freeze before formation, private holdout unopened, no public/counting/production authority. Earlier frontiers below are historical snapshots.
+
 ## Current prospective repair — 2026-10-04
 
 CURRENT BASELINE FRONTIER: Plan265-16 unique entry77660 and unique retained verifier37314 are CLOSED; retained_valid_partial_failure/gaps_found. One current system-failed charge, zero current successes,35unused; ten cumulative charges/3,319,046ms. No baseline training/matrix/finalist/LEAG completion or Phase266freeze. Source/HEAD hold released after actual closures, all consumed bytes unchanged except authorized time append. Finite SUBPROCESS_SIGNAL metadata leaves initiating cause unknown; source-only diagnosis/repair continues, no replacement Match/re-reader. See265-LEAN-BASELINE-RESULT.md and265-16-RETAINED-VERIFICATION-v1.md. Earlier pilot/frontier paragraphs below are historical snapshots, not current readiness.

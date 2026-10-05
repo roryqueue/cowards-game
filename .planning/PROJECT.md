@@ -1,5 +1,9 @@
 # Coward's Game
 
+## Approved prospective Plan16 startup/time supplement — 2026-10-05
+
+Human approval in265-16-STARTUP-APPROVAL-20261005.md permits a distinct private v5 trusted pre-source startup allowance inside unchanged5000ms host receipt, with1000ms Strategy execution and600000ms Match unchanged. The cumulative prospective timebox is twelve hours43200000ms, carrying all spent time/23 charged Matches/surviving files under unchanged15GB/300Match. Old versions and consumed bytes retain old bounds and failures. Research and independent plan check passed for265-16-STARTUP-PLAN-v1.md: three serial source tasks, not a new numbered plan. Implementation/review/fix/validation/source verification precede at mostONE fresh diagnostic and conditionalONE36baseline after accepted diagnostic/fresh same-process capacity. No new empirical route started or phase/freeze credit; the prior baseline remains10/36 partial. Current-rules evaluation/freeze before formation, private holdout unopened, no public/counting/production authority. Earlier frontiers below are historical snapshots.
+
 ## Current prospective repair — 2026-10-04
 
 CURRENT VERIFIED FRONTIER: On2026-10-04 the distinct v7 pilot and its ONE ordinary retained verifier passed:8freshsuccesses/allcleanup,9cumulativecharges includingpriorv6failure, reduced128Match matched schedule frozen before competitive comparison. Cumulative3,305,606ms, maxcell75,186ms/maxphysical274,432B, same15GB/8h/300Match and unchanged rules/runtime/privacy. Plan265-15 complete; Plan265-16 current-only cold training and one adversarial baseline round next through separate gates. No strength/LEAG/Phase265/freeze/formation/holdout/public credit. Source75ce00e4/83abe344, heldHEAD5aa4c4a1 remainedfixedthroughcheck andholdnowreleased. Priorfailedv6 immutable andcauseunknown. See265-15-PILOT-RETAINED-VERIFICATION-v2.md. Earlier repair/terminal snapshots below are history.

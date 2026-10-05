@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Provenance repair source-verified; pending new prospective startup/time resource decision
+stopped_at: Approved prospective startup and twelve-hour envelope; checked Plan16 source supplement next
 last_updated: "2026-10-05"
 last_activity: 2026-10-05
-last_activity_desc: V4 partial baseline preserved; narrow provenance repair verified; no new empirical authority
+last_activity_desc: Human approved distinct prospective startup readiness and cumulative twelve-hour envelope; no new route started
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED FRONTIER (2026-10-05): Direct human approval is recorded in265-16-STARTUP-APPROVAL-20261005.md. Research and checked existing Plan16 supplement may implement DISTINCT prospective trusted startup readiness inside unchanged5000ms host receipt, guest execution1000ms/Match600000ms unchanged, and cumulative cap43200000ms carrying all costs/23 charges/surviving files under same15GB/300Match. Carry26634447ms before current turn1791235144280; every later cost counts. At mostONE new diagnostic plus conditionalONE new36baseline after complete accepted diagnostic/fresh SAMEPROCESS capacity. No request/allocation/entry/verifier/sourcehold active yet. Old v4 partial baseline and all consumed bytes/readers remain immutable/uncredited; original initiating failure UNKNOWN. Independent source gates precede fresh data/allocation committed before unique MAINentry; failure/refusal ends this envelope. Phase265 incomplete;266freeze/formation/holdout/public/counting/production remain gated. The pending paragraphs below are historical snapshots superseded by this approval, not current blockers.
 
 CURRENT HUMAN-ONLY FRONTIER: Narrow provenance repair RED371f151d/GREENb700dacb/source2d099e9d is source-verified, independent limited fallback review clean, MAIN34 no-native tests/configured31cached type tasks/factory1403zero/shell/whitespace PASS; no empirical or performance repair claim. Diagnosis finds synthetic broker sentinel loses finite origin; exact initiating cause UNKNOWN, not physical OSsignal/OOM proven. No baseline instrumentation, defaultbroker/schema/codes, guest1000/host5000/Match600000/caps/rules changes. Source/HEAD holds RELEASED, all workers/readers closed. New PROSPECTIVE-CONTINUATION-DECISION-v1 proposes (NOTapproved/applied) distinct private startup readiness accounting inside existing5000host,1000Strategy execution unchanged; four additional cumulative hours8→12 carrying all spent work; at mostONE fresh diagnostic plus conditionalONE36baseline after checkedsource/freshcapacity. This is a materially NEW resource decision, not inferred from old approvals. Current carry26484319ms at1791231199273 leaves2315681ms before EVERY latercost;23charges/same15GB/8h/300 untilnewdecision. Consumedv4 envelope/oldartifacts/journals/authority/readers immutable, no furtherMatch/retry/refund/recredit. Phase265/Plan16 incomplete,266freeze/formation/holdout/public/counting/production/fullLEAG/archive-success/tag gated. While pending, no unchangedknown-failing run or repeated heavy scans. Earlier frontiers historical only.
 
