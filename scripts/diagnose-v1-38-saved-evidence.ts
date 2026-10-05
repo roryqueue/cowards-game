@@ -159,7 +159,7 @@ const diagnosticCode = (
 
 const DIAGNOSTIC_BOUND = Object.freeze({ code: "DIAGNOSTIC_BOUND" })
 const stagedErrors = new WeakMap<object, DiagnosticStage>()
-const readAt = <T>(stage: DiagnosticStage, action: () => T): T => {
+const readStageAt = <T>(stage: DiagnosticStage, action: () => T): T => {
   try {
     return action()
   } catch {
@@ -237,8 +237,8 @@ export type DiagnosticStage =
 
 export interface SavedEvidenceDiagnosticDependencies {
   entryExists(): boolean
-  inputInventory(): SafeInputInventory
-  loadSnapshot(): {
+  inputInventory(guard: () => void): SafeInputInventory
+  loadSnapshot(guard: () => void): {
     snapshot: unknown
     historical: {
       sourceRoot: string
@@ -329,11 +329,11 @@ export const diagnoseSavedEvidence = (
       non_authorizing: true,
     })
     stage = "input_inventory_before"
-    before = deps.inputInventory()
+    before = deps.inputInventory(checkBounds)
     if (!before.custodyOk) throw new Error("INPUT_CUSTODY")
     checkBounds()
     stage = "snapshot"
-    loaded = deps.loadSnapshot()
+    loaded = deps.loadSnapshot(checkBounds)
     checkBounds()
     if (
       loaded.currentCheckerSourceRoot !==
@@ -351,7 +351,7 @@ export const diagnoseSavedEvidence = (
       })
       stage = "input_inventory_after"
       afterAttempted = true
-      after = deps.inputInventory()
+      after = deps.inputInventory(checkBounds)
       if (!after.custodyOk || after.root !== before.root)
         result = safeResult({
           code: "INPUT_MUTATION",
@@ -374,7 +374,7 @@ export const diagnoseSavedEvidence = (
       const code = diagnosticCode(error, deps.trustedFailureCode)
       stage = "input_inventory_after"
       afterAttempted = true
-      after = deps.inputInventory()
+      after = deps.inputInventory(checkBounds)
       if (!after.custodyOk || after.root !== before.root)
         result = safeResult({
           code: "INPUT_MUTATION",
@@ -401,7 +401,7 @@ export const diagnoseSavedEvidence = (
     }
     stage = "input_inventory_after"
     afterAttempted = true
-    after = deps.inputInventory()
+    after = deps.inputInventory(checkBounds)
     checkBounds()
     if (!after.custodyOk || after.root !== before.root)
       result = safeResult({
@@ -430,7 +430,7 @@ export const diagnoseSavedEvidence = (
     if (before && !afterAttempted) {
       try {
         afterAttempted = true
-        after = deps.inputInventory()
+        after = deps.inputInventory(checkBounds)
         changed = !after.custodyOk || after.root !== before.root
       } catch {
         afterAttempted = true
@@ -524,7 +524,17 @@ const safeReadFile = (
   }
 }
 
-const scanInputs = (): SafeInputInventory => {
+/** Counts directories as well as files across the entire bounded inventory. */
+export const diagnosticInventoryVisitGuard = (guard: () => void) => {
+  let visited = 0
+  return (depth: number): void => {
+    guard()
+    if (++visited > FILE_LIMIT || depth > 5) throw new Error("INPUT_BOUND")
+  }
+}
+
+const scanInputs = (guard: () => void): SafeInputInventory => {
+  const visitGuard = diagnosticInventoryVisitGuard(guard)
   const identities = [
     SAVED_DIAGNOSTIC_PATHS.request,
     SAVED_DIAGNOSTIC_PATHS.allocation,
@@ -542,6 +552,7 @@ const scanInputs = (): SafeInputInventory => {
     size: number
   }> = []
   const visit = (identity: string, depth: number): void => {
+    visitGuard(depth)
     const absolute = resolve(identity),
       stat = lstatSync(absolute)
     if (
@@ -567,12 +578,14 @@ const scanInputs = (): SafeInputInventory => {
         size: 0,
       })
       const children = readdirSync(absolute)
+      guard()
       if (children.length + files.length > FILE_LIMIT)
         throw new Error("INPUT_BOUND")
       for (const name of children.sort()) visit(join(identity, name), depth + 1)
       return
     }
     const { bytes, metadata } = safeReadFile(absolute)
+    guard()
     const file = {
       identity: relative(process.cwd(), absolute),
       root: leanBytesRoot(bytes),
@@ -649,7 +662,13 @@ const writeFreshExclusive = (
   }
 }
 
-const loadFixedSnapshot = () => {
+const loadFixedSnapshot = (guard: () => void) => {
+  const readAt = <T>(stage: DiagnosticStage, action: () => T): T => {
+    guard()
+    const value = readStageAt(stage, action)
+    guard()
+    return value
+  }
   const paths = leanCorrectionRoutePaths("diagnostic", "v3")
   if (
     paths.store !== SAVED_DIAGNOSTIC_PATHS.store ||
@@ -703,7 +722,7 @@ const loadFixedSnapshot = () => {
       .filter((name) => /^source-[a-z0-9-]+\.json$/u.test(name))
       .sort()
       .map((name) =>
-        readLeanBaselineSource(ledger.directory, name.slice(7, -5)),
+        readAt("source_snapshots", () => readLeanBaselineSource(ledger.directory, name.slice(7, -5))),
       ),
   )
   const artifactNames = [
@@ -725,7 +744,7 @@ const loadFixedSnapshot = () => {
         .filter((name) => names.includes(name))
         .map((name) => [
           name,
-          readLeanCorrectionJson(join(ledger.directory, name), 2_097_152),
+          readAt("artifact_json", () => readLeanCorrectionJson(join(ledger.directory, name), 2_097_152)),
         ]),
     ),
   )

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import {
   assertNoOriginRows,
+  diagnosticInventoryVisitGuard,
   diagnoseSavedEvidence,
   type SavedEvidenceDiagnosticDependencies,
 } from "./diagnose-v1-38-saved-evidence.js"
@@ -50,6 +51,28 @@ const makeDeps = (
 }
 
 describe("saved v3 evidence diagnostic source-only boundary", () => {
+  it("bounds accumulated directory and file visits, not just each directory", () => {
+    const check = vi.fn(), visit = diagnosticInventoryVisitGuard(check)
+    for (let ordinal = 0; ordinal < 64; ordinal++) visit(ordinal % 6)
+    expect(() => visit(1)).toThrow("INPUT_BOUND")
+    expect(check).toHaveBeenCalledTimes(65)
+    expect(() => diagnosticInventoryVisitGuard(() => {})(6)).toThrow("INPUT_BOUND")
+  })
+
+  it("passes the deadline into inventory and loading and refuses before audit on expiry", () => {
+    let elapsed = 1
+    const audit = vi.fn()
+    const { deps } = makeDeps({
+      elapsed: () => elapsed,
+      inputInventory: guard => { guard(); return inventory() },
+      loadSnapshot: guard => { elapsed = 60_002; guard(); return loaded() },
+      audit,
+    })
+    const result = diagnoseSavedEvidence(deps)
+    expect(result).toMatchObject({ accepted: false, issued: false, non_authorizing: true, code: "INPUT_INVENTORY_UNVERIFIED" })
+    expect(audit).not.toHaveBeenCalled()
+  })
+
   it("always discards successful audit authority and emits a non-authorizing safe result", () => {
     const { deps, writes } = makeDeps()
     const result = diagnoseSavedEvidence(deps)
