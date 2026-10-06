@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Replay-validation source repair verified; fresh bounded empirical continuation needs approval
-last_updated: "2026-10-05"
-last_activity: 2026-10-05
-last_activity_desc: Replay repair reviewed and source-verified with 70 passing tests; prior one-shot envelope consumed
+stopped_at: Fresh replay-repair continuation approved; checked distinct v6 source wiring next
+last_updated: "2026-10-06"
+last_activity: 2026-10-06
+last_activity_desc: Human approved one fresh diagnostic and conditional baseline under unchanged remaining budgets
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED FRONTIER (2026-10-06): Direct human approval recorded in265-16-REPLAY-REPAIR-APPROVAL-20261006.md authorizes ONEdistinctfreshprivate diagnostic then conditionalONEfresh36baseline, no additionalretry, SAMEremaining12h15GB300Match and24spentcharges. Local bounded taskcompletion1791244661365/currentstart1791247033529 yields36151532mspriorcarry; everycurrentcostcounts, onlyproveninterturnhumanidleexcluded. Source-onlyreplayrepair previouslyreviewed/verified70fixtures; distinctv6route wiring must be researched/checkedplanned/executed/reviewed/fixed/validated/sourceverified beforefreshdatareview/newimmutablecommittedallocation/SAMEPROCESScapacity/uniqueMAINentry andONEappropriatecheck. No activeentry/verifier/hold or newdata/allocationyet. All oldv5andpriorconsumedbytes/readers/authorityimmutable, nooldrecredit. Sameguest1000/host5000/startup2500/Match600000/4xguard/fullaudits andallrules/privacy. Fullbufferinflate stillnotRSSguaranteed; full36notpromisedwithinremainder. Phase265/LEAG/freeze/formation/holdout/public/counting/production unadmitted. Earlierpendingfrontierbelow is nowhistorical, supersededonlyby thisnewboundedapproval.
 
 CURRENT HUMAN-ONLY FRONTIER / SOURCE REPAIR COMPLETE: Replay-validation Plan16 supplement is independently sourceVERIFIED4/4 at e6382a12, cleanSOURCE-REVIEW-v1, VALIDATION-v1 and MAIN-GATES-v1;70/70syntheticfixtures/zero skips, package noEmit0/factory1407zero/diff0. Rawimplementation6372438d/fixturef4e10b81; separatelyboundfixtureoutsideunchangedruntimemanifest disclosed. Fullbufferinflate/allfullaudits remain, noRSS/nativefeasibilityguarantee. Olddecoder/defaultpaths/caps/policy/authoritybytes unchanged. V5diagnosticaccepted a6b50ff7, v5baseline resource_threshold/SIGKILL beforeanyrecordednewcharge; bothuniquechecksCLOSED/immutable, noactiveentry/verifier/hold. New REPLAY-REPAIR-CONTINUATION-DECISION-v1 proposes (NOTapproved) ONEdistinctnewprivate diagnostic plus conditionalONEfresh36baseline under SAMEremaining12h15GB300limits/24spentcharges/carryallsurvivors. Norepeatlongliteralrequired; human must authorize newbounded envelope because previoussingle-useenvelopeENDED. No new request/allocation/Match/oldreaderretry/resume/refund/recredit. Observedcarry36069167ms at1791244579000, remaining7130833 beforeALLlatercosts; futurehumanidle excludedonlyby boundedturncustody. Phase265/LEAGincomplete,266freeze/formation/holdout/public/counting/production gated. All earlierfrontiers history.
 
