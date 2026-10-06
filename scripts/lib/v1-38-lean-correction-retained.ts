@@ -18,11 +18,22 @@ import { leanCorrectionSourceManifest, leanCorrectionAdmissionElapsed, leanCorre
 import { validateLeanSupervisorReasonBytes, LEAN_SUPERVISOR_REASON_FILE, LEAN_SUPERVISOR_REASON_MAX_BYTES } from "../run-v1-38-lean-baseline.js"
 import type { LeanBaselinePair } from "./v1-38-lean-experiment-authority.js"
 import { SoldierBrainInputV119Schema, StrategyInputV119Schema, StrategyResultSchema } from "@cowards/spec"
+import { isLeanChildFailureReceiptV7 } from "./v1-38-lean-child-cli-terminal.js"
 
 const fail = (code: string): never => { throw leanCorrectionTrustedGuardError(`LEAN_CORRECTION_RETAINED_${code}`) }
 const same = (a: unknown, b: unknown) => labRoot("lean-correction-retained-exact-v1", a) === labRoot("lean-correction-retained-exact-v1", b)
 const rooted = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[a-f0-9]{64}$/u.test(v)
 interface Observation { schemaVersion: "lean-baseline-observation-v1"; pairRoot: LabRoot; cell: LeanBaselineObservedCell; root: LabRoot }
+/** Finite failed-terminal custody only: this never admits an ordinary result,
+ * supplies a missing slot terminal/stop, or promotes observed location to cause. */
+export const validateLeanHostStageTerminalOnlyV7 = (ledger: Parameters<typeof readLeanLedger>[0], receipt: unknown) => {
+  const allocation = admitLeanAllocation(ledger.allocation)
+  if (!("route" in allocation) || leanSupervisorAllocationMode(allocation) !== "v7") return fail("CUSTODY")
+  const state = readLeanLedger(ledger), entry = readLeanChildEntry(ledger), terminal = readLeanChildTerminal(ledger)
+  const charge = [...state.charges.values()].at(-1)
+  if (!charge || !isLeanChildFailureReceiptV7(receipt, { route: allocation.route, allocationRoot: allocation.root, chargeRoot: charge.root, slotRoot: charge.slotRoot }) || entry.requestBytesRoot !== allocation.requestBytesRoot || terminal.status !== "child_failed" || terminal.entryBytesRoot !== leanBytesRoot(leanCanonicalBytes(entry)) || readdirSync(ledger.directory).includes("result.json")) return fail("CUSTODY")
+  return Object.freeze({ accepting: false as const, stage: receipt.stage, category: receipt.category, allocationRoot: allocation.root, chargeRoot: charge.root, slotRoot: charge.slotRoot, cumulativeCharged: state.charged, stopped: state.stopped, resultExists: false as const })
+}
 export const validateLeanSupervisorReasonJoin = (bytes: Uint8Array, entry: ReturnType<typeof readLeanChildEntry>, terminal: ReturnType<typeof readLeanChildTerminal>) => {
   const reason = validateLeanSupervisorReasonBytes(bytes)
   if (reason.uncertain || reason.reasons.length || reason.observations.resourceSampling !== "observed" || reason.observations.finalIdentity !== "matched" || reason.observations.failureReceipt !== "absent" || reason.entryBytesRoot !== leanBytesRoot(leanCanonicalBytes(entry)) || reason.allocationRoot !== entry.allocationRoot || reason.sourceRoot !== entry.sourceRoot || reason.requestBytesRoot !== entry.requestBytesRoot || reason.head !== entry.head || reason.parentPid !== entry.parentPid || reason.childPid !== entry.childPid || terminal.entryBytesRoot !== reason.entryBytesRoot || terminal.allocationRoot !== reason.allocationRoot || terminal.sourceRoot !== reason.sourceRoot || terminal.head !== reason.head || terminal.parentPid !== reason.parentPid || terminal.childPid !== reason.childPid || terminal.exitCode !== reason.exitCode || terminal.signal !== reason.signal || terminal.status !== "child_exited" || reason.exitCode !== 0 || reason.signal !== null) return fail("SUPERVISOR_REASON_CUSTODY")
@@ -252,7 +263,7 @@ export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrection
   if (supervisor) beginLeanInterval(ledger, interval, readerStartMs)
   let gap: LeanFreshSupervisorReaderGap | null = null
   let terminal: ReturnType<typeof readLeanChildTerminal>, entry: ReturnType<typeof readLeanChildEntry>
-  try { if (supervisor === "v3" || supervisor === "v4" || supervisor === "v5" || (supervisor === "v6" || supervisor === "v7")) { if (!("route" in allocation) || allocation.route !== route || leanSupervisorAllocationMode(allocation) !== supervisor) return fail("ALLOCATION"); gap = readLeanFreshSupervisorReaderGap(ledger, route, readerStartMs, paths.temp, leanSupervisorVersion(supervisor) as 3 | 4 | 5 | 6 | 7) } terminal = readLeanChildTerminal(ledger); entry = readLeanChildEntry(ledger); if (terminal.status !== "child_exited") return fail("TERMINAL_ONLY_REQUIRED") } catch (error) { if (supervisor === "v3" || supervisor === "v4" || supervisor === "v5" || (supervisor === "v6" || supervisor === "v7")) closeLeanFreshSupervisorReader(ledger, route, gap, Date.now, leanSupervisorVersion(supervisor) as 3 | 4 | 5 | 6 | 7); else if (supervisor) closeLeanInterval(ledger, interval); throw error }
+  try { if (supervisor === "v3" || supervisor === "v4" || supervisor === "v5" || (supervisor === "v6" || supervisor === "v7")) { if (!("route" in allocation) || allocation.route !== route || leanSupervisorAllocationMode(allocation) !== supervisor) return fail("ALLOCATION"); gap = readLeanFreshSupervisorReaderGap(ledger, route, readerStartMs, paths.temp, leanSupervisorVersion(supervisor) as 3 | 4 | 5 | 6 | 7) } terminal = readLeanChildTerminal(ledger); entry = readLeanChildEntry(ledger); if (terminal.status !== "child_exited") { if (supervisor === "v7") validateLeanHostStageTerminalOnlyV7(ledger, readLeanCorrectionJson(join(ledger.directory, "entry-failure.json"), 4096)); return fail("TERMINAL_ONLY_REQUIRED") } } catch (error) { if (supervisor === "v3" || supervisor === "v4" || supervisor === "v5" || (supervisor === "v6" || supervisor === "v7")) closeLeanFreshSupervisorReader(ledger, route, gap, Date.now, leanSupervisorVersion(supervisor) as 3 | 4 | 5 | 6 | 7); else if (supervisor) closeLeanInterval(ledger, interval); throw error }
   // Include loader and pre-reader custody work; source fixtures do not spend
   // this actual one-shot reader identity.
   if (!supervisor) beginLeanInterval(ledger, interval, Date.now() - Math.ceil(process.uptime() * 1000))

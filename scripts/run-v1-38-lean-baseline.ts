@@ -309,8 +309,10 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     if (message !== null && typeof message === "object" && exactLabKeys(message, ["ready"]) && message.ready === child.pid) return
     let validReceipt: boolean
     if (allocation.schemaVersion.endsWith("-v7") && "route" in allocation) {
-      const state = readLeanLedger(ledger), charge = [...state.charges.values()].at(-1)
-      validReceipt = !!charge && isLeanChildFailureReceiptV7(message, { route: allocation.route, allocationRoot: allocation.root, chargeRoot: charge.root, slotRoot: charge.slotRoot })
+      try {
+        const state = readLeanLedger(ledger), charge = [...state.charges.values()].at(-1)
+        validReceipt = !!charge && isLeanChildFailureReceiptV7(message, { route: allocation.route, allocationRoot: allocation.root, chargeRoot: charge.root, slotRoot: charge.slotRoot })
+      } catch { validReceipt = false }
     } else validReceipt = isLeanChildFailureReceipt(message)
     if (!validReceipt || childFailure !== null) { uncertain = true; observe(validReceipt ? "duplicate_failure_receipt" : "malformed_ipc"); return }
     childFailure = message as LeanChildFailureReceipt | LeanChildFailureReceiptV7
