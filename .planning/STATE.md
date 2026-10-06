@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Twenty-hour diagnostic1 accepted and FINAL closed; conditional baseline data preparation next
+stopped_at: Conditional twenty-hour baseline prepared; commit allocation before unique MAIN entry
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
-last_activity_desc: One fresh successful Match accepted by unique retained reader; FINAL closure authenticated, source hold released
+last_activity_desc: Baseline data independently reviewed clean and ONE36 allocation prepared, zero new charges
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT TWENTY-HOUR CONDITIONAL BASELINE PREPARED: ActualMAINdraft8033/finalize21731 CLOSED0; independent BASELINE-DATA-REVIEW-v1 clean/zero. Freshrequestraw77f41d3d/datae020b47d binds sameacceptedcheck72ae7d07/FINALclosure6dcab260/source9ba555e7/extensionc9093818. ExactlyONEprepare42131 CLOSED0/preparation_only allocation851e1337/raw0e5c9a9a/36slots. Checkedrealowned0700store onlyallocation/emptyledger/closedtime, predecessor59945271ms/30prior/0newcharges at23:43:08.800Z; all latercostscarry72000000ms15GB300. Commit/pushallocation BEFOREONEuniqueMAINentry/SAMEPROCESScapacity everycharge/provider, thensourceANDHEADfixedthroughterminal+ONEproperunique retainedcheck/noheavywork. Full36fitnotpromised; anybaselinefailure/inadequatereserve endsenvelope. NoPhase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earlierfrontiershistory.
 
 CURRENT TWENTY-HOUR DIAGNOSTIC1 ACCEPTED: Unique MAIN48904 CLOSED0 and ONEordinaryretainedreader17000 CLOSED0, acceptedcheck72ae7d07/raw91734f31; read-only existing FINALclosure authentication35153 CLOSED0, closure6dcab260/checkrootexact/finalclose1791329532163. One current success/OK/cleanuptrue/399221ms/449invocations, cumulative30charged; entry981962ms includes broader pipeline, cause of overhead not established. Sixstarts/sixcloses/inactive, closedelapsed59338914/remaining12661086 atclose; all latercosts count under72000000ms15GB300. HeldHEAD97619625/source9ba555e7 unchanged throughclosure, source+HEADhold RELEASED. Actual MAIN conditionalbaseline freshdata/helper review then newcommittedallocation/emptyreal0700store/SAMEPROCESScapacity/ONEuniqueentry next. Sameacceptedsource, no optimization detour or additionaldiagnostic, full36fitnotpromised. Failure/inadequatebudget ends envelope. Allconsumedhistoryimmutable, no Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Olderfrontiershistory.
 
