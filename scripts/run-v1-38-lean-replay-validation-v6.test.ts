@@ -288,6 +288,18 @@ describe("wiring", () => {
     const body = { schemaVersion: "lean-replay-setup-witness-v6", approvalRoot: lean.LEAN_REPLAY_V6_APPROVAL_ROOT, supplementRoot: lean.LEAN_REPLAY_V6_SUPPLEMENT_ROOT, policyRoot: lean.LEAN_STARTUP_POLICY_V5.root, priorElapsedMs: lean.LEAN_REPLAY_V6_CARRY.priorElapsedMs, charged: 24, consumedTimeBytesRoot: lean.LEAN_REPLAY_V6_CARRY.timeBytesRoot, segments: [{ startMs: lean.LEAN_REPLAY_V6_CARRY.startedAtMs, closeMs: null }] }
     const witness = { ...body, root: labRoot(body.schemaVersion, body) }
     expect(correction.leanReplayCarryElapsedV6(witness, body.segments[0]!.startMs + 1234)).toBe(36_152_766)
+    const rehash = (segments: typeof body.segments) => {
+      const changed = { ...body, segments }
+      return { ...changed, root: labRoot(changed.schemaVersion, changed) }
+    }
+    const start = lean.LEAN_REPLAY_V6_CARRY.startedAtMs
+    expect(() => correction.validateLeanReplaySetupWitnessV6(rehash([{ startMs: start, closeMs: start }, { startMs: start + 3_600_000, closeMs: null }]))).toThrow()
+    expect(() => correction.validateLeanReplaySetupWitnessV6(rehash([{ startMs: start, closeMs: start }, { startMs: start + 43_200_000 - body.priorElapsedMs, closeMs: null }]))).toThrow()
+    expect(() => correction.validateLeanReplaySetupWitnessV6(rehash([...body.segments, { startMs: start, closeMs: null }]))).toThrow()
+    expect(() => correction.validateLeanReplaySetupWitnessV6(rehash([{ startMs: start, closeMs: start }]))).toThrow()
+    const exactAllowedBoundary = start + (43_200_000 - body.priorElapsedMs - 1)
+    expect(correction.leanReplayCarryElapsedV6(witness, exactAllowedBoundary)).toBe(43_199_999)
+    expect(() => correction.leanReplayCarryElapsedV6(witness, exactAllowedBoundary + 1)).toThrow()
     for (const key of ["approvalRoot", "supplementRoot", "policyRoot", "priorElapsedMs", "charged", "consumedTimeBytesRoot"] as const) {
       const mutated = { ...body, [key]: syntheticRoot("foreign") }
       expect(() => correction.validateLeanReplaySetupWitnessV6({ ...mutated, root: labRoot(body.schemaVersion, mutated) })).toThrow()

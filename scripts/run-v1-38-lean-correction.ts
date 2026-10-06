@@ -494,18 +494,13 @@ export const leanStartupCarryElapsedV5 = (witness: ReturnType<typeof validateLea
 export const validateLeanReplaySetupWitnessV6 = (value: unknown) => {
   if (!exactLabKeys(value, ["schemaVersion", "approvalRoot", "supplementRoot", "policyRoot", "priorElapsedMs", "charged", "segments", "consumedTimeBytesRoot", "root"])) return fail("SETUP_WITNESS")
   const v = value as { schemaVersion: string; approvalRoot: LabRoot; supplementRoot: LabRoot; policyRoot: LabRoot; priorElapsedMs: number; charged: number; segments: Array<{ startMs: number; closeMs: number | null }>; consumedTimeBytesRoot: LabRoot; root: LabRoot }, { root: r, ...body } = v
-  if (v.schemaVersion !== "lean-replay-setup-witness-v6" || v.approvalRoot !== LEAN_REPLAY_V6_APPROVAL_ROOT || v.supplementRoot !== LEAN_REPLAY_V6_SUPPLEMENT_ROOT || v.policyRoot !== LEAN_STARTUP_POLICY_V5.root || v.priorElapsedMs !== LEAN_REPLAY_V6_CARRY.priorElapsedMs || v.charged !== 24 || v.consumedTimeBytesRoot !== LEAN_REPLAY_V6_CARRY.timeBytesRoot || !Array.isArray(v.segments) || !v.segments.length || v.segments.length > 100 || v.segments[0]?.startMs !== LEAN_REPLAY_V6_CARRY.startedAtMs || r !== labRoot(v.schemaVersion, body)) return fail("SETUP_WITNESS")
-  let previous = 0
-  for (const [i, segment] of v.segments.entries()) {
-    if (!exactLabKeys(segment, ["startMs", "closeMs"]) || !Number.isSafeInteger(segment.startMs) || segment.startMs < previous || (i === v.segments.length - 1 ? segment.closeMs !== null : !Number.isSafeInteger(segment.closeMs) || segment.closeMs! < segment.startMs)) return fail("SETUP_WITNESS")
-    previous = segment.closeMs ?? segment.startMs
-  }
+  if (v.schemaVersion !== "lean-replay-setup-witness-v6" || v.approvalRoot !== LEAN_REPLAY_V6_APPROVAL_ROOT || v.supplementRoot !== LEAN_REPLAY_V6_SUPPLEMENT_ROOT || v.policyRoot !== LEAN_STARTUP_POLICY_V5.root || v.priorElapsedMs !== LEAN_REPLAY_V6_CARRY.priorElapsedMs || v.charged !== 24 || v.consumedTimeBytesRoot !== LEAN_REPLAY_V6_CARRY.timeBytesRoot || !Array.isArray(v.segments) || v.segments.length !== 1 || !exactLabKeys(v.segments[0], ["startMs", "closeMs"]) || v.segments[0].startMs !== LEAN_REPLAY_V6_CARRY.startedAtMs || v.segments[0].closeMs !== null || r !== labRoot(v.schemaVersion, body)) return fail("SETUP_WITNESS")
   return Object.freeze(structuredClone(v))
 }
 export const leanReplayCarryElapsedV6 = (witness: ReturnType<typeof validateLeanReplaySetupWitnessV6>, accountingAtMs: number): number => {
   const v = validateLeanReplaySetupWitnessV6(witness)
-  if (!Number.isSafeInteger(accountingAtMs) || accountingAtMs < v.segments.at(-1)!.startMs) return fail("SUPERVISOR_ACCOUNTING_CLOCK")
-  const elapsed = v.priorElapsedMs + v.segments.reduce((sum, segment) => sum + (segment.closeMs ?? accountingAtMs) - segment.startMs, 0)
+  if (!Number.isSafeInteger(accountingAtMs) || accountingAtMs < LEAN_REPLAY_V6_CARRY.startedAtMs) return fail("SUPERVISOR_ACCOUNTING_CLOCK")
+  const elapsed = v.priorElapsedMs + accountingAtMs - LEAN_REPLAY_V6_CARRY.startedAtMs
   if (!Number.isSafeInteger(elapsed) || elapsed >= 43_200_000) return fail("ADMISSION_TIME")
   return elapsed
 }
