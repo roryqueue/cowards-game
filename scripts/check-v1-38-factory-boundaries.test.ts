@@ -37,6 +37,16 @@ describe("private factory dependency boundary", () => {
   it("allows only the narrow packet contract from an oracle", () => {
     expect(checkFactoryBoundaries({ files: base })).toEqual(expect.objectContaining({ ok: true, violations: [] }))
   })
+  it("admits only the reviewed private retry host custody owners transitively", () => {
+    const origin = "scripts/lib/v1-38-lean-experiment-authority.ts"
+    const owners = ["scripts/lib/v1-38-lean-baseline-retained.ts", "scripts/lib/v1-38-lean-correction-retained.ts", "scripts/lib/v1-38-lean-seal-metadata.ts", "scripts/run-v1-38-lean-baseline.ts", "scripts/run-v1-38-lean-correction.ts"]
+    const files = { ...base, [origin]: owners.map(path => `import "../../${path.replace(/\.ts$/u, ".js")}"`).join(";"), ...Object.fromEntries(owners.map(path => [path, 'import "node:child_process"'])) }
+    expect(checkFactoryBoundaries({ files }).ok).toBe(true)
+    const unknown = "scripts/lib/lean-unreviewed-retry.ts"
+    expect(checkFactoryBoundaries({ files: { ...files, [origin]: 'import "./lean-unreviewed-retry.js"', [unknown]: 'import "node:child_process"' } }).violations).toContainEqual({ code: "PRIVATE_TRANSITIVE_UNRESOLVED", file: origin })
+    expect(checkFactoryBoundaries({ files: { ...files, "apps/web/src/page.ts": 'import "../../../scripts/lib/v1-38-lean-experiment-authority.js"' } }).violations.some(v => v.code === "PUBLIC_REACHES_PRIVATE_FACTORY")).toBe(true)
+    expect(checkFactoryBoundaries({ files: { ...files, [owners[0]!]: 'import "node:child_process"; eval(source)' } }).violations).toContainEqual({ code: "PRIVATE_TRANSITIVE_HOSTILE_EXECUTION", file: origin })
+  })
   it("keeps the lean CLI and gzip codec private with path-specific builtin allowances", () => {
     const codec = "packages/strategy-lab/src/league/lean-experiment.ts"
     expect(checkFactoryBoundaries({ files: { ...base, [codec]: 'import "node:zlib"', "scripts/run-v1-38-lean-experiment.ts": 'import "node:child_process"', "scripts/lib/v1-38-lean-experiment-authority.ts": "export {}" } }).ok).toBe(true)

@@ -8,19 +8,19 @@
   "inheritedSealedSourceRoot": "sha256:eaa793b2608a5a586a94f319b4cff7efe6575abba4dff80080817cf9ba92ba1c",
   "inheritedSealedEntryCount": 888,
   "currentInheritedEntryCount": 889,
-  "entryCount": 900,
+  "entryCount": 901,
   "sourceRoots": [
     {
       "attemptOrdinal": 1,
-      "sourceRoot": "sha256:2afd93b1f7388da9c89258c499d96c8fd4e411f499215b2b6403d91a4ba277c8"
+      "sourceRoot": "sha256:479ddbf47e979ed1f0f504f85eeebbd69990eb718e01287a2e2cea1aa564c9d8"
     },
     {
       "attemptOrdinal": 2,
-      "sourceRoot": "sha256:6bb6152b78172e52ece42afbcb75a155a76a5b4923aaaad66f544c766343fd49"
+      "sourceRoot": "sha256:091fcac5babd82cbac0c31bfd176de1e5fad2d449d6a010aa4942a8c11842bdc"
     },
     {
       "attemptOrdinal": 3,
-      "sourceRoot": "sha256:78294dc15102d1cd66f10868e7ad4acaf2f53628bbfd66b06b476794cf95edcc"
+      "sourceRoot": "sha256:589931d5126be8bfad7a8a1355b44f257cbdca61803e423f60ae7402cfc5311c"
     }
   ],
   "entries": [
@@ -2541,8 +2541,12 @@
       "root": "sha256:b55585071536f461f9eeed117ecf3c1dded58480b7dc23dc7fa041858646f630"
     },
     {
+      "path": "scripts/check-v1-38-factory-boundaries.test.ts",
+      "root": "sha256:4fc8de966683770e4badd06a76be3a742cb81306c88abbc2e5558fce2538fd39"
+    },
+    {
       "path": "scripts/check-v1-38-factory-boundaries.ts",
-      "root": "sha256:f8f88818252fdf764376b6d5db57cfa00bc7d8576c11c3c289618509f5c8082f"
+      "root": "sha256:44e683ec86f272537d11f6f7291b1a360eb3790c8449fa74db04a6a6e945ff1e"
     },
     {
       "path": "scripts/check-v1-38-lab-boundaries.ts",
@@ -3486,7 +3490,7 @@
     },
     {
       "path": "scripts/run-v1-38-lean-correction.ts",
-      "root": "sha256:10c8df3af52ad109ae06c8c6a395a4b8e1bd22172f74eafce66f04fb3a8791df"
+      "root": "sha256:b9645cff9b2ca851575276a52b74755108f4805489dfde35b179a508555d0b8e"
     },
     {
       "path": "scripts/run-v1-38-lean-experiment.sh",
@@ -3680,6 +3684,8 @@
     "shellSyntax": "pass",
     "fullCombinedFinalSuite": "not claimed",
     "mainFinalV8SuitePassed": 18,
+    "mainFactoryBoundarySuitePassed": 35,
+    "mainFactoryScan": "pass: 1412 files, zero violations",
     "mainEarlyRunScopeRegression": "RED admission custody refusal; GREEN actual ledger-bound absence closure"
   },
   "pendingMainGates": [

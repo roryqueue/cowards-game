@@ -44,6 +44,7 @@ export const LEAN_RETRY_V8_SOURCE_INVENTORY = Object.freeze([
   LEAN_RETRY_V8_DECISION, LEAN_RETRY_V8_PLAN,
   ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-RETRY-ENVELOPE-RESEARCH-v1.md",
   "scripts/run-v1-38-lean-retry-envelope-source-manifest.ts", "scripts/run-v1-38-lean-host-stage-v8.test.ts",
+  "scripts/check-v1-38-factory-boundaries.test.ts",
   "scripts/lib/v1-38-lean-baseline-retained.ts", "scripts/lib/v1-38-lean-baseline-retained.test.ts",
   "scripts/lib/v1-38-lean-baseline-authority.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts",
   "scripts/run-v1-38-lean-correction.test.ts", "scripts/run-v1-38-lean-correction-bytes.test.ts", "scripts/lib/v1-38-lean-correction-retained.test.ts",

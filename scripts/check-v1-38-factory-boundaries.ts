@@ -152,6 +152,11 @@ const allowedUnresolved = (path: string, specifier: string | undefined): boolean
   (specifier === "node:child_process" && path === "scripts/v1-38-factory-app-server-transport.ts") ||
   (specifier === "node:perf_hooks" && path === "scripts/lib/v1-38-planner-supervised-runtime.ts") ||
   (specifier === "node:perf_hooks" && path === "scripts/run-v1-38-lean-experiment.ts") ||
+  // Exact existing private host custody/containment owners reached by the v8
+  // accepted-file gate. Public reachability, hostile execution and all unknown
+  // loaders still reject; this grants no factory/oracle code a process loader.
+  (specifier === "node:child_process" && ["scripts/lib/v1-38-lean-baseline-retained.ts", "scripts/lib/v1-38-lean-correction-retained.ts", "scripts/lib/v1-38-lean-seal-metadata.ts", "scripts/run-v1-38-lean-baseline.ts", "scripts/run-v1-38-lean-correction.ts"].includes(path)) ||
+  (specifier === "node:perf_hooks" && path === "scripts/lib/v1-38-lean-baseline-match.ts") ||
   // These existing supervised adapters own process containment. This does not
   // allow an oracle/factory module or any new helper to spawn source itself.
   (specifier === "node:child_process" && ["packages/runtime-supervisor/src/native-supervisor.ts", "packages/runtime-supervisor/src/linux-certification-container.ts"].includes(path))
