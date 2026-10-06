@@ -1,0 +1,64 @@
+# Plan 16 replay-v6 continuation — bounded source research
+
+**Research date:** 2026-10-06  
+**Scope:** Static, local-only source seam inventory for the approved fresh v6 route. No payloads, run preparation, readers, provider, Strategy, Match, tests, implementation edits, or commits were performed.  
+**Confidence:** HIGH for inspected route/admission/replay and custody contracts; MEDIUM for the minimal integration proposal pending checked source review.
+
+## User Constraints
+
+The operative authorization is [265-16-REPLAY-REPAIR-APPROVAL-20261006.md](265-16-REPLAY-REPAIR-APPROVAL-20261006.md). It authorizes exactly one distinct fresh private diagnostic, followed by at most one fresh 36-Match baseline only if that diagnostic is fully accepted and new capacity passes. Failure/refusal ends this envelope. No new retry, reset, refund, recredit, old-reader retry, or old authority reuse.
+
+Carry prior 24 charged Matches, all surviving disk, and all time. At this turn's start, prior carry is 36,151,532 ms; the unchanged 43,200,000-ms cap left 7,048,468 ms before any current-turn costs. Every current research/plan/code/test/review/report/admin/run/check cost counts; only bounded inter-turn human idle is excluded. Maintain 15,000,000,000-byte and 300-Match ceilings. Preserve guest 1,000 ms, host 5,000 ms, trusted startup 2,500 ms, cancellation ≤100 ms, Match 600,000 ms, retained/scratch/terminal subcaps, replay 256,000,000 bytes and 4× declared-inflate guard. Full-buffer inflation is not an RSS guarantee or a promise that 36 Matches fit.
+
+Use a separately versioned v6 successor rooted in independently reviewed fixed source containing the verified replay-validation repair. New source/data review and source gates precede a fresh immutable allocation committed before a unique MAIN entry; fresh real 0700 store and passing same-process capacity precede charge/provider dispatch. Hold source and HEAD fixed through terminal and exactly one appropriate unique retained check. No result permits only a terminal-only check, never a fabricated result or ordinary empirical reader. Validation-only replay parsing must select only after strict full v6 admission. Preserve all legacy/v5 behavior and sealed policy. No Phase 265/LEAG/freeze credit, formation, holdout opening, or public/counted/production authority.
+
+## Findings and recommended v6 route
+
+The completed source verification says the replay validator is additive and currently selected only by the exact diagnostic/baseline allocation-v5 schema pair followed by full `admitLeanAllocation` and mode `v5`; legacy decoder paths and fixed caps/policy are byte-pinned. The v5 baseline then ended before any new charge (`resource_threshold`/SIGKILL); static diagnosis leaves the initiating cause unknown. Do not reinterpret that terminal or rerun its reader. [VERIFIED: `265-16-REPLAY-VALIDATION-SOURCE-VERIFICATION-v1.md`; `265-16-STARTUP-RESOURCE-DIAGNOSIS-v1.md`]
+
+Recommended scope is additive v6 route plumbing, not a new execution engine and not a general guest/runtime rewrite. Add exact v6 discriminants and disjoint diagnostic/baseline paths at the same route seams as v5, then parameterize the existing owner/supervision/pipeline only where a v6 identity is required. Keep the v5 origin/startup-control bytes and semantics unchanged wherever versioned bindings allow. The new v6 allocation must preserve the same approved policy bounds and use the fixed v5 effective-clock rule: raw elapsed authenticated as `max(wall delta, ceil(monotonic delta))`, with conservative effective ledger close allowed to lead wall time; do not regress to raw-vs-rounded close comparisons.
+
+| Capability | Primary tier | Secondary tier | Research conclusion |
+|---|---|---|---|
+| v6 approval, request, allocation and strict admission | Private lab control plane | Content-addressed custody | New exact schema/approval/supplement/source roots, selector, and exhaustive exact-key admission required. Do not widen v5 labels. |
+| Startup + Strategy call supervision | Existing host supervisor / container broker | Worker harness | Preserve 1,000/5,000/2,500 ms bounds and existing Strategy execution policy; do not change generic public runtime options. |
+| Replay validation | Retained-evidence reader | Gzip/parser | Add validation-only parsing for strictly admitted v6; retain the existing v5 validator branch and legacy full-decoder path unchanged. |
+| Charge, predecessor carry and terminal custody | Parent coordinator + immutable ledger | Independent retained checker | New v6 roots and directories; prior roots read as finite accounting inputs only, never through an old empirical reader. |
+
+## Concrete source seams to plan against
+
+1. **Mode/schema/path/admission — `packages/strategy-lab/src/league/lean-experiment.ts`.** `LeanSupervisorMode`, `leanSupervisorVersion`, `LEAN_STARTUP_V5_ROUTES`, `leanCorrectionRoutePaths`, `leanSupervisorAllocationMode`, allocation union/caps, `createLeanSupervisorCorrectionAllocation`, `admitLeanAllocation`, `leanCapsForAllocation`, `verifyLeanEvidence`, and `leanWritablePaths` form one inseparable selector/path/cap surface. Add v6 as a distinct mode with exact allocation discriminants and independent diagnostic/baseline store/request/allocation/check/temp paths. Preserve the v5 43,200,000-ms cap and all inherited byte/disk/match subcaps; v6 must not obtain larger bounds by falling through to legacy defaults. Keep extra-key rejection and full reconstruction/equality admission. [VERIFIED: codebase]
+
+2. **Approval/request/source roots — `scripts/run-v1-38-lean-correction.ts`.** Extend command parsing, `supervisorDocuments`, request type/data-root derivation, `readLeanSupervisorCorrectionRequest`, `deriveLeanSupervisorCorrectionRequestRoots`, setup-witness validation, and `leanCorrectionSourceManifest` with v6-specific exact roots. The v6 request should bind the new approval and its distinct continuation supplement, fixed v5 startup-policy identity/bounds, v6 reviewed-source manifest (including replay fixture/validator), immutable predecessor inventory, data review, setup accounting, and authorization. Keep new source root distinct from v5 root; do not mutate already-consumed request/allocation/approval roots. [VERIFIED: codebase]
+
+3. **Parent, preparation, publication, and provider admission — same coordinator plus `scripts/run-v1-38-lean-correction.sh`, `scripts/run-v1-38-lean-baseline.ts`, `scripts/lib/v1-38-lean-correction-retained.ts`, `scripts/lib/v1-38-lean-baseline-pipeline.ts`.** Version all route command names, authorization/setup carriers, unique MAIN identity, result/check names, and 0700 destinations for v6. Reuse existing parent supervision and immutable publication. Retain ordering: reviewed source and data -> committed fresh allocation -> fresh same-process capacity -> one unique parent admission -> charge/provider. A failed/refused diagnostic cannot select baseline. Conditional baseline binds the accepted *new v6 diagnostic check root* and is a new 36-slot allocation; no old unused slots or replay artifacts are reauthorized. [VERIFIED: codebase]
+
+4. **Startup origin/control — `scripts/lib/v1-38-lean-container-match-session.ts`, `scripts/lib/v1-38-factory-supervised-runtime.ts`, `scripts/lib/v1-38-lean-baseline-match.ts`, `scripts/lib/v1-38-lean-startup-supervisor.mjs`.** v5 uses versioned startup grants, invocation bindings/origin records, exact startup frame schema, a generated harness/broker, and source-manifest pins; generic runtime rejects startup options. Prefer carrying v5 mechanism under a separately rooted v6 allocation/origin identity rather than altering generic runtime APIs or weakening joins. Verify startup remains bounded to 2,500 ms within 5,000-ms host receipt and does not increase the 1,000-ms guest execution budget or 600,000-ms Match budget. [VERIFIED: codebase]
+
+5. **Replay selector and regression suite — `packages/strategy-lab/src/league/lean-experiment.ts`, `scripts/run-v1-38-lean-replay-validation-v5.test.ts`.** The current validator is directly gated by exact v5 diagnostic/baseline schema strings plus admitted mode `v5`. Introduce a distinct strict-v6 selection while retaining v5 validator and legacy decoder behavior. New closed synthetic fixtures must exercise real `admitLeanAllocation` and reader path, asserting v6 replay frames are visited, malformed/rehashed late frames refuse, forged/unsupported version and approval/policy/source/root/cap mutations refuse before inflate, the existing v5 validator branch remains, and older versions still use the old decoder. Bind the new fixture to the v6 source inventory; v5's fixture was separately hash-bound outside its old runtime manifest. [VERIFIED: codebase]
+
+6. **Effective clock and predecessor inventory — `scripts/run-v1-38-lean-correction.ts`, `packages/strategy-lab/src/league/lean-experiment.ts`.** Copy fixed v5 max-wall/ceil-monotonic elapsed and effective close semantics into new v6 carriers. Build a read-only, finite predecessor summary from exact old terminal/check/allocation/time/source roots: prior 24 charges, closed v5 baseline elapsed 33,812,347 ms at 1791242322180, predecessor allocations/survivors, and terminal reason. Do not call old full empirical readers, reopen/replay prior gzip, infer unobserved RSS, or treat source verification as capacity. Carry current-turn elapsed from the approved 36,151,532-ms start; later planning/code costs must be added by the operational custody mechanism, not frozen as this research's number. [VERIFIED: approval, STATE, source files]
+
+## Pitfalls / verification gates
+
+- A nominal v6 enum/path is insufficient if one request selector, exact-key schema, source-manifest root, worker origin, result publisher, retained checker, or parent command silently defaults to v5/legacy. Test every route edge with exact v6 success and v5/legacy compatibility negatives.
+- `verifyLeanEvidence` is a shared reader: preserve complete replay admission/integrity validation and select v6 only after full allocation authentication. Never generalize validation-only parsing to unknown versions or user-supplied labels.
+- Startup is an additional trusted pre-source interval, not Strategy time. Ensure its accounting cannot add to guest allowance, host allowance, per-Match timeout, or recreate the prior run's outer resource failure.
+- Do not make RSS/feasibility claims from the synthetic 70-fixture replay tests; compressed bytes plus full inflate buffer remain live. Do not claim the 36-Match baseline fits the remaining time/disk.
+- Terminal/no-result means only the one unique terminal-only verifier; eligible actual result is prerequisite for the ordinary retained reader. All consumed historical roots remain immutable and uncredited.
+- Keep gameplay kernel/rules, privacy exclusions, no-publication claims, and phase gate untouched. This is private validation plumbing, not replay product/UI or Strategy execution in the API.
+
+## Tests and source verification to plan
+
+No package installs or external service/runtime dependencies are introduced. Use the focused current replay-validation fixture as the nearest regression pattern (`node node_modules/vitest/vitest.mjs run scripts/run-v1-38-lean-replay-validation-v5.test.ts --maxWorkers=1`); create a dedicated v6 suite with fresh v6 allocations/roots and closed synthetic gzip only. Add exact tests for v6 route path disjointness, strict request/admission/policy/source binding, startup/control origin joins and clock rounding, immutable predecessor carry roots, publication/readback sequencing, and no-result/result reader selection. Then run the independently reviewed scoped source gates required by the approval. No broad guest/runtime or gameplay changes are indicated.
+
+## Source and provenance
+
+- [265-16-REPLAY-REPAIR-APPROVAL-20261006.md](265-16-REPLAY-REPAIR-APPROVAL-20261006.md) — exact current approval, immutable carry and unchanged caps.
+- [265-16-REPLAY-VALIDATION-SOURCE-VERIFICATION-v1.md](265-16-REPLAY-VALIDATION-SOURCE-VERIFICATION-v1.md) — v5 replay validator behavior, 70 synthetic fixtures, strict v5 selection, byte-pinned legacy behavior and limitations.
+- [265-16-STARTUP-RESOURCE-DIAGNOSIS-v1.md](265-16-STARTUP-RESOURCE-DIAGNOSIS-v1.md) — bounded v5 failure diagnosis; initiating cause remains unknown.
+- `packages/strategy-lab/src/league/lean-experiment.ts`, `scripts/run-v1-38-lean-correction.ts`, `scripts/run-v1-38-lean-replay-validation-v5.test.ts`, and startup/session/baseline source files listed above — static seam inspection. [VERIFIED: codebase]
+- `AGENTS.md`, `265-CONTEXT.md`, `.planning/STATE.md` — project invariants, locked decisions, and current frontier. [VERIFIED: codebase]
+
+**Confidence:** Route/version/cap/replay facts HIGH; precise v6 file-change set MEDIUM until implementation source review confirms closure.  
+**Valid until:** 2026-10-13 or any source/approval/custody change, whichever comes first.
