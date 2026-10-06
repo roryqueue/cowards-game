@@ -236,6 +236,17 @@ const observeFullReplayText = (texts: readonly string[]) => {
   return hits
 }
 describe("wiring", () => {
+  it("joins a v6 reader to the conservative effective close, not raw rounded wall time", async () => {
+    const retained = await import("./lib/v1-38-lean-correction-retained.js")
+    const startBody = { schemaVersion: "lean-correction-supervisor-admission-v6", route: "diagnostic", mode: "run", parentPid: 1, wallStartMs: 1000, monotonicStartNs: "1000000" }
+    const start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
+    const allocationRoot = allocation(6).root
+    const endBody = { schemaVersion: "lean-correction-supervisor-admission-close-v6", startRoot: start.root, route: "diagnostic", mode: "run", elapsedUpperBoundMs: 1, monotonicObservedNs: "1000001", wallObservedMs: 1000, allocationRoot, ledgerInterval: "correction-run-finalization", importedMs: 1, ledgerCloseMs: 1002 }
+    const end = { ...endBody, root: labRoot(endBody.schemaVersion, endBody) }
+    const time = { starts: new Map([["pilot-entry", 1000], ["correction-run-finalization", 1001], ["correction-supervisor-diagnostic-v6-verifier", 1003]]), closes: new Map([["pilot-entry", 1001], ["correction-run-finalization", 1002]]), closed: new Set(["pilot-entry", "correction-run-finalization"]) }
+    expect(retained.validateLeanFreshSupervisorReaderGap(start, end, allocationRoot, "diagnostic", time, 1003, 6)).toEqual({ runCloseMs: 1002, readerStartMs: 1003, gapMs: 1 })
+    expect(() => retained.validateLeanFreshSupervisorReaderGap(start, end, syntheticRoot("foreign"), "diagnostic", time, 1003, 6)).toThrow()
+  })
   it("correlates v6 startup origin and publication identity without issuing a provider", async () => {
     const session = await import("./lib/v1-38-lean-container-match-session.js")
     const publisher = await import("./lib/v1-38-lean-baseline-source.js")
