@@ -1,6 +1,6 @@
 /** Connected inert v8 envelope callers. No native/Worker/Docker/provider/Match dispatch. */
 import { afterEach, describe, it, expect, vi } from "vitest"
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { EventEmitter } from "node:events"
 import { createHash } from "node:crypto"
 import { defaultRuntimeMetadata } from "@cowards/spec"
@@ -11,12 +11,12 @@ import { prospectiveLeagueRuntimeBinding } from "./lib/v1-38-league-prospective-
 import * as sessionIO from "./lib/v1-38-lean-container-match-session.js"
 import { LAB_ADMITTED_ROOTS } from "../packages/strategy-lab/src/contracts.js"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { retainLeanMatch } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { parseLeanCorrectionCommand, authenticateLeanCorrectionReview } from "./run-v1-38-lean-correction.js"
-import { leanBaselineSourceManifest, leanBaselinePair, leanParentFailureReceiptHandler, LEAN_SUPERVISOR_REASON_FILE } from "./run-v1-38-lean-baseline.js"
+import { deriveLeanBaselineCandidateRoots, leanBaselineSourceManifest, leanBaselinePair, leanParentFailureReceiptHandler, LEAN_SUPERVISOR_REASON_FILE } from "./run-v1-38-lean-baseline.js"
 import * as correction from "./run-v1-38-lean-correction.js"
 import * as sourceIO from "./lib/v1-38-lean-baseline-source.js"
 import * as reuseIO from "./lib/v1-38-lean-baseline-reuse.js"
@@ -36,10 +36,10 @@ import { claimLeanRuntimeAuthority } from "./lib/v1-38-lean-experiment-authority
 import { captureLeanHostFailureV7, readLeanTrustedHostFailureStageV7 } from "./lib/v1-38-lean-host-stage-v7.js"
 import { isLeanChildFailureReceipt, isLeanChildFailureReceiptV7, publishChildTerminalAfterOptionalReceipt, resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
 
-const processControl = vi.hoisted(() => ({ head: "", control: undefined as undefined | ((command: string, args: readonly string[]) => unknown), worker: undefined as undefined | ((source: string, options: unknown) => unknown) }))
-vi.mock("node:child_process", async original => { const deny = () => { throw new Error("SYNTHETIC_ONLY") }; return { ...await original<typeof import("node:child_process")>(), spawn: deny, spawnSync: (command: string, args: readonly string[]) => processControl.control ? processControl.control(command, args) : deny(), fork: deny, exec: deny, execSync: deny, execFile: deny, execFileSync: (command: string, args: string[]) => command === "git" && args.join("|") === "rev-parse|HEAD" && processControl.head ? processControl.head : deny() } })
+const processControl = vi.hoisted(() => ({ head: "", git: undefined as undefined | ((args: readonly string[]) => unknown), control: undefined as undefined | ((command: string, args: readonly string[]) => unknown), worker: undefined as undefined | ((source: string, options: unknown) => unknown) }))
+vi.mock("node:child_process", async original => { const deny = () => { throw new Error("SYNTHETIC_ONLY") }; return { ...await original<typeof import("node:child_process")>(), spawn: deny, spawnSync: (command: string, args: readonly string[]) => processControl.control ? processControl.control(command, args) : deny(), fork: deny, exec: deny, execSync: deny, execFile: deny, execFileSync: (command: string, args: string[]) => command === "git" && args.join("|") === "rev-parse|HEAD" && processControl.head ? processControl.head : command === "git" && processControl.git ? processControl.git(args) : deny() } })
 vi.mock("node:worker_threads", async original => ({ ...await original<typeof import("node:worker_threads")>(), Worker: function(source: string, options: unknown) { if (processControl.worker) return processControl.worker(source, options); throw new Error("SYNTHETIC_ONLY") } }))
-const virtualSource = vi.hoisted(() => ({ changed: "", review: "", reviewPath: "", failWrite: "" }))
+const virtualSource = vi.hoisted(() => ({ changed: "", review: "", reviewPath: "", failWrite: "", reviews: {} as Record<string, string> }))
 vi.mock("node:fs", async original => {
   const fs = await original<typeof import("node:fs")>()
   return { ...fs, openSync: (...args: Parameters<typeof fs.openSync>) => {
@@ -48,6 +48,7 @@ vi.mock("node:fs", async original => {
   }, readFileSync: (...args: Parameters<typeof fs.readFileSync>) => {
     if (typeof args[0] === "string" && /(?:^|\/)\.strategy-lab\//u.test(args[0])) throw new Error("CONSUMED_STORE_FORBIDDEN")
     if (String(args[0]) === virtualSource.reviewPath) return Buffer.from(virtualSource.review)
+    if (virtualSource.reviews[String(args[0])]) return Buffer.from(virtualSource.reviews[String(args[0])])
     const bytes = fs.readFileSync(...args)
     return virtualSource.changed && String(args[0]).endsWith(virtualSource.changed) ? Buffer.concat([Buffer.from(bytes), Buffer.from("\n// synthetic source drift\n")]) : bytes
   } }
@@ -58,7 +59,8 @@ const binding = { route: "diagnostic" as const, allocationRoot: root, chargeRoot
 const stages = ["match_preparation", "match_composition_postprocessing", "compact_replay_retention_publication", "terminal_result_publication"] as const
 const r = (label: string) => labRoot("host-stage-v7-fixture", label)
 const syntheticDirectories = new Set<string>()
-afterEach(() => { virtualSource.changed = ""; virtualSource.reviewPath = ""; virtualSource.failWrite = ""; processControl.head = ""; processControl.control = undefined; processControl.worker = undefined; vi.restoreAllMocks(); for (const directory of syntheticDirectories) rmSync(directory, { recursive: true }); syntheticDirectories.clear() })
+const syntheticPrivateFiles = new Set<string>()
+afterEach(() => { for (const path of syntheticPrivateFiles) rmSync(path); syntheticPrivateFiles.clear(); virtualSource.reviews = {}; virtualSource.changed = ""; virtualSource.reviewPath = ""; virtualSource.failWrite = ""; processControl.head = ""; processControl.git = undefined; processControl.control = undefined; processControl.worker = undefined; vi.restoreAllMocks(); for (const directory of syntheticDirectories) rmSync(directory, { recursive: true }); syntheticDirectories.clear() })
 const allocationInput = (version: 5 | 6 | 7 | 8 = 8) => {
   const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: version === 8 ? 29 : version === 7 ? 28 : version === 6 ? 24 : 23, elapsedUpperBoundMs: 49_150_573, allocatedDiskBytes: 12_894_208, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r("history"), survivors: [{ identity: ".strategy-lab/synthetic-history", allocatedBytes: 4096 }] }
   return { ...(version === 8 ? { attemptOrdinal: 1 as const, priorClosureRoot: null, continuationRoot: null, acceptedReaderCloseRoot: null } : {}), sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: version === 8 ? lean.LEAN_RETRY_V8_PLAN_ROOT : version === 7 ? lean.LEAN_REPLAY_V7_SUPPLEMENT_ROOT : version === 6 ? lean.LEAN_REPLAY_V6_SUPPLEMENT_ROOT : lean.LEAN_STARTUP_SUPPLEMENT_ROOT, candidateRoots: [r("a"), r("b")], requestRoots: [r("request")], seed: "synthetic-v7", route: "diagnostic" as const, reuseGrantRoot: r("reuse"), supervisorDecisionRoot: version === 8 ? lean.LEAN_RETRY_V8_APPROVAL_ROOT : version === 7 ? lean.LEAN_REPLAY_V7_APPROVAL_ROOT : version === 6 ? lean.LEAN_REPLAY_V6_APPROVAL_ROOT : lean.LEAN_STARTUP_APPROVAL_ROOT, acceptedCheckRoot: null, requestBytesRoot: r("request-bytes"), dataReviewRoot: r("data"), setupAccountingRoot: r("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
@@ -156,6 +158,79 @@ const readerFixture = (failure = false, absent = false, wall = 1000, gapMs = 1) 
   return f
 }
 describe("actual one-shot reader closures", () => {
+  it.each(["refused", "absent"] as const)("admits ordinal 2 from real %s closure through the actual request owner", closureClass => {
+    const f = readerFixture(closureClass === "refused", closureClass === "absent", lean.LEAN_RETRY_V8_CARRY.startedAtMs + 100)
+    if (closureClass === "refused") expect(() => retained.verifyLeanCorrectionRetained(f.paths.request, "diagnostic", "v8-1")).toThrow("DIAGNOSTIC_NOT_ACCEPTED")
+    else retained.verifyLeanRetryTerminalOnlyV8(f.paths.request, "v8-1")
+    const closure = retained.authenticateLeanRetryClosureV8("v8-1"), mode = "v8-2", n = 2
+    const pathsActual = vi.mocked(lean.leanCorrectionRoutePaths).getMockImplementation()!, paths = { ...pathsActual("diagnostic", mode), request: join(f.paths.temp, "successor-request.json") }
+    vi.mocked(lean.leanCorrectionRoutePaths).mockImplementation((route, selected) => route === "diagnostic" && selected === mode ? paths : pathsActual(route, selected))
+    if (!existsSync(".strategy-lab")) mkdirSync(".strategy-lab", { mode: 0o700 })
+    const writePrivate = (path: string, value: unknown) => { writeFileSync(path, lean.leanCanonicalBytes(value), { mode: 0o600, flag: "wx" }); syntheticPrivateFiles.add(path) }
+    const sourceRoot = leanCorrectionSourceManifest(mode).root, history = reuseIO.LEAN_COLD_REUSE_HISTORY
+    const reviewPath = resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team/SYNTHETIC-source-review.md"), dataReviewPath = resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team/SYNTHETIC-data-review.md")
+    const diagnosisRoot = r("useful-independent-diagnosis"), review = `---\nstatus: clean\nsource_root: ${sourceRoot}\nsource_commit: ${f.entry.head}\nindependently_reviewed: true\nauthor_agent: /root\nreviewer_agent: /root/synthetic_review\ndiagnosis_root: ${diagnosisRoot}\nrepair_verified: true\n---\n`
+    virtualSource.reviews[reviewPath] = review
+    const setupBody = { schemaVersion: "lean-retry-setup-witness-v8", attemptOrdinal: n, startedAtMs: lean.LEAN_RETRY_V8_CARRY.startedAtMs, observedAtMs: lean.LEAN_RETRY_V8_CARRY.startedAtMs + 100, priorElapsedMs: lean.LEAN_RETRY_V8_CARRY.priorElapsedMs, consumedTimeBytesRoot: lean.LEAN_RETRY_V8_CARRY.timeBytesRoot, decisionRoot: lean.LEAN_RETRY_V8_APPROVAL_ROOT, threadId: "019fa652-915a-7183-9af1-3b3c05868d86", turnId: "01a111c1-6f91-7310-870d-056b2d77194f", source: "codex-task-event-custody" }, setup = { ...setupBody, root: labRoot(setupBody.schemaVersion, setupBody) }
+    writePrivate(lean.leanRetrySetupPath(mode), setup)
+    const request = { ...f.request, attemptOrdinal: n, sourceRoot, coldRoot: history.coldRoot, seed: history.seed, amendmentRoot: history.amendmentRoot, reviewPath, reviewRoot: lean.leanBytesRoot(Buffer.from(review)), dataReviewPath, candidateRoots: deriveLeanBaselineCandidateRoots(history.coldRoot), setupAccountingPath: lean.leanRetrySetupPath(mode), setupAccountingRoot: setup.root, authorizationPath: ".strategy-lab/lean-retry-authorization-diagnostic-v8-2.json", requestRoots: correction.deriveLeanSupervisorCorrectionRequestRoots({ route: "diagnostic", seed: history.seed, coldRoot: history.coldRoot, planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT, sourceRoot }, lean.LEAN_RETRY_V8_APPROVAL_ROOT, mode), priorClosureRoot: closure.root, continuationRoot: r("pending") }
+    const continuationBody = { schemaVersion: "lean-retry-continuation-v8", attemptOrdinal: n, priorClosureRoot: closure.root, sourceRoot, diagnosisRoot, resolvedDefectRoot: r("resolved-defect"), reviewRoot: request.reviewRoot }, continuation = { ...continuationBody, root: labRoot(continuationBody.schemaVersion, continuationBody) }
+    writePrivate(".strategy-lab/lean-retry-continuation-v8-2.json", continuation); request.continuationRoot = continuation.root
+    const authorizationBody = { schemaVersion: "lean-retry-execution-authorization-v8", approved: true, executionAuthorized: true, route: "diagnostic", attemptOrdinal: n, sourceRoot, approvalRoot: lean.LEAN_RETRY_V8_APPROVAL_ROOT, planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT, policyRoot: labRoot(lean.LEAN_RETRY_V8_POLICY.schemaVersion, lean.LEAN_RETRY_V8_POLICY), requestDataRoot: correction.leanCorrectionRequestDataRoot(request as never), authorAgent: "/root", reviewerAgent: "/root/synthetic_data_review" }, authorization = { ...authorizationBody, root: labRoot(authorizationBody.schemaVersion, authorizationBody) }
+    writePrivate(request.authorizationPath, authorization); request.authorizationRoot = lean.leanBytesRoot(lean.leanCanonicalBytes(authorization))
+    const dataReview = review.replace("---\n", `---\nrequest_root: ${correction.leanCorrectionRequestDataRoot(request as never)}\n`)
+    virtualSource.reviews[dataReviewPath] = dataReview; request.dataReviewRoot = lean.leanBytesRoot(Buffer.from(dataReview))
+    writeFileSync(paths.request, lean.leanCanonicalBytes(request), { mode: 0o600 })
+    vi.spyOn(reuseIO, "authenticateLeanColdReuse").mockReturnValue(f.reuse)
+    processControl.git = args => args[0] === "diff" && args[1] === "--exit-code" ? Buffer.alloc(0) : (() => { throw new Error("SYNTHETIC_ONLY") })()
+    expect(correction.readLeanRetryRequestV8(paths.request, "diagnostic", mode).request.attemptOrdinal).toBe(2)
+    for (const patch of [{ attemptOrdinal: undefined }, { attemptOrdinal: 3 }, { priorClosureRoot: r("missing-or-skipped") }, { continuationRoot: null }, { authorizationRoot: r("spent-authorization") }]) {
+      const changed = Object.fromEntries(Object.entries({ ...request, ...patch }).filter(([, value]) => value !== undefined))
+      writeFileSync(paths.request, lean.leanCanonicalBytes(changed), { mode: 0o600 })
+      expect(() => correction.readLeanRetryRequestV8(paths.request, "diagnostic", mode)).toThrow()
+    }
+  }, 30000)
+  it("authenticates zero-charge pre-child-entry accounting and observed cleanup, never a corrupt entry", () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v8-preentry-synthetic-")))
+    syntheticDirectories.add(directory); chmodSync(directory, 0o700)
+    const actualPaths = lean.leanCorrectionRoutePaths, paths = { ...actualPaths("diagnostic", "v8-1"), temp: directory, store: join(directory, "store"), request: join(directory, "absent-request.json"), allocation: join(directory, "allocation.json") }
+    vi.spyOn(lean, "leanCorrectionRoutePaths").mockImplementation((route, mode) => route === "diagnostic" && mode === "v8-1" ? paths : actualPaths(route, mode))
+    mkdirSync(paths.store, { mode: 0o700 })
+    const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...allocationInput(), sourceRoot: leanCorrectionSourceManifest("v8-1").root }, 8), ledger = { directory: paths.store, allocation }
+    for (const [name, bytes] of [["allocation.json", lean.leanCanonicalBytes(allocation)], ["ledger.ndjson", ""], ["time.ndjson", ""]] as const) writeFileSync(join(paths.store, name), bytes, { mode: 0o600 })
+    const now = lean.LEAN_RETRY_V8_CARRY.startedAtMs + 1
+    vi.spyOn(Date, "now").mockReturnValue(now); vi.spyOn(process.hrtime, "bigint").mockReturnValue(1_000_000_000n); processControl.head = "1".repeat(40)
+    const start = correction.beginLeanCorrectionAdmission("diagnostic", "run", directory, { wallStartMs: now, monotonicStartNs: "1000000000" }, "v8-1")
+    correction.closeLeanCorrectionAdmission(start, ledger, { wallStartMs: now, monotonicStartNs: "1000000000" })
+    expect(() => correction.publishLeanRetryAdmissionFailureV8("v8-1", "run", true, null)).toThrow("ADMISSION_CUSTODY")
+    correction.publishLeanRetryAdmissionFailureV8("v8-1", "run", true, { childPid: 123, exitCode: null, signal: "SIGKILL" })
+    expect(retained.verifyLeanRetryTerminalOnlyV8(paths.request, "v8-1")).toMatchObject({ cumulativeCharged: 29, currentCharges: 0, entryBytesRoot: null, terminalBytesRoot: null, checkRoot: null, authorizing: false })
+    writeFileSync(join(paths.store, "entry.json"), "corrupt", { mode: 0o600 })
+    expect(() => retained.authenticateLeanRetryClosureV8("v8-1")).toThrow()
+  }, 20000)
+  it("closes an actual inert pre-ledger admission failure without inventing child custody", () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v8-preledger-synthetic-")))
+    syntheticDirectories.add(directory); chmodSync(directory, 0o700)
+    const actualPaths = lean.leanCorrectionRoutePaths, paths = { ...actualPaths("diagnostic", "v8-1"), temp: directory, store: join(directory, "absent-store"), request: join(directory, "absent-request.json"), allocation: join(directory, "absent-allocation.json") }
+    vi.spyOn(lean, "leanCorrectionRoutePaths").mockImplementation((route, mode) => route === "diagnostic" && mode === "v8-1" ? paths : actualPaths(route, mode))
+    vi.spyOn(process, "uptime").mockReturnValue(0)
+    vi.spyOn(Date, "now").mockReturnValue(lean.LEAN_RETRY_V8_CARRY.startedAtMs + 1)
+    vi.spyOn(process.hrtime, "bigint").mockReturnValue(1_000_000_000n)
+    processControl.head = "1".repeat(40)
+    expect(() => retained.authenticateLeanRetryClosureV8("v8-1")).toThrow()
+    // Real admission starts before the scope guard; the fixture deliberately
+    // lacks the heap/scope permission and cannot reach preparation or dispatch.
+    expect(() => correction.prepareLeanCorrection(paths.request, "diagnostic", "v8-1")).toThrow("COORDINATOR_HEAP_BOUND")
+    expect(correction.authenticateLeanRetryAdmissionFailureV8("v8-1")).toMatchObject({ storeAbsent: true, currentCharges: 0, allocationRoot: null, childSpawned: false, cleanup: null })
+    expect(() => retained.authenticateLeanRetryClosureV8("v8-1")).toThrow()
+    const closure = retained.verifyLeanRetryTerminalOnlyV8(paths.request, "v8-1")
+    expect(closure).toMatchObject({ closureClass: "absent", cumulativeCharged: 29, currentCharges: 0, entryBytesRoot: null, terminalBytesRoot: null, authorizing: false })
+    expect(retained.authenticateLeanRetryClosureV8("v8-1")).toEqual(closure)
+    expect(() => correction.prepareLeanCorrection(paths.request, "diagnostic", "v8-1")).toThrow()
+    expect(() => retained.verifyLeanRetryTerminalOnlyV8(paths.request, "v8-1")).toThrow()
+    mkdirSync(paths.store, { mode: 0o700 }); writeFileSync(join(paths.store, "entry.json"), "corrupt", { mode: 0o600 })
+    expect(() => retained.authenticateLeanRetryClosureV8("v8-1")).toThrow()
+  }, 20000)
   it.each([false, true])("allows ordinary/terminal absence=%s with a realistic nonzero gap below cap", absent => {
     const now = lean.LEAN_RETRY_V8_CARRY.startedAtMs + 57_500_000 - lean.LEAN_RETRY_V8_CARRY.priorElapsedMs
     const f = readerFixture(false, absent, lean.LEAN_RETRY_V8_CARRY.startedAtMs, now - lean.LEAN_RETRY_V8_CARRY.startedAtMs - 2)
@@ -184,17 +259,45 @@ describe("actual one-shot reader closures", () => {
     const directory = join(f.paths.temp, "selected-baseline")
     mkdirSync(directory, { mode: 0o700 })
     f.write("allocation.json", baseline, directory)
-    f.write("entry.json", { ...f.entry, allocationRoot: baseline.root, requestBytesRoot: baseline.requestBytesRoot }, directory)
+    const baselineHead = "2".repeat(40)
+    f.write("entry.json", { ...f.entry, head: baselineHead, allocationRoot: baseline.root, requestBytesRoot: baseline.requestBytesRoot }, directory)
+    processControl.head = baselineHead
     const baselinePaths = { ...lean.leanCorrectionRoutePaths("baseline", "v8-1"), store: directory, request: join(directory, "request.json") }
     const paths = vi.mocked(lean.leanCorrectionRoutePaths).getMockImplementation()!
     vi.mocked(lean.leanCorrectionRoutePaths).mockImplementation((route, mode) => route === "baseline" && mode === "v8-1" ? baselinePaths : paths(route, mode))
+    const gitCalls: readonly string[][] = []
+    processControl.git = args => {
+      ;(gitCalls as string[][]).push([...args])
+      if (args[0] === "merge-base" && args.join("|") === `merge-base|--is-ancestor|${f.entry.head}|${baselineHead}` || args[0] === "diff" && args[1] === "--exit-code" && [f.entry.head, baselineHead].includes(args[2]!)) return Buffer.alloc(0)
+      if (args.join("|") === `show|${f.entry.head}:${f.paths.allocation}`) return lean.leanCanonicalBytes(f.ledger.allocation)
+      if (args.join("|") === `show|${baselineHead}:${baselinePaths.allocation}`) return lean.leanCanonicalBytes(baseline)
+      throw new Error("SYNTHETIC_ONLY")
+    }
+    expect(() => baselineRetained.authenticateLeanRetryBaselineAuthorityV8(baseline, baselineHead)).not.toThrow()
+    expect(gitCalls.some(args => args[0] === "merge-base")).toBe(true)
+    const validGit = processControl.git
+    processControl.git = () => { throw new Error("SYNTHETIC_NONLINEAR_OR_SOURCE_DRIFT") }
+    expect(() => baselineRetained.authenticateLeanRetryBaselineAuthorityV8(baseline, baselineHead)).toThrow("RETRY_COMMITTED_LINEAGE")
+    processControl.git = validGit
+    writeFileSync(join(directory, "ledger.ndjson"), "", { mode: 0o600 }); writeFileSync(join(directory, "time.ndjson"), "", { mode: 0o600 })
+    const baselineLedger = { directory, allocation: baseline }
+    for (const snapshot of f.sources) sourceIO.publishLeanReusedBaselineSource(baselineLedger, snapshot, f.reuse)
+    const pair = leanBaselinePair({ ordinal: 0, slot: baseline.slots[0]!, priorLedgerBytesRoot: lean.leanBytesRoot(Buffer.alloc(0)), priorLedgerByteLength: 0, priorCharged: 30, bottom: f.sources[0]!, top: f.sources[1]! })
+    f.write("pair-0.json", pair, directory)
+    lean.beginLeanInterval(baselineLedger, "pilot-entry", f.entry.wallStartMs, 1_000_000_000n)
+    const charge = lean.chargeLeanSlot(baselineLedger, baseline.slots[0]!, { freeBytes: lean.LEAN_CAPS.totalBytes, availableMemoryBytes: 2_000_000_000 })
+    const snapshot = f.sources[0]!, admission = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet: snapshot.packet, proposal: snapshot.proposal, sourceBytes: Buffer.from(snapshot.source) }), validation: snapshot.validation })
+    const defaults = defaultRuntimeMetadata("typescript"), revision = buildStrategyRevision({ source: snapshot.source, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
+    const runtime = prospectiveLeagueRuntimeBinding(admission, { revisionId: revision.id, sourceRoot: snapshot.sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image })
+    const runtimeBinding = { budgetRoot: baseline.root, attemptRoot: charge.root, matchId: `lean-${charge.root.slice(7, 31)}`, containerName: `lean-${charge.root.slice(7, 25)}-bottom`, ownershipLabel: `lean-${baseline.root.slice(7, 25)}`, seat: "bottom" as const, runtime }
+    expect(authorityIO.leanStartupAuthorityDescriptorV5(authorityIO.issueLeanCorrectionRuntimeAuthority(baselineLedger, charge, snapshot, runtimeBinding, f.reuse))?.version).toBe(7)
     // Join accepted; the real ordinary owner independently refuses absent result.
     await expect(baselineRetained.verifyLeanRetryBaselineRetainedV8(baselinePaths.request, "v8-1")).rejects.toThrow("TERMINAL_ONLY_REQUIRED")
     for (const patch of [{ acceptedCheckRoot: r("wrong-check") }, { acceptedReaderCloseRoot: r("nonfinal-close") }]) {
       const { root: _root, ...body } = baseline
       const changed = { ...body, ...patch, root: labRoot(body.schemaVersion, { ...body, ...patch }) }
       f.write("allocation.json", changed, directory)
-      f.write("entry.json", { ...f.entry, allocationRoot: changed.root, requestBytesRoot: changed.requestBytesRoot }, directory)
+      f.write("entry.json", { ...f.entry, head: baselineHead, allocationRoot: changed.root, requestBytesRoot: changed.requestBytesRoot }, directory)
       await expect(baselineRetained.verifyLeanRetryBaselineRetainedV8(baselinePaths.request, "v8-1")).rejects.toThrow("RETRY_ACCEPTED_FINAL_JOIN")
     }
     expect(() => retained.verifyLeanCorrectionRetained(f.paths.request, "diagnostic", "v8-1")).toThrow()
