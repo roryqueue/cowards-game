@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from "vitest"
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { retainLeanMatch } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { parseLeanCorrectionCommand } from "./run-v1-38-lean-correction.js"
 import { captureLeanHostFailureV7, readLeanTrustedHostFailureStageV7 } from "./lib/v1-38-lean-host-stage-v7.js"
 import { isLeanChildFailureReceipt, isLeanChildFailureReceiptV7, publishChildTerminalAfterOptionalReceipt, resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
 
@@ -10,6 +12,19 @@ vi.mock("node:worker_threads", async original => ({ ...await original<typeof imp
 const root = `sha256:${"a".repeat(64)}`
 const binding = { route: "diagnostic" as const, allocationRoot: root, chargeRoot: root, slotRoot: root }
 const stages = ["match_preparation", "match_composition_postprocessing", "compact_replay_retention_publication", "terminal_result_publication"] as const
+describe("additive v7 identity", () => {
+  it("has disjoint routes and the exact approved elapsed-only cap delta", () => {
+    const v7 = (lean as any).LEAN_REPLAY_V7_ROUTES
+    expect(v7).toBeDefined()
+    for (const route of ["diagnostic", "baseline"] as const) {
+      expect(lean.leanCorrectionRoutePaths(route, "v7" as never)).toBe(v7[route])
+      expect(v7[route].store).not.toBe(lean.LEAN_REPLAY_V6_ROUTES[route].store)
+      expect(parseLeanCorrectionCommand([`run-supervisor-${route}-v7`, "--request", v7[route].request])).toMatchObject({ supervisor: "v7", route })
+      expect(() => parseLeanCorrectionCommand([`run-supervisor-${route}-v7`, "--request", lean.LEAN_REPLAY_V6_ROUTES[route].request])).toThrow()
+    }
+    expect((lean as any).LEAN_REPLAY_V7_CAPS).toEqual({ ...lean.LEAN_SUPERVISOR_V5_CAPS, elapsedMs: 57_600_000 })
+  })
+})
 describe("v7 host-only stage custody", () => {
   it("captures actual source/scenario preparation before a provider can open", async () => {
     const input = { ledger: { allocation: { schemaVersion: "lean-correction-supervisor-diagnostic-allocation-v7", route: "diagnostic", root } }, charge: { root }, slot: { root }, bottom: {}, top: {} }
