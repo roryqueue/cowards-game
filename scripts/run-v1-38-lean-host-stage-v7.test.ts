@@ -1,6 +1,14 @@
 import { afterEach, describe, it, expect, vi } from "vitest"
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { EventEmitter } from "node:events"
+import { createHash } from "node:crypto"
+import { defaultRuntimeMetadata } from "@cowards/spec"
+import { MATCH_KERNEL } from "../packages/engine/src/index.js"
+import { buildStrategyRevision } from "../packages/runtime-js/src/revision.js"
+import { admitFactory, authorizeFactorySupervision } from "../packages/strategy-lab/src/factory/admission.js"
+import { prospectiveLeagueRuntimeBinding } from "./lib/v1-38-league-prospective-lifetime.js"
+import * as sessionIO from "./lib/v1-38-lean-container-match-session.js"
+import { LAB_ADMITTED_ROOTS } from "../packages/strategy-lab/src/contracts.js"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
@@ -26,9 +34,9 @@ import { claimLeanRuntimeAuthority } from "./lib/v1-38-lean-experiment-authority
 import { captureLeanHostFailureV7, readLeanTrustedHostFailureStageV7 } from "./lib/v1-38-lean-host-stage-v7.js"
 import { isLeanChildFailureReceipt, isLeanChildFailureReceiptV7, publishChildTerminalAfterOptionalReceipt, resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
 
-const processControl = vi.hoisted(() => ({ head: "" }))
-vi.mock("node:child_process", async original => { const deny = () => { throw new Error("SYNTHETIC_ONLY") }; return { ...await original<typeof import("node:child_process")>(), spawn: deny, spawnSync: deny, fork: deny, exec: deny, execSync: deny, execFile: deny, execFileSync: (command: string, args: string[]) => command === "git" && args.join("|") === "rev-parse|HEAD" && processControl.head ? processControl.head : deny() } })
-vi.mock("node:worker_threads", async original => ({ ...await original<typeof import("node:worker_threads")>(), Worker: function() { throw new Error("SYNTHETIC_ONLY") } }))
+const processControl = vi.hoisted(() => ({ head: "", control: undefined as undefined | ((command: string, args: readonly string[]) => unknown), worker: undefined as undefined | ((source: string, options: unknown) => unknown) }))
+vi.mock("node:child_process", async original => { const deny = () => { throw new Error("SYNTHETIC_ONLY") }; return { ...await original<typeof import("node:child_process")>(), spawn: deny, spawnSync: (command: string, args: readonly string[]) => processControl.control ? processControl.control(command, args) : deny(), fork: deny, exec: deny, execSync: deny, execFile: deny, execFileSync: (command: string, args: string[]) => command === "git" && args.join("|") === "rev-parse|HEAD" && processControl.head ? processControl.head : deny() } })
+vi.mock("node:worker_threads", async original => ({ ...await original<typeof import("node:worker_threads")>(), Worker: function(source: string, options: unknown) { if (processControl.worker) return processControl.worker(source, options); throw new Error("SYNTHETIC_ONLY") } }))
 const virtualSource = vi.hoisted(() => ({ changed: "", review: "", reviewPath: "", failWrite: "" }))
 vi.mock("node:fs", async original => {
   const fs = await original<typeof import("node:fs")>()
@@ -48,21 +56,21 @@ const binding = { route: "diagnostic" as const, allocationRoot: root, chargeRoot
 const stages = ["match_preparation", "match_composition_postprocessing", "compact_replay_retention_publication", "terminal_result_publication"] as const
 const r = (label: string) => labRoot("host-stage-v7-fixture", label)
 const syntheticDirectories = new Set<string>()
-afterEach(() => { virtualSource.changed = ""; virtualSource.reviewPath = ""; virtualSource.failWrite = ""; processControl.head = ""; vi.restoreAllMocks(); for (const directory of syntheticDirectories) rmSync(directory, { recursive: true }); syntheticDirectories.clear() })
-const allocationInput = () => {
-  const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 28, elapsedUpperBoundMs: 41_943_494, allocatedDiskBytes: 12_894_208, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r("history"), survivors: [{ identity: ".strategy-lab/synthetic-history", allocatedBytes: 4096 }] }
-  return { sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: lean.LEAN_REPLAY_V7_SUPPLEMENT_ROOT, candidateRoots: [r("a"), r("b")], requestRoots: [r("request")], seed: "synthetic-v7", route: "diagnostic" as const, reuseGrantRoot: r("reuse"), supervisorDecisionRoot: lean.LEAN_REPLAY_V7_APPROVAL_ROOT, acceptedCheckRoot: null, requestBytesRoot: r("request-bytes"), dataReviewRoot: r("data"), setupAccountingRoot: r("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
+afterEach(() => { virtualSource.changed = ""; virtualSource.reviewPath = ""; virtualSource.failWrite = ""; processControl.head = ""; processControl.control = undefined; processControl.worker = undefined; vi.restoreAllMocks(); for (const directory of syntheticDirectories) rmSync(directory, { recursive: true }); syntheticDirectories.clear() })
+const allocationInput = (version: 5 | 6 | 7 = 7) => {
+  const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: version === 7 ? 28 : version === 6 ? 24 : 23, elapsedUpperBoundMs: 41_943_494, allocatedDiskBytes: 12_894_208, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r("history"), survivors: [{ identity: ".strategy-lab/synthetic-history", allocatedBytes: 4096 }] }
+  return { sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: version === 7 ? lean.LEAN_REPLAY_V7_SUPPLEMENT_ROOT : version === 6 ? lean.LEAN_REPLAY_V6_SUPPLEMENT_ROOT : lean.LEAN_STARTUP_SUPPLEMENT_ROOT, candidateRoots: [r("a"), r("b")], requestRoots: [r("request")], seed: "synthetic-v7", route: "diagnostic" as const, reuseGrantRoot: r("reuse"), supervisorDecisionRoot: version === 7 ? lean.LEAN_REPLAY_V7_APPROVAL_ROOT : version === 6 ? lean.LEAN_REPLAY_V6_APPROVAL_ROOT : lean.LEAN_STARTUP_APPROVAL_ROOT, acceptedCheckRoot: null, requestBytesRoot: r("request-bytes"), dataReviewRoot: r("data"), setupAccountingRoot: r("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
 }
 // Tiny new store only. No historical payload, native runtime or gameplay runs.
-const producerFixture = () => {
+const producerFixture = (version: 5 | 6 | 7 = 7) => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v7-connected-synthetic-")))
   syntheticDirectories.add(directory); chmodSync(directory, 0o700)
   const store = join(directory, "store"), temp = join(directory, "scratch")
   mkdirSync(store, { mode: 0o700 }); mkdirSync(temp, { mode: 0o700 })
   const paths = { ...lean.LEAN_REPLAY_V7_ROUTES.diagnostic, store, temp, request: join(directory, "request.json"), allocation: join(directory, "allocation.json") }
-  const initial = { ...allocationInput(), sourceRoot: leanCorrectionSourceManifest("v7").root }
+  const initial = { ...allocationInput(version), sourceRoot: leanCorrectionSourceManifest("v7").root }
   const request = { schemaVersion: "lean-correction-supervisor-request-v7" as const, route: "diagnostic" as const, sourceRoot: initial.sourceRoot, planRoot: initial.planRoot, amendmentRoot: r("amendment"), reviewPath: "synthetic", reviewRoot: initial.reviewRoot, dataReviewPath: "synthetic", dataReviewRoot: initial.dataReviewRoot, coldRoot: initial.coldRoot, seed: initial.seed, reuseGrantRoot: initial.reuseGrantRoot, candidateRoots: initial.candidateRoots, requestRoots: initial.requestRoots, diagnosis: null, supervisorDecisionRoot: initial.supervisorDecisionRoot, acceptedCheckRoot: null, setupAccountingPath: "synthetic", setupAccountingRoot: initial.setupAccountingRoot, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, authorizationPath: "synthetic", authorizationRoot: r("authorization") }
-  const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...initial, requestBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(request)) }, 7)
+  const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...initial, requestBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(request)) }, version)
   const ledger = { directory: store, allocation }
   const write = (name: string, value: unknown, target = store) => writeFileSync(join(target, name), lean.leanCanonicalBytes(value), { mode: 0o600 })
   write("allocation.json", allocation); writeFileSync(join(store, "ledger.ndjson"), "", { mode: 0o600 }); writeFileSync(join(store, "time.ndjson"), "", { mode: 0o600 })
@@ -77,7 +85,7 @@ const producerFixture = () => {
   for (const snapshot of sources) sourceIO.publishLeanReusedBaselineSource(ledger, snapshot, reuse)
   correction.publishLeanCorrection(join(store, "cold-reuse.json"), reuse, ledger)
   const slot = allocation.slots[0]!
-  const pair = leanBaselinePair({ ordinal: 0, slot, priorLedgerBytesRoot: lean.leanBytesRoot(Buffer.alloc(0)), priorLedgerByteLength: 0, priorCharged: 28, bottom: sources[0]!, top: sources[1]! })
+  const pair = leanBaselinePair({ ordinal: 0, slot, priorLedgerBytesRoot: lean.leanBytesRoot(Buffer.alloc(0)), priorLedgerByteLength: 0, priorCharged: allocation.predecessor.chargedMatches, bottom: sources[0]!, top: sources[1]! })
   correction.publishLeanCorrection(join(store, "pair-0.json"), pair, ledger)
   vi.spyOn(Date, "now").mockReturnValue(1000); vi.spyOn(process.hrtime, "bigint").mockReturnValue(1_000_000_000n)
   const charge = lean.chargeLeanSlot(ledger, slot, { freeBytes: lean.LEAN_CAPS.totalBytes, availableMemoryBytes: 2_000_000_000 })
@@ -87,6 +95,67 @@ const producerFixture = () => {
   const hostBinding = { route: "diagnostic" as const, allocationRoot: allocation.root, chargeRoot: charge.root, slotRoot: slot.root }
   return { ledger, entry, paths, request, reuse, pair, charge, execution, sources, slot, hostBinding, write }
 }
+
+describe("connected startup request digest handshake", () => {
+  it.each([5, 6, 7] as const)("real issued v%s host frames match their generated broker and reject wrong domains", version => {
+    const f = producerFixture(version), source = f.sources[0]!
+    const admission = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet: source.packet, proposal: source.proposal, sourceBytes: Buffer.from(source.source) }), validation: source.validation })
+    const defaults = defaultRuntimeMetadata("typescript")
+    const revision = buildStrategyRevision({ source: source.source, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
+    const runtime = prospectiveLeagueRuntimeBinding(admission, { revisionId: revision.id, sourceRoot: source.sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image })
+    const runtimeBinding = { budgetRoot: f.ledger.allocation.root, attemptRoot: f.charge.root, matchId: `lean-${f.charge.root.slice(7, 31)}`, containerName: `lean-${f.charge.root.slice(7, 25)}-bottom`, ownershipLabel: `lean-${f.ledger.allocation.root.slice(7, 25)}`, seat: "bottom" as const, runtime }
+    const token = authorityIO.issueLeanCorrectionRuntimeAuthority(f.ledger, f.charge, source, runtimeBinding, f.reuse)
+    expect(authorityIO.leanStartupAuthorityDescriptorV5(token)?.version ?? 5).toBe(version)
+    claimLeanRuntimeAuthority(token, runtimeBinding, "factory"); claimLeanRuntimeAuthority(token, runtimeBinding, "planner")
+    const options = { ...runtimeBinding, image: runtime.image, infrastructureProfile: "closeout" as const, leanExperimentAuthority: token, leanExperimentBinding: runtimeBinding }
+    for (const key of ["transport", "streamFactory"] as const) expect(() => sessionIO.createLeanContainerMatchSession({ ...options, [key]: () => { throw new Error("MUST_NOT_CALL") } })).toThrow("LEAN_EXPERIMENT_SESSION_BINDING")
+    let owned = false
+    processControl.control = (command, args) => {
+      if (command !== "docker" || !["inspect", "create", "start", "rm"].includes(args[0]!)) throw new Error("SYNTHETIC_ONLY")
+      if (args[0] === "inspect") return owned ? { status: 0, signal: null, stdout: Buffer.from(runtimeBinding.ownershipLabel + "\n"), stderr: Buffer.alloc(0) } : { status: 1, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.from("Error: No such object: " + runtimeBinding.containerName + "\n") }
+      if (args[0] === "create") owned = true
+      if (args[0] === "rm") owned = false
+      return { status: 0, signal: null, stdout: Buffer.from(args[0] === "create" ? "synthetic-container\n" : ""), stderr: Buffer.alloc(0) }
+    }
+    const frames: Record<string, any>[] = []
+    processControl.worker = (workerSource, options) => {
+      if (!workerSource.includes('const { parentPort, workerData } = require("node:worker_threads")')) throw new Error("SYNTHETIC_ONLY")
+      const data = (options as { workerData: { start: SharedArrayBuffer; command: string; args: string[] } }).workerData
+      const broker = version === 7 ? buildLeanContainerBrokerSourceV7() : version === 6 ? buildLeanContainerBrokerSourceV6() : sessionIO.buildLeanContainerBrokerSourceV5()
+      expect(data.command).toBe("docker"); expect(data.args.at(-1)).toBe(broker)
+      // Execute ONLY the generated trusted binding guard, ending before the
+      // supervisor/Worker construction. No guest source or broker imports run.
+      const begin = broker.indexOf("const binding=q.startup.binding;"), end = broker.indexOf("const result=await superviseLeanStartupV5(binding,q.startup.hostBudgetMs", begin)
+      expect(begin).toBeGreaterThan(0); expect(end).toBeGreaterThan(begin)
+      const guard = new Function("q", "request", "startupHashV5", "exact", "now", broker.slice(begin, end))
+      const exact = (value: object, keys: string[]) => Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key))
+      Atomics.store(new Int32Array(data.start), 0, 1)
+      return { terminate: async () => 0, postMessage(message: any) {
+        let bytes = Buffer.alloc(0)
+        if (message.type === "exchange") {
+          const q = JSON.parse(Buffer.from(message.request).toString("utf8")); frames.push(q)
+          const payload = Buffer.from(q.payloadBase64, "base64"), request = JSON.parse(payload.toString("utf8"))
+          const digest = (domain: number) => `sha256:${createHash("sha256").update(`v1.38-lean-startup-v${domain}:${q.requestId}:`).update(payload).digest("hex")}`
+          expect(q.startup.binding.requestRoot).toBe(digest(version))
+          expect(q.startup.binding.requestOrdinal).toBe(q.requestId)
+          expect(q.timeoutMilliseconds).toBe(1000); expect(q.startup.hostBudgetMs).toBe(5000)
+          expect(() => guard(q, request, createHash, exact, () => 0n)).not.toThrow()
+          for (const wrong of [5, 6, 7].filter(domain => domain !== version)) expect(() => guard({ ...q, startup: { ...q.startup, binding: { ...q.startup.binding, requestRoot: digest(wrong) } } }, request, createHash, exact, () => 0n)).toThrow("STARTUP_BINDING_V5")
+          const inner = { ok: true, value: { activationOrders: [], strategyMemory: request.input.strategyMemory } }
+          const metadata = { ...q.startup.binding, schemaVersion: `v1.38-lean-startup-origin-v${version}`, stage: "receipt", branch: "complete", ready: true, go: true, wait: "changed", termination: "not_required", unknown: false }
+          bytes = Buffer.from(JSON.stringify({ requestId: q.requestId, status: 0, signal: null, stdoutBase64: Buffer.from(JSON.stringify(inner)).toString("base64"), stderrBase64: "", startupOrigin: metadata }) + "\n")
+        }
+        new Uint8Array(message.response).set(bytes); const control = new Int32Array(message.control); Atomics.store(control, 1, bytes.length); Atomics.store(control, 0, 1)
+      } }
+    }
+    const session = sessionIO.createLeanContainerMatchSession(options)
+    try {
+      for (let ordinal = 1; ordinal <= 2; ordinal++) expect(session.adapter.execute({ source: Buffer.from(revision.metadata.sourceArtifact!.bytesBase64!, "base64").toString("utf8"), methodName: "selectActivations", input: { strategyMemory: null }, timeoutMs: 1000 }).ok).toBe(true)
+      expect(frames).toHaveLength(2)
+      expect(frames[0]!.payloadBase64).toBe(frames[1]!.payloadBase64)
+    } finally { expect(session.close()).toEqual({ cleanupComplete: true, orphanedChild: false }) }
+  })
+})
 
 describe("connected v7 producer and parent boundaries", () => {
   it.each(["composition", "cleanup", "provider"] as const)("captures real %s catch while denying native execution", async fault => {
