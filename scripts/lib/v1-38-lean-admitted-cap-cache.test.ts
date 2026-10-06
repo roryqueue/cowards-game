@@ -102,6 +102,7 @@ describe("identity-only admitted v8 cap reuse", () => {
     expect(lean.leanCapsForAllocation(admitted)).toBe(lean.LEAN_RETRY_V8_TIMEBOX_CAPS)
     expect(counts()).toEqual(before)
     expect(() => Object.assign(admitted.slots[0]!, { condition: 99 })).toThrow(TypeError)
+    if (!("predecessor" in admitted)) throw new Error("Expected admitted v8 predecessor")
     expect(() => Object.assign(admitted.predecessor.survivors[0]!, { allocatedBytes: 0 })).toThrow(TypeError)
   })
 
