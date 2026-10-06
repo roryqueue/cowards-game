@@ -1,7 +1,7 @@
 {
   "schemaVersion": "lean-retry-source-inventory-v8",
   "privacy": "private_offline",
-  "scope": "source_only_worker_handoff",
+  "scope": "source_only_review_fix_handoff",
   "startupVersion": 7,
   "planRoot": "sha256:becc43f0198ca37376343fa52c9f10b590cd3588ddac45e820b072163d5326d6",
   "approvalRoot": "sha256:f60084e7d4b34f0f83e6432df1cd0468c9668c83f30be9c7cedd890667373ab1",
@@ -12,15 +12,15 @@
   "sourceRoots": [
     {
       "attemptOrdinal": 1,
-      "sourceRoot": "sha256:2e939fdd3da0e6b5bedcf9d90ccb43677e413488cffb015c2c8a31ba5e66f9d1"
+      "sourceRoot": "sha256:5ec6dfb57fa24af653182412f434e7279c207be41d6037b1865340f9d5950eb5"
     },
     {
       "attemptOrdinal": 2,
-      "sourceRoot": "sha256:ae5c5ff891d686c247c0fd1c901a99cb86da7f78143c8829d1411251e610979d"
+      "sourceRoot": "sha256:f42d2834dc7aa13d3855c2421db69fa9014d4e4a63f92a4cfe6d40c46eb96e88"
     },
     {
       "attemptOrdinal": 3,
-      "sourceRoot": "sha256:41d6605f18d914ba14bb9a4882557fef1f7bf7be88e5fc7f1705f61f4e469ccf"
+      "sourceRoot": "sha256:7533f9802cea30dabc12e14e3c625268c93e1489c172061619ece628001887d4"
     }
   ],
   "entries": [
@@ -2194,7 +2194,7 @@
     },
     {
       "path": "packages/strategy-lab/src/league/lean-experiment.ts",
-      "root": "sha256:ce41b864a03864502ef257b9e9c49e7a94df1c212a294699330f6672633a8b98"
+      "root": "sha256:3d89cd618bbe050a22508c0e5b2420c797a1f6154dc0dc4ec43c6b0ad1f91472"
     },
     {
       "path": "packages/strategy-lab/src/league/lean-training.ts",
@@ -3154,11 +3154,11 @@
     },
     {
       "path": "scripts/lib/v1-38-lean-baseline-retained.test.ts",
-      "root": "sha256:4402f7ac4254ade8dc1e5a44416fdb200b5f601426641246cb2f04ce46254828"
+      "root": "sha256:5548b0d86b6787d7889d3212adecddf5e024de0fc7be15e4da6344c9d9b5af1b"
     },
     {
       "path": "scripts/lib/v1-38-lean-baseline-retained.ts",
-      "root": "sha256:a70b98bea0ad0da174edfed502eece689a2ff13ec1cc3153764457acc594d3e6"
+      "root": "sha256:bb89d3352d8b3edc7570929e085016dd12695a3ac585bb48bbde36ba52d254b1"
     },
     {
       "path": "scripts/lib/v1-38-lean-baseline-reuse.ts",
@@ -3194,7 +3194,7 @@
     },
     {
       "path": "scripts/lib/v1-38-lean-correction-retained.ts",
-      "root": "sha256:d8cf2bd864665bd198ccd295b06e4592472a98805977291298396328176f4547"
+      "root": "sha256:e2764c481c97902eade841605509a46b3d69870e77ffa7571ca2aca1b1fcaa0f"
     },
     {
       "path": "scripts/lib/v1-38-lean-experiment-authority.ts",
@@ -3466,7 +3466,7 @@
     },
     {
       "path": "scripts/run-v1-38-lean-baseline.ts",
-      "root": "sha256:ba908b81a657bfe356eee566db3c32a577ee12246aa7fca26e0623d0437059b4"
+      "root": "sha256:cedb5cf8fd00b51d0778b30cefb4084a276110fb1417d46b33d223c96af5bc4f"
     },
     {
       "path": "scripts/run-v1-38-lean-closeout.ts",
@@ -3486,7 +3486,7 @@
     },
     {
       "path": "scripts/run-v1-38-lean-correction.ts",
-      "root": "sha256:75745ac039f5ac8ac38654b010e5b8a52ecad99c56d1e4b2869b11fa11df3fe9"
+      "root": "sha256:1a8979ff125c474e4673e5fa66990b7a524aaad1a8f29290fdce36bf02866a21"
     },
     {
       "path": "scripts/run-v1-38-lean-experiment.sh",
@@ -3502,7 +3502,7 @@
     },
     {
       "path": "scripts/run-v1-38-lean-host-stage-v8.test.ts",
-      "root": "sha256:b42c9218cf6830324dafd05d04dd93a0dc64f7955786067cc6df3de105aeee31"
+      "root": "sha256:92939fdaa9fdbf6cfbbda73094934fac3128f1740fb48e200a50d7a66795bdd3"
     },
     {
       "path": "scripts/run-v1-38-lean-retry-envelope-source-manifest.ts",
@@ -3672,26 +3672,13 @@
     }
   ],
   "tests": {
-    "combined": {
-      "suites": 9,
-      "tests": 172,
-      "initialPassedSuites": 8,
-      "initialPassedTests": 157,
-      "initialFailedTests": 15,
-      "correction": "Legacy inert parent fixtures were made canonical, not weakened production authentication."
-    },
-    "finalAffected": {
-      "parentTestsPassed": 23,
-      "retryTestsPassed": 10
-    },
-    "strategyLabStrictTypecheck": "pass",
+    "reviewFixFocusedPassed": 8,
+    "actualSuccessorRequestAdmissionPassed": 2,
+    "distinctHeadBaselinePublisherIssuerSelectedReaderAndAbsenceGapPassed": 6,
+    "strictPackageTypecheck": "pass",
+    "scopedStandaloneTypecheck": "No owned errors; pre-existing feasibility-protocol.ts:52 remains",
     "shellSyntax": "pass",
-    "boundaryImports": {
-      "strictOffenses": 0,
-      "ownershipOffenses": 0,
-      "existingReportOnlyOffenses": 19
-    },
-    "adHocScriptsStrictTypecheck": "No owned-file errors; pre-existing feasibility-protocol.ts:52 JsonValue error under standalone compiler options."
+    "fullCombinedFinalSuite": "not claimed"
   },
   "pendingMainGates": [
     "independent review/fix",
