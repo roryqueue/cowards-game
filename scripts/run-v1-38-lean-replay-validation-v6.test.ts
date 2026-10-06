@@ -235,6 +235,22 @@ const observeFullReplayText = (texts: readonly string[]) => {
   return hits
 }
 describe("wiring", () => {
+  it("isolates all v6 paths and keeps the exact finite zero-charge predecessor without a stopped predicate", () => {
+    expect(lean.leanSupervisorVersion("v6")).toBe(6)
+    for (const route of ["diagnostic", "baseline"] as const) {
+      const p = lean.leanCorrectionRoutePaths(route, "v6")
+      for (const version of [false, true, "v3", "v4", "v5"] as const) {
+        const old = lean.leanCorrectionRoutePaths(route, version)
+        for (const key of ["store", "request", "allocation", "check", "temp"] as const) expect(p[key]).not.toBe(old[key])
+      }
+      expect(lean.leanCapsForAllocation(allocation(6, route))).toEqual(lean.LEAN_SUPERVISOR_V5_CAPS)
+    }
+    const { allocationRoot, allocationBytesRoot, timeBytesRoot, terminalBytesRoot, charged, closedElapsedMs, readerCloseMs } = lean.LEAN_REPLAY_V6_CARRY
+    const finite = { allocationRoot, allocationBytesRoot, timeBytesRoot, terminalBytesRoot, charged, closedElapsedMs, readerCloseMs, ledgerBytesRoot: lean.leanBytesRoot(new Uint8Array()), active: false }
+    expect(() => lean.validateLeanReplayV6PredecessorCustody(finite)).not.toThrow()
+    for (const key of Object.keys(finite)) expect(() => lean.validateLeanReplayV6PredecessorCustody({ ...finite, [key]: null })).toThrow()
+    expect(() => lean.validateLeanReplayV6PredecessorCustody({ ...finite, stopped: true })).toThrow()
+  })
   it.each(["diagnostic", "baseline"] as const)("actual strict v6 %s validates every selected replay without full text", async route => {
     const a = allocation(6, route)
     const terminals: SyntheticTerminal[] = route === "diagnostic" ? [{ ordinal: 0 }] : [...a.sampleSlotRoots.map(root => ({ ordinal: a.slots.find(slot => slot.root === root)!.ordinal })), { ordinal: a.slots.find(slot => !a.sampleSlotRoots.includes(slot.root))!.ordinal, failure: true }]
@@ -314,4 +330,3 @@ describe("wiring", () => {
     expect(() => new worker.Worker("denied")).toThrow("SYNTHETIC_ONLY")
   })
 })
-
