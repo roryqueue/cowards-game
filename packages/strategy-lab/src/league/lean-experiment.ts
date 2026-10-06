@@ -3,6 +3,7 @@ import { createHash } from "node:crypto"
 import { constants, openSync, closeSync, writeSync, fsyncSync, readFileSync, mkdirSync, lstatSync, realpathSync, readdirSync, statSync, statfsSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { gzipSync, gunzipSync } from "node:zlib"
+import { types as nodeTypes } from "node:util"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { LAB_ADMITTED_ROOTS, labRoot, exactLabKeys, freezeLabValue, type LabRoot } from "../contracts.js"
 
@@ -841,9 +842,20 @@ const createLeanRetryAllocationV8 = (input: Parameters<typeof createLeanSupervis
   const body = { ...base, caps, ...(extension ? { timeboxExtension: extension } : {}), schemaVersion: `lean-correction-supervisor-${input.route}-allocation-v8` as LeanCorrectionAllocation["schemaVersion"], planRoot: input.planRoot, supervisorDecisionRoot: input.supervisorDecisionRoot, predecessor: p, attemptOrdinal: n, priorClosureRoot: input.priorClosureRoot!, continuationRoot: input.continuationRoot!, acceptedReaderCloseRoot: input.acceptedReaderCloseRoot! }
   return freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
 }
-// Only freshly reconstructed v8 objects returned by full successful admission
-// are registered. Their recursive freeze is guaranteed by createLeanRetryAllocationV8.
-// Caller objects, frozen clones and root strings never acquire cache authority.
+// Freeze alone does not make accessor/proxy results immutable. This eligibility
+// check runs only after full admission and reads descriptors, never getters.
+const immutableRetryData = (value: unknown): boolean => {
+  if (value === null || typeof value !== "object") return typeof value !== "function"
+  if (nodeTypes.isProxy(value)) return false
+  const prototype = Object.getPrototypeOf(value)
+  if ((Array.isArray(value) ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null) || !Object.isFrozen(value)) return false
+  return Reflect.ownKeys(value).every(key => {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    return descriptor !== undefined && "value" in descriptor && immutableRetryData(descriptor.value)
+  })
+}
+// Only safe reconstructed v8 objects returned by successful full admission are
+// registered; caller objects, frozen clones and root strings acquire no authority.
 const admittedRetryCaps = new WeakMap<object, typeof LEAN_REPLAY_V7_CAPS | typeof LEAN_RETRY_V8_TIMEBOX_CAPS>()
 export const admitLeanAllocation = (value: unknown): Readonly<AnyLeanAllocation> => {
   if (typeof value === "object" && value !== null && ["lean-correction-supervisor-diagnostic-allocation-v8", "lean-correction-supervisor-baseline-allocation-v8"].includes((value as { schemaVersion: string }).schemaVersion)) {
@@ -853,7 +865,7 @@ export const admitLeanAllocation = (value: unknown): Readonly<AnyLeanAllocation>
     const { schemaVersion: _schema, privacy: _privacy, root: _root, caps: _caps, slots: _slots, tupleRoot: _tuple, runtimeRoot: _runtime, sampleSlotRoots: _samples, diagnosisRoot: _diagnosis, ...input } = a
     const expected = createLeanRetryAllocationV8(input as Parameters<typeof createLeanSupervisorCorrectionAllocation>[0])
     if (labRoot("lean-retry-admission-v8", a) !== labRoot("lean-retry-admission-v8", expected)) return fail("RETRY_ALLOCATION")
-    admittedRetryCaps.set(expected, "timeboxExtension" in expected ? LEAN_RETRY_V8_TIMEBOX_CAPS : LEAN_REPLAY_V7_CAPS)
+    if (immutableRetryData(expected)) admittedRetryCaps.set(expected, "timeboxExtension" in expected ? LEAN_RETRY_V8_TIMEBOX_CAPS : LEAN_REPLAY_V7_CAPS)
     return expected
   }
   if (typeof value === "object" && value !== null && leanSupervisorAllocationMode(value as AnyLeanAllocation)) {
