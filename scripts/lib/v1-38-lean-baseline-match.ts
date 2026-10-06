@@ -59,7 +59,7 @@ export const leanBaselineMatchEvidence = (actual: LabMatchExecution, compact: Le
 })
 
 export interface LeanCorrectionInvocationBinding {
-  readonly schemaVersion: "v1.38-lean-correction-invocation-binding-v1" | "v1.38-lean-correction-invocation-binding-v5" | "v1.38-lean-correction-invocation-binding-v6"
+  readonly schemaVersion: "v1.38-lean-correction-invocation-binding-v1" | "v1.38-lean-correction-invocation-binding-v5" | "v1.38-lean-correction-invocation-binding-v6" | "v1.38-lean-correction-invocation-binding-v7"
   readonly method: "selectActivations" | "soldierBrain"
   readonly requestOrdinal: number
   readonly requestRoot: string
@@ -74,24 +74,24 @@ export interface LeanCorrectionInvocationBinding {
 }
 const invocationBindingKeys = ["schemaVersion", "method", "requestOrdinal", "requestRoot", "payloadRoot", "inputRoot", "executableRoot", "sourceRoot", "seat", "requestId", "ordinal", "invocationRoot"] as const
 interface LeanCorrectionInvocationTransportBinding { readonly method: "selectActivations" | "soldierBrain"; readonly requestOrdinal: number; readonly requestRoot: string; readonly payloadRoot: string; readonly inputRoot: LabRoot; readonly executableRoot: LabRoot }
-export const leanCorrectionInvocationTransportBinding = (request: { methodName: LeanCorrectionInvocationBinding["method"]; source: string; input: unknown; outputByteLimit?: number; requestOrdinal: number }, startupV5: boolean | "v6" = false): LeanCorrectionInvocationTransportBinding => {
+export const leanCorrectionInvocationTransportBinding = (request: { methodName: LeanCorrectionInvocationBinding["method"]; source: string; input: unknown; outputByteLimit?: number; requestOrdinal: number }, startupV5: boolean | "v6" | "v7" = false): LeanCorrectionInvocationTransportBinding => {
   const payload = encodeSubprocessIpcRequest({ source: request.source, methodName: request.methodName, input: request.input, outputByteLimit: request.outputByteLimit })
   const requestOrdinal = request.requestOrdinal
   if (!Number.isSafeInteger(requestOrdinal) || requestOrdinal < 1) throw new TypeError("LEAN_CORRECTION_INVOCATION_ORDINAL")
   const payloadRoot = `sha256:${createHash("sha256").update(payload).digest("hex")}`
-  return Object.freeze({ method: request.methodName, requestOrdinal, requestRoot: `sha256:${createHash("sha256").update(`${startupV5 === "v6" ? "v1.38-lean-startup-v6" : startupV5 ? "v1.38-lean-startup-v5" : "v1.38-lean-correction-origin"}:${requestOrdinal}:`).update(payload).digest("hex")}`, payloadRoot, inputRoot: labRoot("runtime-input", request.input), executableRoot: `sha256:${createHash("sha256").update(request.source).digest("hex")}` })
+  return Object.freeze({ method: request.methodName, requestOrdinal, requestRoot: `sha256:${createHash("sha256").update(`${startupV5 === "v7" ? "v1.38-lean-startup-v7" : startupV5 === "v6" ? "v1.38-lean-startup-v6" : startupV5 ? "v1.38-lean-startup-v5" : "v1.38-lean-correction-origin"}:${requestOrdinal}:`).update(payload).digest("hex")}`, payloadRoot, inputRoot: labRoot("runtime-input", request.input), executableRoot: `sha256:${createHash("sha256").update(request.source).digest("hex")}` })
 }
 /** Authenticate the finite transport receipt against the actual failed
  * host-issued runtime evidence before it can be retained beside an origin. */
 export const bindLeanCorrectionInvocation = (origin: LeanPrivateCorrectionOrigin, transport: LeanCorrectionInvocationTransportBinding, evidence: Parameters<typeof getFactoryPrivateDiagnostic>[1], privateDiagnostic: ReturnType<typeof getFactoryPrivateDiagnostic>, seat: "bottom" | "top"): LeanCorrectionInvocationBinding => {
   const o = validateLeanPrivateCorrectionOrigin(origin), t = validateTransportBinding(transport)
   if (!privateDiagnostic || evidence.result.ok || !("systemFailure" in evidence.result) || o.requestOrdinal !== t.requestOrdinal || o.requestRoot !== t.requestRoot || t.method !== evidence.method || t.requestOrdinal !== evidence.ordinal + 1 || t.inputRoot !== evidence.inputRoot || t.executableRoot !== evidence.identity.executableRoot || !/^sha256:[a-f0-9]{64}$/u.test(evidence.identity.sourceRoot) || privateDiagnostic.method !== evidence.method || privateDiagnostic.ordinal !== evidence.ordinal || privateDiagnostic.requestId !== evidence.requestId || privateDiagnostic.inputRoot !== evidence.inputRoot || privateDiagnostic.invocationRoot !== evidence.invocationRoot || privateDiagnostic.identity.sourceRoot !== evidence.identity.sourceRoot || privateDiagnostic.identity.executableRoot !== evidence.identity.executableRoot) throw new TypeError("LEAN_CORRECTION_INVOCATION_JOIN")
-  if ((o.schemaVersion === "v1.38-lean-startup-origin-v5" || o.schemaVersion === "v1.38-lean-startup-origin-v6") && (o.sourceRoot !== evidence.identity.sourceRoot || o.executableRoot !== evidence.identity.executableRoot || o.inputRoot !== evidence.inputRoot || o.method !== evidence.method || o.seat !== seat || o.allocationRoot !== evidence.identity.budgetRoot || o.chargeRoot !== evidence.identity.attemptRoot || o.harnessRoot !== evidence.identity.harnessRoot)) throw new TypeError("LEAN_STARTUP_INVOCATION_JOIN_V5")
-  const binding: LeanCorrectionInvocationBinding = Object.freeze({ schemaVersion: o.schemaVersion === "v1.38-lean-startup-origin-v6" ? "v1.38-lean-correction-invocation-binding-v6" : o.schemaVersion === "v1.38-lean-startup-origin-v5" ? "v1.38-lean-correction-invocation-binding-v5" : "v1.38-lean-correction-invocation-binding-v1", method: evidence.method as LeanCorrectionInvocationBinding["method"], requestOrdinal: t.requestOrdinal, requestRoot: t.requestRoot, payloadRoot: t.payloadRoot, inputRoot: evidence.inputRoot, executableRoot: evidence.identity.executableRoot, sourceRoot: evidence.identity.sourceRoot, seat, requestId: evidence.requestId, ordinal: evidence.ordinal, invocationRoot: evidence.invocationRoot })
+  if ((o.schemaVersion === "v1.38-lean-startup-origin-v5" || o.schemaVersion === "v1.38-lean-startup-origin-v6" || o.schemaVersion === "v1.38-lean-startup-origin-v7") && (o.sourceRoot !== evidence.identity.sourceRoot || o.executableRoot !== evidence.identity.executableRoot || o.inputRoot !== evidence.inputRoot || o.method !== evidence.method || o.seat !== seat || o.allocationRoot !== evidence.identity.budgetRoot || o.chargeRoot !== evidence.identity.attemptRoot || o.harnessRoot !== evidence.identity.harnessRoot)) throw new TypeError("LEAN_STARTUP_INVOCATION_JOIN_V5")
+  const binding: LeanCorrectionInvocationBinding = Object.freeze({ schemaVersion: o.schemaVersion === "v1.38-lean-startup-origin-v7" ? "v1.38-lean-correction-invocation-binding-v7" : o.schemaVersion === "v1.38-lean-startup-origin-v6" ? "v1.38-lean-correction-invocation-binding-v6" : o.schemaVersion === "v1.38-lean-startup-origin-v5" ? "v1.38-lean-correction-invocation-binding-v5" : "v1.38-lean-correction-invocation-binding-v1", method: evidence.method as LeanCorrectionInvocationBinding["method"], requestOrdinal: t.requestOrdinal, requestRoot: t.requestRoot, payloadRoot: t.payloadRoot, inputRoot: evidence.inputRoot, executableRoot: evidence.identity.executableRoot, sourceRoot: evidence.identity.sourceRoot, seat, requestId: evidence.requestId, ordinal: evidence.ordinal, invocationRoot: evidence.invocationRoot })
   if (!exactInvocationBinding(binding) || binding.requestId.length < 1) throw new TypeError("LEAN_CORRECTION_INVOCATION_JOIN")
   return binding
 }
-const exactInvocationBinding = (value: unknown): value is LeanCorrectionInvocationBinding => !!value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === invocationBindingKeys.length && invocationBindingKeys.every(key => key in value) && ["v1.38-lean-correction-invocation-binding-v1", "v1.38-lean-correction-invocation-binding-v5", "v1.38-lean-correction-invocation-binding-v6"].includes((value as LeanCorrectionInvocationBinding).schemaVersion)
+const exactInvocationBinding = (value: unknown): value is LeanCorrectionInvocationBinding => !!value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === invocationBindingKeys.length && invocationBindingKeys.every(key => key in value) && ["v1.38-lean-correction-invocation-binding-v1", "v1.38-lean-correction-invocation-binding-v5", "v1.38-lean-correction-invocation-binding-v6", "v1.38-lean-correction-invocation-binding-v7"].includes((value as LeanCorrectionInvocationBinding).schemaVersion)
 const transportBindingKeys = ["method", "requestOrdinal", "requestRoot", "payloadRoot", "inputRoot", "executableRoot"] as const
 const validateTransportBinding = (value: unknown): LeanCorrectionInvocationTransportBinding => {
   if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).length !== transportBindingKeys.length || transportBindingKeys.some(key => !(key in value))) throw new TypeError("LEAN_CORRECTION_TRANSPORT_BINDING_INVALID")
@@ -133,7 +133,7 @@ export const runLeanBaselineMatch = async (input: {
     let activeTransportBinding: LeanCorrectionInvocationTransportBinding | undefined
     let requestOrdinal = 0
     const retainedTransportBindings = new Map<number, { origin: LeanPrivateCorrectionOrigin; transport: LeanCorrectionInvocationTransportBinding }>()
-    const native = createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, matchId, containerName, ownershipLabel, attemptRoot: input.charge.root, budgetRoot: input.ledger.allocation.root, image: LAB_ADMITTED_ROOTS.image, invocationLimit: 24800, factoryLifetimeMs: 600000, ...(input.correction?.observe ? { [(leanSupervisorAllocationMode(input.ledger.allocation) === "v5" || leanSupervisorAllocationMode(input.ledger.allocation) === "v6") ? "startupOriginObserver" : "correctionOriginObserver"]: { observe: (metadata: LeanPrivateCorrectionOrigin) => { if (!activeTransportBinding) return fail(); retainedTransportBindings.set(activeTransportBinding.requestOrdinal, { origin: validateLeanPrivateCorrectionOrigin(metadata), transport: activeTransportBinding }); input.correction!.observe!(metadata, snapshot.sourceRoot, seat, activeTransportBinding) } } } : {}) })
+    const native = createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, matchId, containerName, ownershipLabel, attemptRoot: input.charge.root, budgetRoot: input.ledger.allocation.root, image: LAB_ADMITTED_ROOTS.image, invocationLimit: 24800, factoryLifetimeMs: 600000, ...(input.correction?.observe ? { [(leanSupervisorAllocationMode(input.ledger.allocation) === "v5" || (leanSupervisorAllocationMode(input.ledger.allocation) === "v6" || leanSupervisorAllocationMode(input.ledger.allocation) === "v7")) ? "startupOriginObserver" : "correctionOriginObserver"]: { observe: (metadata: LeanPrivateCorrectionOrigin) => { if (!activeTransportBinding) return fail(); retainedTransportBindings.set(activeTransportBinding.requestOrdinal, { origin: validateLeanPrivateCorrectionOrigin(metadata), transport: activeTransportBinding }); input.correction!.observe!(metadata, snapshot.sourceRoot, seat, activeTransportBinding) } } } : {}) })
     let closed: ReturnType<FactorySupervisionProvider["close"]> | undefined
     const observed = snapshot.role === input.observedRole
     const provider: FactorySupervisionProvider = {
@@ -142,7 +142,7 @@ export const runLeanBaselineMatch = async (input: {
         if (performance.now() - began >= LEAN_CAPS.matchMs) { provider.close(); return fail() }
         input.checkpoint()
         requestOrdinal += 1
-        if (input.correction?.observe) activeTransportBinding = leanCorrectionInvocationTransportBinding({ methodName: request.kind, source: executableSource, input: request.input, outputByteLimit: CORRECTION_RUNTIME_OUTPUT_BYTES, requestOrdinal }, leanSupervisorAllocationMode(input.ledger.allocation) === "v6" ? "v6" : leanSupervisorAllocationMode(input.ledger.allocation) === "v5")
+        if (input.correction?.observe) activeTransportBinding = leanCorrectionInvocationTransportBinding({ methodName: request.kind, source: executableSource, input: request.input, outputByteLimit: CORRECTION_RUNTIME_OUTPUT_BYTES, requestOrdinal }, leanSupervisorAllocationMode(input.ledger.allocation) === "v7" ? "v7" : leanSupervisorAllocationMode(input.ledger.allocation) === "v6" ? "v6" : leanSupervisorAllocationMode(input.ledger.allocation) === "v5")
         const evidence = await native.invoke(request, identity)
         activeTransportBinding = undefined
         if (observed && native.verify(evidence) && evidence.result.ok) {
@@ -169,7 +169,16 @@ export const runLeanBaselineMatch = async (input: {
     catch (error) { if (hostBinding) throw captureLeanHostFailureV7("match_preparation", hostBinding, error); throw error }
     actual = await runCanonicalLabMatch({ match: { matchId: `lean-${input.charge.root.slice(7, 31)}`, seed: scenario.seed, arenaVariant: scenario.arena, bottomPlayerId: scenario.bottomPlayerId, topPlayerId: scenario.topPlayerId, initialInitiativePlayerId: scenario.initialInitiativePlayerId, bottomStrategyRevisionId: bottom.identity.revisionId, topStrategyRevisionId: top.identity.revisionId }, providers: { [scenario.bottomPlayerId]: bottom, [scenario.topPlayerId]: top } })
   } catch (error) { if (hostBinding) throw captureLeanHostFailureV7("match_composition_postprocessing", hostBinding, error); actual = { kind: "failure", privacy: "private_offline", unchangedState: null, transitions: [], accounting: [], failure: { classification: "system_failure", code: "LEAN_BASELINE_SUPERVISOR_FAILURE" } } }
-  finally { for (const provider of opened) { input.unregister(provider); try { provider.close() } catch (error) { cleanupComplete = false; if (hostBinding) throw captureLeanHostFailureV7("match_composition_postprocessing", hostBinding, error) } } }
+  finally {
+    let cleanupFailure: unknown
+    for (const provider of opened) {
+      if (hostBinding) {
+        try { input.unregister(provider) } catch (error) { cleanupFailure ??= captureLeanHostFailureV7("match_composition_postprocessing", hostBinding, error) }
+        try { provider.close() } catch (error) { cleanupComplete = false; cleanupFailure ??= captureLeanHostFailureV7("match_composition_postprocessing", hostBinding, error) }
+      } else { input.unregister(provider); try { provider.close() } catch { cleanupComplete = false } }
+    }
+    if (cleanupFailure) throw cleanupFailure
+  }
   input.checkpoint()
   const elapsedMs = Math.ceil(performance.now() - began), compact = compactExecution(actual, elapsedMs, cleanupComplete, scenario.bottomPlayerId)
   const observedSeat = input.observedRole === bottomSource.role ? "bottom" : input.observedRole === topSource.role ? "top" : null

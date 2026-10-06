@@ -94,7 +94,7 @@ const boundedFailureReceipt = (error: unknown, binding?: LeanHostFailureBindingV
 
 interface LeanCliChildProcess {
   connected: boolean
-  exitCode?: number | string | null
+  exitCode?: number | string | null | undefined
   disconnect(): void
   send?(message: LeanChildFailureReceipt | LeanChildFailureReceiptV7, callback?: (error: Error | null) => void): boolean
 }
