@@ -8,7 +8,7 @@ import { factoryProposalFromPacket, FactoryOraclePacketSchema, FactoryValidation
 import { deriveFactoryOraclePacketRoot, deriveFactoryValidationRoot } from "../../packages/strategy-lab/src/factory/identity.js"
 import { deriveFactorySourceStructureRoot } from "../../packages/strategy-lab/src/factory/fingerprint.js"
 import { admitFactory, authorizeFactorySupervision } from "../../packages/strategy-lab/src/factory/admission.js"
-import { leanCapsForAllocation, leanBytesRoot, leanCanonicalBytes, writeLeanAll, assertLeanPublicationCapacity, type LeanExperimentLedger } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { leanCapsForAllocation, admitLeanAllocation, leanSupervisorAllocationMode, readLeanChildEntry, type AnyLeanAllocation, leanBytesRoot, leanCanonicalBytes, writeLeanAll, assertLeanPublicationCapacity, type LeanExperimentLedger } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 
 const fail = (): never => { throw new TypeError("LEAN_BASELINE_SOURCE") }
@@ -68,8 +68,8 @@ export const validateLeanBaselineSource = (value: unknown): LeanBaselineSource =
 export const publishLeanBaselineSource = (ledger: LeanExperimentLedger, value: LeanBaselineSource): void => {
   const v = validateLeanBaselineSource(value), bytes = leanCanonicalBytes(v)
   const allocation = ledger.allocation as unknown as { schemaVersion: string; coldRoot?: LabRoot; sourceRoot: LabRoot }
-  if (!["lean-current-baseline-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-baseline-allocation-v4", "lean-correction-supervisor-baseline-allocation-v5"].includes(allocation.schemaVersion) || v.coldRoot !== allocation.coldRoot || v.implementationRoot !== allocation.sourceRoot) return fail()
-  if (allocation.schemaVersion.endsWith("-v5")) leanCapsForAllocation(ledger.allocation)
+  if (!["lean-current-baseline-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-baseline-allocation-v4", "lean-correction-supervisor-baseline-allocation-v5", "lean-correction-supervisor-diagnostic-allocation-v6", "lean-correction-supervisor-baseline-allocation-v6"].includes(allocation.schemaVersion) || v.coldRoot !== allocation.coldRoot || v.implementationRoot !== allocation.sourceRoot) return fail()
+  if ((allocation.schemaVersion.endsWith("-v5") || allocation.schemaVersion.endsWith("-v6"))) leanCapsForAllocation(ledger.allocation)
   publishSourceBytes(ledger, v, bytes)
 }
 
@@ -78,8 +78,8 @@ export const publishLeanBaselineSource = (ledger: LeanExperimentLedger, value: L
 export const publishLeanReusedBaselineSource = (ledger: LeanExperimentLedger, value: LeanBaselineSource, reuse: LeanColdReuse): void => {
   const allocation = ledger.allocation as unknown as { schemaVersion: string; coldRoot?: LabRoot; sourceRoot: LabRoot; seed?: string }
   const admitted = validateLeanColdReuse(reuse, allocation.sourceRoot), v = validateLeanBaselineSource(value)
-  if (!["lean-current-baseline-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-diagnostic-allocation-v1", "lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-diagnostic-allocation-v4", "lean-correction-supervisor-diagnostic-allocation-v5", "lean-correction-supervisor-baseline-allocation-v4", "lean-correction-supervisor-baseline-allocation-v5"].includes(allocation.schemaVersion) || allocation.coldRoot !== admitted.grant.coldRoot || allocation.seed !== admitted.grant.seed || !admitted.sources.some(original => original.root === v.root && original.role === v.role)) return fail()
-  if (allocation.schemaVersion.endsWith("-v5")) leanCapsForAllocation(ledger.allocation)
+  if (!["lean-current-baseline-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-diagnostic-allocation-v1", "lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-diagnostic-allocation-v4", "lean-correction-supervisor-diagnostic-allocation-v5", "lean-correction-supervisor-baseline-allocation-v4", "lean-correction-supervisor-baseline-allocation-v5", "lean-correction-supervisor-diagnostic-allocation-v6", "lean-correction-supervisor-baseline-allocation-v6"].includes(allocation.schemaVersion) || allocation.coldRoot !== admitted.grant.coldRoot || allocation.seed !== admitted.grant.seed || !admitted.sources.some(original => original.root === v.root && original.role === v.role)) return fail()
+  if ((allocation.schemaVersion.endsWith("-v5") || allocation.schemaVersion.endsWith("-v6"))) leanCapsForAllocation(ledger.allocation)
   publishSourceBytes(ledger, v, leanCanonicalBytes(v))
 }
 
@@ -92,15 +92,23 @@ export const validateLeanReusedBaselineSource = (value: unknown, reuse: LeanCold
   return original
 }
 
+export const leanBaselineSourcePublicationBindingV6 = (allocation: AnyLeanAllocation, head: string, snapshotRoot: LabRoot, snapshotSourceRoot: LabRoot) => {
+  const a = admitLeanAllocation(allocation)
+  if (leanSupervisorAllocationMode(a) !== "v6" || !("route" in a) || !/^[a-f0-9]{40}$/u.test(head) || !root(snapshotRoot) || !root(snapshotSourceRoot)) return fail()
+  const body = { schemaVersion: "lean-baseline-source-publication-v6", route: a.route, allocationRoot: a.root, sourceRoot: a.sourceRoot, head, snapshotRoot, snapshotSourceRoot }
+  return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
+}
 const publishSourceBytes = (ledger: LeanExperimentLedger, v: LeanBaselineSource, bytes: Uint8Array): void => {
-  assertLeanPublicationCapacity(ledger, bytes.length)
+  const proof = leanSupervisorAllocationMode(ledger.allocation) === "v6" ? leanBaselineSourcePublicationBindingV6(ledger.allocation, readLeanChildEntry(ledger).head, v.root, v.sourceRoot) : undefined
+  assertLeanPublicationCapacity(ledger, bytes.length + (proof ? leanCanonicalBytes(proof).length : 0))
+  if (proof) { const fd = openSync(join(ledger.directory, `publication-${v.role}-v6.json`), constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600); try { writeLeanAll(fd, leanCanonicalBytes(proof)); fsyncSync(fd) } finally { closeSync(fd) } }
   const fd = openSync(join(ledger.directory, `source-${v.role}.json`), constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
   try { writeLeanAll(fd, bytes); fsyncSync(fd) } finally { closeSync(fd) }
   const parent = openSync(ledger.directory, constants.O_RDONLY)
   try { fsyncSync(parent) } finally { closeSync(parent) }
 }
 
-export const readLeanBaselineSource = (directory: string, name: string): LeanBaselineSource => {
+export const readLeanBaselineSource = (directory: string, name: string, publication?: { allocation: AnyLeanAllocation; head: string }): LeanBaselineSource => {
   if (!role(name)) return fail()
   const path = resolve(directory, `source-${name}.json`), s = lstatSync(path)
   if (!s.isFile() || s.isSymbolicLink() || s.nlink !== 1 || (s.mode & 0o777) !== 0o600 || s.size > 262144 || realpathSync(path) !== path) return fail()
@@ -113,6 +121,14 @@ export const readLeanBaselineSource = (directory: string, name: string): LeanBas
     if (bytes.length !== before.size || bytes.length > 262144 || after.size !== before.size || after.mtimeMs !== before.mtimeMs || after.ctimeMs !== before.ctimeMs || after.nlink !== 1) return fail()
     const value: unknown = JSON.parse(Buffer.from(bytes).toString("utf8"))
     if (leanBytesRoot(bytes) !== leanBytesRoot(leanCanonicalBytes(value))) return fail()
-    return validateLeanBaselineSource(value)
+    const source = validateLeanBaselineSource(value)
+    if (publication) {
+      const proof = leanBaselineSourcePublicationBindingV6(publication.allocation, publication.head, source.root, source.sourceRoot)
+      const p = resolve(directory, `publication-${name}-v6.json`), stat = lstatSync(p)
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600 || stat.size > 4096) return fail()
+      const fd = openSync(p, constants.O_RDONLY | constants.O_NOFOLLOW)
+      try { if (leanBytesRoot(readFileSync(fd)) !== leanBytesRoot(leanCanonicalBytes(proof))) return fail() } finally { closeSync(fd) }
+    }
+    return source
   } finally { closeSync(fd) }
 }

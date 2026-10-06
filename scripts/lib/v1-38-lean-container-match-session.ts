@@ -39,7 +39,7 @@ export interface LeanContainerMatchSessionOptions {
   readonly privateObserver?: LeanPrivateObserver | undefined
   /** Correction-only, private, host-owned finite failure receipt. Omitted by all legacy callers. */
   readonly correctionOriginObserver?: { observe(metadata: LeanCorrectionOriginMetadata): void } | undefined
-  readonly startupOriginObserver?: { observe(metadata: LeanStartupOriginV5): void } | undefined
+  readonly startupOriginObserver?: { observe(metadata: LeanStartupOriginV5 | LeanStartupOriginV6): void } | undefined
   readonly infrastructureProfile?: LeanInfrastructureProfile | undefined
   readonly matchId: string; readonly containerName: string; readonly ownershipLabel: string; readonly image: string
   readonly dockerPath?: string | undefined; readonly transport?: LeanContainerMatchTransport | undefined
@@ -234,10 +234,16 @@ export interface LeanStartupOriginV5 extends LeanStartupBindingV5 {
   ready: boolean; go: boolean; wait: "changed" | "timed_out" | "unavailable";
   termination: "not_required" | "completed" | "failed" | "unknown"; unknown: boolean;
 }
-export type LeanPrivateCorrectionOrigin = LeanCorrectionOriginMetadata | LeanStartupOriginV5
+export interface LeanStartupOriginV6 extends Omit<LeanStartupOriginV5, "schemaVersion"> { schemaVersion: "v1.38-lean-startup-origin-v6" }
+export const validateLeanStartupOriginV6 = (value: unknown, expected?: LeanStartupBindingV5): LeanStartupOriginV6 => {
+  if ((value as LeanStartupOriginV6 | null)?.schemaVersion !== "v1.38-lean-startup-origin-v6") throw new TypeError("LEAN_STARTUP_ORIGIN_V6")
+  validateLeanStartupOriginV5({ ...(value as LeanStartupOriginV6), schemaVersion: "v1.38-lean-startup-origin-v5" }, expected)
+  return Object.freeze({ ...(value as LeanStartupOriginV6) })
+}
+export type LeanPrivateCorrectionOrigin = LeanCorrectionOriginMetadata | LeanStartupOriginV5 | LeanStartupOriginV6
 /** v6 retains the sealed control program; only logical wire identity differs. */
 export const buildLeanContainerBrokerSourceV6 = (): string => buildLeanContainerBrokerSourceV5().replaceAll("v1.38-lean-startup-origin-v5", "v1.38-lean-startup-origin-v6").replaceAll("v1.38-lean-startup-v5:", "v1.38-lean-startup-v6:")
-export const validateLeanPrivateCorrectionOrigin = (value: unknown): LeanPrivateCorrectionOrigin => (value as { schemaVersion?: unknown } | null)?.schemaVersion === "v1.38-lean-startup-origin-v5" ? validateLeanStartupOriginV5(value) : validateLeanCorrectionOriginMetadata(value)
+export const validateLeanPrivateCorrectionOrigin = (value: unknown): LeanPrivateCorrectionOrigin => (value as { schemaVersion?: unknown } | null)?.schemaVersion === "v1.38-lean-startup-origin-v6" ? validateLeanStartupOriginV6(value) : (value as { schemaVersion?: unknown } | null)?.schemaVersion === "v1.38-lean-startup-origin-v5" ? validateLeanStartupOriginV5(value) : validateLeanCorrectionOriginMetadata(value)
 export const validateLeanStartupOriginV5 = (value: unknown, expected?: LeanStartupBindingV5): LeanStartupOriginV5 => {
   const keys = ["allocationRoot", "chargeRoot", "seat", "policyRoot", "harnessRoot", "requestOrdinal", "requestRoot", "method", "inputRoot", "sourceRoot", "executableRoot", "schemaVersion", "stage", "branch", "ready", "go", "wait", "termination", "unknown"]
   if (!value || typeof value !== "object" || Array.isArray(value) || !exactKeys(value as Record<string, unknown>, keys) || Buffer.byteLength(JSON.stringify(value)) > 4096) throw new TypeError("LEAN_STARTUP_ORIGIN_V5")
@@ -415,7 +421,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const poison = (): void => { state = "poisoned"; remove() }
   try {
     const started = transport(dockerPath, ["start", containerId], { timeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: CONTROL_BUFFER_BYTES }); assertCleanControlResult(started, "LEAN_CONTAINER_SESSION_START_FAILED")
-    const brokerSource = startup ? buildLeanContainerBrokerSourceV5() : options.correctionOriginObserver !== undefined ? buildLeanCorrectionOriginBrokerSource(options.privateObserver?.harnessSource) : options.privateObserver === undefined ? LEAN_CONTAINER_BROKER_SOURCE : buildLeanObserverBrokerSource(options.privateObserver.harnessSource)
+    const brokerSource = startup ? startup.version === 6 ? buildLeanContainerBrokerSourceV6() : buildLeanContainerBrokerSourceV5() : options.correctionOriginObserver !== undefined ? buildLeanCorrectionOriginBrokerSource(options.privateObserver?.harnessSource) : options.privateObserver === undefined ? LEAN_CONTAINER_BROKER_SOURCE : buildLeanObserverBrokerSource(options.privateObserver.harnessSource)
     stream = streamFactory(dockerPath, ["exec", "-i", containerId, "node", "--input-type=module", "--eval", brokerSource], { startupTimeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: STREAM_FRAME_LIMIT_BYTES })
   } catch { poison(); throw new TypeError("LEAN_CONTAINER_SESSION_START_FAILED") }
   const assertActive = (): void => { if (state === "poisoned") throw new TypeError("LEAN_CONTAINER_SESSION_POISONED"); if (state === "closed") throw new TypeError("LEAN_CONTAINER_SESSION_CLOSED") }
@@ -428,7 +434,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
     const timingBinding = observer?.binding(request)
     if (observer && (mode !== "legacy" || timeoutMilliseconds !== 1000 || options.infrastructureProfile !== "closeout" || !timingBinding || timingBinding.method !== request.methodName)) { poison(); throw new TypeError("LEAN_OBSERVER_PROFILE") }
     const payload = Buffer.from(input)
-    const startupBinding: LeanStartupBindingV5 | undefined = startup ? { ...startup, requestOrdinal: requestId, requestRoot: `sha256:${createHash("sha256").update(`v1.38-lean-startup-v5:${requestId}:`).update(payload).digest("hex")}`, method: request.methodName as LeanStartupBindingV5["method"], inputRoot: labRoot("runtime-input", request.input), sourceRoot: options.leanExperimentAuthority!.runtime.sourceRoot, executableRoot: options.leanExperimentAuthority!.runtime.executableRoot } : undefined
+    const startupBinding: LeanStartupBindingV5 | undefined = startup ? { allocationRoot: startup.allocationRoot, chargeRoot: startup.chargeRoot, seat: startup.seat, policyRoot: startup.policyRoot, harnessRoot: startup.harnessRoot, requestOrdinal: requestId, requestRoot: `sha256:${createHash("sha256").update(`v1.38-lean-startup-v${startup?.version === 6 ? 6 : 5}:${requestId}:`).update(payload).digest("hex")}`, method: request.methodName as LeanStartupBindingV5["method"], inputRoot: labRoot("runtime-input", request.input), sourceRoot: options.leanExperimentAuthority!.runtime.sourceRoot, executableRoot: options.leanExperimentAuthority!.runtime.executableRoot } : undefined
     const hostRemaining = () => hostDeadline === undefined ? 5000 : Math.max(0, Math.floor(Number(hostDeadline - process.hrtime.bigint()) / 1e6))
     const correctionBinding = options.correctionOriginObserver === undefined ? undefined : { requestOrdinal: requestId, requestRoot: `sha256:${createHash("sha256").update(`v1.38-lean-correction-origin:${requestId}:`).update(payload).digest("hex")}` }
     const frame = `${JSON.stringify({ requestId, mode, payloadBase64: payload.toString("base64"), timeoutMilliseconds, stdoutByteLimit: stdoutLimit, stderrByteLimit: stderrLimit, ...(timingBinding === undefined ? {} : { timingBinding }), ...(correctionBinding === undefined ? {} : { correctionOrigin: correctionBinding }), ...(startupBinding === undefined ? {} : { startup: { binding: startupBinding, hostBudgetMs: hostRemaining() } }) })}\n`
@@ -447,7 +453,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
       const value = parsed as Record<string, unknown>
       if (startupBinding) {
         if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64", "startupOrigin"])) throw new TypeError("LEAN_STARTUP_FRAME_V5")
-        const metadata = validateLeanStartupOriginV5(value.startupOrigin, startupBinding)
+        const metadata = startup?.version === 6 ? validateLeanStartupOriginV6(value.startupOrigin, startupBinding) : validateLeanStartupOriginV5(value.startupOrigin, startupBinding)
         if (hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
         if (metadata.branch !== "complete") {
           if (metadata.termination !== "completed") startupCleanupUncertain = true
