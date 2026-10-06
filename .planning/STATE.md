@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh v6 diagnostic accepted; conditional one fresh baseline data preparation next
+stopped_at: Conditional fresh v6 baseline allocation prepared; commit and unique MAIN entry next
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
-last_activity_desc: V6 diagnostic and unique retained check closed and accepted; source hold released
+last_activity_desc: Conditional v6 baseline data reviewed and one immutable allocation prepared
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V6 BASELINE PREPARED: Acceptedfreshdiagnosticcb94964c remainsimmutable. ActualMAINbaseline draft72234/finalize89112 and independent BASELINE-DATA-REVIEW-v1 clean afterfiniteeffectiveclockreconciliation; exactrequestde8be0f9/data59d8a938 binds36freshslots/source67263fe4/unchangedcoldcandidates/newdiagcheck. ExactlyONEpreparation15377 CLOSED0 allocationdf4c4e9046bc0dab740b5b69d44a45a0285629c07868a2c3ece1abd874c1e9a6/raw500dc17163bd4d0d1b7523d4dae41c75bfb7bd79bc72a61bedf6523acfc02904. Checkedreal0700store onlyallocation/emptyledger/time,25prior/0currentcharges andclosedinactive40106193ms. Same43200000ms/15GB300 limits; all latercostscarry. Commit/push BEFOREONEuniqueMAINbaseline entry with freshSAMEPROCESScapacity beforecharge/provider. SOURCE+HEADfixedthroughactualterminal andONEappropriateuniquecheck, no competingheavywork/edits/commit. Full36withinremainingtimeNOTpromised; partial/failure cannotcompletePhase265/freeze. Thisislastconditionalbaselineinapprovedenvelope; no furtherautomaticrouteafterfailure/refusal. Diagnostic/olderconsumedrecordsreadersimmutable/noretry/refund/recredit. Formation/holdout/public/counting/production gated. Earlierfrontiershistory.
 
 CURRENT V6 DIAGNOSTIC ACCEPTED: UniqueMAIN11621 CLOSED0/470304ms; ONEordinaryretainedreader11255 CLOSED0 and ONEindependentclosureaudit CLOSED accepted. Checkcb94964c93bc0ae154d56b0c9f1c00f49a8d1af3efa7cef4b5a2e09523251c12 acceptedtrue/retained_valid/limited_exploratory, current1success/cumulative25/cleanuptrue. Allocation3ddb8b87/rawa774abe3/request7f26d050/heldHEADf81680a5/source67263fe4 unchangedthroughclosure. Allsixintervalsclosed39551176ms/effectiveclose1791250433172, physical11452416B; source+HEADhold RELEASED, noactiveentry/verifier. Complete:false iswholebaseline flag, NOTdiagnostic denial. ConditionalONEfresh36baseline gate passes butnewactualMAINdata/helperreview/immutablecommittedallocation/fresh SAMEPROCESS capacity/uniqueentry stillrequired. All latercostcarry closedelapsed plusgapunder43200000ms/same15GB300/25spent;36fitnotpromised. Diagnosticandallolderhistoryimmutable/no rereader/retry/refund/recredit. Phase265/LEAG/freeze/formation/holdout/public/counting/production gated; priorfrontiershistory.
 
