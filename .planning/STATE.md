@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Handshake source repair verified; fresh bounded retry envelope awaits human approval
+stopped_at: Three-diagnostic continuation approved; research fresh isolated route plumbing
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
-last_activity_desc: Confirmed v7 handshake defect repaired and verified; spent diagnostic remains failed and immutable
+last_activity_desc: Approved up to three distinct private diagnostics and conditional baseline within same remaining budget
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED POST-HANDSHAKE FRONTIER: Directhumanapproval recorded NEW265-16-POST-HANDSHAKE-APPROVAL-20261006.md permits atmostTHREE DISTINCTfreshprivate diagnostics thenONEfresh36baseline ONLYafterfullfreshdiagnostic acceptance. Faileddiagnosticendsitself, notremainingexplicitattempts; do notlaunchunchangedknownfailure. Same57.6Mms15GB300/29spent/allbounds/candidates/privacy/rules; previousconsumedv7 remainsfailedimmutable. Taskeventboundedpreviouscomplete1791297255657/currentstart1791299252280 yields49150573mscarry, excludesONLYproven1996623mshumanidle; everycurrentcostcounts continuously. Handshakefix5077e3ac/fullsourceeaa793b2 reviewed/validated/verified; freshrouteisolation research/checkedexistingPlan16plumbing next, no newrequest/allocation/entry/verifier/holdyet. ActualMAINdata/helperreview, fixedreviewedsource, NEWcommittedallocation/freshreal0700store/SAMEPROCESScapacity precedecharge; fixedsourceHEADthroughterminal+ONEproperuniquecheck. Stopafter3unaccepteddiagnostics/baselinefailure/insufficientcap/newhumandecision; no repeatliteralinsideenvelope. Phase265/LEAG/freeze/formation/holdout/public/counting/production remaingated. Earlierpendingfrontiershistory.
 
 CURRENT HUMAN-ONLY FRONTIER / HANDSHAKE REPAIR VERIFIED: GSDdiagnosis confirmed realv7hostrequestRoot usedv5domain whilegeneratedv7broker requiresv7, deterministicfirstrequest rejection beforeWorker—notguesttimeoutproof. ExistingPlan16source-onlycheckedrepair CLOSED: REDecd7f16f reproducedv7failure/v5v6pass; GREEN5077e3ac1246b4785f7ce60fbbb66b6aea86314d fixesONEproductionline, connectedrealproducer/generatedpreguestguardtests32/32+labtypesPASS. Independentreviewclean/validation3versioncasesPASS/sourceverification4/4; MAIN1410boundaryzero/diff0. New888-entrymanifestsha256:eaa793b2608a5a586a94f319b4cff7efe6575abba4dff80080817cf9ba92ba1c; oldconsumedsource/root/evidence neverrelabeled. No activeentry/verifier/hold/newallocation. Nativecleanup/feasibilityunproved; v7failed29spent remainsfailed/no acceptedcheck/baselineDENIED. Latestexactone+conditionaloneauthorityENDED; no freshMatchauthority inferred. NEW265-16-POST-HANDSHAKE-CONTINUATION-DECISION-v1.md proposes pending budget-bounded atmost3DISTINCTfresh diagnostics thenONEconditionalfresh36baseline afterfullnewacceptance, without onefailed diagnostic revoking remainingexplicitattempts. NOTapproved/applied; do not prepare/allocate/run beforedirecthumanapproval. Allcostcarry41943494+now−1791290048578 under57.6Mms/15GB300, observed48970131ms/8629869remaining at1791297075215, latercostcontinues. Sourceonlysafe workcomplete; Phase265/LEAG/freeze/formation/holdout/public/counting/production gated. Earlierfrontiershistory.
 
