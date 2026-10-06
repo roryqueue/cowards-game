@@ -115,6 +115,44 @@ describe("identity-only admitted v8 cap reuse", () => {
     expect(work.freezes).toBeGreaterThan(before.freezes)
   })
 
+  it.each([false, true])("frozen accessor-backed survivors cannot cache changing getter results (proxy=%s)", proxied => {
+    const input = fixtureInput(8, true)
+    let current = input.predecessor.survivors[0]!
+    const array: typeof input.predecessor.survivors = []
+    Object.defineProperty(array, "0", { enumerable: true, configurable: true, get: () => current })
+    const survivors = proxied ? new Proxy(array, {}) : array
+    const { root: _root, ...prior } = input.predecessor
+    const predecessorBody = { ...prior, survivors }
+    const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...input, predecessor: { ...predecessorBody, root: labRoot(prior.schemaVersion, predecessorBody) } }, 8)
+    const admitted = lean.admitLeanAllocation(allocation)
+    expect(deeplyFrozen(admitted)).toBe(true)
+    const before = counts()
+    expect(lean.leanCapsForAllocation(admitted)).toBe(lean.LEAN_RETRY_V8_TIMEBOX_CAPS)
+    const first = counts()
+    current = { ...current, allocatedBytes: current.allocatedBytes + 1 }
+    expect(() => lean.admitLeanAllocation(admitted)).toThrow()
+    expect(() => lean.leanCapsForAllocation(admitted)).toThrow()
+    expect(first.hashes).toBeGreaterThan(before.hashes)
+  })
+
+  it.each(["transparent-proxy", "custom-prototype", "nonenumerable-getter"] as const)("fully admitted %s survivor arrays remain outside cache eligibility", kind => {
+    const input = fixtureInput(8, true)
+    const array = [...input.predecessor.survivors]
+    if (kind === "custom-prototype") Object.setPrototypeOf(array, Object.create(Array.prototype))
+    if (kind === "nonenumerable-getter") Object.defineProperty(array, "hidden", { configurable: true, get: () => 1 })
+    const survivors = kind === "transparent-proxy" ? new Proxy(array, {}) : array
+    const { root: _root, ...prior } = input.predecessor
+    const predecessorBody = { ...prior, survivors }
+    const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...input, predecessor: { ...predecessorBody, root: labRoot(prior.schemaVersion, predecessorBody) } }, 8)
+    const admitted = lean.admitLeanAllocation(allocation), before = counts()
+    expect(lean.leanCapsForAllocation(admitted)).toBe(lean.LEAN_RETRY_V8_TIMEBOX_CAPS)
+    expect(work.hashes).toBeGreaterThan(before.hashes)
+    expect(work.freezes).toBeGreaterThan(before.freezes)
+    const first = counts()
+    expect(lean.leanCapsForAllocation(admitted)).toBe(lean.LEAN_RETRY_V8_TIMEBOX_CAPS)
+    expect(work.hashes).toBeGreaterThan(first.hashes)
+  })
+
   it.each([2, 3, 4, 5, 6, 7] as const)("supervisor v%s keeps its historical cap and full admission behavior", version => {
     const input = lean.createLeanSupervisorCorrectionAllocation(fixtureInput(version), version), admitted = lean.admitLeanAllocation(input)
     const before = counts(), caps = version === 7 ? lean.LEAN_REPLAY_V7_CAPS : version >= 5 ? lean.LEAN_SUPERVISOR_V5_CAPS : lean.LEAN_CAPS
