@@ -65,6 +65,29 @@ const allocationInput = (version: 5 | 6 | 7 | 8 = 8) => {
   const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: version === 8 ? 29 : version === 7 ? 28 : version === 6 ? 24 : 23, elapsedUpperBoundMs: 49_150_573, allocatedDiskBytes: 12_894_208, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r("history"), survivors: [{ identity: ".strategy-lab/synthetic-history", allocatedBytes: 4096 }] }
   return { ...(version === 8 ? { attemptOrdinal: 1 as const, priorClosureRoot: null, continuationRoot: null, acceptedReaderCloseRoot: null } : {}), sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: version === 8 ? lean.LEAN_RETRY_V8_PLAN_ROOT : version === 7 ? lean.LEAN_REPLAY_V7_SUPPLEMENT_ROOT : version === 6 ? lean.LEAN_REPLAY_V6_SUPPLEMENT_ROOT : lean.LEAN_STARTUP_SUPPLEMENT_ROOT, candidateRoots: [r("a"), r("b")], requestRoots: [r("request")], seed: "synthetic-v7", route: "diagnostic" as const, reuseGrantRoot: r("reuse"), supervisorDecisionRoot: version === 8 ? lean.LEAN_RETRY_V8_APPROVAL_ROOT : version === 7 ? lean.LEAN_REPLAY_V7_APPROVAL_ROOT : version === 6 ? lean.LEAN_REPLAY_V6_APPROVAL_ROOT : lean.LEAN_STARTUP_APPROVAL_ROOT, acceptedCheckRoot: null, requestBytesRoot: r("request-bytes"), dataReviewRoot: r("data"), setupAccountingRoot: r("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
 }
+describe("prospective twenty-hour allocation binding", () => {
+  it("authenticates the additive binding without extending legacy v8", () => {
+    const legacy = lean.createLeanSupervisorCorrectionAllocation(allocationInput(), 8)
+    expect(lean.leanCapsForAllocation(legacy).elapsedMs).toBe(57_600_000)
+    const extension = lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION
+    expect(extension).toMatchObject({ priorElapsedMs: 56_000_917, startedAtMs: 1791326194166, elapsedMs: 72_000_000 })
+    const { root: _root, ...prior } = legacy.predecessor
+    const p = { ...prior, elapsedUpperBoundMs: 60_000_000 }
+    const input = { ...allocationInput(), timeboxExtension: extension, predecessor: { ...p, root: labRoot(p.schemaVersion, p) } }
+    const allocation = lean.createLeanSupervisorCorrectionAllocation(input, 8)
+    expect(lean.leanCapsForAllocation(allocation).elapsedMs).toBe(72_000_000)
+    expect(lean.admitLeanAllocation(allocation)).toEqual(allocation)
+    expect(lean.leanRetryRootElapsedFloorV8(extension.startedAtMs - 1, extension)).toBe(56_000_917)
+    expect(lean.leanRetryRootElapsedFloorV8(extension.startedAtMs + 123, extension)).toBe(56_001_040)
+    for (const patch of [{ root: r("wrong") }, { startedAtMs: extension.startedAtMs - 1 }, { approvalRoot: lean.LEAN_RETRY_V8_APPROVAL_ROOT }, { planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT }, { priorElapsedMs: 0 }]) {
+      expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...input, timeboxExtension: { ...extension, ...patch } }, 8)).toThrow()
+      expect(() => lean.leanCapsForAllocation({ ...allocation, timeboxExtension: { ...extension, ...patch } })).toThrow()
+    }
+    expect(() => lean.leanCapsForAllocation({ ...allocation, timeboxExtension: undefined })).toThrow()
+    expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...input, timeboxExtension: extension }, 7)).toThrow()
+    expect(() => correction.assertLeanCorrectionResources({ elapsedMs: 70_140_000, charged: 29, physicalBytes: 13_000_000, childRss: 1, parentRss: 1, freeBytes: lean.LEAN_CAPS.totalBytes, availableMemoryBytes: 2_000_000_000 }, allocation)).toThrow()
+  })
+})
 // Tiny new store only. No historical payload, native runtime or gameplay runs.
 const producerFixture = (version: 5 | 6 | 7 | 8 = 8, wall = 1000) => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v7-connected-synthetic-")))
