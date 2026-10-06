@@ -15,6 +15,8 @@ import { publishLeanBaselineSource, publishLeanReusedBaselineSource } from "./li
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { validateLeanPrivateCorrectionOrigin, buildLeanStartupWorkerHarnessV5, buildLeanContainerBrokerSourceV5, buildLeanContainerBrokerSourceV6, type LeanPrivateCorrectionOrigin } from "./lib/v1-38-lean-container-match-session.js"
 import { resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
+import { captureLeanHostFailureV7, type LeanHostFailureBindingV7 } from "./lib/v1-38-lean-host-stage-v7.js"
+let activeHostBindingV7: LeanHostFailureBindingV7 | undefined
 import { authenticateLeanSupervisorDiagnosticCheck } from "./lib/v1-38-lean-correction-retained.js"
 
 export { LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES }
@@ -646,9 +648,14 @@ export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrec
     const fs = statfsSync(ledger.directory, { bigint: true }), free = fs.bavail * fs.bsize
     if (free > BigInt(Number.MAX_SAFE_INTEGER)) return fail("CAPACITY")
     const charge = chargeLeanSlot(ledger, slot, { freeBytes: Number(free), availableMemoryBytes: observeLeagueAvailableMemoryBytes() })
+    const hostBinding = allocation.schemaVersion.endsWith("-v7") ? { route, allocationRoot: allocation.root, chargeRoot: charge.root, slotRoot: slot.root } : undefined
+    if (hostBinding) activeHostBindingV7 = hostBinding
+    let hostStage: Parameters<typeof captureLeanHostFailureV7>[0] = "match_composition_postprocessing"
+    try {
     const origins: Array<{ metadata: LeanPrivateCorrectionOrigin; sourceRoot: LabRoot; seat: "bottom" | "top"; binding: unknown }> = []
     const execution = await runLeanBaselineMatch({ ledger, charge, slot, seed: request.seed, bottom, top, ...(observedRole === undefined ? {} : { observedRole }), checkpoint, register: parent.register, unregister: parent.unregister, correction: { reuse, ...(route === "diagnostic" ? { observe: (metadata: LeanPrivateCorrectionOrigin, sourceRoot: LabRoot, seat: "bottom" | "top", binding: unknown) => { if (origins.length >= 2) return fail("ORIGIN_LIMIT"); origins.push({ metadata: validateLeanPrivateCorrectionOrigin(metadata), sourceRoot, seat, binding }) } } : {}) } })
-    retainLeanMatch(ledger, charge, execution.compact, execution.replayFrames)
+    hostStage = "compact_replay_retention_publication"
+    retainLeanMatch(ledger, charge, execution.compact, execution.replayFrames, hostBinding ? (stage, error) => { throw captureLeanHostFailureV7(stage, hostBinding, error) } : undefined)
     const { replayFrames: _frames, ...body } = execution, cell = { ...body, ordinal: slot.ordinal, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot }
     const observationBody = { schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }
     publishLeanCorrection(join(ledger.directory, `observation-${slot.ordinal}.json`), { ...observationBody, root: labRoot("lean-baseline-observation-v1", observationBody) }, ledger)
@@ -658,6 +665,7 @@ export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrec
     }
     checkpoint(); checkpointLeanResources(ledger, currentLeanElapsedMs(ledger), highWater, LEAN_EXTERNAL_SCRATCH_RESERVE)
     return cell
+    } catch (error) { if (hostBinding) throw captureLeanHostFailureV7(hostStage, hostBinding, error); throw error }
   }
   try {
     checkpoint()
@@ -673,11 +681,13 @@ export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrec
       publishLeanCorrection(join(ledger.directory, "cold-reuse.json"), reuse, ledger)
       pipeline = await executeLeanReusedCurrentPipeline({ allocation, reuse, checkpoint, freezeSource: source => { checkpoint(); if (reuse.sources.some(s => s.root === source.root)) publishLeanReusedBaselineSource(ledger, source, reuse); else publishLeanBaselineSource(ledger, source); checkpoint() }, retainArtifact: (name, value) => { if (!/^(?:seal-metadata|cold-corpus|cold-reuse-grant|initial-proposals|initial-selection|initial-training|initial-analysis|response-work|response-node-receipts|response-training|current-analysis)\.json$/u.test(name)) return fail("ARTIFACT"); checkpoint(); publishLeanCorrection(join(ledger.directory, name), value, ledger); checkpoint() }, dispatch })
     }
+    try {
     stopLeanLedger(ledger, route === "diagnostic" || (pipeline as { status: string }).status !== "current_baseline_complete" ? "failure" : "complete")
     const evidence = verifyLeanEvidence(ledger)
     const body = { schemaVersion: supervisor ? `lean-correction-supervisor-result-v${leanSupervisorVersion(supervisor)}` : "lean-correction-result-v1", privacy: "private_offline", issued: false, route, allocationRoot: allocation.root, sourceRoot: request.sourceRoot, requestBytesRoot: entry.requestBytesRoot, head: entry.head, reuseGrantRoot: reuse.grant.root, pipeline, evidenceRoot: evidence.root, cumulativeCharged: evidence.charged, holdoutOpened: false, formationMaterialized: false, phaseComplete: false }
     publishLeanCorrection(join(ledger.directory, "result.json"), { ...body, root: labRoot(body.schemaVersion, body) }, ledger)
     return { issued: false, route, status: "closed_pending_unique_check" }
+    } catch (error) { if (activeHostBindingV7) throw captureLeanHostFailureV7("terminal_result_publication", activeHostBindingV7, error); throw error }
   } finally { process.removeListener("disconnect", disconnect); parent.disconnect() }
 }
 const child = async (path: string, route: LeanCorrectionRoute, supervisor: LeanSupervisorMode = false) => {
@@ -711,6 +721,6 @@ export const leanCorrectionMain = async (args: readonly string[]) => {
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const args = process.argv.slice(2), supervisor: LeanSupervisorMode = /^child-supervisor-(diagnostic|baseline)-v[23456]$/u.test(args[0] ?? "") ? args[0]!.endsWith("-v6") ? "v6" : args[0]!.endsWith("-v5") ? "v5" : args[0]!.endsWith("-v4") ? "v4" : args[0]!.endsWith("-v3") ? "v3" : true : false, childRoute = supervisor ? (args[0]!.includes("-diagnostic-") ? "diagnostic" : "baseline") : args[0] === "child-diagnostic" ? "diagnostic" : args[0] === "child-baseline" ? "baseline" : null
   const action = childRoute !== null && args.length === 3 && args[1] === "--request" && args[2] === leanCorrectionRoutePaths(childRoute, supervisor).request ? child(args[2], childRoute, supervisor) : leanCorrectionMain(args)
-  if (childRoute) void resolveLeanChildCliTerminal(action)
+  if (childRoute) void resolveLeanChildCliTerminal(action, process, () => activeHostBindingV7)
   else void action.then(value => process.stdout.write(`${JSON.stringify(value)}\n`)).catch(error => { process.stderr.write(leanCorrectionCliFailure(args, error)); process.exitCode = 1 })
 }

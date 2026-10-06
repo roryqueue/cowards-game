@@ -17,6 +17,7 @@ import { type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { type LeanPrivateCorrectionOrigin, validateLeanPrivateCorrectionOrigin } from "./v1-38-lean-container-match-session.js"
 import { validateLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { collectLeanBaselineMetrics } from "./v1-38-lean-baseline-metrics.js"
+import { captureLeanHostFailureV7, type LeanHostFailureBindingV7 } from "./v1-38-lean-host-stage-v7.js"
 
 const fail = (): never => { throw new TypeError("LEAN_BASELINE_MATCH") }
 const CORRECTION_RUNTIME_OUTPUT_BYTES = 262144
@@ -107,8 +108,12 @@ export const runLeanBaselineMatch = async (input: {
   register: (provider: Pick<FactorySupervisionProvider, "close">) => void
   unregister: (provider: Pick<FactorySupervisionProvider, "close">) => void
 }) => {
-  const bottomSource = validateLeanBaselineSource(input.bottom), topSource = validateLeanBaselineSource(input.top)
-  const scenario = leanBaselineScenario({ seed: input.seed, slot: input.slot, bottom: bottomSource, top: topSource })
+  const hostBinding: LeanHostFailureBindingV7 | undefined = input.ledger.allocation.schemaVersion.endsWith("-v7") && "route" in input.ledger.allocation ? { route: input.ledger.allocation.route, allocationRoot: input.ledger.allocation.root, chargeRoot: input.charge.root, slotRoot: input.slot.root } : undefined
+  let bottomSource: LeanBaselineSource, topSource: LeanBaselineSource, scenario: ReturnType<typeof leanBaselineScenario>
+  try {
+    bottomSource = validateLeanBaselineSource(input.bottom); topSource = validateLeanBaselineSource(input.top)
+    scenario = leanBaselineScenario({ seed: input.seed, slot: input.slot, bottom: bottomSource, top: topSource })
+  } catch (error) { if (hostBinding) throw captureLeanHostFailureV7("match_preparation", hostBinding, error); throw error }
   const began = performance.now(), opened: FactorySupervisionProvider[] = []
   const brainInputs: SoldierBrainInputV119[] = [], strategyInputs: StrategyInputV119[] = []
   const decisionRows: Array<{ method: string; inputRoot: LabRoot; outputRoot: LabRoot }> = []
@@ -159,10 +164,12 @@ export const runLeanBaselineMatch = async (input: {
   }
   let actual: LabMatchExecution
   try {
-    const bottom = create(bottomSource, "bottom"), top = create(topSource, "top")
+    let bottom: FactorySupervisionProvider, top: FactorySupervisionProvider
+    try { bottom = create(bottomSource, "bottom"); top = create(topSource, "top") }
+    catch (error) { if (hostBinding) throw captureLeanHostFailureV7("match_preparation", hostBinding, error); throw error }
     actual = await runCanonicalLabMatch({ match: { matchId: `lean-${input.charge.root.slice(7, 31)}`, seed: scenario.seed, arenaVariant: scenario.arena, bottomPlayerId: scenario.bottomPlayerId, topPlayerId: scenario.topPlayerId, initialInitiativePlayerId: scenario.initialInitiativePlayerId, bottomStrategyRevisionId: bottom.identity.revisionId, topStrategyRevisionId: top.identity.revisionId }, providers: { [scenario.bottomPlayerId]: bottom, [scenario.topPlayerId]: top } })
-  } catch { actual = { kind: "failure", privacy: "private_offline", unchangedState: null, transitions: [], accounting: [], failure: { classification: "system_failure", code: "LEAN_BASELINE_SUPERVISOR_FAILURE" } } }
-  finally { for (const provider of opened) { input.unregister(provider); try { provider.close() } catch { cleanupComplete = false } } }
+  } catch (error) { if (hostBinding) throw captureLeanHostFailureV7("match_composition_postprocessing", hostBinding, error); actual = { kind: "failure", privacy: "private_offline", unchangedState: null, transitions: [], accounting: [], failure: { classification: "system_failure", code: "LEAN_BASELINE_SUPERVISOR_FAILURE" } } }
+  finally { for (const provider of opened) { input.unregister(provider); try { provider.close() } catch (error) { cleanupComplete = false; if (hostBinding) throw captureLeanHostFailureV7("match_composition_postprocessing", hostBinding, error) } } }
   input.checkpoint()
   const elapsedMs = Math.ceil(performance.now() - began), compact = compactExecution(actual, elapsedMs, cleanupComplete, scenario.bottomPlayerId)
   const observedSeat = input.observedRole === bottomSource.role ? "bottom" : input.observedRole === topSource.role ? "top" : null

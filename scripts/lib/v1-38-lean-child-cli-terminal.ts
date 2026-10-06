@@ -1,3 +1,4 @@
+import { readLeanTrustedHostFailureStageV7, type LeanHostFailureBindingV7, type LeanHostFailureStageV7 } from "./v1-38-lean-host-stage-v7.js"
 const LEAN_CHILD_FAILURE_STAGES = ["handshake", "preflight", "candidate-import", "match", "finalize", "unknown"] as const
 const trustedCodes = <const Prefix extends string, const Codes extends readonly string[]>(prefix: Prefix, codes: Codes) =>
   codes.map(code => `${prefix}${code}` as `${Prefix}${Codes[number]}`)
@@ -33,13 +34,28 @@ export interface LeanChildFailureReceipt {
   code: LeanChildFailureCode
   stage: LeanChildFailureStage
 }
+export interface LeanChildFailureReceiptV7 extends LeanHostFailureBindingV7 {
+  type: "lean-child-failure"; schemaVersion: "lean-child-failure-v7"; stage: LeanHostFailureStageV7
+  category: "host_boundary_observed" | "stage_not_observed"
+}
+/** Descriptor-only admission never executes hostile IPC getters. */
+export const isLeanChildFailureReceiptV7 = (value: unknown, binding?: LeanHostFailureBindingV7): value is LeanChildFailureReceiptV7 => {
+  if (!value || typeof value !== "object") return false
+  const keys = ["type", "schemaVersion", "stage", "category", "route", "allocationRoot", "chargeRoot", "slotRoot"]
+  try {
+    const d = Object.getOwnPropertyDescriptors(value)
+    if (Object.keys(d).length !== keys.length || !keys.every(k => d[k] && "value" in d[k])) return false
+    const v = Object.fromEntries(keys.map(k => [k, d[k]!.value])) as unknown as LeanChildFailureReceiptV7
+    return v.type === "lean-child-failure" && v.schemaVersion === "lean-child-failure-v7" && ["diagnostic", "baseline"].includes(v.route) && [v.allocationRoot, v.chargeRoot, v.slotRoot].every(r => typeof r === "string" && /^sha256:[a-f0-9]{64}$/u.test(r)) && ["match_preparation", "match_composition_postprocessing", "compact_replay_retention_publication", "terminal_result_publication", "unknown"].includes(v.stage) && v.category === (v.stage === "unknown" ? "stage_not_observed" : "host_boundary_observed") && (!binding || Object.entries(binding).every(([k, x]) => v[k as keyof LeanChildFailureReceiptV7] === x))
+  } catch { return false }
+}
 
 /** Attempt the optional bounded diagnostic first, but always run the required
  * terminal callback. A diagnostic write failure is returned as uncertainty;
  * errors from the mandatory terminal callback deliberately propagate. */
 export const publishChildTerminalAfterOptionalReceipt = <T>(
-  receipt: LeanChildFailureReceipt | null,
-  publishReceipt: (receipt: LeanChildFailureReceipt) => void,
+  receipt: LeanChildFailureReceipt | LeanChildFailureReceiptV7 | null,
+  publishReceipt: (receipt: LeanChildFailureReceipt | LeanChildFailureReceiptV7) => void,
   publishTerminal: (receiptPublicationUncertain: boolean) => T,
 ): T => {
   let receiptPublicationUncertain = false
@@ -64,7 +80,11 @@ export const isLeanChildFailureReceipt = (value: unknown): value is LeanChildFai
   "schemaVersion" in value && value.schemaVersion === "lean-child-failure-v1" &&
   "code" in value && isCode(value.code) && "stage" in value && isStage(value.stage)
 
-const boundedFailureReceipt = (error: unknown): LeanChildFailureReceipt => {
+const boundedFailureReceipt = (error: unknown, binding?: LeanHostFailureBindingV7): LeanChildFailureReceipt | LeanChildFailureReceiptV7 => {
+  if (binding) {
+    const stage = readLeanTrustedHostFailureStageV7(error, binding)
+    return { type: "lean-child-failure", schemaVersion: "lean-child-failure-v7", ...binding, stage, category: stage === "unknown" ? "stage_not_observed" : "host_boundary_observed" }
+  }
   const message = error instanceof Error ? error.message : ""
   const match = /^LEAN_PILOT_([A-Z0-9_]{1,64})$/u.exec(message)
   const trustedImportCode = TRUSTED_CANDIDATE_IMPORT_FAILURE_CODES.find(code => code === message)
@@ -76,7 +96,7 @@ interface LeanCliChildProcess {
   connected: boolean
   exitCode?: number | string | null
   disconnect(): void
-  send?(message: LeanChildFailureReceipt, callback?: (error: Error | null) => void): boolean
+  send?(message: LeanChildFailureReceipt | LeanChildFailureReceiptV7, callback?: (error: Error | null) => void): boolean
 }
 
 /** Finish a private child action without leaving its parent IPC handle alive.
@@ -84,6 +104,7 @@ interface LeanCliChildProcess {
 export const resolveLeanChildCliTerminal = async (
   action: Promise<unknown>,
   child: LeanCliChildProcess = process,
+  binding?: LeanHostFailureBindingV7 | (() => LeanHostFailureBindingV7 | undefined),
 ): Promise<void> => {
   let exitCode: 0 | 1 = 0
   try {
@@ -92,7 +113,7 @@ export const resolveLeanChildCliTerminal = async (
     // Keep child failures bounded and non-sensitive. Never serialize the
     // underlying exception or its runtime/IO details across this boundary.
     process.stderr.write("LEAN_PILOT_FAILED_DETAILS_WITHHELD\n")
-    const receipt = boundedFailureReceipt(error)
+    const receipt = boundedFailureReceipt(error, typeof binding === "function" ? binding() : binding)
     if (child.connected && child.send) await new Promise<void>(resolveReceipt => {
       try { child.send!(receipt, () => resolveReceipt()) } catch { resolveReceipt() }
     })

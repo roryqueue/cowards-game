@@ -1349,15 +1349,19 @@ const admitCompactRecord = (r: LeanCompactMatchRecord): void => {
 export const assertLeanPublicationCapacity = (ledger: LeanExperimentLedger, bytes: number, currentPhysicalBytes = leanProspectiveOwnedBytes(ledger)) => {
   if (!natural(bytes) || !natural(currentPhysicalBytes) || currentPhysicalBytes + leanPriorBytes(ledger.allocation) + Math.ceil(bytes / 4096) * 4096 + 65536 > LEAN_CAPS.retainedBytes) return fail("RESOURCE")
 }
-export const retainLeanMatch = (ledger: LeanExperimentLedger, charge: LeanCharge, record: LeanCompactMatchRecord, replayFrames: Iterable<unknown>) => {
+export const retainLeanMatch = (ledger: LeanExperimentLedger, charge: LeanCharge, record: LeanCompactMatchRecord, replayFrames: Iterable<unknown>, hostFailure?: (stage: "compact_replay_retention_publication" | "terminal_result_publication", caught: unknown) => never) => {
+  let replay: ReturnType<typeof encodeLeanReplay> | null
+  try {
   admitCompactRecord(record)
   const s = readLeanLedger(ledger)
   if (s.charges.get(charge.slotRoot)?.root !== charge.root || s.terminals.has(charge.root)) return fail("TERMINAL")
   const selected = ledger.allocation.sampleSlotRoots.includes(charge.slotRoot) || record.classification !== "success" || !record.cleanupComplete
   const remaining = LEAN_CAPS.retainedBytes - cumulativeLeanPhysicalBytes(ledger) - 131072
-  const replay = selected ? encodeLeanReplay(replayFrames, remaining) : null
+  replay = selected ? encodeLeanReplay(replayFrames, remaining) : null
   if (replay) { assertLeanPublicationCapacity(ledger, replay.bytes.length); writeExclusive(join(safeDirectory(ledger.directory), `${charge.root.slice(7)}.gz`), replay.bytes) }
-  append(ledger, { kind: "terminal", chargeRoot: charge.root, record, replay: replay?.container ?? null })
+  } catch (error) { if (hostFailure) hostFailure("compact_replay_retention_publication", error); throw error }
+  try { append(ledger, { kind: "terminal", chargeRoot: charge.root, record, replay: replay?.container ?? null }) }
+  catch (error) { if (hostFailure) hostFailure("terminal_result_publication", error); throw error }
 }
 export const checkpointLeanResources = (ledger: LeanExperimentLedger, elapsedMs: number, bufferBytes: number, scratchBytes = 0) => {
   const e = { kind: "resource" as const, elapsedMs, physicalBytes: leanProspectiveOwnedBytes(ledger), bufferBytes, scratchBytes }

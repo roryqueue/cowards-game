@@ -1,11 +1,31 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
+import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
+import { retainLeanMatch } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { captureLeanHostFailureV7, readLeanTrustedHostFailureStageV7 } from "./lib/v1-38-lean-host-stage-v7.js"
-import { isLeanChildFailureReceipt, isLeanChildFailureReceiptV7, resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
+import { isLeanChildFailureReceipt, isLeanChildFailureReceiptV7, publishChildTerminalAfterOptionalReceipt, resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
+
+vi.mock("node:child_process", async original => ({ ...await original<typeof import("node:child_process")>(), spawn() { throw new Error("SYNTHETIC_ONLY") }, spawnSync() { throw new Error("SYNTHETIC_ONLY") }, fork() { throw new Error("SYNTHETIC_ONLY") }, execFileSync() { throw new Error("SYNTHETIC_ONLY") } }))
+vi.mock("node:worker_threads", async original => ({ ...await original<typeof import("node:worker_threads")>(), Worker: function() { throw new Error("SYNTHETIC_ONLY") } }))
 
 const root = `sha256:${"a".repeat(64)}`
 const binding = { route: "diagnostic" as const, allocationRoot: root, chargeRoot: root, slotRoot: root }
 const stages = ["match_preparation", "match_composition_postprocessing", "compact_replay_retention_publication", "terminal_result_publication"] as const
 describe("v7 host-only stage custody", () => {
+  it("captures actual source/scenario preparation before a provider can open", async () => {
+    const input = { ledger: { allocation: { schemaVersion: "lean-correction-supervisor-diagnostic-allocation-v7", route: "diagnostic", root } }, charge: { root }, slot: { root }, bottom: {}, top: {} }
+    const thrown = await runLeanBaselineMatch(input as never).catch(error => error)
+    expect(readLeanTrustedHostFailureStageV7(thrown, binding)).toBe("match_preparation")
+  })
+  it("captures actual compact admission and never fabricates terminal publication", () => {
+    const observed: string[] = []
+    expect(() => retainLeanMatch({} as never, {} as never, {} as never, [], (stage, error) => { observed.push(stage); throw captureLeanHostFailureV7(stage, binding, error) })).toThrow()
+    expect(observed).toEqual(["compact_replay_retention_publication"])
+  })
+  it("attempts terminal publication even when optional receipt publication fails", () => {
+    const receipt = { type: "lean-child-failure" as const, schemaVersion: "lean-child-failure-v7" as const, ...binding, stage: stages[0], category: "host_boundary_observed" as const }
+    expect(publishChildTerminalAfterOptionalReceipt(receipt, () => { throw new Error("write failed") }, uncertain => uncertain)).toBe(true)
+    expect(() => publishChildTerminalAfterOptionalReceipt(receipt, () => {}, () => { throw new Error("mandatory terminal failed") })).toThrow("mandatory terminal failed")
+  })
   it.each(stages)("classifies the trusted %s catch without reading the thrown object", async stage => {
     const hostile = new Proxy({}, { get() { throw new Error("private getter") } })
     expect(readLeanTrustedHostFailureStageV7(hostile)).toBe("unknown")

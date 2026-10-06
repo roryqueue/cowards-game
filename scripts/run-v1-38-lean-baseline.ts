@@ -14,7 +14,7 @@ import { assessLeanPrefixCapacity, createLeanParentObservationGuard, admitLeanCh
 import { executeLeanCurrentPipeline, leanColdProcedureRoot, compactLeanBaselineCell } from "./lib/v1-38-lean-baseline-pipeline.js"
 import { publishLeanBaselineSource } from "./lib/v1-38-lean-baseline-source.js"
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
-import { isLeanChildFailureReceipt, publishChildTerminalAfterOptionalReceipt, resolveLeanChildCliTerminal, type LeanChildFailureReceipt } from "./lib/v1-38-lean-child-cli-terminal.js"
+import { isLeanChildFailureReceipt, isLeanChildFailureReceiptV7, publishChildTerminalAfterOptionalReceipt, resolveLeanChildCliTerminal, type LeanChildFailureReceipt, type LeanChildFailureReceiptV7 } from "./lib/v1-38-lean-child-cli-terminal.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_${code}`) }
 const STORE = resolve(LEAN_BASELINE_STORE)
@@ -300,16 +300,20 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
   options.beforeRelease?.()
   const token = randomBytes(32).toString("hex")
   const child = fork(resolve(process.argv[1] ?? fail("ENTRY_PATH")), [options.childMode, "--request", requestPath], { execArgv: process.execArgv, stdio: ["ignore", "ignore", "ignore", "ipc"] })
-  let entered = false, uncertain = false, childRssObservedBytes: number | null = null, childFailure: LeanChildFailureReceipt | null = null
+  let entered = false, uncertain = false, childRssObservedBytes: number | null = null, childFailure: LeanChildFailureReceipt | LeanChildFailureReceiptV7 | null = null
   const reasons = new Set<LeanSupervisorReasonCode>()
   const observe = (reason: LeanSupervisorReasonCode) => { if (options.supervisorObservation === true) reasons.add(reason) }
   let finalIdentity: LeanSupervisorReasonEnvelope["observations"]["finalIdentity"] = "matched"
   child.on("error", () => { uncertain = true; observe("child_error") })
   child.on("message", message => {
     if (message !== null && typeof message === "object" && exactLabKeys(message, ["ready"]) && message.ready === child.pid) return
-    const validReceipt = isLeanChildFailureReceipt(message)
+    let validReceipt: boolean
+    if (allocation.schemaVersion.endsWith("-v7") && "route" in allocation) {
+      const state = readLeanLedger(ledger), charge = [...state.charges.values()].at(-1)
+      validReceipt = !!charge && isLeanChildFailureReceiptV7(message, { route: allocation.route, allocationRoot: allocation.root, chargeRoot: charge.root, slotRoot: charge.slotRoot })
+    } else validReceipt = isLeanChildFailureReceipt(message)
     if (!validReceipt || childFailure !== null) { uncertain = true; observe(validReceipt ? "duplicate_failure_receipt" : "malformed_ipc"); return }
-    childFailure = message
+    childFailure = message as LeanChildFailureReceipt | LeanChildFailureReceiptV7
   })
   try {
     await waitLeanBoundedChildReady(child)
