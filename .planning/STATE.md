@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh replay-repair continuation approved; checked distinct v6 source wiring next
+stopped_at: Reviewed v6 diagnostic allocation prepared; commit and unique MAIN entry next
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
-last_activity_desc: Human approved one fresh diagnostic and conditional baseline under unchanged remaining budgets
+last_activity_desc: Replay v6 source verified and diagnostic data reviewed; one fresh allocation prepared
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V6 DIAGNOSTIC PREPARED (2026-10-06): Checked additive replay-v6 source implemented; independent source review-v2 clean after CR-01 single-interval accounting fix03ed458a, VALIDATION-v1 and MAIN-GATES-v1 passed148synthetic tests/types/shell/boundary1408zero, SOURCE-VERIFICATION-v1 verifies4/4 functional truths plus safety. Fixed source67263fe477e884ffabb74c09f562d0091e2a86ec8ae29cf7c812ed64d31430aa/892entries; no native feasibility claim. Actual MAIN draft/finalize and independent DIAGNOSTIC-DATA-REVIEW-v1 clean; exactrequest7f26d050/data11529987/setupac28273e. ExactlyONEpreparation CLOSED0 allocation3ddb8b87ccfe3a97835f4cc0ee15e6782eeb8d6646a10fd25b19e57adffcb647/rawa774abe38e47e27ae391d117ec34b9a431dcc13953100252913687bed5037c2b. Checkedreal0700store onlyallocation/emptyledger/time, prior24/current0charges; closedprefix38981829ms (all latercosts continue) under43200000ms/same15GB300. No diagnosticentry/verifier/holdyet. Commit/push allocation and gates BEFOREoneMAINentry; fresh passing SAME-PROCESScapacity beforecharge/provider. SOURCE+HEADfixed throughactualterminal andONEappropriateuniquecheck, no competingheavywork. OnlyfullacceptanceofTHISfreshdiagnostic permitsconditionalONEfresh36baseline; failure/refusal endsenvelope. Allolderhistoryimmutable/no retry/refund/recredit; fullbufferinflate/nativeRSS/36fitunproved. Phase265/LEAG/freeze/formation/holdout/public/counting/production gated. Earlierfrontiershistory.
 
 CURRENT APPROVED FRONTIER (2026-10-06): Direct human approval recorded in265-16-REPLAY-REPAIR-APPROVAL-20261006.md authorizes ONEdistinctfreshprivate diagnostic then conditionalONEfresh36baseline, no additionalretry, SAMEremaining12h15GB300Match and24spentcharges. Local bounded taskcompletion1791244661365/currentstart1791247033529 yields36151532mspriorcarry; everycurrentcostcounts, onlyproveninterturnhumanidleexcluded. Source-onlyreplayrepair previouslyreviewed/verified70fixtures; distinctv6route wiring must be researched/checkedplanned/executed/reviewed/fixed/validated/sourceverified beforefreshdatareview/newimmutablecommittedallocation/SAMEPROCESScapacity/uniqueMAINentry andONEappropriatecheck. No activeentry/verifier/hold or newdata/allocationyet. All oldv5andpriorconsumedbytes/readers/authorityimmutable, nooldrecredit. Sameguest1000/host5000/startup2500/Match600000/4xguard/fullaudits andallrules/privacy. Fullbufferinflate stillnotRSSguaranteed; full36notpromisedwithinremainder. Phase265/LEAG/freeze/formation/holdout/public/counting/production unadmitted. Earlierpendingfrontierbelow is nowhistorical, supersededonlyby thisnewboundedapproval.
 
