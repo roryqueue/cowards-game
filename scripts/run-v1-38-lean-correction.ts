@@ -47,6 +47,7 @@ export const LEAN_RETRY_V8_SOURCE_INVENTORY = Object.freeze([
   "scripts/lib/v1-38-lean-baseline-retained.ts", "scripts/lib/v1-38-lean-baseline-retained.test.ts",
   "scripts/lib/v1-38-lean-baseline-authority.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts",
   "scripts/run-v1-38-lean-correction.test.ts", "scripts/run-v1-38-lean-correction-bytes.test.ts", "scripts/lib/v1-38-lean-correction-retained.test.ts",
+  "scripts/lib/v1-38-lean-baseline-match.ts", "scripts/run-v1-38-lean-baseline.test.ts",
 ] as const)
 /** Exact union of checked source inventories plus approval, plan, policy, fixture. */
 export const LEAN_HOST_STAGE_V7_SOURCE_INVENTORY = Object.freeze([
