@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V6 baseline failed; source diagnosis inconclusive; prospective time and route decision needed
+stopped_at: Approved prospective host-stage repair and bounded v7 continuation; research first
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
-last_activity_desc: V6 baseline terminal-only verification and source-only diagnosis closed; no further Match authority
+last_activity_desc: Four-hour prospective extension approved; checked source repair precedes fresh diagnostic
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED FRONTIER (2026-10-06): Direct human approval recorded in NEW265-16-HOST-STAGE-APPROVAL-20261006.md authorizes narrow trusted-host finite-stage diagnostic repair through existing Plan16 research/checked-plan/execute/review-fix/validate/source-verify, followed by ONE distinct fresh private diagnostic and conditional ONE fresh36 baseline ONLY after complete new diagnostic acceptance. NEW allocations alone may use cumulative57600000ms (16h); old12h/all consumed bounds/bytes remain immutable. Carry28spent/41943494ms before current turn1791290048578; every current cost counts with no gaps, only proven interturn human idle excluded. Same15GB300/guest1000/host5000/startup2500/Match600000/full audits/4x guard and all other bounds. No active entry/verifier/source hold or new allocation. Fixed reviewed source/actual data review/committed new allocation/fresh empty0700store/passing SAMEPROCESS capacity precede charge. Failure/refusal ends envelope; no old reader/retry/refund/recredit. All9LEAG/Phase265/freeze/formation/holdout/public/counting/production gated. Earlier pending frontier is preserved history, superseded by this approval only.
 
 CURRENT HUMAN-ONLY FRONTIER (2026-10-06): Freshv6diagnostic acceptedcb94964c; conditionalbaseline uniqueMAIN37077 CLOSEDexit1 and ONEindependentENTRY-terminal-onlycheck CLOSED gaps_found. HeldHEAD6b9336f1/source67263fe4 unchangedthroughclosure; SOURCE+HEADhold RELEASED/noactiveentry/verifier. Baseline3currentcharges/2finite success-OK-cleanupterminal records/thirdnonterminal,28cumulativespent; resultabsent/noordinaryreader/no baselinecredit. Actualchild_failed/exit1/signalnull/1236340ms; finitefailureUNKNOWN_INTERNAL_FAILURE/stageunknown, causeunknown (notproved disk/memory/timeout/capacity). Source-only GSDdiagnosisCLOSEDinconclusive: generictrustedhostclassifiercollapses postcharge Match/replaypublication exceptions; no speculativefixapplied. Allcurrentintervalsclosed41342676ms/effectiveclose1791252224672; ALLlatercosts continue as41342676+now−1791252224672 under43200000ms/same15GB300. Remainderbelowunchanged1860000msnext-Matchreserve; preciseapprovedone+conditionaloneenvelopeENDED. NEW265-16-REPLAY-V6-CONTINUATION-DECISION-v1.md proposes (NOTapproved/applied) fouradditionalprospectivecumulativehours→16h, thencheckedfinitehost-stagediagnosticrepair/ONEfreshdiag/conditionalONEfresh36, alloldbytes/bounds/time/28chargescarried. No newroute/allocation/Match/oldreader/retry/refund/recredit. Phase265/LEAG/freeze/formation/holdout/public/counting/production gated. Previousfrontiershistory.
 
