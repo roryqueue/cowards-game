@@ -5,7 +5,8 @@ import { join } from "node:path"
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { retainLeanMatch } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { parseLeanCorrectionCommand } from "./run-v1-38-lean-correction.js"
+import { parseLeanCorrectionCommand, authenticateLeanCorrectionReview } from "./run-v1-38-lean-correction.js"
+import { leanBaselineSourceManifest } from "./run-v1-38-lean-baseline.js"
 import { validateLeanReplaySetupWitnessV7, leanReplayCarryElapsedV7 } from "./run-v1-38-lean-correction.js"
 import { LEAN_HOST_STAGE_V7_SOURCE_INVENTORY, leanCorrectionSourceManifest } from "./run-v1-38-lean-correction.js"
 import * as retained from "./lib/v1-38-lean-correction-retained.js"
@@ -18,13 +19,22 @@ import { isLeanChildFailureReceipt, isLeanChildFailureReceiptV7, publishChildTer
 
 vi.mock("node:child_process", async original => { const deny = () => { throw new Error("SYNTHETIC_ONLY") }; return { ...await original<typeof import("node:child_process")>(), spawn: deny, spawnSync: deny, fork: deny, exec: deny, execSync: deny, execFile: deny, execFileSync: deny } })
 vi.mock("node:worker_threads", async original => ({ ...await original<typeof import("node:worker_threads")>(), Worker: function() { throw new Error("SYNTHETIC_ONLY") } }))
+const virtualSource = vi.hoisted(() => ({ changed: "", review: "", reviewPath: "" }))
+vi.mock("node:fs", async original => {
+  const fs = await original<typeof import("node:fs")>()
+  return { ...fs, readFileSync: (...args: Parameters<typeof fs.readFileSync>) => {
+    if (String(args[0]) === virtualSource.reviewPath) return Buffer.from(virtualSource.review)
+    const bytes = fs.readFileSync(...args)
+    return virtualSource.changed && String(args[0]).endsWith(virtualSource.changed) ? Buffer.concat([Buffer.from(bytes), Buffer.from("\n// synthetic source drift\n")]) : bytes
+  } }
+})
 
 const root = `sha256:${"a".repeat(64)}`
 const binding = { route: "diagnostic" as const, allocationRoot: root, chargeRoot: root, slotRoot: root }
 const stages = ["match_preparation", "match_composition_postprocessing", "compact_replay_retention_publication", "terminal_result_publication"] as const
 const r = (label: string) => labRoot("host-stage-v7-fixture", label)
 const syntheticDirectories = new Set<string>()
-afterEach(() => { for (const directory of syntheticDirectories) rmSync(directory, { recursive: true }); syntheticDirectories.clear() })
+afterEach(() => { virtualSource.changed = ""; virtualSource.reviewPath = ""; vi.restoreAllMocks(); for (const directory of syntheticDirectories) rmSync(directory, { recursive: true }); syntheticDirectories.clear() })
 const allocationInput = () => {
   const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 28, elapsedUpperBoundMs: 41_943_494, allocatedDiskBytes: 12_894_208, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r("history"), survivors: [{ identity: ".strategy-lab/synthetic-history", allocatedBytes: 4096 }] }
   return { sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: lean.LEAN_REPLAY_V7_SUPPLEMENT_ROOT, candidateRoots: [r("a"), r("b")], requestRoots: [r("request")], seed: "synthetic-v7", route: "diagnostic" as const, reuseGrantRoot: r("reuse"), supervisorDecisionRoot: lean.LEAN_REPLAY_V7_APPROVAL_ROOT, acceptedCheckRoot: null, requestBytesRoot: r("request-bytes"), dataReviewRoot: r("data"), setupAccountingRoot: r("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
@@ -36,7 +46,18 @@ describe("additive v7 identity", () => {
     inventory.push(".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-HOST-STAGE-APPROVAL-20261006.md", ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-HOST-STAGE-V7-PLAN-v1.md", lean.LEAN_REPLAY_V7_POLICY.identity)
     expect([...LEAN_HOST_STAGE_V7_SOURCE_INVENTORY].sort()).toEqual([...new Set(inventory)].sort())
     const manifest = leanCorrectionSourceManifest("v7")
-    expect(manifest.entries).toEqual([...LEAN_HOST_STAGE_V7_SOURCE_INVENTORY].sort().map(path => ({ path, root: lean.leanBytesRoot(readFileSync(path)) })))
+    for (const entry of [...leanBaselineSourceManifest().entries, ...LEAN_HOST_STAGE_V7_SOURCE_INVENTORY.map(path => ({ path, root: lean.leanBytesRoot(readFileSync(path)) }))]) expect(manifest.entries).toContainEqual(entry)
+    expect(new Set(manifest.entries.map(entry => entry.path)).size).toBe(manifest.entries.length)
+  })
+  it.each(["packages/engine/src/backstab.ts", "packages/strategy-lab/src/runtime-bridge.ts", "packages/runtime-js/src/subprocess-ipc.ts", "scripts/lib/v1-38-lean-baseline-reuse.ts"])("refuses stale reviewed v7 authority after virtual mutation of %s with unchanged HEAD", dependency => {
+    const manifest = leanCorrectionSourceManifest("v7"), fixedHead = "1".repeat(40)
+    virtualSource.reviewPath = join(process.cwd(), ".planning/phases/265-serious-current-rules-league-and-development-red-team/SYNTHETIC-REVIEW.md")
+    virtualSource.review = `---\nstatus: clean\nsource_root: ${manifest.root}\nsource_commit: ${fixedHead}\nindependently_reviewed: true\nauthor_agent: /root/synthetic_author\nreviewer_agent: /root/synthetic_reviewer\n---\n`
+    const bytesRoot = lean.leanBytesRoot(Buffer.from(virtualSource.review))
+    virtualSource.changed = dependency
+    expect(leanCorrectionSourceManifest("v7").root).not.toBe(manifest.root)
+    expect(() => authenticateLeanCorrectionReview(virtualSource.reviewPath, bytesRoot, manifest.root, null, undefined, "v7")).toThrow("REVIEW_SOURCE")
+    expect(fixedHead).toBe("1".repeat(40))
   })
   it("joins the actual retained failed parent terminal to its last charge without admitting a result", () => {
     const validate = (retained as any).validateLeanHostStageTerminalOnlyV7

@@ -159,7 +159,9 @@ export const closeLeanCorrectionAdmission = (carrier: ReturnType<typeof beginLea
 }
 export const leanCorrectionSourceManifest = (supervisor: LeanSupervisorMode = false) => {
   if (supervisor === "v7") {
-    const entries = [...LEAN_HOST_STAGE_V7_SOURCE_INVENTORY].sort().map(path => ({ path, root: leanBytesRoot(readFileSync(resolve(path))) }))
+    const closure = new Map(leanBaselineSourceManifest().entries.map(entry => [entry.path, entry]))
+    for (const path of LEAN_HOST_STAGE_V7_SOURCE_INVENTORY) closure.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
+    const entries = [...closure.values()].sort((a, b) => a.path.localeCompare(b.path))
     return { entries, root: labRoot("lean-correction-supervisor-reviewed-source-v7", { entries, policyRoot: LEAN_REPLAY_V7_POLICY.bytesRoot, supplementRoot: LEAN_REPLAY_V7_SUPPLEMENT_ROOT, approvalRoot: LEAN_REPLAY_V7_APPROVAL_ROOT, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())), brokerRoot: leanBytesRoot(Buffer.from(buildLeanContainerBrokerSourceV7())) }) }
   }
   const entries = new Map(leanBaselineSourceManifest().entries.map(e => [e.path, e]))
@@ -234,7 +236,7 @@ export interface LeanCorrectionRequest {
   candidateRoots: readonly LabRoot[]; requestRoots: readonly LabRoot[]; diagnosis: LeanCorrectionDiagnosis | null
   supervisorDecisionRoot?: LabRoot; acceptedCheckRoot?: LabRoot | null; setupAccountingPath?: string; setupAccountingRoot?: LabRoot
 }
-const readReview = (path: string, expected: LabRoot, source: LabRoot, diagnosisRoot: LabRoot | null, dataRequestRoot?: LabRoot, supervisor: LeanSupervisorMode = false) => {
+export const authenticateLeanCorrectionReview = (path: string, expected: LabRoot, source: LabRoot, diagnosisRoot: LabRoot | null, dataRequestRoot?: LabRoot, supervisor: LeanSupervisorMode = false) => {
   const absolute = resolve(path)
   if (!absolute.startsWith(`${resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team")}/`)) return fail("REVIEW")
   const bytes = readFileSync(absolute)
@@ -243,8 +245,10 @@ const readReview = (path: string, expected: LabRoot, source: LabRoot, diagnosisR
   const field = (key: string) => front.match(new RegExp(`^${key}: ([^\\n]+)$`, "mu"))?.[1]?.replace(/^['"]|['"]$/gu, "")
   const commit = field("source_commit")
   if (!front.startsWith("---\n") || field("status") !== "clean" || field("source_root") !== source || field("independently_reviewed") !== "true" || !(supervisor ? admitsLeanSupervisorReviewAgents : admitsLeanBaselineReviewAgents)(field("author_agent"), field("reviewer_agent")) || !commit || !/^[a-f0-9]{40}$/u.test(commit) || diagnosisRoot !== null && (field("diagnosis_root") !== diagnosisRoot || field("repair_verified") !== "true") || dataRequestRoot !== undefined && field("request_root") !== dataRequestRoot) return fail("REVIEW")
+  if (supervisor === "v7" && leanCorrectionSourceManifest(supervisor).root !== source) return fail("REVIEW_SOURCE")
   try { execFileSync("git", ["diff", "--exit-code", commit, "--", ...leanCorrectionSourceManifest(supervisor).entries.map(e => e.path)], { stdio: "pipe", maxBuffer: 1024 }) } catch { return fail("REVIEW_SOURCE") }
 }
+const readReview = authenticateLeanCorrectionReview
 export const leanCorrectionRequestDataRoot = (request: LeanCorrectionRequest): LabRoot => {
   const { dataReviewPath: _path, dataReviewRoot: _root, ...raw } = request
   const body = (request.schemaVersion === "lean-correction-supervisor-request-v5" || request.schemaVersion === "lean-correction-supervisor-request-v6" || request.schemaVersion === "lean-correction-supervisor-request-v7") ? Object.fromEntries(Object.entries(raw).filter(([key]) => key !== "authorizationRoot")) : raw
