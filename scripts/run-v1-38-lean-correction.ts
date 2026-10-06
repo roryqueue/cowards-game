@@ -543,6 +543,12 @@ export const leanReplayCarryElapsedV7 = (witness: ReturnType<typeof validateLean
   if (!Number.isSafeInteger(elapsed) || elapsed >= 57_600_000) return fail("ADMISSION_TIME")
   return elapsed
 }
+/** Uses the authenticated new diagnostic's final close, never its report time. */
+export const leanReplayDiagnosticCarryV7 = (accepted: ReturnType<typeof authenticateLeanSupervisorDiagnosticCheck>, diagnostic: LeanExperimentLedger, accountingAtMs: number) => {
+  const latest = readLeanTimeAccounting(diagnostic)
+  if (leanSupervisorAllocationMode(diagnostic.allocation) !== "v7" || !("route" in diagnostic.allocation) || diagnostic.allocation.route !== "diagnostic" || accepted.allocationRoot !== diagnostic.allocation.root || latest.active || !Number.isSafeInteger(accountingAtMs) || accountingAtMs < accepted.readerCloseMs || latest.closes.get("correction-supervisor-diagnostic-v7-reader-close") !== accepted.readerCloseMs || latest.elapsedMs !== accepted.closedElapsedMs || readLeanLedger(diagnostic).charged !== 29) return fail("DIAGNOSTIC_UNCLOSED")
+  return { charged: 29, elapsedMs: accepted.closedElapsedMs + accountingAtMs - accepted.readerCloseMs }
+}
 export const inspectLeanReplayPredecessorV7 = (route: LeanCorrectionRoute, accountingAtMs: number): LeanCorrectionPredecessor => {
   const c = LEAN_REPLAY_V7_CARRY, oldPaths = leanCorrectionRoutePaths("baseline", "v6"), old = openLeanLedger(oldPaths.store), witness = readLeanSupervisorSetupWitness("v7") as ReturnType<typeof validateLeanReplaySetupWitnessV7>
   const time = readLeanTimeAccounting(old), state = readLeanLedger(old)
@@ -556,9 +562,9 @@ export const inspectLeanReplayPredecessorV7 = (route: LeanCorrectionRoute, accou
   const identities = [...old.allocation.predecessor.survivors.map(s => s.identity), oldPaths.store, oldPaths.request, oldPaths.allocation, oldPaths.temp, LEAN_REPLAY_V6_SETUP_PATH, LEAN_REPLAY_V7_SETUP_PATH]
   const roots: LabRoot[] = [old.allocation.root, witness.root, ...Object.values(rawRoots) as LabRoot[]]
   if (route === "baseline") {
-    const accepted = authenticateLeanSupervisorDiagnosticCheck("v7"), p = leanCorrectionRoutePaths("diagnostic", "v7"), diagnostic = openLeanLedger(p.store), latest = readLeanTimeAccounting(diagnostic)
-    if (latest.active || accountingAtMs < accepted.readerCloseMs || latest.elapsedMs !== accepted.closedElapsedMs || readLeanLedger(diagnostic).charged !== 29) return fail("DIAGNOSTIC_UNCLOSED")
-    elapsed = accepted.closedElapsedMs + accountingAtMs - accepted.readerCloseMs; charged = 29
+    const accepted = authenticateLeanSupervisorDiagnosticCheck("v7"), p = leanCorrectionRoutePaths("diagnostic", "v7"), diagnostic = openLeanLedger(p.store)
+    const carry = leanReplayDiagnosticCarryV7(accepted, diagnostic, accountingAtMs)
+    elapsed = carry.elapsedMs; charged = carry.charged
     identities.push(p.store, p.request, p.allocation, p.temp); roots.push(accepted.root, accepted.bytesRoot)
   }
   const survivors = inventoryLeanSupervisorSurvivors([...new Set(identities)])
@@ -679,6 +685,35 @@ const allocationFor = (path: string, route: LeanCorrectionRoute, supervisor: Lea
   if (!("route" in ledger.allocation) || ledger.allocation.route !== route || ledger.allocation.sourceRoot !== request.sourceRoot || ledger.allocation.reviewRoot !== request.reviewRoot || ledger.allocation.planRoot !== request.planRoot || ledger.allocation.reuseGrantRoot !== reuse.grant.root || ledger.allocation.diagnosisRoot !== (request.diagnosis?.root ?? null) || !same(ledger.allocation.requestRoots, request.requestRoots) || !same(ledger.allocation.candidateRoots, [...request.candidateRoots].sort())) return fail("ALLOCATION")
   return { request, reuse, ledger, allocation: ledger.allocation }
 }
+/** Actual charged publication boundary; this grants no execution authority. */
+export const publishLeanCorrectionMatchEvidence = (input: {
+  ledger: LeanExperimentLedger; charge: Parameters<typeof retainLeanMatch>[1]; execution: Awaited<ReturnType<typeof runLeanBaselineMatch>>
+  pair: ReturnType<typeof leanBaselinePair>; bottom: { sourceRoot: LabRoot }; top: { sourceRoot: LabRoot }; origins: readonly unknown[]
+  route: LeanCorrectionRoute; supervisor: LeanSupervisorMode; sourceRoot: LabRoot; hostBinding?: LeanHostFailureBindingV7
+}) => {
+  const { ledger, charge, execution, pair, bottom, top, origins, route, supervisor, sourceRoot, hostBinding } = input
+  try {
+    retainLeanMatch(ledger, charge, execution.compact, execution.replayFrames, hostBinding ? (stage, error) => { throw captureLeanHostFailureV7(stage, hostBinding, error) } : undefined)
+    const { replayFrames: _frames, ...body } = execution, cell = { ...body, ordinal: charge.ordinal, slotRoot: charge.slotRoot, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot }
+    const observationBody = { schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }
+    publishLeanCorrection(join(ledger.directory, `observation-${charge.ordinal}.json`), { ...observationBody, root: labRoot("lean-baseline-observation-v1", observationBody) }, ledger)
+    if (route === "diagnostic") {
+      const originBody = { schemaVersion: supervisor === "v7" ? "lean-startup-origin-envelope-v7" : supervisor === "v6" ? "lean-startup-origin-envelope-v6" : supervisor === "v5" ? "lean-startup-origin-envelope-v5" : "lean-correction-origin-envelope-v1", allocationRoot: ledger.allocation.root, sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins }
+      publishLeanCorrection(join(ledger.directory, "correction-origin.json"), { ...originBody, root: labRoot(originBody.schemaVersion, originBody) }, ledger)
+    }
+    return cell
+  } catch (error) { if (hostBinding) throw captureLeanHostFailureV7("compact_replay_retention_publication", hostBinding, error); throw error }
+}
+/** Actual final stop/evidence/result catch shared with source-only fixtures. */
+export const publishLeanCorrectionTerminalResult = (ledger: LeanExperimentLedger, route: LeanCorrectionRoute, supervisor: LeanSupervisorMode, request: LeanCorrectionRequest, entry: ReturnType<typeof readLeanChildEntry>, reuse: LeanColdReuse, pipeline: unknown, hostBinding?: LeanHostFailureBindingV7) => {
+  try {
+    stopLeanLedger(ledger, route === "diagnostic" || (pipeline as { status: string }).status !== "current_baseline_complete" ? "failure" : "complete")
+    const evidence = verifyLeanEvidence(ledger)
+    const body = { schemaVersion: supervisor ? `lean-correction-supervisor-result-v${leanSupervisorVersion(supervisor)}` : "lean-correction-result-v1", privacy: "private_offline", issued: false, route, allocationRoot: ledger.allocation.root, sourceRoot: request.sourceRoot, requestBytesRoot: entry.requestBytesRoot, head: entry.head, reuseGrantRoot: reuse.grant.root, pipeline, evidenceRoot: evidence.root, cumulativeCharged: evidence.charged, holdoutOpened: false, formationMaterialized: false, phaseComplete: false }
+    publishLeanCorrection(join(ledger.directory, "result.json"), { ...body, root: labRoot(body.schemaVersion, body) }, ledger)
+    return { issued: false, route, status: "closed_pending_unique_check" }
+  } catch (error) { if (hostBinding) throw captureLeanHostFailureV7("terminal_result_publication", hostBinding, error); throw error }
+}
 export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrectionRoute, supervisor: LeanSupervisorMode = false) => {
   scope(route, supervisor)
   const { request, reuse, ledger, allocation } = allocationFor(path, route, supervisor), entry = readLeanChildEntry(ledger)
@@ -715,14 +750,7 @@ export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrec
     const origins: Array<{ metadata: LeanPrivateCorrectionOrigin; sourceRoot: LabRoot; seat: "bottom" | "top"; binding: unknown }> = []
     const execution = await runLeanBaselineMatch({ ledger, charge, slot, seed: request.seed, bottom, top, ...(observedRole === undefined ? {} : { observedRole }), checkpoint, register: parent.register, unregister: parent.unregister, correction: { reuse, ...(route === "diagnostic" ? { observe: (metadata: LeanPrivateCorrectionOrigin, sourceRoot: LabRoot, seat: "bottom" | "top", binding: unknown) => { if (origins.length >= 2) return fail("ORIGIN_LIMIT"); origins.push({ metadata: validateLeanPrivateCorrectionOrigin(metadata), sourceRoot, seat, binding }) } } : {}) } })
     hostStage = "compact_replay_retention_publication"
-    retainLeanMatch(ledger, charge, execution.compact, execution.replayFrames, hostBinding ? (stage, error) => { throw captureLeanHostFailureV7(stage, hostBinding, error) } : undefined)
-    const { replayFrames: _frames, ...body } = execution, cell = { ...body, ordinal: slot.ordinal, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot }
-    const observationBody = { schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }
-    publishLeanCorrection(join(ledger.directory, `observation-${slot.ordinal}.json`), { ...observationBody, root: labRoot("lean-baseline-observation-v1", observationBody) }, ledger)
-    if (route === "diagnostic") {
-      const originBody = { schemaVersion: supervisor === "v7" ? "lean-startup-origin-envelope-v7" : supervisor === "v6" ? "lean-startup-origin-envelope-v6" : supervisor === "v5" ? "lean-startup-origin-envelope-v5" : "lean-correction-origin-envelope-v1", allocationRoot: allocation.root, sourceRoot: request.sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins }
-      publishLeanCorrection(join(ledger.directory, "correction-origin.json"), { ...originBody, root: labRoot(originBody.schemaVersion, originBody) }, ledger)
-    }
+    const cell = publishLeanCorrectionMatchEvidence({ ledger, charge, execution, pair, bottom, top, origins, route, supervisor, sourceRoot: request.sourceRoot, ...(hostBinding ? { hostBinding } : {}) })
     checkpoint(); checkpointLeanResources(ledger, currentLeanElapsedMs(ledger), highWater, LEAN_EXTERNAL_SCRATCH_RESERVE)
     return cell
     } catch (error) { if (hostBinding) throw captureLeanHostFailureV7(hostStage, hostBinding, error); throw error }
@@ -741,13 +769,7 @@ export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrec
       publishLeanCorrection(join(ledger.directory, "cold-reuse.json"), reuse, ledger)
       pipeline = await executeLeanReusedCurrentPipeline({ allocation, reuse, checkpoint, freezeSource: source => { checkpoint(); if (reuse.sources.some(s => s.root === source.root)) publishLeanReusedBaselineSource(ledger, source, reuse); else publishLeanBaselineSource(ledger, source); checkpoint() }, retainArtifact: (name, value) => { if (!/^(?:seal-metadata|cold-corpus|cold-reuse-grant|initial-proposals|initial-selection|initial-training|initial-analysis|response-work|response-node-receipts|response-training|current-analysis)\.json$/u.test(name)) return fail("ARTIFACT"); checkpoint(); publishLeanCorrection(join(ledger.directory, name), value, ledger); checkpoint() }, dispatch })
     }
-    try {
-    stopLeanLedger(ledger, route === "diagnostic" || (pipeline as { status: string }).status !== "current_baseline_complete" ? "failure" : "complete")
-    const evidence = verifyLeanEvidence(ledger)
-    const body = { schemaVersion: supervisor ? `lean-correction-supervisor-result-v${leanSupervisorVersion(supervisor)}` : "lean-correction-result-v1", privacy: "private_offline", issued: false, route, allocationRoot: allocation.root, sourceRoot: request.sourceRoot, requestBytesRoot: entry.requestBytesRoot, head: entry.head, reuseGrantRoot: reuse.grant.root, pipeline, evidenceRoot: evidence.root, cumulativeCharged: evidence.charged, holdoutOpened: false, formationMaterialized: false, phaseComplete: false }
-    publishLeanCorrection(join(ledger.directory, "result.json"), { ...body, root: labRoot(body.schemaVersion, body) }, ledger)
-    return { issued: false, route, status: "closed_pending_unique_check" }
-    } catch (error) { if (activeHostBindingV7) throw captureLeanHostFailureV7("terminal_result_publication", activeHostBindingV7, error); throw error }
+    return publishLeanCorrectionTerminalResult(ledger, route, supervisor, request, entry, reuse, pipeline, activeHostBindingV7)
   } finally { process.removeListener("disconnect", disconnect); parent.disconnect() }
 }
 const child = async (path: string, route: LeanCorrectionRoute, supervisor: LeanSupervisorMode = false) => {
