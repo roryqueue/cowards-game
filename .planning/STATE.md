@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh v7 diagnostic allocation prepared; commit before unique MAIN entry
+stopped_at: V7 diagnostic refused; unique reader and independent closure audit closed; source diagnosis only
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
 last_activity_desc: Full 888-entry source reviewed, fixed, validated and verified; no empirical admission yet
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V7 REFUSED / SOURCE HOLD RELEASED: UniqueMAIN49207 CLOSED0 childexited/61038ms; ONEordinaryretainedreader8637 CLOSED1 LEAN_CORRECTION_RETAINED_DIAGNOSTIC_NOT_ACCEPTED, acceptedcheckABSENT. ONEindependent closure/refusal audit CLOSEDgaps_found: actualonecharge/system_failure CLEANUP/cleanupfalse/zero successes; finite native_response/stream_exchange/MALFORMED_IPC selectActivations ordinal0, initiatingcauseunknown/notguesttimeoutproof. Actualresult361e6632 immutable; no trustedhoststage receipt observed. Parent17692/child17730 absent, heldHEAD1583d2dc/fullsource0e15d33f unchangedthroughclosure, allocationraw937a2bb4 exact. Time6starts/6closes/inactive/closed47361631ms/finalclose1791295466715;29cumulativespent. SOURCE+HEADhold RELEASED. Approvedone+conditionaloneenvelope ENDED by refusal; baselineDENIED/noadditionalroute/Match/oldreader/retry/refund/recredit. Safe source-only GSDcleanup/firstexchange diagnosis may continue, no runtime/resource/rules amendment inferred. Alllatercostcarry41943494+now−1791290048578 under57.6Mms/same15GB300, historicpeaksunknown. Phase265/LEAG/freeze/formation/holdout/public/counting/production gated. Priorprepared/sourcefrontiershistory.
 
 CURRENT V7 DIAGNOSTIC PREPARED: Actual MAIN draft98878/finalize9380 and independent DIAGNOSTIC-DATA-REVIEW-v1 clean; exact request raw6bd2890b/data516d2ece/setup0ceaf249 over reviewed full source0e15d33f/888. ExactlyONEprepare88865 CLOSED0/preparation_only allocationbb23354065cbc7bfb94ea1116d6175869cb22323a05558ea7394be8417674a08/raw937a2bb49f6de7680a81601be727718055c11f8ed3bc471f1a2749d6c1273861. Checkedreal0700store onlyallocation/emptyledger/time,28prior/0currentcharge; closed47281402ms observation, all latercosts continue under57.6Mms/15GB300. Source/data gates committed/pushedf7bec2b6. Commit/push immutableallocation BEFORE ONE unique MAIN diagnosticentry; fresh SAMEPROCESS capacity beforecharge/provider. SourceANDHEADfixedthroughactualterminal+ONE appropriate uniquecheck; no competingheavywork/edits/commits duringhold. Only full acceptedNEWdiagnostic permitsconditionalONEfresh36baseline; anyfailure/refusal ends approvedenvelope. Oldhistory/readers immutable, no retry/refund/recredit. Phase265/LEAG/freeze/formation/holdout/public/counting/production unadmitted. Priorfrontiershistory.
 
