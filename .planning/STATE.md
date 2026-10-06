@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Three-diagnostic continuation approved; research fresh isolated route plumbing
+status: blocked
+stopped_at: Retry-envelope source verified; remaining cumulative time below unchanged next-Match reserve; prospective time decision required
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
-last_activity_desc: Approved up to three distinct private diagnostics and conditional baseline within same remaining budget
+last_activity_desc: Source repair reviewed and verified; no new empirical route started; four-hour prospective time extension proposed, not approved
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT HUMAN-ONLY TIMEBOX FRONTIER (2026-10-06): Existing Plan 16 retry-envelope research, checked plan, implementation, review/fix, source validation and independent source verification are CLOSED. Fixed source commit 77701ca78f1be83b2c7a30efd372bf42dd813062; independent REVIEW-v4 clean; SOURCE-VERIFICATION-v1 verifies 7/7 scoped truths and all 901 manifest entries exactly. Ordinal source roots: v8-1 sha256:479ddbf47e979ed1f0f504f85eeebbd69990eb718e01287a2e2cea1aa564c9d8, v8-2 sha256:091fcac5babd82cbac0c31bfd176de1e5fad2d449d6a010aa4942a8c11842bdc, v8-3 sha256:589931d5126be8bfad7a8a1355b44f257cbdca61803e423f60ae7402cfc5311c. Focused v8 tests 18/18, boundary tests 35/35, strict lab-package types, shell syntax and actual 1412-file boundary scan PASS; no clean standalone whole-project compiler claim. Read-only non-admitting observation at 2026-10-06T16:57:52.692Z: cumulative 55770985ms of unchanged 57600000ms, remaining 1829015ms, LESS THAN unchanged 1860000ms next-Match/cleanup/terminal/check/replay reserve. All subsequent current-turn work continues to count. The approved bounded envelope ends at inadequate remaining cap; no ordinal was spent. All three prospective v8 request/allocation/store/prepare-start/run-start destinations were absent; no helper/setup/entry/provider/Match/ordinary empirical reader was created or run. Actual agent/process checks show no active child entry, verifier or source hold. NEW265-16-RETRY-ENVELOPE-TIMEBOX-DECISION-v1.md proposes FOUR additional prospective cumulative hours (16 to 20), NOT approved or applied. No new prepare/allocation/Match before explicit resource approval and reviewed fresh prospective accounting/authority binding; never revive consumed routes or reinterpret old approval as a cap extension. Same 15GB/300Matches/29oldcharges and all runtime/rules/privacy bounds remain unchanged; all costs/files/history carry. Plan16/Phase265 and all nine LEAG items remain incomplete, Phase266 freeze/formation unstarted, holdout unopened, no public/counting/production. Earlier frontiers below are preserved history.
 
 CURRENT APPROVED POST-HANDSHAKE FRONTIER: Directhumanapproval recorded NEW265-16-POST-HANDSHAKE-APPROVAL-20261006.md permits atmostTHREE DISTINCTfreshprivate diagnostics thenONEfresh36baseline ONLYafterfullfreshdiagnostic acceptance. Faileddiagnosticendsitself, notremainingexplicitattempts; do notlaunchunchangedknownfailure. Same57.6Mms15GB300/29spent/allbounds/candidates/privacy/rules; previousconsumedv7 remainsfailedimmutable. Taskeventboundedpreviouscomplete1791297255657/currentstart1791299252280 yields49150573mscarry, excludesONLYproven1996623mshumanidle; everycurrentcostcounts continuously. Handshakefix5077e3ac/fullsourceeaa793b2 reviewed/validated/verified; freshrouteisolation research/checkedexistingPlan16plumbing next, no newrequest/allocation/entry/verifier/holdyet. ActualMAINdata/helperreview, fixedreviewedsource, NEWcommittedallocation/freshreal0700store/SAMEPROCESScapacity precedecharge; fixedsourceHEADthroughterminal+ONEproperuniquecheck. Stopafter3unaccepteddiagnostics/baselinefailure/insufficientcap/newhumandecision; no repeatliteralinsideenvelope. Phase265/LEAG/freeze/formation/holdout/public/counting/production remaingated. Earlierpendingfrontiershistory.
 
