@@ -72,7 +72,12 @@ const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge
   const allocation = ledger.allocation as unknown as { schemaVersion: string; coldRoot?: LabRoot; sourceRoot: LabRoot; predecessor?: { chargedMatches: number } }
   if (reuse ? !["lean-correction-diagnostic-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-diagnostic-allocation-v4", "lean-correction-supervisor-baseline-allocation-v4", "lean-correction-supervisor-diagnostic-allocation-v5", "lean-correction-supervisor-baseline-allocation-v5", "lean-correction-supervisor-diagnostic-allocation-v6", "lean-correction-supervisor-baseline-allocation-v6", "lean-correction-supervisor-diagnostic-allocation-v7", "lean-correction-supervisor-baseline-allocation-v7", "lean-correction-supervisor-diagnostic-allocation-v8", "lean-correction-supervisor-baseline-allocation-v8"].includes(allocation.schemaVersion) || !("reuseGrantRoot" in ledger.allocation) || ledger.allocation.reuseGrantRoot !== reuse.grant.root : allocation.schemaVersion !== "lean-current-baseline-allocation-v1") return fail()
   if ((allocation.schemaVersion.endsWith("-v5") || allocation.schemaVersion.endsWith("-v6") || allocation.schemaVersion.endsWith("-v7") || allocation.schemaVersion.endsWith("-v8"))) leanCapsForAllocation(ledger.allocation)
-  if (allocation.schemaVersion.endsWith("-v8")) admitLeanAllocation(ledger.allocation)
+  if (allocation.schemaVersion.endsWith("-v8")) {
+    // Admission authenticates the prospective extension as part of the exact
+    // allocation root; the runtime/startup protocol remains wire v7.
+    const admitted = admitLeanAllocation(ledger.allocation)
+    if (admitted.root !== binding.budgetRoot) return fail()
+  }
   if (allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v8") authenticateLeanRetryBaselineAuthorityV8(ledger.allocation as import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanCorrectionAllocation, readLeanChildEntry(ledger).head)
   const state = readLeanLedger(ledger), retainedCharge = state.charges.get(charge.slotRoot)
   if (!retainedCharge || state.stopped || state.terminals.has(retainedCharge.root) || labRoot("lean-slot-charge", charge) !== labRoot("lean-slot-charge", retainedCharge)) return fail()

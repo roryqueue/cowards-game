@@ -5,6 +5,7 @@ import { resolve } from "node:path"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { currentBaselineSlotKind, createLeanCorrectionAllocation, createLeanCurrentBaselineAllocation, leanCanonicalBytes, leanBytesRoot, LEAN_CAPS, LEAN_CLOSED_V7, type LeanExperimentLedger } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import * as parentApi from "./run-v1-38-lean-baseline.js"
 import { admitsLeanBaselineReviewAgents, assertLeanBaselineWritableScope, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselinePair, leanBaselineSourceManifest, parseLeanBaselineCommand } from "./run-v1-38-lean-baseline.js"
 import { leanBaselineMatchSeed } from "./lib/v1-38-lean-baseline-match.js"
@@ -59,6 +60,47 @@ const beginParent = (enabled: boolean, configure?: () => void) => {
 }
 const readyParent = async (child: ReturnType<typeof beginParent>["child"]) => { child.emit("message", { ready: child.pid }); await Promise.resolve(); await Promise.resolve() }
 const exitParent = (child: ReturnType<typeof beginParent>["child"]) => { child.exitCode = 0; child.emit("exit", 0, null) }
+
+const timeboxBaseline = (extended: boolean) => {
+  const extension = lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION
+  const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 30, elapsedUpperBoundMs: extended ? extension.priorElapsedMs : lean.LEAN_RETRY_V8_CARRY.priorElapsedMs, allocatedDiskBytes: 13_000_000, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: [{ identity: ".strategy-lab/inert-parent-survivor", allocatedBytes: 4096 }] }
+  return lean.createLeanSupervisorCorrectionAllocation({ ...(extended ? { timeboxExtension: extension } : {}), sourceRoot: root("source"), reviewRoot: root("review"), coldRoot: root("cold"), planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT, seed: "inert-timebox-baseline", candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, n) => root(`request-${n}`)), route: "baseline", reuseGrantRoot: root("reuse"), supervisorDecisionRoot: lean.LEAN_RETRY_V8_APPROVAL_ROOT, acceptedCheckRoot: root("actual-check-fixture"), acceptedReaderCloseRoot: root("actual-final-fixture"), requestBytesRoot: root("request"), dataReviewRoot: root("data"), setupAccountingRoot: root("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, attemptOrdinal: 1, priorClosureRoot: null, continuationRoot: null, predecessor: { ...p, root: labRoot(p.schemaVersion, p) } }, 8)
+}
+describe("actual conditional baseline parent timebox consumer", () => {
+  it("uses the approved carry/start, cap and child timeout after legacy expiry", async () => {
+    const extension = lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION
+    const { child, settled } = beginParent(true, () => { host.allocation = timeboxBaseline(true); host.elapsed = lean.leanRetryRootElapsedFloorV8(extension.startedAtMs + 3_999_083, extension) })
+    const timers = vi.spyOn(globalThis, "setTimeout")
+    expect(host.elapsed).toBe(60_000_000)
+    expect(parentApi.leanBoundedParentTimeBudget({ allocation: host.allocation } as LeanExperimentLedger, 1_260_000)).toEqual({ elapsedMs: 60_000_000, capMs: 72_000_000, timeoutMs: 10_740_000 })
+    await readyParent(child)
+    expect(timers.mock.calls.some(call => call[1] === 12_000_000)).toBe(true)
+    await vi.advanceTimersByTimeAsync(250)
+    expect(child.kills).toHaveLength(0)
+    host.elapsed = 70_140_000
+    await vi.advanceTimersByTimeAsync(250)
+    expect(child.kills).toContain("SIGKILL")
+    exitParent(child); expect((await settled).error).toBeInstanceOf(TypeError)
+    timers.mockRestore()
+  })
+  it.each(["legacy", "missing", "stale", "cross-root"] as const)("%s cannot extend admission or create a child", async variant => {
+    const { child, settled } = beginParent(true, () => {
+      const allocation = timeboxBaseline(variant !== "legacy")
+      if (variant === "missing") { const { timeboxExtension: _extension, ...missing } = allocation; host.allocation = missing }
+      else host.allocation = variant === "legacy" ? allocation : { ...allocation, timeboxExtension: { ...allocation.timeboxExtension!, ...(variant === "stale" ? { startedAtMs: 0 } : { root: root("cross-root") }) } }
+      host.elapsed = 60_000_000
+    })
+    expect((await settled).error).toBeInstanceOf(TypeError)
+    expect(host.entry).toBeNull(); expect(child.kills).toHaveLength(0)
+    expect(() => parentApi.leanBoundedParentTimeBudget({ allocation: host.allocation } as LeanExperimentLedger)).toThrow()
+  })
+  it("keeps memory and disk refusal ahead of parent release", async () => {
+    const { child, settled } = beginParent(true, () => { host.allocation = timeboxBaseline(true); host.elapsed = 60_000_000; host.capacityFailure = true })
+    await readyParent(child)
+    expect((await settled).error).toBeInstanceOf(TypeError)
+    expect(host.entry).toBeNull()
+  })
+})
 
 describe("opt-in finite parent supervisor observations", () => {
   it("publishes actual custody before terminal without adding default artifacts", async () => {

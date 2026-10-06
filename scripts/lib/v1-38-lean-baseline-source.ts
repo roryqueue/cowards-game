@@ -104,7 +104,7 @@ export const leanBaselineSourcePublicationBindingV8 = (allocation: AnyLeanAlloca
   const a = admitLeanAllocation(allocation), mode = leanSupervisorAllocationMode(a)
   if (!isLeanRetryMode(mode) || !("route" in a) || !/^[a-f0-9]{40}$/u.test(head) || !root(snapshotRoot) || !root(snapshotSourceRoot)) return fail()
   if (a.route === "baseline") authenticateLeanRetryBaselineAuthorityV8(a, head)
-  const body = { schemaVersion: "lean-baseline-source-publication-v8", route: a.route, attemptOrdinal: leanRetryOrdinal(mode), allocationRoot: a.root, sourceRoot: a.sourceRoot, head, acceptedCheckRoot: a.acceptedCheckRoot, acceptedReaderCloseRoot: a.acceptedReaderCloseRoot, snapshotRoot, snapshotSourceRoot }
+  const body = { ...(a.timeboxExtension ? { timeboxExtension: a.timeboxExtension } : {}), schemaVersion: "lean-baseline-source-publication-v8", route: a.route, attemptOrdinal: leanRetryOrdinal(mode), allocationRoot: a.root, sourceRoot: a.sourceRoot, head, acceptedCheckRoot: a.acceptedCheckRoot, acceptedReaderCloseRoot: a.acceptedReaderCloseRoot, snapshotRoot, snapshotSourceRoot }
   return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 export const leanBaselineSourcePublicationBindingV7 = (allocation: AnyLeanAllocation, head: string, snapshotRoot: LabRoot, snapshotSourceRoot: LabRoot) => {

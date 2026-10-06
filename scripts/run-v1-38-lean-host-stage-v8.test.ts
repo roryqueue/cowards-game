@@ -66,6 +66,15 @@ const allocationInput = (version: 5 | 6 | 7 | 8 = 8) => {
   return { ...(version === 8 ? { attemptOrdinal: 1 as const, priorClosureRoot: null, continuationRoot: null, acceptedReaderCloseRoot: null } : {}), sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: version === 8 ? lean.LEAN_RETRY_V8_PLAN_ROOT : version === 7 ? lean.LEAN_REPLAY_V7_SUPPLEMENT_ROOT : version === 6 ? lean.LEAN_REPLAY_V6_SUPPLEMENT_ROOT : lean.LEAN_STARTUP_SUPPLEMENT_ROOT, candidateRoots: [r("a"), r("b")], requestRoots: [r("request")], seed: "synthetic-v7", route: "diagnostic" as const, reuseGrantRoot: r("reuse"), supervisorDecisionRoot: version === 8 ? lean.LEAN_RETRY_V8_APPROVAL_ROOT : version === 7 ? lean.LEAN_REPLAY_V7_APPROVAL_ROOT : version === 6 ? lean.LEAN_REPLAY_V6_APPROVAL_ROOT : lean.LEAN_STARTUP_APPROVAL_ROOT, acceptedCheckRoot: null, requestBytesRoot: r("request-bytes"), dataReviewRoot: r("data"), setupAccountingRoot: r("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
 }
 describe("prospective twenty-hour allocation binding", () => {
+  it.each([false, true])("retained refusal/absence=%s keeps new floor after the old cap", absent => {
+    const extension = lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION
+    const f = readerFixture(!absent, absent, extension.startedAtMs, 60_000_000 - extension.priorElapsedMs - 2, extension)
+    if (absent) expect(retained.verifyLeanRetryTerminalOnlyV8(f.paths.request, "v8-1").closedElapsedMs).toBeGreaterThanOrEqual(60_000_000)
+    else expect(() => retained.verifyLeanCorrectionRetained(f.paths.request, "diagnostic", "v8-1")).toThrow("DIAGNOSTIC_NOT_ACCEPTED")
+    expect(retained.authenticateLeanRetryClosureV8("v8-1")).toMatchObject({ timeboxExtension: extension, closureClass: absent ? "absent" : "refused", cumulativeCharged: 30 })
+    expect(lean.currentLeanElapsedMs(f.ledger)).toBeGreaterThanOrEqual(60_000_000)
+    expect(sourceIO.leanBaselineSourcePublicationBindingV8(f.ledger.allocation, f.entry.head, f.sources[0]!.root, f.sources[0]!.sourceRoot)).toMatchObject({ timeboxExtension: extension })
+  })
   it("authenticates the additive binding without extending legacy v8", () => {
     const legacy = lean.createLeanSupervisorCorrectionAllocation(allocationInput(), 8)
     expect(lean.leanCapsForAllocation(legacy).elapsedMs).toBe(57_600_000)
@@ -89,14 +98,16 @@ describe("prospective twenty-hour allocation binding", () => {
   })
 })
 // Tiny new store only. No historical payload, native runtime or gameplay runs.
-const producerFixture = (version: 5 | 6 | 7 | 8 = 8, wall = 1000) => {
+const producerFixture = (version: 5 | 6 | 7 | 8 = 8, wall = 1000, extension?: lean.LeanRetryTimeboxExtension) => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v7-connected-synthetic-")))
   syntheticDirectories.add(directory); chmodSync(directory, 0o700)
   const store = join(directory, "store"), temp = join(directory, "scratch")
   mkdirSync(store, { mode: 0o700 }); mkdirSync(temp, { mode: 0o700 })
   const paths = { ...lean.leanCorrectionRoutePaths("diagnostic", version === 8 ? "v8-1" : "v7"), store, temp, request: join(directory, "request.json"), allocation: join(directory, "allocation.json") }
-  const initial = { ...allocationInput(version), sourceRoot: leanCorrectionSourceManifest(version === 8 ? "v8-1" : "v7").root }
-  const request = { ...(version === 8 ? { attemptOrdinal: 1 as const, priorClosureRoot: null, continuationRoot: null, acceptedReaderCloseRoot: null } : {}), schemaVersion: version === 8 ? "lean-correction-supervisor-request-v8" as const : "lean-correction-supervisor-request-v7" as const, route: "diagnostic" as const, sourceRoot: initial.sourceRoot, planRoot: initial.planRoot, amendmentRoot: r("amendment"), reviewPath: "synthetic", reviewRoot: initial.reviewRoot, dataReviewPath: "synthetic", dataReviewRoot: initial.dataReviewRoot, coldRoot: initial.coldRoot, seed: initial.seed, reuseGrantRoot: initial.reuseGrantRoot, candidateRoots: initial.candidateRoots, requestRoots: initial.requestRoots, diagnosis: null, supervisorDecisionRoot: initial.supervisorDecisionRoot, acceptedCheckRoot: null, setupAccountingPath: "synthetic", setupAccountingRoot: initial.setupAccountingRoot, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, authorizationPath: "synthetic", authorizationRoot: r("authorization") }
+  const base = allocationInput(version), { root: _priorRoot, ...priorBody } = base.predecessor
+  const prior = { ...priorBody, elapsedUpperBoundMs: extension?.priorElapsedMs ?? priorBody.elapsedUpperBoundMs }
+  const initial = { ...base, ...(extension ? { timeboxExtension: extension } : {}), predecessor: { ...prior, root: labRoot(prior.schemaVersion, prior) }, sourceRoot: leanCorrectionSourceManifest(version === 8 ? "v8-1" : "v7", extension).root }
+  const request = { ...(extension ? { timeboxExtension: extension } : {}), ...(version === 8 ? { attemptOrdinal: 1 as const, priorClosureRoot: null, continuationRoot: null, acceptedReaderCloseRoot: null } : {}), schemaVersion: version === 8 ? "lean-correction-supervisor-request-v8" as const : "lean-correction-supervisor-request-v7" as const, route: "diagnostic" as const, sourceRoot: initial.sourceRoot, planRoot: initial.planRoot, amendmentRoot: r("amendment"), reviewPath: "synthetic", reviewRoot: initial.reviewRoot, dataReviewPath: "synthetic", dataReviewRoot: initial.dataReviewRoot, coldRoot: initial.coldRoot, seed: initial.seed, reuseGrantRoot: initial.reuseGrantRoot, candidateRoots: initial.candidateRoots, requestRoots: initial.requestRoots, diagnosis: null, supervisorDecisionRoot: initial.supervisorDecisionRoot, acceptedCheckRoot: null, setupAccountingPath: "synthetic", setupAccountingRoot: initial.setupAccountingRoot, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, authorizationPath: "synthetic", authorizationRoot: r("authorization") }
   const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...initial, requestBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(request)) }, version)
   const ledger = { directory: store, allocation }
   const write = (name: string, value: unknown, target = store) => writeFileSync(join(target, name), lean.leanCanonicalBytes(value), { mode: 0o600 })
@@ -151,8 +162,8 @@ describe("v8 connected route admission", () => {
   })
 })
 
-const readerFixture = (failure = false, absent = false, wall = 1000, gapMs = 1) => {
-  const f = producerFixture(8, wall), actualPaths = lean.leanCorrectionRoutePaths
+const readerFixture = (failure = false, absent = false, wall = 1000, gapMs = 1, extension?: lean.LeanRetryTimeboxExtension) => {
+  const f = producerFixture(8, wall, extension), actualPaths = lean.leanCorrectionRoutePaths
   vi.spyOn(lean, "leanCorrectionRoutePaths").mockImplementation((route, mode) => mode === "v8-1" && route === "diagnostic" ? f.paths : actualPaths(route, mode))
   vi.spyOn(correction, "readLeanCorrectionRequest").mockReturnValue({ request: f.request, reuse: f.reuse })
   vi.spyOn(process, "uptime").mockReturnValue(0)
@@ -181,8 +192,9 @@ const readerFixture = (failure = false, absent = false, wall = 1000, gapMs = 1) 
   return f
 }
 describe("actual one-shot reader closures", () => {
-  it.each(["refused", "absent"] as const)("admits ordinal 2 from real %s closure through the actual request owner", closureClass => {
-    const f = readerFixture(closureClass === "refused", closureClass === "absent", lean.LEAN_RETRY_V8_CARRY.startedAtMs + 100)
+  it.each([["refused", false], ["absent", false], ["refused", true], ["absent", true]] as const)("admits ordinal 2 from real %s closure extension=%s through request owner", (closureClass, extended) => {
+    const extension = extended ? lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION : undefined, carry = extension ?? lean.LEAN_RETRY_V8_CARRY
+    const f = readerFixture(closureClass === "refused", closureClass === "absent", carry.startedAtMs + 100, 1, extension)
     if (closureClass === "refused") expect(() => retained.verifyLeanCorrectionRetained(f.paths.request, "diagnostic", "v8-1")).toThrow("DIAGNOSTIC_NOT_ACCEPTED")
     else retained.verifyLeanRetryTerminalOnlyV8(f.paths.request, "v8-1")
     const closure = retained.authenticateLeanRetryClosureV8("v8-1"), mode = "v8-2", n = 2
@@ -190,16 +202,16 @@ describe("actual one-shot reader closures", () => {
     vi.mocked(lean.leanCorrectionRoutePaths).mockImplementation((route, selected) => route === "diagnostic" && selected === mode ? paths : pathsActual(route, selected))
     if (!existsSync(".strategy-lab")) mkdirSync(".strategy-lab", { mode: 0o700 })
     const writePrivate = (path: string, value: unknown) => { writeFileSync(path, lean.leanCanonicalBytes(value), { mode: 0o600, flag: "wx" }); syntheticPrivateFiles.add(path) }
-    const sourceRoot = leanCorrectionSourceManifest(mode).root, history = reuseIO.LEAN_COLD_REUSE_HISTORY
+    const sourceRoot = leanCorrectionSourceManifest(mode, extension).root, history = reuseIO.LEAN_COLD_REUSE_HISTORY
     const reviewPath = resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team/SYNTHETIC-source-review.md"), dataReviewPath = resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team/SYNTHETIC-data-review.md")
     const diagnosisRoot = r("useful-independent-diagnosis"), review = `---\nstatus: clean\nsource_root: ${sourceRoot}\nsource_commit: ${f.entry.head}\nindependently_reviewed: true\nauthor_agent: /root\nreviewer_agent: /root/synthetic_review\ndiagnosis_root: ${diagnosisRoot}\nrepair_verified: true\n---\n`
     virtualSource.reviews[reviewPath] = review
-    const setupBody = { schemaVersion: "lean-retry-setup-witness-v8", attemptOrdinal: n, startedAtMs: lean.LEAN_RETRY_V8_CARRY.startedAtMs, observedAtMs: lean.LEAN_RETRY_V8_CARRY.startedAtMs + 100, priorElapsedMs: lean.LEAN_RETRY_V8_CARRY.priorElapsedMs, consumedTimeBytesRoot: lean.LEAN_RETRY_V8_CARRY.timeBytesRoot, decisionRoot: lean.LEAN_RETRY_V8_APPROVAL_ROOT, threadId: "019fa652-915a-7183-9af1-3b3c05868d86", turnId: "01a111c1-6f91-7310-870d-056b2d77194f", source: "codex-task-event-custody" }, setup = { ...setupBody, root: labRoot(setupBody.schemaVersion, setupBody) }
+    const setupBody = { ...(extension ? { timeboxExtension: extension } : {}), schemaVersion: "lean-retry-setup-witness-v8", attemptOrdinal: n, startedAtMs: carry.startedAtMs, observedAtMs: carry.startedAtMs + 100, priorElapsedMs: carry.priorElapsedMs, consumedTimeBytesRoot: lean.LEAN_RETRY_V8_CARRY.timeBytesRoot, decisionRoot: extension?.approvalRoot ?? lean.LEAN_RETRY_V8_APPROVAL_ROOT, threadId: "019fa652-915a-7183-9af1-3b3c05868d86", turnId: extension?.turnId ?? "01a111c1-6f91-7310-870d-056b2d77194f", source: "codex-task-event-custody" }, setup = { ...setupBody, root: labRoot(setupBody.schemaVersion, setupBody) }
     writePrivate(lean.leanRetrySetupPath(mode), setup)
     const request = { ...f.request, attemptOrdinal: n, sourceRoot, coldRoot: history.coldRoot, seed: history.seed, amendmentRoot: history.amendmentRoot, reviewPath, reviewRoot: lean.leanBytesRoot(Buffer.from(review)), dataReviewPath, candidateRoots: deriveLeanBaselineCandidateRoots(history.coldRoot), setupAccountingPath: lean.leanRetrySetupPath(mode), setupAccountingRoot: setup.root, authorizationPath: ".strategy-lab/lean-retry-authorization-diagnostic-v8-2.json", requestRoots: correction.deriveLeanSupervisorCorrectionRequestRoots({ route: "diagnostic", seed: history.seed, coldRoot: history.coldRoot, planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT, sourceRoot }, lean.LEAN_RETRY_V8_APPROVAL_ROOT, mode), priorClosureRoot: closure.root, continuationRoot: r("pending") }
     const continuationBody = { schemaVersion: "lean-retry-continuation-v8", attemptOrdinal: n, priorClosureRoot: closure.root, sourceRoot, diagnosisRoot, resolvedDefectRoot: r("resolved-defect"), reviewRoot: request.reviewRoot }, continuation = { ...continuationBody, root: labRoot(continuationBody.schemaVersion, continuationBody) }
     writePrivate(".strategy-lab/lean-retry-continuation-v8-2.json", continuation); request.continuationRoot = continuation.root
-    const authorizationBody = { schemaVersion: "lean-retry-execution-authorization-v8", approved: true, executionAuthorized: true, route: "diagnostic", attemptOrdinal: n, sourceRoot, approvalRoot: lean.LEAN_RETRY_V8_APPROVAL_ROOT, planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT, policyRoot: labRoot(lean.LEAN_RETRY_V8_POLICY.schemaVersion, lean.LEAN_RETRY_V8_POLICY), requestDataRoot: correction.leanCorrectionRequestDataRoot(request as never), authorAgent: "/root", reviewerAgent: "/root/synthetic_data_review" }, authorization = { ...authorizationBody, root: labRoot(authorizationBody.schemaVersion, authorizationBody) }
+    const authorizationBody = { ...(extension ? { timeboxExtension: extension } : {}), schemaVersion: "lean-retry-execution-authorization-v8", approved: true, executionAuthorized: true, route: "diagnostic", attemptOrdinal: n, sourceRoot, approvalRoot: lean.LEAN_RETRY_V8_APPROVAL_ROOT, planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT, policyRoot: labRoot(lean.LEAN_RETRY_V8_POLICY.schemaVersion, lean.LEAN_RETRY_V8_POLICY), requestDataRoot: correction.leanCorrectionRequestDataRoot(request as never), authorAgent: "/root", reviewerAgent: "/root/synthetic_data_review" }, authorization = { ...authorizationBody, root: labRoot(authorizationBody.schemaVersion, authorizationBody) }
     writePrivate(request.authorizationPath, authorization); request.authorizationRoot = lean.leanBytesRoot(lean.leanCanonicalBytes(authorization))
     const dataReview = review.replace("---\n", `---\nrequest_root: ${correction.leanCorrectionRequestDataRoot(request as never)}\n`)
     virtualSource.reviews[dataReviewPath] = dataReview; request.dataReviewRoot = lean.leanBytesRoot(Buffer.from(dataReview))
@@ -207,21 +219,29 @@ describe("actual one-shot reader closures", () => {
     vi.spyOn(reuseIO, "authenticateLeanColdReuse").mockReturnValue(f.reuse)
     processControl.git = args => args[0] === "diff" && args[1] === "--exit-code" ? Buffer.alloc(0) : (() => { throw new Error("SYNTHETIC_ONLY") })()
     expect(correction.readLeanRetryRequestV8(paths.request, "diagnostic", mode).request.attemptOrdinal).toBe(2)
-    for (const patch of [{ attemptOrdinal: undefined }, { attemptOrdinal: 3 }, { priorClosureRoot: r("missing-or-skipped") }, { continuationRoot: null }, { authorizationRoot: r("spent-authorization") }]) {
+    for (const patch of [{ attemptOrdinal: undefined }, { attemptOrdinal: 3 }, { priorClosureRoot: r("missing-or-skipped") }, { continuationRoot: null }, { authorizationRoot: r("spent-authorization") }, ...(extension ? [{ timeboxExtension: undefined }, { timeboxExtension: { ...extension, startedAtMs: extension.startedAtMs - 1 } }, { timeboxExtension: { ...extension, root: r("cross-root") } }] : [])]) {
       const changed = Object.fromEntries(Object.entries({ ...request, ...patch }).filter(([, value]) => value !== undefined))
       writeFileSync(paths.request, lean.leanCanonicalBytes(changed), { mode: 0o600 })
       expect(() => correction.readLeanRetryRequestV8(paths.request, "diagnostic", mode)).toThrow()
     }
   }, 30000)
-  it("authenticates zero-charge pre-child-entry accounting and observed cleanup, never a corrupt entry", () => {
+  it.each([false, true])("authenticates zero-charge pre-child-entry accounting extension=%s", extended => {
+    const extension = extended ? lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION : undefined
     const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v8-preentry-synthetic-")))
     syntheticDirectories.add(directory); chmodSync(directory, 0o700)
     const actualPaths = lean.leanCorrectionRoutePaths, paths = { ...actualPaths("diagnostic", "v8-1"), temp: directory, store: join(directory, "store"), request: join(directory, "absent-request.json"), allocation: join(directory, "allocation.json") }
     vi.spyOn(lean, "leanCorrectionRoutePaths").mockImplementation((route, mode) => route === "diagnostic" && mode === "v8-1" ? paths : actualPaths(route, mode))
     mkdirSync(paths.store, { mode: 0o700 })
-    const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...allocationInput(), sourceRoot: leanCorrectionSourceManifest("v8-1").root }, 8), ledger = { directory: paths.store, allocation }
+    const input = allocationInput(), { root: _prior, ...pb } = input.predecessor, p = { ...pb, elapsedUpperBoundMs: extension?.priorElapsedMs ?? pb.elapsedUpperBoundMs }
+    const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...input, ...(extension ? { timeboxExtension: extension } : {}), predecessor: { ...p, root: labRoot(p.schemaVersion, p) }, sourceRoot: leanCorrectionSourceManifest("v8-1", extension).root }, 8), ledger = { directory: paths.store, allocation }
+    if (extension) {
+      const setupPath = join(directory, "inert-setup.json")
+      vi.spyOn(lean, "leanRetrySetupPath").mockReturnValue(setupPath)
+      const body = { schemaVersion: "lean-retry-setup-witness-v8", timeboxExtension: extension, attemptOrdinal: 1, startedAtMs: extension.startedAtMs, observedAtMs: extension.startedAtMs, priorElapsedMs: extension.priorElapsedMs, consumedTimeBytesRoot: lean.LEAN_RETRY_V8_CARRY.timeBytesRoot, decisionRoot: extension.approvalRoot, threadId: "019fa652-915a-7183-9af1-3b3c05868d86", turnId: extension.turnId, source: "codex-task-event-custody" }
+      writeFileSync(setupPath, lean.leanCanonicalBytes({ ...body, root: labRoot(body.schemaVersion, body) }), { mode: 0o600 })
+    }
     for (const [name, bytes] of [["allocation.json", lean.leanCanonicalBytes(allocation)], ["ledger.ndjson", ""], ["time.ndjson", ""]] as const) writeFileSync(join(paths.store, name), bytes, { mode: 0o600 })
-    const now = lean.LEAN_RETRY_V8_CARRY.startedAtMs + 1
+    const now = (extension?.startedAtMs ?? lean.LEAN_RETRY_V8_CARRY.startedAtMs) + 1
     vi.spyOn(Date, "now").mockReturnValue(now); vi.spyOn(process.hrtime, "bigint").mockReturnValue(1_000_000_000n); processControl.head = "1".repeat(40)
     const start = correction.beginLeanCorrectionAdmission("diagnostic", "run", directory, { wallStartMs: now, monotonicStartNs: "1000000000" }, "v8-1")
     correction.closeLeanCorrectionAdmission(start, ledger, { wallStartMs: now, monotonicStartNs: "1000000000" })
@@ -284,13 +304,14 @@ describe("actual one-shot reader closures", () => {
     vi.mocked(Date.now).mockReturnValue(now + 100_001)
     expect(lean.currentLeanElapsedMs(f.ledger, 200_000)).toBeGreaterThan(lean.LEAN_REPLAY_V7_CAPS.elapsedMs)
   })
-  it("accepts the real diagnostic reader and joins its actual FINAL close at baseline owner", async () => {
-    const f = readerFixture()
+  it.each([false, true])("accepts the real diagnostic reader and joins FINAL close with extension=%s", async extended => {
+    const extension = extended ? lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION : undefined
+    const f = readerFixture(false, false, extension?.startedAtMs ?? 1000, 1, extension)
     const checked = retained.verifyLeanCorrectionRetained(f.paths.request, "diagnostic", "v8-1")
     const accepted = retained.authenticateLeanSupervisorDiagnosticCheck("v8-1"), closure = retained.authenticateLeanRetryClosureV8("v8-1")
     expect(closure).toMatchObject({ attemptOrdinal: 1, closureClass: "accepted", checkRoot: checked.root, acceptedCheckAbsent: false, finalReaderClose: true })
     const { root: _prior, ...priorBody } = f.ledger.allocation.predecessor, baselinePrior = { ...priorBody, chargedMatches: 30 }
-    const baseline = lean.createLeanSupervisorCorrectionAllocation({ ...allocationInput(), sourceRoot: f.ledger.allocation.sourceRoot, route: "baseline", acceptedCheckRoot: accepted.root, acceptedReaderCloseRoot: closure.root, requestRoots: Array.from({ length: 36 }, (_, n) => r(`baseline-${n}`)), predecessor: { ...baselinePrior, root: labRoot("lean-correction-predecessor-v1", baselinePrior) } } as never, 8)
+    const baseline = lean.createLeanSupervisorCorrectionAllocation({ ...allocationInput(), ...(extension ? { timeboxExtension: extension } : {}), sourceRoot: f.ledger.allocation.sourceRoot, route: "baseline", acceptedCheckRoot: accepted.root, acceptedReaderCloseRoot: closure.root, requestRoots: Array.from({ length: 36 }, (_, n) => r(`baseline-${n}`)), predecessor: { ...baselinePrior, root: labRoot("lean-correction-predecessor-v1", baselinePrior) } } as never, 8)
     expect(() => baselineRetained.assertLeanRetryBaselineJoinV8(baseline, accepted, closure, f.entry.head)).not.toThrow()
     for (const patch of [{ attemptOrdinal: 2 }, { checkRoot: null }, { finalReaderClose: false }, { closureClass: "refused" }]) expect(() => baselineRetained.assertLeanRetryBaselineJoinV8(baseline, accepted, { ...closure, ...patch }, f.entry.head)).toThrow()
     // Selected baseline owner reads real allocation/entry bytes and authenticates

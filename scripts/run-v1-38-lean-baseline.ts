@@ -307,6 +307,15 @@ export const leanParentFailureReceiptHandler = (ledger: LeanExperimentLedger, ch
     received = true; accept(message as LeanChildFailureReceipt | LeanChildFailureReceiptV7)
   }
 }
+/** Actual parent admission/deadline consumer, independently testable with inert allocations. */
+export const leanBoundedParentTimeBudget = (ledger: LeanExperimentLedger, terminalReserveMs = 0) => {
+  const caps = leanCapsForAllocation(ledger.allocation)
+  const elapsedMs = currentLeanElapsedMs(ledger)
+  const retry = ledger.allocation.schemaVersion.endsWith("-v8")
+  const reserveMs = retry ? Math.max(1_860_000, LEAN_CAPS.matchMs + terminalReserveMs) : 0
+  if (retry && elapsedMs + reserveMs >= caps.elapsedMs) return fail("PREFIX_CAPACITY")
+  return { elapsedMs, capMs: caps.elapsedMs, timeoutMs: Math.max(1, caps.elapsedMs - elapsedMs - terminalReserveMs) }
+}
 export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string; prospectiveStart?: { wallStartMs: number; monotonicStartNs: string }; beforeRelease?: () => void; terminalReserveMs?: number; supervisorObservation?: true; onChildCreated?: () => void; onPreEntryCleanup?: (value: { childPid: number; exitCode: number | null; signal: string | null }) => void }) => {
   const { ledger, requestPath, store: STORE } = options, allocation = ledger.allocation
   const committed = execFileSync("git", ["show", `HEAD:${options.allocationPath}`], { maxBuffer: 262144 })
@@ -315,6 +324,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
   const fixedHead = head(), fixedManifest = options.manifestRoot(), fixedRequest = requestBytesRoot(requestPath)
   if (fixedManifest !== options.sourceRoot) return fail("SOURCE_HOLD")
   options.beforeRelease?.()
+  leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0)
   const token = randomBytes(32).toString("hex")
   const child = fork(resolve(process.argv[1] ?? fail("ENTRY_PATH")), [options.childMode, "--request", requestPath], { execArgv: process.execArgv, stdio: ["ignore", "ignore", "ignore", "ipc"] })
   options.onChildCreated?.()
@@ -341,10 +351,10 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
       try {
         const rss = rssOf(child.pid!)
         childRssObservedBytes = Math.max(childRssObservedBytes ?? 0, rss)
-        if (process.memoryUsage().rss + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes || currentLeanElapsedMs(ledger) >= leanCapsForAllocation(allocation).elapsedMs) { uncertain = true; observe("resource_threshold"); child.kill("SIGKILL") }
+        if (process.memoryUsage().rss + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes || leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).elapsedMs >= leanCapsForAllocation(allocation).elapsedMs) { uncertain = true; observe("resource_threshold"); child.kill("SIGKILL") }
       } catch { uncertain = true; observe("resource_sampling_exception"); child.kill("SIGKILL") }
     }, 250)
-    const timeout = setTimeout(() => { uncertain = true; observe("deadline_timeout"); child.kill("SIGKILL") }, Math.max(1, leanCapsForAllocation(allocation).elapsedMs - currentLeanElapsedMs(ledger) - (options.terminalReserveMs ?? 0)))
+    const timeout = setTimeout(() => { uncertain = true; observe("deadline_timeout"); child.kill("SIGKILL") }, leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).timeoutMs)
     const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => resolveExit({ code, signal })))
     clearInterval(period); clearTimeout(timeout)
     try { if (head() !== fixedHead || options.manifestRoot() !== fixedManifest || requestBytesRoot(requestPath) !== fixedRequest) { uncertain = true; observe("final_identity_mismatch"); finalIdentity = "mismatch" } } catch { uncertain = true; observe("final_identity_exception"); finalIdentity = "exception" }

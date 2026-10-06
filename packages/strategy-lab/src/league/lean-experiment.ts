@@ -77,6 +77,15 @@ export const LEAN_RETRY_V8_APPROVAL_ROOT: LabRoot = "sha256:f60084e7d4b34f0f83e6
 export const LEAN_RETRY_V8_PLAN_ROOT: LabRoot = "sha256:becc43f0198ca37376343fa52c9f10b590cd3588ddac45e820b072163d5326d6"
 export const LEAN_RETRY_V8_CARRY = Object.freeze({ charged: 29, priorElapsedMs: 49_150_573, startedAtMs: 1791299252280, closedElapsedMs: 47_361_631, readerCloseMs: 1791295466715, allocationBytesRoot: "sha256:937a2bb49f6de7680a81601be727718055c11f8ed3bc471f1a2749d6c1273861" as LabRoot, timeBytesRoot: "sha256:63aceedab50124d68978631e567e78fecee558accc7f27067cb8f56f2ae05223" as LabRoot })
 export const LEAN_RETRY_V8_POLICY = Object.freeze({ schemaVersion: "lean-retry-envelope-policy-v8", attemptOrdinals: [1, 2, 3] as const, maximumBaselines: 1, startupVersion: 7, approvalRoot: LEAN_RETRY_V8_APPROVAL_ROOT, planRoot: LEAN_RETRY_V8_PLAN_ROOT })
+/** Additive prospective authority. Never changes the historical v8 policy/carry. */
+const retryTimeboxBody = { schemaVersion: "lean-retry-timebox-extension-v8-v1", approvalRoot: "sha256:a60a562ea5697055e5f949c47234587c6c89109c9e97de0ddeb3f1e2109bf043" as LabRoot, planRoot: "sha256:7c6438011ac1316ea78b00a77a78bedfc32075907277f6a2b6e78c948e9580d4" as LabRoot, predecessorPolicyRoot: labRoot(LEAN_RETRY_V8_POLICY.schemaVersion, LEAN_RETRY_V8_POLICY), priorElapsedMs: 56_000_917, startedAtMs: 1791326194166, elapsedMs: 72_000_000, charged: 29, excludedIdleMs: 20_091_542, turnId: "01a1135c-8975-7330-98ad-8d24374dd0cd" } as const
+export const LEAN_RETRY_V8_TIMEBOX_EXTENSION = Object.freeze({ ...retryTimeboxBody, root: labRoot(retryTimeboxBody.schemaVersion, retryTimeboxBody) })
+export type LeanRetryTimeboxExtension = typeof LEAN_RETRY_V8_TIMEBOX_EXTENSION
+export const admitLeanRetryTimeboxExtension = (value: unknown): LeanRetryTimeboxExtension => {
+  if (!exactLabKeys(value, Object.keys(LEAN_RETRY_V8_TIMEBOX_EXTENSION)) || labRoot("lean-retry-timebox-admission-v8", value) !== labRoot("lean-retry-timebox-admission-v8", LEAN_RETRY_V8_TIMEBOX_EXTENSION)) return fail("RETRY_TIMEBOX")
+  return LEAN_RETRY_V8_TIMEBOX_EXTENSION
+}
+export const LEAN_RETRY_V8_TIMEBOX_CAPS = Object.freeze({ ...LEAN_CAPS, elapsedMs: 72_000_000 })
 export const leanRetrySetupPath = (mode: LeanRetryMode) => `.strategy-lab/lean-retry-envelope-setup-20261006-${mode}.json`
 const retryPaths = Object.freeze(Object.fromEntries(([1, 2, 3] as const).map(n => {
   const routes = Object.fromEntries((["diagnostic", "baseline"] as const).map(route => [route, Object.freeze({ store: `.strategy-lab/lean-correction-supervisor-${route}-20261006-v8-${n}`, request: `.strategy-lab/lean-correction-supervisor-${route}-request-20261006-v8-${n}.json`, allocation: `.planning/artifacts/v1.38-lean-correction-supervisor-${route}-allocation-v8-${n}.json`, check: `correction-supervisor-${route}-check-v8-${n}.json`, temp: `.strategy-lab/lean-correction-supervisor-${route}-20261006-v8-${n}-tmp`, result: "result.json", owner: "entry.json", reason: "parent-supervisor-reasons.json" })]))
@@ -697,7 +706,7 @@ export interface LeanCorrectionPredecessor {
   survivors: readonly { identity: string; allocatedBytes: number }[]; root: LabRoot
 }
 export interface LeanCorrectionAllocation extends Omit<LeanCurrentBaselineAllocation, "schemaVersion" | "predecessor" | "caps"> {
-  caps: typeof LEAN_CAPS | typeof LEAN_SUPERVISOR_V5_CAPS | typeof LEAN_REPLAY_V7_CAPS; startupPolicyRoot?: LabRoot
+  caps: typeof LEAN_CAPS | typeof LEAN_SUPERVISOR_V5_CAPS | typeof LEAN_REPLAY_V7_CAPS | typeof LEAN_RETRY_V8_TIMEBOX_CAPS; timeboxExtension?: LeanRetryTimeboxExtension; startupPolicyRoot?: LabRoot
   schemaVersion: "lean-correction-supervisor-diagnostic-allocation-v8" | "lean-correction-supervisor-baseline-allocation-v8" | "lean-correction-supervisor-diagnostic-allocation-v7" | "lean-correction-supervisor-baseline-allocation-v7" | "lean-correction-supervisor-diagnostic-allocation-v6" | "lean-correction-supervisor-baseline-allocation-v6" | "lean-correction-supervisor-diagnostic-allocation-v5" | "lean-correction-supervisor-baseline-allocation-v5" | "lean-correction-supervisor-diagnostic-allocation-v4" | "lean-correction-supervisor-baseline-allocation-v4" | "lean-correction-diagnostic-allocation-v1" | "lean-correction-baseline-allocation-v1" | "lean-correction-supervisor-diagnostic-allocation-v2" | "lean-correction-supervisor-baseline-allocation-v2" | "lean-correction-supervisor-diagnostic-allocation-v3" | "lean-correction-supervisor-baseline-allocation-v3"
   route: "diagnostic" | "baseline"; reuseGrantRoot: LabRoot; diagnosisRoot: LabRoot | null; predecessor: LeanCorrectionPredecessor
   supervisorDecisionRoot?: LabRoot; acceptedCheckRoot?: LabRoot | null; requestBytesRoot?: LabRoot; dataReviewRoot?: LabRoot; setupAccountingRoot?: LabRoot
@@ -795,7 +804,7 @@ export const createLeanCorrectionAllocation = (input: LeanCurrentBaselineInput &
   const body = { schemaVersion: input.route === "diagnostic" ? "lean-correction-diagnostic-allocation-v1" as const : "lean-correction-baseline-allocation-v1" as const, privacy: "private_offline" as const, sourceRoot: input.sourceRoot, reviewRoot: input.reviewRoot, coldRoot: input.coldRoot, planRoot: input.planRoot, seed: input.seed, candidateRoots: [...input.candidateRoots].sort(), requestRoots: [...input.requestRoots], tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, caps: LEAN_CAPS, route: input.route, reuseGrantRoot: input.reuseGrantRoot, diagnosisRoot: input.diagnosisRoot, slots, sampleSlotRoots, predecessor: p }
   return freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
 }
-export const createLeanSupervisorCorrectionAllocation = (input: LeanCurrentBaselineInput & { route: "diagnostic" | "baseline"; reuseGrantRoot: LabRoot; supervisorDecisionRoot: LabRoot; acceptedCheckRoot: LabRoot | null; requestBytesRoot: LabRoot; dataReviewRoot: LabRoot; setupAccountingRoot: LabRoot; predecessor: LeanCorrectionPredecessor; startupPolicyRoot?: LabRoot; attemptOrdinal?: LeanRetryOrdinal; priorClosureRoot?: LabRoot | null; continuationRoot?: LabRoot | null; acceptedReaderCloseRoot?: LabRoot | null }, version: 2 | 3 | 4 | 5 | 6 | 7 | 8 = 2): Readonly<LeanCorrectionAllocation> => {
+export const createLeanSupervisorCorrectionAllocation = (input: LeanCurrentBaselineInput & { route: "diagnostic" | "baseline"; reuseGrantRoot: LabRoot; supervisorDecisionRoot: LabRoot; acceptedCheckRoot: LabRoot | null; requestBytesRoot: LabRoot; dataReviewRoot: LabRoot; setupAccountingRoot: LabRoot; predecessor: LeanCorrectionPredecessor; startupPolicyRoot?: LabRoot; timeboxExtension?: LeanRetryTimeboxExtension; attemptOrdinal?: LeanRetryOrdinal; priorClosureRoot?: LabRoot | null; continuationRoot?: LabRoot | null; acceptedReaderCloseRoot?: LabRoot | null }, version: 2 | 3 | 4 | 5 | 6 | 7 | 8 = 2): Readonly<LeanCorrectionAllocation> => {
   if (version === 8) return createLeanRetryAllocationV8(input)
   if (![2, 3, 4, 5, 6, 7].includes(version) || !exactLabKeys(input, ["sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "route", "reuseGrantRoot", "supervisorDecisionRoot", "acceptedCheckRoot", "requestBytesRoot", "dataReviewRoot", "setupAccountingRoot", "predecessor", ...((version === 5 || (version === 6 || version === 7)) ? ["startupPolicyRoot"] : [])]) || !["diagnostic", "baseline"].includes(input.route) || ![input.sourceRoot, input.reviewRoot, input.coldRoot, input.planRoot, input.reuseGrantRoot, input.supervisorDecisionRoot, input.requestBytesRoot, input.dataReviewRoot, input.setupAccountingRoot].every(root) || (input.route === "diagnostic" ? input.acceptedCheckRoot !== null : !root(input.acceptedCheckRoot)) || !/^[a-z0-9-]{1,100}$/u.test(input.seed) || !Array.isArray(input.candidateRoots) || input.candidateRoots.length !== 2 || !input.candidateRoots.every(root) || new Set(input.candidateRoots).size !== 2 || !Array.isArray(input.requestRoots) || input.requestRoots.length !== (input.route === "diagnostic" ? 1 : 36) || !input.requestRoots.every(root) || new Set(input.requestRoots).size !== input.requestRoots.length) return fail("SUPERVISOR_ALLOCATION")
   if (version === 5 && (input.supervisorDecisionRoot !== LEAN_STARTUP_APPROVAL_ROOT || input.planRoot !== LEAN_STARTUP_SUPPLEMENT_ROOT || input.startupPolicyRoot !== LEAN_STARTUP_POLICY_V5.root)) return fail("STARTUP_POLICY")
@@ -817,23 +826,25 @@ export const createLeanSupervisorCorrectionAllocation = (input: LeanCurrentBasel
 }
 /** Reuse the unchanged schedule validation, never legacy authorization or identity. */
 const createLeanRetryAllocationV8 = (input: Parameters<typeof createLeanSupervisorCorrectionAllocation>[0]): Readonly<LeanCorrectionAllocation> => {
-  if (!exactLabKeys(input, ["sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "route", "reuseGrantRoot", "supervisorDecisionRoot", "acceptedCheckRoot", "requestBytesRoot", "dataReviewRoot", "setupAccountingRoot", "predecessor", "startupPolicyRoot", "attemptOrdinal", "priorClosureRoot", "continuationRoot", "acceptedReaderCloseRoot"]) || !isLeanRetryMode(`v8-${input.attemptOrdinal}`) || input.planRoot !== LEAN_RETRY_V8_PLAN_ROOT || input.supervisorDecisionRoot !== LEAN_RETRY_V8_APPROVAL_ROOT || input.startupPolicyRoot !== LEAN_STARTUP_POLICY_V5.root) return fail("RETRY_ALLOCATION")
+  const extension = Object.hasOwn(input, "timeboxExtension") ? admitLeanRetryTimeboxExtension(input.timeboxExtension) : undefined
+  const caps = extension ? LEAN_RETRY_V8_TIMEBOX_CAPS : LEAN_REPLAY_V7_CAPS
+  if (!exactLabKeys(input, ["sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "route", "reuseGrantRoot", "supervisorDecisionRoot", "acceptedCheckRoot", "requestBytesRoot", "dataReviewRoot", "setupAccountingRoot", "predecessor", "startupPolicyRoot", "attemptOrdinal", "priorClosureRoot", "continuationRoot", "acceptedReaderCloseRoot", ...(extension ? ["timeboxExtension"] : [])]) || !isLeanRetryMode(`v8-${input.attemptOrdinal}`) || input.planRoot !== LEAN_RETRY_V8_PLAN_ROOT || input.supervisorDecisionRoot !== LEAN_RETRY_V8_APPROVAL_ROOT || input.startupPolicyRoot !== LEAN_STARTUP_POLICY_V5.root) return fail("RETRY_ALLOCATION")
   const n = input.attemptOrdinal!, p = input.predecessor
   const { root: claimedPredecessorRoot, ...predecessorBody } = p
   if (claimedPredecessorRoot !== labRoot(p.schemaVersion, predecessorBody) || !natural(p.chargedMatches) || !natural(p.elapsedUpperBoundMs)) return fail("RETRY_PREDECESSOR")
-  if (p.chargedMatches < 29 || p.chargedMatches > 29 + n - (input.route === "diagnostic" ? 1 : 0) || p.elapsedUpperBoundMs < LEAN_RETRY_V8_CARRY.priorElapsedMs || (n === 1 ? input.priorClosureRoot !== null || input.continuationRoot !== null : !root(input.priorClosureRoot) || !root(input.continuationRoot)) || (input.route === "diagnostic" ? input.acceptedReaderCloseRoot !== null : !root(input.acceptedReaderCloseRoot))) return fail("RETRY_PREDECESSOR")
-  const { attemptOrdinal: _ordinal, priorClosureRoot: _closure, continuationRoot: _continuation, acceptedReaderCloseRoot: _accepted, ...common } = input
-  const schedulePredecessorBody = { ...p, chargedMatches: input.route === "diagnostic" ? 28 : 29 }
+  if (p.chargedMatches < 29 || p.chargedMatches > 29 + n - (input.route === "diagnostic" ? 1 : 0) || p.elapsedUpperBoundMs < (extension?.priorElapsedMs ?? LEAN_RETRY_V8_CARRY.priorElapsedMs) || (extension ? p.elapsedUpperBoundMs + 1_860_000 >= caps.elapsedMs : p.elapsedUpperBoundMs >= caps.elapsedMs) || (n === 1 ? input.priorClosureRoot !== null || input.continuationRoot !== null : !root(input.priorClosureRoot) || !root(input.continuationRoot)) || (input.route === "diagnostic" ? input.acceptedReaderCloseRoot !== null : !root(input.acceptedReaderCloseRoot))) return fail("RETRY_PREDECESSOR")
+  const { attemptOrdinal: _ordinal, priorClosureRoot: _closure, continuationRoot: _continuation, acceptedReaderCloseRoot: _accepted, timeboxExtension: _extension, ...common } = input
+  const schedulePredecessorBody = { ...p, ...(extension ? { elapsedUpperBoundMs: LEAN_RETRY_V8_CARRY.priorElapsedMs } : {}), chargedMatches: input.route === "diagnostic" ? 28 : 29 }
   const { root: _priorRoot, ...scheduleBody } = schedulePredecessorBody
   const schedule = createLeanSupervisorCorrectionAllocation({ ...common, planRoot: LEAN_REPLAY_V7_SUPPLEMENT_ROOT, supervisorDecisionRoot: LEAN_REPLAY_V7_APPROVAL_ROOT, predecessor: { ...scheduleBody, root: labRoot(p.schemaVersion, scheduleBody) } }, 7)
   const { root: _scheduleRoot, ...base } = schedule
-  const body = { ...base, schemaVersion: `lean-correction-supervisor-${input.route}-allocation-v8` as LeanCorrectionAllocation["schemaVersion"], planRoot: input.planRoot, supervisorDecisionRoot: input.supervisorDecisionRoot, predecessor: p, attemptOrdinal: n, priorClosureRoot: input.priorClosureRoot!, continuationRoot: input.continuationRoot!, acceptedReaderCloseRoot: input.acceptedReaderCloseRoot! }
+  const body = { ...base, caps, ...(extension ? { timeboxExtension: extension } : {}), schemaVersion: `lean-correction-supervisor-${input.route}-allocation-v8` as LeanCorrectionAllocation["schemaVersion"], planRoot: input.planRoot, supervisorDecisionRoot: input.supervisorDecisionRoot, predecessor: p, attemptOrdinal: n, priorClosureRoot: input.priorClosureRoot!, continuationRoot: input.continuationRoot!, acceptedReaderCloseRoot: input.acceptedReaderCloseRoot! }
   return freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 export const admitLeanAllocation = (value: unknown): Readonly<AnyLeanAllocation> => {
   if (typeof value === "object" && value !== null && ["lean-correction-supervisor-diagnostic-allocation-v8", "lean-correction-supervisor-baseline-allocation-v8"].includes((value as { schemaVersion: string }).schemaVersion)) {
     const a = value as LeanCorrectionAllocation
-    const keys = ["schemaVersion", "privacy", "sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "tupleRoot", "runtimeRoot", "caps", "slots", "sampleSlotRoots", "predecessor", "route", "reuseGrantRoot", "diagnosisRoot", "supervisorDecisionRoot", "acceptedCheckRoot", "requestBytesRoot", "dataReviewRoot", "setupAccountingRoot", "startupPolicyRoot", "attemptOrdinal", "priorClosureRoot", "continuationRoot", "acceptedReaderCloseRoot", "root"]
+    const keys = ["schemaVersion", "privacy", "sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "tupleRoot", "runtimeRoot", "caps", "slots", "sampleSlotRoots", "predecessor", "route", "reuseGrantRoot", "diagnosisRoot", "supervisorDecisionRoot", "acceptedCheckRoot", "requestBytesRoot", "dataReviewRoot", "setupAccountingRoot", "startupPolicyRoot", "attemptOrdinal", "priorClosureRoot", "continuationRoot", "acceptedReaderCloseRoot", "root", ...(Object.hasOwn(a, "timeboxExtension") ? ["timeboxExtension"] : [])]
     if (!exactLabKeys(a, keys)) return fail("RETRY_ALLOCATION")
     const { schemaVersion: _schema, privacy: _privacy, root: _root, caps: _caps, slots: _slots, tupleRoot: _tuple, runtimeRoot: _runtime, sampleSlotRoots: _samples, diagnosisRoot: _diagnosis, ...input } = a
     const expected = createLeanRetryAllocationV8(input as Parameters<typeof createLeanSupervisorCorrectionAllocation>[0])
@@ -1085,7 +1096,11 @@ export const importLeanClosedInterval = (ledger: LeanExperimentLedger, id: strin
   appendTime(ledger, "start", id, startMs); appendTime(ledger, "close", id, closeMs)
   return readLeanTimeAccounting(ledger)
 }
-export const leanRetryRootElapsedFloorV8 = (observedMs: number) => LEAN_RETRY_V8_CARRY.priorElapsedMs + Math.max(0, observedMs - LEAN_RETRY_V8_CARRY.startedAtMs)
+export const leanRetryRootElapsedFloorV8 = (observedMs: number, timeboxExtension?: LeanRetryTimeboxExtension) => {
+  if (!natural(observedMs)) return fail("RETRY_TIMEBOX_CLOCK")
+  const carry = timeboxExtension === undefined ? LEAN_RETRY_V8_CARRY : admitLeanRetryTimeboxExtension(timeboxExtension)
+  return carry.priorElapsedMs + Math.max(0, observedMs - carry.startedAtMs)
+}
 const currentLeanJournalElapsedMs = (ledger: LeanExperimentLedger) => {
   const s = readLeanTimeAccounting(ledger), local = activeTime.get(ledger.directory)
   if (s.active && leanProspective(ledger.allocation)) {
@@ -1109,7 +1124,7 @@ const currentLeanJournalElapsedMs = (ledger: LeanExperimentLedger) => {
   return s.elapsedMs
 }
 /** All administration and gate wall time remains spent even between journals. */
-export const currentLeanElapsedMs = (ledger: LeanExperimentLedger, notYetImportedGapMs = 0) => Math.max(currentLeanJournalElapsedMs(ledger) + notYetImportedGapMs, ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v8" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v8" ? leanRetryRootElapsedFloorV8(Date.now()) : 0)
+export const currentLeanElapsedMs = (ledger: LeanExperimentLedger, notYetImportedGapMs = 0) => Math.max(currentLeanJournalElapsedMs(ledger) + notYetImportedGapMs, ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v8" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v8" ? leanRetryRootElapsedFloorV8(Date.now(), ledger.allocation.timeboxExtension) : 0)
 export const createLeanLedger = (directory: string, allocation: AnyLeanAllocation): LeanExperimentLedger => {
   const p = resolve(directory)
   if (realpathSync(dirname(p)) !== dirname(p)) return fail("STORE")
@@ -1459,7 +1474,8 @@ export const leanReplayV7CapsForAllocation = (value: unknown): typeof LEAN_REPLA
   if (leanSupervisorAllocationMode(a) !== "v7") return fail("ALLOCATION_VERSION")
   return LEAN_REPLAY_V7_CAPS
 }
-export const leanCapsForAllocation = (value: unknown): typeof LEAN_CAPS | typeof LEAN_SUPERVISOR_V5_CAPS | typeof LEAN_REPLAY_V7_CAPS => {
+export const leanCapsForAllocation = (value: unknown): typeof LEAN_CAPS | typeof LEAN_SUPERVISOR_V5_CAPS | typeof LEAN_REPLAY_V7_CAPS | typeof LEAN_RETRY_V8_TIMEBOX_CAPS => {
   const admitted = admitLeanAllocation(value)
+  if (isLeanRetryMode(leanSupervisorAllocationMode(admitted)) && "timeboxExtension" in admitted) { admitLeanRetryTimeboxExtension(admitted.timeboxExtension); return LEAN_RETRY_V8_TIMEBOX_CAPS }
   return (leanSupervisorAllocationMode(admitted) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(admitted))) ? LEAN_REPLAY_V7_CAPS : (leanSupervisorAllocationMode(admitted) === "v5" || (leanSupervisorAllocationMode(admitted) === "v6" || leanSupervisorAllocationMode(admitted) === "v7")) ? LEAN_SUPERVISOR_V5_CAPS : LEAN_CAPS
 }
