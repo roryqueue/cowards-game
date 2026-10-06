@@ -236,6 +236,21 @@ const observeFullReplayText = (texts: readonly string[]) => {
   return hits
 }
 describe("wiring", () => {
+  it("correlates v6 startup origin and publication identity without issuing a provider", async () => {
+    const session = await import("./lib/v1-38-lean-container-match-session.js")
+    const publisher = await import("./lib/v1-38-lean-baseline-source.js")
+    const authority = await import("./lib/v1-38-lean-experiment-authority.js")
+    const a = allocation(6)
+    const binding = { allocationRoot: a.root, chargeRoot: syntheticRoot("charge"), seat: "bottom" as const, policyRoot: lean.LEAN_STARTUP_POLICY_V5.root, harnessRoot: lean.leanBytesRoot(Buffer.from(session.buildLeanStartupWorkerHarnessV5())), requestOrdinal: 1, requestRoot: syntheticRoot("request"), method: "selectActivations" as const, inputRoot: syntheticRoot("input"), sourceRoot: syntheticRoot("source"), executableRoot: syntheticRoot("executable") }
+    const origin = { ...binding, schemaVersion: "v1.38-lean-startup-origin-v6", stage: "receipt", branch: "complete", ready: true, go: true, wait: "changed", termination: "not_required", unknown: false }
+    expect(session.validateLeanPrivateCorrectionOrigin(origin)).toEqual(origin)
+    expect(() => session.validateLeanStartupOriginV6(origin, { ...binding, allocationRoot: syntheticRoot("foreign") })).toThrow()
+    expect(authority.leanStartupAuthorityDescriptorV5({} as never)).toBeUndefined()
+    const proof = publisher.leanBaselineSourcePublicationBindingV6(a, "a".repeat(40), syntheticRoot("snapshot"), syntheticRoot("snapshot-source"))
+    expect(proof).toMatchObject({ allocationRoot: a.root, sourceRoot: a.sourceRoot, route: "diagnostic", head: "a".repeat(40) })
+    expect(() => publisher.leanBaselineSourcePublicationBindingV6({ ...a, sourceRoot: syntheticRoot("foreign") }, "a".repeat(40), syntheticRoot("snapshot"), syntheticRoot("snapshot-source"))).toThrow()
+    expect(session.buildLeanContainerBrokerSourceV6().replaceAll("v1.38-lean-startup-origin-v6", "v1.38-lean-startup-origin-v5").replaceAll("v1.38-lean-startup-v6:", "v1.38-lean-startup-v5:")).toBe(session.buildLeanContainerBrokerSourceV5())
+  })
   it("parses exact v6 commands, disallows old paths and binds v6 request intent", async () => {
     const correction = await import("./run-v1-38-lean-correction.js")
     for (const route of ["diagnostic", "baseline"] as const) for (const op of ["prepare", "run", "verify"]) {
