@@ -208,6 +208,22 @@ describe("actual one-shot reader closures", () => {
     writeFileSync(join(paths.store, "entry.json"), "corrupt", { mode: 0o600 })
     expect(() => retained.authenticateLeanRetryClosureV8("v8-1")).toThrow()
   }, 20000)
+  it("closes the actual run scope refusal with its existing prepared ledger", async () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v8-run-scope-synthetic-")))
+    syntheticDirectories.add(directory); chmodSync(directory, 0o700)
+    const actualPaths = lean.leanCorrectionRoutePaths, paths = { ...actualPaths("diagnostic", "v8-1"), temp: directory, store: join(directory, "store"), request: join(directory, "absent-request.json"), allocation: join(directory, "allocation.json") }
+    vi.spyOn(lean, "leanCorrectionRoutePaths").mockImplementation((route, mode) => route === "diagnostic" && mode === "v8-1" ? paths : actualPaths(route, mode))
+    mkdirSync(paths.store, { mode: 0o700 })
+    const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...allocationInput(), sourceRoot: leanCorrectionSourceManifest("v8-1").root }, 8), ledger = { directory: paths.store, allocation }
+    for (const [name, bytes] of [["allocation.json", lean.leanCanonicalBytes(allocation)], ["ledger.ndjson", ""], ["time.ndjson", ""]] as const) writeFileSync(join(paths.store, name), bytes, { mode: 0o600 })
+    const now = lean.LEAN_RETRY_V8_CARRY.startedAtMs + 1
+    vi.spyOn(Date, "now").mockReturnValue(now); vi.spyOn(process.hrtime, "bigint").mockReturnValue(1_000_000_000n); processControl.head = "1".repeat(40)
+    const preparation = correction.beginLeanCorrectionAdmission("diagnostic", "prepare", directory, { wallStartMs: now, monotonicStartNs: "1000000000" }, "v8-1")
+    correction.closeLeanCorrectionAdmission(preparation, ledger, { wallStartMs: now, monotonicStartNs: "1000000000" })
+    await expect(correction.leanCorrectionMain(["run-supervisor-diagnostic-v8-1", "--request", paths.request])).rejects.toThrow("COORDINATOR_HEAP_BOUND")
+    expect(correction.authenticateLeanRetryAdmissionFailureV8("v8-1")).toMatchObject({ storeAbsent: false, currentCharges: 0, allocationRoot: allocation.root, childSpawned: false, cleanup: null })
+    expect(retained.verifyLeanRetryTerminalOnlyV8(paths.request, "v8-1")).toMatchObject({ closureClass: "absent", cumulativeCharged: 29, currentCharges: 0, entryBytesRoot: null, terminalBytesRoot: null, authorizing: false })
+  }, 20000)
   it("closes an actual inert pre-ledger admission failure without inventing child custody", () => {
     const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v8-preledger-synthetic-")))
     syntheticDirectories.add(directory); chmodSync(directory, 0o700)

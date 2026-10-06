@@ -931,8 +931,11 @@ export const leanCorrectionMain = async (args: readonly string[]) => {
   const carrier = beginLeanCorrectionAdmission(route, "run", resolve(paths.temp), start, supervisor)
   let accountingLedger: LeanExperimentLedger | null = null, completed = false, childSpawned = false, cleanup: { childPid: number; exitCode: number | null; signal: string | null } | null = null
   try {
+  // V8's spent run admission must close against the actual prepared ledger
+  // even if the following scope check refuses before any child is created.
+  if (isLeanRetryMode(supervisor)) accountingLedger = openLeanLedger(paths.store)
   scope(route, supervisor)
-  accountingLedger = openLeanLedger(paths.store)
+  if (!accountingLedger) accountingLedger = openLeanLedger(paths.store)
   const { request, ledger, allocation } = allocationFor(path, route, supervisor)
   accountingLedger = ledger
   if (!same(allocation.predecessor, (supervisor ? inspectLeanSupervisorCorrectionPredecessor(route, (readLeanCorrectionJson(join(paths.temp, "admission-prepare-start.json")) as AdmissionClock).wallStartMs, supervisor) : inspectLeanCorrectionPredecessor(route, carrier.root)))) return fail("PREDECESSOR_DRIFT")

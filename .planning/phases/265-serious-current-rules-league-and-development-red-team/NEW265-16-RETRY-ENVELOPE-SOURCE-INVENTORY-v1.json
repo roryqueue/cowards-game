@@ -12,15 +12,15 @@
   "sourceRoots": [
     {
       "attemptOrdinal": 1,
-      "sourceRoot": "sha256:5ec6dfb57fa24af653182412f434e7279c207be41d6037b1865340f9d5950eb5"
+      "sourceRoot": "sha256:2afd93b1f7388da9c89258c499d96c8fd4e411f499215b2b6403d91a4ba277c8"
     },
     {
       "attemptOrdinal": 2,
-      "sourceRoot": "sha256:f42d2834dc7aa13d3855c2421db69fa9014d4e4a63f92a4cfe6d40c46eb96e88"
+      "sourceRoot": "sha256:6bb6152b78172e52ece42afbcb75a155a76a5b4923aaaad66f544c766343fd49"
     },
     {
       "attemptOrdinal": 3,
-      "sourceRoot": "sha256:7533f9802cea30dabc12e14e3c625268c93e1489c172061619ece628001887d4"
+      "sourceRoot": "sha256:78294dc15102d1cd66f10868e7ad4acaf2f53628bbfd66b06b476794cf95edcc"
     }
   ],
   "entries": [
@@ -3486,7 +3486,7 @@
     },
     {
       "path": "scripts/run-v1-38-lean-correction.ts",
-      "root": "sha256:1a8979ff125c474e4673e5fa66990b7a524aaad1a8f29290fdce36bf02866a21"
+      "root": "sha256:10c8df3af52ad109ae06c8c6a395a4b8e1bd22172f74eafce66f04fb3a8791df"
     },
     {
       "path": "scripts/run-v1-38-lean-experiment.sh",
@@ -3502,7 +3502,7 @@
     },
     {
       "path": "scripts/run-v1-38-lean-host-stage-v8.test.ts",
-      "root": "sha256:92939fdaa9fdbf6cfbbda73094934fac3128f1740fb48e200a50d7a66795bdd3"
+      "root": "sha256:3d4686f11b9f10e8867d412bef3b6dddd3a9e24c79d1748d5a39099e59a41881"
     },
     {
       "path": "scripts/run-v1-38-lean-retry-envelope-source-manifest.ts",
@@ -3678,7 +3678,9 @@
     "strictPackageTypecheck": "pass",
     "scopedStandaloneTypecheck": "No owned errors; pre-existing feasibility-protocol.ts:52 remains",
     "shellSyntax": "pass",
-    "fullCombinedFinalSuite": "not claimed"
+    "fullCombinedFinalSuite": "not claimed",
+    "mainFinalV8SuitePassed": 18,
+    "mainEarlyRunScopeRegression": "RED admission custody refusal; GREEN actual ledger-bound absence closure"
   },
   "pendingMainGates": [
     "independent review/fix",
