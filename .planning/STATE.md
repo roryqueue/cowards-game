@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Reviewed v6 diagnostic allocation prepared; commit and unique MAIN entry next
+stopped_at: Fresh v6 diagnostic accepted; conditional one fresh baseline data preparation next
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
-last_activity_desc: Replay v6 source verified and diagnostic data reviewed; one fresh allocation prepared
+last_activity_desc: V6 diagnostic and unique retained check closed and accepted; source hold released
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V6 DIAGNOSTIC ACCEPTED: UniqueMAIN11621 CLOSED0/470304ms; ONEordinaryretainedreader11255 CLOSED0 and ONEindependentclosureaudit CLOSED accepted. Checkcb94964c93bc0ae154d56b0c9f1c00f49a8d1af3efa7cef4b5a2e09523251c12 acceptedtrue/retained_valid/limited_exploratory, current1success/cumulative25/cleanuptrue. Allocation3ddb8b87/rawa774abe3/request7f26d050/heldHEADf81680a5/source67263fe4 unchangedthroughclosure. Allsixintervalsclosed39551176ms/effectiveclose1791250433172, physical11452416B; source+HEADhold RELEASED, noactiveentry/verifier. Complete:false iswholebaseline flag, NOTdiagnostic denial. ConditionalONEfresh36baseline gate passes butnewactualMAINdata/helperreview/immutablecommittedallocation/fresh SAMEPROCESS capacity/uniqueentry stillrequired. All latercostcarry closedelapsed plusgapunder43200000ms/same15GB300/25spent;36fitnotpromised. Diagnosticandallolderhistoryimmutable/no rereader/retry/refund/recredit. Phase265/LEAG/freeze/formation/holdout/public/counting/production gated; priorfrontiershistory.
 
 CURRENT V6 DIAGNOSTIC PREPARED (2026-10-06): Checked additive replay-v6 source implemented; independent source review-v2 clean after CR-01 single-interval accounting fix03ed458a, VALIDATION-v1 and MAIN-GATES-v1 passed148synthetic tests/types/shell/boundary1408zero, SOURCE-VERIFICATION-v1 verifies4/4 functional truths plus safety. Fixed source67263fe477e884ffabb74c09f562d0091e2a86ec8ae29cf7c812ed64d31430aa/892entries; no native feasibility claim. Actual MAIN draft/finalize and independent DIAGNOSTIC-DATA-REVIEW-v1 clean; exactrequest7f26d050/data11529987/setupac28273e. ExactlyONEpreparation CLOSED0 allocation3ddb8b87ccfe3a97835f4cc0ee15e6782eeb8d6646a10fd25b19e57adffcb647/rawa774abe38e47e27ae391d117ec34b9a431dcc13953100252913687bed5037c2b. Checkedreal0700store onlyallocation/emptyledger/time, prior24/current0charges; closedprefix38981829ms (all latercosts continue) under43200000ms/same15GB300. No diagnosticentry/verifier/holdyet. Commit/push allocation and gates BEFOREoneMAINentry; fresh passing SAME-PROCESScapacity beforecharge/provider. SOURCE+HEADfixed throughactualterminal andONEappropriateuniquecheck, no competingheavywork. OnlyfullacceptanceofTHISfreshdiagnostic permitsconditionalONEfresh36baseline; failure/refusal endsenvelope. Allolderhistoryimmutable/no retry/refund/recredit; fullbufferinflate/nativeRSS/36fitunproved. Phase265/LEAG/freeze/formation/holdout/public/counting/production gated. Earlierfrontiershistory.
 
