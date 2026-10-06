@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Twenty-hour prospective amendment approved; checked source supplement ready for execution
+stopped_at: Twenty-hour amendment source verified; fresh MAIN diagnostic data and helper gates next
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
-last_activity_desc: Twenty-hour prospective timebox approved; research and targeted two-task plan check passed; no new empirical route started
+last_activity_desc: Twenty-hour source review clean, validation passed, independent source verification 5/5; fresh diagnostic remains unstarted
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT SOURCE-VERIFIED TWENTY-HOUR FRONTIER: Approved narrow Plan16 amendment is implemented at source6cade0e237fe976051a71248f3f291166af3e769. REVIEW-v1 clean/zero findings, VALIDATION-v1 scoped source coverage, independent SOURCE-VERIFICATION-v1 5/5 with exact904-entry inventory/threeordinalroots, MAIN1412-file boundary scan zero violations. Configured types/shell pass; initial190/191 thenfixed8affectedpass plusindependent6filteredpass, NOT fullfinalphase-suiteclaim. Newextension sha256:c9093818eca6b9a3967d8c4732871cb925b2880f48a971c7276e6800fd52e96a selects72000000ms onlyexactboundfreshallocations; legacyv8cap57600000/policy/carry/approvalbytesunchanged. Carry56000917+now-1791326194166 continuous; same15GB30029spent/reserve/rules/runtime/privacy. No activeentry/verifier/hold, noactualrequest/setup/allocation/Match yet. MAIN fresh helper/request authorship and distinct-agent review precede immutablecommittedallocation/freshreal0700store/SAMEPROCESScapacity/uniqueentry, thenONEappropriateactualclosurecheck. Atmost3freshdiagnostics andONEconditional36 afteractualacceptedcheckFINALclose. No phase/LEAG/freeze/formation/holdout/public/counting/production credit. Earlierfrontiershistory.
 
 CURRENT APPROVED TWENTY-HOUR FRONTIER (2026-10-06): Human approved NEW265-16-TWENTY-HOUR-APPROVAL-20261006.md, raw sha256:a60a562ea5697055e5f949c47234587c6c89109c9e97de0ddeb3f1e2109bf043. Existing Plan16 narrow research and two-task checked supplement are CLOSED; PLAN-CHECK-v2 passed after adding connected standalone-baseline runner coverage. Source implementation/review-fix/validate/verify next, before any fresh request/helper/allocation/entry/provider/Match. Additive separately rooted new binding alone may select cumulative72000000ms; oldv1-v8 approvals/policies/carry/caps and consumed bytes retain history. Carry56000917ms from task start1791326194166, excludes only proven20091542ms human idle between prior complete1791306102624 and current start; every current cost counts. Same15GB300Matches/29spent/1860000ms reserve and all runtime/rules/privacy bounds. Up to3distinctfreshprivate diagnostics, at mostONEconditionalfresh36 afteractual accepted check plus FINAL reader-close; no known-unchanged failure launches. Stop at bounded attempts/baseline failure/insufficient cap or genuinely new human decision. No live entry/verifier/hold, all three previousv8routes unstarted. All nine LEAG and Phase265 completion remain pending; current-rules evaluation/freeze BEFORE formation, holdout unopened, no public/counting/production. Older frontiers below are preserved history.
 
