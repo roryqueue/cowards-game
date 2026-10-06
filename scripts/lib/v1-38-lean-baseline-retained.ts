@@ -18,17 +18,35 @@ import { buildPlannerCandidate } from "../../packages/strategy-lab/src/planner/e
 import { emitTacticalSource } from "../../packages/strategy-oracle-tactical/src/emit.js"
 import { authenticateLeanBaselineReview, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselineSourceManifest } from "../run-v1-38-lean-baseline.js"
 import { authenticateLeanSupervisorDiagnosticCheck, authenticateLeanRetryClosureV8 } from "./v1-38-lean-correction-retained.js"
+import { leanCorrectionRoutePaths } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { leanCorrectionSourceManifest } from "../run-v1-38-lean-correction.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_RETAINED_${code}`) }
 /** Selected v8 baseline authority is the actual diagnostic check + FINAL close,
  * not an observation, synthetic report, or terminal-only/refusal receipt. */
 export const assertLeanRetryBaselineJoinV8 = (allocation: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanCorrectionAllocation, check: { root: LabRoot; allocationRoot: LabRoot; readerCloseMs: number }, closure: { attemptOrdinal: number; closureClass: string; checkRoot: LabRoot | null; allocationRoot: LabRoot; root: LabRoot; readerCloseMs: number; finalReaderClose: boolean; acceptedCheckAbsent: boolean; sourceRoot: LabRoot; head: string }, head: string) => {
-  if (allocation.schemaVersion !== "lean-correction-supervisor-baseline-allocation-v8" || allocation.attemptOrdinal !== closure.attemptOrdinal || closure.closureClass !== "accepted" || closure.finalReaderClose !== true || closure.acceptedCheckAbsent !== false || allocation.acceptedCheckRoot !== check.root || closure.checkRoot !== check.root || closure.allocationRoot !== check.allocationRoot || allocation.acceptedReaderCloseRoot !== closure.root || check.readerCloseMs !== closure.readerCloseMs || closure.sourceRoot !== allocation.sourceRoot || closure.head !== head) return fail("RETRY_ACCEPTED_FINAL_JOIN")
+  if (allocation.schemaVersion !== "lean-correction-supervisor-baseline-allocation-v8" || allocation.attemptOrdinal !== closure.attemptOrdinal || closure.closureClass !== "accepted" || closure.finalReaderClose !== true || closure.acceptedCheckAbsent !== false || allocation.acceptedCheckRoot !== check.root || closure.checkRoot !== check.root || closure.allocationRoot !== check.allocationRoot || allocation.acceptedReaderCloseRoot !== closure.root || check.readerCloseMs !== closure.readerCloseMs || closure.sourceRoot !== allocation.sourceRoot || !/^[a-f0-9]{40}$/u.test(head) || !/^[a-f0-9]{40}$/u.test(closure.head)) return fail("RETRY_ACCEPTED_FINAL_JOIN")
 }
 /** Shared real accepted-file gate at publisher, issuer and selected reader. */
 export const authenticateLeanRetryBaselineAuthorityV8 = (allocation: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanCorrectionAllocation, head: string) => {
   const mode = `v8-${allocation.attemptOrdinal}` as import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanRetryMode
-  assertLeanRetryBaselineJoinV8(allocation, authenticateLeanSupervisorDiagnosticCheck(mode), authenticateLeanRetryClosureV8(mode), head)
+  const check = authenticateLeanSupervisorDiagnosticCheck(mode), closure = authenticateLeanRetryClosureV8(mode)
+  assertLeanRetryBaselineJoinV8(allocation, check, closure, head)
+  const lean = { diagnostic: leanCorrectionRoutePaths("diagnostic", mode), baseline: leanCorrectionRoutePaths("baseline", mode) }
+  const diagnostic = openLeanLedger(lean.diagnostic.store), diagnosticEntry = readLeanChildEntry(diagnostic)
+  if (diagnosticEntry.head !== closure.head || diagnosticEntry.allocationRoot !== check.allocationRoot || diagnosticEntry.sourceRoot !== allocation.sourceRoot || head !== execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim()) return fail("RETRY_COMMITTED_LINEAGE")
+  try {
+    // A new committed baseline allocation is mandatory; only source bytes,
+    // not the two allocation commits, remain identical across this handoff.
+    execFileSync("git", ["merge-base", "--is-ancestor", closure.head, head], { stdio: "pipe", maxBuffer: 1024 })
+    const manifest = leanCorrectionSourceManifest(mode)
+    if (manifest.root !== allocation.sourceRoot) return fail("RETRY_COMMITTED_LINEAGE")
+    for (const commit of [closure.head, head]) execFileSync("git", ["diff", "--exit-code", commit, "--", ...manifest.entries.map(entry => entry.path)], { stdio: "pipe", maxBuffer: 1024 })
+    for (const [commit, path, value] of [[closure.head, lean.diagnostic.allocation, diagnostic.allocation], [head, lean.baseline.allocation, allocation]] as const) {
+      const bytes = execFileSync("git", ["show", `${commit}:${path}`], { maxBuffer: 262144 })
+      if (leanBytesRoot(bytes) !== leanBytesRoot(leanCanonicalBytes(value))) return fail("RETRY_COMMITTED_LINEAGE")
+    }
+  } catch { return fail("RETRY_COMMITTED_LINEAGE") }
 }
 export const verifyLeanRetryBaselineRetainedV8 = async (path: string, mode: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanRetryMode, precheck?: () => void) => {
   const lean = await import("../../packages/strategy-lab/src/league/lean-experiment.js"), reader = await import("./v1-38-lean-correction-retained.js")

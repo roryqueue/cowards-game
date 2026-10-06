@@ -19,7 +19,7 @@ describe("selected retry baseline authority owner", () => {
     const check = { root: root("check"), allocationRoot: root("diagnostic"), readerCloseMs: 100 }
     const closure = { attemptOrdinal: 2, closureClass: "accepted", checkRoot: check.root, allocationRoot: check.allocationRoot, root: root("final-close"), readerCloseMs: 100, finalReaderClose: true, acceptedCheckAbsent: false, sourceRoot: root("source"), head: "a".repeat(40) }
     const allocation = { schemaVersion: "lean-correction-supervisor-baseline-allocation-v8", attemptOrdinal: 2, acceptedCheckRoot: check.root, acceptedReaderCloseRoot: closure.root, sourceRoot: closure.sourceRoot } as Parameters<typeof assertLeanRetryBaselineJoinV8>[0]
-    expect(() => assertLeanRetryBaselineJoinV8(allocation, check, closure, closure.head)).not.toThrow()
+    expect(() => assertLeanRetryBaselineJoinV8(allocation, check, closure, "b".repeat(40))).not.toThrow()
     for (const patch of [{ attemptOrdinal: 1 }, { checkRoot: null }, { finalReaderClose: false }, { acceptedCheckAbsent: true }, { closureClass: "refused" }, { closureClass: "absent" }]) expect(() => assertLeanRetryBaselineJoinV8(allocation, check, { ...closure, ...patch }, closure.head)).toThrow()
   })
 })
