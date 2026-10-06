@@ -1,5 +1,9 @@
 # Coward's Game
 
+## Current approved host-stage frontier — 2026-10-06
+
+The four-hour prospective extension and ONE fresh diagnostic/conditional ONE36 baseline are approved in NEW265-16-HOST-STAGE-APPROVAL-20261006.md. Checked source repair has passed independent review/fix, validation and6/6 source verification over the full888-entry closure. New v7 alone uses cumulative16h;15GB300 and every runtime/gameplay/privacy bound remain fixed, all28spent/time/survivors carried. Actual data/helper review, committed allocation and SAMEPROCESS capacity remain next, not completed empirical gates. Current-rules baseline/freeze before formation and unopened holdout/no public/counting/production remain. Older pending-choice paragraphs below are history; STATE's top frontier governs.
+
 ## Current bounded experiment frontier — 2026-10-06
 
 Replay-v6 source is independently reviewed/fixed, validated and source-verified. Its fresh one-cell diagnostic was accepted. The conditional36-cell baseline failed after three charges: two finite successful terminal records and a third nonterminal charge, no result. Unique terminal-only check and source-only diagnosis are closed; initiatingcause unknown, no speculativefix.28spentMatches remain carried. The approved envelope ended and the remaining12h timebox cannot cover the unchanged next-Match reserve. A prospective four-hour extension/newbounded envelope is proposed in NEW265-16-REPLAY-V6-CONTINUATION-DECISION-v1.md, NOTapproved/applied. No furtherMatch, baseline/freeze or downstreamcredit. Current-rulesfreeze beforeformation, unopenedholdout and no public/counting/production remain fixed. STATE's top frontier supersedes all earlier snapshots.

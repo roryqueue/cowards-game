@@ -1,5 +1,9 @@
 # Requirements: Coward's Game v1.38 Competitive Strategy Factory and Adversarial League
 
+## Current approved host-stage frontier — 2026-10-06
+
+The prospective16h envelope is approved; source repair has passed independent review/fix/validation/6-of-6 source verification over888 live entries. These are source-only truths, not LEAG-01–09 completion. Actual fresh diagnostic data/helper/allocation/capacity gates and conditional36 baseline remain pending.28spent/allcosts/survivors carry under unchanged15GB300/runtime/privacy/rules. No baseline/freeze/formation/holdout/public/counting/production admission. Older pending-choice paragraphs below are history; STATE governs.
+
 ## Current bounded experiment frontier — 2026-10-06
 
 Fresh replay-v6 diagnostic accepted; conditional36-cell baseline failed after3charges/2finite successes/thirdnonterminal, resultabsent. One terminal-onlycheck and source-onlydiagnosisclosed; causeunknown. All28spent/cumulativecostscarried; no LEAG-01–09 or Phase265 completion credit. Preciseapprovedenvelopeended; remaining12hbelowunchanged next-Matchreserve. NEW265-16-REPLAY-V6-CONTINUATION-DECISION-v1.md's prospective four-hour/newbounded-envelope choice is PENDING/unapplied. No furtherMatch, baseline/freeze, formation or holdout admission; no public/counting/production. Earlier snapshots are historical; no unchecked requirement turned green.

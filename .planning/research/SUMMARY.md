@@ -1,5 +1,9 @@
 # Project Research Summary
 
+## Current approved host-stage frontier — 2026-10-06
+
+The approved narrow finite trusted-host stage repair is implemented, independently reviewed/fixed, validated and source-verified6/6. It identifies location, not causal diagnosis; old failures remain unknown and immutable. CR-01 restored full inherited live source closure888entries; WR-01 connected actual catches/publication/ordinary synthetic reader/final-close carry. Native feasibility is not inferred. ONE fresh diagnostic and conditional ONE36 baseline remain behind actual data/helper/committed allocation/SAMEPROCESS capacity gates under approved16h and unchanged15GB300/runtime/gameplay/privacy bounds, carrying28spent/allcosts. Current-rules freeze before formation, holdout unopened/no public/counting/production. STATE supersedes older pending-choice paragraphs below.
+
 ## Current empirical and diagnosis frontier — 2026-10-06
 
 The replay-v6 source repair passed independent review/fix/validation/source verification and its fresh diagnostic's unique retainedcheck. The conditionalbaseline failed3charges/2finite successfulterminals/thirdnonterminal/noresult. Terminal-onlyverification closed; initiatingcauseunknown. Source-onlyGSDdiagnosis confirms a diagnosticgap, notcausation: generictrustedhostexceptions aftercharge collapse toUNKNOWN_INTERNAL_FAILURE/stageunknown across Match/replaypublication stages. No speculativefix or runtime/ruleschange.28spentMatches/alltime/files carried, oldobjectsimmutable. Current12h remainder belowunchangednext-Matchreserve; preciseenvelopeended. Fouradditionalprospectivehours/newone+conditionalone envelope is proposed, NOTapproved/applied. No furtherMatch, completebaseline/freeze/formation/holdout/public/counting/production credit. STATE/decisiondoc govern future research, with no newnumberedplan proliferation.

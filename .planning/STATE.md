@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Approved prospective host-stage repair and bounded v7 continuation; research first
+stopped_at: Host-stage v7 source gates passed; fresh diagnostic data admission next
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
-last_activity_desc: Four-hour prospective extension approved; checked source repair precedes fresh diagnostic
+last_activity_desc: Full 888-entry source reviewed, fixed, validated and verified; no empirical admission yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT SOURCE-VERIFIED V7 FRONTIER: Checked existing Plan16 host-stage supplement implemented and independently reviewed/fixed (CR-01 full inherited source closure and WR-01 connected consumer tests resolved). SOURCE-REVIEW-v2 clean at source15a2adbdfda547b4b1cdc2a49afc0e63cef57873; full live manifest sha256:0e15d33f3533e826a7cb8b14b8294609ce3dec8848604f912072d61e8334b8e4/888 entries. VALIDATION-v1 passed144 synthetic tests/zero skips, lab types and syntax. MAIN boundary1410files/zero; SOURCE-VERIFICATION-v1 verified6/6. This is source-only, not empirical/Phase265 credit. No active entry/verifier/hold/allocation. Fresh MAIN data/helper review, exact request, new immutable committed allocation, fresh real0700store and passing SAMEPROCESS capacity precede ONE diagnostic; only full acceptance permits conditional ONE36 baseline. Every current cost carries41943494+now−1791290048578 under NEW57.6Mms/same15GB300 caps/28spent; failure/refusal ends envelope. No old reader/retry/refund/recredit, freeze/formation/holdout/public/counting/production. Earlier frontiers are historical.
 
 CURRENT APPROVED FRONTIER (2026-10-06): Direct human approval recorded in NEW265-16-HOST-STAGE-APPROVAL-20261006.md authorizes narrow trusted-host finite-stage diagnostic repair through existing Plan16 research/checked-plan/execute/review-fix/validate/source-verify, followed by ONE distinct fresh private diagnostic and conditional ONE fresh36 baseline ONLY after complete new diagnostic acceptance. NEW allocations alone may use cumulative57600000ms (16h); old12h/all consumed bounds/bytes remain immutable. Carry28spent/41943494ms before current turn1791290048578; every current cost counts with no gaps, only proven interturn human idle excluded. Same15GB300/guest1000/host5000/startup2500/Match600000/full audits/4x guard and all other bounds. No active entry/verifier/source hold or new allocation. Fixed reviewed source/actual data review/committed new allocation/fresh empty0700store/passing SAMEPROCESS capacity precede charge. Failure/refusal ends envelope; no old reader/retry/refund/recredit. All9LEAG/Phase265/freeze/formation/holdout/public/counting/production gated. Earlier pending frontier is preserved history, superseded by this approval only.
 

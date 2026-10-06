@@ -1,5 +1,9 @@
 # Roadmap: Coward's Game
 
+## Current approved host-stage frontier — 2026-10-06
+
+Existing Plan265-16 host-stage supplement is source-verified after checked research/plan/implementation/review-fix/validation. Full888-entry source root0e15d33f and clean review v2 are fixed. Approved ONE fresh diagnostic then conditional ONE36 baseline uses new cumulative16h, unchanged15GB300 and all28spent/currentcosts. Actual data/helper review, immutable committed allocation and SAMEPROCESS capacity precede execution. Plan16/Phase265 remain incomplete;266freeze and formation/holdout cannot advance. No new numbered plan or empirical credit; older pending-choice paragraphs below are historical.
+
 ## Current bounded experiment frontier — 2026-10-06
 
 Plan265-16 remains incomplete. Reviewed/fixed/validated/source-verified replay-v6 diagnostic accepted; conditionalbaseline failed3charged/2finite successes/thirdnonterminal/noresult. Unique terminal-onlycheck and inconclusive source-onlydiagnosisclosed; noactiveentry/verifier/hold.28spent/cumulativecosts carried, approvedenvelopeended and remaining12h cannotadmitnextMatch. Prospective four-hour/newbounded-envelope choice in NEW265-16-REPLAY-V6-CONTINUATION-DECISION-v1.md PENDING/unapplied. No additional numberedplan, empiricalretry or phaseadvance. Phase266freeze and formation/holdout remain gated by completecurrentrulesbaseline; public/counting/production unadmitted. Earlierfrontiershistory.
