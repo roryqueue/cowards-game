@@ -1,4 +1,4 @@
-import { isLeanRetryMode, leanRetryOrdinal, type LeanRetryMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_REPLAY_V7_CAPS, isLeanRetryMode, leanRetryOrdinal, type LeanRetryMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 /** New correction reader: byte/root custody and fixed schedule joins only.
  * No cold builders, authored proposal generation, search or historical reader. */
 import { readdirSync, existsSync } from "node:fs"
@@ -15,7 +15,7 @@ import { compactLeanBaselineCell, leanBaselineMetricCoverage, type LeanBaselineO
 import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
 import { selectLeanBestTrainedProposal, selectLeanTrainedProposal } from "./v1-38-lean-training-adapter.js"
 import { validateLeanPrivateCorrectionOrigin } from "./v1-38-lean-container-match-session.js"
-import { leanCorrectionSourceManifest, leanCorrectionAdmissionElapsed, leanCorrectionTrustedGuardError, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
+import { authenticateLeanRetryAdmissionFailureV8, leanCorrectionSourceManifest, leanCorrectionAdmissionElapsed, leanCorrectionTrustedGuardError, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
 import { validateLeanSupervisorReasonBytes, LEAN_SUPERVISOR_REASON_FILE, LEAN_SUPERVISOR_REASON_MAX_BYTES } from "../run-v1-38-lean-baseline.js"
 import type { LeanBaselinePair } from "./v1-38-lean-experiment-authority.js"
 import { SoldierBrainInputV119Schema, StrategyInputV119Schema, StrategyResultSchema } from "@cowards/spec"
@@ -357,7 +357,15 @@ export const publishLeanRetryClosureV8 = (ledger: Parameters<typeof readLeanLedg
   return closure
 }
 /** Independent finite receipt audit, not a second ordinary reader. */
-export const authenticateLeanRetryClosureV8 = (mode: LeanRetryMode) => {
+type LeanRetryAuthenticatedClosureV8 = Omit<ReturnType<typeof deriveLeanRetryClosureV8>, "allocationRoot" | "entryBytesRoot" | "terminalBytesRoot" | "ledgerBytesRoot" | "requestBytesRoot"> & { allocationRoot: LabRoot | null; entryBytesRoot: LabRoot | null; terminalBytesRoot: LabRoot | null; ledgerBytesRoot: LabRoot | null; requestBytesRoot: LabRoot | null }
+export const authenticateLeanRetryClosureV8 = (mode: LeanRetryMode): LeanRetryAuthenticatedClosureV8 => {
+  const retryPaths = leanCorrectionRoutePaths("diagnostic", mode)
+  if (existsSync(join(retryPaths.temp, "retry-closure-v8.json"))) {
+    if (existsSync(join(retryPaths.store, "retry-closure-v8.json"))) return fail("CUSTODY")
+    const value = readLeanCorrectionJson(join(retryPaths.temp, "retry-closure-v8.json")), expected = deriveLeanRetryPreEntryClosureV8(mode)
+    if (!same(value, expected)) return fail("CUSTODY")
+    return expected
+  }
   const paths = leanCorrectionRoutePaths("diagnostic", mode), ledger = openLeanLedger(paths.store), value = readLeanCorrectionJson(join(ledger.directory, "retry-closure-v8.json")) as Record<string, unknown>
   if (!["accepted", "refused", "absent"].includes(String(value.closureClass))) return fail("CUSTODY")
   const expected = deriveLeanRetryClosureV8(ledger, mode, value.closureClass as LeanRetryClosureClass, false)
@@ -368,6 +376,7 @@ export const authenticateLeanRetryClosureV8 = (mode: LeanRetryMode) => {
 export const verifyLeanRetryTerminalOnlyV8 = (path: string, mode: LeanRetryMode) => {
   const paths = leanCorrectionRoutePaths("diagnostic", mode)
   if (path !== paths.request) return fail("CUSTODY")
+  if (!existsSync(paths.store) || !existsSync(join(paths.store, "entry.json"))) return verifyLeanRetryPreEntryTerminalOnlyV8(mode)
   const ledger = openLeanLedger(paths.store), allocation = admitLeanAllocation(ledger.allocation)
   if (!isLeanRetryMode(mode) || leanSupervisorAllocationMode(allocation) !== mode || !("route" in allocation) || allocation.route !== "diagnostic" || existsSync(join(ledger.directory, "result.json")) || existsSync(join(ledger.directory, paths.check)) || [...readLeanTimeAccounting(ledger).starts.keys()].some(id => id.includes("verifier"))) return fail("CUSTODY")
   readLeanChildTerminal(ledger)
@@ -384,3 +393,36 @@ export const verifyLeanRetryTerminalOnlyV8 = (path: string, mode: LeanRetryMode)
   } finally { const time = closeLeanInterval(ledger, interval); if (gap) importLeanClosedInterval(ledger, "correction-supervisor-diagnostic-v8-terminal-reader-gap", gap.runCloseMs, gap.readerStartMs); beginLeanInterval(ledger, closing, time.closes.get(interval)!); closeLeanInterval(ledger, closing) }
   return publishLeanRetryClosureV8(ledger, mode, "absent")
 }
+/** Separate actual MAIN admission custody: no fabricated child ledger/entry,
+ * terminal, accepted check or ordinary-reader identity. */
+const deriveLeanRetryPreEntryClosureV8 = (mode: LeanRetryMode): LeanRetryAuthenticatedClosureV8 => {
+  const paths = leanCorrectionRoutePaths("diagnostic", mode), failure = authenticateLeanRetryAdmissionFailureV8(mode)
+  const start = readLeanCorrectionJson(join(paths.temp, "retry-terminal-reader-start-v8.json")) as { schemaVersion: string; attemptOrdinal: number; failureRoot: LabRoot; wallStartMs: number; monotonicStartNs: string; root: LabRoot }
+  const close = readLeanCorrectionJson(join(paths.temp, "retry-terminal-reader-close-v8.json")) as { schemaVersion: string; startRoot: LabRoot; wallObservedMs: number; monotonicObservedNs: string; elapsedUpperBoundMs: number; root: LabRoot }
+  const { root: sr, ...sb } = start, { root: cr, ...cb } = close
+  if (!exactLabKeys(start, ["schemaVersion", "attemptOrdinal", "failureRoot", "wallStartMs", "monotonicStartNs", "root"]) || !exactLabKeys(close, ["schemaVersion", "startRoot", "wallObservedMs", "monotonicObservedNs", "elapsedUpperBoundMs", "root"]) || start.schemaVersion !== "lean-retry-terminal-reader-start-v8" || close.schemaVersion !== "lean-retry-terminal-reader-close-v8" || sr !== labRoot(start.schemaVersion, sb) || cr !== labRoot(close.schemaVersion, cb) || close.startRoot !== sr || start.failureRoot !== failure.root || start.attemptOrdinal !== leanRetryOrdinal(mode) || start.wallStartMs < failure.admissionCloseMs || close.elapsedUpperBoundMs !== leanCorrectionAdmissionElapsed(start, { wallStartMs: close.wallObservedMs, monotonicStartNs: close.monotonicObservedNs })) return fail("CUSTODY")
+  const n = leanRetryOrdinal(mode), prior = n === 1 ? 29 : authenticateLeanRetryClosureV8(`v8-${n - 1}` as LeanRetryMode).cumulativeCharged
+  if (failure.cumulativeCharged !== null && failure.cumulativeCharged !== prior) return fail("CUSTODY")
+  const readerCloseMs = Math.max(close.wallObservedMs, start.wallStartMs + close.elapsedUpperBoundMs)
+  const body = { schemaVersion: "lean-retry-closure-v8", privacy: "private_offline", attemptOrdinal: n, closureClass: "absent" as const, authorizing: false, allocationRoot: failure.allocationRoot, sourceRoot: failure.sourceRoot, head: failure.head, requestBytesRoot: failure.requestBytesRoot, entryBytesRoot: null, terminalBytesRoot: null, resultBytesRoot: null, ledgerBytesRoot: failure.ledgerBytesRoot, timeBytesRoot: labRoot("lean-retry-admission-reader-time-v8", { failureRoot: failure.root, startRoot: sr, closeRoot: cr }), readerInterval: "correction-supervisor-diagnostic-v8-admission-terminal-verifier", readerStartMs: start.wallStartMs, readerCloseMs, finalReaderClose: true, checkRoot: null, checkBytesRoot: null, acceptedCheckAbsent: true, resultAbsent: true, closedElapsedMs: leanRetryRootElapsedFloorV8(readerCloseMs), cumulativeCharged: prior, currentCharges: 0, admissionFailureRoot: failure.root }
+  return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
+}
+const verifyLeanRetryPreEntryTerminalOnlyV8 = (mode: LeanRetryMode) => {
+  const paths = leanCorrectionRoutePaths("diagnostic", mode), failure = authenticateLeanRetryAdmissionFailureV8(mode)
+  if (existsSync(join(paths.store, "retry-closure-v8.json")) || leanCorrectionSourceManifest(mode).root !== failure.sourceRoot || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim() !== failure.head) return fail("CUSTODY")
+  const startBody = { schemaVersion: "lean-retry-terminal-reader-start-v8", attemptOrdinal: leanRetryOrdinal(mode), failureRoot: failure.root, wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
+  // O_EXCL spends the sole absent-reader identity even if its finite audit fails.
+  publishLeanCorrection(join(paths.temp, "retry-terminal-reader-start-v8.json"), start)
+  try {
+    authenticateLeanRetryAdmissionFailureV8(mode)
+    if (leanRetryRootElapsedFloorV8(Date.now()) >= leanCapsForAllocationModeV8() || process.memoryUsage().rss + LEAN_EXTERNAL_SCRATCH_RESERVE > LEAN_CAPS.scratchBytes) return fail("HOLD_OR_CAPACITY")
+  } finally {
+    const observed = { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, body = { schemaVersion: "lean-retry-terminal-reader-close-v8", startRoot: start.root, wallObservedMs: observed.wallStartMs, monotonicObservedNs: observed.monotonicStartNs, elapsedUpperBoundMs: leanCorrectionAdmissionElapsed(start, observed) }
+    publishLeanCorrection(join(paths.temp, "retry-terminal-reader-close-v8.json"), { ...body, root: labRoot(body.schemaVersion, body) })
+  }
+  const closure = deriveLeanRetryPreEntryClosureV8(mode)
+  if (closure.closedElapsedMs >= leanCapsForAllocationModeV8()) return fail("HOLD_OR_CAPACITY")
+  publishLeanCorrection(join(paths.temp, "retry-closure-v8.json"), closure)
+  return closure
+}
+const leanCapsForAllocationModeV8 = () => LEAN_REPLAY_V7_CAPS.elapsedMs

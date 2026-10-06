@@ -307,7 +307,7 @@ export const leanParentFailureReceiptHandler = (ledger: LeanExperimentLedger, ch
     received = true; accept(message as LeanChildFailureReceipt | LeanChildFailureReceiptV7)
   }
 }
-export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string; prospectiveStart?: { wallStartMs: number; monotonicStartNs: string }; beforeRelease?: () => void; terminalReserveMs?: number; supervisorObservation?: true }) => {
+export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string; prospectiveStart?: { wallStartMs: number; monotonicStartNs: string }; beforeRelease?: () => void; terminalReserveMs?: number; supervisorObservation?: true; onChildCreated?: () => void; onPreEntryCleanup?: (value: { childPid: number; exitCode: number | null; signal: string | null }) => void }) => {
   const { ledger, requestPath, store: STORE } = options, allocation = ledger.allocation
   const committed = execFileSync("git", ["show", `HEAD:${options.allocationPath}`], { maxBuffer: 262144 })
   if (leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(allocation)) || leanBytesRoot(committed) !== leanBytesRoot(safeBytes(options.allocationPath))) return fail("UNCOMMITTED_ALLOCATION")
@@ -317,6 +317,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
   options.beforeRelease?.()
   const token = randomBytes(32).toString("hex")
   const child = fork(resolve(process.argv[1] ?? fail("ENTRY_PATH")), [options.childMode, "--request", requestPath], { execArgv: process.execArgv, stdio: ["ignore", "ignore", "ignore", "ipc"] })
+  options.onChildCreated?.()
   let entered = false, uncertain = false, childRssObservedBytes: number | null = null, childFailure: LeanChildFailureReceipt | LeanChildFailureReceiptV7 | null = null
   const reasons = new Set<LeanSupervisorReasonCode>()
   const observe = (reason: LeanSupervisorReasonCode) => { if (options.supervisorObservation === true) reasons.add(reason) }
@@ -387,6 +388,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
       child.kill("SIGKILL")
       await cleanup
     } else if (!entered && child.exitCode === null) child.kill("SIGKILL")
+    if (!entered && options.onPreEntryCleanup && child.pid && (child.exitCode !== null || child.signalCode !== null)) options.onPreEntryCleanup({ childPid: child.pid, exitCode: child.exitCode, signal: child.signalCode })
   }
 }
 export const leanBaselineMain = async (args: readonly string[]) => {

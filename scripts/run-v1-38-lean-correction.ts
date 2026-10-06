@@ -657,17 +657,17 @@ export const inspectLeanRetryPredecessorV8 = (route: LeanCorrectionRoute, atMs: 
   const roots: unknown[] = [pinned, extraPins, witness.root]
   for (let i = 1; i < n || route === "baseline" && i <= n; i++) {
     const priorMode = `v8-${i}` as LeanRetryMode, paths = leanCorrectionRoutePaths("diagnostic", priorMode)
-    const closed = authenticateLeanRetryClosureV8(priorMode), previous = openLeanLedger(paths.store), latest = readLeanTimeAccounting(previous)
-    if (latest.active || closed.readerCloseMs > atMs || closed.closureClass === "accepted" && (route !== "baseline" || i !== n) || route === "baseline" && i === n && closed.closureClass !== "accepted") return fail("DIAGNOSTIC_CUSTODY")
-    charged = readLeanLedger(previous).charged
+    const closed = authenticateLeanRetryClosureV8(priorMode)
+    if (existsSync(paths.store) && readLeanTimeAccounting(openLeanLedger(paths.store)).active || closed.readerCloseMs > atMs || closed.closureClass === "accepted" && (route !== "baseline" || i !== n) || route === "baseline" && i === n && closed.closureClass !== "accepted") return fail("DIAGNOSTIC_CUSTODY")
+    charged = closed.cumulativeCharged
     elapsed = Math.max(elapsed, closed.closedElapsedMs + atMs - closed.readerCloseMs)
-    identities.push(paths.store, paths.temp, paths.request, paths.allocation, leanRetrySetupPath(priorMode))
+    identities.push(...[paths.store, paths.temp, paths.request, paths.allocation, leanRetrySetupPath(priorMode)].filter(path => existsSync(path)))
     roots.push(closed.root, closed.timeBytesRoot)
   }
   for (const i of [1, 2, 3] as const) {
     const paths = leanCorrectionRoutePaths("baseline", `v8-${i}`)
-    if ((route !== "baseline" || i !== n) && (existsSync(paths.store) || existsSync(paths.allocation) || existsSync(join(paths.temp, "admission-run-start.json")))) return fail("SPENT_DESTINATION")
-    if (i > n) { const future = leanCorrectionRoutePaths("diagnostic", `v8-${i}`); if (existsSync(future.store) || existsSync(future.allocation) || existsSync(join(future.temp, "admission-run-start.json"))) return fail("SPENT_DESTINATION") }
+    if ((route !== "baseline" || i !== n) && (existsSync(paths.store) || existsSync(paths.allocation) || (existsSync(join(paths.temp, "admission-run-start.json")) || existsSync(join(paths.temp, "admission-prepare-start.json"))))) return fail("SPENT_DESTINATION")
+    if (i > n) { const future = leanCorrectionRoutePaths("diagnostic", `v8-${i}`); if (existsSync(future.store) || existsSync(future.allocation) || (existsSync(join(future.temp, "admission-run-start.json")) || existsSync(join(future.temp, "admission-prepare-start.json")))) return fail("SPENT_DESTINATION") }
   }
   const survivors = inventoryLeanSupervisorSurvivors([...new Set(identities)])
   const reserve = Math.max(0, old.allocation.predecessor.allocatedDiskBytes - old.allocation.predecessor.survivors.reduce((sum, s) => sum + s.allocatedBytes, 0))
@@ -764,10 +764,43 @@ const scope = (route: LeanCorrectionRoute, supervisor: LeanSupervisorMode = fals
   if (supervisor) for (const path of [leanCorrectionRoutePaths(route, supervisor).store, leanCorrectionRoutePaths(route, supervisor).request, leanCorrectionRoutePaths(route, supervisor).allocation]) if (realpathSync(dirname(resolve(path))) !== dirname(resolve(path))) return fail("ROUTE_ALIAS")
   if (process.env.TSX_DISABLE_CACHE !== "1" || process.env.NODE_DISABLE_COMPILE_CACHE !== "1" || ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"].some(k => process.env[k] !== undefined) || process.env.TMPDIR !== temp || !stat.isDirectory() || stat.isSymbolicLink() || (stat.mode & 0o777) !== 0o700 || stat.uid !== process.getuid?.() || realpathSync(temp) !== temp || execFileSync("sh", ["-c", "ulimit -c"], { encoding: "utf8", timeout: 1000, maxBuffer: 128 }).trim() !== "0") return fail("WRITABLE_SCOPE")
 }
+/** MAIN's finite pre-ledger/pre-entry failure, never a child terminal. The
+ * durable admission remains spent, including a zero-charge failure. */
+export const publishLeanRetryAdmissionFailureV8 = (mode: LeanRetryMode, admissionMode: "prepare" | "run", childSpawned: boolean, cleanup: { childPid: number; exitCode: number | null; signal: string | null } | null) => {
+  const paths = leanCorrectionRoutePaths("diagnostic", mode)
+  const start = readLeanCorrectionJson(join(paths.temp, `admission-${admissionMode}-start.json`)) as ReturnType<typeof beginLeanCorrectionAdmission>
+  const close = readLeanCorrectionJson(join(paths.temp, `admission-${admissionMode}-close.json`)) as ReturnType<typeof closeLeanCorrectionAdmission> & { attemptOrdinal: number; ledgerCloseMs: number }
+  const ledger = existsSync(paths.store) ? openLeanLedger(paths.store) : null
+  if (childSpawned ? !cleanup || cleanup.exitCode === null && cleanup.signal === null : cleanup !== null) return fail("ADMISSION_CUSTODY")
+  if (ledger && (readLeanTimeAccounting(ledger).active || readLeanLedger(ledger).charges.size !== 0 || ["entry.json", "child-terminal.json", "result.json", paths.check].some(name => existsSync(join(paths.store, name))))) return fail("ADMISSION_CUSTODY")
+  const bytesRoot = (path: string) => leanBytesRoot(readLeanCorrectionPrivateBytes(path, 4194304))
+  const body = { schemaVersion: "lean-retry-admission-failure-v8", authorAgent: "/root", authorizing: false, attemptOrdinal: leanRetryOrdinal(mode), admissionMode, startRoot: start.root, closeRoot: close.root, sourceRoot: leanCorrectionSourceManifest(mode).root, head: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim(), requestBytesRoot: existsSync(paths.request) ? bytesRoot(paths.request) : null, allocationRoot: ledger?.allocation.root ?? null, ledgerBytesRoot: ledger ? bytesRoot(join(paths.store, "ledger.ndjson")) : null, timeBytesRoot: ledger ? bytesRoot(join(paths.store, "time.ndjson")) : null, currentCharges: 0, cumulativeCharged: ledger ? readLeanLedger(ledger).charged : null, storeAbsent: ledger === null, childSpawned, cleanup, entryAbsent: true, terminalAbsent: true, resultAbsent: true, acceptedCheckAbsent: true }
+  const receipt = { ...body, root: labRoot(body.schemaVersion, body) }
+  publishLeanCorrection(join(paths.temp, "admission-failure-v8.json"), receipt)
+  return receipt
+}
+export const authenticateLeanRetryAdmissionFailureV8 = (mode: LeanRetryMode) => {
+  const paths = leanCorrectionRoutePaths("diagnostic", mode), value = readLeanCorrectionJson(join(paths.temp, "admission-failure-v8.json")) as ReturnType<typeof publishLeanRetryAdmissionFailureV8>
+  const { root: claimed, ...body } = value
+  if (!exactLabKeys(value, ["schemaVersion", "authorAgent", "authorizing", "attemptOrdinal", "admissionMode", "startRoot", "closeRoot", "sourceRoot", "head", "requestBytesRoot", "allocationRoot", "ledgerBytesRoot", "timeBytesRoot", "currentCharges", "cumulativeCharged", "storeAbsent", "childSpawned", "cleanup", "entryAbsent", "terminalAbsent", "resultAbsent", "acceptedCheckAbsent", "root"]) || claimed !== labRoot("lean-retry-admission-failure-v8", body) || value.schemaVersion !== "lean-retry-admission-failure-v8" || value.authorAgent !== "/root" || value.authorizing !== false || value.attemptOrdinal !== leanRetryOrdinal(mode) || !["prepare", "run"].includes(value.admissionMode) || !root(value.sourceRoot) || !/^[a-f0-9]{40}$/u.test(value.head) || value.currentCharges !== 0 || !value.entryAbsent || !value.terminalAbsent || !value.resultAbsent || !value.acceptedCheckAbsent) return fail("ADMISSION_CUSTODY")
+  if (value.childSpawned ? !value.cleanup || !exactLabKeys(value.cleanup, ["childPid", "exitCode", "signal"]) || !Number.isSafeInteger(value.cleanup.childPid) || value.cleanup.childPid <= 0 || value.cleanup.exitCode === null && value.cleanup.signal === null : value.cleanup !== null) return fail("ADMISSION_CUSTODY")
+  const start = readLeanCorrectionJson(join(paths.temp, `admission-${value.admissionMode}-start.json`)) as ReturnType<typeof beginLeanCorrectionAdmission>, close = readLeanCorrectionJson(join(paths.temp, `admission-${value.admissionMode}-close.json`)) as ReturnType<typeof closeLeanCorrectionAdmission> & { attemptOrdinal: number; ledgerCloseMs: number }
+  const { root: sr, ...sb } = start, { root: cr, ...cb } = close
+  if (!exactLabKeys(start, ["schemaVersion", "attemptOrdinal", "route", "mode", "parentPid", "wallStartMs", "monotonicStartNs", "root"]) || !exactLabKeys(close, ["schemaVersion", "attemptOrdinal", "startRoot", "route", "mode", "elapsedUpperBoundMs", "monotonicObservedNs", "wallObservedMs", "allocationRoot", "ledgerInterval", "importedMs", "ledgerCloseMs", "root"]) || start.schemaVersion !== "lean-correction-supervisor-admission-v8" || close.schemaVersion !== "lean-correction-supervisor-admission-close-v8") return fail("ADMISSION_CUSTODY")
+  if (sr !== value.startRoot || sr !== labRoot("lean-correction-supervisor-admission-v8", sb) || cr !== value.closeRoot || cr !== labRoot("lean-correction-supervisor-admission-close-v8", cb) || close.startRoot !== sr || start.attemptOrdinal !== leanRetryOrdinal(mode) || close.attemptOrdinal !== start.attemptOrdinal || start.mode !== value.admissionMode || close.mode !== start.mode || start.route !== "diagnostic" || close.route !== start.route || close.elapsedUpperBoundMs !== leanCorrectionAdmissionElapsed(start, { wallStartMs: close.wallObservedMs, monotonicStartNs: close.monotonicObservedNs }) || close.ledgerCloseMs < start.wallStartMs + close.elapsedUpperBoundMs) return fail("ADMISSION_CUSTODY")
+  if (existsSync(paths.store) === value.storeAbsent || ["entry.json", "child-terminal.json", "result.json", paths.check].some(name => existsSync(join(paths.store, name)))) return fail("ADMISSION_CUSTODY")
+  if (value.storeAbsent) { if (value.allocationRoot !== null || value.ledgerBytesRoot !== null || value.timeBytesRoot !== null || close.allocationRoot !== null || close.ledgerInterval !== null || value.cumulativeCharged !== null || value.childSpawned) return fail("ADMISSION_CUSTODY") }
+  else {
+    const ledger = openLeanLedger(paths.store), state = readLeanLedger(ledger), time = readLeanTimeAccounting(ledger)
+    if (state.charges.size || time.active || state.charged !== value.cumulativeCharged || ledger.allocation.root !== value.allocationRoot || close.allocationRoot !== value.allocationRoot || !close.ledgerInterval || !time.closed.has(close.ledgerInterval) || time.closes.get(close.ledgerInterval) !== close.ledgerCloseMs || value.ledgerBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(join(paths.store, "ledger.ndjson"), 4194304)) || value.timeBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(join(paths.store, "time.ndjson"), 4194304))) return fail("ADMISSION_CUSTODY")
+  }
+  if (value.requestBytesRoot !== (existsSync(paths.request) ? leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)) : null)) return fail("ADMISSION_CUSTODY")
+  return { ...value, admissionCloseMs: close.ledgerCloseMs }
+}
 export const prepareLeanCorrection = (path: string, route: LeanCorrectionRoute, supervisor: LeanSupervisorMode = false) => {
   const paths = leanCorrectionRoutePaths(route, supervisor)
   const carrier = beginLeanCorrectionAdmission(route, "prepare", resolve(paths.temp), processAdmissionClock(), supervisor)
-  let ledger: LeanExperimentLedger | null = null
+  let ledger: LeanExperimentLedger | null = null, completed = false
   try {
   scope(route, supervisor)
   if (supervisor && (existsSync(paths.store) || existsSync(paths.allocation))) return fail("SPENT_DESTINATION")
@@ -777,8 +810,9 @@ export const prepareLeanCorrection = (path: string, route: LeanCorrectionRoute, 
   assertLeanCorrectionAdmissionTime(predecessor.elapsedUpperBoundMs, carrier, admissionClock(), allocation)
   ledger = createLeanLedger(paths.store, allocation)
   publishLeanCorrection(paths.allocation, allocation, ledger)
+  completed = true
   return { issued: false, evidenceClass: "preparation_only", route, allocationRoot: allocation.root, plannedCells: allocation.slots.length, charged: 0 }
-  } finally { closeLeanCorrectionAdmission(carrier, ledger) }
+  } finally { closeLeanCorrectionAdmission(carrier, ledger); if (!completed && route === "diagnostic" && isLeanRetryMode(supervisor)) publishLeanRetryAdmissionFailureV8(supervisor, carrier.mode, false, null) }
 }
 const allocationFor = (path: string, route: LeanCorrectionRoute, supervisor: LeanSupervisorMode = false) => {
   const { request, reuse } = readLeanCorrectionRequest(path, route, supervisor), ledger = openLeanLedger(leanCorrectionRoutePaths(route, supervisor).store)
@@ -895,15 +929,17 @@ export const leanCorrectionMain = async (args: readonly string[]) => {
   if (command.mode.startsWith("verify-")) { if (!supervisor) scope(route); const { verifyLeanCorrectionRetained } = await import("./lib/v1-38-lean-correction-retained.js"); return verifyLeanCorrectionRetained(path, route, supervisor, supervisor ? () => scope(route, supervisor) : undefined) }
   const start = supervisor ? supervisorPostPreparationClock(paths.temp, supervisor) : processAdmissionClock()
   const carrier = beginLeanCorrectionAdmission(route, "run", resolve(paths.temp), start, supervisor)
-  let accountingLedger: LeanExperimentLedger | null = null
+  let accountingLedger: LeanExperimentLedger | null = null, completed = false, childSpawned = false, cleanup: { childPid: number; exitCode: number | null; signal: string | null } | null = null
   try {
   scope(route, supervisor)
   accountingLedger = openLeanLedger(paths.store)
   const { request, ledger, allocation } = allocationFor(path, route, supervisor)
   accountingLedger = ledger
   if (!same(allocation.predecessor, (supervisor ? inspectLeanSupervisorCorrectionPredecessor(route, (readLeanCorrectionJson(join(paths.temp, "admission-prepare-start.json")) as AdmissionClock).wallStartMs, supervisor) : inspectLeanCorrectionPredecessor(route, carrier.root)))) return fail("PREDECESSOR_DRIFT")
-  return await runLeanBoundedParent({ ledger, requestPath: path, allocationPath: paths.allocation, store: resolve(paths.store), sourceRoot: request.sourceRoot, manifestRoot: () => leanCorrectionSourceManifest(supervisor).root, childMode: leanCorrectionChildMode(route, supervisor), ...(supervisor ? { supervisorObservation: true as const } : {}), prospectiveStart: carrier, beforeRelease: () => { assertLeanCorrectionAdmissionTime(readLeanTimeAccounting(ledger).closedElapsedMs, carrier, admissionClock(), ledger.allocation) }, terminalReserveMs: LEAN_CORRECTION_RESERVE.cleanupMs + LEAN_CORRECTION_RESERVE.terminalMs + LEAN_CORRECTION_RESERVE.checkMs + LEAN_CORRECTION_RESERVE.replayMs })
-  } finally { closeLeanCorrectionAdmission(carrier, accountingLedger) }
+  const result = await runLeanBoundedParent({ ledger, requestPath: path, allocationPath: paths.allocation, store: resolve(paths.store), sourceRoot: request.sourceRoot, manifestRoot: () => leanCorrectionSourceManifest(supervisor).root, childMode: leanCorrectionChildMode(route, supervisor), ...(supervisor ? { supervisorObservation: true as const } : {}), ...(isLeanRetryMode(supervisor) ? { onChildCreated: () => { childSpawned = true }, onPreEntryCleanup: (value: { childPid: number; exitCode: number | null; signal: string | null }) => { cleanup = value } } : {}), prospectiveStart: carrier, beforeRelease: () => { assertLeanCorrectionAdmissionTime(readLeanTimeAccounting(ledger).closedElapsedMs, carrier, admissionClock(), ledger.allocation) }, terminalReserveMs: LEAN_CORRECTION_RESERVE.cleanupMs + LEAN_CORRECTION_RESERVE.terminalMs + LEAN_CORRECTION_RESERVE.checkMs + LEAN_CORRECTION_RESERVE.replayMs })
+  completed = true
+  return result
+  } finally { closeLeanCorrectionAdmission(carrier, accountingLedger); if (!completed && route === "diagnostic" && isLeanRetryMode(supervisor) && !existsSync(join(paths.store, "entry.json"))) publishLeanRetryAdmissionFailureV8(supervisor, carrier.mode, childSpawned, cleanup) }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const args = process.argv.slice(2), supervisor: LeanSupervisorMode = /^child-supervisor-(diagnostic|baseline)-v8-[123]$/u.test(args[0] ?? "") ? args[0]!.slice(-4) as LeanRetryMode : /^child-supervisor-(diagnostic|baseline)-v[234567]$/u.test(args[0] ?? "") ? args[0]!.endsWith("-v7") ? "v7" : args[0]!.endsWith("-v6") ? "v6" : args[0]!.endsWith("-v5") ? "v5" : args[0]!.endsWith("-v4") ? "v4" : args[0]!.endsWith("-v3") ? "v3" : true : false, childRoute = supervisor ? (args[0]!.includes("-diagnostic-") ? "diagnostic" : "baseline") : args[0] === "child-diagnostic" ? "diagnostic" : args[0] === "child-baseline" ? "baseline" : null
