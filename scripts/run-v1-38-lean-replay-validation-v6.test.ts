@@ -32,7 +32,7 @@ vi.mock("node:fs", async original => {
     if (typeof path === "number" && safety.descriptors.has(path)) return
     if (typeof path === "string") {
       const absolute = resolve(path)
-      if (absolute === source || [...safety.directories].some(dir => absolute === dir || absolute.startsWith(dir + "/"))) return
+      if (absolute === source || absolute.startsWith(resolve("scripts") + "/") || absolute.startsWith(resolve("packages") + "/") || [...safety.directories].some(dir => absolute === dir || absolute.startsWith(dir + "/"))) return
     }
     safety.deny()
   }
@@ -235,6 +235,17 @@ const observeFullReplayText = (texts: readonly string[]) => {
   return hits
 }
 describe("wiring", () => {
+  it("parses exact v6 commands, disallows old paths and binds v6 request intent", async () => {
+    const correction = await import("./run-v1-38-lean-correction.js")
+    for (const route of ["diagnostic", "baseline"] as const) for (const op of ["prepare", "run", "verify"]) {
+      const p = lean.leanCorrectionRoutePaths(route, "v6")
+      expect(correction.parseLeanCorrectionCommand([`${op}-supervisor-${route}-v6`, "--request", p.request])).toMatchObject({ supervisor: "v6", route })
+      expect(() => correction.parseLeanCorrectionCommand([`${op}-supervisor-${route}-v6`, "--request", lean.leanCorrectionRoutePaths(route, "v5").request])).toThrow()
+    }
+    const input = { route: "diagnostic" as const, seed: "synthetic", sourceRoot: syntheticRoot("source"), coldRoot: syntheticRoot("cold"), planRoot: lean.LEAN_REPLAY_V6_SUPPLEMENT_ROOT }
+    expect(correction.deriveLeanSupervisorCorrectionRequestRoots(input, lean.LEAN_REPLAY_V6_APPROVAL_ROOT, "v6")).not.toEqual(correction.deriveLeanSupervisorCorrectionRequestRoots(input, lean.LEAN_STARTUP_APPROVAL_ROOT, "v5"))
+    expect(readFileSync("scripts/run-v1-38-lean-correction.sh", "utf8")).toContain("prepare-supervisor-diagnostic-v6")
+  })
   it("isolates all v6 paths and keeps the exact finite zero-charge predecessor without a stopped predicate", () => {
     expect(lean.leanSupervisorVersion("v6")).toBe(6)
     for (const route of ["diagnostic", "baseline"] as const) {
