@@ -29,7 +29,7 @@ vi.mock("node:fs", async original => {
   const { resolve } = await import("node:path")
   const source = resolve("packages/strategy-lab/src/league/lean-experiment.ts")
   const permit = (path: unknown): void => {
-    if (path instanceof URL && path.protocol === "file:" && decodeURIComponent(path.pathname).startsWith(resolve("scripts") + "/")) return
+    if (path instanceof URL && path.protocol === "file:" && ["scripts", "packages"].some(dir => decodeURIComponent(path.pathname).startsWith(resolve(dir) + "/"))) return
     if (typeof path === "number" && safety.descriptors.has(path)) return
     if (typeof path === "string") {
       const absolute = resolve(path)
@@ -236,6 +236,40 @@ const observeFullReplayText = (texts: readonly string[]) => {
   return hits
 }
 describe("wiring", () => {
+  it.each(["diagnostic", "baseline"] as const)("publishes and reads %s v6 snapshots through real consumers under synthetic capacity", async route => {
+    const publisher = await import("./lib/v1-38-lean-baseline-source.js")
+    const reuseIO = await import("./lib/v1-38-lean-baseline-reuse.js")
+    const emitter = await import("../packages/strategy-lab/src/planner/emit.js")
+    const a = allocation(6, route), fixture = await syntheticLedger(a, [])
+    const snapshot = publisher.buildLeanBaselineSource({ role: "final-response", source: emitter.buildPlannerCandidate().source, coldRoot: a.coldRoot!, implementationRoot: a.sourceRoot })
+    vi.spyOn(lean, "assertLeanPublicationCapacity").mockImplementation(() => {})
+    vi.spyOn(lean, "readLeanChildEntry").mockReturnValue({ head: "a".repeat(40) } as never)
+    const reuse = { grant: { root: a.reuseGrantRoot, coldRoot: a.coldRoot, seed: a.seed }, sources: [snapshot] } as never
+    vi.spyOn(reuseIO, "validateLeanColdReuse").mockImplementation((value, sourceRoot) => { if (value !== reuse || sourceRoot !== a.sourceRoot) throw new Error("SYNTHETIC_REUSE"); return reuse })
+    if (route === "baseline") publisher.publishLeanBaselineSource(fixture.ledger, snapshot)
+    else publisher.publishLeanReusedBaselineSource(fixture.ledger, snapshot, reuse)
+    expect(readFileSync(join(fixture.ledger.directory, "source-final-response.json"))).toEqual(Buffer.from(lean.leanCanonicalBytes(snapshot)))
+    expect(publisher.readLeanBaselineSource(fixture.ledger.directory, snapshot.role, { allocation: a, head: "a".repeat(40) })).toEqual(snapshot)
+    expect(() => publisher.readLeanBaselineSource(fixture.ledger.directory, snapshot.role, { allocation: a, head: "b".repeat(40) })).toThrow()
+    const proof = publisher.leanBaselineSourcePublicationBindingV6(a, "b".repeat(40), snapshot.root, snapshot.sourceRoot)
+    writeFileSync(join(fixture.ledger.directory, "publication-final-response-v6.json"), lean.leanCanonicalBytes(proof))
+    expect(() => publisher.readLeanBaselineSource(fixture.ledger.directory, snapshot.role, { allocation: a, head: "a".repeat(40) })).toThrow()
+  })
+  it("keeps generic planner/factory constructors unable to acquire startup scalar authority", async () => {
+    const factory = await import("./lib/v1-38-factory-supervised-runtime.js"), planner = await import("./lib/v1-38-planner-supervised-runtime.js")
+    for (const constructor of [factory.createFactorySupervisedRuntime, planner.createPlannerSupervisedRuntime]) expect(() => constructor({ startupMs: 2500 } as never)).toThrow()
+    expect(readFileSync("scripts/lib/v1-38-lean-baseline-pipeline.ts", "utf8")).toContain("freezeSource")
+  })
+  it("authenticates current v6 setup custody and charges every current-turn millisecond", async () => {
+    const correction = await import("./run-v1-38-lean-correction.js")
+    const body = { schemaVersion: "lean-replay-setup-witness-v6", approvalRoot: lean.LEAN_REPLAY_V6_APPROVAL_ROOT, supplementRoot: lean.LEAN_REPLAY_V6_SUPPLEMENT_ROOT, policyRoot: lean.LEAN_STARTUP_POLICY_V5.root, priorElapsedMs: lean.LEAN_REPLAY_V6_CARRY.priorElapsedMs, charged: 24, consumedTimeBytesRoot: lean.LEAN_REPLAY_V6_CARRY.timeBytesRoot, segments: [{ startMs: lean.LEAN_REPLAY_V6_CARRY.startedAtMs, closeMs: null }] }
+    const witness = { ...body, root: labRoot(body.schemaVersion, body) }
+    expect(correction.leanReplayCarryElapsedV6(witness, body.segments[0]!.startMs + 1234)).toBe(36_152_766)
+    for (const key of ["approvalRoot", "supplementRoot", "policyRoot", "priorElapsedMs", "charged", "consumedTimeBytesRoot"] as const) {
+      const mutated = { ...body, [key]: syntheticRoot("foreign") }
+      expect(() => correction.validateLeanReplaySetupWitnessV6({ ...mutated, root: labRoot(body.schemaVersion, mutated) })).toThrow()
+    }
+  })
   it("joins a v6 reader to the conservative effective close, not raw rounded wall time", async () => {
     const retained = await import("./lib/v1-38-lean-correction-retained.js")
     const startBody = { schemaVersion: "lean-correction-supervisor-admission-v6", route: "diagnostic", mode: "run", parentPid: 1, wallStartMs: 1000, monotonicStartNs: "1000000" }

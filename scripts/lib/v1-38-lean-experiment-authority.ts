@@ -1,6 +1,6 @@
 /** New compact-route capability; never a legacy full-league receipt. */
 import { labRoot, freezeLabValue, LAB_ADMITTED_ROOTS, exactLabKeys, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
-import { readLeanLedger, type LeanExperimentLedger, type LeanCharge } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { readLeanLedger, readLeanChildEntry, type LeanExperimentLedger, type LeanCharge } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import type { ProspectiveLeagueLifetimeProviderBinding } from "./v1-38-league-prospective-lifetime.js"
 import { prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { readCandidateClosure, type FactoryCandidateClosure } from "../../packages/strategy-lab/src/league/connected-runner.js"
@@ -106,7 +106,7 @@ const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge
   const expectedRole = binding.seat === "bottom" ? pair.bottomRole : pair.topRole
   const expectedRoot = binding.seat === "bottom" ? pair.bottomSourceRoot : pair.topSourceRoot
   const expectedSnapshot = binding.seat === "bottom" ? pair.bottomSnapshotRoot : pair.topSnapshotRoot
-  const source = readLeanBaselineSource(ledger.directory, expectedRole)
+  const source = readLeanBaselineSource(ledger.directory, expectedRole, leanSupervisorAllocationMode(ledger.allocation) === "v6" ? { allocation: ledger.allocation, head: readLeanChildEntry(ledger).head } : undefined)
   if (source.sourceRoot !== expectedRoot || source.root !== expectedSnapshot || source.root !== snapshot.root || source.coldRoot !== allocation.coldRoot || (source.implementationRoot !== allocation.sourceRoot && (!reuse || !reuse.sources.some(s => s.root === source.root && s.role === source.role)))) return fail()
   const sourceBytes = new TextEncoder().encode(source.source)
   const admission = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet: source.packet, proposal: source.proposal, sourceBytes }), validation: source.validation })
