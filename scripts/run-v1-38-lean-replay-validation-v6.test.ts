@@ -29,6 +29,7 @@ vi.mock("node:fs", async original => {
   const { resolve } = await import("node:path")
   const source = resolve("packages/strategy-lab/src/league/lean-experiment.ts")
   const permit = (path: unknown): void => {
+    if (path instanceof URL && path.protocol === "file:" && decodeURIComponent(path.pathname).startsWith(resolve("scripts") + "/")) return
     if (typeof path === "number" && safety.descriptors.has(path)) return
     if (typeof path === "string") {
       const absolute = resolve(path)

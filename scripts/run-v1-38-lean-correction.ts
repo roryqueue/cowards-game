@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process"
 import { dirname, join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { exactLabKeys, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
-import { leanCapsForAllocation, type AnyLeanAllocation, LEAN_STARTUP_POLICY_V5, LEAN_STARTUP_APPROVAL_ROOT, LEAN_STARTUP_SUPPLEMENT_ROOT, LEAN_STARTUP_V5_SETUP_PATH, LEAN_CAPS, LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES, leanCorrectionRoutePaths, leanSupervisorAllocationMode, leanSupervisorVersion, type LeanSupervisorMode, createLeanSupervisorCorrectionAllocation, LEAN_EXTERNAL_SCRATCH_RESERVE, LEAN_BASELINE_STORE, LEAN_BASELINE_WRITABLE_PATHS, createLeanCorrectionAllocation, createLeanLedger, openLeanLedger, readLeanLedger, readLeanTimeAccounting, readLeanChildEntry, readLeanChildTerminal, beginLeanInterval, closeLeanInterval, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, stopLeanLedger, verifyLeanEvidence, currentLeanElapsedMs, cumulativeLeanPhysicalBytes, measureLeanPhysicalBytes, inspectLeanClosedV7Predecessor, leanBytesRoot, leanCanonicalBytes, writeLeanAll, assertLeanPublicationCapacity, type LeanCorrectionPredecessor, type LeanCorrectionAllocation, type LeanExperimentLedger } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { leanCapsForAllocation, type AnyLeanAllocation, LEAN_REPLAY_V6_APPROVAL_ROOT, LEAN_REPLAY_V6_SUPPLEMENT_ROOT, LEAN_REPLAY_V6_SETUP_PATH, LEAN_REPLAY_V6_CARRY, validateLeanReplayV6PredecessorCustody, LEAN_STARTUP_POLICY_V5, LEAN_STARTUP_APPROVAL_ROOT, LEAN_STARTUP_SUPPLEMENT_ROOT, LEAN_STARTUP_V5_SETUP_PATH, LEAN_CAPS, LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES, leanCorrectionRoutePaths, leanSupervisorAllocationMode, leanSupervisorVersion, type LeanSupervisorMode, createLeanSupervisorCorrectionAllocation, LEAN_EXTERNAL_SCRATCH_RESERVE, LEAN_BASELINE_STORE, LEAN_BASELINE_WRITABLE_PATHS, createLeanCorrectionAllocation, createLeanLedger, openLeanLedger, readLeanLedger, readLeanTimeAccounting, readLeanChildEntry, readLeanChildTerminal, beginLeanInterval, closeLeanInterval, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, stopLeanLedger, verifyLeanEvidence, currentLeanElapsedMs, cumulativeLeanPhysicalBytes, measureLeanPhysicalBytes, inspectLeanClosedV7Predecessor, leanBytesRoot, leanCanonicalBytes, writeLeanAll, assertLeanPublicationCapacity, type LeanCorrectionPredecessor, type LeanCorrectionAllocation, type LeanExperimentLedger } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanBaselineSourceManifest, deriveLeanBaselineRequestRoots, deriveLeanBaselineCandidateRoots, leanBaselinePair, runLeanBoundedParent, assertLeanBaselinePrefixCapacity, admitsLeanBaselineReviewAgents } from "./run-v1-38-lean-baseline.js"
 import { createLeanParentObservationGuard, admitLeanChildRelease, assertLeanEntryBinding } from "./run-v1-38-lean-experiment.js"
 import { observeLeagueAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
@@ -13,7 +13,7 @@ import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY, type LeanColdReuse 
 import { executeLeanReusedCurrentPipeline } from "./lib/v1-38-lean-baseline-pipeline.js"
 import { publishLeanBaselineSource, publishLeanReusedBaselineSource } from "./lib/v1-38-lean-baseline-source.js"
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
-import { validateLeanPrivateCorrectionOrigin, buildLeanStartupWorkerHarnessV5, buildLeanContainerBrokerSourceV5, type LeanPrivateCorrectionOrigin } from "./lib/v1-38-lean-container-match-session.js"
+import { validateLeanPrivateCorrectionOrigin, buildLeanStartupWorkerHarnessV5, buildLeanContainerBrokerSourceV5, buildLeanContainerBrokerSourceV6, type LeanPrivateCorrectionOrigin } from "./lib/v1-38-lean-container-match-session.js"
 import { resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
 import { authenticateLeanSupervisorDiagnosticCheck } from "./lib/v1-38-lean-correction-retained.js"
 
@@ -31,7 +31,9 @@ export const LEAN_REPAIRED_READER_PLAN = ".planning/phases/265-serious-current-r
 export const LEAN_REPAIRED_READER_SETUP_WITNESS = ".strategy-lab/lean-correction-supervisor-setup-20261005-v4.json"
 export const LEAN_STARTUP_V5_DECISION = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-STARTUP-APPROVAL-20261005.md"
 export const LEAN_STARTUP_V5_PLAN = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-STARTUP-PLAN-v1.md"
-const supervisorDocuments = (mode: LeanSupervisorMode) => mode === "v5" ? { decision: LEAN_STARTUP_V5_DECISION, plan: LEAN_STARTUP_V5_PLAN, setup: LEAN_STARTUP_V5_SETUP_PATH, custody: LEAN_STARTUP_V5_DECISION } : mode === "v4" ? { decision: LEAN_REPAIRED_READER_DECISION, plan: LEAN_REPAIRED_READER_PLAN, setup: LEAN_REPAIRED_READER_SETUP_WITNESS, custody: LEAN_REPAIRED_READER_DECISION } : mode === "v3" ? { decision: LEAN_FRESH_SUPERVISOR_DECISION, plan: LEAN_FRESH_SUPERVISOR_PLAN, setup: LEAN_FRESH_SUPERVISOR_SETUP_WITNESS, custody: LEAN_FRESH_SUPERVISOR_SETUP_CUSTODY } : { decision: LEAN_SUPERVISOR_DECISION, plan: LEAN_SUPERVISOR_PLAN, setup: LEAN_SUPERVISOR_SETUP_WITNESS, custody: LEAN_SUPERVISOR_SETUP_CUSTODY }
+export const LEAN_REPLAY_V6_DECISION = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-REPLAY-REPAIR-APPROVAL-20261006.md"
+export const LEAN_REPLAY_V6_PLAN = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-REPLAY-V6-PLAN-v1.md"
+const supervisorDocuments = (mode: LeanSupervisorMode) => mode === "v6" ? { decision: LEAN_REPLAY_V6_DECISION, plan: LEAN_REPLAY_V6_PLAN, setup: LEAN_REPLAY_V6_SETUP_PATH, custody: LEAN_REPLAY_V6_DECISION } : mode === "v5" ? { decision: LEAN_STARTUP_V5_DECISION, plan: LEAN_STARTUP_V5_PLAN, setup: LEAN_STARTUP_V5_SETUP_PATH, custody: LEAN_STARTUP_V5_DECISION } : mode === "v4" ? { decision: LEAN_REPAIRED_READER_DECISION, plan: LEAN_REPAIRED_READER_PLAN, setup: LEAN_REPAIRED_READER_SETUP_WITNESS, custody: LEAN_REPAIRED_READER_DECISION } : mode === "v3" ? { decision: LEAN_FRESH_SUPERVISOR_DECISION, plan: LEAN_FRESH_SUPERVISOR_PLAN, setup: LEAN_FRESH_SUPERVISOR_SETUP_WITNESS, custody: LEAN_FRESH_SUPERVISOR_SETUP_CUSTODY } : { decision: LEAN_SUPERVISOR_DECISION, plan: LEAN_SUPERVISOR_PLAN, setup: LEAN_SUPERVISOR_SETUP_WITNESS, custody: LEAN_SUPERVISOR_SETUP_CUSTODY }
 export const admitsLeanSupervisorReviewAgents = (author: unknown, reviewer: unknown) => typeof author === "string" && typeof reviewer === "string" && /^\/root(?:\/[a-z0-9_]+)*$/u.test(author) && /^\/root(?:\/[a-z0-9_]+)*$/u.test(reviewer) && author !== reviewer
 export type LeanCorrectionRoute = keyof typeof LEAN_CORRECTION_ROUTES
 // Only errors created by these trusted static guards can cross the private
@@ -48,7 +50,7 @@ export const leanCorrectionTrustedGuardError = (code: string): TypeError => {
 }
 export const leanCorrectionCliFailure = (args: readonly string[], error: unknown): string => {
   const withheld = "LEAN_CORRECTION_FAILED_DETAILS_WITHHELD\n"
-  const command = args[0], supervisor = command?.endsWith("-v5") ? "v5" : command?.endsWith("-v4") ? "v4" : "v3", route = command === `verify-supervisor-diagnostic-${supervisor}` ? "diagnostic" : command === `verify-supervisor-baseline-${supervisor}` ? "baseline" : null
+  const command = args[0], supervisor = command?.endsWith("-v6") ? "v6" : command?.endsWith("-v5") ? "v5" : command?.endsWith("-v4") ? "v4" : "v3", route = command === `verify-supervisor-diagnostic-${supervisor}` ? "diagnostic" : command === `verify-supervisor-baseline-${supervisor}` ? "baseline" : null
   if (!route || args.length !== 3 || args[1] !== "--request" || args[2] !== leanCorrectionRoutePaths(route, supervisor).request || typeof error !== "object" || error === null) return withheld
   const code = trustedGuardErrors.get(error)
   if (!code || Object.getOwnPropertyDescriptor(error, "message")?.value !== code) return withheld
@@ -92,7 +94,7 @@ export const assertLeanCorrectionAdmissionTime = (priorMs: number, start: Admiss
 }
 export const closeLeanCorrectionAdmission = (carrier: ReturnType<typeof beginLeanCorrectionAdmission>, ledger: LeanExperimentLedger | null, now = admissionClock()) => {
   const elapsedUpperBoundMs = leanCorrectionAdmissionElapsed(carrier, now)
-  if (carrier.schemaVersion === "lean-correction-supervisor-admission-v5") {
+  if (carrier.schemaVersion === "lean-correction-supervisor-admission-v5" || carrier.schemaVersion === "lean-correction-supervisor-admission-v6") {
     // Raw clock observations authenticate elapsed; the effective ledger boundary
     // may lead wall time after conservative monotonic rounding. Publish it only
     // after importing/closing, so receipt and journal cannot disagree.
@@ -110,7 +112,7 @@ export const closeLeanCorrectionAdmission = (carrier: ReturnType<typeof beginLea
       const closed = closeLeanInterval(ledger, ledgerInterval, ledgerCloseMs)
       ledgerCloseMs = closed.closes.get(ledgerInterval)!
     }
-    const body = { schemaVersion: "lean-correction-supervisor-admission-close-v5", startRoot: carrier.root, route: carrier.route, mode: carrier.mode, elapsedUpperBoundMs, monotonicObservedNs: now.monotonicStartNs, wallObservedMs: now.wallStartMs, allocationRoot: ledger?.allocation.root ?? null, ledgerInterval, importedMs, ledgerCloseMs }
+    const body = { schemaVersion: carrier.schemaVersion === "lean-correction-supervisor-admission-v6" ? "lean-correction-supervisor-admission-close-v6" : "lean-correction-supervisor-admission-close-v5", startRoot: carrier.root, route: carrier.route, mode: carrier.mode, elapsedUpperBoundMs, monotonicObservedNs: now.monotonicStartNs, wallObservedMs: now.wallStartMs, allocationRoot: ledger?.allocation.root ?? null, ledgerInterval, importedMs, ledgerCloseMs }
     const closed = { ...body, root: labRoot(body.schemaVersion, body) }
     publishLeanCorrection(join(carrier.directory, `admission-${carrier.mode}-close.json`), closed)
     return closed
@@ -152,8 +154,9 @@ export const leanCorrectionSourceManifest = (supervisor: LeanSupervisorMode = fa
   if (supervisor === "v3" || supervisor === "v4" || supervisor === "v5") for (const path of ["scripts/lib/v1-38-lean-baseline-source.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-experiment-authority.ts", "scripts/lib/v1-38-lean-baseline-authority.test.ts"]) entries.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
   if (supervisor === "v4") for (const path of ["scripts/run-v1-38-lean-fresh-reader.test.ts", "scripts/run-v1-38-lean-correction-bytes.test.ts", "scripts/run-v1-38-lean-baseline.sh"]) entries.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
   if (supervisor === "v5") for (const path of ["scripts/run-v1-38-lean-startup-v5.test.ts", "scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-lean-baseline-match.ts"]) entries.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
+  if (supervisor === "v6") for (const path of [LEAN_REPLAY_V6_DECISION, LEAN_REPLAY_V6_PLAN, ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-REPLAY-V6-POLICY-v1.json", "scripts/run-v1-38-lean-replay-validation-v6.test.ts", "scripts/run-v1-38-lean-replay-validation-v5.test.ts", "scripts/lib/v1-38-lean-baseline-source.ts", "scripts/lib/v1-38-lean-experiment-authority.ts", "scripts/lib/v1-38-planner-supervised-runtime.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-lean-baseline-match.ts", "scripts/lib/v1-38-lean-startup-supervisor.mjs", "scripts/run-v1-38-lean-experiment.ts"]) entries.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
   const sorted = [...entries.values()].sort((a, b) => a.path.localeCompare(b.path))
-  return { entries: sorted, root: labRoot(supervisor ? `lean-correction-supervisor-reviewed-source-v${leanSupervisorVersion(supervisor)}` : "lean-correction-reviewed-source-v1", supervisor === "v5" ? { entries: sorted, policyRoot: LEAN_STARTUP_POLICY_V5.root, supplementRoot: LEAN_STARTUP_SUPPLEMENT_ROOT, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())), brokerRoot: leanBytesRoot(Buffer.from(buildLeanContainerBrokerSourceV5())) } : sorted) }
+  return { entries: sorted, root: labRoot(supervisor ? `lean-correction-supervisor-reviewed-source-v${leanSupervisorVersion(supervisor)}` : "lean-correction-reviewed-source-v1", supervisor === "v6" ? { entries: sorted, policyRoot: LEAN_STARTUP_POLICY_V5.root, supplementRoot: LEAN_REPLAY_V6_SUPPLEMENT_ROOT, approvalRoot: LEAN_REPLAY_V6_APPROVAL_ROOT, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())), brokerRoot: leanBytesRoot(Buffer.from(buildLeanContainerBrokerSourceV6())) } : supervisor === "v5" ? { entries: sorted, policyRoot: LEAN_STARTUP_POLICY_V5.root, supplementRoot: LEAN_STARTUP_SUPPLEMENT_ROOT, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())), brokerRoot: leanBytesRoot(Buffer.from(buildLeanContainerBrokerSourceV5())) } : sorted) }
 }
 /** Bounded owner-only descriptor read; no symbolic links, aliases or custody drift. */
 export const readLeanCorrectionPrivateBytes = (path: string, limit = 262144): Uint8Array => {
@@ -183,9 +186,9 @@ export const publishLeanCorrection = (path: string, value: unknown, ledger?: Lea
 }
 export const parseLeanCorrectionCommand = (args: readonly string[]) => {
   const mode = args[0]
-  if (mode && /^(prepare|run|verify)-supervisor-(diagnostic|baseline)-v[2345]$/u.test(mode)) {
+  if (mode && /^(prepare|run|verify)-supervisor-(diagnostic|baseline)-v[23456]$/u.test(mode)) {
     const route: LeanCorrectionRoute = mode.includes("-diagnostic-") ? "diagnostic" : "baseline"
-    const supervisor = mode.endsWith("-v5") ? "v5" as const : mode.endsWith("-v4") ? "v4" as const : mode.endsWith("-v3") ? "v3" as const : true
+    const supervisor = mode.endsWith("-v6") ? "v6" as const : mode.endsWith("-v5") ? "v5" as const : mode.endsWith("-v4") ? "v4" as const : mode.endsWith("-v3") ? "v3" as const : true
     if (args.length !== 3 || args[1] !== "--request" || args[2] !== leanCorrectionRoutePaths(route, supervisor).request) return fail("ARGUMENTS")
     return { mode, route, request: args[2]!, supervisor }
   }
@@ -212,7 +215,7 @@ export const validateLeanCorrectionDiagnosis = (value: unknown, checkRoot: LabRo
 }
 export interface LeanCorrectionRequest {
   startupPolicyRoot?: LabRoot; authorizationPath?: string; authorizationRoot?: LabRoot
-  schemaVersion: "lean-correction-supervisor-request-v5" | "lean-correction-supervisor-request-v4" | "lean-correction-request-v1" | "lean-correction-supervisor-request-v2" | "lean-correction-supervisor-request-v3"; route: LeanCorrectionRoute; sourceRoot: LabRoot; planRoot: LabRoot; amendmentRoot: LabRoot
+  schemaVersion: "lean-correction-supervisor-request-v6" | "lean-correction-supervisor-request-v5" | "lean-correction-supervisor-request-v4" | "lean-correction-request-v1" | "lean-correction-supervisor-request-v2" | "lean-correction-supervisor-request-v3"; route: LeanCorrectionRoute; sourceRoot: LabRoot; planRoot: LabRoot; amendmentRoot: LabRoot
   reviewPath: string; reviewRoot: LabRoot; dataReviewPath: string; dataReviewRoot: LabRoot; coldRoot: LabRoot; seed: string; reuseGrantRoot: LabRoot
   candidateRoots: readonly LabRoot[]; requestRoots: readonly LabRoot[]; diagnosis: LeanCorrectionDiagnosis | null
   supervisorDecisionRoot?: LabRoot; acceptedCheckRoot?: LabRoot | null; setupAccountingPath?: string; setupAccountingRoot?: LabRoot
@@ -230,8 +233,8 @@ const readReview = (path: string, expected: LabRoot, source: LabRoot, diagnosisR
 }
 export const leanCorrectionRequestDataRoot = (request: LeanCorrectionRequest): LabRoot => {
   const { dataReviewPath: _path, dataReviewRoot: _root, ...raw } = request
-  const body = request.schemaVersion === "lean-correction-supervisor-request-v5" ? Object.fromEntries(Object.entries(raw).filter(([key]) => key !== "authorizationRoot")) : raw
-  return labRoot(request.schemaVersion === "lean-correction-supervisor-request-v5" ? "lean-correction-supervisor-request-data-v5" : request.schemaVersion === "lean-correction-supervisor-request-v4" ? "lean-correction-supervisor-request-data-v4" : request.schemaVersion === "lean-correction-supervisor-request-v3" ? "lean-correction-supervisor-request-data-v3" : request.schemaVersion === "lean-correction-supervisor-request-v2" ? "lean-correction-supervisor-request-data-v2" : "lean-correction-request-data-v1", body)
+  const body = (request.schemaVersion === "lean-correction-supervisor-request-v5" || request.schemaVersion === "lean-correction-supervisor-request-v6") ? Object.fromEntries(Object.entries(raw).filter(([key]) => key !== "authorizationRoot")) : raw
+  return labRoot(request.schemaVersion === "lean-correction-supervisor-request-v6" ? "lean-correction-supervisor-request-data-v6" : request.schemaVersion === "lean-correction-supervisor-request-v5" ? "lean-correction-supervisor-request-data-v5" : request.schemaVersion === "lean-correction-supervisor-request-v4" ? "lean-correction-supervisor-request-data-v4" : request.schemaVersion === "lean-correction-supervisor-request-v3" ? "lean-correction-supervisor-request-data-v3" : request.schemaVersion === "lean-correction-supervisor-request-v2" ? "lean-correction-supervisor-request-data-v2" : "lean-correction-request-data-v1", body)
 }
 export const deriveLeanCorrectionRequestRoots = (input: { route: LeanCorrectionRoute; seed: string; coldRoot: LabRoot; planRoot: LabRoot; sourceRoot: LabRoot }): readonly LabRoot[] => {
   if (!exactLabKeys(input, ["route", "seed", "coldRoot", "planRoot", "sourceRoot"]) || !["diagnostic", "baseline"].includes(input.route)) return fail("REQUEST_ROOTS")
@@ -260,11 +263,11 @@ export const readLeanCorrectionRequest = (path: string, route: LeanCorrectionRou
   readReview(request.dataReviewPath, request.dataReviewRoot, request.sourceRoot, request.diagnosis?.root ?? null, leanCorrectionRequestDataRoot(request))
   return { request, reuse }
 }
-export const deriveLeanSupervisorCorrectionRequestRoots = (input: Parameters<typeof deriveLeanCorrectionRequestRoots>[0], supervisorDecisionRoot: LabRoot, supervisor: true | "v3" | "v4" | "v5" = true) => {
+export const deriveLeanSupervisorCorrectionRequestRoots = (input: Parameters<typeof deriveLeanCorrectionRequestRoots>[0], supervisorDecisionRoot: LabRoot, supervisor: true | "v3" | "v4" | "v5" | "v6" = true) => {
   if (!root(supervisorDecisionRoot)) return fail("SUPERVISOR_DECISION")
   return deriveLeanCorrectionRequestRoots(input).map((intentRoot, ordinal) => labRoot(`lean-correction-supervisor-request-slot-v${leanSupervisorVersion(supervisor)}`, { intentRoot, ordinal, supervisorDecisionRoot }))
 }
-export const readLeanSupervisorCorrectionRequest = (path: string, route: LeanCorrectionRoute, supervisor: true | "v3" | "v4" | "v5" = true): { request: LeanCorrectionRequest; reuse: LeanColdReuse } => {
+export const readLeanSupervisorCorrectionRequest = (path: string, route: LeanCorrectionRoute, supervisor: true | "v3" | "v4" | "v5" | "v6" = true): { request: LeanCorrectionRequest; reuse: LeanColdReuse } => {
   const documents = supervisorDocuments(supervisor)
   if (path !== leanCorrectionRoutePaths(route, supervisor).request) return fail("REQUEST_PATH")
   const request = readLeanCorrectionJson(path) as LeanCorrectionRequest
@@ -276,7 +279,14 @@ export const readLeanSupervisorCorrectionRequest = (path: string, route: LeanCor
     const { root: claimed, ...body } = authorization
     if (claimed !== labRoot("lean-startup-execution-authorization-v5", body) || request.authorizationRoot !== leanBytesRoot(leanCanonicalBytes(authorization))) return fail("SUPERVISOR_REQUEST")
   }
-  if (!exactLabKeys(request, ["schemaVersion", "route", "sourceRoot", "planRoot", "amendmentRoot", "reviewPath", "reviewRoot", "dataReviewPath", "dataReviewRoot", "coldRoot", "seed", "reuseGrantRoot", "candidateRoots", "requestRoots", "diagnosis", "supervisorDecisionRoot", "acceptedCheckRoot", "setupAccountingPath", "setupAccountingRoot", ...(supervisor === "v5" ? ["startupPolicyRoot", "authorizationPath", "authorizationRoot"] : [])]) || request.schemaVersion !== `lean-correction-supervisor-request-v${leanSupervisorVersion(supervisor)}` || request.route !== route || request.diagnosis !== null || request.sourceRoot !== leanCorrectionSourceManifest(supervisor).root || request.planRoot !== leanBytesRoot(readFileSync(documents.plan)) || request.supervisorDecisionRoot !== leanBytesRoot(decision) || supervisor !== "v5" && (!/^approved: true$/mu.test(decision.toString("utf8")) || !/^execution_authorized: true$/mu.test(decision.toString("utf8"))) || request.amendmentRoot !== LEAN_COLD_REUSE_HISTORY.amendmentRoot || leanBytesRoot(readFileSync(AMENDMENT)) !== request.amendmentRoot || request.coldRoot !== LEAN_COLD_REUSE_HISTORY.coldRoot || request.seed !== LEAN_COLD_REUSE_HISTORY.seed || !same(request.candidateRoots, deriveLeanBaselineCandidateRoots(request.coldRoot)) || !same(request.requestRoots, deriveLeanSupervisorCorrectionRequestRoots({ route, seed: request.seed, sourceRoot: request.sourceRoot, planRoot: request.planRoot, coldRoot: request.coldRoot }, request.supervisorDecisionRoot!, supervisor)) || request.setupAccountingPath !== documents.setup || request.setupAccountingRoot !== readLeanSupervisorSetupWitness(supervisor).root) return fail("SUPERVISOR_REQUEST")
+  if (supervisor === "v6") {
+    if (leanBytesRoot(decision) !== LEAN_REPLAY_V6_APPROVAL_ROOT || leanBytesRoot(readFileSync(documents.plan)) !== LEAN_REPLAY_V6_SUPPLEMENT_ROOT || request.startupPolicyRoot !== LEAN_STARTUP_POLICY_V5.root || typeof request.authorizationPath !== "string" || !request.authorizationPath.startsWith(".strategy-lab/lean-replay-v6-") || request.authorizationPath.includes("..") || !root(request.authorizationRoot)) return fail("SUPERVISOR_REQUEST")
+    const authorization = readLeanCorrectionJson(request.authorizationPath) as Record<string, unknown>
+    if (!exactLabKeys(authorization, ["schemaVersion", "approved", "executionAuthorized", "route", "sourceRoot", "approvalRoot", "supplementRoot", "policyRoot", "requestDataRoot", "root"]) || authorization.schemaVersion !== "lean-replay-execution-authorization-v6" || authorization.approved !== true || authorization.executionAuthorized !== true || authorization.route !== route || authorization.sourceRoot !== request.sourceRoot || authorization.approvalRoot !== LEAN_REPLAY_V6_APPROVAL_ROOT || authorization.supplementRoot !== LEAN_REPLAY_V6_SUPPLEMENT_ROOT || authorization.policyRoot !== LEAN_STARTUP_POLICY_V5.root || authorization.requestDataRoot !== leanCorrectionRequestDataRoot(request)) return fail("SUPERVISOR_REQUEST")
+    const { root: claimed, ...body } = authorization
+    if (claimed !== labRoot("lean-replay-execution-authorization-v6", body) || request.authorizationRoot !== leanBytesRoot(leanCanonicalBytes(authorization))) return fail("SUPERVISOR_REQUEST")
+  }
+  if (!exactLabKeys(request, ["schemaVersion", "route", "sourceRoot", "planRoot", "amendmentRoot", "reviewPath", "reviewRoot", "dataReviewPath", "dataReviewRoot", "coldRoot", "seed", "reuseGrantRoot", "candidateRoots", "requestRoots", "diagnosis", "supervisorDecisionRoot", "acceptedCheckRoot", "setupAccountingPath", "setupAccountingRoot", ...((supervisor === "v5" || supervisor === "v6") ? ["startupPolicyRoot", "authorizationPath", "authorizationRoot"] : [])]) || request.schemaVersion !== `lean-correction-supervisor-request-v${leanSupervisorVersion(supervisor)}` || request.route !== route || request.diagnosis !== null || request.sourceRoot !== leanCorrectionSourceManifest(supervisor).root || request.planRoot !== leanBytesRoot(readFileSync(documents.plan)) || request.supervisorDecisionRoot !== leanBytesRoot(decision) || supervisor !== "v5" && (!/^approved: true$/mu.test(decision.toString("utf8")) || !/^execution_authorized: true$/mu.test(decision.toString("utf8"))) || request.amendmentRoot !== LEAN_COLD_REUSE_HISTORY.amendmentRoot || leanBytesRoot(readFileSync(AMENDMENT)) !== request.amendmentRoot || request.coldRoot !== LEAN_COLD_REUSE_HISTORY.coldRoot || request.seed !== LEAN_COLD_REUSE_HISTORY.seed || !same(request.candidateRoots, deriveLeanBaselineCandidateRoots(request.coldRoot)) || !same(request.requestRoots, deriveLeanSupervisorCorrectionRequestRoots({ route, seed: request.seed, sourceRoot: request.sourceRoot, planRoot: request.planRoot, coldRoot: request.coldRoot }, request.supervisorDecisionRoot!, supervisor)) || request.setupAccountingPath !== documents.setup || request.setupAccountingRoot !== readLeanSupervisorSetupWitness(supervisor).root) return fail("SUPERVISOR_REQUEST")
   const reuse = authenticateLeanColdReuse({ directory: LEAN_BASELINE_STORE, newSourceRoot: request.sourceRoot, amendmentRoot: request.amendmentRoot })
   if (reuse.grant.root !== request.reuseGrantRoot) return fail("REUSE")
   if (route === "diagnostic" ? request.acceptedCheckRoot !== null : authenticateLeanSupervisorDiagnosticCheck(supervisor).root !== request.acceptedCheckRoot) return fail("ACCEPTED_CHECK")
@@ -305,9 +315,9 @@ export const inventoryLeanSupervisorSurvivors = (identities: readonly string[]) 
 }
 export function readLeanSupervisorSetupWitness(supervisor: "v5"): ReturnType<typeof validateLeanStartupSetupWitnessV5>
 export function readLeanSupervisorSetupWitness(supervisor?: true | "v3" | "v4"): ReturnType<typeof readLeanLegacySupervisorSetupWitness>
-export function readLeanSupervisorSetupWitness(supervisor: true | "v3" | "v4" | "v5"): ReturnType<typeof validateLeanStartupSetupWitnessV5> | ReturnType<typeof readLeanLegacySupervisorSetupWitness>
-export function readLeanSupervisorSetupWitness(supervisor: true | "v3" | "v4" | "v5" = true) {
-  return supervisor === "v5" ? validateLeanStartupSetupWitnessV5(readLeanCorrectionJson(LEAN_STARTUP_V5_SETUP_PATH)) : readLeanLegacySupervisorSetupWitness(supervisor)
+export function readLeanSupervisorSetupWitness(supervisor: true | "v3" | "v4" | "v5" | "v6"): ReturnType<typeof validateLeanStartupSetupWitnessV5> | ReturnType<typeof readLeanLegacySupervisorSetupWitness>
+export function readLeanSupervisorSetupWitness(supervisor: true | "v3" | "v4" | "v5" | "v6" = true) {
+  return supervisor === "v6" ? validateLeanReplaySetupWitnessV6(readLeanCorrectionJson(LEAN_REPLAY_V6_SETUP_PATH)) : supervisor === "v5" ? validateLeanStartupSetupWitnessV5(readLeanCorrectionJson(LEAN_STARTUP_V5_SETUP_PATH)) : readLeanLegacySupervisorSetupWitness(supervisor)
 }
 const readLeanLegacySupervisorSetupWitness = (supervisor: true | "v3" | "v4" = true) => {
   if (supervisor === "v4") return validateLeanRepairedReaderSetupWitness(readLeanCorrectionJson(LEAN_REPAIRED_READER_SETUP_WITNESS), leanBytesRoot(readFileSync(LEAN_REPAIRED_READER_DECISION)))
@@ -317,7 +327,8 @@ const readLeanLegacySupervisorSetupWitness = (supervisor: true | "v3" | "v4" = t
   if (!exactLabKeys(v, ["schemaVersion", "startedAtMs", "observedAtMs", "source", "threadId", "turnId", "decisionRoot", "custodyRoot", "root"]) || v.schemaVersion !== "lean-supervisor-setup-witness-v2" || v.startedAtMs !== 1791155677000 || !Number.isSafeInteger(v.observedAtMs) || v.observedAtMs < v.startedAtMs || v.source !== "codex-app-read-thread" || v.threadId !== "019fa652-915a-7183-9af1-3b3c05868d86" || v.turnId !== "01a10932-a9e2-77a3-9083-229b602e9d48" || v.decisionRoot !== leanBytesRoot(readFileSync(LEAN_SUPERVISOR_DECISION)) || v.custodyRoot !== leanBytesRoot(readFileSync(LEAN_SUPERVISOR_SETUP_CUSTODY)) || r !== labRoot(v.schemaVersion, body)) return fail("SETUP_WITNESS")
   return v
 }
-export const inspectLeanSupervisorCorrectionPredecessor = (route: LeanCorrectionRoute, accountingAtMs: number, supervisor: true | "v3" | "v4" | "v5" = true): LeanCorrectionPredecessor => {
+export const inspectLeanSupervisorCorrectionPredecessor = (route: LeanCorrectionRoute, accountingAtMs: number, supervisor: true | "v3" | "v4" | "v5" | "v6" = true): LeanCorrectionPredecessor => {
+  if (supervisor === "v6") return inspectLeanReplayPredecessorV6(route, accountingAtMs)
   if (supervisor === "v5") return inspectLeanStartupPredecessorV5(route, accountingAtMs)
   if (supervisor === "v4") return inspectLeanRepairedReaderPredecessor(route, accountingAtMs)
   if (supervisor === "v3") return inspectLeanFreshSupervisorPredecessor(route, accountingAtMs)
@@ -453,7 +464,7 @@ export const inspectLeanRepairedReaderPredecessor = (route: LeanCorrectionRoute,
   const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: charged, elapsedUpperBoundMs: elapsed, allocatedDiskBytes: Math.max(c.physicalFloorBytes, conservativeBasis) + survivors.reduce((n, s) => n + s.allocatedBytes, 0), historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: labRoot("lean-correction-supervisor-history-v4", { roots, accountingAtMs }), survivors }
   return { ...body, root: labRoot(body.schemaVersion, body) }
 }
-const supervisorPostPreparationClock = (directory: string, supervisor: true | "v3" | "v4" | "v5" = true): AdmissionClock => {
+const supervisorPostPreparationClock = (directory: string, supervisor: true | "v3" | "v4" | "v5" | "v6" = true): AdmissionClock => {
   const start = readLeanCorrectionJson(join(directory, "admission-prepare-start.json")) as ReturnType<typeof beginLeanCorrectionAdmission>
   const closed = readLeanCorrectionJson(join(directory, "admission-prepare-close.json")) as ReturnType<typeof closeLeanCorrectionAdmission>
   const { root: startRoot, ...startBody } = start, { root: closeRoot, ...closeBody } = closed
@@ -480,6 +491,24 @@ export const leanStartupCarryElapsedV5 = (witness: ReturnType<typeof validateLea
   if (!Number.isSafeInteger(elapsed) || elapsed >= 43_200_000) return fail("ADMISSION_TIME")
   return elapsed
 }
+export const validateLeanReplaySetupWitnessV6 = (value: unknown) => {
+  if (!exactLabKeys(value, ["schemaVersion", "approvalRoot", "supplementRoot", "policyRoot", "priorElapsedMs", "charged", "segments", "consumedTimeBytesRoot", "root"])) return fail("SETUP_WITNESS")
+  const v = value as { schemaVersion: string; approvalRoot: LabRoot; supplementRoot: LabRoot; policyRoot: LabRoot; priorElapsedMs: number; charged: number; segments: Array<{ startMs: number; closeMs: number | null }>; consumedTimeBytesRoot: LabRoot; root: LabRoot }, { root: r, ...body } = v
+  if (v.schemaVersion !== "lean-replay-setup-witness-v6" || v.approvalRoot !== LEAN_REPLAY_V6_APPROVAL_ROOT || v.supplementRoot !== LEAN_REPLAY_V6_SUPPLEMENT_ROOT || v.policyRoot !== LEAN_STARTUP_POLICY_V5.root || v.priorElapsedMs !== LEAN_REPLAY_V6_CARRY.priorElapsedMs || v.charged !== 24 || v.consumedTimeBytesRoot !== LEAN_REPLAY_V6_CARRY.timeBytesRoot || !Array.isArray(v.segments) || !v.segments.length || v.segments.length > 100 || v.segments[0]?.startMs !== LEAN_REPLAY_V6_CARRY.startedAtMs || r !== labRoot(v.schemaVersion, body)) return fail("SETUP_WITNESS")
+  let previous = 0
+  for (const [i, segment] of v.segments.entries()) {
+    if (!exactLabKeys(segment, ["startMs", "closeMs"]) || !Number.isSafeInteger(segment.startMs) || segment.startMs < previous || (i === v.segments.length - 1 ? segment.closeMs !== null : !Number.isSafeInteger(segment.closeMs) || segment.closeMs! < segment.startMs)) return fail("SETUP_WITNESS")
+    previous = segment.closeMs ?? segment.startMs
+  }
+  return Object.freeze(structuredClone(v))
+}
+export const leanReplayCarryElapsedV6 = (witness: ReturnType<typeof validateLeanReplaySetupWitnessV6>, accountingAtMs: number): number => {
+  const v = validateLeanReplaySetupWitnessV6(witness)
+  if (!Number.isSafeInteger(accountingAtMs) || accountingAtMs < v.segments.at(-1)!.startMs) return fail("SUPERVISOR_ACCOUNTING_CLOCK")
+  const elapsed = v.priorElapsedMs + v.segments.reduce((sum, segment) => sum + (segment.closeMs ?? accountingAtMs) - segment.startMs, 0)
+  if (!Number.isSafeInteger(elapsed) || elapsed >= 43_200_000) return fail("ADMISSION_TIME")
+  return elapsed
+}
 export const inspectLeanStartupPredecessorV5 = (route: LeanCorrectionRoute, accountingAtMs: number): LeanCorrectionPredecessor => {
   const oldPaths = leanCorrectionRoutePaths("baseline", "v4"), old = openLeanLedger(oldPaths.store), witness = readLeanSupervisorSetupWitness("v5") as ReturnType<typeof validateLeanStartupSetupWitnessV5>
   if (!("route" in old.allocation) || old.allocation.root !== LEAN_STARTUP_CARRY_V5.allocationRoot || old.allocation.route !== "baseline") return fail("FRESH_HISTORY")
@@ -498,6 +527,29 @@ export const inspectLeanStartupPredecessorV5 = (route: LeanCorrectionRoute, acco
   const survivors = inventoryLeanSupervisorSurvivors([...new Set(identities)])
   const reserve = Math.max(0, old.allocation.predecessor.allocatedDiskBytes - old.allocation.predecessor.survivors.reduce((sum, s) => sum + s.allocatedBytes, 0))
   const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: charged, elapsedUpperBoundMs: elapsed, allocatedDiskBytes: Math.max(LEAN_STARTUP_CARRY_V5.physicalFloorBytes, reserve + survivors.reduce((sum, s) => sum + s.allocatedBytes, 0)), historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: labRoot("lean-startup-history-v5", { roots, accountingAtMs }), survivors }
+  return { ...body, root: labRoot(body.schemaVersion, body) }
+}
+/** Carry every predecessor survivor and cost. This inventory reads bytes/counters,
+ * never calls a historical empirical reader or a cold builder. */
+export const inspectLeanReplayPredecessorV6 = (route: LeanCorrectionRoute, accountingAtMs: number): LeanCorrectionPredecessor => {
+  const oldPaths = leanCorrectionRoutePaths("baseline", "v5"), old = openLeanLedger(oldPaths.store), witness = readLeanSupervisorSetupWitness("v6") as ReturnType<typeof validateLeanReplaySetupWitnessV6>
+  if (!("route" in old.allocation) || old.allocation.root !== LEAN_REPLAY_V6_CARRY.allocationRoot || old.allocation.route !== "baseline") return fail("FRESH_HISTORY")
+  const oldTime = readLeanTimeAccounting(old), oldState = readLeanLedger(old)
+  if (oldTime.active || oldTime.elapsedMs !== LEAN_REPLAY_V6_CARRY.closedElapsedMs || oldState.charged !== 24 || leanBytesRoot(readLeanCorrectionPrivateBytes(join(old.directory, "time.ndjson"), 4194304)) !== witness.consumedTimeBytesRoot) return fail("FRESH_HISTORY")
+  readLeanChildTerminal(old)
+  validateLeanReplayV6PredecessorCustody({ allocationRoot: old.allocation.root, allocationBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(old.directory, "allocation.json"), 4194304)), timeBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(old.directory, "time.ndjson"), 4194304)), terminalBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(old.directory, "child-terminal.json"), 65536)), ledgerBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(old.directory, "ledger.ndjson"), 4194304)), charged: oldState.charged, closedElapsedMs: oldTime.closedElapsedMs, readerCloseMs: Math.max(...oldTime.closes.values()), active: oldTime.active })
+  let elapsed = leanReplayCarryElapsedV6(witness, accountingAtMs), charged = 24
+  const identities = [...old.allocation.predecessor.survivors.map(s => s.identity), oldPaths.store, oldPaths.request, oldPaths.allocation, oldPaths.temp, LEAN_REPLAY_V6_SETUP_PATH]
+  const roots: LabRoot[] = [old.allocation.root, witness.root]
+  if (route === "baseline") {
+    const accepted = authenticateLeanSupervisorDiagnosticCheck("v6"), p = leanCorrectionRoutePaths("diagnostic", "v6"), diagnostic = openLeanLedger(p.store), time = readLeanTimeAccounting(diagnostic)
+    if (time.active || accountingAtMs < accepted.readerCloseMs || accepted.closedElapsedMs < elapsed - (accountingAtMs - LEAN_REPLAY_V6_CARRY.startedAtMs)) return fail("DIAGNOSTIC_UNCLOSED")
+    elapsed = accepted.closedElapsedMs + accountingAtMs - accepted.readerCloseMs; charged = readLeanLedger(diagnostic).charged
+    identities.push(p.store, p.request, p.allocation, p.temp); roots.push(accepted.root)
+  }
+  const survivors = inventoryLeanSupervisorSurvivors([...new Set(identities)])
+  const reserve = Math.max(0, old.allocation.predecessor.allocatedDiskBytes - old.allocation.predecessor.survivors.reduce((sum, s) => sum + s.allocatedBytes, 0))
+  const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: charged, elapsedUpperBoundMs: elapsed, allocatedDiskBytes: Math.max(LEAN_REPLAY_V6_CARRY.physicalFloorBytes, reserve + survivors.reduce((sum, s) => sum + s.allocatedBytes, 0)), historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: labRoot("lean-replay-history-v6", { roots, accountingAtMs }), survivors }
   return { ...body, root: labRoot(body.schemaVersion, body) }
 }
 /** Carry every predecessor survivor and cost. This inventory reads bytes/counters,
@@ -556,7 +608,7 @@ export const prepareLeanCorrection = (path: string, route: LeanCorrectionRoute, 
   if (supervisor && (existsSync(paths.store) || existsSync(paths.allocation))) return fail("SPENT_DESTINATION")
   const { request, reuse } = readLeanCorrectionRequest(path, route, supervisor), predecessor = supervisor ? inspectLeanSupervisorCorrectionPredecessor(route, carrier.wallStartMs, supervisor) : inspectLeanCorrectionPredecessor(route, carrier.root)
   const common = { sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route, reuseGrantRoot: reuse.grant.root, predecessor }
-  const allocation = supervisor ? createLeanSupervisorCorrectionAllocation({ ...common, supervisorDecisionRoot: request.supervisorDecisionRoot!, acceptedCheckRoot: request.acceptedCheckRoot!, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), dataReviewRoot: request.dataReviewRoot, setupAccountingRoot: request.setupAccountingRoot!, ...(supervisor === "v5" ? { startupPolicyRoot: request.startupPolicyRoot! } : {}) }, leanSupervisorVersion(supervisor)) : createLeanCorrectionAllocation({ sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route, reuseGrantRoot: reuse.grant.root, diagnosisRoot: request.diagnosis?.root ?? null, predecessor })
+  const allocation = supervisor ? createLeanSupervisorCorrectionAllocation({ ...common, supervisorDecisionRoot: request.supervisorDecisionRoot!, acceptedCheckRoot: request.acceptedCheckRoot!, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), dataReviewRoot: request.dataReviewRoot, setupAccountingRoot: request.setupAccountingRoot!, ...((supervisor === "v5" || supervisor === "v6") ? { startupPolicyRoot: request.startupPolicyRoot! } : {}) }, leanSupervisorVersion(supervisor)) : createLeanCorrectionAllocation({ sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route, reuseGrantRoot: reuse.grant.root, diagnosisRoot: request.diagnosis?.root ?? null, predecessor })
   assertLeanCorrectionAdmissionTime(predecessor.elapsedUpperBoundMs, carrier, admissionClock(), allocation)
   ledger = createLeanLedger(paths.store, allocation)
   publishLeanCorrection(paths.allocation, allocation, ledger)
@@ -606,7 +658,7 @@ export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrec
     const observationBody = { schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }
     publishLeanCorrection(join(ledger.directory, `observation-${slot.ordinal}.json`), { ...observationBody, root: labRoot("lean-baseline-observation-v1", observationBody) }, ledger)
     if (route === "diagnostic") {
-      const originBody = { schemaVersion: supervisor === "v5" ? "lean-startup-origin-envelope-v5" : "lean-correction-origin-envelope-v1", allocationRoot: allocation.root, sourceRoot: request.sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins }
+      const originBody = { schemaVersion: supervisor === "v6" ? "lean-startup-origin-envelope-v6" : supervisor === "v5" ? "lean-startup-origin-envelope-v5" : "lean-correction-origin-envelope-v1", allocationRoot: allocation.root, sourceRoot: request.sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins }
       publishLeanCorrection(join(ledger.directory, "correction-origin.json"), { ...originBody, root: labRoot(originBody.schemaVersion, originBody) }, ledger)
     }
     checkpoint(); checkpointLeanResources(ledger, currentLeanElapsedMs(ledger), highWater, LEAN_EXTERNAL_SCRATCH_RESERVE)
@@ -662,7 +714,7 @@ export const leanCorrectionMain = async (args: readonly string[]) => {
   } finally { closeLeanCorrectionAdmission(carrier, accountingLedger) }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const args = process.argv.slice(2), supervisor: LeanSupervisorMode = /^child-supervisor-(diagnostic|baseline)-v[2345]$/u.test(args[0] ?? "") ? args[0]!.endsWith("-v5") ? "v5" : args[0]!.endsWith("-v4") ? "v4" : args[0]!.endsWith("-v3") ? "v3" : true : false, childRoute = supervisor ? (args[0]!.includes("-diagnostic-") ? "diagnostic" : "baseline") : args[0] === "child-diagnostic" ? "diagnostic" : args[0] === "child-baseline" ? "baseline" : null
+  const args = process.argv.slice(2), supervisor: LeanSupervisorMode = /^child-supervisor-(diagnostic|baseline)-v[23456]$/u.test(args[0] ?? "") ? args[0]!.endsWith("-v6") ? "v6" : args[0]!.endsWith("-v5") ? "v5" : args[0]!.endsWith("-v4") ? "v4" : args[0]!.endsWith("-v3") ? "v3" : true : false, childRoute = supervisor ? (args[0]!.includes("-diagnostic-") ? "diagnostic" : "baseline") : args[0] === "child-diagnostic" ? "diagnostic" : args[0] === "child-baseline" ? "baseline" : null
   const action = childRoute !== null && args.length === 3 && args[1] === "--request" && args[2] === leanCorrectionRoutePaths(childRoute, supervisor).request ? child(args[2], childRoute, supervisor) : leanCorrectionMain(args)
   if (childRoute) void resolveLeanChildCliTerminal(action)
   else void action.then(value => process.stdout.write(`${JSON.stringify(value)}\n`)).catch(error => { process.stderr.write(leanCorrectionCliFailure(args, error)); process.exitCode = 1 })

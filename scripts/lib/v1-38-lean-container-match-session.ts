@@ -235,6 +235,8 @@ export interface LeanStartupOriginV5 extends LeanStartupBindingV5 {
   termination: "not_required" | "completed" | "failed" | "unknown"; unknown: boolean;
 }
 export type LeanPrivateCorrectionOrigin = LeanCorrectionOriginMetadata | LeanStartupOriginV5
+/** v6 retains the sealed control program; only logical wire identity differs. */
+export const buildLeanContainerBrokerSourceV6 = (): string => buildLeanContainerBrokerSourceV5().replaceAll("v1.38-lean-startup-origin-v5", "v1.38-lean-startup-origin-v6").replaceAll("v1.38-lean-startup-v5:", "v1.38-lean-startup-v6:")
 export const validateLeanPrivateCorrectionOrigin = (value: unknown): LeanPrivateCorrectionOrigin => (value as { schemaVersion?: unknown } | null)?.schemaVersion === "v1.38-lean-startup-origin-v5" ? validateLeanStartupOriginV5(value) : validateLeanCorrectionOriginMetadata(value)
 export const validateLeanStartupOriginV5 = (value: unknown, expected?: LeanStartupBindingV5): LeanStartupOriginV5 => {
   const keys = ["allocationRoot", "chargeRoot", "seat", "policyRoot", "harnessRoot", "requestOrdinal", "requestRoot", "method", "inputRoot", "sourceRoot", "executableRoot", "schemaVersion", "stage", "branch", "ready", "go", "wait", "termination", "unknown"]
