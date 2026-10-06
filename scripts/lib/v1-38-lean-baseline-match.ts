@@ -8,7 +8,7 @@ import { encodeSubprocessIpcRequest } from "../../packages/runtime-js/src/subpro
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { admitFactory, authorizeFactorySupervision, type FactorySupervisionProvider } from "../../packages/strategy-lab/src/factory/admission.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../../packages/strategy-lab/src/runtime-bridge.js"
-import { leanSupervisorAllocationMode, LEAN_CAPS, type LeanExperimentLedger, type LeanCharge, type LeanSlot, type LeanCompactMatchRecord } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { isLeanRetryMode, leanSupervisorAllocationMode, LEAN_CAPS, type LeanExperimentLedger, type LeanCharge, type LeanSlot, type LeanCompactMatchRecord } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { compactExecution, deriveLeanSupervisorDiagnostic } from "../run-v1-38-lean-experiment.js"
 import { createFactorySupervisedRuntime, getFactoryPrivateDiagnostic } from "./v1-38-factory-supervised-runtime.js"
 import { prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
@@ -108,7 +108,7 @@ export const runLeanBaselineMatch = async (input: {
   register: (provider: Pick<FactorySupervisionProvider, "close">) => void
   unregister: (provider: Pick<FactorySupervisionProvider, "close">) => void
 }) => {
-  const hostBinding: LeanHostFailureBindingV7 | undefined = input.ledger.allocation.schemaVersion.endsWith("-v7") && "route" in input.ledger.allocation ? { route: input.ledger.allocation.route, allocationRoot: input.ledger.allocation.root, chargeRoot: input.charge.root, slotRoot: input.slot.root } : undefined
+  const hostBinding: LeanHostFailureBindingV7 | undefined = (input.ledger.allocation.schemaVersion.endsWith("-v7") || input.ledger.allocation.schemaVersion.endsWith("-v8")) && "route" in input.ledger.allocation ? { route: input.ledger.allocation.route, allocationRoot: input.ledger.allocation.root, chargeRoot: input.charge.root, slotRoot: input.slot.root } : undefined
   let bottomSource: LeanBaselineSource, topSource: LeanBaselineSource, scenario: ReturnType<typeof leanBaselineScenario>
   try {
     bottomSource = validateLeanBaselineSource(input.bottom); topSource = validateLeanBaselineSource(input.top)
@@ -133,7 +133,7 @@ export const runLeanBaselineMatch = async (input: {
     let activeTransportBinding: LeanCorrectionInvocationTransportBinding | undefined
     let requestOrdinal = 0
     const retainedTransportBindings = new Map<number, { origin: LeanPrivateCorrectionOrigin; transport: LeanCorrectionInvocationTransportBinding }>()
-    const native = createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, matchId, containerName, ownershipLabel, attemptRoot: input.charge.root, budgetRoot: input.ledger.allocation.root, image: LAB_ADMITTED_ROOTS.image, invocationLimit: 24800, factoryLifetimeMs: 600000, ...(input.correction?.observe ? { [(leanSupervisorAllocationMode(input.ledger.allocation) === "v5" || (leanSupervisorAllocationMode(input.ledger.allocation) === "v6" || leanSupervisorAllocationMode(input.ledger.allocation) === "v7")) ? "startupOriginObserver" : "correctionOriginObserver"]: { observe: (metadata: LeanPrivateCorrectionOrigin) => { if (!activeTransportBinding) return fail(); retainedTransportBindings.set(activeTransportBinding.requestOrdinal, { origin: validateLeanPrivateCorrectionOrigin(metadata), transport: activeTransportBinding }); input.correction!.observe!(metadata, snapshot.sourceRoot, seat, activeTransportBinding) } } } : {}) })
+    const native = createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, matchId, containerName, ownershipLabel, attemptRoot: input.charge.root, budgetRoot: input.ledger.allocation.root, image: LAB_ADMITTED_ROOTS.image, invocationLimit: 24800, factoryLifetimeMs: 600000, ...(input.correction?.observe ? { [(leanSupervisorAllocationMode(input.ledger.allocation) === "v5" || (leanSupervisorAllocationMode(input.ledger.allocation) === "v6" || (leanSupervisorAllocationMode(input.ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(input.ledger.allocation))))) ? "startupOriginObserver" : "correctionOriginObserver"]: { observe: (metadata: LeanPrivateCorrectionOrigin) => { if (!activeTransportBinding) return fail(); retainedTransportBindings.set(activeTransportBinding.requestOrdinal, { origin: validateLeanPrivateCorrectionOrigin(metadata), transport: activeTransportBinding }); input.correction!.observe!(metadata, snapshot.sourceRoot, seat, activeTransportBinding) } } } : {}) })
     let closed: ReturnType<FactorySupervisionProvider["close"]> | undefined
     const observed = snapshot.role === input.observedRole
     const provider: FactorySupervisionProvider = {
@@ -142,7 +142,7 @@ export const runLeanBaselineMatch = async (input: {
         if (performance.now() - began >= LEAN_CAPS.matchMs) { provider.close(); return fail() }
         input.checkpoint()
         requestOrdinal += 1
-        if (input.correction?.observe) activeTransportBinding = leanCorrectionInvocationTransportBinding({ methodName: request.kind, source: executableSource, input: request.input, outputByteLimit: CORRECTION_RUNTIME_OUTPUT_BYTES, requestOrdinal }, leanSupervisorAllocationMode(input.ledger.allocation) === "v7" ? "v7" : leanSupervisorAllocationMode(input.ledger.allocation) === "v6" ? "v6" : leanSupervisorAllocationMode(input.ledger.allocation) === "v5")
+        if (input.correction?.observe) activeTransportBinding = leanCorrectionInvocationTransportBinding({ methodName: request.kind, source: executableSource, input: request.input, outputByteLimit: CORRECTION_RUNTIME_OUTPUT_BYTES, requestOrdinal }, (leanSupervisorAllocationMode(input.ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(input.ledger.allocation))) ? "v7" : leanSupervisorAllocationMode(input.ledger.allocation) === "v6" ? "v6" : leanSupervisorAllocationMode(input.ledger.allocation) === "v5")
         const evidence = await native.invoke(request, identity)
         activeTransportBinding = undefined
         if (observed && native.verify(evidence) && evidence.result.ok) {

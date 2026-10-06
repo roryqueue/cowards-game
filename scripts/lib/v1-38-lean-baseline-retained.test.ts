@@ -2,13 +2,27 @@ import { describe, expect, it } from "vitest"
 import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCurrentBaselineAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanColdProcedureRoot, compactLeanBaselineCell, executeLeanCurrentPipeline, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
-import { auditLeanCurrentBaselineRetained, type LeanBaselineRetainedSnapshot } from "./v1-38-lean-baseline-retained.js"
+import { auditLeanCurrentBaselineRetained, assertLeanRetryBaselineJoinV8, verifyLeanRetryBaselineRetainedV8, type LeanBaselineRetainedSnapshot } from "./v1-38-lean-baseline-retained.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
 import { CANONICAL_ARENA_CATALOG_V1_37, type StrategyInputV119 } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { LEAN_BASELINE_REQUIRED_METRICS, type LeanBaselineMetricReceipt } from "./v1-38-lean-baseline-metrics.js"
 
 const root = (name: string): LabRoot => labRoot("lean-retained-test-v1", name)
+describe("selected retry baseline authority owner", () => {
+  it("refuses a caller-selected path before opening a store", async () => {
+    await expect(verifyLeanRetryBaselineRetainedV8("caller-selected.json", "v8-1")).rejects.toThrow("RETRY_ACCEPTED_FINAL_JOIN")
+  })
+  it("requires selected ordinal, actual accepted-check identity and FINAL close together", () => {
+    // Actual finite reader acceptance is exercised in the connected v8 suite;
+    // this owner regression covers every join independently of route dispatch.
+    const check = { root: root("check"), allocationRoot: root("diagnostic"), readerCloseMs: 100 }
+    const closure = { attemptOrdinal: 2, closureClass: "accepted", checkRoot: check.root, allocationRoot: check.allocationRoot, root: root("final-close"), readerCloseMs: 100, finalReaderClose: true, acceptedCheckAbsent: false, sourceRoot: root("source"), head: "a".repeat(40) }
+    const allocation = { schemaVersion: "lean-correction-supervisor-baseline-allocation-v8", attemptOrdinal: 2, acceptedCheckRoot: check.root, acceptedReaderCloseRoot: closure.root, sourceRoot: closure.sourceRoot } as Parameters<typeof assertLeanRetryBaselineJoinV8>[0]
+    expect(() => assertLeanRetryBaselineJoinV8(allocation, check, closure, closure.head)).not.toThrow()
+    for (const patch of [{ attemptOrdinal: 1 }, { checkRoot: null }, { finalReaderClose: false }, { acceptedCheckAbsent: true }, { closureClass: "refused" }, { closureClass: "absent" }]) expect(() => assertLeanRetryBaselineJoinV8(allocation, check, { ...closure, ...patch }, closure.head)).toThrow()
+  })
+})
 const syntheticMetrics = (executionRoot: LabRoot, success = true): LeanBaselineMetricReceipt => {
   const body = { schemaVersion: "v1.38-lean-baseline-match-metrics-v1" as const, source: success ? "actual_canonical_trace" as const : "unavailable" as const,
     executionRoot, measurements: { terminalLength: null, terminalActivationCount: null, cycleCount: null, contractionCount: null, activeSurvival: null, firstEnemyAwarenessActivation: null, firstContactActivation: null, firstBackstabActivation: null, firstPushActivation: null, firstStoneActivation: null, firstDecisiveActivation: null, contractionFallCount: null, advances: null, stones: null, pushes: null, moveBlocks: null, pushBlocks: null, openingCluster: null }, missing: [...LEAN_BASELINE_REQUIRED_METRICS], formationComparison: "inconclusive" as const }

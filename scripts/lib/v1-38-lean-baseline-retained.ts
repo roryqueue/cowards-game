@@ -17,8 +17,28 @@ import { selectPlannerActivations } from "../../packages/strategy-lab/src/planne
 import { buildPlannerCandidate } from "../../packages/strategy-lab/src/planner/emit.js"
 import { emitTacticalSource } from "../../packages/strategy-oracle-tactical/src/emit.js"
 import { authenticateLeanBaselineReview, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselineSourceManifest } from "../run-v1-38-lean-baseline.js"
+import { authenticateLeanSupervisorDiagnosticCheck, authenticateLeanRetryClosureV8 } from "./v1-38-lean-correction-retained.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_RETAINED_${code}`) }
+/** Selected v8 baseline authority is the actual diagnostic check + FINAL close,
+ * not an observation, synthetic report, or terminal-only/refusal receipt. */
+export const assertLeanRetryBaselineJoinV8 = (allocation: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanCorrectionAllocation, check: { root: LabRoot; allocationRoot: LabRoot; readerCloseMs: number }, closure: { attemptOrdinal: number; closureClass: string; checkRoot: LabRoot | null; allocationRoot: LabRoot; root: LabRoot; readerCloseMs: number; finalReaderClose: boolean; acceptedCheckAbsent: boolean; sourceRoot: LabRoot; head: string }, head: string) => {
+  if (allocation.schemaVersion !== "lean-correction-supervisor-baseline-allocation-v8" || allocation.attemptOrdinal !== closure.attemptOrdinal || closure.closureClass !== "accepted" || closure.finalReaderClose !== true || closure.acceptedCheckAbsent !== false || allocation.acceptedCheckRoot !== check.root || closure.checkRoot !== check.root || closure.allocationRoot !== check.allocationRoot || allocation.acceptedReaderCloseRoot !== closure.root || check.readerCloseMs !== closure.readerCloseMs || closure.sourceRoot !== allocation.sourceRoot || closure.head !== head) return fail("RETRY_ACCEPTED_FINAL_JOIN")
+}
+/** Shared real accepted-file gate at publisher, issuer and selected reader. */
+export const authenticateLeanRetryBaselineAuthorityV8 = (allocation: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanCorrectionAllocation, head: string) => {
+  const mode = `v8-${allocation.attemptOrdinal}` as import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanRetryMode
+  assertLeanRetryBaselineJoinV8(allocation, authenticateLeanSupervisorDiagnosticCheck(mode), authenticateLeanRetryClosureV8(mode), head)
+}
+export const verifyLeanRetryBaselineRetainedV8 = async (path: string, mode: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanRetryMode, precheck?: () => void) => {
+  const lean = await import("../../packages/strategy-lab/src/league/lean-experiment.js"), reader = await import("./v1-38-lean-correction-retained.js")
+  const paths = lean.leanCorrectionRoutePaths("baseline", mode)
+  if (path !== paths.request || !lean.isLeanRetryMode(mode)) return fail("RETRY_ACCEPTED_FINAL_JOIN")
+  const ledger = openLeanLedger(paths.store), allocation = lean.admitLeanAllocation(ledger.allocation)
+  if (!("route" in allocation) || allocation.route !== "baseline") return fail("RETRY_ACCEPTED_FINAL_JOIN")
+  authenticateLeanRetryBaselineAuthorityV8(allocation, readLeanChildEntry(ledger).head)
+  return reader.verifyLeanCorrectionRetained(path, "baseline", mode, precheck)
+}
 const rooted = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[0-9a-f]{64}$/u.test(v)
 const natural = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v >= 0
 const same = (left: unknown, right: unknown): boolean => labRoot("lean-baseline-retained-equality-v1", left) === labRoot("lean-baseline-retained-equality-v1", right)

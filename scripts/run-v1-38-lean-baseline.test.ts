@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process"
 import { resolve } from "node:path"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
-import { currentBaselineSlotKind, createLeanCurrentBaselineAllocation, leanCanonicalBytes, leanBytesRoot, LEAN_CAPS, LEAN_CLOSED_V7, type LeanExperimentLedger } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { currentBaselineSlotKind, createLeanCorrectionAllocation, createLeanCurrentBaselineAllocation, leanCanonicalBytes, leanBytesRoot, LEAN_CAPS, LEAN_CLOSED_V7, type LeanExperimentLedger } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import * as parentApi from "./run-v1-38-lean-baseline.js"
 import { admitsLeanBaselineReviewAgents, assertLeanBaselineWritableScope, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselinePair, leanBaselineSourceManifest, parseLeanBaselineCommand } from "./run-v1-38-lean-baseline.js"
 import { leanBaselineMatchSeed } from "./lib/v1-38-lean-baseline-match.js"
@@ -46,7 +46,10 @@ vi.mock("../packages/strategy-lab/src/league/lean-experiment.js", async original
 afterEach(() => { host.active = false; vi.useRealTimers() })
 const beginParent = (enabled: boolean, configure?: () => void) => {
   vi.useFakeTimers()
-  Object.assign(host, { active: true, files: new Map(), order: [], entry: null, terminal: null, allocation: { root: root("allocation") }, headCalls: 0, finalDrift: false, finalThrow: false, sampleThrow: false, resourceHigh: false, elapsed: 0, publishFailure: "", terminalFailure: false, capacityFailure: false })
+  const input = { seed: "inert-parent-fixture", sourceRoot: root("source"), planRoot: root("plan"), coldRoot: root("cold") }
+  const prior = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 11, elapsedUpperBoundMs: 3_319_046, allocatedDiskBytes: 0, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: [{ identity: ".strategy-lab/inert-parent-survivor", allocatedBytes: 0 }] }
+  const allocation = createLeanCorrectionAllocation({ ...input, reviewRoot: root("review"), candidateRoots: deriveLeanBaselineCandidateRoots(input.coldRoot), requestRoots: deriveLeanBaselineRequestRoots(input), route: "baseline", reuseGrantRoot: root("reuse"), diagnosisRoot: root("diagnosis"), predecessor: { ...prior, root: labRoot(prior.schemaVersion, prior) } })
+  Object.assign(host, { active: true, files: new Map(), order: [], entry: null, terminal: null, allocation, headCalls: 0, finalDrift: false, finalThrow: false, sampleThrow: false, resourceHigh: false, elapsed: 0, publishFailure: "", terminalFailure: false, capacityFailure: false })
   const child = Object.assign(new EventEmitter(), { pid: process.pid + 1000, exitCode: null as number | null, signalCode: null as string | null, kills: [] as string[], kill(signal: string) { this.kills.push(signal); return true }, send: () => true })
   host.child = child
   configure?.()
@@ -66,7 +69,7 @@ describe("opt-in finite parent supervisor observations", () => {
       const bytes = host.files.get("parent-supervisor-reasons.json")
       if (!enabled) { expect(bytes).toBeUndefined(); continue }
       const reason = parentApi.validateLeanSupervisorReasonBytes(bytes!)
-      expect(reason).toMatchObject({ allocationRoot: root("allocation"), sourceRoot: root("source"), requestBytesRoot: leanBytesRoot(Buffer.from("request")), entryBytesRoot: leanBytesRoot(leanCanonicalBytes(host.entry)), head: "a".repeat(40), parentPid: process.pid, childPid: child.pid, exitCode: 0, signal: null, uncertain: false, reasons: [] })
+      expect(reason).toMatchObject({ allocationRoot: host.allocation.root, sourceRoot: root("source"), requestBytesRoot: leanBytesRoot(Buffer.from("request")), entryBytesRoot: leanBytesRoot(leanCanonicalBytes(host.entry)), head: "a".repeat(40), parentPid: process.pid, childPid: child.pid, exitCode: 0, signal: null, uncertain: false, reasons: [] })
       expect(reason.observations).toMatchObject({ entry: "published", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" })
       expect(host.order.indexOf("parent-supervisor-reasons.json")).toBeLessThan(host.order.indexOf("derive-terminal"))
       expect(bytes!.length).toBeLessThanOrEqual(4096)

@@ -5,6 +5,12 @@ ulimit -c 0
 unset NODE_OPTIONS NODE_COMPILE_CACHE NODE_REDIRECT_WARNINGS NODE_V8_COVERAGE
 export TSX_DISABLE_CACHE=1 NODE_DISABLE_COMPILE_CACHE=1
 case "${1:-}" in
+  prepare-supervisor-diagnostic-v8-1|run-supervisor-diagnostic-v8-1|verify-supervisor-diagnostic-v8-1|verify-terminal-supervisor-diagnostic-v8-1) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-diagnostic-20261006-v8-1-tmp" ;;
+  prepare-supervisor-baseline-v8-1|run-supervisor-baseline-v8-1|verify-supervisor-baseline-v8-1) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-baseline-20261006-v8-1-tmp" ;;
+  prepare-supervisor-diagnostic-v8-2|run-supervisor-diagnostic-v8-2|verify-supervisor-diagnostic-v8-2|verify-terminal-supervisor-diagnostic-v8-2) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-diagnostic-20261006-v8-2-tmp" ;;
+  prepare-supervisor-baseline-v8-2|run-supervisor-baseline-v8-2|verify-supervisor-baseline-v8-2) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-baseline-20261006-v8-2-tmp" ;;
+  prepare-supervisor-diagnostic-v8-3|run-supervisor-diagnostic-v8-3|verify-supervisor-diagnostic-v8-3|verify-terminal-supervisor-diagnostic-v8-3) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-diagnostic-20261006-v8-3-tmp" ;;
+  prepare-supervisor-baseline-v8-3|run-supervisor-baseline-v8-3|verify-supervisor-baseline-v8-3) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-baseline-20261006-v8-3-tmp" ;;
   prepare-supervisor-diagnostic-v7|run-supervisor-diagnostic-v7|verify-supervisor-diagnostic-v7) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-diagnostic-20261006-v7-tmp" ;;
   prepare-supervisor-baseline-v7|run-supervisor-baseline-v7|verify-supervisor-baseline-v7) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-baseline-20261006-v7-tmp" ;;
   prepare-supervisor-diagnostic-v6|run-supervisor-diagnostic-v6|verify-supervisor-diagnostic-v6) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-diagnostic-20261006-v6-tmp" ;;

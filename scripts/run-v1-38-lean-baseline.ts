@@ -297,7 +297,7 @@ export const leanParentFailureReceiptHandler = (ledger: LeanExperimentLedger, ch
     if (message !== null && typeof message === "object" && exactLabKeys(message, ["ready"]) && message.ready === childPid) return
     let validReceipt: boolean
     const allocation = ledger.allocation
-    if (allocation.schemaVersion.endsWith("-v7") && "route" in allocation) {
+    if (["lean-correction-supervisor-diagnostic-allocation-v7", "lean-correction-supervisor-baseline-allocation-v7", "lean-correction-supervisor-diagnostic-allocation-v8", "lean-correction-supervisor-baseline-allocation-v8"].includes(allocation.schemaVersion) && "route" in allocation) {
       try {
         const state = readLeanLedger(ledger), charge = [...state.charges.values()].at(-1)
         validReceipt = !!charge && isLeanChildFailureReceiptV7(message, { route: allocation.route, allocationRoot: allocation.root, chargeRoot: charge.root, slotRoot: charge.slotRoot })
