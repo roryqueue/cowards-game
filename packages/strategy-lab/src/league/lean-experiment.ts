@@ -1109,7 +1109,7 @@ const currentLeanJournalElapsedMs = (ledger: LeanExperimentLedger) => {
   return s.elapsedMs
 }
 /** All administration and gate wall time remains spent even between journals. */
-export const currentLeanElapsedMs = (ledger: LeanExperimentLedger) => Math.max(currentLeanJournalElapsedMs(ledger), ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v8" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v8" ? leanRetryRootElapsedFloorV8(Date.now()) : 0)
+export const currentLeanElapsedMs = (ledger: LeanExperimentLedger, notYetImportedGapMs = 0) => Math.max(currentLeanJournalElapsedMs(ledger) + notYetImportedGapMs, ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v8" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v8" ? leanRetryRootElapsedFloorV8(Date.now()) : 0)
 export const createLeanLedger = (directory: string, allocation: AnyLeanAllocation): LeanExperimentLedger => {
   const p = resolve(directory)
   if (realpathSync(dirname(p)) !== dirname(p)) return fail("STORE")

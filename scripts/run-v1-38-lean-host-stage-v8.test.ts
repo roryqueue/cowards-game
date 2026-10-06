@@ -64,7 +64,7 @@ const allocationInput = (version: 5 | 6 | 7 | 8 = 8) => {
   return { ...(version === 8 ? { attemptOrdinal: 1 as const, priorClosureRoot: null, continuationRoot: null, acceptedReaderCloseRoot: null } : {}), sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: version === 8 ? lean.LEAN_RETRY_V8_PLAN_ROOT : version === 7 ? lean.LEAN_REPLAY_V7_SUPPLEMENT_ROOT : version === 6 ? lean.LEAN_REPLAY_V6_SUPPLEMENT_ROOT : lean.LEAN_STARTUP_SUPPLEMENT_ROOT, candidateRoots: [r("a"), r("b")], requestRoots: [r("request")], seed: "synthetic-v7", route: "diagnostic" as const, reuseGrantRoot: r("reuse"), supervisorDecisionRoot: version === 8 ? lean.LEAN_RETRY_V8_APPROVAL_ROOT : version === 7 ? lean.LEAN_REPLAY_V7_APPROVAL_ROOT : version === 6 ? lean.LEAN_REPLAY_V6_APPROVAL_ROOT : lean.LEAN_STARTUP_APPROVAL_ROOT, acceptedCheckRoot: null, requestBytesRoot: r("request-bytes"), dataReviewRoot: r("data"), setupAccountingRoot: r("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
 }
 // Tiny new store only. No historical payload, native runtime or gameplay runs.
-const producerFixture = (version: 5 | 6 | 7 | 8 = 8) => {
+const producerFixture = (version: 5 | 6 | 7 | 8 = 8, wall = 1000) => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v7-connected-synthetic-")))
   syntheticDirectories.add(directory); chmodSync(directory, 0o700)
   const store = join(directory, "store"), temp = join(directory, "scratch")
@@ -77,8 +77,8 @@ const producerFixture = (version: 5 | 6 | 7 | 8 = 8) => {
   const write = (name: string, value: unknown, target = store) => writeFileSync(join(target, name), lean.leanCanonicalBytes(value), { mode: 0o600 })
   write("allocation.json", allocation); writeFileSync(join(store, "ledger.ndjson"), "", { mode: 0o600 }); writeFileSync(join(store, "time.ndjson"), "", { mode: 0o600 })
   write("request.json", request, directory); write("allocation.json", allocation, directory)
-  const entry: lean.LeanChildEntryV2 = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot!, head: "1".repeat(40), parentPid: process.ppid, childPid: process.pid, handshakeRoot: r("handshake"), wallStartMs: 1000, monotonicStartNs: "1000000000" }
-  lean.publishLeanChildEntry(ledger, entry); lean.beginLeanInterval(ledger, "pilot-entry", 1000, 1_000_000_000n)
+  const entry: lean.LeanChildEntryV2 = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot!, head: "1".repeat(40), parentPid: process.ppid, childPid: process.pid, handshakeRoot: r("handshake"), wallStartMs: wall, monotonicStartNs: "1000000000" }
+  lean.publishLeanChildEntry(ledger, entry); lean.beginLeanInterval(ledger, "pilot-entry", wall, 1_000_000_000n)
   const source = buildPlannerCandidate().source
   const sources = ["tactical-0", "cold-opponent"].map((role, index) => sourceIO.buildLeanBaselineSource({ role, source: source + `\n// synthetic seat ${index}\n`, coldRoot: allocation.coldRoot!, implementationRoot: allocation.sourceRoot }))
   const reuse = { grant: { root: allocation.reuseGrantRoot!, coldRoot: allocation.coldRoot, seed: allocation.seed }, sources } as unknown as reuseIO.LeanColdReuse
@@ -89,7 +89,7 @@ const producerFixture = (version: 5 | 6 | 7 | 8 = 8) => {
   const slot = allocation.slots[0]!
   const pair = leanBaselinePair({ ordinal: 0, slot, priorLedgerBytesRoot: lean.leanBytesRoot(Buffer.alloc(0)), priorLedgerByteLength: 0, priorCharged: allocation.predecessor.chargedMatches, bottom: sources[0]!, top: sources[1]! })
   correction.publishLeanCorrection(join(store, "pair-0.json"), pair, ledger)
-  vi.spyOn(Date, "now").mockReturnValue(1000); vi.spyOn(process.hrtime, "bigint").mockReturnValue(1_000_000_000n)
+  vi.spyOn(Date, "now").mockReturnValue(wall); vi.spyOn(process.hrtime, "bigint").mockReturnValue(1_000_000_000n)
   const charge = lean.chargeLeanSlot(ledger, slot, { freeBytes: lean.LEAN_CAPS.totalBytes, availableMemoryBytes: 2_000_000_000 })
   const compact: lean.LeanCompactMatchRecord = { classification: "success", code: "OK", outcome: "DRAW", elapsedMs: 1, cleanupComplete: true, invocationCount: 0, accountingRoot: r("accounting"), executionRoot: r("execution"), telemetry: { transitions: 0, events: 0 } }
   const metrics = collectLeanBaselineMetrics({ kind: "failure", privacy: "private_offline", unchangedState: null, transitions: [], accounting: [], failure: { classification: "system_failure", code: "SYNTHETIC_NO_TRACE" } }, compact)
@@ -126,8 +126,8 @@ describe("v8 connected route admission", () => {
   })
 })
 
-const readerFixture = (failure = false, absent = false) => {
-  const f = producerFixture(), actualPaths = lean.leanCorrectionRoutePaths
+const readerFixture = (failure = false, absent = false, wall = 1000, gapMs = 1) => {
+  const f = producerFixture(8, wall), actualPaths = lean.leanCorrectionRoutePaths
   vi.spyOn(lean, "leanCorrectionRoutePaths").mockImplementation((route, mode) => mode === "v8-1" && route === "diagnostic" ? f.paths : actualPaths(route, mode))
   vi.spyOn(correction, "readLeanCorrectionRequest").mockReturnValue({ request: f.request, reuse: f.reuse })
   vi.spyOn(process, "uptime").mockReturnValue(0)
@@ -141,21 +141,35 @@ const readerFixture = (failure = false, absent = false) => {
     correction.publishLeanCorrectionMatchEvidence({ ...f, bottom: f.sources[0]!, top: f.sources[1]!, origins: [], route: "diagnostic", supervisor: "v8-1", sourceRoot: f.ledger.allocation.sourceRoot })
     correction.publishLeanCorrectionTerminalResult(f.ledger, "diagnostic", "v8-1", f.request, f.entry, f.reuse, { status: "diagnostic_only", cells: [{ ordinal: 0, slotRoot: f.slot.root, compact: f.execution.compact }], training: null, holdoutOpened: false, formationMaterialized: false })
   }
-  vi.spyOn(Date, "now").mockReturnValue(1001); vi.spyOn(process.hrtime, "bigint").mockReturnValue(1001000000n)
-  const terminal = lean.deriveLeanChildTerminal(f.ledger, f.entry, { exitCode: absent ? 1 : 0, signal: null, wallObservedMs: 1001, monotonicObservedNs: "1001000000", status: absent ? "child_failed" : "child_exited", parentRssBytes: 1, childRssObservedBytes: 1, physicalBytes: f.ledger.allocation.predecessor.allocatedDiskBytes, freeBytes: lean.LEAN_CAPS.totalBytes })
+  vi.spyOn(Date, "now").mockReturnValue(wall + 1); vi.spyOn(process.hrtime, "bigint").mockReturnValue(1001000000n)
+  const terminal = lean.deriveLeanChildTerminal(f.ledger, f.entry, { exitCode: absent ? 1 : 0, signal: null, wallObservedMs: wall + 1, monotonicObservedNs: "1001000000", status: absent ? "child_failed" : "child_exited", parentRssBytes: 1, childRssObservedBytes: 1, physicalBytes: f.ledger.allocation.predecessor.allocatedDiskBytes, freeBytes: lean.LEAN_CAPS.totalBytes })
   lean.publishLeanChildTerminal(f.ledger, terminal)
-  lean.beginLeanInterval(f.ledger, "correction-run-finalization", 1001, 1001000000n)
-  vi.spyOn(Date, "now").mockReturnValue(1002); vi.spyOn(process.hrtime, "bigint").mockReturnValue(1002000000n)
-  lean.closeLeanInterval(f.ledger, "correction-run-finalization", 1002, 1002000000n)
-  const startBody = { schemaVersion: "lean-correction-supervisor-admission-v8", attemptOrdinal: 1, route: "diagnostic", mode: "run", parentPid: f.entry.parentPid, wallStartMs: 1000, monotonicStartNs: "1000000000" }, start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
-  const closeBody = { schemaVersion: "lean-correction-supervisor-admission-close-v8", attemptOrdinal: 1, startRoot: start.root, route: "diagnostic", mode: "run", elapsedUpperBoundMs: 2, monotonicObservedNs: "1002000000", wallObservedMs: 1002, allocationRoot: f.ledger.allocation.root, ledgerInterval: "correction-run-finalization", importedMs: 1, ledgerCloseMs: 1002 }
+  lean.beginLeanInterval(f.ledger, "correction-run-finalization", wall + 1, 1001000000n)
+  vi.spyOn(Date, "now").mockReturnValue(wall + 2); vi.spyOn(process.hrtime, "bigint").mockReturnValue(1002000000n)
+  lean.closeLeanInterval(f.ledger, "correction-run-finalization", wall + 2, 1002000000n)
+  const startBody = { schemaVersion: "lean-correction-supervisor-admission-v8", attemptOrdinal: 1, route: "diagnostic", mode: "run", parentPid: f.entry.parentPid, wallStartMs: wall, monotonicStartNs: "1000000000" }, start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
+  const closeBody = { schemaVersion: "lean-correction-supervisor-admission-close-v8", attemptOrdinal: 1, startRoot: start.root, route: "diagnostic", mode: "run", elapsedUpperBoundMs: 2, monotonicObservedNs: "1002000000", wallObservedMs: wall + 2, allocationRoot: f.ledger.allocation.root, ledgerInterval: "correction-run-finalization", importedMs: 1, ledgerCloseMs: wall + 2 }
   f.write("admission-run-start.json", start, f.paths.temp); f.write("admission-run-close.json", { ...closeBody, root: labRoot(closeBody.schemaVersion, closeBody) }, f.paths.temp)
   const reasonBody = { schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: f.ledger.allocation.root, sourceRoot: f.entry.sourceRoot, requestBytesRoot: f.entry.requestBytesRoot, entryBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(f.entry)), head: f.entry.head, parentPid: f.entry.parentPid, childPid: f.entry.childPid, exitCode: absent ? 1 : 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
   f.write(LEAN_SUPERVISOR_REASON_FILE, { ...reasonBody, root: labRoot(reasonBody.schemaVersion, reasonBody) })
-  vi.spyOn(Date, "now").mockReturnValue(1003); vi.spyOn(process.hrtime, "bigint").mockReturnValue(1003000000n)
+  vi.spyOn(Date, "now").mockReturnValue(wall + 2 + gapMs); vi.spyOn(process.hrtime, "bigint").mockReturnValue(1003000000n)
   return f
 }
 describe("actual one-shot reader closures", () => {
+  it.each([false, true])("allows ordinary/terminal absence=%s with a realistic nonzero gap below cap", absent => {
+    const now = lean.LEAN_RETRY_V8_CARRY.startedAtMs + 57_500_000 - lean.LEAN_RETRY_V8_CARRY.priorElapsedMs
+    const f = readerFixture(false, absent, lean.LEAN_RETRY_V8_CARRY.startedAtMs, now - lean.LEAN_RETRY_V8_CARRY.startedAtMs - 2)
+    if (absent) expect(retained.verifyLeanRetryTerminalOnlyV8(f.paths.request, "v8-1").closedElapsedMs).toBeLessThan(57_600_000)
+    else expect(retained.verifyLeanCorrectionRetained(f.paths.request, "diagnostic", "v8-1").cumulativeElapsedMs).toBe(57_500_000)
+  }, 20000)
+  it("debits a not-yet-imported gap once against the realistic whole-task wall floor", () => {
+    const f = readerFixture()
+    const now = lean.LEAN_RETRY_V8_CARRY.startedAtMs + 57_500_000 - lean.LEAN_RETRY_V8_CARRY.priorElapsedMs
+    vi.mocked(Date.now).mockReturnValue(now)
+    expect(lean.currentLeanElapsedMs(f.ledger, 200_000)).toBe(57_500_000)
+    vi.mocked(Date.now).mockReturnValue(now + 100_001)
+    expect(lean.currentLeanElapsedMs(f.ledger, 200_000)).toBeGreaterThan(lean.LEAN_REPLAY_V7_CAPS.elapsedMs)
+  })
   it("accepts the real diagnostic reader and joins its actual FINAL close at baseline owner", async () => {
     const f = readerFixture()
     const checked = retained.verifyLeanCorrectionRetained(f.paths.request, "diagnostic", "v8-1")
