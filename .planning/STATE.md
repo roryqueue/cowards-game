@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Host-stage v7 source gates passed; fresh diagnostic data admission next
+stopped_at: Fresh v7 diagnostic allocation prepared; commit before unique MAIN entry
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
 last_activity_desc: Full 888-entry source reviewed, fixed, validated and verified; no empirical admission yet
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V7 DIAGNOSTIC PREPARED: Actual MAIN draft98878/finalize9380 and independent DIAGNOSTIC-DATA-REVIEW-v1 clean; exact request raw6bd2890b/data516d2ece/setup0ceaf249 over reviewed full source0e15d33f/888. ExactlyONEprepare88865 CLOSED0/preparation_only allocationbb23354065cbc7bfb94ea1116d6175869cb22323a05558ea7394be8417674a08/raw937a2bb49f6de7680a81601be727718055c11f8ed3bc471f1a2749d6c1273861. Checkedreal0700store onlyallocation/emptyledger/time,28prior/0currentcharge; closed47281402ms observation, all latercosts continue under57.6Mms/15GB300. Source/data gates committed/pushedf7bec2b6. Commit/push immutableallocation BEFORE ONE unique MAIN diagnosticentry; fresh SAMEPROCESS capacity beforecharge/provider. SourceANDHEADfixedthroughactualterminal+ONE appropriate uniquecheck; no competingheavywork/edits/commits duringhold. Only full acceptedNEWdiagnostic permitsconditionalONEfresh36baseline; anyfailure/refusal ends approvedenvelope. Oldhistory/readers immutable, no retry/refund/recredit. Phase265/LEAG/freeze/formation/holdout/public/counting/production unadmitted. Priorfrontiershistory.
 
 CURRENT SOURCE-VERIFIED V7 FRONTIER: Checked existing Plan16 host-stage supplement implemented and independently reviewed/fixed (CR-01 full inherited source closure and WR-01 connected consumer tests resolved). SOURCE-REVIEW-v2 clean at source15a2adbdfda547b4b1cdc2a49afc0e63cef57873; full live manifest sha256:0e15d33f3533e826a7cb8b14b8294609ce3dec8848604f912072d61e8334b8e4/888 entries. VALIDATION-v1 passed144 synthetic tests/zero skips, lab types and syntax. MAIN boundary1410files/zero; SOURCE-VERIFICATION-v1 verified6/6. This is source-only, not empirical/Phase265 credit. No active entry/verifier/hold/allocation. Fresh MAIN data/helper review, exact request, new immutable committed allocation, fresh real0700store and passing SAMEPROCESS capacity precede ONE diagnostic; only full acceptance permits conditional ONE36 baseline. Every current cost carries41943494+now−1791290048578 under NEW57.6Mms/same15GB300 caps/28spent; failure/refusal ends envelope. No old reader/retry/refund/recredit, freeze/formation/holdout/public/counting/production. Earlier frontiers are historical.
 
