@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Conditional fresh v6 baseline allocation prepared; commit and unique MAIN entry next
+stopped_at: V6 baseline failed; source diagnosis inconclusive; prospective time and route decision needed
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
-last_activity_desc: Conditional v6 baseline data reviewed and one immutable allocation prepared
+last_activity_desc: V6 baseline terminal-only verification and source-only diagnosis closed; no further Match authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT HUMAN-ONLY FRONTIER (2026-10-06): Freshv6diagnostic acceptedcb94964c; conditionalbaseline uniqueMAIN37077 CLOSEDexit1 and ONEindependentENTRY-terminal-onlycheck CLOSED gaps_found. HeldHEAD6b9336f1/source67263fe4 unchangedthroughclosure; SOURCE+HEADhold RELEASED/noactiveentry/verifier. Baseline3currentcharges/2finite success-OK-cleanupterminal records/thirdnonterminal,28cumulativespent; resultabsent/noordinaryreader/no baselinecredit. Actualchild_failed/exit1/signalnull/1236340ms; finitefailureUNKNOWN_INTERNAL_FAILURE/stageunknown, causeunknown (notproved disk/memory/timeout/capacity). Source-only GSDdiagnosisCLOSEDinconclusive: generictrustedhostclassifiercollapses postcharge Match/replaypublication exceptions; no speculativefixapplied. Allcurrentintervalsclosed41342676ms/effectiveclose1791252224672; ALLlatercosts continue as41342676+now−1791252224672 under43200000ms/same15GB300. Remainderbelowunchanged1860000msnext-Matchreserve; preciseapprovedone+conditionaloneenvelopeENDED. NEW265-16-REPLAY-V6-CONTINUATION-DECISION-v1.md proposes (NOTapproved/applied) fouradditionalprospectivecumulativehours→16h, thencheckedfinitehost-stagediagnosticrepair/ONEfreshdiag/conditionalONEfresh36, alloldbytes/bounds/time/28chargescarried. No newroute/allocation/Match/oldreader/retry/refund/recredit. Phase265/LEAG/freeze/formation/holdout/public/counting/production gated. Previousfrontiershistory.
 
 CURRENT V6 BASELINE PREPARED: Acceptedfreshdiagnosticcb94964c remainsimmutable. ActualMAINbaseline draft72234/finalize89112 and independent BASELINE-DATA-REVIEW-v1 clean afterfiniteeffectiveclockreconciliation; exactrequestde8be0f9/data59d8a938 binds36freshslots/source67263fe4/unchangedcoldcandidates/newdiagcheck. ExactlyONEpreparation15377 CLOSED0 allocationdf4c4e9046bc0dab740b5b69d44a45a0285629c07868a2c3ece1abd874c1e9a6/raw500dc17163bd4d0d1b7523d4dae41c75bfb7bd79bc72a61bedf6523acfc02904. Checkedreal0700store onlyallocation/emptyledger/time,25prior/0currentcharges andclosedinactive40106193ms. Same43200000ms/15GB300 limits; all latercostscarry. Commit/push BEFOREONEuniqueMAINbaseline entry with freshSAMEPROCESScapacity beforecharge/provider. SOURCE+HEADfixedthroughactualterminal andONEappropriateuniquecheck, no competingheavywork/edits/commit. Full36withinremainingtimeNOTpromised; partial/failure cannotcompletePhase265/freeze. Thisislastconditionalbaselineinapprovedenvelope; no furtherautomaticrouteafterfailure/refusal. Diagnostic/olderconsumedrecordsreadersimmutable/noretry/refund/recredit. Formation/holdout/public/counting/production gated. Earlierfrontiershistory.
 

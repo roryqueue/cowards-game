@@ -1,5 +1,9 @@
 # Roadmap: Coward's Game
 
+## Current bounded experiment frontier — 2026-10-06
+
+Plan265-16 remains incomplete. Reviewed/fixed/validated/source-verified replay-v6 diagnostic accepted; conditionalbaseline failed3charged/2finite successes/thirdnonterminal/noresult. Unique terminal-onlycheck and inconclusive source-onlydiagnosisclosed; noactiveentry/verifier/hold.28spent/cumulativecosts carried, approvedenvelopeended and remaining12h cannotadmitnextMatch. Prospective four-hour/newbounded-envelope choice in NEW265-16-REPLAY-V6-CONTINUATION-DECISION-v1.md PENDING/unapplied. No additional numberedplan, empiricalretry or phaseadvance. Phase266freeze and formation/holdout remain gated by completecurrentrulesbaseline; public/counting/production unadmitted. Earlierfrontiershistory.
+
 ## Approved prospective Plan16 startup/time supplement — 2026-10-05
 
 Human approval in265-16-STARTUP-APPROVAL-20261005.md permits a distinct private v5 trusted pre-source startup allowance inside unchanged5000ms host receipt, with1000ms Strategy execution and600000ms Match unchanged. The cumulative prospective timebox is twelve hours43200000ms, carrying all spent time/23 charged Matches/surviving files under unchanged15GB/300Match. Old versions and consumed bytes retain old bounds and failures. Research and independent plan check passed for265-16-STARTUP-PLAN-v1.md: three serial source tasks, not a new numbered plan. Implementation/review/fix/validation/source verification precede at mostONE fresh diagnostic and conditionalONE36baseline after accepted diagnostic/fresh same-process capacity. No new empirical route started or phase/freeze credit; the prior baseline remains10/36 partial. Current-rules evaluation/freeze before formation, private holdout unopened, no public/counting/production authority. Earlier frontiers below are historical snapshots.

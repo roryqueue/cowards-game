@@ -1,5 +1,9 @@
 # Requirements: Coward's Game v1.38 Competitive Strategy Factory and Adversarial League
 
+## Current bounded experiment frontier — 2026-10-06
+
+Fresh replay-v6 diagnostic accepted; conditional36-cell baseline failed after3charges/2finite successes/thirdnonterminal, resultabsent. One terminal-onlycheck and source-onlydiagnosisclosed; causeunknown. All28spent/cumulativecostscarried; no LEAG-01–09 or Phase265 completion credit. Preciseapprovedenvelopeended; remaining12hbelowunchanged next-Matchreserve. NEW265-16-REPLAY-V6-CONTINUATION-DECISION-v1.md's prospective four-hour/newbounded-envelope choice is PENDING/unapplied. No furtherMatch, baseline/freeze, formation or holdout admission; no public/counting/production. Earlier snapshots are historical; no unchecked requirement turned green.
+
 ## Approved prospective Plan16 startup/time supplement — 2026-10-05
 
 Human approval in265-16-STARTUP-APPROVAL-20261005.md permits a distinct private v5 trusted pre-source startup allowance inside unchanged5000ms host receipt, with1000ms Strategy execution and600000ms Match unchanged. The cumulative prospective timebox is twelve hours43200000ms, carrying all spent time/23 charged Matches/surviving files under unchanged15GB/300Match. Old versions and consumed bytes retain old bounds and failures. Research and independent plan check passed for265-16-STARTUP-PLAN-v1.md: three serial source tasks, not a new numbered plan. Implementation/review/fix/validation/source verification precede at mostONE fresh diagnostic and conditionalONE36baseline after accepted diagnostic/fresh same-process capacity. No new empirical route started or phase/freeze credit; the prior baseline remains10/36 partial. Current-rules evaluation/freeze before formation, private holdout unopened, no public/counting/production authority. Earlier frontiers below are historical snapshots.
