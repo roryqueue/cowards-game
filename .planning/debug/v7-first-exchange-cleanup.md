@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved_source_only
 trigger: Fresh v7 diagnostic refused after first broker exchange and cleanup failure
 created: 2026-10-06
 updated: 2026-10-06
@@ -18,7 +18,7 @@ Reproduction: no rerun authorized. Source-only investigation and isolated fake-t
 hypothesis: v7 host computes the request digest with the v5 domain, while the generated v7 broker requires the v7 domain; first request is rejected before Worker construction and response emission.
 test: completed static producer/consumer, authority-version and held-source comparisons; no tests or native/Worker execution.
 expecting: confirmed request-root domain mismatch explains first broker rejection; actual finite broker exit is not separately retained in reviewed allowlist.
-next_action: hand diagnosis to parent for separately authorized source-only remediation planning; do not execute, fix, commit, reopen readers, or change bounds.
+next_action: source repair independently verified; await new prospective empirical authority, never reopen the failed route or reader.
 
 ## Evidence
 
@@ -58,6 +58,6 @@ next_action: hand diagnosis to parent for separately authorized source-only reme
 ## Resolution
 
 root_cause: Confirmed static v7 request-root domain mismatch. Host startupBinding hashes v1.38-lean-startup-v5:<requestId>: for version 7 (session.ts:444), while buildLeanContainerBrokerSourceV7 rewrites the broker's expected domain to v7 (:252,:289). Actual route issues version 7 (authority.ts:121). First request is rejected before Worker construction; broker exits 73 without response and stream failure is classified MALFORMED_IPC. That nonzero exit also predicts stream-close rejection and cleanupfalse; actual cleanup suboperation outcomes remain unknown.
-fix: not applied
+fix: Source-only repair5077e3ac aligns the host v7 digest domain with selected generated broker. REDecd7f16f fails preciselyv7 whilev5/v6pass; GREENconnected32/32/labtypespass. Independent source reviewclean, validation3/3versions and verification4/4; MAINboundary1410zero. No bounds, cleanup or game semantics change. The consumed failed run remains failed; no native feasibility or cleanup success is inferred.
 verification: Static source/authority/producer-consumer and rejection/cleanup control-flow inspection only; relevant source matches consumed held HEAD and reviewed source commit. No tests, private runtime/Strategy payload reads, native/provider/Worker/Match/Docker execution, or accepted-check simulation. Single most useful missing finite host observation is the first docker-exec broker child's exit code/signal, specifically whether exit 73/null occurred before any response frame.
 files_changed: [.planning/debug/v7-first-exchange-cleanup.md]

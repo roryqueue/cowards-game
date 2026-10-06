@@ -1,5 +1,9 @@
 # Requirements: Coward's Game v1.38 Competitive Strategy Factory and Adversarial League
 
+## Current verified repair and pending continuation — 2026-10-06
+
+Fresh v7 diagnostic refused/29spent; no baseline/LEAG-01–09 credit. Confirmed handshake source defect repaired5077e3ac and independently verified4/4; source-only truth, no empirical requirement checked. Latest one-shot ended; proposed same-budget atmost3freshdiagnostics/conditionalONE36 is pendinghumanapproval in NEW265-16-POST-HANDSHAKE-CONTINUATION-DECISION-v1.md. Old records/readers remain immutable; no newMatch/freeze/formation/holdout/public/counting/production authority. STATE governs; earlier frontiershistory.
+
 ## Current approved host-stage frontier — 2026-10-06
 
 The prospective16h envelope is approved; source repair has passed independent review/fix/validation/6-of-6 source verification over888 live entries. These are source-only truths, not LEAG-01–09 completion. Actual fresh diagnostic data/helper/allocation/capacity gates and conditional36 baseline remain pending.28spent/allcosts/survivors carry under unchanged15GB300/runtime/privacy/rules. No baseline/freeze/formation/holdout/public/counting/production admission. Older pending-choice paragraphs below are history; STATE governs.

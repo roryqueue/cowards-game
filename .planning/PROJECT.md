@@ -1,5 +1,9 @@
 # Coward's Game
 
+## Current verified repair and pending continuation — 2026-10-06
+
+The fresh v7 diagnostic was refused: first broker exchange failed and cleanup was incomplete. Source diagnosis found a definite v7-host/v5-digest mismatch before Worker construction. One-line repair5077e3ac is independently reviewed/validated/verified4/4 with32connected source tests and no bound/rule change. The failed29spent prefix remains immutable and failed; no baseline credit. Latest one-shot permission ended. NEW265-16-POST-HANDSHAKE-CONTINUATION-DECISION-v1.md proposes atmost3freshdiagnostics/conditionalONE36 under the same remaining16h15GB300 budget, NOTapproved/applied. No active work/newallocation/Matchauthority. STATE's top frontier governs; earlier frontiers are history.
+
 ## Current approved host-stage frontier — 2026-10-06
 
 The four-hour prospective extension and ONE fresh diagnostic/conditional ONE36 baseline are approved in NEW265-16-HOST-STAGE-APPROVAL-20261006.md. Checked source repair has passed independent review/fix, validation and6/6 source verification over the full888-entry closure. New v7 alone uses cumulative16h;15GB300 and every runtime/gameplay/privacy bound remain fixed, all28spent/time/survivors carried. Actual data/helper review, committed allocation and SAMEPROCESS capacity remain next, not completed empirical gates. Current-rules baseline/freeze before formation and unopened holdout/no public/counting/production remain. Older pending-choice paragraphs below are history; STATE's top frontier governs.

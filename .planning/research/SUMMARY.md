@@ -1,5 +1,9 @@
 # Project Research Summary
 
+## Current handshake diagnosis and repair — 2026-10-06
+
+Fresh v7 failure is explained by a confirmed static producer/consumer mismatch: host computed v5 binding for version7 while generatedbroker requiredv7, rejecting beforeWorker. It predicts finite firstexchangeMALFORMED_IPC and unsuccessful streamclose; actual brokerexit/cleanupsubresults were not separately retained, not guesttimeoutproof. One-line source repair5077e3ac independently reviewed/validated/verified4/4 with actualproducer/generatedbindingguard tests; v5/v6/bounds/rules preserved. Failedv7/29spent remainsimmutable/no baselinecredit. Latestexactenvelopeended; proposed same-budget atmost3freshdiagnostics/conditionalONE36 pendinghumanapproval. No newroute/run or downstreamauthority; STATE governs.
+
 ## Current approved host-stage frontier — 2026-10-06
 
 The approved narrow finite trusted-host stage repair is implemented, independently reviewed/fixed, validated and source-verified6/6. It identifies location, not causal diagnosis; old failures remain unknown and immutable. CR-01 restored full inherited live source closure888entries; WR-01 connected actual catches/publication/ordinary synthetic reader/final-close carry. Native feasibility is not inferred. ONE fresh diagnostic and conditional ONE36 baseline remain behind actual data/helper/committed allocation/SAMEPROCESS capacity gates under approved16h and unchanged15GB300/runtime/gameplay/privacy bounds, carrying28spent/allcosts. Current-rules freeze before formation, holdout unopened/no public/counting/production. STATE supersedes older pending-choice paragraphs below.

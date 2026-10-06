@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V7 diagnostic refused; unique reader and independent closure audit closed; source diagnosis only
+stopped_at: Handshake source repair verified; fresh bounded retry envelope awaits human approval
 last_updated: "2026-10-06"
 last_activity: 2026-10-06
-last_activity_desc: Full 888-entry source reviewed, fixed, validated and verified; no empirical admission yet
+last_activity_desc: Confirmed v7 handshake defect repaired and verified; spent diagnostic remains failed and immutable
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT HUMAN-ONLY FRONTIER / HANDSHAKE REPAIR VERIFIED: GSDdiagnosis confirmed realv7hostrequestRoot usedv5domain whilegeneratedv7broker requiresv7, deterministicfirstrequest rejection beforeWorker—notguesttimeoutproof. ExistingPlan16source-onlycheckedrepair CLOSED: REDecd7f16f reproducedv7failure/v5v6pass; GREEN5077e3ac1246b4785f7ce60fbbb66b6aea86314d fixesONEproductionline, connectedrealproducer/generatedpreguestguardtests32/32+labtypesPASS. Independentreviewclean/validation3versioncasesPASS/sourceverification4/4; MAIN1410boundaryzero/diff0. New888-entrymanifestsha256:eaa793b2608a5a586a94f319b4cff7efe6575abba4dff80080817cf9ba92ba1c; oldconsumedsource/root/evidence neverrelabeled. No activeentry/verifier/hold/newallocation. Nativecleanup/feasibilityunproved; v7failed29spent remainsfailed/no acceptedcheck/baselineDENIED. Latestexactone+conditionaloneauthorityENDED; no freshMatchauthority inferred. NEW265-16-POST-HANDSHAKE-CONTINUATION-DECISION-v1.md proposes pending budget-bounded atmost3DISTINCTfresh diagnostics thenONEconditionalfresh36baseline afterfullnewacceptance, without onefailed diagnostic revoking remainingexplicitattempts. NOTapproved/applied; do not prepare/allocate/run beforedirecthumanapproval. Allcostcarry41943494+now−1791290048578 under57.6Mms/15GB300, observed48970131ms/8629869remaining at1791297075215, latercostcontinues. Sourceonlysafe workcomplete; Phase265/LEAG/freeze/formation/holdout/public/counting/production gated. Earlierfrontiershistory.
 
 CURRENT V7 REFUSED / SOURCE HOLD RELEASED: UniqueMAIN49207 CLOSED0 childexited/61038ms; ONEordinaryretainedreader8637 CLOSED1 LEAN_CORRECTION_RETAINED_DIAGNOSTIC_NOT_ACCEPTED, acceptedcheckABSENT. ONEindependent closure/refusal audit CLOSEDgaps_found: actualonecharge/system_failure CLEANUP/cleanupfalse/zero successes; finite native_response/stream_exchange/MALFORMED_IPC selectActivations ordinal0, initiatingcauseunknown/notguesttimeoutproof. Actualresult361e6632 immutable; no trustedhoststage receipt observed. Parent17692/child17730 absent, heldHEAD1583d2dc/fullsource0e15d33f unchangedthroughclosure, allocationraw937a2bb4 exact. Time6starts/6closes/inactive/closed47361631ms/finalclose1791295466715;29cumulativespent. SOURCE+HEADhold RELEASED. Approvedone+conditionaloneenvelope ENDED by refusal; baselineDENIED/noadditionalroute/Match/oldreader/retry/refund/recredit. Safe source-only GSDcleanup/firstexchange diagnosis may continue, no runtime/resource/rules amendment inferred. Alllatercostcarry41943494+now−1791290048578 under57.6Mms/same15GB300, historicpeaksunknown. Phase265/LEAG/freeze/formation/holdout/public/counting/production gated. Priorprepared/sourcefrontiershistory.
 
