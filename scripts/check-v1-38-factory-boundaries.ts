@@ -144,7 +144,7 @@ const allowedUnresolved = (path: string, specifier: string | undefined): boolean
   // lean reuse reaches it transitively. This exact path grants no other loader,
   // source execution, or oracle route; unresolved/hostile edges still reject.
   (specifier === "typescript" && path === "packages/strategy-lab/src/planner/emit.ts") ||
-  (specifier === "node:zlib" && path === "packages/strategy-lab/src/league/lean-experiment.ts") ||
+  ((specifier === "node:zlib" || specifier === "node:util") && path === "packages/strategy-lab/src/league/lean-experiment.ts") ||
   (specifier === "node:child_process" && path === "scripts/run-v1-38-lean-experiment.ts") ||
   (specifier === "node:child_process" && path === "scripts/lib/v1-38-lean-container-match-session.ts") ||
   (specifier === "node:child_process" && path === "scripts/run-v1-38-serious-league.ts") ||
@@ -178,7 +178,7 @@ export const checkFactoryBoundaries = (options: { files?: Readonly<Record<string
   const shared = collectLabBoundaryGraph(options), files = shared.files
   const violations: FactoryBoundaryViolation[] = [...checkLabBoundaries({ files }).violations]
   const add = (code: string, file: string) => { if (!violations.some(entry => entry.code === code && entry.file === file)) violations.push({ code, file }) }
-  for (const [path, missing] of shared.unresolved) if (missing.includes("node:zlib") && path !== "packages/strategy-lab/src/league/lean-experiment.ts") add("PRIVATE_TRANSITIVE_UNRESOLVED", path)
+  for (const [path, missing] of shared.unresolved) if ((missing.includes("node:zlib") || missing.includes("node:util") && privatePath(path)) && path !== "packages/strategy-lab/src/league/lean-experiment.ts") add("PRIVATE_TRANSITIVE_UNRESOLVED", path)
   // Package declarations form a second graph: follow their dependency manifests,
   // not every unused public barrel. In particular a strategy-lab declaration
   // never permits importing its broad factory entrypoint. Source edges below

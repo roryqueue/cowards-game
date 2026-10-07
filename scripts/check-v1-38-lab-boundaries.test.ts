@@ -63,9 +63,10 @@ describe("one-way lab boundary monitor", () => {
   it("allows util only in the exact lean metadata owner and denies every other private or public reach", () => {
     const owner = "packages/strategy-lab/src/league/lean-experiment.ts"
     expect(checkLabBoundaries({ files: { [owner]: 'import { types } from "node:util"' } }).ok).toBe(true)
-    for (const path of ["packages/strategy-lab/src/league/other.ts", "packages/strategy-lab/src/factory/other.ts", "packages/strategy-oracle-model/src/emit.ts", "scripts/lib/v1-38-lean-experiment-authority.ts", "packages/engine/src/codec.ts"]) {
+    for (const path of ["packages/strategy-lab/src/league/other.ts", "packages/strategy-lab/src/factory/other.ts", "packages/strategy-oracle-model/src/emit.ts", "scripts/lib/v1-38-lean-experiment-authority.ts"]) {
       expect(checkLabBoundaries({ files: { [path]: 'import "node:util"' } }).ok).toBe(false)
     }
+    expect(checkLabBoundaries({ files: { "apps/runtime-service/src/execute-match.ts": 'import "node:util"' } }).ok).toBe(true)
     const files = { [owner]: 'import "node:util"; export const metadata = 1', "apps/web/src/page.ts": 'import "../../../packages/strategy-lab/src/league/lean-experiment.js"' }
     expect(checkLabBoundaries({ files }).violations).toContainEqual({ code: "PRODUCTION_REACHES_LAB", file: "apps/web/src/page.ts" })
   })

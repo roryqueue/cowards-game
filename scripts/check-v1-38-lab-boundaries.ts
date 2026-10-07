@@ -159,11 +159,11 @@ export const checkLabBoundaries = (options: { files?: Readonly<Record<string, st
     }
   }
   for (const [path, unresolved] of sharedGraph.unresolved) for (const specifier of unresolved) {
-    if (specifier === "node:zlib" && path !== "packages/strategy-lab/src/league/lean-experiment.ts") add("CORE_DEPENDENCY_DENIED", path)
+    if ((specifier === "node:zlib" || specifier === "node:util" && isPrivateStrategy(path)) && path !== "packages/strategy-lab/src/league/lean-experiment.ts") add("CORE_DEPENDENCY_DENIED", path)
     const staticBuildTool = (path === "packages/strategy-lab/src/planner/emit.ts" || path === "packages/strategy-lab/src/factory/fingerprint.ts" || path === "packages/strategy-lab/src/factory/numeric-calibration.ts") && specifier === "typescript"
     if (specifier === undefined) { if (isLab(path) || labText.test(files[path] ?? "")) add("UNRESOLVED_LAB_EDGE", path); continue }
     if (!isLab(path) && labText.test(specifier)) add("UNRESOLVED_LAB_EDGE", path)
-    if (isLab(path) && !allowedNode.has(specifier) && !(path === "packages/strategy-lab/src/league/lean-experiment.ts" && specifier === "node:zlib") && !staticBuildTool) add("CORE_DEPENDENCY_DENIED", path)
+    if (isLab(path) && !allowedNode.has(specifier) && !(path === "packages/strategy-lab/src/league/lean-experiment.ts" && (specifier === "node:zlib" || specifier === "node:util")) && !staticBuildTool) add("CORE_DEPENDENCY_DENIED", path)
   }
   for (const [path, edges] of sharedGraph.graph) if (isLab(path)) for (const target of edges) if (!isLab(target) && !allowedCore.test(target)) add("CORE_DEPENDENCY_DENIED", path)
   // The policy-specific pass above preserves historical violation codes; all

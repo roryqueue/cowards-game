@@ -893,7 +893,7 @@ export const admitLeanAllocation = (value: unknown): Readonly<AnyLeanAllocation>
     const { schemaVersion: _schema, privacy: _privacy, root: _root, caps: _caps, slots: _slots, tupleRoot: _tuple, runtimeRoot: _runtime, sampleSlotRoots: _samples, diagnosisRoot: _diagnosis, ...input } = a
     const expected = createLeanRetryAllocationV8(input as Parameters<typeof createLeanSupervisorCorrectionAllocation>[0])
     if (labRoot("lean-retry-admission-v8", a) !== labRoot("lean-retry-admission-v8", expected)) return fail("RETRY_ALLOCATION")
-    if (immutableRetryData(expected)) admittedRetryCaps.set(expected, "timeboxExtension" in expected ? LEAN_RETRY_V8_TIMEBOX_CAPS : LEAN_REPLAY_V7_CAPS)
+    if (immutableRetryData(expected)) admittedRetryCaps.set(expected, Object.hasOwn(expected, "timeboxExtension") ? LEAN_RETRY_V8_TIMEBOX_CAPS : LEAN_REPLAY_V7_CAPS)
     return expected
   }
   if (typeof value === "object" && value !== null && leanSupervisorAllocationMode(value as AnyLeanAllocation)) {
