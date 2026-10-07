@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Two-pair source gate verified; fresh pair-one data/helper preparation next
+stopped_at: Fresh v11-1 diagnostic prepared; commit allocation before unique MAIN entry
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Scoped validation and independent source gate closed; pairs remain zero of two
+last_activity_desc: Fresh independent data/helper reviews clean; one-cell allocation prepared at zero charges
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V11-1 DIAGNOSTIC PREPARED (2026-10-07): Actual MAIN draft34607/finalize18141 CLOSED0; independent actual /root/review_two_pair_v11_data DATA59e38c32/HELPER eb7c6872 clean, exacthelper e4878b20/requestdata105b00b9/requestbytes4c7e65bf. ExactlyONE prepare89905 CLOSED0/preparation_only/issuedfalse/oneplanned/zerocharges. Freshallocation c2fb3831da47e1c000c6da660f07b089edebf063d9302c6cbef822ae9ae87184/raw846e1073992b538a4b257c773bece24b1339655fa44d308b900e3ec4fc523e06/source da8d5402/910. Checkedownedreal0700nonsymlinkstore onlyallocation/emptyledger/time; predecessor32charges/101682776ms/17694720B, closedinactive101691211ms afterprepare. Commitimmutableallocation BEFOREuniqueMAINentry; freshSAMEPROCESScapacity BEFOREcharge/provider. SourceANDHEADfixedthroughactualterminal+ONEappropriateindependentcheck; no competingheavywork/edits/commits duringhold. OnlythispairNEWaccepteddiagnostic+actualFINAL permits ownconditional36baseline; fitnotpromised. Distinctpair2 requiresauthenticclosedpair1carry andremainingbudget. SAMEabsolute01:43:30.738Zdeadline108M/15GB300/32oldcharges/allcosts/reserve1860000ms/allbounds. No Phase265/LEAG/freeze/formation/holdout/public/counting/production success. Olderfrontiershistory.
 
 CURRENT VERIFIED TWO-PAIR SOURCE GATE (2026-10-07): Tasks1/2 source gate independently source_verified/ec44e434/da8d5402/910, zero introduced blockers; actual BOTHordinal Markdownreview gates/manifest/source-diff pass. MAINfinal4filev11regression18PASS/116filterexcluded/87.50s, labbuild/shell/diff/factory1415zeroPASS. Scoped VALIDATION-v1 and SOURCE-VERIFICATION-v1 preserve six inherited strict diagnostics and warning: all-result lifecycle test is shape-only, not full actual transition proof. Report standard human_needed describes out-of-scope empirical evidence, not a new product/resource decision or repeat approval; source_verified gate explicitly permits fresh Task3data/helper work. Actual outcome authentication remains mandatory. No empirical/helper/allocation/entry/reader/sourceHEADhold; pairs0/2. Exact21:43:30.738Zstart→01:43:30.738Zdeadline continuous/allcosts,108Mcap/15GB300/32charges/reserve1860000ms/allbounds unchanged. Phase265/LEAG/freeze/formation/holdout/public/counting/production unadmitted.
 
