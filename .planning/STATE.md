@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Audit dedup repair reviewed and validated; two-pair remaining-budget decision awaits approval
+stopped_at: Two fresh pairs approved and unused; existing time allowance below unchanged reserve
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Source-only repair complete with clean reviews and 109 passing regressions; no new empirical authority
+last_activity_desc: Two-pair approval recorded; non-admitting time check blocks launch; time-only extension awaits decision
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT TWO-PAIR APPROVED / TIME CAPACITY BLOCKED (2026-10-07): Direct human approved the two distinct fresh private diagnostic/conditional36baseline pairs under SAMEremaininglimits/no repeat per-pair literals; recorded265-16-TWO-PAIR-APPROVAL-20261007.md against unchangedproposalbytes6a1c6db6. Approval does NOTincrease time or reduce reserve/exclude more idle. Non-admitting frozen-source clock observation19:10:07.458Z gives elapsed92588886/93600000, remaining1011114ms <1860000msreserve by848886; originaldeadline19:26:58.572Z unchanged, latercostcontinues. ZEROnewpairs/allocations/charges/providers/readers; no activeentry/verifier/sourceHEADhold. Oldsource07227237/functional0055ed48/905 reviewed and synchronizedorigin/main, old32charges/allhistory immutable. Do not create an allocation or launch a known time-refused route. Pending265-16-TWO-PAIR-TIME-EXTENSION-DECISION-v1.md proposes FOURprospectiveadditionalhours startingactualfirstMAINresumeAFTERtimeapproval, conservativelydebitfullold26h and newcumulative30h, SAME15GB300/reserve/allotherbounds/two-paircount; NOTapproved/applied. No retrospective idle exclusion/reset/refund. GSDresume capacity gate is a genuinely new resource checkpoint, not another per-attempt literal. Plan16/265/LEAG/freeze/formation/holdout/public/counting/production/archive-success/tag remain gated. Earlier paragraphs are history, superseded only as stated.
 
 CURRENT AUDIT DEDUP REPAIR CLOSED / BOUNDED CONTINUATION DECISION (2026-10-07): Existing Plan16 source-only research/checked supplement/RED52bc48b6/GREENb821a6e4/fixture6505088a CLOSED. Independent source REVIEW-v1 and committed-fixture REVIEW-v2 clean; source-verification5/5 with final test gate closed separately. Full worker remaining-budget62/62 and MAIN retained47/47 PASS/zero skips; MAIN selected connected repeat1/1 (61 excluded by filter), labtypes/shell/diff PASS, final factory1415zero. New actual v10 functional manifest0055ed48/905. Exact v10 request/predecessor/terminal consumers retain one full rederived accepted-closure audit each; legacy dual-auth order unchanged. Synthetic namespace isolation preserves real consumed bytes and rejection guards. No nativeRSS reduction, exact failurecause, full36 fit or Phase265/LEAG credit established. Unique diagnostic93653 accepted/check23564b5d/FINAL91213587 and failed baseline43305/terminal-onlycheck remain CLOSED/immutable; no active entry/verifier/sourceHEADhold. Approved one-shot pair ENDED; no new prepare/allocation/Match/ordinary old reader/reuse/recredit/refund authority. Pending265-16-REMAINING-BUDGET-AUTONOMY-DECISION-v1.md proposes atmostTWO distinct fresh private diagnostic/conditional36baseline pairs, without repeat per-pair approvals, under SAME93.6Mms/15GB/300/all32charges/allcosts/original19:26:58.572Zdeadline/reserve1860000/no new idle exclusion; NOTyetapproved. Async human decision requested while safe source work closed. Current-rules league/evaluation/freeze BEFORE formation; holdout unopened/no public/counting/production. Phase265/266freeze/formation/archive-success/tag remain gated. Earlier paragraphs are immutable-outcome history, not current authority.
 
