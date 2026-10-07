@@ -2,7 +2,7 @@ import { admitLeanRetryTimeboxExtension, LEAN_RETRY_V8_TIMEBOX_EXTENSION, isLean
 import { isLeanRemainingBudgetMode, isLeanRemainingBudgetExtensionV9, LEAN_REMAINING_V9_EXTENSION, LEAN_REMAINING_V9_PHASE, LEAN_REMAINING_V9_REVIEW_PATHS, validateLeanRemainingSurvivorsV9 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanTwentySixMode, isLeanTwentySixExtensionV10, isLeanProspectiveBudgetMode, leanProspectiveBudgetBinding, LEAN_TWENTY_SIX_V10_EXTENSION, LEAN_TWENTY_SIX_V10_REPORT_PATHS, validateLeanTwentySixSurvivorsV10 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanTwoPairMode, isLeanTwoPairExtensionV11, LEAN_TWO_PAIR_V11_EXTENSION, LEAN_TWO_PAIR_V11_REPORT_PATHS, type LeanTwoPairMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { authenticateLeanTwoPairHistoricalCustodyV11, authenticateLeanTwoPairClosedOutcomeV11 } from "./lib/v1-38-lean-correction-retained.js"
+import { authenticateLeanTwoPairHistoricalCustodyV11, authenticateLeanTwoPairClosedOutcomeV11, authenticateLeanTwoPairTerminalCarryV11 } from "./lib/v1-38-lean-correction-retained.js"
 /** Additive, fixed one-cell diagnostic / conditional 36-cell baseline.
  * Import is inert. Historical requests, stores and empirical readers are never used. */
 import { constants, closeSync, existsSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, realpathSync, readdirSync, statfsSync } from "node:fs"
@@ -540,8 +540,10 @@ const inspectLeanTwoPairPredecessorWithJoinV11 = (route: LeanCorrectionRoute, at
     const p = leanCorrectionRoutePaths("diagnostic", mode), d = leanTwoPairDocumentsV11("diagnostic", mode)
     identities.push(p.store, p.temp, p.request, p.allocation, d.authorization)
   }
-  const survivors = inventoryLeanSupervisorSurvivors([...new Set(identities.filter(path => existsSync(path)))])
-  const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: charged, elapsedUpperBoundMs: leanRetryElapsedV8(atMs, b), allocatedDiskBytes: Math.max(b.physicalFloorBytes, history.reserveBytes + survivors.reduce((n, row) => n + row.allocatedBytes, 0)), historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: labRoot("lean-two-pair-predecessor-v11", { roots, atMs, mode, route }), survivors }
+  const diagnostic = route === "baseline" ? authenticateLeanTwoPairTerminalCarryV11(mode, "diagnostic") : null
+  const inherited = diagnostic ?? previous ?? history.predecessor
+  const inventory = inventoryLeanTwoPairNoRefundV11(inherited, identities)
+  const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: charged, elapsedUpperBoundMs: leanRetryElapsedV8(atMs, b), allocatedDiskBytes: Math.max(b.physicalFloorBytes, inventory.allocatedDiskBytes), historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: labRoot("lean-two-pair-predecessor-v11", { roots, atMs, mode, route }), survivors: inventory.survivors }
   return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 /** v9 keeps its own exact envelope, reports, and continuation identity end-to-end. */
@@ -615,6 +617,21 @@ export const inventoryLeanSupervisorSurvivors = (identities: readonly string[]) 
   }
   for (const path of roots) visit(path)
   return rows.sort((a, b) => a.identity.localeCompare(b.identity))
+}
+/** Required inherited rows cannot disappear or shrink. New identities are
+ * optional until observed, then their full positive debit is inherited too.
+ * Carry the complete cumulative floor/reserve, not just a constant old floor. */
+export const inventoryLeanTwoPairNoRefundV11 = (prior: Pick<LeanCorrectionPredecessor, "survivors" | "allocatedDiskBytes">, identities: readonly string[]) => {
+  const survivors = inventoryLeanSupervisorSurvivors([...new Set([...prior.survivors.map(row => row.identity), ...identities.filter(path => existsSync(path))])])
+  const old = new Map(prior.survivors.map(row => [row.identity, row.allocatedBytes]))
+  if (old.size !== prior.survivors.length || !Number.isSafeInteger(prior.allocatedDiskBytes) || prior.allocatedDiskBytes < 0) return fail("PREDECESSOR_DRIFT")
+  for (const row of prior.survivors) {
+    const actual = survivors.find(value => value.identity === row.identity)
+    if (!Number.isSafeInteger(row.allocatedBytes) || row.allocatedBytes < 0 || !actual || actual.allocatedBytes < row.allocatedBytes) return fail("PREDECESSOR_DRIFT")
+  }
+  const allocatedDiskBytes = survivors.reduce((bytes, row) => bytes + Math.max(0, row.allocatedBytes - (old.get(row.identity) ?? 0)), prior.allocatedDiskBytes)
+  if (!Number.isSafeInteger(allocatedDiskBytes) || allocatedDiskBytes > LEAN_CAPS.retainedBytes) return fail("PREDECESSOR_DRIFT")
+  return { survivors, allocatedDiskBytes }
 }
 export function readLeanSupervisorSetupWitness(supervisor: "v5"): ReturnType<typeof validateLeanStartupSetupWitnessV5>
 export function readLeanSupervisorSetupWitness(supervisor?: true | "v3" | "v4"): ReturnType<typeof readLeanLegacySupervisorSetupWitness>

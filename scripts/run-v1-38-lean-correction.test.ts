@@ -14,6 +14,24 @@ import * as correction from "./run-v1-38-lean-correction.js"
 import * as retainedTwoPair from "./lib/v1-38-lean-correction-retained.js"
 
 describe("v11 additive two-pair concrete public seams", () => {
+  it("never refunds inherited v11 rows at preparation, terminal carry or pair2 inventory", () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v11-no-refund-")))
+    const survivor = join(directory, "historical-row"), fresh = join(directory, "new-row")
+    try {
+      writeFileSync(survivor, Buffer.alloc(65536))
+      const rows = inventoryLeanSupervisorSurvivors([survivor]), prior = { survivors: rows, allocatedDiskBytes: rows[0]!.allocatedBytes + 4288512 }
+      writeFileSync(fresh, Buffer.alloc(8192))
+      const observed = correction.inventoryLeanTwoPairNoRefundV11(prior, [fresh])
+      expect(observed.allocatedDiskBytes).toBe(prior.allocatedDiskBytes + inventoryLeanSupervisorSurvivors([fresh])[0]!.allocatedBytes)
+      expect(observed.survivors.find(row => row.identity === survivor)).toEqual(rows[0])
+      writeFileSync(survivor, "shrunk")
+      expect(() => correction.inventoryLeanTwoPairNoRefundV11(prior, [fresh])).toThrow()
+      rmSync(survivor)
+      expect(() => correction.inventoryLeanTwoPairNoRefundV11(prior, [fresh])).toThrow()
+      rmSync(fresh)
+      expect(() => correction.inventoryLeanTwoPairNoRefundV11(observed, [])).toThrow()
+    } finally { rmSync(directory, { recursive: true, force: true }) }
+  })
   it("keeps sealed v11 preparation stable across charged report growth only", () => {
     const fixture = correctionAllocationFixture().predecessor, report = accounting.LEAN_TWO_PAIR_V11_REPORT_PATHS[0]!
     const seal = (body: Omit<typeof fixture, "root">) => ({ ...body, root: labRoot(body.schemaVersion, body) })
