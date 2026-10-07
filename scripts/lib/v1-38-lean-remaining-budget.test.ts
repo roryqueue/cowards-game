@@ -3,6 +3,7 @@ import { afterEach, describe, it, expect, vi } from "vitest"
 import { readFileSync, existsSync, lstatSync } from "node:fs"
 import * as fs from "node:fs"
 import { resolve, join } from "node:path"
+import { tmpdir } from "node:os"
 import * as retained from "./v1-38-lean-correction-retained.js"
 import * as reuseIO from "./v1-38-lean-baseline-reuse.js"
 import { deriveLeanSupervisorCorrectionRequestRoots } from "../run-v1-38-lean-correction.js"
@@ -21,6 +22,12 @@ const input = (route: "diagnostic" | "baseline" = "diagnostic", ordinal: lean.Le
   const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: charges, elapsedUpperBoundMs: 64_594_435, allocatedDiskBytes: 14_864_384, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r("history"), survivors }
   return { timeboxExtension: b, sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: b?.planRoot, supervisorDecisionRoot: b?.approvalRoot, candidateRoots: [r("a"), r("b")], requestRoots: Array.from({ length: route === "diagnostic" ? 1 : 36 }, (_, i) => r(`request-${i}`)), seed: "inert-v9", route, reuseGrantRoot: r("reuse"), acceptedCheckRoot: route === "diagnostic" ? null : r("new-check"), requestBytesRoot: r("bytes"), dataReviewRoot: r("data"), setupAccountingRoot: r("setup"), predecessor: { ...p, root: labRoot(p.schemaVersion, p) }, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, attemptOrdinal: ordinal, priorClosureRoot: ordinal === 1 ? null : r("new-spent-closure"), continuationRoot: ordinal === 1 ? null : r("new-continuation"), acceptedReaderCloseRoot: route === "diagnostic" ? null : r("new-final") }
 }
+const inputV10 = (route: "diagnostic" | "baseline" = "diagnostic") => {
+  const b = envelopeV10(), f = input(route), survivors = Array.from({ length: 407 }, (_, i) => ({ identity: `.strategy-lab/inert-v10-history-${i}`, allocatedBytes: i === 0 ? 9_134_080 : 4096 }))
+  const p = { ...f.predecessor, chargedMatches: route === "diagnostic" ? 31 : 32, elapsedUpperBoundMs: b.priorElapsedMs, allocatedDiskBytes: b.physicalFloorBytes, survivors }
+  const { root: _root, ...pb } = p
+  return { ...f, seed: "inert-v10", timeboxExtension: b, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, predecessor: { ...pb, root: labRoot(pb.schemaVersion, pb) } }
+}
 describe("approved additive v10-1 twenty-six-hour envelope", () => {
   it("admits only the approved binding and routes every CLI and child identity", () => {
     const b = envelopeV10()
@@ -36,9 +43,85 @@ describe("approved additive v10-1 twenty-six-hour envelope", () => {
         expect(readFileSync("scripts/run-v1-38-lean-correction.sh", "utf8")).toContain(`${verb}-supervisor-${route}-v10-1`)
       }
       expect(correction.leanCorrectionChildMode(route, "v10-1")).toBe(`child-supervisor-${route}-v10-1`)
+      expect(correction.leanCorrectionChildSupervisor(correction.leanCorrectionChildMode(route, "v10-1"))).toBe("v10-1")
     }
     expect(() => correction.parseLeanCorrectionCommand(["prepare-supervisor-diagnostic-v10-2", "--request", "inert"])).toThrow()
     for (const key of ["approvalRoot", "planRoot", "charged", "startedAtMs", "root", "elapsedMs", "excludedIdleMs"]) expect(() => lean.admitLeanRetryTimeboxExtension({ ...b, [key]: r("forged") })).toThrow()
+  })
+  it.each(["diagnostic", "baseline"] as const)("routes admitted %s allocation, cap cache, preflight, elapsed floor and FINAL join", route => {
+    const f = inputV10(route), allocation = lean.createLeanSupervisorCorrectionAllocation(f, 8), admitted = lean.admitLeanAllocation(allocation)
+    expect(lean.leanSupervisorAllocationMode(admitted)).toBe("v10-1")
+    expect(lean.leanCapsForAllocation(admitted)).toBe(lean.LEAN_TWENTY_SIX_V10_CAPS)
+    expect(lean.leanCapsForAllocation(allocation)).toEqual(lean.LEAN_TWENTY_SIX_V10_CAPS)
+    expect(lean.leanCapsForAllocation(JSON.parse(JSON.stringify(allocation)))).toEqual(lean.LEAN_TWENTY_SIX_V10_CAPS)
+    expect(retained.leanCapsForAllocationModeV8(envelopeV10())).toBe(93_600_000)
+    expect(retained.leanCapsForAllocationModeV8(envelope())).toBe(72_000_000)
+    const start = { wallStartMs: envelopeV10().startedAtMs, monotonicStartNs: "0" }, now = { wallStartMs: start.wallStartMs + 123, monotonicStartNs: "123000000" }
+    expect(correction.assertLeanCorrectionAdmissionTime(f.predecessor.elapsedUpperBoundMs, start, now, admitted)).toBe(envelopeV10().priorElapsedMs + 123)
+    const m = { elapsedMs: 73_000_000, charged: route === "diagnostic" ? 31 : 32, physicalBytes: f.predecessor.allocatedDiskBytes, childRss: 1, parentRss: 1, freeBytes: lean.LEAN_CAPS.totalBytes, availableMemoryBytes: 2_000_000_000 }
+    expect(() => correction.assertLeanCorrectionResources(m, admitted)).not.toThrow()
+    expect(() => correction.assertLeanCorrectionResources({ ...m, elapsedMs: 91_740_000 }, admitted)).toThrow()
+    expect(() => correction.assertLeanCorrectionResources({ ...m, charged: 300 }, admitted)).toThrow()
+    expect(() => correction.assertLeanCorrectionResources({ ...m, availableMemoryBytes: 0 }, admitted)).toThrow()
+    expect(lean.leanWritablePaths(admitted)).toContain(lean.leanRetrySetupPath("v10-1"))
+    for (const patch of [{ attemptOrdinal: 2 }, { timeboxExtension: envelope() }, { planRoot: envelope().planRoot }]) expect(() => lean.admitLeanAllocation({ ...allocation, ...patch })).toThrow()
+    if (route === "baseline") {
+      const check = { root: allocation.acceptedCheckRoot!, allocationRoot: r("fresh-diag"), readerCloseMs: envelopeV10().startedAtMs + 1 }
+      const closure = { timeboxExtension: envelopeV10(), attemptOrdinal: 1, closureClass: "accepted", finalReaderClose: true, acceptedCheckAbsent: false, checkRoot: check.root, allocationRoot: check.allocationRoot, root: allocation.acceptedReaderCloseRoot!, readerCloseMs: check.readerCloseMs, sourceRoot: allocation.sourceRoot, head: "1".repeat(40) }
+      expect(() => assertLeanRetryBaselineJoinV8(allocation, check, closure, "2".repeat(40))).not.toThrow()
+      for (const patch of [{ timeboxExtension: envelope() }, { finalReaderClose: false }, { sourceRoot: r("old-source") }, { checkRoot: r("old-check") }]) expect(() => assertLeanRetryBaselineJoinV8(allocation, check, { ...closure, ...patch }, "2".repeat(40))).toThrow()
+    }
+  })
+  it("uses 93.6M at actual inert ledger interval, resource, capacity and charge boundaries", () => {
+    const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "lean-v10-inert-"))), allocation = lean.createLeanSupervisorCorrectionAllocation(inputV10(), 8)
+    try {
+      const ledger = lean.createLeanLedger(join(directory, "store"), allocation), start = envelopeV10().startedAtMs
+      vi.spyOn(Date, "now").mockReturnValue(start)
+      lean.publishLeanChildEntry(ledger, { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot!, head: "1".repeat(40), parentPid: process.ppid, childPid: process.pid, handshakeRoot: r("inert-handshake"), wallStartMs: start + 2_000_000, monotonicStartNs: process.hrtime.bigint().toString() })
+      lean.beginLeanInterval(ledger, "inert-cost", start)
+      lean.closeLeanInterval(ledger, "inert-cost", start + 2_000_000)
+      expect(lean.readLeanTimeAccounting(ledger).closedElapsedMs).toBe(73_508_287)
+      expect(lean.currentLeanElapsedMs(ledger)).toBe(73_508_287)
+      lean.checkpointLeanResources(ledger, 73_508_287, 1, 1)
+      expect(lean.readLeanLedger(ledger).elapsedMs).toBe(73_508_287)
+      vi.spyOn(Date, "now").mockReturnValue(start + 2_000_000)
+      lean.beginLeanInterval(ledger, "pilot-entry", start + 2_000_000)
+      const capacity = { freeBytes: lean.LEAN_CAPS.totalBytes, availableMemoryBytes: 2_000_000_000 }
+      expect(() => lean.chargeLeanSlot(ledger, allocation.slots[0]!, { ...capacity, availableMemoryBytes: 0 })).toThrow("CAPACITY")
+      const charged = lean.chargeLeanSlot(ledger, allocation.slots[0]!, capacity)
+      expect(charged.ordinal).toBe(0)
+      expect(lean.readLeanLedger(ledger).charged).toBe(32)
+      expect(() => lean.checkpointLeanResources(ledger, 93_600_001, 1, 1)).toThrow("RESOURCE")
+    } finally { fs.rmSync(directory, { recursive: true, force: true }) }
+  })
+  it("authenticates only the finite pinned old-v9 custody, never emitting accepted authority", () => {
+    const raw = new Map(Object.keys(retained.LEAN_TWENTY_SIX_V10_HISTORY_PINS).map(path => [path, fs.readFileSync(path)])), history = retained.validateLeanTwentySixHistoricalCustodyV10(raw, [])
+    expect(history).toMatchObject({ authorizing: false, cumulativeCharged: 31, priorElapsedMs: 71_508_287, reserveBytes: 4_288_512 })
+    expect(history.predecessor.survivors).toHaveLength(407)
+    for (const key of ["accepted", "checkRoot", "finalReaderClose", "readerCloseMs"]) expect(history).not.toHaveProperty(key)
+    for (const path of raw.keys()) {
+      const missing = new Map(raw); missing.delete(path); expect(() => retained.validateLeanTwentySixHistoricalCustodyV10(missing, [])).toThrow()
+      const changed = new Map(raw); changed.set(path, Buffer.concat([raw.get(path)!, Buffer.from(" ")])); expect(() => retained.validateLeanTwentySixHistoricalCustodyV10(changed, [])).toThrow()
+    }
+    for (const path of retained.leanTwentySixHistoricalAbsentPathsV10()) expect(() => retained.validateLeanTwentySixHistoricalCustodyV10(raw, [path])).toThrow()
+    expect(retained.authenticateLeanTwentySixHistoricalCustodyV10()).toMatchObject({ authorizing: false, cumulativeCharged: 31, refusalRoot: expect.any(String) })
+  })
+  it("keeps every exact new report physically debited but outside functional source", () => {
+    const names = ["RESEARCH-v1.md", "APPROVAL-20261007.md", "PLAN-v1.md", "PLAN-CHECK-v1.md", "PLAN-CHECK-v2.md", "SOURCE-REVIEW-v1.md", "SOURCE-REVIEW-v2.md", "SOURCE-SUMMARY-v1.md", "REVIEW-FIX-v1.md", "VALIDATION-v1.md", "SOURCE-VERIFICATION-v1.md", "BASELINE-DATA-REVIEW-v1.md", "BASELINE-HELPER-REVIEW-v1.md", "BASELINE-ALLOCATION-v1.json", "BASELINE-PREPARATION-v1.md", "DIAGNOSTIC-REQUEST-v1.json", "DIAGNOSTIC-SETUP-v1.json", "DIAGNOSTIC-CONTINUATION-v1.json", "DIAGNOSTIC-AUTHORIZATION-v1.json", "BASELINE-REQUEST-v1.json", "BASELINE-SETUP-v1.json", "BASELINE-CONTINUATION-v1.json", "BASELINE-AUTHORIZATION-v1.json"]
+    const manifest = correction.leanCorrectionSourceManifest("v10-1", envelopeV10())
+    for (const name of names) {
+      const path = `${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-${name}`
+      expect(lean.LEAN_TWENTY_SIX_V10_REPORT_PATHS.filter(p => p === path)).toEqual([path])
+      expect(manifest.entries.some(entry => entry.path === path)).toBe(false)
+    }
+    const f = inputV10(), extant = lean.LEAN_TWENTY_SIX_V10_REPORT_PATHS.filter(path => existsSync(path)), rows = correction.inventoryLeanSupervisorSurvivors(extant)
+    const { root: _root, ...p } = f.predecessor, body = { ...p, survivors: [...p.survivors, ...rows], allocatedDiskBytes: p.allocatedDiskBytes + rows.reduce((n, row) => n + row.allocatedBytes, 0) }
+    expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...f, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }, 8)).not.toThrow()
+    for (const row of rows) expect(row.allocatedBytes).toBe(fs.lstatSync(row.identity).blocks * 512)
+    const wrong = { ...body, survivors: [...body.survivors, { identity: `${lean.LEAN_REMAINING_V9_PHASE}UNRELATED.md`, allocatedBytes: 0 }] }
+    expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...f, predecessor: { ...wrong, root: labRoot(wrong.schemaVersion, wrong) } }, 8)).toThrow()
+    expect(() => correction.leanCorrectionSourceManifest("v10-1", envelope())).toThrow()
+    expect(() => correction.leanCorrectionSourceManifest("v9-1", envelopeV10())).toThrow()
   })
 })
 describe("approved additive v9 remaining-budget envelope", () => {
@@ -219,14 +302,15 @@ describe("approved additive v9 remaining-budget envelope", () => {
 })
 
 /** Composed read-only lineage fixture; no publication or execution. */
-const virtual = vi.hoisted(() => ({ bytes: new Map<string, Buffer>(), fds: new Map<number, string>(), present: new Set<string>() }))
+const virtual = vi.hoisted(() => ({ bytes: new Map<string, Buffer>(), fds: new Map<number, string>(), present: new Set<string>(), anchors: new Map<string, string>() }))
 vi.mock("node:fs", async original => {
   const real = await original<typeof import("node:fs")>()
-  const adjusted = (stat: fs.Stats, path: string) => virtual.bytes.has(path) ? Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { size: virtual.bytes.get(path)!.length }) : stat
+  const adjusted = (stat: fs.Stats, path: string) => virtual.bytes.has(path) ? Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { size: virtual.bytes.get(path)!.length, ...(virtual.anchors.has(path) ? { ino: 1_000_000_000 + [...virtual.anchors.keys()].indexOf(path) } : {}) }) : stat
   return { ...real,
-    existsSync: (path: fs.PathLike) => virtual.present.has(resolve(String(path))) || real.existsSync(path),
-    lstatSync: (path: fs.PathLike) => adjusted(real.lstatSync(path), resolve(String(path))),
-    openSync: (...args: Parameters<typeof real.openSync>) => { const fd = real.openSync(...args); virtual.fds.set(fd, resolve(String(args[0]))); return fd },
+    existsSync: (path: fs.PathLike) => virtual.bytes.has(resolve(String(path))) || virtual.present.has(resolve(String(path))) || real.existsSync(path),
+    realpathSync: (path: fs.PathLike) => virtual.anchors.has(resolve(String(path))) ? resolve(String(path)) : real.realpathSync(path),
+    lstatSync: (path: fs.PathLike) => adjusted(real.lstatSync(virtual.anchors.get(resolve(String(path))) ?? path), resolve(String(path))),
+    openSync: (...args: Parameters<typeof real.openSync>) => { const path = resolve(String(args[0])); const fd = real.openSync(virtual.anchors.get(path) ?? args[0], args[1], args[2]); virtual.fds.set(fd, path); return fd },
     fstatSync: (fd: number) => adjusted(real.fstatSync(fd), virtual.fds.get(fd) ?? ""),
     closeSync: (fd: number) => { virtual.fds.delete(fd); real.closeSync(fd) },
     readFileSync: (...args: Parameters<typeof real.readFileSync>) => {
@@ -236,7 +320,7 @@ vi.mock("node:fs", async original => {
   }
 })
 vi.mock("node:child_process", async original => ({ ...await original<typeof import("node:child_process")>(), execFileSync: (command: string) => { if (command !== "git") throw new Error("NO_PROCESS_AUTHORITY"); return "" } }))
-afterEach(() => { virtual.bytes.clear(); virtual.present.clear(); virtual.fds.clear(); vi.restoreAllMocks() })
+afterEach(() => { virtual.bytes.clear(); virtual.present.clear(); virtual.fds.clear(); virtual.anchors.clear(); vi.restoreAllMocks() })
 const put = (path: string, value: unknown) => virtual.bytes.set(resolve(path), Buffer.from(lean.leanCanonicalBytes(value)))
 const fixture = () => {
   const mode = "v9-2" as const, paths = lean.leanCorrectionRoutePaths("diagnostic", mode), docs = correction.leanRemainingDocumentsV9("diagnostic", mode)
@@ -304,6 +388,68 @@ describe("composed v9 accepted diagnostic lineage, not fresh execution", () => {
     for (const patch of [{ accepted: false }, { attemptOrdinal: 3 }, { sourceRoot: labRoot("wrong", {}) }, { allocationRoot: labRoot("wrong", {}) }]) {
       const { root: _r, ...body } = { ...f.check, ...patch }; put(join(f.paths.store, f.paths.check), { ...body, root: labRoot(body.schemaVersion, body) })
       f.evidence.mockClear(); expect(() => retained.authenticateLeanSupervisorDiagnosticCheck(f.mode)).toThrow(); expect(f.evidence).not.toHaveBeenCalled()
+    }
+    put(join(f.paths.store, f.paths.check), f.check); f.time.closed.delete("correction-supervisor-diagnostic-v8-reader-close")
+    expect(() => retained.authenticateLeanSupervisorDiagnosticCheck(f.mode)).toThrow("ACCEPTED_READER_CLOSURE")
+  }, 30_000)
+})
+
+/** Fully virtual v10 request/check/authorization/setup/report identities. The old
+ * accepted allocation/entry/terminal/time supply inert metadata shapes only. */
+const fixtureV10 = () => {
+  const mode = "v10-1" as const, b = envelopeV10(), paths = lean.leanCorrectionRoutePaths("diagnostic", mode), docs = correction.leanRemainingDocumentsV9("diagnostic", mode), old = lean.leanCorrectionRoutePaths("diagnostic", "v9-2")
+  const originalLedger = lean.openLeanLedger(old.store), originalEntry = lean.readLeanChildEntry(originalLedger), originalTerminal = lean.readLeanChildTerminal(originalLedger), oldTime = lean.readLeanTimeAccounting(originalLedger)
+  const sourceRoot = correction.leanCorrectionSourceManifest(mode, b).root, setup = correction.createLeanRemainingSetupWitnessV9(mode, b.startedAtMs + 1), delta = b.startedAtMs + 1000 - Math.max(...oldTime.closes.values())
+  const time = { ...oldTime, elapsedMs: b.priorElapsedMs + 1000, closedElapsedMs: b.priorElapsedMs + 1000, starts: new Map([...oldTime.starts].map(([id, at]) => [id, at + delta])), closes: new Map([...oldTime.closes].map(([id, at]) => [id, at + delta])), closed: new Set(oldTime.closed) }
+  const putAt = (path: string, value: unknown, anchor = old.request) => { virtual.anchors.set(resolve(path), resolve(anchor)); put(path, value) }
+  const putText = (path: string, bytes: Buffer) => { virtual.anchors.set(resolve(path), resolve(correction.leanRemainingDocumentsV9("diagnostic", "v9-2").dataReview)); virtual.bytes.set(resolve(path), bytes) }
+  putAt(docs.setup, setup, lean.leanRetrySetupPath("v9-2"))
+  const review = Buffer.from(`---\nstatus: clean\nsource_root: ${sourceRoot}\nsource_commit: ${"1".repeat(40)}\nindependently_reviewed: true\nauthor_agent: /root/execute_265_twenty_six\nreviewer_agent: /root/review_v10\n---\n`)
+  const request = correction.createLeanRemainingRequestDraftV9(mode, "diagnostic", { sourceRoot, reviewRoot: lean.leanBytesRoot(review), dataReviewRoot: r("temporary-data"), setupAccountingRoot: setup.root, reuseGrantRoot: r("virtual-reuse"), authorizationRoot: r("temporary-auth"), priorClosureRoot: null, continuationRoot: null, acceptedCheckRoot: null, acceptedReaderCloseRoot: null })
+  const dataRoot = correction.leanCorrectionRequestDataRoot(request), data = Buffer.from(review.toString().replace("---\nstatus", `---\nrequest_root: ${dataRoot}\nstatus`))
+  const authBody = { schemaVersion: "lean-retry-execution-authorization-v8", timeboxExtension: b, approved: true, executionAuthorized: true, route: "diagnostic", attemptOrdinal: 1, sourceRoot, approvalRoot: b.approvalRoot, planRoot: b.planRoot, policyRoot: b.root, requestDataRoot: dataRoot, authorAgent: "/root", reviewerAgent: "/root/review_v10" }, authorization = { ...authBody, root: labRoot(authBody.schemaVersion, authBody) }
+  const finalRequest = { ...request, dataReviewRoot: lean.leanBytesRoot(data), authorizationRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(authorization)) }
+  putText(docs.review, review); putText(docs.dataReview, data); putAt(docs.authorization, authorization); putAt(paths.request, finalRequest)
+  const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...inputV10(), sourceRoot, reviewRoot: finalRequest.reviewRoot, coldRoot: finalRequest.coldRoot, seed: finalRequest.seed, candidateRoots: finalRequest.candidateRoots, requestRoots: finalRequest.requestRoots, reuseGrantRoot: finalRequest.reuseGrantRoot, requestBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(finalRequest)), dataReviewRoot: finalRequest.dataReviewRoot, setupAccountingRoot: setup.root }, 8)
+  const ledger = { directory: resolve(paths.store), allocation }, entry = { ...originalEntry, sourceRoot, allocationRoot: allocation.root, requestBytesRoot: allocation.requestBytesRoot! }, terminal = { ...originalTerminal, sourceRoot, allocationRoot: allocation.root, entryBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(entry)) }
+  const { root: _runStartRoot, ...runStartBody } = JSON.parse(fs.readFileSync(join(old.temp, "admission-run-start.json"), "utf8")), runStart = { ...runStartBody, attemptOrdinal: 1, wallStartMs: runStartBody.wallStartMs + delta }, runStartValue = { ...runStart, root: labRoot(runStart.schemaVersion, runStart) }
+  const { root: _runCloseRoot, ...runCloseBody } = JSON.parse(fs.readFileSync(join(old.temp, "admission-run-close.json"), "utf8")), runClose = { ...runCloseBody, attemptOrdinal: 1, startRoot: runStartValue.root, allocationRoot: allocation.root, wallObservedMs: runCloseBody.wallObservedMs + delta, ledgerCloseMs: runCloseBody.ledgerCloseMs + delta }
+  putAt(join(paths.temp, "admission-run-start.json"), runStartValue, join(old.temp, "admission-run-start.json")); putAt(join(paths.temp, "admission-run-close.json"), { ...runClose, root: labRoot(runClose.schemaVersion, runClose) }, join(old.temp, "admission-run-close.json"))
+  const checkBody = { schemaVersion: "lean-correction-supervisor-retained-v8", attemptOrdinal: 1, accepted: true, route: "diagnostic", allocationRoot: allocation.root, sourceRoot, head: entry.head, requestBytesRoot: entry.requestBytesRoot, readerInterval: "correction-supervisor-diagnostic-v8-verifier", readerStartMs: time.starts.get("correction-supervisor-diagnostic-v8-verifier")!, readerObservedMs: time.closes.get("correction-supervisor-diagnostic-v8-verifier")! }, check = { ...checkBody, root: labRoot(checkBody.schemaVersion, checkBody) }
+  putAt(join(paths.store, paths.check), check, join(old.store, old.check))
+  const open = lean.openLeanLedger, readTime = lean.readLeanTimeAccounting, readEntry = lean.readLeanChildEntry, readTerminal = lean.readLeanChildTerminal, readState = lean.readLeanLedger
+  vi.spyOn(lean, "openLeanLedger").mockImplementation(path => resolve(path) === resolve(paths.store) ? ledger : open(path))
+  vi.spyOn(lean, "readLeanTimeAccounting").mockImplementation(value => value === ledger ? time : readTime(value))
+  vi.spyOn(lean, "readLeanChildEntry").mockImplementation(value => value === ledger ? entry : readEntry(value))
+  vi.spyOn(lean, "readLeanChildTerminal").mockImplementation(value => value === ledger ? terminal : readTerminal(value))
+  vi.spyOn(lean, "readLeanLedger").mockImplementation(value => value === ledger ? { stopped: false, charges: new Map(), charged: 32 } as never : readState(value))
+  vi.spyOn(reuseIO, "authenticateLeanColdReuse").mockReturnValue({ grant: { root: finalRequest.reuseGrantRoot } } as never)
+  const evidence = vi.spyOn(lean, "verifyLeanEvidence").mockReturnValue({} as never), lineage = correction.readLeanRemainingAcceptedDiagnosticLineageV9
+  let captured: unknown
+  vi.spyOn(correction, "readLeanRemainingAcceptedDiagnosticLineageV9").mockImplementation(purpose => { captured = purpose; return lineage(purpose) })
+  vi.spyOn(Date, "now").mockReturnValue(b.startedAtMs + 1001)
+  return { mode, paths, docs, time, check, evidence, captured: () => captured }
+}
+describe("composed v10 accepted lineage with strict fresh admission", () => {
+  it("composes actual request/predecessor custody for own-baseline lifecycle and revokes purpose", () => {
+    const f = fixtureV10(), baseline = lean.leanCorrectionRoutePaths("baseline", f.mode)
+    for (const path of [join(baseline.temp, "admission-prepare-start.json"), baseline.allocation, baseline.store, join(baseline.temp, "admission-run-start.json"), join(baseline.store, "child-terminal.json"), join(baseline.store, "result.json")]) {
+      virtual.present.add(resolve(path)); f.evidence.mockClear()
+      expect(() => retained.authenticateLeanSupervisorDiagnosticCheck(f.mode)).toThrow("ACCEPTED_CHARGE")
+      expect(f.evidence).toHaveBeenCalledOnce()
+      expect(() => retained.readLeanRemainingAcceptedLineagePurposeV9(f.captured())).toThrow("CUSTODY")
+      expect(() => correction.readLeanRemainingAcceptedDiagnosticLineageV9(f.captured())).toThrow("CUSTODY")
+      expect(() => correction.readLeanRemainingRequestV9(f.paths.request, "diagnostic", f.mode)).toThrow()
+      expect(() => correction.inspectLeanRemainingPredecessorV9("diagnostic", envelopeV10().startedAtMs + 1001, f.mode)).toThrow("SPENT_DESTINATION")
+      virtual.present.delete(resolve(path))
+    }
+    for (const path of [lean.leanCorrectionRoutePaths("baseline", "v9-3").store, ".strategy-lab/lean-correction-supervisor-baseline-20261007-v10-2", ".strategy-lab/lean-correction-supervisor-diagnostic-20261007-v10-3"]) {
+      virtual.present.add(resolve(path)); f.evidence.mockClear(); expect(() => retained.authenticateLeanSupervisorDiagnosticCheck(f.mode)).toThrow(); expect(f.evidence).not.toHaveBeenCalled(); virtual.present.delete(resolve(path))
+    }
+    expect(() => correction.readLeanRemainingAcceptedDiagnosticLineageV9({ mode: "v10-1" })).toThrow("CUSTODY")
+    for (const patch of [{ accepted: false }, { attemptOrdinal: 2 }, { sourceRoot: r("old-source") }, { allocationRoot: r("wrong-allocation") }]) {
+      const { root: _root, ...body } = { ...f.check, ...patch }; put(join(f.paths.store, f.paths.check), { ...body, root: labRoot(body.schemaVersion, body) }); f.evidence.mockClear()
+      expect(() => retained.authenticateLeanSupervisorDiagnosticCheck(f.mode)).toThrow(); expect(f.evidence).not.toHaveBeenCalled()
     }
     put(join(f.paths.store, f.paths.check), f.check); f.time.closed.delete("correction-supervisor-diagnostic-v8-reader-close")
     expect(() => retained.authenticateLeanSupervisorDiagnosticCheck(f.mode)).toThrow("ACCEPTED_READER_CLOSURE")

@@ -1,5 +1,6 @@
 import { LEAN_REPLAY_V7_CAPS, LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION, LEAN_RETRY_V8_TIMEBOX_EXTENSION, validateLeanBookkeepingBaselineCustodyV8, isLeanRetryMode, leanRetryOrdinal, type LeanRetryMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanRemainingBudgetMode, isLeanRemainingBudgetExtensionV9, LEAN_REMAINING_V9_PHASE, LEAN_REMAINING_V9_EXTENSION } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { isLeanTwentySixMode, isLeanProspectiveBudgetMode, LEAN_TWENTY_SIX_V10_EXTENSION } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 /** New correction reader: byte/root custody and fixed schedule joins only.
  * No cold builders, authored proposal generation, search or historical reader. */
 import { readdirSync, existsSync, readFileSync, lstatSync, realpathSync, openSync, fstatSync, closeSync, constants } from "node:fs"
@@ -326,7 +327,7 @@ export const authenticateLeanSupervisorDiagnosticCheck = (supervisor: true | "v3
   if (check.schemaVersion !== `lean-correction-supervisor-retained-v${leanSupervisorVersion(supervisor)}` || checkRoot !== labRoot(`lean-correction-supervisor-retained-v${leanSupervisorVersion(supervisor)}`, checkBody) || check.readerInterval !== interval || check.readerStartMs !== time.starts.get(interval) || !Number.isSafeInteger(check.readerObservedMs) || Number(check.readerObservedMs) < Number(check.readerStartMs) || Number(check.readerObservedMs) > time.closes.get(interval)!) return fail("ACCEPTED_CHECK_CUSTODY")
   if (isLeanRetryMode(supervisor) && check.attemptOrdinal !== leanRetryOrdinal(supervisor)) return fail("ACCEPTED_CHECK_CUSTODY")
   const readRequest = () => {
-    if (!isLeanRemainingBudgetMode(supervisor)) return readLeanCorrectionRequest(paths.request, "diagnostic", supervisor)
+    if (!isLeanProspectiveBudgetMode(supervisor)) return readLeanCorrectionRequest(paths.request, "diagnostic", supervisor)
     const closing = "correction-supervisor-diagnostic-v8-reader-close"
     // These finite accepted/actual FINAL/source/request joins precede the purpose.
     // The complete existing audit below still determines acceptance.
@@ -366,7 +367,7 @@ const deriveLeanRetryClosureV8 = (ledger: Parameters<typeof readLeanLedger>[0], 
   if (currentHold && (leanCorrectionSourceManifest(mode, allocation.timeboxExtension).root !== allocation.sourceRoot || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim() !== entry.head)) return fail("HOLD_OR_CAPACITY")
   const accepted = closureClass === "accepted" ? authenticateLeanSupervisorDiagnosticCheck(mode) : null
   if (accepted && accepted.readerCloseMs !== time.closes.get(closing)) return fail("ACCEPTED_READER_CLOSURE")
-  const body = { ...(allocation.timeboxExtension ? { timeboxExtension: allocation.timeboxExtension } : {}), schemaVersion: "lean-retry-closure-v8", privacy: "private_offline", attemptOrdinal: leanRetryOrdinal(mode), closureClass, authorizing: false, allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, head: entry.head, requestBytesRoot: entry.requestBytesRoot, entryBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "entry.json"))), terminalBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "child-terminal.json"))), resultBytesRoot: resultExists ? leanBytesRoot(readLeanCorrectionPrivateBytes(resultPath, 8388608)) : null, ledgerBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "ledger.ndjson"), 4194304)), timeBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "time.ndjson"), 4194304)), readerInterval: interval, readerStartMs: time.starts.get(interval)!, readerCloseMs: time.closes.get(closing)!, finalReaderClose: !isLeanRemainingBudgetMode(mode) || closureClass === "accepted", checkRoot: accepted?.root ?? null, checkBytesRoot: accepted?.bytesRoot ?? null, acceptedCheckAbsent: !checkExists, resultAbsent: !resultExists, closedElapsedMs: Math.max(time.elapsedMs, leanRetryRootElapsedFloorV8(time.closes.get(closing)!, allocation.timeboxExtension)), cumulativeCharged: state.charged, currentCharges: state.charges.size }
+const body = { ...(allocation.timeboxExtension ? { timeboxExtension: allocation.timeboxExtension } : {}), schemaVersion: "lean-retry-closure-v8", privacy: "private_offline", attemptOrdinal: leanRetryOrdinal(mode), closureClass, authorizing: false, allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, head: entry.head, requestBytesRoot: entry.requestBytesRoot, entryBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "entry.json"))), terminalBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "child-terminal.json"))), resultBytesRoot: resultExists ? leanBytesRoot(readLeanCorrectionPrivateBytes(resultPath, 8388608)) : null, ledgerBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "ledger.ndjson"), 4194304)), timeBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "time.ndjson"), 4194304)), readerInterval: interval, readerStartMs: time.starts.get(interval)!, readerCloseMs: time.closes.get(closing)!, finalReaderClose: !isLeanProspectiveBudgetMode(mode) || closureClass === "accepted", checkRoot: accepted?.root ?? null, checkBytesRoot: accepted?.bytesRoot ?? null, acceptedCheckAbsent: !checkExists, resultAbsent: !resultExists, closedElapsedMs: Math.max(time.elapsedMs, leanRetryRootElapsedFloorV8(time.closes.get(closing)!, allocation.timeboxExtension)), cumulativeCharged: state.charged, currentCharges: state.charges.size }
   return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 export const publishLeanRetryClosureV8 = (ledger: Parameters<typeof readLeanLedger>[0], mode: LeanRetryMode, closureClass: LeanRetryClosureClass) => {
@@ -381,7 +382,7 @@ export const authenticateLeanRetryClosureV8 = (mode: LeanRetryMode): LeanRetryAu
   const retryPaths = leanCorrectionRoutePaths("diagnostic", mode)
   if (existsSync(join(retryPaths.temp, "retry-closure-v8.json"))) {
     if (existsSync(join(retryPaths.store, "retry-closure-v8.json"))) return fail("CUSTODY")
-    const value = readLeanCorrectionJson(join(retryPaths.temp, "retry-closure-v8.json")), expected = deriveLeanRetryPreEntryClosureV8(mode, !isLeanRemainingBudgetMode(mode))
+    const value = readLeanCorrectionJson(join(retryPaths.temp, "retry-closure-v8.json")), expected = deriveLeanRetryPreEntryClosureV8(mode, !isLeanProspectiveBudgetMode(mode))
     if (!same(value, expected)) return fail("CUSTODY")
     return expected
   }
@@ -453,6 +454,42 @@ export const verifyLeanRetryTerminalOnlyV8 = (path: string, mode: LeanRetryMode)
   } finally { const time = closeLeanInterval(ledger, interval); if (gap) importLeanClosedInterval(ledger, "correction-supervisor-diagnostic-v8-terminal-reader-gap", gap.runCloseMs, gap.readerStartMs); beginLeanInterval(ledger, closing, time.closes.get(interval)!); closeLeanInterval(ledger, closing) }
   return publishLeanRetryClosureV8(ledger, mode, "absent")
 }
+/** The new baseline's sole absent-result check. Finite custody only: no ordinary
+ * reader, accepted check, fabricated entry identity, or future execution grant. */
+export const verifyLeanTwentySixBaselineTerminalOnlyV10 = (path: string) => {
+  const mode = "v10-1", paths = leanCorrectionRoutePaths("baseline", mode)
+  if (path !== paths.request || existsSync(join(paths.store, "result.json")) || existsSync(join(paths.store, paths.check))) return fail("CUSTODY")
+  const request = readLeanCorrectionJson(path) as LeanCorrectionRequest, head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim()
+  if (request.route !== "baseline" || request.attemptOrdinal !== 1 || !same(request.timeboxExtension, LEAN_TWENTY_SIX_V10_EXTENSION) || leanCorrectionSourceManifest(mode, request.timeboxExtension).root !== request.sourceRoot || !/^[a-f0-9]{40}$/u.test(head)) return fail("CUSTODY")
+  const startBody = { schemaVersion: "lean-baseline-terminal-reader-start-v10", authorizing: false, sourceRoot: request.sourceRoot, head, wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
+  publishLeanCorrection(join(paths.temp, "baseline-terminal-reader-start-v10.json"), start)
+  let ledger: Parameters<typeof readLeanLedger>[0] | null = null
+  let custody: unknown
+  try {
+    const prepareStart = readLeanCorrectionJson(join(paths.temp, "admission-prepare-start.json")) as Record<string, unknown>, prepareClose = readLeanCorrectionJson(join(paths.temp, "admission-prepare-close.json")) as Record<string, unknown>
+    if (prepareStart.route !== "baseline" || prepareStart.mode !== "prepare" || prepareStart.attemptOrdinal !== 1 || prepareClose.startRoot !== prepareStart.root || prepareClose.route !== "baseline" || prepareClose.mode !== "prepare") return fail("CUSTODY")
+    if (!existsSync(paths.store)) {
+      if (existsSync(paths.allocation) || prepareClose.allocationRoot !== null || prepareClose.ledgerInterval !== null || prepareClose.importedMs !== 0 || existsSync(join(paths.temp, "admission-run-start.json"))) return fail("CUSTODY")
+      custody = { stage: "preparation_terminal_only", allocationRoot: null, entryHead: null, currentCharges: 0, cumulativeCharged: 32, prepareStartRoot: prepareStart.root, prepareCloseRoot: prepareClose.root }
+    } else {
+      ledger = openLeanLedger(paths.store)
+      if (leanSupervisorAllocationMode(ledger.allocation) !== mode || !("route" in ledger.allocation) || ledger.allocation.route !== "baseline" || ledger.allocation.sourceRoot !== request.sourceRoot || readLeanTimeAccounting(ledger).active || [...readLeanTimeAccounting(ledger).starts.keys()].some(id => id.includes("verifier"))) return fail("CUSTODY")
+      const hasEntry = existsSync(join(paths.store, "entry.json")), entry = hasEntry ? readLeanChildEntry(ledger) : null, terminal = hasEntry ? readLeanChildTerminal(ledger) : null, state = readLeanLedger(ledger)
+      if (entry && entry.head !== head || state.charged < 32 || state.charged > 68) return fail("CUSTODY")
+      custody = { stage: hasEntry ? "entry_terminal_only" : "admission_terminal_only", allocationRoot: ledger.allocation.root, entryHead: entry?.head ?? null, currentCharges: state.charges.size, cumulativeCharged: state.charged, terminalStatus: terminal?.status ?? null, prepareStartRoot: prepareStart.root, prepareCloseRoot: prepareClose.root }
+      beginLeanInterval(ledger, "correction-supervisor-baseline-v8-terminal-verifier", start.wallStartMs)
+    }
+    if (leanRetryRootElapsedFloorV8(Date.now(), request.timeboxExtension) >= leanCapsForAllocationModeV8(request.timeboxExtension) || process.memoryUsage().rss + LEAN_EXTERNAL_SCRATCH_RESERVE > LEAN_CAPS.scratchBytes) return fail("HOLD_OR_CAPACITY")
+  } finally {
+    if (ledger && readLeanTimeAccounting(ledger).active) closeLeanInterval(ledger, "correction-supervisor-baseline-v8-terminal-verifier")
+    const observed = { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, body = { schemaVersion: "lean-baseline-terminal-reader-close-v10", startRoot: start.root, wallObservedMs: observed.wallStartMs, monotonicObservedNs: observed.monotonicStartNs, elapsedUpperBoundMs: leanCorrectionAdmissionElapsed(start, observed) }
+    publishLeanCorrection(join(paths.temp, "baseline-terminal-reader-close-v10.json"), { ...body, root: labRoot(body.schemaVersion, body) })
+  }
+  const body = { schemaVersion: "lean-baseline-terminal-custody-v10", authorizing: false, accepted: false, finalReaderClose: false, timeboxExtension: request.timeboxExtension, sourceRoot: request.sourceRoot, currentHead: head, custody, cumulativeElapsedMs: leanRetryRootElapsedFloorV8(Date.now(), request.timeboxExtension) }
+  const report = { ...body, root: labRoot(body.schemaVersion, body) }
+  publishLeanCorrection(join(paths.temp, "baseline-terminal-custody-v10.json"), report)
+  return report
+}
 /** Separate actual MAIN admission custody: no fabricated child ledger/entry,
  * terminal, accepted check or ordinary-reader identity. */
 const deriveLeanRetryPreEntryClosureV8 = (mode: LeanRetryMode, currentHold = true): LeanRetryAuthenticatedClosureV8 => {
@@ -461,10 +498,10 @@ const deriveLeanRetryPreEntryClosureV8 = (mode: LeanRetryMode, currentHold = tru
   const close = readLeanCorrectionJson(join(paths.temp, "retry-terminal-reader-close-v8.json")) as { schemaVersion: string; startRoot: LabRoot; wallObservedMs: number; monotonicObservedNs: string; elapsedUpperBoundMs: number; root: LabRoot }
   const { root: sr, ...sb } = start, { root: cr, ...cb } = close
   if (!exactLabKeys(start, ["schemaVersion", "attemptOrdinal", "failureRoot", "wallStartMs", "monotonicStartNs", "root"]) || !exactLabKeys(close, ["schemaVersion", "startRoot", "wallObservedMs", "monotonicObservedNs", "elapsedUpperBoundMs", "root"]) || start.schemaVersion !== "lean-retry-terminal-reader-start-v8" || close.schemaVersion !== "lean-retry-terminal-reader-close-v8" || sr !== labRoot(start.schemaVersion, sb) || cr !== labRoot(close.schemaVersion, cb) || close.startRoot !== sr || start.failureRoot !== failure.root || start.attemptOrdinal !== leanRetryOrdinal(mode) || start.wallStartMs < failure.admissionCloseMs || close.elapsedUpperBoundMs !== leanCorrectionAdmissionElapsed(start, { wallStartMs: close.wallObservedMs, monotonicStartNs: close.monotonicObservedNs })) return fail("CUSTODY")
-  const n = leanRetryOrdinal(mode), prior = n === 1 ? isLeanRemainingBudgetMode(mode) ? 30 : 29 : authenticateLeanRetryClosureV8(`${isLeanRemainingBudgetMode(mode) ? "v9" : "v8"}-${n - 1}` as LeanRetryMode).cumulativeCharged
+  const n = leanRetryOrdinal(mode), prior = n === 1 ? isLeanTwentySixMode(mode) ? 31 : isLeanRemainingBudgetMode(mode) ? 30 : 29 : authenticateLeanRetryClosureV8(`${isLeanRemainingBudgetMode(mode) ? "v9" : "v8"}-${n - 1}` as LeanRetryMode).cumulativeCharged
   if (failure.cumulativeCharged !== null && failure.cumulativeCharged !== prior) return fail("CUSTODY")
   const readerCloseMs = Math.max(close.wallObservedMs, start.wallStartMs + close.elapsedUpperBoundMs)
-  const body = { ...(failure.timeboxExtension ? { timeboxExtension: failure.timeboxExtension } : {}), schemaVersion: "lean-retry-closure-v8", privacy: "private_offline", attemptOrdinal: n, closureClass: "absent" as const, authorizing: false, allocationRoot: failure.allocationRoot, sourceRoot: failure.sourceRoot, head: failure.head, requestBytesRoot: failure.requestBytesRoot, entryBytesRoot: null, terminalBytesRoot: null, resultBytesRoot: null, ledgerBytesRoot: failure.ledgerBytesRoot, timeBytesRoot: labRoot("lean-retry-admission-reader-time-v8", { failureRoot: failure.root, startRoot: sr, closeRoot: cr }), readerInterval: "correction-supervisor-diagnostic-v8-admission-terminal-verifier", readerStartMs: start.wallStartMs, readerCloseMs, finalReaderClose: !isLeanRemainingBudgetMode(mode), checkRoot: null, checkBytesRoot: null, acceptedCheckAbsent: true, resultAbsent: true, closedElapsedMs: leanRetryRootElapsedFloorV8(readerCloseMs, failure.timeboxExtension), cumulativeCharged: prior, currentCharges: 0, admissionFailureRoot: failure.root }
+  const body = { ...(failure.timeboxExtension ? { timeboxExtension: failure.timeboxExtension } : {}), schemaVersion: "lean-retry-closure-v8", privacy: "private_offline", attemptOrdinal: n, closureClass: "absent" as const, authorizing: false, allocationRoot: failure.allocationRoot, sourceRoot: failure.sourceRoot, head: failure.head, requestBytesRoot: failure.requestBytesRoot, entryBytesRoot: null, terminalBytesRoot: null, resultBytesRoot: null, ledgerBytesRoot: failure.ledgerBytesRoot, timeBytesRoot: labRoot("lean-retry-admission-reader-time-v8", { failureRoot: failure.root, startRoot: sr, closeRoot: cr }), readerInterval: "correction-supervisor-diagnostic-v8-admission-terminal-verifier", readerStartMs: start.wallStartMs, readerCloseMs, finalReaderClose: !isLeanProspectiveBudgetMode(mode), checkRoot: null, checkBytesRoot: null, acceptedCheckAbsent: true, resultAbsent: true, closedElapsedMs: leanRetryRootElapsedFloorV8(readerCloseMs, failure.timeboxExtension), cumulativeCharged: prior, currentCharges: 0, admissionFailureRoot: failure.root }
   return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 const verifyLeanRetryPreEntryTerminalOnlyV8 = (mode: LeanRetryMode) => {
@@ -485,7 +522,7 @@ const verifyLeanRetryPreEntryTerminalOnlyV8 = (mode: LeanRetryMode) => {
   publishLeanCorrection(join(paths.temp, "retry-closure-v8.json"), closure)
   return closure
 }
-const leanCapsForAllocationModeV8 = (extension?: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanRetryTimeboxExtension) => extension === undefined ? LEAN_REPLAY_V7_CAPS.elapsedMs : (admitLeanRetryTimeboxExtension(extension), LEAN_RETRY_V8_TIMEBOX_CAPS.elapsedMs)
+export const leanCapsForAllocationModeV8 = (extension?: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanRetryTimeboxExtension) => extension === undefined ? LEAN_REPLAY_V7_CAPS.elapsedMs : admitLeanRetryTimeboxExtension(extension).elapsedMs
 
 /** Closed historical preparation markers and report; NEVER an old reader/FINAL. */
 export const LEAN_REMAINING_V9_PREPARATION_PINS = Object.freeze({
@@ -581,4 +618,67 @@ export const authenticateLeanRemainingClosedPrefixV9 = (mode: LeanRetryMode) => 
   if (mode === "v9-1" && existsSync(join(leanCorrectionRoutePaths("diagnostic", mode).temp, "author-finalization-terminal-observation-v1.json"))) return authenticateLeanRemainingAuthorRefusalCustodyV9()
   const closure = authenticateLeanRetryClosureV8(mode)
   return Object.freeze({ ...closure, custodyClass: "actual_reader_closure" as const, closedAtMs: closure.readerCloseMs, custodyBytesRoot: closure.timeBytesRoot, identities: [] as string[] })
+}
+
+/** Finite historical v9 metadata only. No old request admission, ordinary reader,
+ * current-source reevaluation, replay, Strategy source, or result payload read. */
+const v10OldDiagnostic = ".strategy-lab/lean-correction-supervisor-diagnostic-20261007-v9-2"
+const v10OldBaselineTemp = ".strategy-lab/lean-correction-supervisor-baseline-20261007-v9-2-tmp"
+export const LEAN_TWENTY_SIX_V10_HISTORY_PINS = Object.freeze({
+  [`${v10OldDiagnostic}/allocation.json`]: "sha256:3afc66258714d8d59561c22c4ad9fc28a70a6c6b77bed98d25e98da893008fdc",
+  ".planning/artifacts/v1.38-lean-correction-supervisor-diagnostic-allocation-v9-2.json": "sha256:3afc66258714d8d59561c22c4ad9fc28a70a6c6b77bed98d25e98da893008fdc",
+  [`${v10OldDiagnostic}/entry.json`]: "sha256:0f47b5c4fddd3030af4afc405e3e44b8fe587957ca129be5e0418c415f98e066",
+  [`${v10OldDiagnostic}/child-terminal.json`]: "sha256:bd3e448e24cc020c92506126ff14516f08c10fdc8278e4bbee995cdc7eae1421",
+  [`${v10OldDiagnostic}/correction-supervisor-diagnostic-check-v9-2.json`]: "sha256:a6febfdd0b548a1a1575f00adc54650d2adb2f4f222dd572d00761d960b52723",
+  [`${v10OldDiagnostic}/retry-closure-v8.json`]: "sha256:bd2a972650b9ea88b5a57e4e70b16bd4c7dba8586599f07e751306aca85295e9",
+  [`${v10OldDiagnostic}/ledger.ndjson`]: "sha256:ddc396d8e93e50ef50a05625f343c477ca0953af21b1b1c4c08019ee9bf4e2bd",
+  [`${v10OldDiagnostic}/time.ndjson`]: "sha256:7007d1c89d09bf3f6a51e6eb10634818f9dfe24d52541ad0e8128bb1e9e02eeb",
+  ".strategy-lab/lean-correction-supervisor-diagnostic-request-20261007-v9-2.json": "sha256:fda35499f34a49cce75994c51f05464484aef62d0a77f9df4e96083624029cd1",
+  ".strategy-lab/lean-correction-supervisor-baseline-request-20261007-v9-2.json": "sha256:5f8f0cea417c8134d0bfb6347bf734e96b15f8d5898115f045d198f40729f4da",
+  [`${v10OldBaselineTemp}/admission-prepare-start.json`]: "sha256:9c4f13950b9d535b5ab3ea4ec5d33dfc615c115832666efbd401e66bdfcbd696",
+  [`${v10OldBaselineTemp}/admission-prepare-close.json`]: "sha256:d30cf79a4b7e3c0f30eda6797d9cbaddd3d5cfdb7c1cfc7814df6a058f5931a5",
+  ".strategy-lab/lean-retry-authorization-baseline-v9-2.json": "sha256:97ca159fdbf9e80b4569842f01d8f12733fb5a9616d213f3d4d24e4684be930c",
+  ".strategy-lab/lean-retry-envelope-setup-20261007-v9-2.json": "sha256:21b524a4b097f9b9b62a572072b68b8a1aab8af72091f0f75fd90cc128a9104f",
+  ".strategy-lab/lean-retry-continuation-v9-2.json": "sha256:afcc555f435c8714c1631859f0eea05f34b366d98df75c95a1ae3cfe8b79eb82",
+  [`${LEAN_REMAINING_V9_PHASE}NEW265-16-V9-BASELINE-FOR-2-PREPARATION-TERMINAL-VERIFICATION-v1.md`]: "sha256:64138c3b44c158061598fc8afe66185b20e9fbefc8e2c9d7ebb704e09110e03d",
+})
+export const leanTwentySixHistoricalAbsentPathsV10 = () => {
+  const failed = leanCorrectionRoutePaths("baseline", "v9-2"), unused = [leanCorrectionRoutePaths("baseline", "v9-1"), leanCorrectionRoutePaths("diagnostic", "v9-3"), leanCorrectionRoutePaths("baseline", "v9-3")]
+  return [failed.store, failed.allocation, ...["admission-run-start.json", "admission-run-close.json", "retry-closure-v8.json", "entry.json", "child-terminal.json", "result.json"].map(name => join(failed.temp, name)), ...unused.flatMap(p => [p.store, p.allocation, join(p.temp, "admission-prepare-start.json"), join(p.temp, "admission-run-start.json")])]
+}
+export const validateLeanTwentySixHistoricalCustodyV10 = (raw: ReadonlyMap<string, Uint8Array>, forbidden: readonly string[]) => {
+  const pins = LEAN_TWENTY_SIX_V10_HISTORY_PINS
+  if (forbidden.length || raw.size !== Object.keys(pins).length) return fail("CUSTODY")
+  for (const [path, pin] of Object.entries(pins)) { const bytes = raw.get(path); if (!bytes || bytes.length > 262144 || leanBytesRoot(bytes) !== pin) return fail("CUSTODY") }
+  const parse = (path: string) => JSON.parse(Buffer.from(raw.get(path) ?? fail("CUSTODY")).toString("utf8")) as Record<string, unknown>
+  const allocation = parse(`${v10OldDiagnostic}/allocation.json`) as unknown as LeanCorrectionAllocation
+  const entry = parse(`${v10OldDiagnostic}/entry.json`), terminal = parse(`${v10OldDiagnostic}/child-terminal.json`), check = parse(`${v10OldDiagnostic}/correction-supervisor-diagnostic-check-v9-2.json`), closure = parse(`${v10OldDiagnostic}/retry-closure-v8.json`)
+  const { root: cr, ...cb } = closure, { root: kr, ...kb } = check
+  const sourceRoot = "sha256:664f2da8fd2199d965773de7422575f52dbebeeb486a0c661702a97d648c8ee6"
+  if (allocation.root !== "sha256:5288fa839acd80b9e703fa7dba02aa49618fe1e5b58dbc677688782bceb6bf48" || allocation.sourceRoot !== sourceRoot || allocation.attemptOrdinal !== 2 || allocation.route !== "diagnostic" || !same(allocation.timeboxExtension, LEAN_REMAINING_V9_EXTENSION) || allocation.predecessor.chargedMatches !== 30 || allocation.predecessor.survivors.length !== 407 || allocation.predecessor.allocatedDiskBytes !== 15_085_568 || allocation.predecessor.survivors.reduce((n, row) => n + row.allocatedBytes, 0) !== 10_797_056) return fail("CUSTODY")
+  if (cr !== labRoot("lean-retry-closure-v8", cb) || kr !== labRoot("lean-correction-supervisor-retained-v8", kb) || closure.closureClass !== "accepted" || closure.authorizing !== false || closure.finalReaderClose !== true || closure.acceptedCheckAbsent !== false || closure.currentCharges !== 1 || closure.cumulativeCharged !== 31 || closure.closedElapsedMs !== 69_224_947 || closure.readerCloseMs !== 1791351187999 || closure.sourceRoot !== sourceRoot || closure.allocationRoot !== allocation.root || closure.checkRoot !== kr || closure.checkBytesRoot !== pins[`${v10OldDiagnostic}/correction-supervisor-diagnostic-check-v9-2.json`] || closure.ledgerBytesRoot !== pins[`${v10OldDiagnostic}/ledger.ndjson`] || closure.timeBytesRoot !== pins[`${v10OldDiagnostic}/time.ndjson`] || !same(closure.timeboxExtension, LEAN_REMAINING_V9_EXTENSION)) return fail("CUSTODY")
+  if (check.accepted !== true || check.status !== "retained_valid" || check.currentCharged !== 1 || check.cumulativeCharged !== 31 || check.successful !== 1 || check.cleanupComplete !== true || check.sourceRoot !== sourceRoot || check.allocationRoot !== allocation.root || check.head !== entry.head || closure.head !== entry.head || terminal.head !== entry.head || terminal.status !== "child_exited" || terminal.exitCode !== 0 || terminal.signal !== null || entry.sourceRoot !== sourceRoot || entry.allocationRoot !== allocation.root || terminal.entryBytesRoot !== pins[`${v10OldDiagnostic}/entry.json`]) return fail("CUSTODY")
+  const baseline = parse(".strategy-lab/lean-correction-supervisor-baseline-request-20261007-v9-2.json"), start = parse(`${v10OldBaselineTemp}/admission-prepare-start.json`), close = parse(`${v10OldBaselineTemp}/admission-prepare-close.json`)
+  if (baseline.sourceRoot !== sourceRoot || baseline.route !== "baseline" || baseline.acceptedCheckRoot !== kr || baseline.acceptedReaderCloseRoot !== cr || start.route !== "baseline" || start.mode !== "prepare" || start.wallStartMs !== 1791351546464 || close.startRoot !== start.root || close.elapsedUpperBoundMs !== 4404 || close.wallObservedMs !== 1791351550868 || close.allocationRoot !== null || close.ledgerInterval !== null || close.importedMs !== 0) return fail("CUSTODY")
+  // Only accounted custody crosses the new approval gap. No check/FINAL object
+  // is returned, and these old bytes cannot become v10 baseline authority.
+  const body = { schemaVersion: "lean-twenty-six-historical-custody-v10", authorizing: false as const, cumulativeCharged: 31, priorElapsedMs: LEAN_TWENTY_SIX_V10_EXTENSION.priorElapsedMs, predecessor: allocation.predecessor, reserveBytes: 4_288_512, identities: Object.keys(pins), custodyRoot: labRoot("lean-twenty-six-history-pins-v10", pins) }
+  return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
+}
+/** Exact report/private metadata descriptor reads, never a generic permission. */
+export const authenticateLeanTwentySixHistoricalCustodyV10 = () => {
+  const raw = new Map<string, Uint8Array>()
+  for (const path of Object.keys(LEAN_TWENTY_SIX_V10_HISTORY_PINS)) {
+    if (path.startsWith(".strategy-lab/") || path.startsWith(".planning/artifacts/")) raw.set(path, readLeanCorrectionPrivateBytes(path))
+    else {
+      const absolute = resolve(path), stat = lstatSync(absolute)
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== process.getuid?.() || stat.size > 262144 || realpathSync(absolute) !== absolute) return fail("CUSTODY")
+      const fd = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW)
+      try { const before = fstatSync(fd), bytes = readFileSync(fd), after = fstatSync(fd); if (before.ino !== stat.ino || before.dev !== stat.dev || bytes.length !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs || after.ctimeMs !== before.ctimeMs) return fail("CUSTODY"); raw.set(path, bytes) } finally { closeSync(fd) }
+    }
+  }
+  const history = validateLeanTwentySixHistoricalCustodyV10(raw, leanTwentySixHistoricalAbsentPathsV10().filter(path => existsSync(path)))
+  const refusal = authenticateLeanRemainingAuthorRefusalCustodyV9()
+  if (refusal.cumulativeCharged !== 30 || refusal.authorizing !== false || refusal.accepted !== false) return fail("CUSTODY")
+  return Object.freeze({ ...history, refusalRoot: refusal.root, identities: [...history.identities, ...refusal.identities] })
 }

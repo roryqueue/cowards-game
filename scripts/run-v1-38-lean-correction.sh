@@ -5,6 +5,8 @@ ulimit -c 0
 unset NODE_OPTIONS NODE_COMPILE_CACHE NODE_REDIRECT_WARNINGS NODE_V8_COVERAGE
 export TSX_DISABLE_CACHE=1 NODE_DISABLE_COMPILE_CACHE=1
 case "${1:-}" in
+  prepare-supervisor-diagnostic-v10-1|run-supervisor-diagnostic-v10-1|verify-supervisor-diagnostic-v10-1|verify-terminal-supervisor-diagnostic-v10-1) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-diagnostic-20261007-v10-1-tmp" ;;
+  prepare-supervisor-baseline-v10-1|run-supervisor-baseline-v10-1|verify-supervisor-baseline-v10-1|verify-terminal-supervisor-baseline-v10-1) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-baseline-20261007-v10-1-tmp" ;;
   prepare-supervisor-diagnostic-v9-1|run-supervisor-diagnostic-v9-1|verify-supervisor-diagnostic-v9-1|verify-terminal-supervisor-diagnostic-v9-1) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-diagnostic-20261007-v9-1-tmp" ;;
   prepare-supervisor-baseline-v9-1|run-supervisor-baseline-v9-1|verify-supervisor-baseline-v9-1) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-baseline-20261007-v9-1-tmp" ;;
   prepare-supervisor-diagnostic-v9-2|run-supervisor-diagnostic-v9-2|verify-supervisor-diagnostic-v9-2|verify-terminal-supervisor-diagnostic-v9-2) LEAN_CORRECTION_TEMP="$(pwd -P)/.strategy-lab/lean-correction-supervisor-diagnostic-20261007-v9-2-tmp" ;;
