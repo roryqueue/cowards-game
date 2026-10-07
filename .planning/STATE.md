@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: File-basis repair verified; distinct fresh v9-2 MAIN data admission next
+stopped_at: Distinct v9-2 diagnostic prepared; commit allocation before unique MAIN entry
 last_updated: "2026-10-07"
 last_activity: 2026-10-06
 last_activity_desc: Direct approval recorded for three fresh diagnostics and one conditional baseline under unchanged cumulative caps
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V9-2 PREPARED (2026-10-07): MAINdraft86484/finalize46058 CLOSED0; independentV9-2-DATA-REVIEW-v1clean; actualpurepredecessor404rows/10,780,672bytes+inheritedreserve4,288,512=15,069,184debit. ExactlyONEprepare89005 CLOSED0; allocation5288fa83/raw3afc6625/source664f2da8/oneplannedcell/30priorcharges/elapsed68,812,450ms/debit15,085,568bytes. Real0700nonsymlinkstore onlyallocation,emptyledger,timewithclosedpreparationaccounting; noentry/Match/provider/reader/holdyet. Commit exactcanonicalallocation andsource/datareviews BEFORE uniqueMAINentry. SourceANDHEAD fixedthroughentryterminal+ONEappropriateuniqueactualretainedcheck; avoidcompetingheavywork. Same72Mms15GB300/deadline06:19:23.053Z/1860000reserve; SAMEPROCESSfreshcapacity beforecharge. Failedv9-1immutablezeroMatchcostscarried. No baselineunlessNEWacceptedfullcheck+actualFINAL; nofreeze/formation/holdout/public/counting/production/fullPhase265credit. Earlierparagraphshistory.
 
 CURRENT FILE-BASIS REPAIR VERIFIED (2026-10-07): Actualv9-1 MAINfinalization59860 CLOSED1 atrequestauthentication, BEFOREprepare/allocation/store/entry/Match/reader. Immutableauthorobservation andONEindependentterminalverification CLOSED; spentnonauthorizinghistory, nofakeprep/FINAL/retry. Diagnosedrawrows10,698,752plusinheritedreserve4,288,512 yields14,987,264budgetbasisaboveunchanged14,864,384floor; allold287rowsintact. CheckedexistingPlan16sourcecorrection RED2e5c7418/GREENb96c616c/final38694137 independentlySOURCE-REVIEW-v2clean; WR01reportdebitwarninghistoryresolved. MAIN56093 CLOSED0/22focusedPASS/types/diffPASS; independentSOURCE-VERIFICATION-v1 CLOSED3/3/905entryroot664f2da8/extension6b5895ee. Exactfiniteauthorfailureauthreturnsseparatelatercustodyanchor1791349668689/30charges/FINALfalse/noactualreaderfields. Noactualroute/reader/holdactive. MAIN distinctfreshv9-2data/helper+independentreview next; unchanged3diagnostics/ONEconditionalbaseline/72Mms15GB300/allcosts30oldcharges/deadline06:19:23.053Z/reserve1860000. Freeze/formation/holdout/public/counting/production gated. Earlierparagraphshistory.
 
