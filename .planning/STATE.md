@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Approved bookkeeping continuation source verified; fresh diagnostic2 data preparation next
+stopped_at: Diagnostic2 preparation failed zero-charge; source-only survivor-path mismatch repair next, no new route authority
 last_updated: "2026-10-07"
 last_activity: 2026-10-06
-last_activity_desc: Approved ordinal2 continuation reviewed clean,90 focused tests pass,904 source hashes independently verified
+last_activity_desc: Unique preparation failed before allocation/child/charge; independent terminal-only verification closed; narrow path mismatch found
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT DIAGNOSTIC2 PREPARATION FAILED / SAFE SOURCE DIAGNOSIS (2026-10-07): MAINdraft42003/finalize79838/datareviewclean; exactlyONEprepare99898 CLOSED1/DETAILS_WITHHELD beforestore/allocation/child/charge. Finitefailure84add3c8/raw6f8f74f6;start1791337263777/close1791337271289/7512ms/parent5987absent. ONEindependent PREPARATION-terminal-only verification CLOSED, source8cf180ad/HEAD888ca603 fixedthroughclosure;SOURCE+HEADhold RELEASED. Noactualentry/headeligibleordinaryreader; noneinvoked/fabricated. All30historicalcharges/costs/filescarry; request74950f06/setup/continuation/auth/markersimmutable. FailureENDSapproveddiag2+conditionalbaselinepair;NOnewprepare/run/Match/retry/baselinegrant. Boundednon-consuming finitepredecessor inspection57714PASS/367rows/14,864,384B/63,896,581ms atactualprepareanchor;8134staticpredicatecomparison finds3exacthistoricalreview `.planning/phases/` rows20,480B correctlyinventoried but rejectedbydelegatedlegacyv7 schedule validator. Definitecurrentsourceadmissionmismatch;originalwithheldthrowpointNOTobserved. NEW265-16-BOOKKEEPING-SURVIVOR-PATH-DIAGNOSIS-v1.md scopes safeRED/GREENexact-pinned-path repair/review/validate/verify;NOgenericpathwidening/legacychange/newrouteauthority. Carry62,024,083+now−1791335391279 under unchanged72Mms15GB300/allcurrentcosts;noreset. All9LEAG/Plan16/Phase265/266freeze/formation/holdout/public/counting/production/archive-success/tagremain gated. Olderfrontiersbelowhistory.
 
 CURRENT APPROVED BOOKKEEPING CONTINUATION / SOURCE VERIFIED (2026-10-07): Directhumanapproval NEW265-16-BOOKKEEPING-CONTINUATION-APPROVAL-20261007.md permits exactlyONEfreshprivate diagnostic v8-2 and ONLY after actualacceptedcheck+FINALclosure ONEfresh36baseline v8-2. CheckedexistingPlan16supplement/RED-GREEN/source0033e854/independentREVIEW-v2clean/scopedVALIDATION-v1/independentSOURCE-VERIFICATION-v1 CLOSED;4/4truths/904actualhashesmatch source8cf180ad/extension16492c39. REVIEW-v1missing12,288-byte survivor debit preserved/resolved. MAIN30835 CLOSED0/90selectedPASS57skipped42.25s;configuredlabtypes/diffPASS. Earlier1414zero boundaryscan precedes narrow no-import accountingfix, not a newfinalscan. This proves source bookkeeping/admission only, NOTempiricalRSS-cure/full36fit/Phase265credit. MAINfreshdata/helperauthor+distinctactualreview precede newimmutableallocation committedbeforeuniqueentry/emptyreal0700store/freshpassingSAMEPROCESS capacity BEFOREcharge. Keep sourceANDHEADfixedthroughactualterminal+ONEuniqueappropriatecheck;no competingheavywork. All30oldcharges/costs/files/oldreaders/historyimmutable; accepteddiag1/failedbaseline1 NOTnewauthority/success. Carry62,024,083ms+now−1791335391279 under unchanged72,000,000ms15GB300;excludeONLY3,173,947ms provenhumanidle;allcurrentresearch/review/test/admin/live/cleanup/checkcounts. Failure/refusal/inadequatereserve endsapprovedpair;noextraattempt. Noentry/provider/Match/ordinaryreader/holdactive. All9LEAG/Plan16/Phase265/266freeze/formation/holdout/public/counting/production/archive-success/tagremain gated. Olderfrontiersbelowarehistory,notcurrentpendingapproval.
 
