@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Survivor-path source fix verified and pushed; pending prospective remaining-budget envelope amendment
+stopped_at: Approved remaining-budget envelope; additive Plan16 research and checked source supplement underway
 last_updated: "2026-10-07"
 last_activity: 2026-10-06
-last_activity_desc: Narrow admission mismatch fixed, independently clean reviewed and source verified; MAIN69 tests pass, zero new games
+last_activity_desc: Direct approval recorded for three fresh diagnostics and one conditional baseline under unchanged cumulative caps
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED REMAINING-BUDGET ENVELOPE (2026-10-07): Direct human approval recorded in NEW265-16-REMAINING-BUDGET-ENVELOPE-APPROVAL-20261007.md. AtmostTHREE distinct fresh private diagnostics and ONE conditional36baseline after NEWacceptedcheck+actualFINALclosure; individualfailedroutesimmutable butremainingdiagnostics do notneedrepeatliteral. SAME72Mms15GB300/30oldcharges and allpriorcost/files; noreset/refund/recredit/newrules. Exactpriorcompletion1791337961631 gives64,594,435ms carry, currenttaskstart1791346557488; excludeONLY8,595,857ms provenhumanidle. EVERYcurrentcostcounts, deadline06:19:23.053Z; reserve1,860,000ms unchanged. Noactiveentry/reader/hold. ExistingPlan16 research/check/additivesource/review-fix/validate/sourceverify BEFORE MAINfreshdata/independentreview/newcommittedallocation/uniqueentry/emptyreal0700store/SAMEPROCESScapacity. Oldv8-2prepare+uniquecheck CLOSEDspentzerocharge/noallocation/store/result/head; allhistory/readersimmutable,nofabrication/reuse. Phase265/LEAG/266freeze/formation/holdout/public/counting/production stillgated. Earlierparagraphshistorical.
 
 CURRENT SOURCE FIX VERIFIED / PROSPECTIVE ENVELOPE DECISION PENDING (2026-10-07): Exact historicalreviewpath repair RED2cf89eea/GREEN31880765e6f636100b29e27a40bdb23ec6bbe03a CLOSED underexistingPlan16. Independent SURVIVOR-PATH-REVIEW-v1clean/10focusedPASS31unselected; VALIDATION-v1/sourceVERIFICATION-v1 CLOSED3/3truths. MAIN98800 CLOSED0/69testsPASS7.05s (41continuation/path+28cache); configuredlabtypes/diffPASS. Exact3phase-reviewpaths20,480B validatedONLYnewbookkeepingbinding beforelegacy schedule-onlyfilter; ACTUALcomplete367-rowpredecessor/root/counters/14,864,384B retainsallrows/debit. Legacyv7/oldv8paths/bindings/caps/cache/spentguardsunchanged. NoempiricalRSScure/full36fit/originalwithheldthrowclaim. Oldsource8cf180ad inventory remainsHISTORICAL,notcurrentfinalfixadmission. Diagnostic2prepare99898anditsONEterminalonlyverification CLOSEDimmutablezerocharge/noallocation/store/child/actualentryhead;pairSPENT, nobaseline/nextattemptauthority. No liveentry/reader/hold/heavyworker. All30oldcharges/costs/filescarry continuously62,024,083+now−1791335391279 under72Mms15GB300,noreset. NEW265-16-REMAINING-BUDGET-ENVELOPE-DECISION-v1.md proposesNOTapproved atmost3DISTINCTfreshprivate diagnostics+ONEconditional36baseline underSAMEcumulativecaps, no repeatliteral butfreshsource/data/allocation/SAMEPROCESScapacity/uniqueentry/checkeveryroute;failedindividualimmutable, neverreuse. No newbinding/prepare/allocation/runbeforehumanamendment. All9LEAG/Plan16/Phase265/266freeze/formation/holdout/public/counting/production/archive-success/tagremain gated. Olderfrontiershistory.
 
