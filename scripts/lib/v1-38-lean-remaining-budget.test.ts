@@ -149,6 +149,7 @@ describe("approved additive v9 remaining-budget envelope", () => {
       expect(() => validateLeanRemainingAuthorRefusalCustodyV9(forged, [])).toThrow()
     }
     const a = lean.createLeanSupervisorCorrectionAllocation(input("baseline"), 8)
+    // @ts-expect-error Deliberate hostile input: refusal custody is not a reader FINAL, even structurally.
     expect(() => assertLeanRetryBaselineJoinV8(a, { root: a.acceptedCheckRoot!, allocationRoot: r("new-diag"), readerCloseMs: prior.closedAtMs }, prior, "2".repeat(40))).toThrow()
     expect(() => authenticateLeanRemainingClosedPrefixV9("v8-1")).toThrow()
   })
