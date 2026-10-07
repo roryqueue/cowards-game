@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Corrected v10-1 preparation approved once; source gates complete; MAIN execution next
+stopped_at: Corrected v10-1 preparation passed; commit actual allocation before unique MAIN diagnostic entry
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Human approved one corrected preparation under unchanged limits; failed invocation preserved
+last_activity_desc: Corrected preparation 59362 closed exit0; one cell allocated and no Match charged
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CORRECTED V10-1 PREPARED (2026-10-07): Explicitly amended ONE corrected MAINprepare59362 CLOSED0/preparation_only/issuedfalse/onecell/zerocharge. Actualallocationf7e061d5/raw9d9a2c1b/source26c1befe; real0700nonsymlinkstore onlyallocation/ledger/time. Safe current observations in own canonicaltemp; all original refusal/history bytes unchanged. Commit actual canonical allocation BEFORE uniqueMAINentry. SAMEPROCESScapacity beforecharge/provider; sourceANDHEADhold throughactualterminal+ONEappropriateuniquecheck; no competingheavywork/edits/commits duringhold. Only NEWfullacceptedcheck+actualFINAL permits conditionalONE36baseline. Same93.6Mms/15GB300/all31oldcharges/allcosts/original19:26:58.572Zdeadline/reserve1860000. No Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earlier paragraphs preserved history.
 
 CURRENT CORRECTED PREPARATION APPROVED (2026-10-07): Direct human approved exactlyONE corrected MAIN preparation of the existing independently reviewed unconsumed v10-1 request with required --request. New safe approval recorded in own canonical diagnostic temp; failed58419 and all previous reports/authoritybytes remain immutable. Source52d40bd8/root26c1befe/905 and closed source/data/helper gates unchanged; no active entry/verifier/hold. SAME cumulative93.6Mms/15GB300/all31charges/allcosts/originaldeadline19:26:58.572Z/reserve1860000; no additional idle exclusion. Corrected preparation refusal/failure ends pair. Only NEW acceptedfullcheck+actualFINAL permits ONE conditional36baseline. Commit actual allocation before uniqueMAINentry; SAMEPROCESScapacity beforecharge; sourceANDHEADfixed throughterminal+ONEuniqueappropriatecheck. Phase265/LEAG/freeze/formation/holdout/public/counting/production remain gated. Earlier paragraphs are preserved history.
 
