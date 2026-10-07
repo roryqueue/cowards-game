@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Approved remaining-budget envelope; additive Plan16 research and checked source supplement underway
+stopped_at: Remaining-budget source verified; fresh MAIN diagnostic data admission next
 last_updated: "2026-10-07"
 last_activity: 2026-10-06
 last_activity_desc: Direct approval recorded for three fresh diagnostics and one conditional baseline under unchanged cumulative caps
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT SOURCE GATES CLOSED (2026-10-07): Remaining-budget GREEN301540f8 independently reviewed clean; MAIN145 connected tests and7 lifecycle tests PASS, configuredlabtypes/shell/diff PASS. Independent SOURCE-VERIFICATION-v1 CLOSED4/4; actual905-entry source45218281/extension6b5895ee matchesallthreev9modes. Scoped source proof ONLY, not empirical admission/Phase265 credit. No liveentry/reader/hold. MAIN fresh v9-1 data/helper plus independent review next, then unique prepare/newallocation committedbeforeuniqueMAINentry/SAMEPROCESScapacity. SAME approved3diagnostics+ONEconditional36baseline,72Mms15GB300/30oldcharges, currentcarry64,594,435+now−1791346557488, deadline06:19:23.053Z and1,860,000msreserve unchanged. Allhistoryimmutable; freeze/formation/holdout/public/counting/production gated. Earlierparagraphshistorical.
 
 CURRENT APPROVED REMAINING-BUDGET ENVELOPE (2026-10-07): Direct human approval recorded in NEW265-16-REMAINING-BUDGET-ENVELOPE-APPROVAL-20261007.md. AtmostTHREE distinct fresh private diagnostics and ONE conditional36baseline after NEWacceptedcheck+actualFINALclosure; individualfailedroutesimmutable butremainingdiagnostics do notneedrepeatliteral. SAME72Mms15GB300/30oldcharges and allpriorcost/files; noreset/refund/recredit/newrules. Exactpriorcompletion1791337961631 gives64,594,435ms carry, currenttaskstart1791346557488; excludeONLY8,595,857ms provenhumanidle. EVERYcurrentcostcounts, deadline06:19:23.053Z; reserve1,860,000ms unchanged. Noactiveentry/reader/hold. ExistingPlan16 research/check/additivesource/review-fix/validate/sourceverify BEFORE MAINfreshdata/independentreview/newcommittedallocation/uniqueentry/emptyreal0700store/SAMEPROCESScapacity. Oldv8-2prepare+uniquecheck CLOSEDspentzerocharge/noallocation/store/result/head; allhistory/readersimmutable,nofabrication/reuse. Phase265/LEAG/266freeze/formation/holdout/public/counting/production stillgated. Earlierparagraphshistorical.
 
