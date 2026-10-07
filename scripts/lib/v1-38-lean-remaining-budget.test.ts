@@ -178,4 +178,11 @@ describe("approved additive v9 remaining-budget envelope", () => {
     expect(source).toContain('closed.closedElapsedMs + atMs - closed.closedAtMs')
     expect(source).toContain('const accepted = authenticateLeanSupervisorDiagnosticCheck(mode), closure = authenticateLeanRetryClosureV8(mode)')
   })
+  it("keeps accepted-diagnostic lineage read-only and inaccessible to forged fresh-admission purposes", () => {
+    const source = readFileSync("scripts/lib/v1-38-lean-correction-retained.ts", "utf8")
+    expect(source).toContain("readLeanRemainingAcceptedDiagnosticLineageV9(purpose)")
+    expect(source).toContain("remainingAcceptedLineagePurposesV9.delete(purpose)")
+    const requestSource = readFileSync("scripts/run-v1-38-lean-correction.ts", "utf8")
+    expect(requestSource).toContain("inspectLeanRemainingPredecessorWithPurposeV9(route, Date.now(), mode, purpose)")
+  })
 })
