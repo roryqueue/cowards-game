@@ -81,7 +81,7 @@ describe("approved additive v9 remaining-budget envelope", () => {
     }
   })
   it("debits every exact file-basis gate report once, including the measured current source review", () => {
-    const names = ["V9-1-AUTHOR-FINALIZATION-TERMINAL-VERIFICATION-v1", "V9-1-FILE-ACCOUNTING-DIAGNOSIS-v1", "V9-FILE-BASIS-REPAIR-PLAN-v1", "V9-FILE-BASIS-PLAN-CHECK-v1", "V9-FILE-BASIS-SOURCE-SUMMARY-v1", "V9-FILE-BASIS-SOURCE-REVIEW-v1", "V9-FILE-BASIS-REVIEW-FIX-v1", "V9-FILE-BASIS-SOURCE-VALIDATION-v1", "V9-FILE-BASIS-SOURCE-VERIFICATION-v1", "V9-2-SOURCE-REVIEW-v1", "V9-2-DATA-REVIEW-v1"]
+    const names = ["V9-1-AUTHOR-FINALIZATION-TERMINAL-VERIFICATION-v1", "V9-1-FILE-ACCOUNTING-DIAGNOSIS-v1", "V9-FILE-BASIS-REPAIR-PLAN-v1", "V9-FILE-BASIS-PLAN-CHECK-v1", "V9-FILE-BASIS-SOURCE-SUMMARY-v1", "V9-FILE-BASIS-SOURCE-REVIEW-v1", "V9-FILE-BASIS-SOURCE-REVIEW-v2", "V9-FILE-BASIS-REVIEW-FIX-v1", "V9-FILE-BASIS-SOURCE-VALIDATION-v1", "V9-FILE-BASIS-SOURCE-VERIFICATION-v1", "V9-2-SOURCE-REVIEW-v1", "V9-2-DATA-REVIEW-v1"]
     const expected = names.map(name => `${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-${name}.md`)
     for (const path of expected) expect(lean.LEAN_REMAINING_V9_REVIEW_PATHS.filter(identity => identity === path)).toEqual([path])
     const extant = expected.filter(path => existsSync(path)), measured = correction.inventoryLeanSupervisorSurvivors(extant)
