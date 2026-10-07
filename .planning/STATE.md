@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Lineage source repair verified; new prospective time/attempt decision required
+stopped_at: Approved26h onefreshdiagnostic andconditional36baseline; checkedPlan16 supplement next
 last_updated: "2026-10-07"
-last_activity: 2026-10-06
-last_activity_desc: Direct approval recorded for three fresh diagnostics and one conditional baseline under unchanged cumulative caps
+last_activity: 2026-10-07
+last_activity_desc: Direct approval recorded for26h cumulative onefreshdiagnostic andconditional36baseline
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED26H PROSPECTIVE PAIR (2026-10-07): Direct human approved NEW265-16-POST-V9-PROSPECTIVE-BUDGET-DECISION-v1.md; approval recorded in NEW265-16-TWENTY-SIX-HOUR-APPROVAL-20261007.md. ExactlyONE distinctfreshprivate diagnostic plus ONLY after its NEWfullacceptedcheck andactualFINAL ONEdistinctfresh36baseline; anypreparation/admission refusal/failure orbaselineoutcome ends pair. Cumulative93,600,000ms26h/unchanged15GB300; all31charges/costs/survivingfiles carry. Exactpriorcompletion1791353471340 gives71,508,287ms carry; currenttaskstart1791379126859, excludeONLY25,655,519ms provenhumanidle; EVERYcurrentcostcounts, deadline19:26:58.572Z/reserve1860000ms. Allruntime/gameplay/privacy/capacitybounds unchanged. Noactiveentry/reader/sourcehold; checkedexistingPlan16 additive research/plan/source/review-fix/validate/verify BEFORE MAINfreshdata/independentreview/newcommittedallocation/uniqueentry/SAMEPROCESScapacity. Oldacceptedv9-2diagnostic/failedbaseline52980+uniquechecks immutable; nooldreuse/retry/refund/recredit. Phase265/LEAG/266freeze/formation/holdout/public/counting/production remain gated. Earlierparagraphshistory.
 
 CURRENT SOURCE REPAIR CLOSED / HUMAN RESOURCE CHECKPOINT (2026-10-07): Baseline-lineage RED8605c261/GREEN51801d24/root1334976f/905entries CLOSED. IndependentSOURCE-REVIEW-v1clean/0; MAIN17512 CLOSED0/24focusedPASS27.37s/configuredtypes/shell/diffPASS; independentSOURCE-VERIFICATION-v1 CLOSED3/3 withallthreev9manifests matching. EphemeralprivateWeakMap-purpose allowsONLYauthenticatedaccepted-diagnosticreadonlylineage toinspectownbaseline lifecycle; revokedfinally, freshdiagnostic/ordinaryreader/topbaseline spent/one-shot/sourceHEAD/capacity/FINAL guardsremainstrict. Composedfixture deliberateACCEPTED_CHARGE stop afteractualrequest/predecessor, NOTempiricalacceptance. Debugsessionrecords reproducibleownmarkerfeedback, originalwithheldMAINthrowunobserved.
 
