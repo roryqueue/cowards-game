@@ -5,7 +5,7 @@ import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import * as lean from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as correction from "../run-v1-38-lean-correction.js"
 import { assertLeanRetryBaselineJoinV8 } from "./v1-38-lean-baseline-retained.js"
-import { validateLeanRemainingPreparationCustodyV9, LEAN_REMAINING_V9_PREPARATION_PINS } from "./v1-38-lean-correction-retained.js"
+import { validateLeanRemainingPreparationCustodyV9, LEAN_REMAINING_V9_PREPARATION_PINS, LEAN_REMAINING_V9_AUTHOR_REFUSAL_PINS, validateLeanRemainingAuthorRefusalCustodyV9, authenticateLeanRemainingClosedPrefixV9, leanRemainingAuthorRefusalAbsentPathsV9 } from "./v1-38-lean-correction-retained.js"
 
 const r = (label: string) => labRoot("remaining-budget-inert", label)
 const envelope = () => lean.LEAN_REMAINING_V9_EXTENSION
@@ -125,5 +125,37 @@ describe("approved additive v9 remaining-budget envelope", () => {
       expect(request.requestRoots).toHaveLength(1)
       expect(correction.leanCorrectionRequestDataRoot(request)).toBe(correction.leanCorrectionRequestDataRoot({ ...request, authorizationRoot: r("final-auth") }))
     }
+  })
+  it("authenticates only the exact spent v9-1 author refusal, without invented reader/FINAL fields", () => {
+    // Finite immutable metadata only; no ordinary historical reader or admission.
+    const raw = new Map(Object.keys(LEAN_REMAINING_V9_AUTHOR_REFUSAL_PINS).map(path => [path, readFileSync(path)]))
+    const prior = validateLeanRemainingAuthorRefusalCustodyV9(raw, [])
+    expect(prior).toMatchObject({ custodyClass: "author_finalization_refusal", closureClass: "refused", closedAtMs: 1791349668689, currentCharges: 0, cumulativeCharged: 30, finalReaderClose: false, accepted: false, authorizing: false })
+    expect(prior.closedElapsedMs).toBe(lean.leanRetryRootElapsedFloorV8(prior.closedAtMs, envelope()))
+    for (const field of ["readerStartMs", "readerCloseMs", "readerInterval", "allocationRoot", "entryBytesRoot", "terminalBytesRoot", "timeBytesRoot", "checkRoot"]) expect(prior).not.toHaveProperty(field)
+    expect(prior.identities).toEqual(Object.keys(LEAN_REMAINING_V9_AUTHOR_REFUSAL_PINS))
+    expect(authenticateLeanRemainingClosedPrefixV9("v9-1")).toEqual(prior)
+    for (const path of raw.keys()) {
+      const missing = new Map(raw); missing.delete(path)
+      expect(() => validateLeanRemainingAuthorRefusalCustodyV9(missing, [])).toThrow()
+      const tampered = new Map(raw); tampered.set(path, Buffer.concat([raw.get(path)!, Buffer.from(" ")]))
+      expect(() => validateLeanRemainingAuthorRefusalCustodyV9(tampered, [])).toThrow()
+    }
+    for (const path of leanRemainingAuthorRefusalAbsentPathsV9()) expect(() => validateLeanRemainingAuthorRefusalCustodyV9(raw, [path])).toThrow()
+    const observationPath = ".strategy-lab/lean-correction-supervisor-diagnostic-20261007-v9-1-tmp/author-finalization-terminal-observation-v1.json"
+    const observation = JSON.parse(raw.get(observationPath)!.toString())
+    for (const patch of [{ finalReaderClose: true }, { accepted: true }, { authorizing: true }, { readerCloseMs: prior.closedAtMs }, { head: "2".repeat(40) }, { currentCharges: 1 }, { observedAtMs: prior.closedAtMs + 1 }]) {
+      const forged = new Map(raw); forged.set(observationPath, Buffer.from(JSON.stringify({ ...observation, ...patch })))
+      expect(() => validateLeanRemainingAuthorRefusalCustodyV9(forged, [])).toThrow()
+    }
+    const a = lean.createLeanSupervisorCorrectionAllocation(input("baseline"), 8)
+    expect(() => assertLeanRetryBaselineJoinV8(a, { root: a.acceptedCheckRoot!, allocationRoot: r("new-diag"), readerCloseMs: prior.closedAtMs }, prior, "2".repeat(40))).toThrow()
+    expect(() => authenticateLeanRemainingClosedPrefixV9("v8-1")).toThrow()
+  })
+  it("uses the custody anchor only for v9 continuation while retaining actual accepted FINAL joins", () => {
+    const source = readFileSync("scripts/run-v1-38-lean-correction.ts", "utf8")
+    expect(source).toContain('const previous = authenticateLeanRemainingClosedPrefixV9(`v9-${n - 1}`')
+    expect(source).toContain('closed.closedElapsedMs + atMs - closed.closedAtMs')
+    expect(source).toContain('const accepted = authenticateLeanSupervisorDiagnosticCheck(mode), closure = authenticateLeanRetryClosureV8(mode)')
   })
 })

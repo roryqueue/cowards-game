@@ -2,9 +2,9 @@ import { LEAN_REPLAY_V7_CAPS, LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION, LEAN_RETRY
 import { isLeanRemainingBudgetMode, isLeanRemainingBudgetExtensionV9, LEAN_REMAINING_V9_PHASE, LEAN_REMAINING_V9_EXTENSION } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 /** New correction reader: byte/root custody and fixed schedule joins only.
  * No cold builders, authored proposal generation, search or historical reader. */
-import { readdirSync, existsSync, readFileSync } from "node:fs"
+import { readdirSync, existsSync, readFileSync, lstatSync, realpathSync, openSync, fstatSync, closeSync, constants } from "node:fs"
 import { execFileSync } from "node:child_process"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { labRoot, exactLabKeys, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
@@ -16,7 +16,7 @@ import { compactLeanBaselineCell, leanBaselineMetricCoverage, type LeanBaselineO
 import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
 import { selectLeanBestTrainedProposal, selectLeanTrainedProposal } from "./v1-38-lean-training-adapter.js"
 import { validateLeanPrivateCorrectionOrigin } from "./v1-38-lean-container-match-session.js"
-import { authenticateLeanRetryAdmissionFailureV8, leanCorrectionSourceManifest, leanCorrectionAdmissionElapsed, leanCorrectionTrustedGuardError, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
+import { authenticateLeanRetryAdmissionFailureV8, leanCorrectionSourceManifest, leanCorrectionRequestDataRoot, leanCorrectionAdmissionElapsed, leanCorrectionTrustedGuardError, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
 import { validateLeanSupervisorReasonBytes, LEAN_SUPERVISOR_REASON_FILE, LEAN_SUPERVISOR_REASON_MAX_BYTES } from "../run-v1-38-lean-baseline.js"
 import type { LeanBaselinePair } from "./v1-38-lean-experiment-authority.js"
 import { SoldierBrainInputV119Schema, StrategyInputV119Schema, StrategyResultSchema } from "@cowards/spec"
@@ -499,4 +499,69 @@ export const authenticateLeanRemainingPreparationCustodyV9 = () => {
   validateLeanRemainingPreparationCustodyV9(request, failure)
   if ([paths.store, paths.allocation, join(paths.temp, "admission-run-start.json"), join(paths.temp, "retry-closure-v8.json")].some(path => existsSync(path))) return fail("CUSTODY")
   return Object.freeze({ accepting: false, finalReaderClose: false, currentCharges: 0, cumulativeCharged: LEAN_REMAINING_V9_EXTENSION.charged, root: labRoot("lean-remaining-preparation-custody-v9", LEAN_REMAINING_V9_PREPARATION_PINS), identities: Object.keys(LEAN_REMAINING_V9_PREPARATION_PINS) })
+}
+
+/** Exact spent authoring history, not an admission receipt or actual reader FINAL. */
+export const LEAN_REMAINING_V9_AUTHOR_REFUSAL_PINS = Object.freeze({
+  ".strategy-lab/lean-correction-supervisor-diagnostic-request-20261007-v9-1.json": "sha256:f9fa0c59241fad2f703560474b587bad751f0387a12e277defc20edf01c3edfc",
+  ".strategy-lab/lean-retry-authorization-diagnostic-v9-1.json": "sha256:003ed1558920cc73cd179ee93cc9565ece350a0974eb84d6e9d265b080762a6f",
+  ".strategy-lab/lean-retry-envelope-setup-20261007-v9-1.json": "sha256:4bcaf450253ecaa22d1db9a9ac9c21e3e6eb60282e35c20c85070782e3f363ac",
+  ".strategy-lab/lean-correction-supervisor-diagnostic-20261007-v9-1-tmp/author-finalization-terminal-observation-v1.json": "sha256:8741adbfaa1ebcd51eb582b6bdbfbacb2777c505d99f73d426c1aa97ac3fd8d9",
+  ".strategy-lab/lean-correction-supervisor-diagnostic-20261007-v9-1-tmp/author-remaining-budget-v9-1.ts": "sha256:26f6275084a8f3c46f21c985ad6b593a7e15d0a7135de5244cd7f5f64ed24cf3",
+  ".strategy-lab/lean-correction-supervisor-diagnostic-20261007-v9-1-tmp/draft-request.json": "sha256:71e4af1877bf3b75bd7f330942c62d0167d096d507bd0f7038327e5352e0241c",
+  [`${LEAN_REMAINING_V9_PHASE}NEW265-16-V9-1-SOURCE-REVIEW-v1.md`]: "sha256:16a17120e951c8e65343a9e8f1c5c11d23b17a8370f8a3904857c63b7cd21fea",
+  [`${LEAN_REMAINING_V9_PHASE}NEW265-16-V9-1-DATA-REVIEW-v1.md`]: "sha256:d454e351d219d9b2a738db99a60b56aecec70000cd45c109ef4953f2e1b5b70b",
+  [`${LEAN_REMAINING_V9_PHASE}NEW265-16-V9-1-FILE-ACCOUNTING-DIAGNOSIS-v1.md`]: "sha256:b8c8fb02e3526bf649e86e0b86d39251f349e58f643b3f19b3a0e4facb315732",
+  [`${LEAN_REMAINING_V9_PHASE}NEW265-16-V9-1-AUTHOR-FINALIZATION-TERMINAL-VERIFICATION-v1.md`]: "sha256:06c7ccd1a7024104ddf84c4c99cb0c53afae7fb7893fac99a7947bbbe8fdeee4",
+})
+export const leanRemainingAuthorRefusalAbsentPathsV9 = () => {
+  const p = leanCorrectionRoutePaths("diagnostic", "v9-1")
+  return [p.store, p.allocation, join(p.temp, "admission-prepare-start.json"), join(p.temp, "admission-prepare-close.json"), join(p.temp, "admission-run-start.json"), join(p.temp, "admission-run-close.json"), join(p.temp, "admission-failure-v8.json"), join(p.temp, "retry-closure-v8.json"), join(p.temp, "retry-terminal-reader-start-v8.json"), join(p.temp, "retry-terminal-reader-close-v8.json"), join(p.temp, "entry.json"), join(p.temp, "child-terminal.json"), join(p.temp, "result.json")]
+}
+/** Pure finite byte audit for focused tamper/missing-history regressions. */
+export const validateLeanRemainingAuthorRefusalCustodyV9 = (raw: ReadonlyMap<string, Uint8Array>, presentForbidden: readonly string[]) => {
+  const pins = LEAN_REMAINING_V9_AUTHOR_REFUSAL_PINS, paths = leanCorrectionRoutePaths("diagnostic", "v9-1")
+  if (presentForbidden.length || raw.size !== Object.keys(pins).length) return fail("CUSTODY")
+  for (const [path, pin] of Object.entries(pins)) {
+    const bytes = raw.get(path)
+    if (!bytes || bytes.length > 262144 || leanBytesRoot(bytes) !== pin) return fail("CUSTODY")
+  }
+  const parse = (path: string) => JSON.parse(Buffer.from(raw.get(path) ?? fail("CUSTODY")).toString("utf8")) as Record<string, unknown>
+  const request = parse(paths.request) as unknown as LeanCorrectionRequest, authorization = parse(".strategy-lab/lean-retry-authorization-diagnostic-v9-1.json"), setup = parse(".strategy-lab/lean-retry-envelope-setup-20261007-v9-1.json"), observation = parse(join(paths.temp, "author-finalization-terminal-observation-v1.json"))
+  const sourceRoot = "sha256:452182810a0b1179552a7977243144c71709ec460f73f4d361f6f7aa79b33d0c", closedAtMs = 1791349668689
+  const { root: ar, ...ab } = authorization, { root: sr, ...sb } = setup
+  if (request.schemaVersion !== "lean-correction-supervisor-request-v8" || request.route !== "diagnostic" || request.attemptOrdinal !== 1 || request.sourceRoot !== sourceRoot || !same(request.timeboxExtension, LEAN_REMAINING_V9_EXTENSION) || request.priorClosureRoot !== null || request.continuationRoot !== null || request.acceptedCheckRoot !== null || request.acceptedReaderCloseRoot !== null || request.diagnosis !== null || request.authorizationRoot !== pins[".strategy-lab/lean-retry-authorization-diagnostic-v9-1.json"] || request.setupAccountingRoot !== sr || request.reviewRoot !== pins[`${LEAN_REMAINING_V9_PHASE}NEW265-16-V9-1-SOURCE-REVIEW-v1.md`] || request.dataReviewRoot !== pins[`${LEAN_REMAINING_V9_PHASE}NEW265-16-V9-1-DATA-REVIEW-v1.md`]) return fail("CUSTODY")
+  if (authorization.schemaVersion !== "lean-retry-execution-authorization-v8" || ar !== labRoot(String(authorization.schemaVersion), ab) || authorization.authorAgent !== "/root" || authorization.reviewerAgent !== "/root/review_265_remaining_data" || authorization.route !== "diagnostic" || authorization.attemptOrdinal !== 1 || authorization.sourceRoot !== sourceRoot || authorization.requestDataRoot !== leanCorrectionRequestDataRoot(request) || !same(authorization.timeboxExtension, LEAN_REMAINING_V9_EXTENSION) || setup.schemaVersion !== "lean-retry-setup-witness-v8" || sr !== labRoot(String(setup.schemaVersion), sb) || setup.attemptOrdinal !== 1 || setup.startedAtMs !== LEAN_REMAINING_V9_EXTENSION.startedAtMs || setup.priorElapsedMs !== LEAN_REMAINING_V9_EXTENSION.priorElapsedMs || !same(setup.timeboxExtension, LEAN_REMAINING_V9_EXTENSION)) return fail("CUSTODY")
+  if (!same(observation, { schemaVersion: "lean-author-finalization-terminal-observation-v1", authorAgent: "/root", sessionId: 59860, exitCode: 1, stage: "request_authentication", diagnostic: "LEAN_EXPERIMENT_RETRY_PREDECESSOR", observedAtMs: closedAtMs, sourceRoot, head: "32d09da9315f1df669a2f814206879f34608c51b", requestBytesRoot: pins[paths.request as keyof typeof pins], authorizationBytesRoot: pins[".strategy-lab/lean-retry-authorization-diagnostic-v9-1.json"], setupBytesRoot: pins[".strategy-lab/lean-retry-envelope-setup-20261007-v9-1.json"], prepareInvoked: false, allocationAbsent: true, storeAbsent: true, entryAbsent: true, resultAbsent: true, currentCharges: 0, finalReaderClose: false, accepted: false, authorizing: false, timestampMeaning: "later_independent_root_observation_not_fabricated_terminal_time" })) return fail("CUSTODY")
+  const body = { schemaVersion: "lean-remaining-author-refusal-custody-v9", custodyClass: "author_finalization_refusal" as const, timeboxExtension: LEAN_REMAINING_V9_EXTENSION, attemptOrdinal: 1, closureClass: "refused" as const, authorizing: false as const, accepted: false as const, finalReaderClose: false as const, closedAtMs, closedElapsedMs: leanRetryRootElapsedFloorV8(closedAtMs, LEAN_REMAINING_V9_EXTENSION), cumulativeCharged: 30, currentCharges: 0, sourceRoot, head: observation.head, custodyBytesRoot: labRoot("lean-remaining-author-refusal-pins-v9", pins), identities: Object.keys(pins) }
+  return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
+}
+export const authenticateLeanRemainingAuthorRefusalCustodyV9 = () => {
+  const raw = new Map<string, Uint8Array>()
+  for (const path of Object.keys(LEAN_REMAINING_V9_AUTHOR_REFUSAL_PINS)) {
+    const absolute = resolve(path), stat = lstatSync(absolute)
+    // Old MAIN helper/observation and reports are immutable 0644 metadata;
+    // request/draft/auth/setup remain private 0600. No generic reader is relaxed.
+    const privateFile = path.startsWith(".strategy-lab/") && !path.endsWith("/author-finalization-terminal-observation-v1.json") && !path.endsWith("/author-remaining-budget-v9-1.ts"), mode = privateFile ? 0o600 : 0o644
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.nlink !== 1 || (stat.mode & 0o777) !== mode || stat.size > 262144 || realpathSync(absolute) !== absolute) return fail("CUSTODY")
+    const fd = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW)
+    try {
+      const before = fstatSync(fd)
+      if (before.dev !== stat.dev || before.ino !== stat.ino || before.size !== stat.size || before.nlink !== 1 || before.uid !== stat.uid || (before.mode & 0o777) !== mode) return fail("CUSTODY")
+      const bytes = readFileSync(fd), after = fstatSync(fd)
+      if (after.size !== before.size || after.mtimeMs !== before.mtimeMs || after.ctimeMs !== before.ctimeMs || bytes.length !== before.size) return fail("CUSTODY")
+      raw.set(path, bytes)
+    } finally { closeSync(fd) }
+  }
+  const temp = leanCorrectionRoutePaths("diagnostic", "v9-1").temp
+  const allowed = Object.keys(LEAN_REMAINING_V9_AUTHOR_REFUSAL_PINS).filter(path => path.startsWith(`${temp}/`)).map(path => path.slice(temp.length + 1))
+  if (readdirSync(temp).some(name => !allowed.includes(name))) return fail("CUSTODY")
+  return validateLeanRemainingAuthorRefusalCustodyV9(raw, leanRemainingAuthorRefusalAbsentPathsV9().filter(path => existsSync(path)))
+}
+/** Closed-prefix accounting only. Baseline accepted joins must use actual FINAL authentication. */
+export const authenticateLeanRemainingClosedPrefixV9 = (mode: LeanRetryMode) => {
+  if (!isLeanRemainingBudgetMode(mode)) return fail("CUSTODY")
+  if (mode === "v9-1" && existsSync(join(leanCorrectionRoutePaths("diagnostic", mode).temp, "author-finalization-terminal-observation-v1.json"))) return authenticateLeanRemainingAuthorRefusalCustodyV9()
+  const closure = authenticateLeanRetryClosureV8(mode)
+  return Object.freeze({ ...closure, custodyClass: "actual_reader_closure" as const, closedAtMs: closure.readerCloseMs, custodyBytesRoot: closure.timeBytesRoot, identities: [] as string[] })
 }

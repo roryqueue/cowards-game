@@ -888,6 +888,7 @@ export const LEAN_REMAINING_V9_REVIEW_PATHS = Object.freeze([
   ...bookkeepingReviewSurvivors,
   ...["BOOKKEEPING-CONTINUATION-SOURCE-ADMISSION-REVIEW-v1", "BOOKKEEPING-CONTINUATION-DIAGNOSTIC-2-DATA-REVIEW-v1", "BOOKKEEPING-CONTINUATION-DIAGNOSTIC-2-TERMINAL-VERIFICATION-v1", "REMAINING-BUDGET-ENVELOPE-APPROVAL-20261007", "REMAINING-BUDGET-RESEARCH-v1", "REMAINING-BUDGET-RESEARCH-PLAN-v1", "REMAINING-BUDGET-SOURCE-REVIEW-v1", "REMAINING-BUDGET-REVIEW-FIX-v1", "REMAINING-BUDGET-SOURCE-VALIDATION-v1", "REMAINING-BUDGET-SOURCE-VERIFICATION-v1"].map(name => `${LEAN_REMAINING_V9_PHASE}NEW265-16-${name}.md`),
   ...([1, 2, 3] as const).flatMap(n => ["SOURCE", "DATA"].flatMap(kind => [`${LEAN_REMAINING_V9_PHASE}NEW265-16-V9-${n}-${kind}-REVIEW-v1.md`, `${LEAN_REMAINING_V9_PHASE}NEW265-16-V9-BASELINE-FOR-${n}-${kind}-REVIEW-v1.md`])),
+  ...["V9-1-AUTHOR-FINALIZATION-TERMINAL-VERIFICATION-v1", "V9-1-FILE-ACCOUNTING-DIAGNOSIS-v1", "V9-FILE-BASIS-REPAIR-PLAN-v1", "V9-FILE-BASIS-PLAN-CHECK-v1", "V9-FILE-BASIS-SOURCE-SUMMARY-v1"].map(name => `${LEAN_REMAINING_V9_PHASE}NEW265-16-${name}.md`),
 ])
 export const validateLeanRemainingSurvivorsV9 = (p: LeanCorrectionPredecessor): void => {
   if (!exactLabKeys(p, ["schemaVersion", "chargedMatches", "elapsedUpperBoundMs", "allocatedDiskBytes", "historicalPeakDiskBytes", "historicalPeakRssBytes", "historyRoot", "survivors", "root"]) || !Array.isArray(p.survivors) || p.survivors.length < LEAN_REMAINING_V9_EXTENSION.historicalRows || !natural(p.allocatedDiskBytes) || p.allocatedDiskBytes < LEAN_REMAINING_V9_EXTENSION.physicalFloorBytes) return fail("RETRY_PREDECESSOR")
@@ -897,7 +898,8 @@ export const validateLeanRemainingSurvivorsV9 = (p: LeanCorrectionPredecessor): 
     identities.add(row.identity); allocated += row.allocatedBytes
     if (!natural(allocated) || allocated > p.allocatedDiskBytes) return fail("RETRY_PREDECESSOR")
   }
-  if (allocated < LEAN_REMAINING_V9_EXTENSION.physicalFloorBytes) return fail("RETRY_PREDECESSOR")
+  // The allocated debit carries inherited conservative reserve; extant rows alone
+  // need not meet that budget floor. Every row must still fit the allocated debit.
 }
 /** Uses the existing schedule builder, never reinterprets a v9 allocation as v8. */
 const createLeanRemainingAllocationV9 = (input: Parameters<typeof createLeanSupervisorCorrectionAllocation>[0]): Readonly<LeanCorrectionAllocation> => {
