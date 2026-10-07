@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "lean-twenty-six-baseline-authorization-metadata-v1",
+  "authorizing": false,
+  "canonicalPath": ".strategy-lab/lean-retry-authorization-baseline-v10-1.json",
+  "canonicalBytesRoot": "sha256:a2faacbc674b1874edd32e58befb80010a5531404cdce88122eecd2db03e5724",
+  "canonicalRoot": "sha256:5e7e0a05841ae83856450c997b70ca6c7ada8daaa2104d11903e070548af4c47",
+  "sourceRoot": "sha256:26c1befe2d2e214f8b1b50adc30292d4a9f4cede72e8fc3d6e8499a652161ab1",
+  "route": "baseline",
+  "attemptOrdinal": 1,
+  "plannedCells": 36,
+  "requestDataRoot": "sha256:201e9a144a3657a3c5cd2fe52d809ad71a77530676e2b36bc6ab691c8011c283",
+  "acceptedCheckRoot": "sha256:23564b5d90fdf8e4bde2c004b052be5bc24804742db5466c6c41985a394ad6b2",
+  "acceptedReaderCloseRoot": "sha256:91213587cc5e89f94a1f479734ac9587197f9188670bc16027cc53f7b74ed096"
+}

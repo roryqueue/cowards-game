@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "lean-twenty-six-baseline-setup-metadata-v1",
+  "authorizing": false,
+  "canonicalPath": ".strategy-lab/lean-retry-envelope-setup-20261007-v10-1.json",
+  "canonicalBytesRoot": "sha256:dcaec5ddb919166285c4ab0b4a36cc050a29859cb5b9f1f3a9958b6af823751d",
+  "canonicalRoot": "sha256:e9c195995f88a3e9ee9ede57b21c47a6616bc56aa112e98acfb90ebdd6c81f88",
+  "sourceRoot": "sha256:26c1befe2d2e214f8b1b50adc30292d4a9f4cede72e8fc3d6e8499a652161ab1",
+  "route": "baseline",
+  "attemptOrdinal": 1,
+  "plannedCells": 36,
+  "requestDataRoot": "sha256:201e9a144a3657a3c5cd2fe52d809ad71a77530676e2b36bc6ab691c8011c283",
+  "acceptedCheckRoot": "sha256:23564b5d90fdf8e4bde2c004b052be5bc24804742db5466c6c41985a394ad6b2",
+  "acceptedReaderCloseRoot": "sha256:91213587cc5e89f94a1f479734ac9587197f9188670bc16027cc53f7b74ed096"
+}

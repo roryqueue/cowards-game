@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Corrected v10-1 preparation passed; commit actual allocation before unique MAIN diagnostic entry
+stopped_at: v10-1 conditional baseline prepared; commit allocation before unique MAIN entry
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Corrected preparation 59362 closed exit0; one cell allocated and no Match charged
+last_activity_desc: Conditional baseline independently reviewed and prepared7012 exit0; no baseline charges yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V10-1 BASELINE PREPARED (2026-10-07): MAINdraft2032/finalize60935 CLOSED0; distinct independentBASELINE-DATA/HELPERreviews clean. ExactlyONEprepare7012 CLOSED0/preparation_only/issuedfalse/36planned/zerocharge. Actualallocationede8c186/raw50d2b5d2/source26c1befe; predecessor32charges/81150990ms/17272832B. Checkedreal0700nonsymlinkstore onlyallocation/ledger/time. NEWdiagnosticcheck23564b5d/actualFINAL91213587 prerequisite accepted. Commit allocation/reviews BEFOREuniqueMAINentry; SAMEPROCESScapacity beforeeverycharge/provider; sourceANDHEADfixedthroughterminal+ONEappropriateuniquecheck/no competingheavywork/commits/edits. SAME93.6Mms15GB300/allcosts/original19:26:58.572Zdeadline/reserve1860000;full36fitNOTguaranteed. Anybaselineoutcomeendsapprovedpair/no automaticnextattempt. Phase265/LEAG/freeze/formation/holdout/public/counting/production remain gated. Allolderrecordsimmutable; earlierparagraphshistory.
+
+CURRENT V10-1 DIAGNOSTIC ACCEPTED (2026-10-07): UniqueMAIN93653 CLOSED0/child_exited/434520ms overheldHEAD4b60d593/source26c1befe/allocationf7e061d5. ONEindependentordinaryreader CLOSED0/acceptedtrue/retained_valid/cleanupcomplete; check23564b5d/raw99ca58c6. ActualFINAL91213587/accepted/finalReaderClosetrue/close1791388336828/closedelapsed80718257ms/current1/cumulative32charges. Independentreport inowncanonicaltemp includesfiniteFINALclarification; no repeatedordinaryreader. SourceANDHEADhold RELEASED/noactiveentry/reader. FreshMAINbaseline draft2032 CLOSED0/36planned/requestData201e9a14; distinctactualbaselineDATA/HELPERreview next beforefinalization/preparation/newcommittedallocation/uniqueMAINentry/SAMEPROCESScapacity. ONEconditionalbaseline noweligible under SAME93.6Mms15GB300/allcosts32charges/original19:26:58.572Zdeadline/reserve1860000;36fitNOTguaranteed. No Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Allolderartifacts/refusalreports preserved; earlierparagraphshistory.
 
 CURRENT CORRECTED V10-1 PREPARED (2026-10-07): Explicitly amended ONE corrected MAINprepare59362 CLOSED0/preparation_only/issuedfalse/onecell/zerocharge. Actualallocationf7e061d5/raw9d9a2c1b/source26c1befe; real0700nonsymlinkstore onlyallocation/ledger/time. Safe current observations in own canonicaltemp; all original refusal/history bytes unchanged. Commit actual canonical allocation BEFORE uniqueMAINentry. SAMEPROCESScapacity beforecharge/provider; sourceANDHEADhold throughactualterminal+ONEappropriateuniquecheck; no competingheavywork/edits/commits duringhold. Only NEWfullacceptedcheck+actualFINAL permits conditionalONE36baseline. Same93.6Mms/15GB300/all31oldcharges/allcosts/original19:26:58.572Zdeadline/reserve1860000. No Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earlier paragraphs preserved history.
 

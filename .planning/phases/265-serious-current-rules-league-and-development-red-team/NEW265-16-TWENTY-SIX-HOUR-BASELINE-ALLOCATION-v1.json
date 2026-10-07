@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "lean-twenty-six-baseline-allocation-metadata-v1",
+  "authorizing": false,
+  "canonicalPath": ".planning/artifacts/v1.38-lean-correction-supervisor-baseline-allocation-v10-1.json",
+  "allocationRoot": "sha256:ede8c18628b3fbfce6fc77655a3bdcac57d86295e30384befd6591c654591779",
+  "canonicalBytesRoot": "sha256:50d2b5d28a42f88df1cc5535280f44768a71c3032f0e2a1f65fbdb431a8a0388",
+  "sourceRoot": "sha256:26c1befe2d2e214f8b1b50adc30292d4a9f4cede72e8fc3d6e8499a652161ab1",
+  "plannedCells": 36,
+  "priorChargedMatches": 32,
+  "priorElapsedUpperBoundMs": 81150990,
+  "priorAllocatedDiskBytes": 17272832,
+  "actualEntryStarted": false,
+  "phaseComplete": false,
+  "freezeAdmitted": false
+}
