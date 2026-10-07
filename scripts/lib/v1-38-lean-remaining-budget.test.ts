@@ -1,6 +1,6 @@
 /** Source-only synthetic v9 contracts. No historical reader or live dispatch. */
 import { describe, it, expect } from "vitest"
-import { readFileSync } from "node:fs"
+import { readFileSync, existsSync, lstatSync } from "node:fs"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import * as lean from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as correction from "../run-v1-38-lean-correction.js"
@@ -79,6 +79,25 @@ describe("approved additive v9 remaining-budget envelope", () => {
       const changed = { ...body, ...patch }
       expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...f, predecessor: { ...changed, root: labRoot(body.schemaVersion, changed) } }, 8)).toThrow()
     }
+  })
+  it("debits every exact file-basis gate report once, including the measured current source review", () => {
+    const names = ["V9-1-AUTHOR-FINALIZATION-TERMINAL-VERIFICATION-v1", "V9-1-FILE-ACCOUNTING-DIAGNOSIS-v1", "V9-FILE-BASIS-REPAIR-PLAN-v1", "V9-FILE-BASIS-PLAN-CHECK-v1", "V9-FILE-BASIS-SOURCE-SUMMARY-v1", "V9-FILE-BASIS-SOURCE-REVIEW-v1", "V9-FILE-BASIS-REVIEW-FIX-v1", "V9-FILE-BASIS-SOURCE-VALIDATION-v1", "V9-FILE-BASIS-SOURCE-VERIFICATION-v1", "V9-2-SOURCE-REVIEW-v1", "V9-2-DATA-REVIEW-v1"]
+    const expected = names.map(name => `${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-${name}.md`)
+    for (const path of expected) expect(lean.LEAN_REMAINING_V9_REVIEW_PATHS.filter(identity => identity === path)).toEqual([path])
+    const extant = expected.filter(path => existsSync(path)), measured = correction.inventoryLeanSupervisorSurvivors(extant)
+    expect(measured).toHaveLength(extant.length)
+    for (const row of measured) expect(row.allocatedBytes).toBe(lstatSync(row.identity).blocks * 512)
+    expect(measured).toContainEqual({ identity: `${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-V9-FILE-BASIS-SOURCE-REVIEW-v1.md`, allocatedBytes: lstatSync(`${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-V9-FILE-BASIS-SOURCE-REVIEW-v1.md`).blocks * 512 })
+    const f = input(), { root: _root, ...p } = f.predecessor, reserve = 4_288_512
+    const body = { ...p, survivors: [...p.survivors, ...measured], allocatedDiskBytes: p.allocatedDiskBytes + reserve + measured.reduce((sum, row) => sum + row.allocatedBytes, 0) }
+    const predecessor = { ...body, root: labRoot(body.schemaVersion, body) }
+    expect(lean.createLeanSupervisorCorrectionAllocation({ ...f, predecessor }, 8).predecessor).toEqual(predecessor)
+    const manifest = correction.leanCorrectionSourceManifest("v9-2", envelope())
+    expect(manifest.entries.some(entry => expected.includes(entry.path))).toBe(false)
+    const source = readFileSync("scripts/run-v1-38-lean-correction.ts", "utf8")
+    expect(source).toContain('identities.push(...LEAN_REMAINING_V9_REVIEW_PATHS.filter(path => existsSync(path)))')
+    expect(source).toContain('const survivors = inventoryLeanSupervisorSurvivors([...new Set(identities)])')
+    expect(source).toContain('bytesRoot: leanBytesRoot(readFileSync(row.identity))')
   })
   it("a zero-charge failed earlier route can precede each distinct next route, never refund", () => {
     expect(() => lean.createLeanSupervisorCorrectionAllocation(input("diagnostic", 2, 30), 8)).not.toThrow()
