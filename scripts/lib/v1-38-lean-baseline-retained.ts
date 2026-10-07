@@ -18,7 +18,7 @@ import { buildPlannerCandidate } from "../../packages/strategy-lab/src/planner/e
 import { emitTacticalSource } from "../../packages/strategy-oracle-tactical/src/emit.js"
 import { authenticateLeanBaselineReview, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselineSourceManifest } from "../run-v1-38-lean-baseline.js"
 import { authenticateLeanSupervisorDiagnosticCheck, authenticateLeanRetryClosureV8 } from "./v1-38-lean-correction-retained.js"
-import { admitLeanRetryTimeboxExtension, admitLeanAllocation, leanCorrectionRoutePaths } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { admitLeanRetryTimeboxExtension, admitLeanAllocation, leanCorrectionRoutePaths, leanSupervisorAllocationMode, isLeanRetryMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanCorrectionSourceManifest } from "../run-v1-38-lean-correction.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_RETAINED_${code}`) }
@@ -31,7 +31,8 @@ export const assertLeanRetryBaselineJoinV8 = (allocation: import("../../packages
 /** Shared real accepted-file gate at publisher, issuer and selected reader. */
 export const authenticateLeanRetryBaselineAuthorityV8 = (allocation: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanCorrectionAllocation, head: string) => {
   admitLeanAllocation(allocation)
-  const mode = `v8-${allocation.attemptOrdinal}` as import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanRetryMode
+  const mode = leanSupervisorAllocationMode(allocation)
+  if (!isLeanRetryMode(mode)) return fail("RETRY_ACCEPTED_FINAL_JOIN")
   const check = authenticateLeanSupervisorDiagnosticCheck(mode), closure = authenticateLeanRetryClosureV8(mode)
   assertLeanRetryBaselineJoinV8(allocation, check, closure, head)
   const lean = { diagnostic: leanCorrectionRoutePaths("diagnostic", mode), baseline: leanCorrectionRoutePaths("baseline", mode) }

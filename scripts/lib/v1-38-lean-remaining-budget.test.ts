@@ -5,6 +5,7 @@ import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import * as lean from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as correction from "../run-v1-38-lean-correction.js"
 import { assertLeanRetryBaselineJoinV8 } from "./v1-38-lean-baseline-retained.js"
+import { validateLeanRemainingPreparationCustodyV9, LEAN_REMAINING_V9_PREPARATION_PINS } from "./v1-38-lean-correction-retained.js"
 
 const r = (label: string) => labRoot("remaining-budget-inert", label)
 const envelope = () => lean.LEAN_REMAINING_V9_EXTENSION
@@ -55,6 +56,17 @@ describe("approved additive v9 remaining-budget envelope", () => {
     const { root: _root, ...p } = body
     expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...f, predecessor: { ...p, root: labRoot(p.schemaVersion, p) } }, 8)).toThrow()
   })
+  it("validates every exact old/new report row with its full physical debit", () => {
+    const f = input(), reports = lean.LEAN_REMAINING_V9_REVIEW_PATHS.map(identity => ({ identity, allocatedBytes: 4096 }))
+    const { root: _root, ...p } = f.predecessor
+    const body = { ...p, survivors: [...p.survivors, ...reports], allocatedDiskBytes: p.allocatedDiskBytes + reports.length * 4096 }
+    const predecessor = { ...body, root: labRoot(body.schemaVersion, body) }
+    expect(lean.createLeanSupervisorCorrectionAllocation({ ...f, predecessor }, 8).predecessor).toEqual(predecessor)
+    for (const patch of [{ allocatedDiskBytes: p.allocatedDiskBytes }, { survivors: [...body.survivors, reports[0]!] }, { survivors: [...body.survivors.slice(0, -1), { ...reports.at(-1)!, allocatedBytes: -1 }] }]) {
+      const changed = { ...body, ...patch }
+      expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...f, predecessor: { ...changed, root: labRoot(body.schemaVersion, changed) } }, 8)).toThrow()
+    }
+  })
   it("a zero-charge failed earlier route can precede each distinct next route, never refund", () => {
     expect(() => lean.createLeanSupervisorCorrectionAllocation(input("diagnostic", 2, 30), 8)).not.toThrow()
     expect(() => lean.createLeanSupervisorCorrectionAllocation(input("diagnostic", 3, 30), 8)).not.toThrow()
@@ -72,6 +84,8 @@ describe("approved additive v9 remaining-budget envelope", () => {
     expect(manifest.entries).toContainEqual({ path: correction.LEAN_REMAINING_V9_PLAN, root: envelope().planRoot })
     expect(manifest.entries.some(e => /(?:SOURCE|DATA)-REVIEW/u.test(e.path))).toBe(false)
     expect(manifest.entries.some(e => e.path === "scripts/lib/v1-38-lean-remaining-budget.test.ts")).toBe(true)
+    expect(correction.leanCorrectionSourceManifest("v9-2", envelope()).root).toBe(manifest.root)
+    expect(correction.leanCorrectionSourceManifest("v9-3", envelope()).root).toBe(manifest.root)
     expect(() => correction.leanCorrectionSourceManifest("v8-1", envelope())).toThrow()
     expect(() => correction.leanCorrectionSourceManifest("v9-1", lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION)).toThrow()
   })
@@ -81,5 +95,22 @@ describe("approved additive v9 remaining-budget envelope", () => {
     expect(() => correction.assertLeanCorrectionResources(m, a)).not.toThrow()
     expect(() => correction.assertLeanCorrectionResources({ ...m, elapsedMs: 70_140_000 }, a)).toThrow()
     expect(() => correction.assertLeanCorrectionResources({ ...m, availableMemoryBytes: 0 }, a)).toThrow()
+  })
+  it("pinned old preparation is finite, spent, terminal-only and cannot become FINAL", () => {
+    const dir = lean.LEAN_REMAINING_V9_PHASE
+    const request: correction.LeanCorrectionRequest = { planRoot: r("plan"), amendmentRoot: r("amendment"), reviewRoot: r("review"), dataReviewRoot: r("data"), coldRoot: r("cold"), seed: "inert-old", reuseGrantRoot: r("reuse"), candidateRoots: [r("a"), r("b")], requestRoots: [r("request")], diagnosis: null, schemaVersion: "lean-correction-supervisor-request-v8", attemptOrdinal: 2, route: "diagnostic", reviewPath: `${dir}NEW265-16-BOOKKEEPING-CONTINUATION-SOURCE-ADMISSION-REVIEW-v1.md`, dataReviewPath: `${dir}NEW265-16-BOOKKEEPING-CONTINUATION-DIAGNOSTIC-2-DATA-REVIEW-v1.md`, authorizationPath: ".strategy-lab/lean-retry-authorization-diagnostic-v8-2.json", setupAccountingPath: ".strategy-lab/lean-retry-envelope-setup-20261006-v8-2.json", timeboxExtension: lean.LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION, sourceRoot: "sha256:8cf180adcfd731c1b47de02b380bd86d913a1f00ec30ac74a8409f04d6923b1c" }
+    const failure = { root: "sha256:84add3c8424b3d85b9b4c0c901ba8a6679939e74a8df6627bfd4bdadff528d77", sourceRoot: request.sourceRoot, head: "888ca6032a20a9ddbb59f11373ed1234706a6f8d", requestBytesRoot: LEAN_REMAINING_V9_PREPARATION_PINS[".strategy-lab/lean-correction-supervisor-diagnostic-request-20261006-v8-2.json"], admissionMode: "prepare", currentCharges: 0, cumulativeCharged: null, storeAbsent: true, childSpawned: false, cleanup: null, allocationRoot: null, ledgerBytesRoot: null, timeBytesRoot: null, entryAbsent: true, terminalAbsent: true, resultAbsent: true, acceptedCheckAbsent: true }
+    expect(() => validateLeanRemainingPreparationCustodyV9(request, failure)).not.toThrow()
+    for (const patch of [{ root: r("replaced") }, { currentCharges: 1 }, { allocationRoot: r("fabricated") }, { childSpawned: true }, { resultAbsent: false }, { head: "2".repeat(40) }]) expect(() => validateLeanRemainingPreparationCustodyV9(request, { ...failure, ...patch })).toThrow()
+    expect(() => validateLeanRemainingPreparationCustodyV9({ ...request, reviewPath: `${dir}UNRELATED.md` }, failure)).toThrow()
+  })
+  it("pure MAIN authoring APIs preserve exact report/request/setup identities", () => {
+    for (const n of [1, 2, 3] as const) {
+      const mode = `v9-${n}` as lean.LeanRetryMode, docs = correction.leanRemainingDocumentsV9("diagnostic", mode), setup = correction.createLeanRemainingSetupWitnessV9(mode, envelope().startedAtMs + 1), f = input("diagnostic", n)
+      const request = correction.createLeanRemainingRequestDraftV9(mode, "diagnostic", { sourceRoot: f.sourceRoot, reviewRoot: f.reviewRoot, dataReviewRoot: f.dataReviewRoot, setupAccountingRoot: setup.root, reuseGrantRoot: f.reuseGrantRoot, authorizationRoot: r("auth"), priorClosureRoot: f.priorClosureRoot, continuationRoot: f.continuationRoot, acceptedCheckRoot: null, acceptedReaderCloseRoot: null })
+      expect(request).toMatchObject({ timeboxExtension: envelope(), attemptOrdinal: n, reviewPath: docs.review, dataReviewPath: docs.dataReview, setupAccountingPath: docs.setup, authorizationPath: docs.authorization, setupAccountingRoot: setup.root })
+      expect(request.requestRoots).toHaveLength(1)
+      expect(correction.leanCorrectionRequestDataRoot(request)).toBe(correction.leanCorrectionRequestDataRoot({ ...request, authorizationRoot: r("final-auth") }))
+    }
   })
 })
