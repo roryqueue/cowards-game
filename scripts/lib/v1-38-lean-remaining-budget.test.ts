@@ -1,6 +1,11 @@
 /** Source-only synthetic v9 contracts. No historical reader or live dispatch. */
-import { describe, it, expect } from "vitest"
+import { afterEach, describe, it, expect, vi } from "vitest"
 import { readFileSync, existsSync, lstatSync } from "node:fs"
+import * as fs from "node:fs"
+import { resolve, join } from "node:path"
+import * as retained from "./v1-38-lean-correction-retained.js"
+import * as reuseIO from "./v1-38-lean-baseline-reuse.js"
+import { deriveLeanSupervisorCorrectionRequestRoots } from "../run-v1-38-lean-correction.js"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import * as lean from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as correction from "../run-v1-38-lean-correction.js"
@@ -82,7 +87,12 @@ describe("approved additive v9 remaining-budget envelope", () => {
   })
   it("debits every exact file-basis gate report once, including the measured current source review", () => {
     const names = ["V9-1-AUTHOR-FINALIZATION-TERMINAL-VERIFICATION-v1", "V9-1-FILE-ACCOUNTING-DIAGNOSIS-v1", "V9-FILE-BASIS-REPAIR-PLAN-v1", "V9-FILE-BASIS-PLAN-CHECK-v1", "V9-FILE-BASIS-SOURCE-SUMMARY-v1", "V9-FILE-BASIS-SOURCE-REVIEW-v1", "V9-FILE-BASIS-SOURCE-REVIEW-v2", "V9-FILE-BASIS-REVIEW-FIX-v1", "V9-FILE-BASIS-SOURCE-VALIDATION-v1", "V9-FILE-BASIS-SOURCE-VERIFICATION-v1", "V9-2-SOURCE-REVIEW-v1", "V9-2-DATA-REVIEW-v1"]
-    const expected = names.map(name => `${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-${name}.md`)
+    const expected = [
+      ...names.map(name => `${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-${name}.md`),
+      ".planning/debug/v9-baseline-prepare.md",
+      `${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-V9-BASELINE-FOR-2-PREPARATION-TERMINAL-VERIFICATION-v1.md`,
+      ...["REPAIR-PLAN-v1", "PLAN-CHECK-v1", "PLAN-CHECK-v2", "SOURCE-SUMMARY-v1", "SOURCE-REVIEW-v1", "SOURCE-REVIEW-v2", "REVIEW-FIX-v1", "SOURCE-VALIDATION-v1", "SOURCE-VERIFICATION-v1"].map(name => `${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-V9-BASELINE-LINEAGE-${name}.md`),
+    ]
     for (const path of expected) expect(lean.LEAN_REMAINING_V9_REVIEW_PATHS.filter(identity => identity === path)).toEqual([path])
     const extant = expected.filter(path => existsSync(path)), measured = correction.inventoryLeanSupervisorSurvivors(extant)
     expect(measured).toHaveLength(extant.length)
@@ -185,4 +195,96 @@ describe("approved additive v9 remaining-budget envelope", () => {
     const requestSource = readFileSync("scripts/run-v1-38-lean-correction.ts", "utf8")
     expect(requestSource).toContain("inspectLeanRemainingPredecessorWithPurposeV9(route, Date.now(), mode, purpose)")
   })
+})
+
+/** Composed read-only lineage fixture; no publication or execution. */
+const virtual = vi.hoisted(() => ({ bytes: new Map<string, Buffer>(), fds: new Map<number, string>(), present: new Set<string>() }))
+vi.mock("node:fs", async original => {
+  const real = await original<typeof import("node:fs")>()
+  const adjusted = (stat: fs.Stats, path: string) => virtual.bytes.has(path) ? Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { size: virtual.bytes.get(path)!.length }) : stat
+  return { ...real,
+    existsSync: (path: fs.PathLike) => virtual.present.has(resolve(String(path))) || real.existsSync(path),
+    lstatSync: (path: fs.PathLike) => adjusted(real.lstatSync(path), resolve(String(path))),
+    openSync: (...args: Parameters<typeof real.openSync>) => { const fd = real.openSync(...args); virtual.fds.set(fd, resolve(String(args[0]))); return fd },
+    fstatSync: (fd: number) => adjusted(real.fstatSync(fd), virtual.fds.get(fd) ?? ""),
+    closeSync: (fd: number) => { virtual.fds.delete(fd); real.closeSync(fd) },
+    readFileSync: (...args: Parameters<typeof real.readFileSync>) => {
+      const path = typeof args[0] === "number" ? virtual.fds.get(args[0]) : resolve(String(args[0])), bytes = path && virtual.bytes.get(path)
+      return bytes ? typeof args[1] === "string" ? bytes.toString(args[1] as BufferEncoding) : bytes : real.readFileSync(...args)
+    },
+  }
+})
+vi.mock("node:child_process", async original => ({ ...await original<typeof import("node:child_process")>(), execFileSync: (command: string) => { if (command !== "git") throw new Error("NO_PROCESS_AUTHORITY"); return "" } }))
+afterEach(() => { virtual.bytes.clear(); virtual.present.clear(); virtual.fds.clear(); vi.restoreAllMocks() })
+const put = (path: string, value: unknown) => virtual.bytes.set(resolve(path), Buffer.from(lean.leanCanonicalBytes(value)))
+const fixture = () => {
+  const mode = "v9-2" as const, paths = lean.leanCorrectionRoutePaths("diagnostic", mode), docs = correction.leanRemainingDocumentsV9("diagnostic", mode)
+  // Only finite metadata is copied as an inert template. It is re-bound in memory;
+  // the old request is never admitted or modified at its historical source.
+  const ledger = lean.openLeanLedger(paths.store), time = lean.readLeanTimeAccounting(ledger), originalEntry = lean.readLeanChildEntry(ledger), originalTerminal = lean.readLeanChildTerminal(ledger)
+  const request = JSON.parse(fs.readFileSync(paths.request, "utf8")) as correction.LeanCorrectionRequest
+  const sourceRoot = correction.leanCorrectionSourceManifest(mode, lean.LEAN_REMAINING_V9_EXTENSION).root
+  request.sourceRoot = sourceRoot
+  request.requestRoots = deriveLeanSupervisorCorrectionRequestRoots({ route: "diagnostic", seed: request.seed, coldRoot: request.coldRoot, planRoot: request.planRoot, sourceRoot }, lean.LEAN_REMAINING_V9_EXTENSION.approvalRoot, mode)
+  const sourceReview = fs.readFileSync(docs.review, "utf8").replaceAll(originalEntry.sourceRoot, sourceRoot)
+  request.reviewRoot = lean.leanBytesRoot(Buffer.from(sourceReview)); virtual.bytes.set(resolve(docs.review), Buffer.from(sourceReview))
+  const dataRoot = correction.leanCorrectionRequestDataRoot(request)
+  const oldData = fs.readFileSync(docs.dataReview, "utf8"), oldRequestData = /request_root: (sha256:[a-f0-9]{64})/u.exec(oldData)![1]!
+  const dataReview = oldData.replaceAll(originalEntry.sourceRoot, sourceRoot).replaceAll(oldRequestData, dataRoot)
+  request.dataReviewRoot = lean.leanBytesRoot(Buffer.from(dataReview)); virtual.bytes.set(resolve(docs.dataReview), Buffer.from(dataReview))
+  const continuation = JSON.parse(fs.readFileSync(docs.continuation, "utf8")), { root: _cr, ...cb } = { ...continuation, sourceRoot, reviewRoot: request.reviewRoot }
+  const newContinuation = { ...cb, root: labRoot(cb.schemaVersion, cb) }; request.continuationRoot = newContinuation.root; put(docs.continuation, newContinuation)
+  // Request data excludes review/data/authorization roots, but includes continuation.
+  const finalDataRoot = correction.leanCorrectionRequestDataRoot(request)
+  const finalDataReview = dataReview.replaceAll(dataRoot, finalDataRoot); request.dataReviewRoot = lean.leanBytesRoot(Buffer.from(finalDataReview)); virtual.bytes.set(resolve(docs.dataReview), Buffer.from(finalDataReview))
+  const authorization = JSON.parse(fs.readFileSync(docs.authorization, "utf8")), { root: _ar, ...ab } = { ...authorization, sourceRoot, requestDataRoot: finalDataRoot }
+  const newAuthorization = { ...ab, root: labRoot(ab.schemaVersion, ab) }; request.authorizationRoot = lean.leanBytesRoot(lean.leanCanonicalBytes(newAuthorization)); put(docs.authorization, newAuthorization); put(paths.request, request)
+  const requestBytesRoot = lean.leanBytesRoot(lean.leanCanonicalBytes(request)), allocation = { ...ledger.allocation, sourceRoot, requestBytesRoot }
+  const entry = { ...originalEntry, sourceRoot, requestBytesRoot }, terminal = { ...originalTerminal, sourceRoot, entryBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(entry)) }
+  put(join(paths.store, "entry.json"), entry); put(join(paths.store, "child-terminal.json"), terminal)
+  const check = JSON.parse(fs.readFileSync(join(paths.store, paths.check), "utf8")), { root: _check, ...body } = { ...check, sourceRoot, requestBytesRoot }
+  put(join(paths.store, paths.check), { ...body, root: labRoot(body.schemaVersion, body) })
+  const originalOpen = lean.openLeanLedger, originalTime = lean.readLeanTimeAccounting, originalReadEntry = lean.readLeanChildEntry, originalReadTerminal = lean.readLeanChildTerminal
+  vi.spyOn(lean, "openLeanLedger").mockImplementation(path => path === paths.store ? { ...ledger, allocation } : originalOpen(path))
+  vi.spyOn(lean, "readLeanTimeAccounting").mockImplementation(value => resolve(value.directory) === resolve(paths.store) ? time : originalTime(value))
+  vi.spyOn(lean, "readLeanChildEntry").mockImplementation(value => resolve(value.directory) === resolve(paths.store) ? entry : originalReadEntry(value))
+  vi.spyOn(lean, "readLeanChildTerminal").mockImplementation(value => resolve(value.directory) === resolve(paths.store) ? terminal : originalReadTerminal(value))
+  vi.spyOn(reuseIO, "authenticateLeanColdReuse").mockReturnValue({ grant: { root: request.reuseGrantRoot } } as never)
+  // Stop immediately AFTER the real accepted-auth -> request -> predecessor chain.
+  // No result/source payload audit or ordinary reader is run on historical evidence.
+  const evidence = vi.spyOn(lean, "verifyLeanEvidence").mockReturnValue({} as never)
+  const originalState = lean.readLeanLedger
+  vi.spyOn(lean, "readLeanLedger").mockImplementation(value => resolve(value.directory) === resolve(paths.store) ? { stopped: false, charges: new Map(), charged: 31 } as never : originalState(value))
+  vi.spyOn(Date, "now").mockReturnValue(time.closes.get("correction-supervisor-diagnostic-v8-reader-close")! + 1)
+  const originalLineage = correction.readLeanRemainingAcceptedDiagnosticLineageV9
+  let capturedPurpose: unknown
+  vi.spyOn(correction, "readLeanRemainingAcceptedDiagnosticLineageV9").mockImplementation(purpose => { capturedPurpose = purpose; return originalLineage(purpose) })
+  return { mode, paths, docs, time, check: { ...body, root: labRoot(body.schemaVersion, body) }, evidence, capturedPurpose: () => capturedPurpose }
+}
+describe("composed v9 accepted diagnostic lineage, not fresh execution", () => {
+  it("crosses real request/predecessor validation for every own-baseline lifecycle state, never issuing acceptance", () => {
+    const f = fixture(), baseline = lean.leanCorrectionRoutePaths("baseline", f.mode)
+    for (const path of [join(baseline.temp, "admission-prepare-start.json"), baseline.allocation, baseline.store, join(baseline.temp, "admission-run-start.json"), join(baseline.store, "child-terminal.json"), join(baseline.store, "result.json")]) {
+      virtual.present.add(resolve(path)); f.evidence.mockClear()
+      try { retained.authenticateLeanSupervisorDiagnosticCheck(f.mode); throw new Error("NO_ACCEPTANCE_EXPECTED") } catch (error) { if (!(error instanceof Error) || !error.message.includes("ACCEPTED_CHARGE")) throw error }
+      expect(f.evidence).toHaveBeenCalledOnce()
+      expect(f.capturedPurpose()).toBeDefined()
+      expect(() => retained.readLeanRemainingAcceptedLineagePurposeV9(f.capturedPurpose())).toThrow("CUSTODY")
+      expect(() => correction.readLeanRemainingAcceptedDiagnosticLineageV9(f.capturedPurpose())).toThrow("CUSTODY")
+      expect(() => correction.readLeanRemainingRequestV9(f.paths.request, "diagnostic", f.mode)).toThrow("SPENT_DESTINATION")
+      virtual.present.delete(resolve(path))
+    }
+    for (const path of [lean.leanCorrectionRoutePaths("baseline", "v9-1").store, lean.leanCorrectionRoutePaths("baseline", "v9-3").allocation, lean.leanCorrectionRoutePaths("diagnostic", "v9-3").store]) {
+      virtual.present.add(resolve(path)); f.evidence.mockClear()
+      expect(() => retained.authenticateLeanSupervisorDiagnosticCheck(f.mode)).toThrow("SPENT_DESTINATION")
+      expect(f.evidence).not.toHaveBeenCalled(); virtual.present.delete(resolve(path))
+    }
+    expect(() => correction.readLeanRemainingAcceptedDiagnosticLineageV9({ mode: f.mode })).toThrow("CUSTODY")
+    for (const patch of [{ accepted: false }, { attemptOrdinal: 3 }, { sourceRoot: labRoot("wrong", {}) }, { allocationRoot: labRoot("wrong", {}) }]) {
+      const { root: _r, ...body } = { ...f.check, ...patch }; put(join(f.paths.store, f.paths.check), { ...body, root: labRoot(body.schemaVersion, body) })
+      f.evidence.mockClear(); expect(() => retained.authenticateLeanSupervisorDiagnosticCheck(f.mode)).toThrow(); expect(f.evidence).not.toHaveBeenCalled()
+    }
+    put(join(f.paths.store, f.paths.check), f.check); f.time.closed.delete("correction-supervisor-diagnostic-v8-reader-close")
+    expect(() => retained.authenticateLeanSupervisorDiagnosticCheck(f.mode)).toThrow("ACCEPTED_READER_CLOSURE")
+  }, 30_000)
 })

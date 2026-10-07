@@ -19,7 +19,7 @@ import { validateLeanPrivateCorrectionOrigin, buildLeanStartupWorkerHarnessV5, b
 import { resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
 import { captureLeanHostFailureV7, type LeanHostFailureBindingV7 } from "./lib/v1-38-lean-host-stage-v7.js"
 let activeHostBindingV7: LeanHostFailureBindingV7 | undefined
-import { authenticateLeanSupervisorDiagnosticCheck, authenticateLeanRetryClosureV8, authenticateLeanBookkeepingPredecessorV8, authenticateLeanRemainingPreparationCustodyV9, authenticateLeanRemainingClosedPrefixV9 } from "./lib/v1-38-lean-correction-retained.js"
+import { authenticateLeanSupervisorDiagnosticCheck, authenticateLeanRetryClosureV8, authenticateLeanBookkeepingPredecessorV8, authenticateLeanRemainingPreparationCustodyV9, authenticateLeanRemainingClosedPrefixV9, readLeanRemainingAcceptedLineagePurposeV9 } from "./lib/v1-38-lean-correction-retained.js"
 
 export { LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES }
 export const LEAN_SUPERVISOR_DECISION = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-CORRECTION-SUPERVISOR-DECISION-v1.md"
@@ -425,6 +425,14 @@ export const readLeanRetryRequestV8 = (path: string, route: LeanCorrectionRoute,
 }
 /** v9 keeps its own exact envelope, reports, and continuation identity end-to-end. */
 export const readLeanRemainingRequestV9 = (path: string, route: LeanCorrectionRoute, mode: LeanRetryMode): { request: LeanCorrectionRequest; reuse: LeanColdReuse } => {
+  return readLeanRemainingRequestWithPurposeV9(path, route, mode)
+}
+/** Only an ephemeral purpose issued inside accepted-check authentication can enter. */
+export const readLeanRemainingAcceptedDiagnosticLineageV9 = (purpose: unknown) => {
+  const mode = readLeanRemainingAcceptedLineagePurposeV9(purpose)
+  return readLeanRemainingRequestWithPurposeV9(leanCorrectionRoutePaths("diagnostic", mode).request, "diagnostic", mode, purpose)
+}
+const readLeanRemainingRequestWithPurposeV9 = (path: string, route: LeanCorrectionRoute, mode: LeanRetryMode, purpose?: unknown): { request: LeanCorrectionRequest; reuse: LeanColdReuse } => {
   if (!isLeanRemainingBudgetMode(mode) || path !== leanCorrectionRoutePaths(route, mode).request) return fail("REQUEST_PATH")
   const request = readLeanCorrectionJson(path) as LeanCorrectionRequest, n = leanRetryOrdinal(mode), b = LEAN_REMAINING_V9_EXTENSION, docs = leanRemainingDocumentsV9(route, mode)
   const keys = ["timeboxExtension", "schemaVersion", "route", "sourceRoot", "planRoot", "amendmentRoot", "reviewPath", "reviewRoot", "dataReviewPath", "dataReviewRoot", "coldRoot", "seed", "reuseGrantRoot", "candidateRoots", "requestRoots", "diagnosis", "supervisorDecisionRoot", "acceptedCheckRoot", "setupAccountingPath", "setupAccountingRoot", "startupPolicyRoot", "authorizationPath", "authorizationRoot", "attemptOrdinal", "priorClosureRoot", "continuationRoot", "acceptedReaderCloseRoot"]
@@ -443,7 +451,7 @@ export const readLeanRemainingRequestV9 = (path: string, route: LeanCorrectionRo
     if (!same(closure.timeboxExtension, b) || closure.closureClass !== "accepted" || closure.finalReaderClose !== true || request.acceptedCheckRoot !== accepted.root || request.acceptedReaderCloseRoot !== closure.root || closure.checkRoot !== accepted.root || closure.sourceRoot !== request.sourceRoot || closure.readerCloseMs !== accepted.readerCloseMs) return fail("ACCEPTED_CHECK")
   }
   // Validate original complete physical rows and exact report paths BEFORE data review.
-  inspectLeanRemainingPredecessorV9(route, Date.now(), mode)
+  inspectLeanRemainingPredecessorWithPurposeV9(route, Date.now(), mode, purpose)
   const reuse = authenticateLeanColdReuse({ directory: LEAN_BASELINE_STORE, newSourceRoot: request.sourceRoot, amendmentRoot: request.amendmentRoot })
   if (reuse.grant.root !== request.reuseGrantRoot) return fail("REUSE")
   readReview(docs.review, request.reviewRoot, request.sourceRoot, null, undefined, mode, b)
@@ -726,7 +734,12 @@ export const createLeanRemainingSetupWitnessV9 = (mode: LeanRetryMode, observedA
 }
 /** No legacy ordinary reader. Full physical debit is validated before allocation. */
 export const inspectLeanRemainingPredecessorV9 = (route: LeanCorrectionRoute, atMs: number, mode: LeanRetryMode): LeanCorrectionPredecessor => {
+  return inspectLeanRemainingPredecessorWithPurposeV9(route, atMs, mode)
+}
+const inspectLeanRemainingPredecessorWithPurposeV9 = (route: LeanCorrectionRoute, atMs: number, mode: LeanRetryMode, purpose?: unknown): LeanCorrectionPredecessor => {
   if (!isLeanRemainingBudgetMode(mode)) return fail("ARGUMENTS")
+  const acceptedLineage = purpose !== undefined && readLeanRemainingAcceptedLineagePurposeV9(purpose) === mode
+  if (acceptedLineage && route !== "diagnostic") return fail("DIAGNOSTIC_CUSTODY")
   const witness = readLeanRetrySetupWitnessV8(mode), finite = authenticateLeanRemainingPreparationCustodyV9(), history = authenticateLeanBookkeepingPredecessorV8()
   const { oldPaths, old, pinned, extraPins } = readLeanRetryFailedV7PrefixV8()
   if (!("route" in old.allocation) || !Number.isSafeInteger(atMs) || atMs < witness.observedAtMs || !isLeanRemainingBudgetExtensionV9(witness.timeboxExtension)) return fail("FRESH_HISTORY")
@@ -744,7 +757,7 @@ export const inspectLeanRemainingPredecessorV9 = (route: LeanCorrectionRoute, at
   for (const i of [1, 2, 3] as const) {
     const baseline = leanCorrectionRoutePaths("baseline", `v9-${i}`), future = leanCorrectionRoutePaths("diagnostic", `v9-${i}`)
     const spent = (paths: ReturnType<typeof leanCorrectionRoutePaths>) => [paths.store, paths.allocation, join(paths.temp, "admission-run-start.json"), join(paths.temp, "admission-prepare-start.json")].some(path => existsSync(path))
-    if ((route !== "baseline" || i !== n) && spent(baseline) || i > n && spent(future)) return fail("SPENT_DESTINATION")
+    if (!(i === n && (route === "baseline" || acceptedLineage)) && spent(baseline) || i > n && spent(future)) return fail("SPENT_DESTINATION")
   }
   // These exact physical/report identities are separate from functional source.
   identities.push(...LEAN_REMAINING_V9_REVIEW_PATHS.filter(path => existsSync(path)))

@@ -16,7 +16,7 @@ import { compactLeanBaselineCell, leanBaselineMetricCoverage, type LeanBaselineO
 import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
 import { selectLeanBestTrainedProposal, selectLeanTrainedProposal } from "./v1-38-lean-training-adapter.js"
 import { validateLeanPrivateCorrectionOrigin } from "./v1-38-lean-container-match-session.js"
-import { authenticateLeanRetryAdmissionFailureV8, leanCorrectionSourceManifest, leanCorrectionRequestDataRoot, leanCorrectionAdmissionElapsed, leanCorrectionTrustedGuardError, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
+import { authenticateLeanRetryAdmissionFailureV8, leanCorrectionSourceManifest, leanCorrectionRequestDataRoot, leanCorrectionAdmissionElapsed, leanCorrectionTrustedGuardError, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, readLeanRemainingAcceptedDiagnosticLineageV9, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
 import { validateLeanSupervisorReasonBytes, LEAN_SUPERVISOR_REASON_FILE, LEAN_SUPERVISOR_REASON_MAX_BYTES } from "../run-v1-38-lean-baseline.js"
 import type { LeanBaselinePair } from "./v1-38-lean-experiment-authority.js"
 import { SoldierBrainInputV119Schema, StrategyInputV119Schema, StrategyResultSchema } from "@cowards/spec"
@@ -306,6 +306,12 @@ export const verifyLeanCorrectionRetained = (path: string, route: LeanCorrection
 }
 /** Admission reopens immutable bytes; it never dispatches/retries an empirical
  * reader. Caller booleans and mock audit reports cannot grant this authority. */
+const remainingAcceptedLineagePurposesV9 = new WeakMap<object, LeanRetryMode>()
+/** Verification only: no exported issuer, no caller-controlled route or bypass. */
+export const readLeanRemainingAcceptedLineagePurposeV9 = (purpose: unknown): LeanRetryMode => {
+  if (!purpose || typeof purpose !== "object") return fail("CUSTODY")
+  return remainingAcceptedLineagePurposesV9.get(purpose) ?? fail("CUSTODY")
+}
 export const authenticateLeanSupervisorDiagnosticCheck = (supervisor: true | "v3" | "v4" | "v5" | "v6" | "v7" | LeanRetryMode = true) => {
   const paths = leanCorrectionRoutePaths("diagnostic", supervisor), ledger = openLeanLedger(paths.store), allocation = ledger.allocation
   if (leanSupervisorAllocationMode(allocation) !== supervisor || !("route" in allocation) || allocation.route !== "diagnostic") return fail("ACCEPTED_ALLOCATION")
@@ -319,7 +325,18 @@ export const authenticateLeanSupervisorDiagnosticCheck = (supervisor: true | "v3
   const { root: checkRoot, ...checkBody } = check
   if (check.schemaVersion !== `lean-correction-supervisor-retained-v${leanSupervisorVersion(supervisor)}` || checkRoot !== labRoot(`lean-correction-supervisor-retained-v${leanSupervisorVersion(supervisor)}`, checkBody) || check.readerInterval !== interval || check.readerStartMs !== time.starts.get(interval) || !Number.isSafeInteger(check.readerObservedMs) || Number(check.readerObservedMs) < Number(check.readerStartMs) || Number(check.readerObservedMs) > time.closes.get(interval)!) return fail("ACCEPTED_CHECK_CUSTODY")
   if (isLeanRetryMode(supervisor) && check.attemptOrdinal !== leanRetryOrdinal(supervisor)) return fail("ACCEPTED_CHECK_CUSTODY")
-  const { request, reuse } = readLeanCorrectionRequest(paths.request, "diagnostic", supervisor)
+  const readRequest = () => {
+    if (!isLeanRemainingBudgetMode(supervisor)) return readLeanCorrectionRequest(paths.request, "diagnostic", supervisor)
+    const closing = "correction-supervisor-diagnostic-v8-reader-close"
+    // These finite accepted/actual FINAL/source/request joins precede the purpose.
+    // The complete existing audit below still determines acceptance.
+    if (check.accepted !== true || check.route !== "diagnostic" || check.allocationRoot !== allocation.root || check.sourceRoot !== allocation.sourceRoot || entry.sourceRoot !== allocation.sourceRoot || check.head !== entry.head || terminal.head !== entry.head || check.requestBytesRoot !== entry.requestBytesRoot || allocation.requestBytesRoot !== entry.requestBytesRoot || leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)) !== entry.requestBytesRoot || !time.closed.has(closing) || time.starts.get(closing) !== time.closes.get(interval) || time.closes.get(closing)! < time.closes.get(interval)! || leanCorrectionSourceManifest(supervisor, allocation.timeboxExtension).root !== allocation.sourceRoot) return fail("ACCEPTED_CHECK_CUSTODY")
+    const purpose = Object.freeze({})
+    remainingAcceptedLineagePurposesV9.set(purpose, supervisor)
+    try { return readLeanRemainingAcceptedDiagnosticLineageV9(purpose) }
+    finally { remainingAcceptedLineagePurposesV9.delete(purpose) }
+  }
+  const { request, reuse } = readRequest()
   const evidence = verifyLeanEvidence(ledger), state = readLeanLedger(ledger)
   if (!state.stopped || state.charges.size !== 1 || state.charged !== (isLeanRetryMode(supervisor) ? allocation.predecessor.chargedMatches + 1 : supervisor === "v7" ? 29 : supervisor === "v6" ? 25 : supervisor === "v5" ? 24 : supervisor === "v4" ? 13 : 12)) return fail("ACCEPTED_CHARGE")
   const result = readLeanCorrectionJson(join(ledger.directory, "result.json"), 8_388_608) as Record<string, unknown>
