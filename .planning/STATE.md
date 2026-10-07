@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: v10-1 preparation invocation refused; source gates complete; corrected attempt needs human amendment
+stopped_at: Corrected v10-1 preparation approved once; source gates complete; MAIN execution next
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Source reviewed/fixed/validated/verified; missing request flag refused preparation before allocation
+last_activity_desc: Human approved one corrected preparation under unchanged limits; failed invocation preserved
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CORRECTED PREPARATION APPROVED (2026-10-07): Direct human approved exactlyONE corrected MAIN preparation of the existing independently reviewed unconsumed v10-1 request with required --request. New safe approval recorded in own canonical diagnostic temp; failed58419 and all previous reports/authoritybytes remain immutable. Source52d40bd8/root26c1befe/905 and closed source/data/helper gates unchanged; no active entry/verifier/hold. SAME cumulative93.6Mms/15GB300/all31charges/allcosts/originaldeadline19:26:58.572Z/reserve1860000; no additional idle exclusion. Corrected preparation refusal/failure ends pair. Only NEW acceptedfullcheck+actualFINAL permits ONE conditional36baseline. Commit actual allocation before uniqueMAINentry; SAMEPROCESScapacity beforecharge; sourceANDHEADfixed throughterminal+ONEuniqueappropriatecheck. Phase265/LEAG/freeze/formation/holdout/public/counting/production remain gated. Earlier paragraphs are preserved history.
 
 CURRENT V10-1 INVOCATION REFUSED / HUMAN CHECKPOINT (2026-10-07): Source52d40bd8/root26c1befe/905 verified5/5 after independently closed CR-01/CR-02; MAIN61focusedPASS/types/shell/diffPASS/factory1415zero. Fresh diagnostic MAINdraft51071/finalize32825 CLOSED0; DATA/HELPERreviews clean; request408e5f95/auth53cc7957/setup/helper/draft untouched. ExactlyONEpreparatory invocation58419 CLOSEDexit1/detailswithheld: MAIN omitted required --request. Independent inert parser reproduces ARGUMENTS; actual thrown details unretained. Canonicalallocation/store/admissionmarkers/entry/Match/result/check/FINAL absent;0newretainedcharges/all31carry. ONEindependent invocation-terminal-only check CLOSED, no fabricatedHEAD/ordinaryreader. Approvedsinglepair ENDED procedurally; baselineineligible/no automatic corrected invocation/retry/recredit/refund. No activeentry/reader/sourcehold. Human may explicitly amend to allowONEcorrected preparation under same remaining93.6Mms/15GB300/deadline19:26:58.572Z/allcosts/1860000reserve/source/runtime/rules/privacy; NOTcurrentlyapproved. Source workcomplete; Phase265/LEAG/266freeze/formation/holdout/public/counting/production/archive-success/tagremain gated. Earlierparagraphshistory.
 
