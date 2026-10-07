@@ -1186,7 +1186,7 @@ export const publishLeanRetryAdmissionFailureV8 = (mode: LeanRetryMode, admissio
   publishLeanCorrection(join(paths.temp, "admission-failure-v8.json"), receipt)
   return receipt
 }
-export const authenticateLeanRetryAdmissionFailureV8 = (mode: LeanRetryMode, currentHold = true, route: LeanCorrectionRoute = "diagnostic") => {
+export const authenticateLeanRetryAdmissionFailureV8 = (mode: LeanRetryMode, currentHold = true, route: LeanCorrectionRoute = "diagnostic", terminalVerifierInterval?: string) => {
   if (route !== "diagnostic" && !isLeanTwentySixMode(mode) && !isLeanTwoPairMode(mode)) return fail("ADMISSION_CUSTODY")
   const paths = leanCorrectionRoutePaths(route, mode), value = readLeanCorrectionJson(join(paths.temp, "admission-failure-v8.json")) as ReturnType<typeof publishLeanRetryAdmissionFailureV8>
   const { root: claimed, ...body } = value
@@ -1205,7 +1205,18 @@ export const authenticateLeanRetryAdmissionFailureV8 = (mode: LeanRetryMode, cur
   if (value.storeAbsent) { if (value.allocationRoot !== null || value.ledgerBytesRoot !== null || value.timeBytesRoot !== null || close.allocationRoot !== null || close.ledgerInterval !== null || value.cumulativeCharged !== null || value.childSpawned) return fail("ADMISSION_CUSTODY") }
   else {
     const ledger = openLeanLedger(paths.store), state = readLeanLedger(ledger), time = readLeanTimeAccounting(ledger)
-    if (state.charges.size || time.active || state.charged !== value.cumulativeCharged || ledger.allocation.root !== value.allocationRoot || !same(("timeboxExtension" in ledger.allocation ? ledger.allocation.timeboxExtension : null) ?? null, value.timeboxExtension ?? null) || close.allocationRoot !== value.allocationRoot || !close.ledgerInterval || !time.closed.has(close.ledgerInterval) || time.closes.get(close.ledgerInterval) !== close.ledgerCloseMs || value.ledgerBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(join(paths.store, "ledger.ndjson"), 4194304)) || value.timeBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(join(paths.store, "time.ndjson"), 4194304))) return fail("ADMISSION_CUSTODY")
+    const timeBytes = readLeanCorrectionPrivateBytes(join(paths.store, "time.ndjson"), 4194304)
+    let failureTimeBytes = timeBytes
+    if (terminalVerifierInterval !== undefined) {
+      if (!isLeanTwoPairMode(mode) || terminalVerifierInterval !== `correction-supervisor-${route}-v11-terminal-verifier`) return fail("ADMISSION_CUSTODY")
+      const lines = Buffer.from(timeBytes).toString("utf8").split("\n"), index = lines.findIndex(line => line && JSON.parse(line).kind === "start" && JSON.parse(line).id === terminalVerifierInterval)
+      if (index >= 0) {
+        const suffix = lines.slice(index).filter(Boolean).map(line => JSON.parse(line) as { kind: string; id: string; atMs: number })
+        if (suffix.length !== 2 || suffix[0]!.kind !== "start" || suffix[1]!.kind !== "close" || suffix.some(row => row.id !== terminalVerifierInterval) || suffix[0]!.atMs < close.ledgerCloseMs) return fail("ADMISSION_CUSTODY")
+        failureTimeBytes = Buffer.from(lines.slice(0, index).map(line => `${line}\n`).join(""))
+      }
+    }
+    if (state.charges.size || time.active || state.charged !== value.cumulativeCharged || ledger.allocation.root !== value.allocationRoot || !same(("timeboxExtension" in ledger.allocation ? ledger.allocation.timeboxExtension : null) ?? null, value.timeboxExtension ?? null) || close.allocationRoot !== value.allocationRoot || !close.ledgerInterval || !time.closed.has(close.ledgerInterval) || time.closes.get(close.ledgerInterval) !== close.ledgerCloseMs || value.ledgerBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(join(paths.store, "ledger.ndjson"), 4194304)) || value.timeBytesRoot !== leanBytesRoot(failureTimeBytes)) return fail("ADMISSION_CUSTODY")
   }
   if (value.requestBytesRoot !== (existsSync(paths.request) ? leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)) : null)) return fail("ADMISSION_CUSTODY")
   return { ...value, admissionCloseMs: close.ledgerCloseMs }

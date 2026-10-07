@@ -482,7 +482,7 @@ import { tmpdir as twoPairTmpdir } from "node:os"
 import { join as twoPairJoin } from "node:path"
 import { execFileSync as twoPairExec } from "node:child_process"
 
-it("v11 authentic finite refusal carry closes pair1 in an isolated synthetic namespace without old readers", () => {
+it("v11 rejects the old fabricated partial-request refusal fixture even with recomputed roots", () => {
   const directory = twoPairRealpath(twoPairTemp(twoPairJoin(twoPairTmpdir(), "lean-v11-refusal-fixture-")))
   const accountingUrl = new URL("../../packages/strategy-lab/src/league/lean-experiment.ts", import.meta.url).href, retainedUrl = new URL("./v1-38-lean-correction-retained.ts", import.meta.url).href, contractsUrl = new URL("../../packages/strategy-lab/src/contracts.ts", import.meta.url).href
   const code = `
@@ -500,17 +500,79 @@ it("v11 authentic finite refusal carry closes pair1 in an isolated synthetic nam
     const start=rooted({schemaVersion:"lean-two-pair-terminal-verifier-start-v11",authorizing:false,mode:"v11-1",route:"diagnostic",sourceRoot:r(1),head:"a".repeat(40),wallStartMs:at-10,monotonicStartNs:"1000000"});put(join(p.temp,"terminal-verifier-start-v11.json"),start);
     const close=rooted({schemaVersion:"lean-two-pair-terminal-verifier-close-v11",startRoot:start.root,closedAtMs:at,monotonicObservedNs:"11000000",elapsedUpperBoundMs:10});put(join(p.temp,"terminal-verifier-close-v11.json"),close);
     const check=rooted({schemaVersion:"lean-two-pair-terminal-verification-v11",authorizing:false,accepted:false,attemptOrdinal:1,route:"diagnostic",sourceRoot:r(1),requestBytesRoot:leanBytesRoot(leanCanonicalBytes(request)),allocationRoot:null,entryHead:null,entryBytesRoot:null,terminalBytesRoot:null,currentCharges:0,cumulativeCharged:32,predecessor,readerStartRoot:start.root,readerCloseRoot:close.root,closedAtMs:at});put(join(p.temp,"terminal-verification-v11.json"),check);
-    const carry=publishLeanTwoPairTerminalCarryV11("v11-1","diagnostic"), outcome=authenticateLeanTwoPairClosedOutcomeV11("v11-1");
-    if(carry.outcome!=="refused_before_entry"||carry.entryHead!==null||carry.resultBytesRoot!==null||outcome.cumulativeCharged!==32||outcome.baselineCarryRoot!==null)throw new Error("CARRY_INVALID");
-    writeFileSync(join(p.temp,"finite-later-accounting.json"),"later cost",{mode:0o600});
-    if(authenticateLeanTwoPairClosedOutcomeV11("v11-1").root!==outcome.root)throw new Error("UNSTABLE_CONTINUATION");
-    put(join(p.temp,"terminal-verification-v11.json"),{...check,entryHead:"a".repeat(40)});
-    let rejected=false;try{authenticateLeanTwoPairClosedOutcomeV11("v11-1");}catch{rejected=true;}if(!rejected)throw new Error("MUTATION_ACCEPTED");
+    let rejected=false;try{publishLeanTwoPairTerminalCarryV11("v11-1","diagnostic");}catch{rejected=true;}if(!rejected)throw new Error("FABRICATED_CARRY_ACCEPTED");
     if(existsSync(leanCorrectionRoutePaths("diagnostic","v10-1").store))throw new Error("HISTORICAL_NAMESPACE_OPENED");
-    console.log(JSON.stringify({closed:true,charged:32,current:0,head:null,mutationRejected:rejected}));
+    console.log(JSON.stringify({fabricatedRejected:rejected}));
   `
-  try { expect(JSON.parse(twoPairExec(process.execPath, ["--import", import.meta.resolve("tsx"), "--input-type=module", "--eval", code], { cwd: directory, encoding: "utf8", timeout: 30000, maxBuffer: 8192 }))).toEqual({ closed: true, charged: 32, current: 0, head: null, mutationRejected: true }) }
+  try { expect(JSON.parse(twoPairExec(process.execPath, ["--import", import.meta.resolve("tsx"), "--input-type=module", "--eval", code], { cwd: directory, encoding: "utf8", timeout: 30000, maxBuffer: 8192 }))).toEqual({ fabricatedRejected: true }) }
   finally { twoPairRemove(directory, { recursive: true, force: true }) }
+})
+
+it("v11 authenticates a complete inert actual admission/refusal lifecycle, not rooted report claims", () => {
+  const previousCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v11-actual-lifecycle-")))
+  const b = ledgerIO.LEAN_TWO_PAIR_V11_EXTENSION, mode = "v11-1", route = "diagnostic", paths = ledgerIO.leanCorrectionRoutePaths(route, mode)
+  const publicDocuments = [correctionIO.LEAN_TWO_PAIR_V11_APPROVAL, correctionIO.LEAN_TWO_PAIR_V11_PAIRS_APPROVAL, correctionIO.LEAN_TWO_PAIR_V11_PLAN]
+  for (const path of publicDocuments) { const target = join(directory, path); fileIO.mkdirSync(resolve(target, ".."), { recursive: true }); fileIO.copyFileSync(resolve(path), target) }
+  fileIO.mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); fileIO.mkdirSync(join(directory, paths.temp), { mode: 0o700 })
+  const r = (n: number) => labRoot("inert-actual-lifecycle", n), rooted = (body: Record<string, unknown>) => ({ ...body, root: labRoot(String(body.schemaVersion), body) })
+  let history: ReturnType<typeof vi.spyOn> | undefined
+  try {
+    process.chdir(directory)
+    const survivors = Array.from({ length: 517 }, (_, i) => { const identity = `.strategy-lab/inert-history-${i}`; fileIO.writeFileSync(identity, "inert historical debit", { mode: 0o600 }); return { identity, allocatedBytes: fileIO.lstatSync(identity).blocks * 512 } })
+    const witness = rooted({ schemaVersion: "lean-retry-setup-witness-v8", timeboxExtension: b, attemptOrdinal: 1, startedAtMs: b.startedAtMs, observedAtMs: b.startedAtMs, priorElapsedMs: b.priorElapsedMs, consumedTimeBytesRoot: ledgerIO.LEAN_RETRY_V8_CARRY.timeBytesRoot, decisionRoot: b.approvalRoot, threadId: "019fa652-915a-7183-9af1-3b3c05868d86", turnId: b.turnId, source: "codex-task-event-custody" })
+    const put = (path: string, value: unknown) => fileIO.writeFileSync(path, ledgerIO.leanCanonicalBytes(value), { mode: 0o600 })
+    put(ledgerIO.leanRetrySetupPath(mode), witness)
+    const predecessor = rooted({ schemaVersion: "lean-correction-predecessor-v1", chargedMatches: 32, elapsedUpperBoundMs: b.priorElapsedMs + 1000, allocatedDiskBytes: b.physicalFloorBytes, historicalPeakDiskBytes: "unknown", historicalPeakRssBytes: "unknown", historyRoot: r(20), survivors }) as unknown as ledgerIO.LeanCorrectionPredecessor
+    // Only the pre-existing historical byte authority is injected. All new
+    // admission, request, refusal, reader, report and carry files are real reads.
+    history = vi.spyOn(correctionIO, "inspectLeanTwoPairPredecessorV11").mockReturnValue(predecessor)
+    const request = correctionIO.createLeanTwoPairRequestDraftV11(mode, route, { sourceRoot: r(1), reviewRoot: r(2), dataReviewRoot: r(3), helperReviewRoot: r(4), setupAccountingRoot: witness.root, reuseGrantRoot: r(6), authorizationRoot: r(7), priorClosureRoot: null, continuationRoot: null, acceptedCheckRoot: null, acceptedReaderCloseRoot: null })
+    put(paths.request, request)
+    const admission = correctionIO.beginLeanCorrectionAdmission(route, "prepare", resolve(paths.temp), { wallStartMs: b.startedAtMs + 1000, monotonicStartNs: "1000000" }, mode)
+    const admissionClose = correctionIO.closeLeanCorrectionAdmission(admission, null, { wallStartMs: b.startedAtMs + 1010, monotonicStartNs: "11000000" })
+    const failure = rooted({ schemaVersion: "lean-retry-admission-failure-v8", timeboxExtension: b, authorAgent: "/root", authorizing: false, attemptOrdinal: 1, admissionMode: "prepare", startRoot: admission.root, closeRoot: admissionClose.root, sourceRoot: request.sourceRoot, head: "a".repeat(40), requestBytesRoot: ledgerIO.leanBytesRoot(ledgerIO.leanCanonicalBytes(request)), allocationRoot: null, ledgerBytesRoot: null, timeBytesRoot: null, currentCharges: 0, cumulativeCharged: null, storeAbsent: true, childSpawned: false, cleanup: null, entryAbsent: true, terminalAbsent: true, resultAbsent: true, acceptedCheckAbsent: true })
+    put(join(paths.temp, "admission-failure-v8.json"), failure)
+    const start = rooted({ schemaVersion: "lean-two-pair-terminal-verifier-start-v11", authorizing: false, mode, route, sourceRoot: request.sourceRoot, head: failure.head, wallStartMs: b.startedAtMs + 1020, monotonicStartNs: "21000000" })
+    const close = rooted({ schemaVersion: "lean-two-pair-terminal-verifier-close-v11", startRoot: start.root, closedAtMs: b.startedAtMs + 1030, wallObservedMs: b.startedAtMs + 1030, monotonicObservedNs: "31000000", elapsedUpperBoundMs: 10 })
+    put(join(paths.temp, "terminal-verifier-start-v11.json"), start); put(join(paths.temp, "terminal-verifier-close-v11.json"), close)
+    const check = rooted({ schemaVersion: "lean-two-pair-terminal-verification-v11", authorizing: false, accepted: false, finalReaderClose: false, attemptOrdinal: 1, route, sourceRoot: request.sourceRoot, requestBytesRoot: failure.requestBytesRoot, allocationRoot: null, entryHead: null, entryBytesRoot: null, terminalBytesRoot: null, resultAbsent: true, checkAbsent: true, failureRoot: failure.root, currentCharges: 0, cumulativeCharged: 32, predecessor, readerStartRoot: start.root, readerCloseRoot: close.root, closedAtMs: close.closedAtMs, cumulativeElapsedMs: b.priorElapsedMs + 1030 })
+    const reportPath = join(paths.temp, "terminal-verification-v11.json"); put(reportPath, check)
+    expect(retainedIO.authenticateLeanTwoPairTerminalVerificationV11(mode, route).value).toEqual(check)
+    expect(retainedIO.publishLeanTwoPairTerminalCarryV11(mode, route)).toMatchObject({ outcome: "refused_before_entry", cumulativeCharged: 32, currentCharges: 0, entryHead: null, resultBytesRoot: null })
+    expect(retainedIO.authenticateLeanTwoPairClosedOutcomeV11(mode)).toMatchObject({ cumulativeCharged: 32, baselineCarryRoot: null })
+    for (const mutation of [{ cumulativeCharged: 33 }, { failureRoot: r(99) }, { predecessor: rooted({ ...predecessor, chargedMatches: 33 }) }, { cumulativeElapsedMs: b.priorElapsedMs }, { entryHead: "a".repeat(40) }, { finalReaderClose: true }]) {
+      const { root: _root, ...body } = check; put(reportPath, rooted({ ...body, ...mutation }))
+      expect(() => retainedIO.authenticateLeanTwoPairClosedOutcomeV11(mode)).toThrow()
+    }
+    put(reportPath, check)
+    const { root: _startRoot, ...startBody } = start; put(join(paths.temp, "terminal-verifier-start-v11.json"), rooted({ ...startBody, wallStartMs: b.startedAtMs + 1 }))
+    expect(() => retainedIO.authenticateLeanTwoPairClosedOutcomeV11(mode)).toThrow()
+    put(join(paths.temp, "terminal-verifier-start-v11.json"), start)
+    for (const name of ["admission-prepare-start.json", "admission-prepare-close.json", "admission-failure-v8.json"]) { const path = join(paths.temp, name), bytes = fileIO.readFileSync(path); fileIO.unlinkSync(path); expect(() => retainedIO.authenticateLeanTwoPairClosedOutcomeV11(mode)).toThrow(); fileIO.writeFileSync(path, bytes, { mode: 0o600 }) }
+    // A saved preparation failure seals the ORIGINAL time prefix. A later
+    // terminal verifier appends exactly its own closed interval, not a rewrite.
+    const allocation = ledgerIO.createLeanSupervisorCorrectionAllocation({ sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route, reuseGrantRoot: request.reuseGrantRoot, supervisorDecisionRoot: request.supervisorDecisionRoot!, acceptedCheckRoot: null, requestBytesRoot: failure.requestBytesRoot as `sha256:${string}`, dataReviewRoot: request.dataReviewRoot, setupAccountingRoot: request.setupAccountingRoot!, predecessor, startupPolicyRoot: request.startupPolicyRoot!, attemptOrdinal: 1, priorClosureRoot: null, continuationRoot: null, acceptedReaderCloseRoot: null, timeboxExtension: b }, 8)
+    const ledger = ledgerIO.createLeanLedger(paths.store, allocation)
+    ledgerIO.importLeanClosedInterval(ledger, "correction-preparation", Number(admission.wallStartMs), Number(admissionClose.ledgerCloseMs))
+    const { root: _admissionClose, ...admissionCloseBody } = admissionClose
+    const ledgerClose = rooted({ ...admissionCloseBody, allocationRoot: allocation.root, ledgerInterval: "correction-preparation" })
+    put(join(paths.temp, "admission-prepare-close.json"), ledgerClose)
+    const prefixBytes = fileIO.readFileSync(join(paths.store, "time.ndjson")), { root: _failure, ...failureBody } = failure
+    const ledgerFailure = rooted({ ...failureBody, closeRoot: ledgerClose.root, allocationRoot: allocation.root, ledgerBytesRoot: ledgerIO.leanBytesRoot(fileIO.readFileSync(join(paths.store, "ledger.ndjson"))), timeBytesRoot: ledgerIO.leanBytesRoot(prefixBytes), cumulativeCharged: 32, storeAbsent: false })
+    put(join(paths.temp, "admission-failure-v8.json"), ledgerFailure)
+    const interval = "correction-supervisor-diagnostic-v11-terminal-verifier"
+    ledgerIO.beginLeanInterval(ledger, interval, Number(start.wallStartMs), 21000000n); ledgerIO.closeLeanInterval(ledger, interval, Number(close.closedAtMs), 31000000n)
+    const { root: _check, ...checkBody } = check
+    const ledgerCheck = rooted({ ...checkBody, allocationRoot: allocation.root, failureRoot: ledgerFailure.root }); put(reportPath, ledgerCheck)
+    expect(retainedIO.authenticateLeanTwoPairTerminalVerificationV11(mode, route).value).toEqual(ledgerCheck)
+    expect(correctionIO.authenticateLeanRetryAdmissionFailureV8(mode, false, route, interval).timeBytesRoot).toBe(ledgerIO.leanBytesRoot(prefixBytes))
+    expect(() => correctionIO.authenticateLeanRetryAdmissionFailureV8(mode, false, route)).toThrow()
+    const beforeTime = fileIO.readFileSync(join(paths.store, "time.ndjson")); fileIO.writeFileSync(join(paths.store, "time.ndjson"), Buffer.concat([beforeTime, Buffer.from('{"kind":"start","id":"unrelated","atMs":1791409412000}\n{"kind":"close","id":"unrelated","atMs":1791409412001}\n')]))
+    expect(() => retainedIO.authenticateLeanTwoPairTerminalVerificationV11(mode, route)).toThrow()
+    fileIO.writeFileSync(join(paths.store, "time.ndjson"), beforeTime)
+    fileIO.writeFileSync(survivors[0]!.identity, "")
+    expect(() => retainedIO.publishLeanTwoPairTerminalCarryV11(mode, route)).toThrow()
+  } finally { history?.mockRestore(); process.chdir(previousCwd); rmSync(directory, { recursive: true, force: true }) }
 })
 
 it("v11 terminal carry permits pair2 after every authentic closed pair1 outcome without inventing heads", () => {
