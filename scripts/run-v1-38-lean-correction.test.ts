@@ -51,6 +51,23 @@ describe("v11 additive two-pair concrete public seams", () => {
       expect(accounting.leanSupervisorAllocationMode(accounting.admitLeanAllocation(a))).toBe(mode)
       expect(accounting.leanCapsForAllocation(a)).toEqual(accounting.LEAN_TWO_PAIR_V11_CAPS)
       expect(a.slots).toHaveLength(route === "diagnostic" ? 1 : 36)
+      if (route === "baseline" || n === 2) {
+        const report = { identity: accounting.LEAN_TWO_PAIR_V11_REPORT_PATHS[0]!, allocatedBytes: 4096 }
+        const malformed: Array<Record<string, unknown>> = [
+          { chargedMatches: 32.5 }, { chargedMatches: "33" },
+          ...[-1, 0.5].map(allocatedBytes => ({ survivors: [...body.survivors, { ...report, allocatedBytes }] })),
+          { survivors: [...body.survivors, report, report] },
+          { survivors: [...body.survivors, { ...report, extra: true }] },
+          { survivors: [...body.survivors, { ...report, allocatedBytes: b.physicalFloorBytes }] },
+          ...[".strategy-lab/noncanonical/./row", ".strategy-lab/noncanonical\\row"].map(identity => ({ survivors: [...body.survivors, { identity, allocatedBytes: 4096 }] })),
+        ]
+        for (const mutation of malformed) {
+          const changed = { ...body, ...mutation }, predecessor = { ...changed, root: labRoot(body.schemaVersion, changed) }
+          expect(() => accounting.createLeanSupervisorCorrectionAllocation({ ...input, predecessor } as never, 8)).toThrow()
+          const { root: _allocation, ...original } = a, changedAllocation = { ...original, predecessor }
+          expect(() => accounting.admitLeanAllocation(JSON.parse(JSON.stringify({ ...changedAllocation, root: labRoot(a.schemaVersion, changedAllocation) })))).toThrow()
+        }
+      }
       expect(accounting.leanWritablePaths(a)).toContain(accounting.leanCorrectionRoutePaths(route, mode).allocation)
       for (const mutation of [{ attemptOrdinal: 3 as const }, { caps: accounting.LEAN_TWENTY_SIX_V10_CAPS }, { timeboxExtension: { ...b, charged: 0 } }]) expect(() => accounting.admitLeanAllocation({ ...a, ...mutation })).toThrow()
       const observations = { elapsedMs: b.priorElapsedMs + 1, charged: input.predecessor.chargedMatches, physicalBytes: b.physicalFloorBytes, childRss: 1, parentRss: 1, freeBytes: accounting.LEAN_CAPS.totalBytes, availableMemoryBytes: 2000000000 }

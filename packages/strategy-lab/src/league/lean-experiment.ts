@@ -959,6 +959,20 @@ const validateLeanProspectiveSurvivors = (p: LeanCorrectionPredecessor, b: typeo
 }
 export const validateLeanRemainingSurvivorsV9 = (p: LeanCorrectionPredecessor): void => validateLeanProspectiveSurvivors(p, LEAN_REMAINING_V9_EXTENSION, LEAN_REMAINING_V9_REVIEW_PATHS)
 export const validateLeanTwentySixSurvivorsV10 = (p: LeanCorrectionPredecessor): void => validateLeanProspectiveSurvivors(p, LEAN_TWENTY_SIX_V10_EXTENSION, LEAN_TWENTY_SIX_V10_REPORT_PATHS)
+/** Validate the complete sealed inventory BEFORE removing report rows for the
+ * legacy schedule-only view. The view must never confer accounting authority. */
+export const validateLeanTwoPairPredecessorV11 = (p: LeanCorrectionPredecessor): void => {
+  if (!exactLabKeys(p, ["schemaVersion", "chargedMatches", "elapsedUpperBoundMs", "allocatedDiskBytes", "historicalPeakDiskBytes", "historicalPeakRssBytes", "historyRoot", "survivors", "root"]) || p.schemaVersion !== "lean-correction-predecessor-v1" || !natural(p.chargedMatches) || p.chargedMatches < 32 || p.chargedMatches > LEAN_CAPS.matches || !natural(p.elapsedUpperBoundMs) || p.elapsedUpperBoundMs < LEAN_TWO_PAIR_V11_EXTENSION.priorElapsedMs || !natural(p.allocatedDiskBytes) || p.allocatedDiskBytes < LEAN_TWO_PAIR_V11_EXTENSION.physicalFloorBytes || p.allocatedDiskBytes > LEAN_CAPS.retainedBytes || p.historicalPeakDiskBytes !== "unknown" || p.historicalPeakRssBytes !== "unknown" || !root(p.historyRoot) || !Array.isArray(p.survivors) || p.survivors.length < 517) return fail("RETRY_PREDECESSOR")
+  const { root: claimed, ...body } = p
+  if (claimed !== labRoot(p.schemaVersion, body)) return fail("RETRY_PREDECESSOR")
+  const reports = new Set([...LEAN_TWENTY_SIX_V10_REPORT_PATHS, ...LEAN_TWO_PAIR_V11_REPORT_PATHS]), identities = new Set<string>()
+  let allocated = 0
+  for (const row of p.survivors) {
+    if (!exactLabKeys(row, ["identity", "allocatedBytes"]) || typeof row.identity !== "string" || !(row.identity.startsWith(".strategy-lab/") || row.identity.startsWith(".planning/artifacts/") || reports.has(row.identity)) || row.identity.includes("..") || row.identity.includes("//") || row.identity.includes("\\") || row.identity.split("/").includes(".") || row.identity.endsWith("/") || !natural(row.allocatedBytes) || identities.has(row.identity)) return fail("RETRY_PREDECESSOR")
+    identities.add(row.identity); allocated += row.allocatedBytes
+    if (!natural(allocated) || allocated > p.allocatedDiskBytes) return fail("RETRY_PREDECESSOR")
+  }
+}
 /** Uses the existing schedule builder, never reinterprets a v9 allocation as v8. */
 const createLeanRemainingAllocationV9 = (input: Parameters<typeof createLeanSupervisorCorrectionAllocation>[0]): Readonly<LeanCorrectionAllocation> => {
   const b = admitLeanRetryTimeboxExtension(input.timeboxExtension), n = input.attemptOrdinal, p = input.predecessor
@@ -977,6 +991,7 @@ const createLeanRemainingAllocationV9 = (input: Parameters<typeof createLeanSupe
 export const createLeanTwoPairAllocationV11 = (input: Parameters<typeof createLeanSupervisorCorrectionAllocation>[0]): Readonly<LeanCorrectionAllocation> => {
   const b = admitLeanRetryTimeboxExtension(input.timeboxExtension), n = input.attemptOrdinal, p = input.predecessor
   if (!isLeanTwoPairExtensionV11(b) || n !== 1 && n !== 2 || !exactLabKeys(input, ["sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "route", "reuseGrantRoot", "supervisorDecisionRoot", "acceptedCheckRoot", "requestBytesRoot", "dataReviewRoot", "setupAccountingRoot", "predecessor", "startupPolicyRoot", "attemptOrdinal", "priorClosureRoot", "continuationRoot", "acceptedReaderCloseRoot", "timeboxExtension"]) || input.planRoot !== b.planRoot || input.supervisorDecisionRoot !== b.approvalRoot || input.startupPolicyRoot !== LEAN_STARTUP_POLICY_V5.root) return fail("RETRY_ALLOCATION")
+  validateLeanTwoPairPredecessorV11(p)
   const { root: pr, ...pb } = p
   if (pr !== labRoot(p.schemaVersion, pb) || p.chargedMatches < 32 || p.chargedMatches > 32 + (n - 1) * 37 + (input.route === "baseline" ? 1 : 0) || input.route === "baseline" && p.chargedMatches < 33 || !natural(p.elapsedUpperBoundMs) || p.elapsedUpperBoundMs < b.priorElapsedMs || p.elapsedUpperBoundMs + b.reserveMs >= b.elapsedMs || !natural(p.allocatedDiskBytes) || p.allocatedDiskBytes < b.physicalFloorBytes || p.survivors.length < 517 || (n === 1 ? input.priorClosureRoot !== null || input.continuationRoot !== null : !root(input.priorClosureRoot) || !root(input.continuationRoot)) || (input.route === "diagnostic" ? input.acceptedReaderCloseRoot !== null : !root(input.acceptedReaderCloseRoot))) return fail("RETRY_PREDECESSOR")
   const reports = p.survivors.filter(row => row.identity.startsWith(LEAN_REMAINING_V9_PHASE))
