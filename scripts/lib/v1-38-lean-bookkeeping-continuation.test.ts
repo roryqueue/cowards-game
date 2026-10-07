@@ -1,7 +1,7 @@
 /** Inert prospective metadata only; no historical reader/provider/Strategy/Match. */
 import { afterEach, describe, expect, it, vi } from "vitest"
 import * as fs from "node:fs"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import * as contracts from "../../packages/strategy-lab/src/contracts.js"
 import * as lean from "../../packages/strategy-lab/src/league/lean-experiment.js"
@@ -88,11 +88,12 @@ describe("exact prospective bookkeeping continuation", () => {
     const time = { active: false, closed: new Set(intervals), starts: new Map(intervals.map((id, i) => [id, times[i * 2]])), closes: new Map(intervals.map((id, i) => [id, times[i * 2 + 1]])) }
     const state = { charged: 30, charges: new Map(), terminals: new Map() }
     const request = { authorizationPath: ".strategy-lab/inert-old-auth", setupAccountingPath: ".strategy-lab/inert-old-setup", reviewPath: ".planning/inert-old-review", dataReviewPath: ".planning/inert-old-data-review" }
+    const diagnosticRequest = { ...request, authorizationPath: ".strategy-lab/inert-old-diagnostic-auth", dataReviewPath: ".planning/inert-old-diagnostic-data-review" }
     const files = new Map<string, Uint8Array>(), pins = new Map<string, string>()
     const put = (path: string, bytes: Uint8Array, pin: string) => { files.set(path, bytes); pins.set(Buffer.from(bytes).toString("utf8"), pin) }
     put(join(dp.store, "retry-closure-v8.json"), lean.leanCanonicalBytes(old), b.diagnosticClosureBytesRoot)
-    for (const [name, pin] of [["time.ndjson", old.timeBytesRoot], ["ledger.ndjson", old.ledgerBytesRoot], ["entry.json", old.entryBytesRoot], ["child-terminal.json", old.terminalBytesRoot], ["request", old.requestBytesRoot]]) put(name === "request" ? dp.request : join(dp.store, name), Buffer.from(`inert-diagnostic-${name}`), pin!)
-    for (const [name, pin] of Object.entries(b.baselineRawRoots)) put(name === "request" ? bp.request : join(bp.store, name), Buffer.from(`inert-baseline-${name}`), pin)
+    for (const [name, pin] of [["time.ndjson", old.timeBytesRoot], ["ledger.ndjson", old.ledgerBytesRoot], ["entry.json", old.entryBytesRoot], ["child-terminal.json", old.terminalBytesRoot], ["request", old.requestBytesRoot]]) put(name === "request" ? dp.request : join(dp.store, name), name === "request" ? lean.leanCanonicalBytes(diagnosticRequest) : Buffer.from(`inert-diagnostic-${name}`), pin!)
+    for (const [name, pin] of Object.entries(b.baselineRawRoots)) put(name === "request" ? bp.request : join(bp.store, name), name === "request" ? lean.leanCanonicalBytes(request) : Buffer.from(`inert-baseline-${name}`), pin)
     files.set(bp.allocation, files.get(join(bp.store, "allocation.json"))!)
     const hash = lean.leanBytesRoot, root = contracts.labRoot
     vi.spyOn(lean, "leanBytesRoot").mockImplementation(bytes => (pins.get(Buffer.from(bytes).toString("utf8")) ?? hash(bytes)) as ReturnType<typeof hash>)
@@ -116,6 +117,17 @@ describe("exact prospective bookkeeping continuation", () => {
     expect(authenticated.identities).toContain(bp.store)
     expect(authenticated.identities).toContain(bp.temp)
     expect(authenticated.identities).toContain(request.authorizationPath)
+    for (const path of [...Object.values(request), ...Object.values(diagnosticRequest)]) expect(authenticated.identities).toContain(path)
+    // Same inode identities shared by the two requests debit once. The two
+    // diagnostic-only admin survivors debit an additional4096+8192 bytes.
+    const unique = [...new Set(authenticated.identities)], inodes = new Map(unique.map((path, i) => [resolve(path), i + 1]))
+    vi.spyOn(fs, "realpathSync").mockImplementation(path => resolve(String(path)))
+    vi.spyOn(fs, "lstatSync").mockImplementation(path => ({ uid: process.getuid?.(), dev: 1, ino: inodes.get(String(path)), nlink: 1, blocks: String(path) === resolve(diagnosticRequest.dataReviewPath) ? 16 : 8, size: 1, mtimeMs: 1, ctimeMs: 1, isSymbolicLink: () => false, isFile: () => true, isDirectory: () => false }) as never)
+    const survivors = correction.inventoryLeanSupervisorSurvivors(unique)
+    expect(survivors.reduce((sum, s) => sum + s.allocatedBytes, 0)).toBe(32_768 + 12_288)
+    expect(survivors.filter(s => s.identity === request.setupAccountingPath)).toHaveLength(1)
+    expect(survivors.find(s => s.identity === diagnosticRequest.authorizationPath)?.allocatedBytes).toBe(4096)
+    expect(survivors.find(s => s.identity === diagnosticRequest.dataReviewPath)?.allocatedBytes).toBe(8192)
     time.active = true; expect(() => retained.authenticateLeanBookkeepingPredecessorV8()).toThrow(); time.active = false
     state.charges.set("inert", {}); expect(() => retained.authenticateLeanBookkeepingPredecessorV8()).toThrow(); state.charges.clear()
     resultExists = true; expect(() => retained.authenticateLeanBookkeepingPredecessorV8()).toThrow(); resultExists = false
