@@ -192,12 +192,21 @@ const readerFixture = (failure = false, absent = false, wall = 1000, gapMs = 1, 
   return f
 }
 describe("actual one-shot reader closures", () => {
-  it.each([["refused", false], ["absent", false], ["refused", true], ["absent", true]] as const)("admits ordinal 2 from real %s closure extension=%s through request owner", (closureClass, extended) => {
-    const extension = extended ? lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION : undefined, carry = extension ?? lean.LEAN_RETRY_V8_CARRY
-    const f = readerFixture(closureClass === "refused", closureClass === "absent", carry.startedAtMs + 100, 1, extension)
+  it.each([["refused", false], ["absent", false], ["refused", true], ["absent", true], ["accepted-history", true]] as const)("admits ordinal 2 from real %s closure extension=%s through request owner", (closureClass, extended) => {
+    const bookkeeping = closureClass === "accepted-history"
+    const extension = bookkeeping ? lean.LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION : extended ? lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION : undefined, carry = extension ?? lean.LEAN_RETRY_V8_CARRY
+    const fixtureExtension = bookkeeping ? lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION : extension
+    const f = readerFixture(closureClass === "refused", closureClass !== "refused", (fixtureExtension ?? carry).startedAtMs + 100, 1, fixtureExtension)
     if (closureClass === "refused") expect(() => retained.verifyLeanCorrectionRetained(f.paths.request, "diagnostic", "v8-1")).toThrow("DIAGNOSTIC_NOT_ACCEPTED")
     else retained.verifyLeanRetryTerminalOnlyV8(f.paths.request, "v8-1")
-    const closure = retained.authenticateLeanRetryClosureV8("v8-1"), mode = "v8-2", n = 2
+    const oldClosure = retained.authenticateLeanRetryClosureV8("v8-1"), mode = "v8-2", n = 2
+    const closure = bookkeeping ? { ...oldClosure, root: lean.LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION.diagnosticClosureRoot, closureClass: "accepted" as const, checkRoot: lean.LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION.diagnosticCheckRoot } : oldClosure
+    const failedBaselineRoot = r("exact-failed-baseline-custody")
+    if (bookkeeping) {
+      vi.spyOn(retained, "authenticateLeanBookkeepingPredecessorV8").mockReturnValue({ diagnostic: closure, baseline: { root: failedBaselineRoot }, identities: [] } as never)
+      vi.spyOn(retained, "authenticateLeanRetryClosureV8").mockImplementation(() => { throw new Error("OLD_FULL_READER_FORBIDDEN") })
+      vi.spyOn(retained, "authenticateLeanSupervisorDiagnosticCheck").mockImplementation(() => { throw new Error("OLD_FULL_READER_FORBIDDEN") })
+    }
     const pathsActual = vi.mocked(lean.leanCorrectionRoutePaths).getMockImplementation()!, paths = { ...pathsActual("diagnostic", mode), request: join(f.paths.temp, "successor-request.json") }
     vi.mocked(lean.leanCorrectionRoutePaths).mockImplementation((route, selected) => route === "diagnostic" && selected === mode ? paths : pathsActual(route, selected))
     if (!existsSync(".strategy-lab")) mkdirSync(".strategy-lab", { mode: 0o700 })
@@ -208,8 +217,8 @@ describe("actual one-shot reader closures", () => {
     virtualSource.reviews[reviewPath] = review
     const setupBody = { ...(extension ? { timeboxExtension: extension } : {}), schemaVersion: "lean-retry-setup-witness-v8", attemptOrdinal: n, startedAtMs: carry.startedAtMs, observedAtMs: carry.startedAtMs + 100, priorElapsedMs: carry.priorElapsedMs, consumedTimeBytesRoot: lean.LEAN_RETRY_V8_CARRY.timeBytesRoot, decisionRoot: extension?.approvalRoot ?? lean.LEAN_RETRY_V8_APPROVAL_ROOT, threadId: "019fa652-915a-7183-9af1-3b3c05868d86", turnId: extension?.turnId ?? "01a111c1-6f91-7310-870d-056b2d77194f", source: "codex-task-event-custody" }, setup = { ...setupBody, root: labRoot(setupBody.schemaVersion, setupBody) }
     writePrivate(lean.leanRetrySetupPath(mode), setup)
-    const request = { ...f.request, attemptOrdinal: n, sourceRoot, coldRoot: history.coldRoot, seed: history.seed, amendmentRoot: history.amendmentRoot, reviewPath, reviewRoot: lean.leanBytesRoot(Buffer.from(review)), dataReviewPath, candidateRoots: deriveLeanBaselineCandidateRoots(history.coldRoot), setupAccountingPath: lean.leanRetrySetupPath(mode), setupAccountingRoot: setup.root, authorizationPath: ".strategy-lab/lean-retry-authorization-diagnostic-v8-2.json", requestRoots: correction.deriveLeanSupervisorCorrectionRequestRoots({ route: "diagnostic", seed: history.seed, coldRoot: history.coldRoot, planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT, sourceRoot }, lean.LEAN_RETRY_V8_APPROVAL_ROOT, mode), priorClosureRoot: closure.root, continuationRoot: r("pending") }
-    const continuationBody = { schemaVersion: "lean-retry-continuation-v8", attemptOrdinal: n, priorClosureRoot: closure.root, sourceRoot, diagnosisRoot, resolvedDefectRoot: r("resolved-defect"), reviewRoot: request.reviewRoot }, continuation = { ...continuationBody, root: labRoot(continuationBody.schemaVersion, continuationBody) }
+    const request = { ...f.request, ...(extension ? { timeboxExtension: extension } : {}), attemptOrdinal: n, sourceRoot, coldRoot: history.coldRoot, seed: history.seed, amendmentRoot: history.amendmentRoot, reviewPath, reviewRoot: lean.leanBytesRoot(Buffer.from(review)), dataReviewPath, candidateRoots: deriveLeanBaselineCandidateRoots(history.coldRoot), setupAccountingPath: lean.leanRetrySetupPath(mode), setupAccountingRoot: setup.root, authorizationPath: ".strategy-lab/lean-retry-authorization-diagnostic-v8-2.json", requestRoots: correction.deriveLeanSupervisorCorrectionRequestRoots({ route: "diagnostic", seed: history.seed, coldRoot: history.coldRoot, planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT, sourceRoot }, lean.LEAN_RETRY_V8_APPROVAL_ROOT, mode), priorClosureRoot: closure.root, continuationRoot: r("pending") }
+    const continuationBody = { ...(bookkeeping ? { timeboxExtension: extension, failedBaselineRoot } : {}), schemaVersion: "lean-retry-continuation-v8", attemptOrdinal: n, priorClosureRoot: closure.root, sourceRoot, diagnosisRoot, resolvedDefectRoot: r("resolved-defect"), reviewRoot: request.reviewRoot }, continuation = { ...continuationBody, root: labRoot(continuationBody.schemaVersion, continuationBody) }
     writePrivate(".strategy-lab/lean-retry-continuation-v8-2.json", continuation); request.continuationRoot = continuation.root
     const authorizationBody = { ...(extension ? { timeboxExtension: extension } : {}), schemaVersion: "lean-retry-execution-authorization-v8", approved: true, executionAuthorized: true, route: "diagnostic", attemptOrdinal: n, sourceRoot, approvalRoot: lean.LEAN_RETRY_V8_APPROVAL_ROOT, planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT, policyRoot: labRoot(lean.LEAN_RETRY_V8_POLICY.schemaVersion, lean.LEAN_RETRY_V8_POLICY), requestDataRoot: correction.leanCorrectionRequestDataRoot(request as never), authorAgent: "/root", reviewerAgent: "/root/synthetic_data_review" }, authorization = { ...authorizationBody, root: labRoot(authorizationBody.schemaVersion, authorizationBody) }
     writePrivate(request.authorizationPath, authorization); request.authorizationRoot = lean.leanBytesRoot(lean.leanCanonicalBytes(authorization))

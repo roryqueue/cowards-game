@@ -1,4 +1,4 @@
-import { LEAN_REPLAY_V7_CAPS, isLeanRetryMode, leanRetryOrdinal, type LeanRetryMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_REPLAY_V7_CAPS, LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION, LEAN_RETRY_V8_TIMEBOX_EXTENSION, validateLeanBookkeepingBaselineCustodyV8, isLeanRetryMode, leanRetryOrdinal, type LeanRetryMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 /** New correction reader: byte/root custody and fixed schedule joins only.
  * No cold builders, authored proposal generation, search or historical reader. */
 import { readdirSync, existsSync } from "node:fs"
@@ -371,6 +371,36 @@ export const authenticateLeanRetryClosureV8 = (mode: LeanRetryMode): LeanRetryAu
   const expected = deriveLeanRetryClosureV8(ledger, mode, value.closureClass as LeanRetryClosureClass, false)
   if (!same(value, expected)) return fail("CUSTODY")
   return expected
+}
+/** Pinned metadata only: never calls an old accepted-check/full retained audit.
+ * The prior failed baseline is custody, not acceptance or repeat authority. */
+export const authenticateLeanBookkeepingPredecessorV8 = () => {
+  const b = LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION, diagnosticPaths = leanCorrectionRoutePaths("diagnostic", "v8-1"), paths = leanCorrectionRoutePaths("baseline", "v8-1")
+  const closureBytes = readLeanCorrectionPrivateBytes(join(diagnosticPaths.store, "retry-closure-v8.json"))
+  if (leanBytesRoot(closureBytes) !== b.diagnosticClosureBytesRoot) return fail("CUSTODY")
+  const diagnostic = JSON.parse(Buffer.from(closureBytes).toString("utf8")) as LeanRetryAuthenticatedClosureV8
+  const { root: claimed, ...body } = diagnostic
+  if (leanBytesRoot(leanCanonicalBytes(diagnostic)) !== b.diagnosticClosureBytesRoot || claimed !== b.diagnosticClosureRoot || claimed !== labRoot("lean-retry-closure-v8", body) || diagnostic.schemaVersion !== "lean-retry-closure-v8" || diagnostic.attemptOrdinal !== 1 || diagnostic.closureClass !== "accepted" || diagnostic.authorizing !== false || diagnostic.finalReaderClose !== true || diagnostic.acceptedCheckAbsent !== false || diagnostic.checkRoot !== b.diagnosticCheckRoot || diagnostic.cumulativeCharged !== 30 || diagnostic.currentCharges !== 1 || diagnostic.closedElapsedMs !== 59_338_914 || diagnostic.readerCloseMs !== 1791329532163 || !same(diagnostic.timeboxExtension, LEAN_RETRY_V8_TIMEBOX_EXTENSION)) return fail("CUSTODY")
+  // Actual finite prefix files still have their accepted closure byte identity.
+  for (const [path, pin, limit] of [[join(diagnosticPaths.store, "time.ndjson"), diagnostic.timeBytesRoot, 4194304], [join(diagnosticPaths.store, "ledger.ndjson"), diagnostic.ledgerBytesRoot, 4194304], [join(diagnosticPaths.store, "entry.json"), diagnostic.entryBytesRoot, 262144], [join(diagnosticPaths.store, "child-terminal.json"), diagnostic.terminalBytesRoot, 262144], [diagnosticPaths.request, diagnostic.requestBytesRoot, 262144]] as const) {
+    if (leanBytesRoot(readLeanCorrectionPrivateBytes(path, limit)) !== pin) return fail("CUSTODY")
+  }
+  const rawRoots = Object.fromEntries(Object.keys(b.baselineRawRoots).map(name => [name, leanBytesRoot(readLeanCorrectionPrivateBytes(name === "request" ? paths.request : join(paths.store, name), name.endsWith(".ndjson") ? 4194304 : 262144))]))
+  if (leanBytesRoot(readLeanCorrectionPrivateBytes(paths.allocation)) !== b.baselineRawRoots["allocation.json"]) return fail("CUSTODY")
+  const ledger = openLeanLedger(paths.store), allocation = admitLeanAllocation(ledger.allocation)
+  if (!("route" in allocation) || allocation.route !== "baseline" || leanSupervisorAllocationMode(allocation) !== "v8-1" || !same(allocation.timeboxExtension, LEAN_RETRY_V8_TIMEBOX_EXTENSION) || allocation.requestBytesRoot !== rawRoots.request || allocation.acceptedReaderCloseRoot !== diagnostic.root || allocation.acceptedCheckRoot !== diagnostic.checkRoot) return fail("CUSTODY")
+  const entry = readLeanChildEntry(ledger), terminal = readLeanChildTerminal(ledger), time = readLeanTimeAccounting(ledger), state = readLeanLedger(ledger)
+  const reason = validateLeanSupervisorReasonBytes(readLeanCorrectionPrivateBytes(join(paths.store, LEAN_SUPERVISOR_REASON_FILE), LEAN_SUPERVISOR_REASON_MAX_BYTES))
+  if (entry.head !== b.baselineHead || entry.sourceRoot !== b.baselineSourceRoot || entry.allocationRoot !== b.baselineAllocationRoot || entry.requestBytesRoot !== rawRoots.request || terminal.entryBytesRoot !== rawRoots["entry.json"] || terminal.allocationRoot !== entry.allocationRoot || terminal.sourceRoot !== entry.sourceRoot || terminal.head !== entry.head || reason.entryBytesRoot !== terminal.entryBytesRoot || reason.allocationRoot !== entry.allocationRoot || reason.sourceRoot !== entry.sourceRoot || reason.requestBytesRoot !== entry.requestBytesRoot || reason.head !== entry.head || reason.parentPid !== entry.parentPid || reason.childPid !== entry.childPid || reason.exitCode !== terminal.exitCode || reason.signal !== terminal.signal) return fail("CUSTODY")
+  const intervals = ["correction-preparation", "pilot-entry", "correction-run-finalization"]
+  const custody = { allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, head: entry.head, rawRoots, charged: state.charged, currentCharges: state.charges.size, currentTerminals: state.terminals.size, active: !!time.active, resultExists: existsSync(join(paths.store, "result.json")), checkExists: existsSync(join(paths.store, paths.check)), terminalStatus: terminal.status, exitCode: terminal.exitCode, signal: terminal.signal, closedIntervals: [...time.closed], intervalTimes: intervals.flatMap(id => [time.starts.get(id), time.closes.get(id)]) }
+  validateLeanBookkeepingBaselineCustodyV8(custody)
+  const baseline = Object.freeze({ ...custody, root: labRoot("lean-bookkeeping-failed-baseline-custody-v8", custody) })
+  // No fictitious reader interval: the original terminal-only verification was
+  // a planning metadata report, and the pinned time journal has six records.
+  const request = readLeanCorrectionJson(paths.request) as LeanCorrectionRequest
+  const identities = [paths.store, paths.temp, paths.request, paths.allocation, ...[request.authorizationPath, request.setupAccountingPath, request.reviewPath, request.dataReviewPath].filter((path): path is string => typeof path === "string" && existsSync(path))]
+  return { diagnostic, baseline, identities }
 }
 /** Separate terminal-only lifecycle proves actual result absence before spending. */
 export const verifyLeanRetryTerminalOnlyV8 = (path: string, mode: LeanRetryMode) => {

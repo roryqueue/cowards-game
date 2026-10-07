@@ -1,8 +1,16 @@
 /** Inert prospective metadata only; no historical reader/provider/Strategy/Match. */
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import * as fs from "node:fs"
+import { join } from "node:path"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
+import * as contracts from "../../packages/strategy-lab/src/contracts.js"
 import * as lean from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as correction from "../run-v1-38-lean-correction.js"
+import * as retained from "./v1-38-lean-correction-retained.js"
+import * as parent from "../run-v1-38-lean-baseline.js"
+import { assertLeanRetryBaselineJoinV8 } from "./v1-38-lean-baseline-retained.js"
+vi.mock("node:fs", async original => ({ ...await original<typeof import("node:fs")>() }))
+afterEach(() => vi.restoreAllMocks())
 
 const r = (label: string) => labRoot("bookkeeping-continuation-fixture", label)
 const binding = () => lean.LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION
@@ -43,6 +51,23 @@ describe("exact prospective bookkeeping continuation", () => {
     expect(b.startedAtMs - b.previousCompletedAtMs).toBe(3_173_947)
     expect(b.priorElapsedMs).toBe(lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION.priorElapsedMs + 6_023_166)
   })
+  it("does not re-add human idle from the old prefix but keeps fresh closure floors", () => {
+    const b = binding(), now = b.startedAtMs + 100
+    expect(lean.leanRetryClosedPrefixFloorV8(59_338_914, 1791329532163, now, 1, b)).toBe(62_024_183)
+    expect(lean.leanRetryClosedPrefixFloorV8(62_030_000, b.startedAtMs + 50, now, 2, b)).toBe(62_030_050)
+    const old = lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION
+    expect(lean.leanRetryClosedPrefixFloorV8(59_338_914, 1791329532163, now, 1, old)).toBe(59_338_914 + now - 1791329532163)
+  })
+  it("keeps baseline2 own accepted FINAL gate and refuses historical diagnostic1", () => {
+    const a = lean.createLeanSupervisorCorrectionAllocation(input("baseline"), 8), check = { root: a.acceptedCheckRoot!, allocationRoot: r("new-diagnostic-allocation"), readerCloseMs: binding().startedAtMs + 500 }
+    const closure = { timeboxExtension: binding(), attemptOrdinal: 2, closureClass: "accepted", finalReaderClose: true, acceptedCheckAbsent: false, checkRoot: check.root, allocationRoot: check.allocationRoot, root: a.acceptedReaderCloseRoot!, readerCloseMs: check.readerCloseMs, sourceRoot: a.sourceRoot, head: "1".repeat(40) }
+    expect(() => assertLeanRetryBaselineJoinV8(a, check, closure, "2".repeat(40))).not.toThrow()
+    for (const patch of [{ attemptOrdinal: 1, root: binding().diagnosticClosureRoot }, { closureClass: "refused" }, { finalReaderClose: false }, { acceptedCheckAbsent: true }, { checkRoot: binding().diagnosticCheckRoot }, { sourceRoot: r("old-source") }]) expect(() => assertLeanRetryBaselineJoinV8(a, check, { ...closure, ...patch }, "2".repeat(40))).toThrow()
+  })
+  it("keeps the existing next-Match reserve under the unchanged ceiling", () => {
+    const a = lean.createLeanSupervisorCorrectionAllocation(input(), 8)
+    expect(() => correction.assertLeanCorrectionResources({ elapsedMs: 70_140_000, charged: 30, physicalBytes: 12_894_208, childRss: 1, parentRss: 1, freeBytes: lean.LEAN_CAPS.totalBytes, availableMemoryBytes: 2_000_000_000 }, a)).toThrow()
+  })
   it("binds actual new approval/source bytes without changing old source inventories", () => {
     const manifest = correction.leanCorrectionSourceManifest("v8-2", binding())
     expect(manifest.entries).toContainEqual({ path: correction.LEAN_RETRY_V8_BOOKKEEPING_DECISION, root: binding().approvalRoot })
@@ -51,6 +76,52 @@ describe("exact prospective bookkeeping continuation", () => {
   })
   it("accepts only the pinned closed failed baseline with no charge", () => {
     expect(() => lean.validateLeanBookkeepingBaselineCustodyV8(custody())).not.toThrow()
+  })
+  it("joins finite helper bytes/terminal/time without invoking an old accepted reader", () => {
+    const b = binding(), dp = lean.leanCorrectionRoutePaths("diagnostic", "v8-1"), bp = lean.leanCorrectionRoutePaths("baseline", "v8-1")
+    const old = { schemaVersion: "lean-retry-closure-v8", privacy: "private_offline", attemptOrdinal: 1, closureClass: "accepted", authorizing: false, finalReaderClose: true, acceptedCheckAbsent: false, checkRoot: b.diagnosticCheckRoot, cumulativeCharged: 30, currentCharges: 1, closedElapsedMs: 59_338_914, readerCloseMs: 1791329532163, timeboxExtension: lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION, timeBytesRoot: r("old-time"), ledgerBytesRoot: r("old-ledger"), entryBytesRoot: r("old-entry"), terminalBytesRoot: r("old-terminal"), requestBytesRoot: r("old-request"), root: b.diagnosticClosureRoot }
+    const allocation = { schemaVersion: "lean-correction-supervisor-baseline-allocation-v8", attemptOrdinal: 1, route: "baseline", root: b.baselineAllocationRoot, sourceRoot: b.baselineSourceRoot, timeboxExtension: lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION, requestBytesRoot: b.baselineRawRoots.request, acceptedReaderCloseRoot: old.root, acceptedCheckRoot: old.checkRoot }
+    const entry = { allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, head: b.baselineHead, parentPid: 100, childPid: 101 }
+    const terminal = { ...entry, entryBytesRoot: b.baselineRawRoots["entry.json"], status: "child_failed", exitCode: null, signal: "SIGKILL" }
+    const reason = { ...terminal }
+    const intervals = custody().closedIntervals, times = custody().intervalTimes
+    const time = { active: false, closed: new Set(intervals), starts: new Map(intervals.map((id, i) => [id, times[i * 2]])), closes: new Map(intervals.map((id, i) => [id, times[i * 2 + 1]])) }
+    const state = { charged: 30, charges: new Map(), terminals: new Map() }
+    const request = { authorizationPath: ".strategy-lab/inert-old-auth", setupAccountingPath: ".strategy-lab/inert-old-setup", reviewPath: ".planning/inert-old-review", dataReviewPath: ".planning/inert-old-data-review" }
+    const files = new Map<string, Uint8Array>(), pins = new Map<string, string>()
+    const put = (path: string, bytes: Uint8Array, pin: string) => { files.set(path, bytes); pins.set(Buffer.from(bytes).toString("utf8"), pin) }
+    put(join(dp.store, "retry-closure-v8.json"), lean.leanCanonicalBytes(old), b.diagnosticClosureBytesRoot)
+    for (const [name, pin] of [["time.ndjson", old.timeBytesRoot], ["ledger.ndjson", old.ledgerBytesRoot], ["entry.json", old.entryBytesRoot], ["child-terminal.json", old.terminalBytesRoot], ["request", old.requestBytesRoot]]) put(name === "request" ? dp.request : join(dp.store, name), Buffer.from(`inert-diagnostic-${name}`), pin!)
+    for (const [name, pin] of Object.entries(b.baselineRawRoots)) put(name === "request" ? bp.request : join(bp.store, name), Buffer.from(`inert-baseline-${name}`), pin)
+    files.set(bp.allocation, files.get(join(bp.store, "allocation.json"))!)
+    const hash = lean.leanBytesRoot, root = contracts.labRoot
+    vi.spyOn(lean, "leanBytesRoot").mockImplementation(bytes => (pins.get(Buffer.from(bytes).toString("utf8")) ?? hash(bytes)) as ReturnType<typeof hash>)
+    vi.spyOn(contracts, "labRoot").mockImplementation((domain, value) => domain === "lean-retry-closure-v8" ? b.diagnosticClosureRoot : root(domain, value))
+    vi.spyOn(correction, "readLeanCorrectionPrivateBytes").mockImplementation(path => { const bytes = files.get(path); if (!bytes) throw new Error("INERT_MISSING_METADATA"); return bytes })
+    vi.spyOn(correction, "readLeanCorrectionJson").mockReturnValue(request)
+    vi.spyOn(lean, "openLeanLedger").mockReturnValue({ directory: bp.store, allocation } as never)
+    vi.spyOn(lean, "admitLeanAllocation").mockReturnValue(allocation as never)
+    vi.spyOn(lean, "readLeanChildEntry").mockReturnValue(entry as never)
+    vi.spyOn(lean, "readLeanChildTerminal").mockReturnValue(terminal as never)
+    vi.spyOn(lean, "readLeanTimeAccounting").mockReturnValue(time as never)
+    vi.spyOn(lean, "readLeanLedger").mockReturnValue(state as never)
+    vi.spyOn(parent, "validateLeanSupervisorReasonBytes").mockReturnValue(reason as never)
+    let resultExists = false
+    vi.spyOn(fs, "existsSync").mockImplementation(path => String(path).endsWith("result.json") ? resultExists : String(path).endsWith(bp.check) ? false : true)
+    vi.spyOn(retained, "authenticateLeanRetryClosureV8").mockImplementation(() => { throw new Error("OLD_READER_FORBIDDEN") })
+    vi.spyOn(retained, "authenticateLeanSupervisorDiagnosticCheck").mockImplementation(() => { throw new Error("OLD_READER_FORBIDDEN") })
+    const authenticated = retained.authenticateLeanBookkeepingPredecessorV8()
+    expect(authenticated.baseline.charged).toBe(30)
+    expect(authenticated.baseline.currentCharges).toBe(0)
+    expect(authenticated.identities).toContain(bp.store)
+    expect(authenticated.identities).toContain(bp.temp)
+    expect(authenticated.identities).toContain(request.authorizationPath)
+    time.active = true; expect(() => retained.authenticateLeanBookkeepingPredecessorV8()).toThrow(); time.active = false
+    state.charges.set("inert", {}); expect(() => retained.authenticateLeanBookkeepingPredecessorV8()).toThrow(); state.charges.clear()
+    resultExists = true; expect(() => retained.authenticateLeanBookkeepingPredecessorV8()).toThrow(); resultExists = false
+    entry.head = "0".repeat(40); expect(() => retained.authenticateLeanBookkeepingPredecessorV8()).toThrow(); entry.head = b.baselineHead
+    files.set(join(bp.store, "ledger.ndjson"), Buffer.from("changed")); expect(() => retained.authenticateLeanBookkeepingPredecessorV8()).toThrow()
+    files.delete(join(bp.store, "ledger.ndjson")); expect(() => retained.authenticateLeanBookkeepingPredecessorV8()).toThrow()
   })
   it.each([{ charged: 29 }, { currentCharges: 1 }, { currentTerminals: 1 }, { active: true }, { resultExists: true }, { checkExists: true }, { terminalStatus: "child_exited" }, { signal: null }, { head: "0".repeat(40) }, { allocationRoot: r("other") }, { closedIntervals: ["pilot-entry"] }, { intervalTimes: [] }, { rawRoots: {} }])("refuses unsafe failed-baseline custody %j", patch => {
     expect(() => lean.validateLeanBookkeepingBaselineCustodyV8({ ...custody(), ...patch })).toThrow()

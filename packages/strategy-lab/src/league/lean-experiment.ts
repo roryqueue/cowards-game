@@ -81,10 +81,55 @@ export const LEAN_RETRY_V8_POLICY = Object.freeze({ schemaVersion: "lean-retry-e
 /** Additive prospective authority. Never changes the historical v8 policy/carry. */
 const retryTimeboxBody = { schemaVersion: "lean-retry-timebox-extension-v8-v1", approvalRoot: "sha256:a60a562ea5697055e5f949c47234587c6c89109c9e97de0ddeb3f1e2109bf043" as LabRoot, planRoot: "sha256:7c6438011ac1316ea78b00a77a78bedfc32075907277f6a2b6e78c948e9580d4" as LabRoot, predecessorPolicyRoot: labRoot(LEAN_RETRY_V8_POLICY.schemaVersion, LEAN_RETRY_V8_POLICY), priorElapsedMs: 56_000_917, startedAtMs: 1791326194166, elapsedMs: 72_000_000, charged: 29, excludedIdleMs: 20_091_542, turnId: "01a1135c-8975-7330-98ad-8d24374dd0cd" } as const
 export const LEAN_RETRY_V8_TIMEBOX_EXTENSION = Object.freeze({ ...retryTimeboxBody, root: labRoot(retryTimeboxBody.schemaVersion, retryTimeboxBody) })
-export type LeanRetryTimeboxExtension = typeof LEAN_RETRY_V8_TIMEBOX_EXTENSION
+const bookkeepingBody = {
+  schemaVersion: "lean-retry-bookkeeping-continuation-v8-v1", attemptOrdinal: 2,
+  approvalRoot: "sha256:fb43e7111786dd8016b20e51fb0c84c9fad3333b86ec694f2ffc8a8f456a0d27" as LabRoot,
+  planRoot: "sha256:1085418da15ef73ceb205ca97dde0d5f1c8df7d2260bd5caf6d02d2ace96fc97" as LabRoot,
+  predecessorPolicyRoot: retryTimeboxBody.predecessorPolicyRoot, predecessorExtensionRoot: LEAN_RETRY_V8_TIMEBOX_EXTENSION.root,
+  priorElapsedMs: 62_024_083, startedAtMs: 1791335391279, previousCompletedAtMs: 1791332217332,
+  elapsedMs: 72_000_000, charged: 30, excludedIdleMs: 3_173_947, turnId: "01a113e8-dfdc-7951-aed2-aafdd8cee95c",
+  completionEventBytesRoot: "sha256:62e06206ecbf48230f93d9154081acf38bae9a26dacea25dcd091dfa2675e2f0" as LabRoot,
+  startEventBytesRoot: "sha256:b5f7655ff7b6137e3fac5ed6fa8f4bfe04ff03e477164b75fff3b61a1f98ad70" as LabRoot,
+  diagnosticClosureRoot: "sha256:6dcab26064d1fcb880518afc3716b0ed05812fb88c692525f94640681f78e830" as LabRoot,
+  diagnosticClosureBytesRoot: "sha256:4371ca8d328460832a5c304f965b1a57c67de439fb509ac3085dc46c841f4e70" as LabRoot,
+  diagnosticCheckRoot: "sha256:72ae7d0797b482fbe756e39fd3d9708b935c5106d06bad6e682a87601c2aae71" as LabRoot,
+  baselineAllocationRoot: "sha256:851e13373686f825be17db4fdba70c52b3a6c586bf9822daeee14ded4757e16c" as LabRoot,
+  baselineSourceRoot: "sha256:9ba555e78f094004ea29229672d587f7d08a3ace06974d26219d61727a1441a6" as LabRoot,
+  baselineHead: "1b5f59d62704cf6672b4ba2953925ddede8a9957",
+  baselineRawRoots: {
+    "allocation.json": "sha256:0e5c9a9ae8ed11b60139c87896028b6ba88af7b984bdd002ddffae1df5e4d8d5",
+    request: "sha256:77f41d3db3986281c6b7920ca23a6cad53457ed41bf2407112a28bfafd30e470",
+    "entry.json": "sha256:167cde487500ae94eb83e8488d8242ce0c153ecc7d863512cb4e2dcbdad528cf",
+    "child-terminal.json": "sha256:cc29918971dc5f93a1989113d5d27d3f82b74327b2c95ec5725d70d8ea28645b",
+    "parent-supervisor-reasons.json": "sha256:c5abccf652a78c2bda702c1f06014c9ed86265303c8863181c3dee561428a390",
+    "time.ndjson": "sha256:e98afdf741ef5de80eddd95ec66b6cc11c580d185e6917008c7afcdaea020478",
+    "ledger.ndjson": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  },
+} as const
+export const LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION = freezeLabValue({ ...bookkeepingBody, root: labRoot(bookkeepingBody.schemaVersion, bookkeepingBody) })
+export type LeanRetryTimeboxExtension = typeof LEAN_RETRY_V8_TIMEBOX_EXTENSION | typeof LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION
+export const isLeanBookkeepingContinuationV8 = (value: LeanRetryTimeboxExtension | undefined): value is typeof LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION => value?.schemaVersion === "lean-retry-bookkeeping-continuation-v8-v1"
 export const admitLeanRetryTimeboxExtension = (value: unknown): LeanRetryTimeboxExtension => {
-  if (!exactLabKeys(value, Object.keys(LEAN_RETRY_V8_TIMEBOX_EXTENSION)) || labRoot("lean-retry-timebox-admission-v8", value) !== labRoot("lean-retry-timebox-admission-v8", LEAN_RETRY_V8_TIMEBOX_EXTENSION)) return fail("RETRY_TIMEBOX")
-  return LEAN_RETRY_V8_TIMEBOX_EXTENSION
+  for (const expected of [LEAN_RETRY_V8_TIMEBOX_EXTENSION, LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION]) {
+    if (exactLabKeys(value, Object.keys(expected)) && labRoot("lean-retry-timebox-admission-v8", value) === labRoot("lean-retry-timebox-admission-v8", expected)) return expected
+  }
+  return fail("RETRY_TIMEBOX")
+}
+/** Exact failed baseline metadata, never ordinary retained evidence or success. */
+export const validateLeanBookkeepingBaselineCustodyV8 = (value: unknown): void => {
+  const b = LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION
+  if (!exactLabKeys(value, ["allocationRoot", "sourceRoot", "head", "rawRoots", "charged", "currentCharges", "currentTerminals", "active", "resultExists", "checkExists", "terminalStatus", "exitCode", "signal", "closedIntervals", "intervalTimes"])) return fail("RETRY_PREDECESSOR")
+  const v = value as Record<string, unknown>
+  if (v.allocationRoot !== b.baselineAllocationRoot || v.sourceRoot !== b.baselineSourceRoot || v.head !== b.baselineHead || labRoot("lean-bookkeeping-baseline-raw-v8", v.rawRoots) !== labRoot("lean-bookkeeping-baseline-raw-v8", b.baselineRawRoots) || v.charged !== 30 || v.currentCharges !== 0 || v.currentTerminals !== 0 || v.active !== false || v.resultExists !== false || v.checkExists !== false || v.terminalStatus !== "child_failed" || v.exitCode !== null || v.signal !== "SIGKILL" || labRoot("lean-bookkeeping-baseline-intervals-v8", v.closedIntervals) !== labRoot("lean-bookkeeping-baseline-intervals-v8", ["correction-preparation", "pilot-entry", "correction-run-finalization"]) || labRoot("lean-bookkeeping-baseline-times-v8", v.intervalTimes) !== labRoot("lean-bookkeeping-baseline-times-v8", [1791330138520, 1791330177618, 1791330177618, 1791330306049, 1791330306049, 1791330306250])) return fail("RETRY_PREDECESSOR")
+}
+/** Only the approved closed ordinal1 prefix crosses the new human-idle gap. */
+export const leanRetryClosedPrefixFloorV8 = (closedElapsedMs: number, readerCloseMs: number, observedMs: number, ordinal: number, extension?: LeanRetryTimeboxExtension): number => {
+  if (isLeanBookkeepingContinuationV8(extension) && ordinal === 1) {
+    admitLeanRetryTimeboxExtension(extension)
+    if (!natural(closedElapsedMs) || closedElapsedMs > extension.priorElapsedMs || !natural(readerCloseMs) || readerCloseMs > extension.previousCompletedAtMs || observedMs < extension.startedAtMs) return fail("RETRY_PREDECESSOR")
+    return leanRetryRootElapsedFloorV8(observedMs, extension)
+  }
+  return closedElapsedMs + observedMs - readerCloseMs
 }
 export const LEAN_RETRY_V8_TIMEBOX_CAPS = Object.freeze({ ...LEAN_CAPS, elapsedMs: 72_000_000 })
 export const leanRetrySetupPath = (mode: LeanRetryMode) => `.strategy-lab/lean-retry-envelope-setup-20261006-${mode}.json`
@@ -831,6 +876,7 @@ const createLeanRetryAllocationV8 = (input: Parameters<typeof createLeanSupervis
   const caps = extension ? LEAN_RETRY_V8_TIMEBOX_CAPS : LEAN_REPLAY_V7_CAPS
   if (!exactLabKeys(input, ["sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "route", "reuseGrantRoot", "supervisorDecisionRoot", "acceptedCheckRoot", "requestBytesRoot", "dataReviewRoot", "setupAccountingRoot", "predecessor", "startupPolicyRoot", "attemptOrdinal", "priorClosureRoot", "continuationRoot", "acceptedReaderCloseRoot", ...(extension ? ["timeboxExtension"] : [])]) || !isLeanRetryMode(`v8-${input.attemptOrdinal}`) || input.planRoot !== LEAN_RETRY_V8_PLAN_ROOT || input.supervisorDecisionRoot !== LEAN_RETRY_V8_APPROVAL_ROOT || input.startupPolicyRoot !== LEAN_STARTUP_POLICY_V5.root) return fail("RETRY_ALLOCATION")
   const n = input.attemptOrdinal!, p = input.predecessor
+  if (isLeanBookkeepingContinuationV8(extension) && (n !== 2 || input.priorClosureRoot !== extension.diagnosticClosureRoot || p.chargedMatches !== (input.route === "diagnostic" ? 30 : 31))) return fail("RETRY_PREDECESSOR")
   const { root: claimedPredecessorRoot, ...predecessorBody } = p
   if (claimedPredecessorRoot !== labRoot(p.schemaVersion, predecessorBody) || !natural(p.chargedMatches) || !natural(p.elapsedUpperBoundMs)) return fail("RETRY_PREDECESSOR")
   if (p.chargedMatches < 29 || p.chargedMatches > 29 + n - (input.route === "diagnostic" ? 1 : 0) || p.elapsedUpperBoundMs < (extension?.priorElapsedMs ?? LEAN_RETRY_V8_CARRY.priorElapsedMs) || (extension ? p.elapsedUpperBoundMs + 1_860_000 >= caps.elapsedMs : p.elapsedUpperBoundMs >= caps.elapsedMs) || (n === 1 ? input.priorClosureRoot !== null || input.continuationRoot !== null : !root(input.priorClosureRoot) || !root(input.continuationRoot)) || (input.route === "diagnostic" ? input.acceptedReaderCloseRoot !== null : !root(input.acceptedReaderCloseRoot))) return fail("RETRY_PREDECESSOR")

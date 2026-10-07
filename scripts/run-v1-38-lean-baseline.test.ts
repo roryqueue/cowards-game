@@ -61,12 +61,24 @@ const beginParent = (enabled: boolean, configure?: () => void) => {
 const readyParent = async (child: ReturnType<typeof beginParent>["child"]) => { child.emit("message", { ready: child.pid }); await Promise.resolve(); await Promise.resolve() }
 const exitParent = (child: ReturnType<typeof beginParent>["child"]) => { child.exitCode = 0; child.emit("exit", 0, null) }
 
-const timeboxBaseline = (extended: boolean) => {
-  const extension = lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION
-  const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 30, elapsedUpperBoundMs: extended ? extension.priorElapsedMs : lean.LEAN_RETRY_V8_CARRY.priorElapsedMs, allocatedDiskBytes: 13_000_000, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: [{ identity: ".strategy-lab/inert-parent-survivor", allocatedBytes: 4096 }] }
-  return lean.createLeanSupervisorCorrectionAllocation({ ...(extended ? { timeboxExtension: extension } : {}), sourceRoot: root("source"), reviewRoot: root("review"), coldRoot: root("cold"), planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT, seed: "inert-timebox-baseline", candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, n) => root(`request-${n}`)), route: "baseline", reuseGrantRoot: root("reuse"), supervisorDecisionRoot: lean.LEAN_RETRY_V8_APPROVAL_ROOT, acceptedCheckRoot: root("actual-check-fixture"), acceptedReaderCloseRoot: root("actual-final-fixture"), requestBytesRoot: root("request"), dataReviewRoot: root("data"), setupAccountingRoot: root("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, attemptOrdinal: 1, priorClosureRoot: null, continuationRoot: null, predecessor: { ...p, root: labRoot(p.schemaVersion, p) } }, 8)
+const timeboxBaseline = (extended: boolean, bookkeeping = false) => {
+  const extension = bookkeeping ? lean.LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION : lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION
+  const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: bookkeeping ? 31 : 30, elapsedUpperBoundMs: extended ? extension.priorElapsedMs : lean.LEAN_RETRY_V8_CARRY.priorElapsedMs, allocatedDiskBytes: 13_000_000, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: [{ identity: ".strategy-lab/inert-parent-survivor", allocatedBytes: 4096 }] }
+  return lean.createLeanSupervisorCorrectionAllocation({ ...(extended ? { timeboxExtension: extension } : {}), sourceRoot: root("source"), reviewRoot: root("review"), coldRoot: root("cold"), planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT, seed: "inert-timebox-baseline", candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, n) => root(`request-${n}`)), route: "baseline", reuseGrantRoot: root("reuse"), supervisorDecisionRoot: lean.LEAN_RETRY_V8_APPROVAL_ROOT, acceptedCheckRoot: root("actual-check-fixture"), acceptedReaderCloseRoot: root("actual-final-fixture"), requestBytesRoot: root("request"), dataReviewRoot: root("data"), setupAccountingRoot: root("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, attemptOrdinal: bookkeeping ? 2 : 1, priorClosureRoot: bookkeeping ? lean.LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION.diagnosticClosureRoot : null, continuationRoot: bookkeeping ? root("fresh-continuation") : null, predecessor: { ...p, root: labRoot(p.schemaVersion, p) } }, 8)
 }
 describe("actual conditional baseline parent timebox consumer", () => {
+  it("consumes the new ordinal2 carry continuously with the same parent reserve", async () => {
+    const b = lean.LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION
+    const { child, settled } = beginParent(true, () => { host.allocation = timeboxBaseline(true, true); host.elapsed = lean.leanRetryRootElapsedFloorV8(b.startedAtMs + 100, b) })
+    expect(parentApi.leanBoundedParentTimeBudget({ allocation: host.allocation } as LeanExperimentLedger, 1_260_000)).toEqual({ elapsedMs: 62_024_183, capMs: 72_000_000, timeoutMs: 8_715_817 })
+    await readyParent(child)
+    await vi.advanceTimersByTimeAsync(250)
+    expect(child.kills).toHaveLength(0)
+    host.elapsed = 70_140_000
+    await vi.advanceTimersByTimeAsync(250)
+    expect(child.kills).toContain("SIGKILL")
+    exitParent(child); expect((await settled).error).toBeInstanceOf(TypeError)
+  })
   it("uses the approved carry/start, cap and child timeout after legacy expiry", async () => {
     const extension = lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION
     const { child, settled } = beginParent(true, () => { host.allocation = timeboxBaseline(true); host.elapsed = lean.leanRetryRootElapsedFloorV8(extension.startedAtMs + 3_999_083, extension) })

@@ -1,4 +1,4 @@
-import { admitLeanRetryTimeboxExtension, LEAN_RETRY_V8_TIMEBOX_EXTENSION, leanRetryRootElapsedFloorV8, type LeanRetryTimeboxExtension, isLeanRetryMode, leanRetryOrdinal, leanRetrySetupPath, LEAN_RETRY_V8_APPROVAL_ROOT, LEAN_RETRY_V8_PLAN_ROOT, LEAN_RETRY_V8_POLICY, LEAN_RETRY_V8_CARRY, type LeanRetryMode, type LeanRetryOrdinal } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { admitLeanRetryTimeboxExtension, LEAN_RETRY_V8_TIMEBOX_EXTENSION, isLeanBookkeepingContinuationV8, leanRetryClosedPrefixFloorV8, leanRetryRootElapsedFloorV8, type LeanRetryTimeboxExtension, isLeanRetryMode, leanRetryOrdinal, leanRetrySetupPath, LEAN_RETRY_V8_APPROVAL_ROOT, LEAN_RETRY_V8_PLAN_ROOT, LEAN_RETRY_V8_POLICY, LEAN_RETRY_V8_CARRY, type LeanRetryMode, type LeanRetryOrdinal } from "../packages/strategy-lab/src/league/lean-experiment.js"
 /** Additive, fixed one-cell diagnostic / conditional 36-cell baseline.
  * Import is inert. Historical requests, stores and empirical readers are never used. */
 import { constants, closeSync, existsSync, fstatSync, fsyncSync, lstatSync, openSync, readFileSync, realpathSync, readdirSync, statfsSync } from "node:fs"
@@ -18,7 +18,7 @@ import { validateLeanPrivateCorrectionOrigin, buildLeanStartupWorkerHarnessV5, b
 import { resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
 import { captureLeanHostFailureV7, type LeanHostFailureBindingV7 } from "./lib/v1-38-lean-host-stage-v7.js"
 let activeHostBindingV7: LeanHostFailureBindingV7 | undefined
-import { authenticateLeanSupervisorDiagnosticCheck, authenticateLeanRetryClosureV8 } from "./lib/v1-38-lean-correction-retained.js"
+import { authenticateLeanSupervisorDiagnosticCheck, authenticateLeanRetryClosureV8, authenticateLeanBookkeepingPredecessorV8 } from "./lib/v1-38-lean-correction-retained.js"
 
 export { LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES }
 export const LEAN_SUPERVISOR_DECISION = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-CORRECTION-SUPERVISOR-DECISION-v1.md"
@@ -43,6 +43,19 @@ export const LEAN_RETRY_V8_PLAN = ".planning/phases/265-serious-current-rules-le
 export const LEAN_RETRY_V8_TIMEBOX_DECISION = ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-HOUR-APPROVAL-20261006.md"
 export const LEAN_RETRY_V8_TIMEBOX_PLAN = ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-HOUR-PLAN-v1.md"
 export const LEAN_RETRY_V8_TIMEBOX_RESEARCH = ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-HOUR-RESEARCH-v1.md"
+export const LEAN_RETRY_V8_BOOKKEEPING_DECISION = ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-BOOKKEEPING-CONTINUATION-APPROVAL-20261007.md"
+export const LEAN_RETRY_V8_BOOKKEEPING_PLAN = ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-BOOKKEEPING-CONTINUATION-RESEARCH-PLAN-v1.md"
+const leanRetryExtensionDocumentsV8 = (extension: LeanRetryTimeboxExtension, mode: LeanRetryMode) => {
+  if (isLeanBookkeepingContinuationV8(extension)) {
+    if (mode !== "v8-2") return fail("SUPERVISOR_REQUEST")
+    return { decision: LEAN_RETRY_V8_BOOKKEEPING_DECISION, plan: LEAN_RETRY_V8_BOOKKEEPING_PLAN }
+  }
+  return { decision: LEAN_RETRY_V8_TIMEBOX_DECISION, plan: LEAN_RETRY_V8_TIMEBOX_PLAN }
+}
+const assertLeanRetryExtensionDocumentsV8 = (extension: LeanRetryTimeboxExtension, mode: LeanRetryMode) => {
+  const documents = leanRetryExtensionDocumentsV8(extension, mode)
+  if (leanBytesRoot(readFileSync(documents.decision)) !== extension.approvalRoot || leanBytesRoot(readFileSync(documents.plan)) !== extension.planRoot) return fail("SUPERVISOR_REQUEST")
+}
 export const LEAN_RETRY_V8_SOURCE_INVENTORY = Object.freeze([
   LEAN_RETRY_V8_DECISION, LEAN_RETRY_V8_PLAN,
   ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-RETRY-ENVELOPE-RESEARCH-v1.md",
@@ -179,7 +192,11 @@ export const leanCorrectionSourceManifest = (supervisor: LeanSupervisorMode = fa
   if (isLeanRetryMode(supervisor)) {
     const extension = timeboxExtension === undefined ? undefined : admitLeanRetryTimeboxExtension(timeboxExtension)
     const closure = new Map(leanCorrectionSourceManifest("v7").entries.map(entry => [entry.path, entry]))
-    if (extension) for (const path of [LEAN_RETRY_V8_TIMEBOX_DECISION, LEAN_RETRY_V8_TIMEBOX_PLAN, LEAN_RETRY_V8_TIMEBOX_RESEARCH]) closure.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
+    if (extension) {
+      const documents = leanRetryExtensionDocumentsV8(extension, supervisor)
+      const added = isLeanBookkeepingContinuationV8(extension) ? [documents.decision, documents.plan, "scripts/lib/v1-38-lean-bookkeeping-continuation.test.ts"] : [documents.decision, documents.plan, LEAN_RETRY_V8_TIMEBOX_RESEARCH]
+      for (const path of added) closure.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
+    }
     for (const path of LEAN_RETRY_V8_SOURCE_INVENTORY) closure.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
     const entries = [...closure.values()].sort((a, b) => a.path.localeCompare(b.path))
     return { entries, root: labRoot("lean-retry-reviewed-source-v8", { attemptOrdinal: leanRetryOrdinal(supervisor), entries, ...(extension ? { timeboxExtension: extension } : {}), approvalRoot: LEAN_RETRY_V8_APPROVAL_ROOT, planRoot: LEAN_RETRY_V8_PLAN_ROOT, envelopePolicy: LEAN_RETRY_V8_POLICY, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())), brokerRoot: leanBytesRoot(Buffer.from(buildLeanContainerBrokerSourceV7())) }) }
@@ -357,7 +374,7 @@ export const readLeanRetryRequestV8 = (path: string, route: LeanCorrectionRoute,
   if (path !== paths.request) return fail("REQUEST_PATH")
   const request = readLeanCorrectionJson(path) as LeanCorrectionRequest
   const extension = Object.hasOwn(request, "timeboxExtension") ? admitLeanRetryTimeboxExtension(request.timeboxExtension) : undefined
-  if (extension && (leanBytesRoot(readFileSync(LEAN_RETRY_V8_TIMEBOX_DECISION)) !== extension.approvalRoot || leanBytesRoot(readFileSync(LEAN_RETRY_V8_TIMEBOX_PLAN)) !== extension.planRoot)) return fail("SUPERVISOR_REQUEST")
+  if (extension) assertLeanRetryExtensionDocumentsV8(extension, mode)
   const keys = [...(extension ? ["timeboxExtension"] : []), "schemaVersion", "route", "sourceRoot", "planRoot", "amendmentRoot", "reviewPath", "reviewRoot", "dataReviewPath", "dataReviewRoot", "coldRoot", "seed", "reuseGrantRoot", "candidateRoots", "requestRoots", "diagnosis", "supervisorDecisionRoot", "acceptedCheckRoot", "setupAccountingPath", "setupAccountingRoot", "startupPolicyRoot", "authorizationPath", "authorizationRoot", "attemptOrdinal", "priorClosureRoot", "continuationRoot", "acceptedReaderCloseRoot"]
   if (!exactLabKeys(request, keys) || request.schemaVersion !== "lean-correction-supervisor-request-v8" || request.route !== route || request.attemptOrdinal !== n || request.diagnosis !== null || request.planRoot !== LEAN_RETRY_V8_PLAN_ROOT || request.supervisorDecisionRoot !== LEAN_RETRY_V8_APPROVAL_ROOT || leanBytesRoot(readFileSync(LEAN_RETRY_V8_DECISION)) !== LEAN_RETRY_V8_APPROVAL_ROOT || leanBytesRoot(readFileSync(LEAN_RETRY_V8_PLAN)) !== LEAN_RETRY_V8_PLAN_ROOT || request.startupPolicyRoot !== LEAN_STARTUP_POLICY_V5.root || request.sourceRoot !== leanCorrectionSourceManifest(mode, extension).root || request.setupAccountingPath !== leanRetrySetupPath(mode) || request.setupAccountingRoot !== readLeanRetrySetupWitnessV8(mode).root || !same(extension ?? null, readLeanRetrySetupWitnessV8(mode).timeboxExtension ?? null) || request.authorizationPath !== `.strategy-lab/lean-retry-authorization-${route}-v8-${n}.json` || request.amendmentRoot !== LEAN_COLD_REUSE_HISTORY.amendmentRoot || request.coldRoot !== LEAN_COLD_REUSE_HISTORY.coldRoot || request.seed !== LEAN_COLD_REUSE_HISTORY.seed || !same(request.candidateRoots, deriveLeanBaselineCandidateRoots(request.coldRoot)) || !same(request.requestRoots, deriveLeanSupervisorCorrectionRequestRoots({ route, seed: request.seed, coldRoot: request.coldRoot, planRoot: request.planRoot, sourceRoot: request.sourceRoot }, request.supervisorDecisionRoot!, mode))) return fail("SUPERVISOR_REQUEST")
   const authorization = readLeanCorrectionJson(request.authorizationPath) as Record<string, unknown>, { root: claimed, ...body } = authorization
@@ -365,8 +382,10 @@ export const readLeanRetryRequestV8 = (path: string, route: LeanCorrectionRoute,
   if (n === 1 ? request.priorClosureRoot !== null || request.continuationRoot !== null : !root(request.priorClosureRoot) || !root(request.continuationRoot)) return fail("DIAGNOSTIC_CUSTODY")
   let continuationDiagnosisRoot: LabRoot | null = null
   if (n > 1) {
-    const previous = authenticateLeanRetryClosureV8(`v8-${n - 1}` as LeanRetryMode), continuation = readLeanCorrectionJson(`.strategy-lab/lean-retry-continuation-v8-${n}.json`) as Record<string, unknown>, { root: cr, ...cb } = continuation
-    if (!same(previous.timeboxExtension ?? null, extension ?? null) || previous.closureClass === "accepted" || request.priorClosureRoot !== previous.root || request.continuationRoot !== cr || !exactLabKeys(continuation, ["schemaVersion", "attemptOrdinal", "priorClosureRoot", "sourceRoot", "diagnosisRoot", "resolvedDefectRoot", "reviewRoot", "root"]) || continuation.schemaVersion !== "lean-retry-continuation-v8" || continuation.attemptOrdinal !== n || continuation.priorClosureRoot !== previous.root || continuation.sourceRoot !== request.sourceRoot || continuation.reviewRoot !== request.reviewRoot || !root(continuation.diagnosisRoot) || !root(continuation.resolvedDefectRoot) || continuation.diagnosisRoot === previous.resultBytesRoot || continuation.resolvedDefectRoot === previous.resultBytesRoot || cr !== labRoot(String(continuation.schemaVersion), cb)) return fail("DIAGNOSTIC_CUSTODY")
+    const historical = isLeanBookkeepingContinuationV8(extension) ? authenticateLeanBookkeepingPredecessorV8() : null
+    const previous = historical?.diagnostic ?? authenticateLeanRetryClosureV8(`v8-${n - 1}` as LeanRetryMode), continuation = readLeanCorrectionJson(`.strategy-lab/lean-retry-continuation-v8-${n}.json`) as Record<string, unknown>, { root: cr, ...cb } = continuation
+    const predecessorValid = historical ? isLeanBookkeepingContinuationV8(extension) && n === 2 && previous.root === extension.diagnosticClosureRoot && same(continuation.timeboxExtension, extension) && continuation.failedBaselineRoot === historical.baseline.root : same(previous.timeboxExtension ?? null, extension ?? null) && previous.closureClass !== "accepted"
+    if (!predecessorValid || request.priorClosureRoot !== previous.root || request.continuationRoot !== cr || !exactLabKeys(continuation, ["schemaVersion", "attemptOrdinal", "priorClosureRoot", "sourceRoot", "diagnosisRoot", "resolvedDefectRoot", "reviewRoot", "root", ...(historical ? ["timeboxExtension", "failedBaselineRoot"] : [])]) || continuation.schemaVersion !== "lean-retry-continuation-v8" || continuation.attemptOrdinal !== n || continuation.priorClosureRoot !== previous.root || continuation.sourceRoot !== request.sourceRoot || continuation.reviewRoot !== request.reviewRoot || !root(continuation.diagnosisRoot) || !root(continuation.resolvedDefectRoot) || continuation.diagnosisRoot === previous.resultBytesRoot || continuation.resolvedDefectRoot === previous.resultBytesRoot || cr !== labRoot(String(continuation.schemaVersion), cb)) return fail("DIAGNOSTIC_CUSTODY")
     continuationDiagnosisRoot = continuation.diagnosisRoot as LabRoot
   }
   if (route === "diagnostic") { if (request.acceptedCheckRoot !== null || request.acceptedReaderCloseRoot !== null) return fail("ACCEPTED_CHECK") }
@@ -644,7 +663,7 @@ export const readLeanRetrySetupWitnessV8 = (mode: LeanRetryMode) => {
   const v = readLeanCorrectionJson(leanRetrySetupPath(mode)) as Record<string, unknown>, { root: claimed, ...body } = v
   const extension = Object.hasOwn(v, "timeboxExtension") ? admitLeanRetryTimeboxExtension(v.timeboxExtension) : undefined
   const carry = extension ?? LEAN_RETRY_V8_CARRY
-  if (extension && (leanBytesRoot(readFileSync(LEAN_RETRY_V8_TIMEBOX_DECISION)) !== extension.approvalRoot || leanBytesRoot(readFileSync(LEAN_RETRY_V8_TIMEBOX_PLAN)) !== extension.planRoot)) return fail("SETUP_WITNESS")
+  if (extension) assertLeanRetryExtensionDocumentsV8(extension, mode)
   if (!exactLabKeys(v, [...(extension ? ["timeboxExtension"] : []), "schemaVersion", "attemptOrdinal", "startedAtMs", "observedAtMs", "priorElapsedMs", "consumedTimeBytesRoot", "decisionRoot", "threadId", "turnId", "source", "root"]) || v.schemaVersion !== "lean-retry-setup-witness-v8" || v.attemptOrdinal !== leanRetryOrdinal(mode) || v.startedAtMs !== carry.startedAtMs || v.priorElapsedMs !== carry.priorElapsedMs || v.consumedTimeBytesRoot !== LEAN_RETRY_V8_CARRY.timeBytesRoot || v.decisionRoot !== (extension?.approvalRoot ?? LEAN_RETRY_V8_APPROVAL_ROOT) || v.threadId !== "019fa652-915a-7183-9af1-3b3c05868d86" || v.turnId !== (extension?.turnId ?? "01a111c1-6f91-7310-870d-056b2d77194f") || v.source !== "codex-task-event-custody" || !Number.isSafeInteger(v.observedAtMs) || Number(v.observedAtMs) < carry.startedAtMs || claimed !== labRoot(String(v.schemaVersion), body)) return fail("SETUP_WITNESS")
   return v as unknown as { root: LabRoot; observedAtMs: number; startedAtMs: number; timeboxExtension?: LeanRetryTimeboxExtension }
 }
@@ -666,20 +685,25 @@ export const inspectLeanRetryPredecessorV8 = (route: LeanCorrectionRoute, atMs: 
   const witness = readLeanRetrySetupWitnessV8(mode)
   if (atMs < witness.observedAtMs) return fail("SUPERVISOR_ACCOUNTING_CLOCK")
   const n = leanRetryOrdinal(mode), identities = [...old.allocation.predecessor.survivors.map(s => s.identity), oldPaths.store, oldPaths.temp, oldPaths.request, oldPaths.allocation, LEAN_REPLAY_V7_SETUP_PATH, leanRetrySetupPath(mode)]
+  const historical = isLeanBookkeepingContinuationV8(witness.timeboxExtension) ? authenticateLeanBookkeepingPredecessorV8() : null
+  if (historical && n !== 2) return fail("DIAGNOSTIC_CUSTODY")
   let charged = 29, elapsed = leanRetryElapsedV8(atMs, witness.timeboxExtension)
   const roots: unknown[] = [pinned, extraPins, witness.root]
+  if (historical) { identities.push(...historical.identities); roots.push(historical.baseline.root) }
   for (let i = 1; i < n || route === "baseline" && i <= n; i++) {
     const priorMode = `v8-${i}` as LeanRetryMode, paths = leanCorrectionRoutePaths("diagnostic", priorMode)
-    const closed = authenticateLeanRetryClosureV8(priorMode)
-    if (!same(closed.timeboxExtension ?? null, witness.timeboxExtension ?? null)) return fail("DIAGNOSTIC_CUSTODY")
-    if (existsSync(paths.store) && readLeanTimeAccounting(openLeanLedger(paths.store)).active || closed.readerCloseMs > atMs || closed.closureClass === "accepted" && (route !== "baseline" || i !== n) || route === "baseline" && i === n && closed.closureClass !== "accepted") return fail("DIAGNOSTIC_CUSTODY")
+    const historicalPrefix = historical !== null && i === 1
+    const closed = historicalPrefix ? historical.diagnostic : authenticateLeanRetryClosureV8(priorMode)
+    if (!historicalPrefix && !same(closed.timeboxExtension ?? null, witness.timeboxExtension ?? null)) return fail("DIAGNOSTIC_CUSTODY")
+    if (!historicalPrefix && existsSync(paths.store) && readLeanTimeAccounting(openLeanLedger(paths.store)).active || closed.readerCloseMs > atMs || !historicalPrefix && closed.closureClass === "accepted" && (route !== "baseline" || i !== n) || route === "baseline" && i === n && closed.closureClass !== "accepted") return fail("DIAGNOSTIC_CUSTODY")
     charged = closed.cumulativeCharged
-    elapsed = Math.max(elapsed, closed.closedElapsedMs + atMs - closed.readerCloseMs)
+    elapsed = Math.max(elapsed, leanRetryClosedPrefixFloorV8(closed.closedElapsedMs, closed.readerCloseMs, atMs, i, witness.timeboxExtension))
     identities.push(...[paths.store, paths.temp, paths.request, paths.allocation, leanRetrySetupPath(priorMode)].filter(path => existsSync(path)))
     roots.push(closed.root, closed.timeBytesRoot)
   }
   for (const i of [1, 2, 3] as const) {
     const paths = leanCorrectionRoutePaths("baseline", `v8-${i}`)
+    if (historical && i === 1) continue // Exact authenticated failed destination remains inventoried above.
     if ((route !== "baseline" || i !== n) && (existsSync(paths.store) || existsSync(paths.allocation) || (existsSync(join(paths.temp, "admission-run-start.json")) || existsSync(join(paths.temp, "admission-prepare-start.json"))))) return fail("SPENT_DESTINATION")
     if (i > n) { const future = leanCorrectionRoutePaths("diagnostic", `v8-${i}`); if (existsSync(future.store) || existsSync(future.allocation) || (existsSync(join(future.temp, "admission-run-start.json")) || existsSync(join(future.temp, "admission-prepare-start.json")))) return fail("SPENT_DESTINATION") }
   }
