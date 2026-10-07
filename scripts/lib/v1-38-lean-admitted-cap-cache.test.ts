@@ -1,5 +1,6 @@
 /** Inert allocation metadata only: no stores, readers, provider or Match dispatch. */
 import { describe, expect, it, vi } from "vitest"
+import { execFileSync } from "node:child_process"
 import { freezeLabValue, labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import * as lean from "../../packages/strategy-lab/src/league/lean-experiment.js"
 
@@ -34,6 +35,27 @@ const fixtureInput = (version: 2 | 3 | 4 | 5 | 6 | 7 | 8, extended = false, rout
 const fixture = (extended = false, route: "diagnostic" | "baseline" = "diagnostic") => lean.createLeanSupervisorCorrectionAllocation(fixtureInput(8, extended, route), 8)
 
 describe("identity-only admitted v8 cap reuse", () => {
+  it("isolates inherited extension pollution and cannot poison a legacy cached cap", () => {
+    const moduleUrl = new URL("../../packages/strategy-lab/src/league/lean-experiment.ts", import.meta.url).href
+    const source = `
+      import * as lean from ${JSON.stringify(moduleUrl)};
+      const legacy = lean.createLeanSupervisorCorrectionAllocation(${JSON.stringify(fixtureInput(8))}, 8);
+      const extended = lean.createLeanSupervisorCorrectionAllocation(${JSON.stringify(fixtureInput(8, true))}, 8);
+      let admitted, during, extendedCap, cloneRefused = false;
+      try {
+        Object.defineProperty(Object.prototype, "timeboxExtension", { value: { elapsedMs: 72000000 }, configurable: true });
+        admitted = lean.admitLeanAllocation(legacy);
+        during = lean.leanCapsForAllocation(admitted).elapsedMs;
+        extendedCap = lean.leanCapsForAllocation(lean.admitLeanAllocation(extended)).elapsedMs;
+        try { lean.leanCapsForAllocation(JSON.parse(JSON.stringify(legacy))); }
+        catch (error) { cloneRefused = error.message.includes("LEAN_EXPERIMENT_RETRY_TIMEBOX"); }
+      } finally { delete Object.prototype.timeboxExtension; }
+      console.log(JSON.stringify({ ownExtension: Object.hasOwn(admitted, "timeboxExtension"), during, after: lean.leanCapsForAllocation(admitted).elapsedMs, extendedCap, cloneRefused }));
+    `
+    const result = JSON.parse(execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", source], { encoding: "utf8", timeout: 15_000 }))
+    expect(result).toEqual({ ownExtension: false, during: 57_600_000, after: 57_600_000, extendedCap: 72_000_000, cloneRefused: true })
+  })
+
   it.each([false, true])("repeated admitted diagnostic reads skip reconstruction/hash/freeze (extended=%s)", extended => {
     const input = fixture(extended), admitted = lean.admitLeanAllocation(input)
     expect(admitted).not.toBe(input)
