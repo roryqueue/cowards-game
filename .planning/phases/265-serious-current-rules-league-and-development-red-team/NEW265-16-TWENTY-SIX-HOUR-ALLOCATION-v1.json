@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "lean-twenty-six-allocation-metadata-v1",
+  "authorizing": false,
+  "canonicalAllocationPresent": false,
+  "canonicalPath": ".planning/artifacts/v1.38-lean-correction-supervisor-diagnostic-allocation-v10-1.json",
+  "allocationRoot": null,
+  "reason": "preparatory invocation refused before retained allocation",
+  "actualInvocation": "58419 CLOSED exit1"
+}

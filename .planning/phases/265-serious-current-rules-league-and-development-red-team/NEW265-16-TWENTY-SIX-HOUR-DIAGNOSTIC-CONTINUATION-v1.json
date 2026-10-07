@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "lean-twenty-six-diagnostic-metadata-v1",
+  "authorizing": false,
+  "mode": "v10-1",
+  "sourceRoot": "sha256:26c1befe2d2e214f8b1b50adc30292d4a9f4cede72e8fc3d6e8499a652161ab1",
+  "authorAgent": "/root",
+  "canonicalPath": ".strategy-lab/lean-retry-continuation-v10-1.json",
+  "canonicalFilePresent": false,
+  "priorClosureRoot": null,
+  "continuationRoot": null,
+  "reason": "ordinal1 requires no continuation grant"
+}

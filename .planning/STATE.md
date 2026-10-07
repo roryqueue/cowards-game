@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Approved26h onefreshdiagnostic andconditional36baseline; checkedPlan16 supplement next
+stopped_at: v10-1 preparation invocation refused; source gates complete; corrected attempt needs human amendment
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Direct approval recorded for26h cumulative onefreshdiagnostic andconditional36baseline
+last_activity_desc: Source reviewed/fixed/validated/verified; missing request flag refused preparation before allocation
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V10-1 INVOCATION REFUSED / HUMAN CHECKPOINT (2026-10-07): Source52d40bd8/root26c1befe/905 verified5/5 after independently closed CR-01/CR-02; MAIN61focusedPASS/types/shell/diffPASS/factory1415zero. Fresh diagnostic MAINdraft51071/finalize32825 CLOSED0; DATA/HELPERreviews clean; request408e5f95/auth53cc7957/setup/helper/draft untouched. ExactlyONEpreparatory invocation58419 CLOSEDexit1/detailswithheld: MAIN omitted required --request. Independent inert parser reproduces ARGUMENTS; actual thrown details unretained. Canonicalallocation/store/admissionmarkers/entry/Match/result/check/FINAL absent;0newretainedcharges/all31carry. ONEindependent invocation-terminal-only check CLOSED, no fabricatedHEAD/ordinaryreader. Approvedsinglepair ENDED procedurally; baselineineligible/no automatic corrected invocation/retry/recredit/refund. No activeentry/reader/sourcehold. Human may explicitly amend to allowONEcorrected preparation under same remaining93.6Mms/15GB300/deadline19:26:58.572Z/allcosts/1860000reserve/source/runtime/rules/privacy; NOTcurrentlyapproved. Source workcomplete; Phase265/LEAG/266freeze/formation/holdout/public/counting/production/archive-success/tagremain gated. Earlierparagraphshistory.
 
 CURRENT APPROVED26H PROSPECTIVE PAIR (2026-10-07): Direct human approved NEW265-16-POST-V9-PROSPECTIVE-BUDGET-DECISION-v1.md; approval recorded in NEW265-16-TWENTY-SIX-HOUR-APPROVAL-20261007.md. ExactlyONE distinctfreshprivate diagnostic plus ONLY after its NEWfullacceptedcheck andactualFINAL ONEdistinctfresh36baseline; anypreparation/admission refusal/failure orbaselineoutcome ends pair. Cumulative93,600,000ms26h/unchanged15GB300; all31charges/costs/survivingfiles carry. Exactpriorcompletion1791353471340 gives71,508,287ms carry; currenttaskstart1791379126859, excludeONLY25,655,519ms provenhumanidle; EVERYcurrentcostcounts, deadline19:26:58.572Z/reserve1860000ms. Allruntime/gameplay/privacy/capacitybounds unchanged. Noactiveentry/reader/sourcehold; checkedexistingPlan16 additive research/plan/source/review-fix/validate/verify BEFORE MAINfreshdata/independentreview/newcommittedallocation/uniqueentry/SAMEPROCESScapacity. Oldacceptedv9-2diagnostic/failedbaseline52980+uniquechecks immutable; nooldreuse/retry/refund/recredit. Phase265/LEAG/266freeze/formation/holdout/public/counting/production remain gated. Earlierparagraphshistory.
 

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "lean-twenty-six-diagnostic-metadata-v1",
+  "authorizing": false,
+  "mode": "v10-1",
+  "sourceRoot": "sha256:26c1befe2d2e214f8b1b50adc30292d4a9f4cede72e8fc3d6e8499a652161ab1",
+  "authorAgent": "/root",
+  "canonicalPath": ".strategy-lab/lean-correction-supervisor-diagnostic-request-20261007-v10-1.json",
+  "bytesRoot": "sha256:408e5f95cbd539a64fd4aa8208630149e4c091acfa1bd5b2b6546d55f1cadb9c",
+  "requestDataRoot": "sha256:bd09d6ca0a351fb4f7b1a10e71b7e4c7cdbc0b765dd5f7672551fbd60e72903b",
+  "plannedCells": 1
+}

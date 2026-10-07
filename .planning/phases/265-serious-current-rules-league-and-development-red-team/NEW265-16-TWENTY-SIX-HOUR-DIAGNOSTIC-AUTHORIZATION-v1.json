@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "lean-twenty-six-diagnostic-metadata-v1",
+  "authorizing": false,
+  "mode": "v10-1",
+  "sourceRoot": "sha256:26c1befe2d2e214f8b1b50adc30292d4a9f4cede72e8fc3d6e8499a652161ab1",
+  "authorAgent": "/root",
+  "canonicalPath": ".strategy-lab/lean-retry-authorization-diagnostic-v10-1.json",
+  "bytesRoot": "sha256:53cc7957256e892f60bb6aa56fbebe776acea0232371441510f23e13c8d8c79c",
+  "authorizationRoot": "sha256:26008a3b464af5bbcc9a0ddeac17e61629607c293188877c133841fe5e7105eb",
+  "reviewerAgent": "/root/review_265_twenty_six_data",
+  "scope": "canonical operational authorization only; this wrapper is not authority"
+}

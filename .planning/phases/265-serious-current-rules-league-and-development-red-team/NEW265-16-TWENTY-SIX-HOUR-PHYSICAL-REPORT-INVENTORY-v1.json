@@ -68,29 +68,84 @@
       "bytes": 16520,
       "allocatedBytes": 20480,
       "bytesRoot": "sha256:596a9b8d560dbc5a3dceb183cb27cc56b6bef237276a320b343e165958466d47"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DATA-REVIEW-v1.md",
+      "bytes": 7027,
+      "allocatedBytes": 8192,
+      "bytesRoot": "sha256:c0b0dd1aca448443432900a75e7c1f55dc2cb5b8e23893974bbe089044410746"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-HELPER-REVIEW-v1.md",
+      "bytes": 5671,
+      "allocatedBytes": 8192,
+      "bytesRoot": "sha256:d16065460c7efd1d92be8c8aa3d86b4926f590b2679d03ea3989ebf471659c66"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-PREPARATION-v1.md",
+      "bytes": 1602,
+      "allocatedBytes": 4096,
+      "bytesRoot": "sha256:515582bd07a80253351171fc10adae7e0f9618ce2f4449ae5b87a87bf0c53a53"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-EMPIRICAL-RESULT-v1.md",
+      "bytes": 1986,
+      "allocatedBytes": 4096,
+      "bytesRoot": "sha256:759053dfd87b3b939387331421ec9e5e96844f73ca8b4265f8453bbfec08bb61"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-TERMINAL-VERIFICATION-v1.md",
+      "bytes": 4072,
+      "allocatedBytes": 4096,
+      "bytesRoot": "sha256:3b2d96c6825e323f748187c071a02bdb6ef3dc5f97126eca775a3ee27fc696ef"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-SUMMARY-v1.md",
+      "bytes": 2188,
+      "allocatedBytes": 4096,
+      "bytesRoot": "sha256:2ee7d4c657b08141e6c4a28d863a79c1c71aa1e184fa97ff1c433d0f4667fbd8"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-ALLOCATION-v1.json",
+      "bytes": 378,
+      "allocatedBytes": 4096,
+      "bytesRoot": "sha256:9b55f78b13a0f435c52809c0980242df6e9d18545ca192e30a3fe3eb8847be0b"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DIAGNOSTIC-REQUEST-v1.json",
+      "bytes": 533,
+      "allocatedBytes": 4096,
+      "bytesRoot": "sha256:a841db86961efa2105f4c11b3b899308f141e0fae973295a7ccd127bf96aac0e"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DIAGNOSTIC-SETUP-v1.json",
+      "bytes": 575,
+      "allocatedBytes": 4096,
+      "bytesRoot": "sha256:3f8b2ce602ca050b0075e774b80c651dd2317803d095070d870d9b3c0e1c64b5"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DIAGNOSTIC-CONTINUATION-v1.json",
+      "bytes": 439,
+      "allocatedBytes": 4096,
+      "bytesRoot": "sha256:92699f01241b5fcf5a8058ef1758a6525a72f4b93d8c0cc59f1d53221e192e01"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DIAGNOSTIC-AUTHORIZATION-v1.json",
+      "bytes": 636,
+      "allocatedBytes": 4096,
+      "bytesRoot": "sha256:6123b990f011dbd17ca5090bdb04a4b5064d596c3c887fdff4b58fc528a9f2e4"
     }
   ],
   "pending": [
-    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DATA-REVIEW-v1.md",
-    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-HELPER-REVIEW-v1.md",
-    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-PREPARATION-v1.md",
-    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-EMPIRICAL-RESULT-v1.md",
-    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-TERMINAL-VERIFICATION-v1.md",
-    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-SUMMARY-v1.md",
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-DATA-REVIEW-v1.md",
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-HELPER-REVIEW-v1.md",
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-PREPARATION-v1.md",
-    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-ALLOCATION-v1.json",
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-ALLOCATION-v1.json",
-    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DIAGNOSTIC-REQUEST-v1.json",
-    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DIAGNOSTIC-SETUP-v1.json",
-    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DIAGNOSTIC-CONTINUATION-v1.json",
-    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DIAGNOSTIC-AUTHORIZATION-v1.json",
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-REQUEST-v1.json",
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-SETUP-v1.json",
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-CONTINUATION-v1.json",
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-AUTHORIZATION-v1.json"
   ],
-  "allocatedBytes": 151552,
+  "allocatedBytes": 204800,
   "selfCustody": "direct-canonical-allocation-block-debit-not-self-digest"
 }
