@@ -84,7 +84,7 @@ The inert complete-lifecycle fixture injects the authenticated historical-predec
 
 Only five existing source/test files changed across the four commits. Consumed old v10 constants and artifacts, unrelated old recovery markers/locks, ordinary historical-reader behavior, private payloads, provider/runtime behavior, allocations, and gameplay remain untouched. No helper, Match, provider request, actual empirical admission, live verifier, or old ordinary-reader replay was performed.
 
-The continuous clock remains rooted at **2026-10-07T21:43:30.738Z** (`1791409410738`), with the old **93,600,000 ms** debit plus all elapsed time since that instant, the **108,000,000 ms** cap, and expiry **2026-10-08T01:43:30.738Z**. Source, test, and administrative work consume that same clock; there is no reset or refund. The **15 GB**, **300 Match**, **32 historical charge**, **1,860,000-byte reserve**, and route/runtime bounds remain unchanged.
+The continuous clock remains rooted at **2026-10-07T21:43:30.738Z** (`1791409410738`), with the old **93,600,000 ms** debit plus all elapsed time since that instant, the **108,000,000 ms** cap, and expiry **2026-10-08T01:43:30.738Z**. Source, test, and administrative work consume that same clock; there is no reset or refund. The **15 GB**, **300 Match**, **32 historical charge**, **1,860,000-ms reserve**, and route/runtime bounds remain unchanged.
 
 Independent fixed-source re-review and verification are still required before any fresh empirical/helper/data gates. This report grants no Phase completion, league credit, or old-store custody certification.
 

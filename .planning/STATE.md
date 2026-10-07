@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Two-pair source fixes under re-review; baseline-refusal historical-lineage variant remains open
+stopped_at: Two-pair source review clean; scoped validation and source verification next
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Research/check/implementation and four fixes committed; bounded CR-05 baseline-lineage correction next
+last_activity_desc: All two-pair source findings independently closed; no empirical pair consumed
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CLEAN TWO-PAIR SOURCE FRONTIER (2026-10-07): Independently clean REVIEW-v4 closes CR01-04 and both CR05 variants at ec44e434/source sha256:da8d54020c36e0008a0800ac5c87e7fe790757cc364b12bb4b0405f61a841945/910. Exact Markdown SOURCE-REVIEW-v2 retains genuine reviewer identity and reviewed source binding. Scoped MAIN validation/source verification next, then fresh actual request/data/helper review and new committed allocation/SAMEPROCESS capacity gates. No empirical pair/helper/allocation/entry/verifier/hold; pairs0/2. Continuous deadline2026-10-08T01:43:30.738Z, fullold93600000+allnewwalltime under108000000, reserve1860000ms, same15GB300/32charges/allbounds. No Phase265/LEAG/freeze/formation/holdout/public/counting/production success. Earlier review frontiers below are historical, not remaining open findings.
 
 CURRENT TWO-PAIR SOURCE REVIEW/FIX CONTINUATION (2026-10-07): Research/checked existingPlan16supplement CLOSED; sourceRED e642b19a/GREEN94164868. IndependentREVIEW-v1 found4blockers; atomic78645d38/6e5ebf3c/f269f027/e025739a fix predecessor schema/no-refund accounting/authentic refusal custody/final sourceHEADrequesthold. REVIEW-v2 CR05 diagnostic-refusal→pair2marker guard repaired956523dd; real guard regression81pass9historicalskips/buildshellPASS inisolation, same6 inherited stricttransitiveerrors. REVIEW-v3 finds remaining baseline-refusal accepted-diagnostic-lineage variant ofCR05; source NOTclean/verified/admitted. Bounded existingseam correction and independentre-review next, no newnumberedplan/humanliteral. Source956523dd/root4e2c06d1/910; no empiricalentry/verifier/sourceHEADhold. TWOapprovedpairs remain0/2, no newactualallocation/Match/provider/helper. Exactcontinuousstart1791409410738/deadline2026-10-08T01:43:30.738Z unchanged; FULLold93600000 +ALLnewwalltime under108000000, SAME15GB30032chargesfilescostreserve1860000allbounds. Do not run live old host-stage fixtures (consumed-path collision); sourcegate historicalisolationlimits disclosed. Alloldconsumed evidence immutable. Source/data/helper/newallocation/SAMEPROCESScapacity gates still precede any freshcharge. Plan16/265/LEAG/freeze/formation/holdout/public/counting/production/archive-success/tag remain gated. Earlierfrontiers are history, not additional authority.
 
