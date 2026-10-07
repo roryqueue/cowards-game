@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Remaining-budget source verified; fresh MAIN diagnostic data admission next
+stopped_at: File-basis repair verified; distinct fresh v9-2 MAIN data admission next
 last_updated: "2026-10-07"
 last_activity: 2026-10-06
 last_activity_desc: Direct approval recorded for three fresh diagnostics and one conditional baseline under unchanged cumulative caps
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT FILE-BASIS REPAIR VERIFIED (2026-10-07): Actualv9-1 MAINfinalization59860 CLOSED1 atrequestauthentication, BEFOREprepare/allocation/store/entry/Match/reader. Immutableauthorobservation andONEindependentterminalverification CLOSED; spentnonauthorizinghistory, nofakeprep/FINAL/retry. Diagnosedrawrows10,698,752plusinheritedreserve4,288,512 yields14,987,264budgetbasisaboveunchanged14,864,384floor; allold287rowsintact. CheckedexistingPlan16sourcecorrection RED2e5c7418/GREENb96c616c/final38694137 independentlySOURCE-REVIEW-v2clean; WR01reportdebitwarninghistoryresolved. MAIN56093 CLOSED0/22focusedPASS/types/diffPASS; independentSOURCE-VERIFICATION-v1 CLOSED3/3/905entryroot664f2da8/extension6b5895ee. Exactfiniteauthorfailureauthreturnsseparatelatercustodyanchor1791349668689/30charges/FINALfalse/noactualreaderfields. Noactualroute/reader/holdactive. MAIN distinctfreshv9-2data/helper+independentreview next; unchanged3diagnostics/ONEconditionalbaseline/72Mms15GB300/allcosts30oldcharges/deadline06:19:23.053Z/reserve1860000. Freeze/formation/holdout/public/counting/production gated. Earlierparagraphshistory.
 
 CURRENT SOURCE GATES CLOSED (2026-10-07): Remaining-budget GREEN301540f8 independently reviewed clean; MAIN145 connected tests and7 lifecycle tests PASS, configuredlabtypes/shell/diff PASS. Independent SOURCE-VERIFICATION-v1 CLOSED4/4; actual905-entry source45218281/extension6b5895ee matchesallthreev9modes. Scoped source proof ONLY, not empirical admission/Phase265 credit. No liveentry/reader/hold. MAIN fresh v9-1 data/helper plus independent review next, then unique prepare/newallocation committedbeforeuniqueMAINentry/SAMEPROCESScapacity. SAME approved3diagnostics+ONEconditional36baseline,72Mms15GB300/30oldcharges, currentcarry64,594,435+now−1791346557488, deadline06:19:23.053Z and1,860,000msreserve unchanged. Allhistoryimmutable; freeze/formation/holdout/public/counting/production gated. Earlierparagraphshistorical.
 
