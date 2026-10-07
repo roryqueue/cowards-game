@@ -20,6 +20,58 @@ const input = (route: "diagnostic" | "baseline" = "diagnostic", ordinal: 1 | 2 |
 }
 const custody = () => ({ allocationRoot: binding().baselineAllocationRoot, sourceRoot: binding().baselineSourceRoot, head: binding().baselineHead, rawRoots: binding().baselineRawRoots, charged: 30, currentCharges: 0, currentTerminals: 0, active: false, resultExists: false, checkExists: false, terminalStatus: "child_failed", exitCode: null, signal: "SIGKILL", closedIntervals: ["correction-preparation", "pilot-entry", "correction-run-finalization"], intervalTimes: [1791330138520, 1791330177618, 1791330177618, 1791330306049, 1791330306049, 1791330306250] })
 
+const reviewDirectory = ".planning/phases/265-serious-current-rules-league-and-development-red-team/"
+const historicalReviews = [
+  { identity: `${reviewDirectory}NEW265-16-TWENTY-HOUR-BASELINE-DATA-REVIEW-v1.md`, allocatedBytes: 4096 },
+  { identity: `${reviewDirectory}NEW265-16-TWENTY-HOUR-DIAGNOSTIC-1-DATA-REVIEW-v1.md`, allocatedBytes: 8192 },
+  { identity: `${reviewDirectory}NEW265-16-TWENTY-HOUR-REVIEW-v1.md`, allocatedBytes: 8192 },
+]
+const survivorInput = (patch: Partial<lean.LeanCorrectionPredecessor> = {}) => {
+  const base = input(), { root: _root, ...p } = base.predecessor
+  // Inert identities: reproduce the observed367-row/14864384-byte envelope,
+  // not a claim that the historical private store was reconstructed or read.
+  const survivors = [...Array.from({ length: 364 }, (_, i) => ({ identity: `.strategy-lab/inert-path-survivor-${i}`, allocatedBytes: i === 0 ? 13_357_056 : 4096 })), ...historicalReviews.map(row => ({ ...row }))]
+  const body = { ...p, elapsedUpperBoundMs: 63_896_581, allocatedDiskBytes: 14_864_384, survivors, ...patch }
+  return { ...base, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
+}
+describe("exact bookkeeping historical review survivor paths", () => {
+  it("real v8 constructor and admission retain every original row/root/counter and full debit", () => {
+    const f = survivorInput(), a = lean.createLeanSupervisorCorrectionAllocation(f, 8)
+    expect(a.predecessor).toEqual(f.predecessor)
+    expect(a.predecessor.survivors).toHaveLength(367)
+    expect(a.predecessor).toMatchObject({ chargedMatches: 30, elapsedUpperBoundMs: 63_896_581, allocatedDiskBytes: 14_864_384 })
+    expect(a.predecessor.survivors.reduce((sum, row) => sum + row.allocatedBytes, 0)).toBe(14_864_384)
+    for (const row of historicalReviews) expect(a.predecessor.survivors).toContainEqual(row)
+    expect(lean.admitLeanAllocation(a)).toEqual(a)
+    expect(lean.leanCapsForAllocation(lean.admitLeanAllocation(a))).toEqual(lean.LEAN_RETRY_V8_TIMEBOX_CAPS)
+  })
+  it("legacy v7 and old v8 bindings keep rejecting phase review paths", () => {
+    const f = survivorInput(), { attemptOrdinal: _ordinal, priorClosureRoot: _prior, continuationRoot: _continuation, acceptedReaderCloseRoot: _close, timeboxExtension: _extension, ...common } = f
+    const { root: _root, ...prior } = f.predecessor
+    const p7 = { ...prior, chargedMatches: 28, elapsedUpperBoundMs: 49_150_573 }
+    expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...common, planRoot: lean.LEAN_REPLAY_V7_SUPPLEMENT_ROOT, supervisorDecisionRoot: lean.LEAN_REPLAY_V7_APPROVAL_ROOT, predecessor: { ...p7, root: labRoot(p7.schemaVersion, p7) } }, 7)).toThrow("SUPERVISOR_PREDECESSOR")
+    const p8 = { ...prior, chargedMatches: 29, elapsedUpperBoundMs: 56_000_917 }
+    expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...f, attemptOrdinal: 1, priorClosureRoot: null, continuationRoot: null, timeboxExtension: lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION, predecessor: { ...p8, root: labRoot(p8.schemaVersion, p8) } }, 8)).toThrow("SUPERVISOR_PREDECESSOR")
+  })
+  it.each([
+    { identity: `${reviewDirectory}UNRELATED-review.md`, allocatedBytes: 4096 },
+    { identity: `${reviewDirectory}../NEW265-16-TWENTY-HOUR-REVIEW-v1.md`, allocatedBytes: 8192 },
+    { identity: historicalReviews[0]!.identity, allocatedBytes: -1 },
+    { identity: historicalReviews[0]!.identity, allocatedBytes: 1.5 },
+    { identity: historicalReviews[0]!.identity, allocatedBytes: Number.MAX_SAFE_INTEGER + 1 },
+    { identity: historicalReviews[0]!.identity, allocatedBytes: 4096, extra: true },
+    { identity: 17, allocatedBytes: 4096 },
+  ])("refuses unapproved or malformed original row %j before filtering", row => {
+    const f = survivorInput(), survivors = [...f.predecessor.survivors.slice(0, -3), row, ...historicalReviews.slice(1)]
+    expect(() => lean.createLeanSupervisorCorrectionAllocation(survivorInput({ survivors } as never), 8)).toThrow()
+  })
+  it("refuses duplicate reviews and aggregate hidden review bytes over the full budget", () => {
+    const f = survivorInput()
+    expect(() => lean.createLeanSupervisorCorrectionAllocation(survivorInput({ survivors: [...f.predecessor.survivors, historicalReviews[0]!] }), 8)).toThrow()
+    expect(() => lean.createLeanSupervisorCorrectionAllocation(survivorInput({ allocatedDiskBytes: 14_864_383 }), 8)).toThrow()
+  })
+})
+
 describe("exact prospective bookkeeping continuation", () => {
   it("admits only the new exact binding and preserves the old singleton", () => {
     const old = lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION
