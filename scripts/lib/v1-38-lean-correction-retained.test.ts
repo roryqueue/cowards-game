@@ -475,3 +475,20 @@ describe("synthetic complete retained correction (no empirical credit)", () => {
     }
   }, 60000)
 })
+import * as twoPairCustody from "./v1-38-lean-correction-retained.js"
+import * as twoPairAccounting from "../../packages/strategy-lab/src/league/lean-experiment.js"
+
+it("v11 terminal carry permits pair2 after every authentic closed pair1 outcome without inventing heads", () => {
+  const r = (n: number) => `sha256:${String(n).padStart(64, "0")}` as const
+  for (const outcome of ["refused_before_entry", "entered_without_result", "failed_result", "closed_result"] as const) {
+    const entered = outcome !== "refused_before_entry", result = outcome === "failed_result" || outcome === "closed_result"
+    const body = { schemaVersion: "lean-two-pair-terminal-carry-v11", timeboxExtension: twoPairAccounting.LEAN_TWO_PAIR_V11_EXTENSION ?? { schemaVersion: "missing-v11-production-binding" }, authorizing: false, accepted: false, attemptOrdinal: 1, route: "diagnostic", outcome, sourceRoot: r(1), requestBytesRoot: r(2), allocationRoot: entered ? r(3) : null, entryHead: entered ? "a".repeat(40) : null, entryBytesRoot: entered ? r(4) : null, terminalBytesRoot: entered ? r(5) : null, resultBytesRoot: result ? r(6) : null, verificationRoot: r(7), verificationBytesRoot: r(8), closureRoot: r(9), closedAtMs: 1791409410738 + 1000, cumulativeElapsedMs: 93601000, currentCharges: entered ? 1 : 0, cumulativeCharged: entered ? 33 : 32, allocatedDiskBytes: 17272832, survivors: [{ identity: ".strategy-lab/synthetic-old", allocatedBytes: 4096 }] }
+    const record = { ...body, root: labRoot(body.schemaVersion, body) }
+    expect(twoPairCustody.validateLeanTwoPairTerminalCarryV11(record, "v11-1", "diagnostic")).toEqual(record)
+    for (const change of [{ attemptOrdinal: 3 }, { authorizing: true }, { cumulativeCharged: 0 }, { cumulativeElapsedMs: 1 }, { resultBytesRoot: entered ? null : r(99), entryHead: entered ? null : "a".repeat(40) }]) {
+      const changed = { ...body, ...change }
+      expect(() => twoPairCustody.validateLeanTwoPairTerminalCarryV11({ ...changed, root: labRoot(body.schemaVersion, changed) }, "v11-1", "diagnostic")).toThrow()
+    }
+    expect(() => twoPairCustody.validateLeanTwoPairTerminalCarryV11(record, "v11-2", "diagnostic")).toThrow()
+  }
+})

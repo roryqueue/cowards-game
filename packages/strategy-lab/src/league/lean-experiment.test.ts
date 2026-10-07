@@ -9,6 +9,30 @@ import { beginLeanInterval, closeLeanInterval, readLeanTimeAccounting, LEAN_CAPS
 import { assertLeanPublicationCapacity } from "./lean-experiment.js"
 import { LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES, LEAN_FRESH_SUPERVISOR_ROUTES, leanCorrectionRoutePaths } from "./lean-experiment.js"
 import { writeLeanAll, createLeanAllocation, chargeLeanSlot, createLeanLedger, retainLeanMatch, verifyLeanEvidence, chooseLeanTier, encodeLeanReplay, decodeLeanReplay, leanSchedule, readLeanLedger } from "./lean-experiment.js"
+import * as twoPair from "./lean-experiment.js"
+
+it("v11 pins two fresh pairs and exact uninterrupted thirty-hour accounting without altering v10", () => {
+  const b = twoPair.LEAN_TWO_PAIR_V11_EXTENSION
+  expect(b).toMatchObject({ schemaVersion: "lean-two-pair-envelope-v11", priorElapsedMs: 93600000, startedAtMs: 1791409410738, elapsedMs: 108000000, charged: 32, excludedIdleMs: 0, maximumDiagnostics: 2, maximumBaselines: 2, reserveMs: 1860000 })
+  expect(twoPair.LEAN_TWO_PAIR_V11_CAPS).toEqual({ ...LEAN_CAPS, elapsedMs: 108000000 })
+  expect(twoPair.leanRetryRootElapsedFloorV8(b.startedAtMs + 12345, b)).toBe(93612345)
+  expect(twoPair.leanRetryRootElapsedFloorV8(b.startedAtMs + 14400000, b)).toBe(108000000)
+  for (const mutation of [{ priorElapsedMs: 0 }, { elapsedMs: 108000001 }, { excludedIdleMs: 1 }, { startedAtMs: b.startedAtMs + 1 }, { charged: 31 }]) expect(() => twoPair.admitLeanRetryTimeboxExtension({ ...b, ...mutation })).toThrow()
+  expect(twoPair.LEAN_TWENTY_SIX_V10_EXTENSION).toMatchObject({ priorElapsedMs: 71508287, elapsedMs: 93600000, charged: 31, maximumDiagnostics: 1 })
+  const destinations: string[] = []
+  for (const mode of ["v11-1", "v11-2"] as const) {
+    expect(twoPair.isLeanTwoPairMode(mode)).toBe(true)
+    expect(twoPair.leanProspectiveBudgetBinding(mode)).toBe(b)
+    for (const route of ["diagnostic", "baseline"] as const) {
+      const paths = twoPair.leanCorrectionRoutePaths(route, mode)
+      for (const key of ["store", "request", "allocation", "temp", "check"] as const) { expect(paths[key]).toContain(mode); destinations.push(paths[key]) }
+      expect(paths).not.toEqual(twoPair.leanCorrectionRoutePaths(route, "v10-1"))
+    }
+    destinations.push(twoPair.leanRetrySetupPath(mode))
+  }
+  expect(new Set(destinations).size).toBe(destinations.length)
+  for (const invalid of ["v11-0", "v11-3", "v11-12", "v10-2"]) { expect(twoPair.isLeanTwoPairMode(invalid)).toBe(false); expect(twoPair.isLeanRetryMode(invalid)).toBe(false) }
+})
 
 const dirs: string[] = []
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }) })

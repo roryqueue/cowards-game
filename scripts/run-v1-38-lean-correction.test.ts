@@ -11,6 +11,28 @@ import { LEAN_CORRECTION_ROUTES, inventoryLeanSupervisorSurvivors, admitsLeanSup
 import { deriveLeanBaselineCandidateRoots, waitLeanBoundedChildReady } from "./run-v1-38-lean-baseline.js"
 import { LEAN_COLD_REUSE_HISTORY } from "./lib/v1-38-lean-baseline-reuse.js"
 import * as correction from "./run-v1-38-lean-correction.js"
+import * as retainedTwoPair from "./lib/v1-38-lean-correction-retained.js"
+
+describe("v11 additive two-pair concrete public seams", () => {
+  it("accepts every fixed v11 CLI route and rejects ordinal3 and cross-pair request paths", () => {
+    for (const mode of ["v11-1", "v11-2"] as const) for (const route of ["diagnostic", "baseline"] as const) {
+      const docs = correction.leanTwoPairDocumentsV11(route, mode), paths = accounting.leanCorrectionRoutePaths(route, mode)
+      expect(docs.authorization).toContain(`${route}-${mode}`)
+      expect(docs.continuation).toContain(mode)
+      expect(docs.dataReview).toContain(`${route.toUpperCase()}-${mode.toUpperCase()}`)
+      for (const verb of ["prepare", "run", "verify", "verify-terminal"]) {
+        const command = `${verb}-supervisor-${route}-${mode}`
+        expect(correction.parseLeanCorrectionCommand([command, "--request", paths.request]).supervisor).toBe(mode)
+        expect(() => correction.parseLeanCorrectionCommand([command, "--request", accounting.leanCorrectionRoutePaths(route, mode === "v11-1" ? "v11-2" : "v11-1").request])).toThrow()
+      }
+      expect(correction.leanCorrectionChildSupervisor(`child-supervisor-${route}-${mode}`)).toBe(mode)
+    }
+    expect(() => correction.parseLeanCorrectionCommand(["run-supervisor-diagnostic-v11-3", "--request", "unused"])).toThrow()
+    expect(correction.leanCorrectionChildSupervisor("child-supervisor-diagnostic-v11-3")).toBe(false)
+    for (const name of ["readLeanTwoPairRequestV11", "inspectLeanTwoPairPredecessorV11", "authenticateLeanTwoPairAcceptedJoinV11"]) expect(typeof correction[name as keyof typeof correction]).toBe("function")
+    for (const name of ["authenticateLeanTwoPairHistoricalCustodyV11", "authenticateLeanTwoPairClosedOutcomeV11", "verifyLeanTwoPairTerminalOnlyV11"]) expect(typeof retainedTwoPair[name as keyof typeof retainedTwoPair]).toBe("function")
+  })
+})
 
 describe("private v3 verifier finite trusted diagnostics", () => {
   it("projects only branded static guard codes for the exact private v3 verify commands", () => {
