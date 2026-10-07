@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Four-hour extension approved; checked prospective two-pair supplement in progress
+stopped_at: Two-pair source fixes under re-review; baseline-refusal historical-lineage variant remains open
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Exact MAIN start bound; old26h fully carried into new30h cap; research/checked supplement next
+last_activity_desc: Research/check/implementation and four fixes committed; bounded CR-05 baseline-lineage correction next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT TWO-PAIR SOURCE REVIEW/FIX CONTINUATION (2026-10-07): Research/checked existingPlan16supplement CLOSED; sourceRED e642b19a/GREEN94164868. IndependentREVIEW-v1 found4blockers; atomic78645d38/6e5ebf3c/f269f027/e025739a fix predecessor schema/no-refund accounting/authentic refusal custody/final sourceHEADrequesthold. REVIEW-v2 CR05 diagnostic-refusal→pair2marker guard repaired956523dd; real guard regression81pass9historicalskips/buildshellPASS inisolation, same6 inherited stricttransitiveerrors. REVIEW-v3 finds remaining baseline-refusal accepted-diagnostic-lineage variant ofCR05; source NOTclean/verified/admitted. Bounded existingseam correction and independentre-review next, no newnumberedplan/humanliteral. Source956523dd/root4e2c06d1/910; no empiricalentry/verifier/sourceHEADhold. TWOapprovedpairs remain0/2, no newactualallocation/Match/provider/helper. Exactcontinuousstart1791409410738/deadline2026-10-08T01:43:30.738Z unchanged; FULLold93600000 +ALLnewwalltime under108000000, SAME15GB30032chargesfilescostreserve1860000allbounds. Do not run live old host-stage fixtures (consumed-path collision); sourcegate historicalisolationlimits disclosed. Alloldconsumed evidence immutable. Source/data/helper/newallocation/SAMEPROCESScapacity gates still precede any freshcharge. Plan16/265/LEAG/freeze/formation/holdout/public/counting/production/archive-success/tag remain gated. Earlierfrontiers are history, not additional authority.
 
 CURRENT TWO-PAIR TIME EXTENSION APPROVED (2026-10-07): Direct human `yes, approved` recorded in265-16-TWO-PAIR-TIME-APPROVAL-20261007.md. ActualMAINtask01a11852 start1791409410738/21:43:30.738Z bound by local-journal rawf9fc537e; conservatively debitFULLold93600000ms and countALLnewwalltime under108000000ms cumulativecap, deadline2026-10-08T01:43:30.738Z. No clock restart/idle exclusion/refund/reset/recredit. TWOdistinctfresh private diagnostic/conditional36baseline pairs remain0/2, no repeat per-pair approval; existing Plan16 checked additive prospective plumbing required before any allocation. SAME15GB300/all32charges/allcosts/files/reserve1860000/guest1000/host5000/startup2500/Match600000/scratch2GB/allotherbounds. No activeentry/verifier/sourceHEADhold observed; oldsource0055ed48 and all consumed evidence immutable. Research→checked supplement→source execution/review-fix/validation/verification precede freshactualMAINdata/helperreview/newcommittedallocation/uniqueentry/SAMEPROCESScapacity. Only NEWaccepteddiagnostic+actualFINAL permits pairedbaseline; insufficienttime or two unsuccessfulpairs ends honestly. Phase265/LEAG/freeze/formation/holdout/public/counting/production/archive-success/tag remain gated. Earlier paragraphs are history, superseded only as stated.
 
