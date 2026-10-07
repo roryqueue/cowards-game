@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
+import { LEAN_TWO_PAIR_V11_EXTENSION } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCurrentBaselineAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanColdProcedureRoot, compactLeanBaselineCell, executeLeanCurrentPipeline, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
@@ -10,6 +12,16 @@ import { LEAN_BASELINE_REQUIRED_METRICS, type LeanBaselineMetricReceipt } from "
 
 const root = (name: string): LabRoot => labRoot("lean-retained-test-v1", name)
 describe("selected retry baseline authority owner", () => {
+  it("v11 source publication authority uses one audited closure and rejects cross-pair FINAL", () => {
+    const b = LEAN_TWO_PAIR_V11_EXTENSION, check = { root: root("v11-check"), allocationRoot: root("v11-diag"), readerCloseMs: b.startedAtMs + 1 }
+    const closure = { timeboxExtension: b, attemptOrdinal: 1, closureClass: "accepted", checkRoot: check.root, allocationRoot: check.allocationRoot, root: root("v11-FINAL"), readerCloseMs: check.readerCloseMs, finalReaderClose: true, acceptedCheckAbsent: false, sourceRoot: root("v11-source"), head: "a".repeat(40) }
+    const allocation = { timeboxExtension: b, schemaVersion: "lean-correction-supervisor-baseline-allocation-v8", attemptOrdinal: 1, acceptedCheckRoot: check.root, acceptedReaderCloseRoot: closure.root, sourceRoot: closure.sourceRoot } as Parameters<typeof assertLeanRetryBaselineJoinV8>[0]
+    expect(() => assertLeanRetryBaselineJoinV8(allocation, check, closure, "b".repeat(40))).not.toThrow()
+    for (const change of [{ attemptOrdinal: 2 }, { timeboxExtension: { ...b, startedAtMs: b.startedAtMs + 1 } }, { finalReaderClose: false }, { checkRoot: root("other-pair") }]) expect(() => assertLeanRetryBaselineJoinV8(allocation, check, { ...closure, ...change } as never, "b".repeat(40))).toThrow()
+    const source = readFileSync("scripts/lib/v1-38-lean-baseline-retained.ts", "utf8")
+    expect(source).toContain("isLeanTwoPairMode(mode) ? authenticateLeanTwoPairAcceptedJoinV11(mode)")
+    expect(source).toContain("assertLeanRetryBaselineJoinV8(allocation, check, closure, head)")
+  })
   it("refuses a caller-selected path before opening a store", async () => {
     await expect(verifyLeanRetryBaselineRetainedV8("caller-selected.json", "v8-1")).rejects.toThrow("RETRY_ACCEPTED_FINAL_JOIN")
   })

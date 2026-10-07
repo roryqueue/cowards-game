@@ -14,6 +14,59 @@ import * as correction from "./run-v1-38-lean-correction.js"
 import * as retainedTwoPair from "./lib/v1-38-lean-correction-retained.js"
 
 describe("v11 additive two-pair concrete public seams", () => {
+  it("keeps sealed v11 preparation stable across charged report growth only", () => {
+    const fixture = correctionAllocationFixture().predecessor, report = accounting.LEAN_TWO_PAIR_V11_REPORT_PATHS[0]!
+    const seal = (body: Omit<typeof fixture, "root">) => ({ ...body, root: labRoot(body.schemaVersion, body) })
+    const { root: _root, ...body } = fixture
+    const prepared = seal({ ...body, survivors: [...body.survivors, { identity: report, allocatedBytes: 4096 }], allocatedDiskBytes: body.allocatedDiskBytes + 4096 })
+    const inspected = seal({ ...body, survivors: [...body.survivors, { identity: report, allocatedBytes: 8192 }, { identity: accounting.LEAN_TWO_PAIR_V11_REPORT_PATHS[1]!, allocatedBytes: 4096 }], allocatedDiskBytes: body.allocatedDiskBytes + 12288 })
+    expect(() => correction.assertLeanPreparedTwoPairPredecessorV11(prepared, inspected)).not.toThrow()
+    expect(() => correction.assertLeanPreparedTwoPairPredecessorV11(prepared, seal({ ...body, survivors: [...body.survivors, { identity: report, allocatedBytes: 0 }], allocatedDiskBytes: prepared.allocatedDiskBytes }))).toThrow()
+    expect(() => correction.assertLeanPreparedTwoPairPredecessorV11(prepared, seal({ ...inspected, chargedMatches: body.chargedMatches + 1 }))).toThrow()
+    expect(() => correction.assertLeanPreparedTwoPairPredecessorV11(prepared, seal({ ...inspected, survivors: [...inspected.survivors, { identity: ".strategy-lab/unapproved-growth", allocatedBytes: 4096 }] }))).toThrow()
+  })
+  it("audits one actual accepted closure per consumer call, never a second full check or cached closure", () => {
+    const r = (n: number) => labRoot("v11-synthetic-accepted", n), b = accounting.LEAN_TWO_PAIR_V11_EXTENSION
+    const closure = { timeboxExtension: b, attemptOrdinal: 1, closureClass: "accepted", finalReaderClose: true, acceptedCheckAbsent: false, resultAbsent: false, currentCharges: 1, cumulativeCharged: 33, checkRoot: r(1), checkBytesRoot: r(2), allocationRoot: r(3), sourceRoot: r(4), requestBytesRoot: r(5), head: "a".repeat(40), readerCloseMs: b.startedAtMs + 10, root: r(6) }
+    const audit = vi.spyOn(retainedTwoPair, "authenticateLeanRetryClosureV8").mockReturnValue(closure as never), duplicate = vi.spyOn(retainedTwoPair, "authenticateLeanSupervisorDiagnosticCheck").mockImplementation(() => { throw new Error("DUPLICATE_AUDIT") })
+    try {
+      expect(correction.authenticateLeanTwoPairAcceptedJoinV11("v11-1").accepted).toMatchObject({ root: closure.checkRoot, allocationRoot: closure.allocationRoot, attemptOrdinal: 1 })
+      expect(audit).toHaveBeenCalledTimes(1); expect(duplicate).not.toHaveBeenCalled()
+      expect(correction.authenticateLeanTwoPairAcceptedJoinV11("v11-1").closure).toBe(closure)
+      expect(audit).toHaveBeenCalledTimes(2)
+      expect(() => correction.authenticateLeanTwoPairAcceptedJoinV11("v11-2")).toThrow()
+      for (const change of [{ finalReaderClose: false }, { closureClass: "absent" }, { checkBytesRoot: null }, { sourceRoot: null }, { timeboxExtension: accounting.LEAN_TWENTY_SIX_V10_EXTENSION }]) {
+        audit.mockReturnValue({ ...closure, ...change } as never)
+        expect(() => correction.authenticateLeanTwoPairAcceptedJoinV11("v11-1")).toThrow()
+      }
+      expect(duplicate).not.toHaveBeenCalled()
+    } finally { audit.mockRestore(); duplicate.mockRestore() }
+  })
+  it("admitted v11 allocations preserve all limits and reject cap resets, cross-pair FINAL and unknown ordinal", () => {
+    const old = correctionAllocationFixture(), r = (n: number) => labRoot("v11-allocation-synthetic", n), b = accounting.LEAN_TWO_PAIR_V11_EXTENSION
+    for (const mode of ["v11-1", "v11-2"] as const) for (const route of ["diagnostic", "baseline"] as const) {
+      const n = accounting.leanRetryOrdinal(mode), pb = { ...old.predecessor, chargedMatches: route === "baseline" ? 33 : 32, elapsedUpperBoundMs: b.priorElapsedMs + 1, allocatedDiskBytes: b.physicalFloorBytes, survivors: Array.from({ length: 517 }, (_, i) => ({ identity: `.strategy-lab/v11-synthetic-old-${i}`, allocatedBytes: 4096 })) }, { root: _p, ...body } = pb
+      const input = { sourceRoot: r(1), reviewRoot: r(2), coldRoot: old.coldRoot, planRoot: b.planRoot, candidateRoots: old.candidateRoots, requestRoots: Array.from({ length: route === "diagnostic" ? 1 : 36 }, (_, i) => r(100 + i)), seed: old.seed, route, reuseGrantRoot: old.reuseGrantRoot, supervisorDecisionRoot: b.approvalRoot, acceptedCheckRoot: route === "baseline" ? r(3) : null, requestBytesRoot: r(4), dataReviewRoot: r(5), setupAccountingRoot: r(6), predecessor: { ...body, root: labRoot(body.schemaVersion, body) }, startupPolicyRoot: accounting.LEAN_STARTUP_POLICY_V5.root, timeboxExtension: b, attemptOrdinal: n, priorClosureRoot: n === 1 ? null : r(7), continuationRoot: n === 1 ? null : r(8), acceptedReaderCloseRoot: route === "baseline" ? r(9) : null }
+      const a = accounting.createLeanSupervisorCorrectionAllocation(input, 8)
+      expect(accounting.leanSupervisorAllocationMode(accounting.admitLeanAllocation(a))).toBe(mode)
+      expect(accounting.leanCapsForAllocation(a)).toEqual(accounting.LEAN_TWO_PAIR_V11_CAPS)
+      expect(a.slots).toHaveLength(route === "diagnostic" ? 1 : 36)
+      expect(accounting.leanWritablePaths(a)).toContain(accounting.leanCorrectionRoutePaths(route, mode).allocation)
+      for (const mutation of [{ attemptOrdinal: 3 as const }, { caps: accounting.LEAN_TWENTY_SIX_V10_CAPS }, { timeboxExtension: { ...b, charged: 0 } }]) expect(() => accounting.admitLeanAllocation({ ...a, ...mutation })).toThrow()
+      const observations = { elapsedMs: b.priorElapsedMs + 1, charged: input.predecessor.chargedMatches, physicalBytes: b.physicalFloorBytes, childRss: 1, parentRss: 1, freeBytes: accounting.LEAN_CAPS.totalBytes, availableMemoryBytes: 2000000000 }
+      expect(() => correction.assertLeanCorrectionResources(observations, a)).not.toThrow()
+      expect(() => correction.assertLeanCorrectionResources({ ...observations, elapsedMs: b.elapsedMs - b.reserveMs }, a)).toThrow()
+    }
+  })
+  it("fresh MAIN drafts and helper reviews have a non-circular data identity and a bounded continuation", () => {
+    const r = (n: number) => labRoot("v11-draft-synthetic", n), input = { sourceRoot: r(1), reviewRoot: r(2), dataReviewRoot: r(3), helperReviewRoot: r(4), setupAccountingRoot: r(5), reuseGrantRoot: r(6), authorizationRoot: r(7), priorClosureRoot: null, continuationRoot: null, acceptedCheckRoot: null, acceptedReaderCloseRoot: null }
+    const draft = correction.createLeanTwoPairRequestDraftV11("v11-1", "diagnostic", input)
+    expect(draft.helperReviewPath).toBe(correction.leanTwoPairDocumentsV11("diagnostic", "v11-1").helperReview)
+    expect(correction.leanCorrectionRequestDataRoot({ ...draft, helperReviewRoot: r(8), dataReviewRoot: r(9), authorizationRoot: r(10) })).toBe(correction.leanCorrectionRequestDataRoot(draft))
+    const continuation = correction.createLeanTwoPairContinuationV11({ priorClosureRoot: r(11), sourceRoot: r(1), reviewRoot: r(2), cumulativeCharged: 32, cumulativeElapsedMs: 93601000, allocatedDiskBytes: 17272832 })
+    expect(continuation).toMatchObject({ attemptOrdinal: 2, cumulativeCharged: 32, priorClosureRoot: r(11) })
+    expect(() => correction.createLeanTwoPairContinuationV11({ ...continuation, cumulativeCharged: 0 } as never)).toThrow()
+  })
   it("accepts every fixed v11 CLI route and rejects ordinal3 and cross-pair request paths", () => {
     for (const mode of ["v11-1", "v11-2"] as const) for (const route of ["diagnostic", "baseline"] as const) {
       const docs = correction.leanTwoPairDocumentsV11(route, mode), paths = accounting.leanCorrectionRoutePaths(route, mode)

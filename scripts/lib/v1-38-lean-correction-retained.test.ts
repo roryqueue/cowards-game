@@ -477,6 +477,41 @@ describe("synthetic complete retained correction (no empirical credit)", () => {
 })
 import * as twoPairCustody from "./v1-38-lean-correction-retained.js"
 import * as twoPairAccounting from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { mkdtempSync as twoPairTemp, realpathSync as twoPairRealpath, rmSync as twoPairRemove } from "node:fs"
+import { tmpdir as twoPairTmpdir } from "node:os"
+import { join as twoPairJoin } from "node:path"
+import { execFileSync as twoPairExec } from "node:child_process"
+
+it("v11 authentic finite refusal carry closes pair1 in an isolated synthetic namespace without old readers", () => {
+  const directory = twoPairRealpath(twoPairTemp(twoPairJoin(twoPairTmpdir(), "lean-v11-refusal-fixture-")))
+  const accountingUrl = new URL("../../packages/strategy-lab/src/league/lean-experiment.ts", import.meta.url).href, retainedUrl = new URL("./v1-38-lean-correction-retained.ts", import.meta.url).href, contractsUrl = new URL("../../packages/strategy-lab/src/contracts.ts", import.meta.url).href
+  const code = `
+    import {mkdirSync,writeFileSync,existsSync,lstatSync} from "node:fs";
+    import {join} from "node:path";
+    import {labRoot} from ${JSON.stringify(contractsUrl)};
+    import {leanCorrectionRoutePaths,LEAN_TWO_PAIR_V11_EXTENSION as b,leanCanonicalBytes,leanBytesRoot} from ${JSON.stringify(accountingUrl)};
+    import {publishLeanTwoPairTerminalCarryV11,authenticateLeanTwoPairClosedOutcomeV11} from ${JSON.stringify(retainedUrl)};
+    const r=n=>labRoot("isolated-v11-refusal",n), p=leanCorrectionRoutePaths("diagnostic","v11-1"), at=b.startedAtMs+1000;
+    mkdirSync(".strategy-lab",{mode:0o700});mkdirSync(p.temp,{mode:0o700});
+    const put=(path,v)=>writeFileSync(path,leanCanonicalBytes(v),{mode:0o600}), rooted=body=>({...body,root:labRoot(body.schemaVersion,body)});
+    const survivors=Array.from({length:517},(_,i)=>{const identity=".strategy-lab/synthetic-survivor-"+i;writeFileSync(identity,"finite synthetic accounting",{mode:0o600});return {identity,allocatedBytes:lstatSync(identity).blocks*512};});
+    const predecessor=rooted({schemaVersion:"lean-correction-predecessor-v1",chargedMatches:32,elapsedUpperBoundMs:93600000,allocatedDiskBytes:17272832,historicalPeakDiskBytes:"unknown",historicalPeakRssBytes:"unknown",historyRoot:r(20),survivors});
+    const request={route:"diagnostic",attemptOrdinal:1,timeboxExtension:b,sourceRoot:r(1)};put(p.request,request);
+    const start=rooted({schemaVersion:"lean-two-pair-terminal-verifier-start-v11",authorizing:false,mode:"v11-1",route:"diagnostic",sourceRoot:r(1),head:"a".repeat(40),wallStartMs:at-10,monotonicStartNs:"1000000"});put(join(p.temp,"terminal-verifier-start-v11.json"),start);
+    const close=rooted({schemaVersion:"lean-two-pair-terminal-verifier-close-v11",startRoot:start.root,closedAtMs:at,monotonicObservedNs:"11000000",elapsedUpperBoundMs:10});put(join(p.temp,"terminal-verifier-close-v11.json"),close);
+    const check=rooted({schemaVersion:"lean-two-pair-terminal-verification-v11",authorizing:false,accepted:false,attemptOrdinal:1,route:"diagnostic",sourceRoot:r(1),requestBytesRoot:leanBytesRoot(leanCanonicalBytes(request)),allocationRoot:null,entryHead:null,entryBytesRoot:null,terminalBytesRoot:null,currentCharges:0,cumulativeCharged:32,predecessor,readerStartRoot:start.root,readerCloseRoot:close.root,closedAtMs:at});put(join(p.temp,"terminal-verification-v11.json"),check);
+    const carry=publishLeanTwoPairTerminalCarryV11("v11-1","diagnostic"), outcome=authenticateLeanTwoPairClosedOutcomeV11("v11-1");
+    if(carry.outcome!=="refused_before_entry"||carry.entryHead!==null||carry.resultBytesRoot!==null||outcome.cumulativeCharged!==32||outcome.baselineCarryRoot!==null)throw new Error("CARRY_INVALID");
+    writeFileSync(join(p.temp,"finite-later-accounting.json"),"later cost",{mode:0o600});
+    if(authenticateLeanTwoPairClosedOutcomeV11("v11-1").root!==outcome.root)throw new Error("UNSTABLE_CONTINUATION");
+    put(join(p.temp,"terminal-verification-v11.json"),{...check,entryHead:"a".repeat(40)});
+    let rejected=false;try{authenticateLeanTwoPairClosedOutcomeV11("v11-1");}catch{rejected=true;}if(!rejected)throw new Error("MUTATION_ACCEPTED");
+    if(existsSync(leanCorrectionRoutePaths("diagnostic","v10-1").store))throw new Error("HISTORICAL_NAMESPACE_OPENED");
+    console.log(JSON.stringify({closed:true,charged:32,current:0,head:null,mutationRejected:rejected}));
+  `
+  try { expect(JSON.parse(twoPairExec(process.execPath, ["--import", import.meta.resolve("tsx"), "--input-type=module", "--eval", code], { cwd: directory, encoding: "utf8", timeout: 30000, maxBuffer: 8192 }))).toEqual({ closed: true, charged: 32, current: 0, head: null, mutationRejected: true }) }
+  finally { twoPairRemove(directory, { recursive: true, force: true }) }
+})
 
 it("v11 terminal carry permits pair2 after every authentic closed pair1 outcome without inventing heads", () => {
   const r = (n: number) => `sha256:${String(n).padStart(64, "0")}` as const
