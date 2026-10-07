@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "lean-twenty-six-physical-report-inventory-v1",
+  "authorizing": false,
+  "sourceRoot": "sha256:26c1befe2d2e214f8b1b50adc30292d4a9f4cede72e8fc3d6e8499a652161ab1",
+  "rows": [
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-APPROVAL-20261007.md",
+      "bytes": 3428,
+      "allocatedBytes": 4096,
+      "bytesRoot": "sha256:cbb5fd944a92b538f4b5762b208fb98568c9dfd225916afebef5778aae24cc5c"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-RESEARCH-v1.md",
+      "bytes": 31798,
+      "allocatedBytes": 32768,
+      "bytesRoot": "sha256:fa3a35b651f94bf940267895b5b0818303b7a632cce4dbd39ace624c71747e7a"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-PLAN-v1.md",
+      "bytes": 29505,
+      "allocatedBytes": 32768,
+      "bytesRoot": "sha256:133e9a027949a2089edecc1b1fea378ad1d074aa75c5836b39e49fbd7cda4d99"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-PLAN-CHECK-v1.md",
+      "bytes": 4505,
+      "allocatedBytes": 8192,
+      "bytesRoot": "sha256:abadef579e690a9fed83d7a95fd8ff70fae3b5bb8a1391b6e75420ec8863f901"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-PLAN-CHECK-v2.md",
+      "bytes": 2303,
+      "allocatedBytes": 4096,
+      "bytesRoot": "sha256:c1d4e63e0308e25105b787f6eb2f049411ad799d940e7cadca4bdcf9cecc59ac"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-SOURCE-REVIEW-v1.md",
+      "bytes": 7404,
+      "allocatedBytes": 8192,
+      "bytesRoot": "sha256:f5bb506e41204a9b30efbe55b1ae1ea409f320eef5a4cc46967a01d376b4da06"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-SOURCE-REVIEW-v2.md",
+      "bytes": 6682,
+      "allocatedBytes": 8192,
+      "bytesRoot": "sha256:e771bb201800b77c6fcee4f5b4bdb1487fa1ed35330c5d8bdbec7554d3454e8a"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-REVIEW-FIX-v1.md",
+      "bytes": 8654,
+      "allocatedBytes": 12288,
+      "bytesRoot": "sha256:e2cf82c5b4094e28cef9ef376719e117ad04482beda30b431e10c25224b4f990"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-SOURCE-SUMMARY-v1.md",
+      "bytes": 12154,
+      "allocatedBytes": 12288,
+      "bytesRoot": "sha256:6c9b31567b19eb02ae444fc273b0acf6a2b844f41ea085829a74b2861638630c"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-VALIDATION-v1.md",
+      "bytes": 4360,
+      "allocatedBytes": 8192,
+      "bytesRoot": "sha256:dda1fd94aa59a70639fd4c3ec2bb02f74aa62acdd2d0c5c5feba94a9b65646a8"
+    }
+  ],
+  "pending": [
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-SOURCE-VERIFICATION-v1.md",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DATA-REVIEW-v1.md",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-HELPER-REVIEW-v1.md",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-PREPARATION-v1.md",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-EMPIRICAL-RESULT-v1.md",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-TERMINAL-VERIFICATION-v1.md",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-SUMMARY-v1.md",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-DATA-REVIEW-v1.md",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-HELPER-REVIEW-v1.md",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-PREPARATION-v1.md",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-ALLOCATION-v1.json",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-ALLOCATION-v1.json",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DIAGNOSTIC-REQUEST-v1.json",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DIAGNOSTIC-SETUP-v1.json",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DIAGNOSTIC-CONTINUATION-v1.json",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DIAGNOSTIC-AUTHORIZATION-v1.json",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-REQUEST-v1.json",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-SETUP-v1.json",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-CONTINUATION-v1.json",
+    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-AUTHORIZATION-v1.json"
+  ],
+  "allocatedBytes": 131072,
+  "selfCustody": "direct-canonical-allocation-block-debit-not-self-digest"
+}
