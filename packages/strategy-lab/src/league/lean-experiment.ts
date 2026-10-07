@@ -871,6 +871,11 @@ export const createLeanSupervisorCorrectionAllocation = (input: LeanCurrentBasel
   return freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 /** Reuse the unchanged schedule validation, never legacy authorization or identity. */
+const bookkeepingReviewSurvivors = new Set([
+  ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-HOUR-BASELINE-DATA-REVIEW-v1.md",
+  ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-HOUR-DIAGNOSTIC-1-DATA-REVIEW-v1.md",
+  ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-HOUR-REVIEW-v1.md",
+])
 const createLeanRetryAllocationV8 = (input: Parameters<typeof createLeanSupervisorCorrectionAllocation>[0]): Readonly<LeanCorrectionAllocation> => {
   const extension = Object.hasOwn(input, "timeboxExtension") ? admitLeanRetryTimeboxExtension(input.timeboxExtension) : undefined
   const caps = extension ? LEAN_RETRY_V8_TIMEBOX_CAPS : LEAN_REPLAY_V7_CAPS
@@ -880,8 +885,22 @@ const createLeanRetryAllocationV8 = (input: Parameters<typeof createLeanSupervis
   const { root: claimedPredecessorRoot, ...predecessorBody } = p
   if (claimedPredecessorRoot !== labRoot(p.schemaVersion, predecessorBody) || !natural(p.chargedMatches) || !natural(p.elapsedUpperBoundMs)) return fail("RETRY_PREDECESSOR")
   if (p.chargedMatches < 29 || p.chargedMatches > 29 + n - (input.route === "diagnostic" ? 1 : 0) || p.elapsedUpperBoundMs < (extension?.priorElapsedMs ?? LEAN_RETRY_V8_CARRY.priorElapsedMs) || (extension ? p.elapsedUpperBoundMs + 1_860_000 >= caps.elapsedMs : p.elapsedUpperBoundMs >= caps.elapsedMs) || (n === 1 ? input.priorClosureRoot !== null || input.continuationRoot !== null : !root(input.priorClosureRoot) || !root(input.continuationRoot)) || (input.route === "diagnostic" ? input.acceptedReaderCloseRoot !== null : !root(input.acceptedReaderCloseRoot))) return fail("RETRY_PREDECESSOR")
+  let scheduleSurvivors = p.survivors
+  if (isLeanBookkeepingContinuationV8(extension)) {
+    // Validate the COMPLETE actual inventory before deriving a schedule-only
+    // legacy compatibility view. Original rows/root/full debit remain below.
+    if (!exactLabKeys(p, ["schemaVersion", "chargedMatches", "elapsedUpperBoundMs", "allocatedDiskBytes", "historicalPeakDiskBytes", "historicalPeakRssBytes", "historyRoot", "survivors", "root"]) || !Array.isArray(p.survivors) || !p.survivors.length || !natural(p.allocatedDiskBytes)) return fail("RETRY_PREDECESSOR")
+    const identities = new Set<string>()
+    let allocated = 0
+    for (const row of p.survivors) {
+      if (!exactLabKeys(row, ["identity", "allocatedBytes"]) || typeof row.identity !== "string" || !(row.identity.startsWith(".strategy-lab/") || row.identity.startsWith(".planning/artifacts/") || bookkeepingReviewSurvivors.has(row.identity)) || row.identity.includes("..") || !natural(row.allocatedBytes) || identities.has(row.identity)) return fail("RETRY_PREDECESSOR")
+      identities.add(row.identity); allocated += row.allocatedBytes
+      if (!natural(allocated) || allocated > p.allocatedDiskBytes) return fail("RETRY_PREDECESSOR")
+    }
+    scheduleSurvivors = p.survivors.filter(row => !bookkeepingReviewSurvivors.has(row.identity))
+  }
   const { attemptOrdinal: _ordinal, priorClosureRoot: _closure, continuationRoot: _continuation, acceptedReaderCloseRoot: _accepted, timeboxExtension: _extension, ...common } = input
-  const schedulePredecessorBody = { ...p, ...(extension ? { elapsedUpperBoundMs: LEAN_RETRY_V8_CARRY.priorElapsedMs } : {}), chargedMatches: input.route === "diagnostic" ? 28 : 29 }
+  const schedulePredecessorBody = { ...p, survivors: scheduleSurvivors, ...(extension ? { elapsedUpperBoundMs: LEAN_RETRY_V8_CARRY.priorElapsedMs } : {}), chargedMatches: input.route === "diagnostic" ? 28 : 29 }
   const { root: _priorRoot, ...scheduleBody } = schedulePredecessorBody
   const schedule = createLeanSupervisorCorrectionAllocation({ ...common, planRoot: LEAN_REPLAY_V7_SUPPLEMENT_ROOT, supervisorDecisionRoot: LEAN_REPLAY_V7_APPROVAL_ROOT, predecessor: { ...scheduleBody, root: labRoot(p.schemaVersion, scheduleBody) } }, 7)
   const { root: _scheduleRoot, ...base } = schedule
