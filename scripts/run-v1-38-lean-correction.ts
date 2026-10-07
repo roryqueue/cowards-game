@@ -440,6 +440,19 @@ export const readLeanRetryRequestV8 = (path: string, route: LeanCorrectionRoute,
   readReview(request.dataReviewPath, request.dataReviewRoot, request.sourceRoot, continuationDiagnosisRoot, leanCorrectionRequestDataRoot(request), mode, extension)
   return { request, reuse }
 }
+/** v10's accepted closure is re-derived and fully audits its persisted check.
+ * Reuse that authenticated metadata instead of repeating the full check audit.
+ * Earlier retry modes deliberately retain their prior dual-authentication path. */
+const authenticateLeanRetryAcceptedJoinV10 = (mode: LeanRetryMode) => {
+  if (mode === "v10-1") {
+    const closure = authenticateLeanRetryClosureV8(mode)
+    if (!same(closure.timeboxExtension, LEAN_TWENTY_SIX_V10_EXTENSION) || closure.attemptOrdinal !== 1 || closure.closureClass !== "accepted" || closure.finalReaderClose !== true || closure.acceptedCheckAbsent !== false || !root(closure.checkRoot) || !root(closure.checkBytesRoot) || !root(closure.allocationRoot) || !root(closure.sourceRoot) || !root(closure.requestBytesRoot) || typeof closure.head !== "string" || !/^[a-f0-9]{40}$/u.test(closure.head) || !Number.isSafeInteger(closure.readerCloseMs)) return fail("ACCEPTED_CHECK")
+    return { accepted: { root: closure.checkRoot, allocationRoot: closure.allocationRoot, readerCloseMs: closure.readerCloseMs }, closure }
+  }
+  const accepted = authenticateLeanSupervisorDiagnosticCheck(mode)
+  const closure = authenticateLeanRetryClosureV8(mode)
+  return { accepted, closure }
+}
 /** v9 keeps its own exact envelope, reports, and continuation identity end-to-end. */
 export const readLeanRemainingRequestV9 = (path: string, route: LeanCorrectionRoute, mode: LeanRetryMode): { request: LeanCorrectionRequest; reuse: LeanColdReuse } => {
   return readLeanRemainingRequestWithPurposeV9(path, route, mode)
@@ -464,7 +477,7 @@ const readLeanRemainingRequestWithPurposeV9 = (path: string, route: LeanCorrecti
   }
   if (route === "diagnostic") { if (request.acceptedCheckRoot !== null || request.acceptedReaderCloseRoot !== null) return fail("ACCEPTED_CHECK") }
   else {
-    const accepted = authenticateLeanSupervisorDiagnosticCheck(mode), closure = authenticateLeanRetryClosureV8(mode)
+    const { accepted, closure } = authenticateLeanRetryAcceptedJoinV10(mode)
     if (!same(closure.timeboxExtension, b) || closure.closureClass !== "accepted" || closure.finalReaderClose !== true || request.acceptedCheckRoot !== accepted.root || request.acceptedReaderCloseRoot !== closure.root || closure.checkRoot !== accepted.root || closure.sourceRoot !== request.sourceRoot || closure.readerCloseMs !== accepted.readerCloseMs) return fail("ACCEPTED_CHECK")
   }
   // Validate original complete physical rows and exact report paths BEFORE data review.
@@ -792,7 +805,7 @@ export const assertLeanPreparedPredecessor = (prepared: LeanCorrectionPredecesso
 /** Finite new accepted-check/actual-FINAL custody for a baseline preparation
  * failure with no ledger. This grants no entry or ordinary-reader authority. */
 export const authenticateLeanTwentySixBaselineTerminalCarryV10 = (request: LeanCorrectionRequest, preparationStartedAtMs: number) => {
-  const accepted = authenticateLeanSupervisorDiagnosticCheck("v10-1"), closure = authenticateLeanRetryClosureV8("v10-1")
+  const { accepted, closure } = authenticateLeanRetryAcceptedJoinV10("v10-1")
   if (!same(closure.timeboxExtension, LEAN_TWENTY_SIX_V10_EXTENSION) || closure.attemptOrdinal !== 1 || closure.closureClass !== "accepted" || closure.finalReaderClose !== true || closure.acceptedCheckAbsent !== false || closure.checkRoot !== accepted.root || request.acceptedCheckRoot !== accepted.root || request.acceptedReaderCloseRoot !== closure.root || closure.allocationRoot !== accepted.allocationRoot || closure.sourceRoot !== request.sourceRoot || closure.readerCloseMs !== accepted.readerCloseMs || closure.readerCloseMs > preparationStartedAtMs || closure.cumulativeCharged !== LEAN_TWENTY_SIX_V10_EXTENSION.charged + 1 || closure.currentCharges !== 1) return fail("DIAGNOSTIC_CUSTODY")
   return { cumulativeCharged: closure.cumulativeCharged, acceptedDiagnosticCheckRoot: accepted.root, acceptedDiagnosticFinalRoot: closure.root }
 }
@@ -821,7 +834,7 @@ const inspectLeanTwentySixPredecessorV10 = (route: LeanCorrectionRoute, atMs: nu
     if ([store, `.planning/artifacts/v1.38-lean-correction-supervisor-${other}-allocation-v10-${ordinal}.json`, join(temp, "admission-prepare-start.json"), join(temp, "admission-run-start.json")].some(path => existsSync(path))) return fail("SPENT_DESTINATION")
   }
   if (route === "baseline") {
-    const accepted = authenticateLeanSupervisorDiagnosticCheck(mode), closure = authenticateLeanRetryClosureV8(mode)
+    const { accepted, closure } = authenticateLeanRetryAcceptedJoinV10(mode)
     if (!same(closure.timeboxExtension, b) || closure.closureClass !== "accepted" || closure.finalReaderClose !== true || closure.checkRoot !== accepted.root || closure.cumulativeCharged !== 32 || closure.currentCharges !== 1 || closure.readerCloseMs !== accepted.readerCloseMs || closure.readerCloseMs > atMs) return fail("DIAGNOSTIC_CUSTODY")
     charged = 32; elapsed = Math.max(elapsed, closure.closedElapsedMs + atMs - closure.readerCloseMs)
     const diagnostic = leanCorrectionRoutePaths("diagnostic", mode), diagnosticDocs = leanRemainingDocumentsV9("diagnostic", mode)

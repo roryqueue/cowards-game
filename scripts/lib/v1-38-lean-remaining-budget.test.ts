@@ -53,7 +53,7 @@ describe("approved additive v10-1 twenty-six-hour envelope", () => {
       vi.spyOn(retained, "authenticateLeanTwentySixHistoricalCustodyV10").mockReturnValue({ predecessor: historical, reserveBytes: 4_288_512, root: r("pinned-history"), refusalRoot: r("pinned-refusal"), identities: [] } as never)
       if (route === "baseline") {
         vi.spyOn(retained, "authenticateLeanSupervisorDiagnosticCheck").mockReturnValue({ root: r("new-check"), readerCloseMs: atMs - 1 } as never)
-        vi.spyOn(retained, "authenticateLeanRetryClosureV8").mockReturnValue({ timeboxExtension: b, closureClass: "accepted", finalReaderClose: true, checkRoot: r("new-check"), cumulativeCharged: 32, currentCharges: 1, readerCloseMs: atMs - 1, closedElapsedMs: b.priorElapsedMs + 999, root: r("new-final") } as never)
+        vi.spyOn(retained, "authenticateLeanRetryClosureV8").mockReturnValue({ timeboxExtension: b, attemptOrdinal: 1, closureClass: "accepted", finalReaderClose: true, acceptedCheckAbsent: false, checkRoot: r("new-check"), checkBytesRoot: r("new-check-bytes"), allocationRoot: r("new-diagnostic-allocation"), sourceRoot: r("source"), requestBytesRoot: r("diagnostic-request"), head: "1".repeat(40), cumulativeCharged: 32, currentCharges: 1, readerCloseMs: atMs - 1, closedElapsedMs: b.priorElapsedMs + 999, root: r("new-final") } as never)
       }
       const predecessor = correction.inspectLeanRemainingPredecessorV9(route, atMs, mode), snapshot = correction.readLeanTwentySixReportCustodyV10(), allocation = lean.createLeanSupervisorCorrectionAllocation({ ...inputV10(route), predecessor }, 8)
       const body = { schemaVersion: "lean-predecessor-report-snapshot-v10", route, atMs, allocationRoot: allocation.root, rows: snapshot }
@@ -354,14 +354,18 @@ describe("approved additive v9 remaining-budget envelope", () => {
     const source = readFileSync("scripts/run-v1-38-lean-correction.ts", "utf8")
     expect(source).toContain('const previous = authenticateLeanRemainingClosedPrefixV9(`v9-${n - 1}`')
     expect(source).toContain('closed.closedElapsedMs + atMs - closed.closedAtMs')
-    expect(source).toContain('const accepted = authenticateLeanRetryAcceptedJoinV10(mode)')
+    expect(source).toContain('const { accepted, closure } = authenticateLeanRetryAcceptedJoinV10(mode)')
     expect(source).toContain('if (mode === "v10-1")')
     expect(source).toContain('authenticateLeanSupervisorDiagnosticCheck(mode)')
     expect(source).toContain('closure.checkRoot !== accepted.root')
     expect(source).toContain('closure.readerCloseMs !== accepted.readerCloseMs')
     expect(source).toContain('closure.allocationRoot !== accepted.allocationRoot')
-    expect(source).toContain('const accepted = authenticateLeanRetryAcceptedJoinV10("v10-1")')
+    expect(source).toContain('const { accepted, closure } = authenticateLeanRetryAcceptedJoinV10("v10-1")')
     expect(source).not.toContain('const accepted = authenticateLeanSupervisorDiagnosticCheck("v10-1"), closure = authenticateLeanRetryClosureV8("v10-1")')
+    const helper = source.slice(source.indexOf("const authenticateLeanRetryAcceptedJoinV10"), source.indexOf("/** v9 keeps its own exact envelope"))
+    expect(helper.indexOf('if (mode === "v10-1")')).toBeLessThan(helper.indexOf('const accepted = authenticateLeanSupervisorDiagnosticCheck(mode)'))
+    const legacyAccepted = helper.indexOf('const accepted = authenticateLeanSupervisorDiagnosticCheck(mode)')
+    expect(legacyAccepted).toBeLessThan(helper.indexOf('const closure = authenticateLeanRetryClosureV8(mode)', legacyAccepted))
   })
   it("keeps accepted-diagnostic lineage read-only and inaccessible to forged fresh-admission purposes", () => {
     const source = readFileSync("scripts/lib/v1-38-lean-correction-retained.ts", "utf8")
@@ -369,6 +373,27 @@ describe("approved additive v9 remaining-budget envelope", () => {
     expect(source).toContain("remainingAcceptedLineagePurposesV9.delete(purpose)")
     const requestSource = readFileSync("scripts/run-v1-38-lean-correction.ts", "utf8")
     expect(requestSource).toContain("inspectLeanRemainingPredecessorWithPurposeV9(route, Date.now(), mode, purpose)")
+  })
+  it("uses one authenticated v10 closure for baseline terminal carry and rejects incomplete closure metadata", () => {
+    const b = envelopeV10(), checkRoot = r("dedup-check"), allocationRoot = r("dedup-allocation"), sourceRoot = r("dedup-source"), requestBytesRoot = r("dedup-request"), finalRoot = r("dedup-final")
+    const closure = { timeboxExtension: b, attemptOrdinal: 1, closureClass: "accepted", finalReaderClose: true, acceptedCheckAbsent: false, checkRoot, checkBytesRoot: r("dedup-check-bytes"), allocationRoot, sourceRoot, head: "1".repeat(40), requestBytesRoot, root: finalRoot, readerCloseMs: b.startedAtMs + 9, cumulativeCharged: 32, currentCharges: 1 }
+    const authenticateCheck = vi.spyOn(retained, "authenticateLeanSupervisorDiagnosticCheck").mockImplementation(() => { throw new Error("DUPLICATE_AUDIT") })
+    const authenticateClosure = vi.spyOn(retained, "authenticateLeanRetryClosureV8").mockReturnValue(closure as never)
+    const request = { acceptedCheckRoot: checkRoot, acceptedReaderCloseRoot: finalRoot, sourceRoot } as never
+    const preparationStartedAtMs = closure.readerCloseMs + 1
+    try {
+      expect(correction.authenticateLeanTwentySixBaselineTerminalCarryV10(request, preparationStartedAtMs)).toMatchObject({ cumulativeCharged: 32, acceptedDiagnosticCheckRoot: checkRoot, acceptedDiagnosticFinalRoot: finalRoot })
+      expect(authenticateClosure).toHaveBeenCalledTimes(1)
+      expect(authenticateCheck).not.toHaveBeenCalled()
+      expect(() => correction.authenticateLeanTwentySixBaselineTerminalCarryV10({ ...request, acceptedCheckRoot: r("wrong-request-check") }, preparationStartedAtMs)).toThrow()
+      expect(() => correction.authenticateLeanTwentySixBaselineTerminalCarryV10({ ...request, acceptedReaderCloseRoot: r("wrong-request-final") }, preparationStartedAtMs)).toThrow()
+      for (const patch of [{ checkBytesRoot: null }, { checkRoot: null }, { finalReaderClose: false }, { acceptedCheckAbsent: true }, { attemptOrdinal: 2 }, { allocationRoot: null }, { sourceRoot: r("wrong-source") }, { readerCloseMs: closure.readerCloseMs + 2 }]) {
+        const original = { ...closure }; Object.assign(closure, patch)
+        expect(() => correction.authenticateLeanTwentySixBaselineTerminalCarryV10(request, preparationStartedAtMs)).toThrow()
+        Object.assign(closure, original)
+      }
+      expect(authenticateCheck).not.toHaveBeenCalled()
+    } finally { authenticateClosure.mockRestore(); authenticateCheck.mockRestore() }
   })
 })
 
