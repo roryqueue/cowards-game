@@ -366,7 +366,7 @@ describe("approved additive v9 remaining-budget envelope", () => {
 })
 
 /** Composed read-only lineage fixture; no publication or execution. */
-const virtual = vi.hoisted(() => ({ bytes: new Map<string, Buffer>(), fds: new Map<number, string>(), present: new Set<string>(), anchors: new Map<string, string>(), blocks: new Map<string, number>() }))
+const virtual = vi.hoisted(() => ({ bytes: new Map<string, Buffer>(), fds: new Map<number, string>(), present: new Set<string>(), anchors: new Map<string, string>(), blocks: new Map<string, number>(), head: "" }))
 vi.mock("node:fs", async original => {
   const real = await original<typeof import("node:fs")>()
   const adjusted = (stat: fs.Stats, path: string) => virtual.bytes.has(path) ? Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { size: virtual.bytes.get(path)!.length, ...(virtual.blocks.has(path) ? { blocks: virtual.blocks.get(path) } : {}), ...(virtual.anchors.has(path) ? { ino: 1_000_000_000 + [...virtual.anchors.keys()].indexOf(path) } : {}) }) : stat
@@ -383,9 +383,118 @@ vi.mock("node:fs", async original => {
     },
   }
 })
-vi.mock("node:child_process", async original => ({ ...await original<typeof import("node:child_process")>(), execFileSync: (command: string) => { if (command !== "git") throw new Error("NO_PROCESS_AUTHORITY"); return "" } }))
-afterEach(() => { virtual.bytes.clear(); virtual.present.clear(); virtual.fds.clear(); virtual.anchors.clear(); virtual.blocks.clear(); vi.restoreAllMocks() })
+vi.mock("node:child_process", async original => ({ ...await original<typeof import("node:child_process")>(), execFileSync: (command: string) => { if (command !== "git") throw new Error("NO_PROCESS_AUTHORITY"); return virtual.head } }))
+afterEach(() => { virtual.bytes.clear(); virtual.present.clear(); virtual.fds.clear(); virtual.anchors.clear(); virtual.blocks.clear(); virtual.head = ""; vi.restoreAllMocks() })
 const put = (path: string, value: unknown) => virtual.bytes.set(resolve(path), Buffer.from(lean.leanCanonicalBytes(value)))
+/** Direct terminal-adapter fixture: synthetic metadata only, no preparation,
+ * ordinary reader, provider or Match, and no live private-store writes. */
+const twentySixTerminalFixture = (stage: "preparation" | "admission" | "entry") => {
+  const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "lean-v10-terminal-inert-"))), anchor = join(directory, "metadata.json"), b = envelopeV10(), paths = lean.leanCorrectionRoutePaths("baseline", "v10-1"), at = b.startedAtMs
+  fs.writeFileSync(anchor, lean.leanCanonicalBytes({ inert: true }), { mode: 0o600 })
+  const putAt = (path: string, value: unknown) => { virtual.anchors.set(resolve(path), anchor); put(path, value) }
+  const rooted = <T extends { schemaVersion: string }>(body: T) => ({ ...body, root: labRoot(body.schemaVersion, body) })
+  const sourceRoot = correction.leanCorrectionSourceManifest("v10-1", b).root, checkRoot = r("terminal-new-check"), finalRoot = r("terminal-new-FINAL")
+  const setup = correction.createLeanRemainingSetupWitnessV9("v10-1", at), request = correction.createLeanRemainingRequestDraftV9("v10-1", "baseline", { sourceRoot, reviewRoot: r("source-review"), dataReviewRoot: r("data-review"), setupAccountingRoot: setup.root, reuseGrantRoot: r("reuse"), authorizationRoot: r("authorization"), priorClosureRoot: null, continuationRoot: null, acceptedCheckRoot: checkRoot, acceptedReaderCloseRoot: finalRoot })
+  putAt(paths.request, request); putAt(lean.leanRetrySetupPath("v10-1"), setup)
+  const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...inputV10("baseline"), sourceRoot, requestBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(request)), acceptedCheckRoot: checkRoot, acceptedReaderCloseRoot: finalRoot }, 8)
+  const stored = stage !== "preparation", admissionMode = stored ? "run" : "prepare"
+  const marker = (mode: "prepare" | "run") => {
+    const wall = at + (mode === "prepare" ? 10 : 20), ns = mode === "prepare" ? 1_000_000_000 : 2_000_000_000, importedMs = stage === "entry" && mode === "run" ? 3 : 0
+    const start = rooted({ schemaVersion: "lean-correction-supervisor-admission-v8", attemptOrdinal: 1, route: "baseline", mode, parentPid: 1234, wallStartMs: wall, monotonicStartNs: String(ns) })
+    const close = rooted({ schemaVersion: "lean-correction-supervisor-admission-close-v8", attemptOrdinal: 1, startRoot: start.root, route: "baseline", mode, elapsedUpperBoundMs: 5, monotonicObservedNs: String(ns + 5_000_000), wallObservedMs: wall + 5, allocationRoot: stored ? allocation.root : null, ledgerInterval: stored ? mode === "prepare" ? "correction-preparation" : "correction-run-finalization" : null, importedMs, ledgerCloseMs: wall + 5 })
+    putAt(join(paths.temp, `admission-${mode}-start.json`), start); putAt(join(paths.temp, `admission-${mode}-close.json`), close)
+    return { start, close }
+  }
+  const preparation = marker("prepare"), run = stored ? marker("run") : null
+  const time = { active: null, starts: new Map<string, number>(), closes: new Map<string, number>(), closed: new Set<string>() }
+  if (stored) for (const pair of [preparation, run!]) {
+    const interval = pair.close.ledgerInterval!
+    time.starts.set(interval, pair.start.wallStartMs + pair.close.importedMs); time.closes.set(interval, pair.close.ledgerCloseMs); time.closed.add(interval)
+  }
+  if (stage === "entry") { time.starts.set("pilot-entry", at + 20); time.closes.set("pilot-entry", at + 23); time.closed.add("pilot-entry") }
+  const ledger = { directory: resolve(paths.store), allocation }, state = { charges: new Map(stage === "entry" ? [[r("charge"), { ordinal: 32 }]] : []), charged: stage === "entry" ? 33 : 32 }
+  if (stored) {
+    virtual.present.add(resolve(paths.store)); putAt(paths.allocation, allocation)
+    putAt(join(paths.store, "ledger.ndjson"), { inert: "ledger" }); putAt(join(paths.store, "time.ndjson"), { inert: "time" })
+  }
+  virtual.head = "1".repeat(40)
+  const entry = { schemaVersion: "lean-child-entry-v2", head: virtual.head, wallStartMs: at + 22, allocationRoot: allocation.root, sourceRoot, requestBytesRoot: allocation.requestBytesRoot }, terminal = { schemaVersion: "lean-child-terminal-v2", head: virtual.head, wallObservedMs: at + 24, status: "child_failed", allocationRoot: allocation.root, sourceRoot }
+  if (stage === "entry") { putAt(join(paths.store, "entry.json"), entry); putAt(join(paths.store, "child-terminal.json"), terminal) }
+  else {
+    const chosen = run ?? preparation, rawRoot = (name: string) => lean.leanBytesRoot(virtual.bytes.get(resolve(join(paths.store, name)))!)
+    const failure = rooted({ timeboxExtension: b, schemaVersion: "lean-retry-admission-failure-v8", authorAgent: "/root", authorizing: false, attemptOrdinal: 1, admissionMode, startRoot: chosen.start.root, closeRoot: chosen.close.root, sourceRoot, head: virtual.head, requestBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(request)), allocationRoot: stored ? allocation.root : null, ledgerBytesRoot: stored ? rawRoot("ledger.ndjson") : null, timeBytesRoot: stored ? rawRoot("time.ndjson") : null, currentCharges: 0, cumulativeCharged: stored ? 32 : null, storeAbsent: !stored, childSpawned: stored, cleanup: stored ? { childPid: 5678, exitCode: 1, signal: null } : null, entryAbsent: true, terminalAbsent: true, resultAbsent: true, acceptedCheckAbsent: true })
+    putAt(join(paths.temp, "admission-failure-v8.json"), failure)
+  }
+  vi.spyOn(lean, "openLeanLedger").mockReturnValue(ledger)
+  vi.spyOn(lean, "readLeanTimeAccounting").mockReturnValue(time as never)
+  vi.spyOn(lean, "readLeanLedger").mockReturnValue(state as never)
+  vi.spyOn(lean, "readLeanChildEntry").mockReturnValue(entry as never)
+  vi.spyOn(lean, "readLeanChildTerminal").mockReturnValue(terminal as never)
+  vi.spyOn(lean, "beginLeanInterval").mockImplementation(() => {})
+  vi.spyOn(lean, "closeLeanInterval").mockReturnValue(time as never)
+  vi.spyOn(lean, "cumulativeLeanPhysicalBytes").mockReturnValue(b.physicalFloorBytes)
+  const accepted = { root: checkRoot, allocationRoot: r("new-diagnostic-allocation"), readerCloseMs: at + 9 }
+  vi.spyOn(retained, "authenticateLeanSupervisorDiagnosticCheck").mockReturnValue(accepted as never)
+  const closure = { timeboxExtension: b, attemptOrdinal: 1, closureClass: "accepted", finalReaderClose: true, acceptedCheckAbsent: false, checkRoot, allocationRoot: accepted.allocationRoot, root: finalRoot, sourceRoot, readerCloseMs: at + 9, cumulativeCharged: 32, currentCharges: 1 }
+  vi.spyOn(retained, "authenticateLeanRetryClosureV8").mockReturnValue(closure as never)
+  const publications = vi.spyOn(correction, "publishLeanCorrection").mockImplementation((path, value) => { if (virtual.bytes.has(resolve(path))) throw new Error("EXCLUSIVE_PUBLICATION"); putAt(path, value) })
+  vi.spyOn(Date, "now").mockReturnValue(at + 40)
+  const mutate = (name: string, patch: Record<string, unknown>, reroot = true) => {
+    const path = join(paths.temp, name), value = JSON.parse(virtual.bytes.get(resolve(path))!.toString("utf8")), { root: _root, ...body } = { ...value, ...patch }
+    putAt(path, reroot ? rooted(body) : { ...body, root: patch.root ?? value.root })
+  }
+  return { paths, request, allocation, preparation, run, time, state, terminal, publications, closure, mutate, destroy: () => fs.rmSync(directory, { recursive: true, force: true }) }
+}
+describe("finite v10 baseline terminal-only actual adapter", () => {
+  it.each(["preparation", "admission", "entry"] as const)("authenticates %s failure metadata without an ordinary reader or fabricated HEAD", stage => {
+    const f = twentySixTerminalFixture(stage)
+    try {
+      const report = retained.verifyLeanTwentySixBaselineTerminalOnlyV10(f.paths.request)
+      expect(report).toMatchObject({ authorizing: false, accepted: false, finalReaderClose: false, custody: { stage: `${stage}_terminal_only`, entryHead: stage === "entry" ? virtual.head : null, currentCharges: stage === "entry" ? 1 : 0, cumulativeCharged: stage === "entry" ? 33 : 32 } })
+      expect(report.readerStartRoot).toMatch(/^sha256:/u); expect(report.readerCloseRoot).toMatch(/^sha256:/u)
+      expect(f.publications).toHaveBeenCalledTimes(3)
+      expect(() => retained.verifyLeanTwentySixBaselineTerminalOnlyV10(f.paths.request)).toThrow("EXCLUSIVE_PUBLICATION")
+    } finally { f.destroy() }
+  })
+  it.each([
+    ["admission-prepare-start.json", { root: r("tampered-start") }, false],
+    ["admission-prepare-start.json", { schemaVersion: "forged-start" }, true],
+    ["admission-prepare-start.json", { wallStartMs: envelopeV10().startedAtMs + 11 }, true],
+    ["admission-prepare-start.json", { monotonicStartNs: "2000000000" }, true],
+    ["admission-prepare-close.json", { root: r("tampered-close") }, false],
+    ["admission-prepare-close.json", { schemaVersion: "forged-close" }, true],
+    ["admission-prepare-close.json", { attemptOrdinal: 2 }, true],
+    ["admission-prepare-close.json", { wallObservedMs: envelopeV10().startedAtMs + 16 }, true],
+    ["admission-prepare-close.json", { monotonicObservedNs: "1006000000" }, true],
+    ["admission-prepare-close.json", { ledgerCloseMs: envelopeV10().startedAtMs + 16 }, true],
+    ["admission-prepare-close.json", { allocationRoot: r("invented-allocation") }, true],
+    ["admission-prepare-close.json", { importedMs: 1 }, true],
+  ] as const)("rejects counterfeit no-store marker %s %j", (name, patch, reroot) => {
+    const f = twentySixTerminalFixture("preparation")
+    try { f.mutate(name, patch, reroot); expect(() => retained.verifyLeanTwentySixBaselineTerminalOnlyV10(f.paths.request)).toThrow(); expect(f.publications.mock.calls.some(([path]) => path.endsWith("baseline-terminal-custody-v10.json"))).toBe(false) } finally { f.destroy() }
+  })
+  it.each([
+    ["admission-prepare-close.json", { allocationRoot: r("wrong-allocation") }],
+    ["admission-prepare-close.json", { ledgerInterval: "wrong-preparation" }],
+    ["admission-run-close.json", { attemptOrdinal: 2 }],
+    ["admission-run-close.json", { wallObservedMs: envelopeV10().startedAtMs + 26 }],
+    ["admission-run-close.json", { ledgerInterval: "wrong-run" }],
+    ["admission-run-close.json", { allocationRoot: r("wrong-run-allocation") }],
+    ["admission-failure-v8.json", { cleanup: { childPid: 5678, exitCode: null, signal: null } }],
+    ["admission-failure-v8.json", { timeBytesRoot: r("unjoined-time-journal") }],
+  ] as const)("rejects counterfeit allocated admission marker %s %j", (name, patch) => {
+    const f = twentySixTerminalFixture("admission")
+    try { f.mutate(name, patch); expect(() => retained.verifyLeanTwentySixBaselineTerminalOnlyV10(f.paths.request)).toThrow(); expect(f.publications.mock.calls.some(([path]) => path.endsWith("baseline-terminal-custody-v10.json"))).toBe(false) } finally { f.destroy() }
+  })
+  it("rejects missing accepted diagnostic FINAL", () => {
+    const f = twentySixTerminalFixture("preparation")
+    try { f.closure.finalReaderClose = false; expect(() => retained.verifyLeanTwentySixBaselineTerminalOnlyV10(f.paths.request)).toThrow("DIAGNOSTIC_CUSTODY") } finally { f.destroy() }
+  })
+  it("rejects unjoined actual entry terminal chronology", () => {
+    const f = twentySixTerminalFixture("entry")
+    try { f.terminal.wallObservedMs = envelopeV10().startedAtMs + 26; expect(() => retained.verifyLeanTwentySixBaselineTerminalOnlyV10(f.paths.request)).toThrow("CUSTODY") } finally { f.destroy() }
+  })
+})
 const fixture = () => {
   const mode = "v9-2" as const, paths = lean.leanCorrectionRoutePaths("diagnostic", mode), docs = correction.leanRemainingDocumentsV9("diagnostic", mode)
   // Only finite metadata is copied as an inert template. It is re-bound in memory;

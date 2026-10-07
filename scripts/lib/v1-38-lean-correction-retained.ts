@@ -17,7 +17,7 @@ import { compactLeanBaselineCell, leanBaselineMetricCoverage, type LeanBaselineO
 import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
 import { selectLeanBestTrainedProposal, selectLeanTrainedProposal } from "./v1-38-lean-training-adapter.js"
 import { validateLeanPrivateCorrectionOrigin } from "./v1-38-lean-container-match-session.js"
-import { authenticateLeanRetryAdmissionFailureV8, leanCorrectionSourceManifest, leanCorrectionRequestDataRoot, leanCorrectionAdmissionElapsed, leanCorrectionTrustedGuardError, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, readLeanRemainingAcceptedDiagnosticLineageV9, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
+import { authenticateLeanRetryAdmissionFailureV8, authenticateLeanTwentySixBaselineTerminalCarryV10, leanCorrectionSourceManifest, leanCorrectionRequestDataRoot, leanCorrectionAdmissionElapsed, leanCorrectionTrustedGuardError, readLeanCorrectionPrivateBytes, readLeanCorrectionJson, readLeanCorrectionRequest, readLeanRemainingAcceptedDiagnosticLineageV9, publishLeanCorrection, type LeanCorrectionRoute, type LeanCorrectionRequest } from "../run-v1-38-lean-correction.js"
 import { validateLeanSupervisorReasonBytes, LEAN_SUPERVISOR_REASON_FILE, LEAN_SUPERVISOR_REASON_MAX_BYTES } from "../run-v1-38-lean-baseline.js"
 import type { LeanBaselinePair } from "./v1-38-lean-experiment-authority.js"
 import { SoldierBrainInputV119Schema, StrategyInputV119Schema, StrategyResultSchema } from "@cowards/spec"
@@ -456,36 +456,64 @@ export const verifyLeanRetryTerminalOnlyV8 = (path: string, mode: LeanRetryMode)
 }
 /** The new baseline's sole absent-result check. Finite custody only: no ordinary
  * reader, accepted check, fabricated entry identity, or future execution grant. */
+export const validateLeanTwentySixBaselineAdmissionMarkersV10 = (startValue: unknown, closeValue: unknown, admissionMode: "prepare" | "run", ledger: Parameters<typeof readLeanLedger>[0] | null, readerStartMs: number) => {
+  const start = startValue as { schemaVersion: string; attemptOrdinal: number; route: string; mode: string; parentPid: number; wallStartMs: number; monotonicStartNs: string; root: LabRoot }
+  const close = closeValue as { schemaVersion: string; attemptOrdinal: number; startRoot: LabRoot; route: string; mode: string; elapsedUpperBoundMs: number; monotonicObservedNs: string; wallObservedMs: number; allocationRoot: LabRoot | null; ledgerInterval: string | null; importedMs: number; ledgerCloseMs: number; root: LabRoot }
+  const natural = (n: unknown): n is number => Number.isSafeInteger(n) && Number(n) >= 0
+  if (!start || !close || !exactLabKeys(start, ["schemaVersion", "attemptOrdinal", "route", "mode", "parentPid", "wallStartMs", "monotonicStartNs", "root"]) || !exactLabKeys(close, ["schemaVersion", "attemptOrdinal", "startRoot", "route", "mode", "elapsedUpperBoundMs", "monotonicObservedNs", "wallObservedMs", "allocationRoot", "ledgerInterval", "importedMs", "ledgerCloseMs", "root"]) || start.schemaVersion !== "lean-correction-supervisor-admission-v8" || close.schemaVersion !== "lean-correction-supervisor-admission-close-v8" || start.route !== "baseline" || close.route !== start.route || start.mode !== admissionMode || close.mode !== start.mode || start.attemptOrdinal !== 1 || close.attemptOrdinal !== 1 || !natural(start.parentPid) || start.parentPid === 0 || !natural(start.wallStartMs) || start.wallStartMs < LEAN_TWENTY_SIX_V10_EXTENSION.startedAtMs || !natural(close.wallObservedMs) || close.wallObservedMs < start.wallStartMs || !natural(close.elapsedUpperBoundMs) || !natural(close.importedMs) || !natural(close.ledgerCloseMs) || !natural(readerStartMs)) return fail("CUSTODY")
+  const { root: sr, ...sb } = start, { root: cr, ...cb } = close
+  if (sr !== labRoot(start.schemaVersion, sb) || cr !== labRoot(close.schemaVersion, cb) || close.startRoot !== sr || close.elapsedUpperBoundMs !== leanCorrectionAdmissionElapsed(start, { wallStartMs: close.wallObservedMs, monotonicStartNs: close.monotonicObservedNs }) || close.ledgerCloseMs < start.wallStartMs + close.elapsedUpperBoundMs || close.ledgerCloseMs > readerStartMs) return fail("CUSTODY")
+  if (!ledger) {
+    if (admissionMode !== "prepare" || close.allocationRoot !== null || close.ledgerInterval !== null || close.importedMs !== 0 || close.ledgerCloseMs !== start.wallStartMs + close.elapsedUpperBoundMs) return fail("CUSTODY")
+  } else {
+    const time = readLeanTimeAccounting(ledger), interval = admissionMode === "prepare" ? "correction-preparation" : "correction-run-finalization"
+    if (close.allocationRoot !== ledger.allocation.root || close.ledgerInterval !== interval || !time.closed.has(interval) || time.starts.get(interval) !== start.wallStartMs + close.importedMs || time.closes.get(interval) !== close.ledgerCloseMs || admissionMode === "prepare" && close.importedMs !== 0) return fail("CUSTODY")
+    if (admissionMode === "run" && (time.starts.has("pilot-entry") ? time.starts.get("pilot-entry") !== start.wallStartMs || !time.closed.has("pilot-entry") || time.closes.get("pilot-entry") !== start.wallStartMs + close.importedMs : close.importedMs !== 0)) return fail("CUSTODY")
+  }
+  return { start, close }
+}
 export const verifyLeanTwentySixBaselineTerminalOnlyV10 = (path: string) => {
   const mode = "v10-1", paths = leanCorrectionRoutePaths("baseline", mode)
   if (path !== paths.request || existsSync(join(paths.store, "result.json")) || existsSync(join(paths.store, paths.check))) return fail("CUSTODY")
   const request = readLeanCorrectionJson(path) as LeanCorrectionRequest, head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim()
-  if (request.route !== "baseline" || request.attemptOrdinal !== 1 || !same(request.timeboxExtension, LEAN_TWENTY_SIX_V10_EXTENSION) || leanCorrectionSourceManifest(mode, request.timeboxExtension).root !== request.sourceRoot || !/^[a-f0-9]{40}$/u.test(head)) return fail("CUSTODY")
+  if (request.schemaVersion !== "lean-correction-supervisor-request-v8" || request.route !== "baseline" || request.attemptOrdinal !== 1 || !same(request.timeboxExtension, LEAN_TWENTY_SIX_V10_EXTENSION) || request.planRoot !== LEAN_TWENTY_SIX_V10_EXTENSION.planRoot || request.supervisorDecisionRoot !== LEAN_TWENTY_SIX_V10_EXTENSION.approvalRoot || request.priorClosureRoot !== null || request.continuationRoot !== null || request.diagnosis !== null || leanCorrectionSourceManifest(mode, request.timeboxExtension).root !== request.sourceRoot || !/^[a-f0-9]{40}$/u.test(head)) return fail("CUSTODY")
   const startBody = { schemaVersion: "lean-baseline-terminal-reader-start-v10", authorizing: false, sourceRoot: request.sourceRoot, head, wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
   publishLeanCorrection(join(paths.temp, "baseline-terminal-reader-start-v10.json"), start)
   let ledger: Parameters<typeof readLeanLedger>[0] | null = null
-  let custody: unknown
+  let custody: unknown, readerIntervalStarted = false, readerCloseRoot: LabRoot | null = null
   try {
     const prepareStart = readLeanCorrectionJson(join(paths.temp, "admission-prepare-start.json")) as Record<string, unknown>, prepareClose = readLeanCorrectionJson(join(paths.temp, "admission-prepare-close.json")) as Record<string, unknown>
-    if (prepareStart.route !== "baseline" || prepareStart.mode !== "prepare" || prepareStart.attemptOrdinal !== 1 || prepareClose.startRoot !== prepareStart.root || prepareClose.route !== "baseline" || prepareClose.mode !== "prepare") return fail("CUSTODY")
     if (!existsSync(paths.store)) {
-      if (existsSync(paths.allocation) || prepareClose.allocationRoot !== null || prepareClose.ledgerInterval !== null || prepareClose.importedMs !== 0 || existsSync(join(paths.temp, "admission-run-start.json"))) return fail("CUSTODY")
-      custody = { stage: "preparation_terminal_only", allocationRoot: null, entryHead: null, currentCharges: 0, cumulativeCharged: 32, prepareStartRoot: prepareStart.root, prepareCloseRoot: prepareClose.root }
+      const prepared = validateLeanTwentySixBaselineAdmissionMarkersV10(prepareStart, prepareClose, "prepare", null, start.wallStartMs), failure = authenticateLeanRetryAdmissionFailureV8(mode, true, "baseline")
+      if (existsSync(paths.allocation) || existsSync(join(paths.temp, "admission-run-start.json")) || existsSync(join(paths.temp, "admission-run-close.json")) || !failure.storeAbsent || failure.admissionMode !== "prepare" || failure.sourceRoot !== request.sourceRoot || failure.head !== head) return fail("CUSTODY")
+      const carried = authenticateLeanTwentySixBaselineTerminalCarryV10(request, prepared.start.wallStartMs)
+      custody = { stage: "preparation_terminal_only", allocationRoot: null, entryHead: null, currentCharges: failure.currentCharges, ...carried, failureRoot: failure.root, prepareStartRoot: prepared.start.root, prepareCloseRoot: prepared.close.root }
     } else {
       ledger = openLeanLedger(paths.store)
-      if (leanSupervisorAllocationMode(ledger.allocation) !== mode || !("route" in ledger.allocation) || ledger.allocation.route !== "baseline" || ledger.allocation.sourceRoot !== request.sourceRoot || readLeanTimeAccounting(ledger).active || [...readLeanTimeAccounting(ledger).starts.keys()].some(id => id.includes("verifier"))) return fail("CUSTODY")
+      const allocation = ledger.allocation, time = readLeanTimeAccounting(ledger)
+      if (leanSupervisorAllocationMode(allocation) !== mode || !("route" in allocation) || allocation.route !== "baseline" || allocation.sourceRoot !== request.sourceRoot || allocation.requestBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(path)) || allocation.acceptedCheckRoot !== request.acceptedCheckRoot || allocation.acceptedReaderCloseRoot !== request.acceptedReaderCloseRoot || allocation.predecessor.chargedMatches !== LEAN_TWENTY_SIX_V10_EXTENSION.charged + 1 || time.active || [...time.starts.keys()].some(id => id.includes("verifier"))) return fail("CUSTODY")
+      const prepared = validateLeanTwentySixBaselineAdmissionMarkersV10(prepareStart, prepareClose, "prepare", ledger, start.wallStartMs)
+      if (existsSync(paths.allocation) && !same(readLeanCorrectionJson(paths.allocation), allocation)) return fail("CUSTODY")
       const hasEntry = existsSync(join(paths.store, "entry.json")), entry = hasEntry ? readLeanChildEntry(ledger) : null, terminal = hasEntry ? readLeanChildTerminal(ledger) : null, state = readLeanLedger(ledger)
-      if (entry && entry.head !== head || state.charged < 32 || state.charged > 68) return fail("CUSTODY")
-      custody = { stage: hasEntry ? "entry_terminal_only" : "admission_terminal_only", allocationRoot: ledger.allocation.root, entryHead: entry?.head ?? null, currentCharges: state.charges.size, cumulativeCharged: state.charged, terminalStatus: terminal?.status ?? null, prepareStartRoot: prepareStart.root, prepareCloseRoot: prepareClose.root }
+      if (entry && entry.head !== head || state.charged !== allocation.predecessor.chargedMatches + state.charges.size || state.charges.size > allocation.slots.length) return fail("CUSTODY")
+      const runStartPath = join(paths.temp, "admission-run-start.json"), runClosePath = join(paths.temp, "admission-run-close.json")
+      const ran = existsSync(runStartPath) ? validateLeanTwentySixBaselineAdmissionMarkersV10(readLeanCorrectionJson(runStartPath), readLeanCorrectionJson(runClosePath), "run", ledger, start.wallStartMs) : null
+      if (ran ? ran.start.wallStartMs < prepared.close.ledgerCloseMs : existsSync(runClosePath) || hasEntry) return fail("CUSTODY")
+      const failure = hasEntry ? null : authenticateLeanRetryAdmissionFailureV8(mode, true, "baseline")
+      if (failure && (failure.head !== head || failure.sourceRoot !== request.sourceRoot || failure.cumulativeCharged !== state.charged || failure.admissionMode !== (ran ? "run" : "prepare"))) return fail("CUSTODY")
+      if (entry && terminal && (!ran || entry.wallStartMs < ran.start.wallStartMs || terminal.wallObservedMs > ran.close.ledgerCloseMs || terminal.wallObservedMs > start.wallStartMs)) return fail("CUSTODY")
+      custody = { stage: hasEntry ? "entry_terminal_only" : ran ? "admission_terminal_only" : "preparation_terminal_only", allocationRoot: allocation.root, entryHead: entry?.head ?? null, currentCharges: state.charges.size, cumulativeCharged: state.charged, terminalStatus: terminal?.status ?? null, failureRoot: failure?.root ?? null, prepareStartRoot: prepared.start.root, prepareCloseRoot: prepared.close.root, runStartRoot: ran?.start.root ?? null, runCloseRoot: ran?.close.root ?? null, entryBytesRoot: entry ? leanBytesRoot(leanCanonicalBytes(entry)) : null, terminalBytesRoot: terminal ? leanBytesRoot(leanCanonicalBytes(terminal)) : null }
       beginLeanInterval(ledger, "correction-supervisor-baseline-v8-terminal-verifier", start.wallStartMs)
+      readerIntervalStarted = true
     }
-    if (leanRetryRootElapsedFloorV8(Date.now(), request.timeboxExtension) >= leanCapsForAllocationModeV8(request.timeboxExtension) || process.memoryUsage().rss + LEAN_EXTERNAL_SCRATCH_RESERVE > LEAN_CAPS.scratchBytes) return fail("HOLD_OR_CAPACITY")
+    if (leanRetryRootElapsedFloorV8(Date.now(), request.timeboxExtension) >= leanCapsForAllocationModeV8(request.timeboxExtension) || process.memoryUsage().rss + LEAN_EXTERNAL_SCRATCH_RESERVE > LEAN_CAPS.scratchBytes || ledger && cumulativeLeanPhysicalBytes(ledger) > LEAN_CAPS.retainedBytes) return fail("HOLD_OR_CAPACITY")
   } finally {
-    if (ledger && readLeanTimeAccounting(ledger).active) closeLeanInterval(ledger, "correction-supervisor-baseline-v8-terminal-verifier")
+    if (ledger && readerIntervalStarted) closeLeanInterval(ledger, "correction-supervisor-baseline-v8-terminal-verifier")
     const observed = { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, body = { schemaVersion: "lean-baseline-terminal-reader-close-v10", startRoot: start.root, wallObservedMs: observed.wallStartMs, monotonicObservedNs: observed.monotonicStartNs, elapsedUpperBoundMs: leanCorrectionAdmissionElapsed(start, observed) }
-    publishLeanCorrection(join(paths.temp, "baseline-terminal-reader-close-v10.json"), { ...body, root: labRoot(body.schemaVersion, body) })
+    readerCloseRoot = labRoot(body.schemaVersion, body)
+    publishLeanCorrection(join(paths.temp, "baseline-terminal-reader-close-v10.json"), { ...body, root: readerCloseRoot })
   }
-  const body = { schemaVersion: "lean-baseline-terminal-custody-v10", authorizing: false, accepted: false, finalReaderClose: false, timeboxExtension: request.timeboxExtension, sourceRoot: request.sourceRoot, currentHead: head, custody, cumulativeElapsedMs: leanRetryRootElapsedFloorV8(Date.now(), request.timeboxExtension) }
+  const body = { schemaVersion: "lean-baseline-terminal-custody-v10", authorizing: false, accepted: false, finalReaderClose: false, timeboxExtension: request.timeboxExtension, sourceRoot: request.sourceRoot, currentHead: head, custody, readerStartRoot: start.root, readerCloseRoot, cumulativeElapsedMs: leanRetryRootElapsedFloorV8(Date.now(), request.timeboxExtension) }
   const report = { ...body, root: labRoot(body.schemaVersion, body) }
   publishLeanCorrection(join(paths.temp, "baseline-terminal-custody-v10.json"), report)
   return report
