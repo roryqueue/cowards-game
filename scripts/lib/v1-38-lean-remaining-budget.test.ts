@@ -56,6 +56,19 @@ describe("approved additive v9 remaining-budget envelope", () => {
     const { root: _root, ...p } = body
     expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...f, predecessor: { ...p, root: labRoot(p.schemaVersion, p) } }, 8)).toThrow()
   })
+  it("carries the actual 387-row v9-1 vector below the conservative floor without refunding reserve", () => {
+    const f = input(), { root: _root, ...p } = f.predecessor
+    // Actual diagnosis: all 287 old rows intact, 100 additions, inherited reserve unchanged.
+    const survivors = Array.from({ length: 387 }, (_, i) => ({ identity: `.strategy-lab/inert-actual-v9-${i}`, allocatedBytes: i === 0 ? 9_117_696 : 4096 }))
+    expect(survivors.reduce((sum, row) => sum + row.allocatedBytes, 0)).toBe(10_698_752)
+    const body = { ...p, survivors, allocatedDiskBytes: 10_698_752 + 4_288_512 }
+    const predecessor = { ...body, root: labRoot(body.schemaVersion, body) }
+    expect(lean.createLeanSupervisorCorrectionAllocation({ ...f, predecessor }, 8).predecessor).toEqual(predecessor)
+    for (const patch of [{ allocatedDiskBytes: 10_698_751 }, { allocatedDiskBytes: envelope().physicalFloorBytes - 1 }, { survivors: survivors.slice(0, 366) }, { survivors: [...survivors, survivors[0]!] }, { survivors: [...survivors, { identity: `${lean.LEAN_REMAINING_V9_PHASE}UNRELATED.md`, allocatedBytes: 4096 }] }]) {
+      const changed = { ...body, ...patch }
+      expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...f, predecessor: { ...changed, root: labRoot(changed.schemaVersion, changed) } }, 8)).toThrow()
+    }
+  })
   it("validates every exact old/new report row with its full physical debit", () => {
     const f = input(), reports = lean.LEAN_REMAINING_V9_REVIEW_PATHS.map(identity => ({ identity, allocatedBytes: 4096 }))
     const { root: _root, ...p } = f.predecessor
