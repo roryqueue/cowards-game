@@ -56,6 +56,44 @@ describe("identity-only admitted v8 cap reuse", () => {
     expect(result).toEqual({ ownExtension: false, during: 57_600_000, after: 57_600_000, extendedCap: 72_000_000, cloneRefused: true })
   })
 
+  it("isolates sparse survivor arrays with mutable inherited numeric slots and keeps full admission", () => {
+    const moduleUrl = new URL("../../packages/strategy-lab/src/league/lean-experiment.ts", import.meta.url).href
+    const contractsUrl = new URL("../../packages/strategy-lab/src/contracts.ts", import.meta.url).href
+    const source = `
+      import * as lean from ${JSON.stringify(moduleUrl)};
+      import { labRoot } from ${JSON.stringify(contractsUrl)};
+      const input = ${JSON.stringify(fixtureInput(8, true))};
+      const inherited = input.predecessor.survivors[0];
+      const survivors = new Array(1);
+      const oldIndex = Object.getOwnPropertyDescriptor(Array.prototype, "0");
+      const oldLength = Object.getOwnPropertyDescriptor(Array.prototype, "length");
+      let initialCap, ownIndex, arrayFrozen, inheritedFrozen, fullRefused = false, capRefused = false;
+      try {
+        Object.defineProperty(Array.prototype, "0", { value: inherited, writable: true, configurable: true });
+        const { root: ignoredRoot, ...prior } = input.predecessor;
+        const body = { ...prior, survivors };
+        const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...input, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }, 8);
+        const admitted = lean.admitLeanAllocation(allocation);
+        initialCap = lean.leanCapsForAllocation(admitted).elapsedMs;
+        ownIndex = Object.hasOwn(admitted.predecessor.survivors, "0");
+        arrayFrozen = Object.isFrozen(admitted.predecessor.survivors);
+        inheritedFrozen = Object.isFrozen(inherited);
+        inherited.allocatedBytes += 1;
+        try { lean.admitLeanAllocation(admitted); }
+        catch (error) { fullRefused = error.message.includes("LEAN_EXPERIMENT_RETRY_PREDECESSOR"); }
+        try { lean.leanCapsForAllocation(admitted); }
+        catch (error) { capRefused = error.message.includes("LEAN_EXPERIMENT_RETRY_PREDECESSOR"); }
+      } finally {
+        if (oldIndex) Object.defineProperty(Array.prototype, "0", oldIndex);
+        else delete Array.prototype[0];
+        Object.defineProperty(Array.prototype, "length", oldLength);
+      }
+      console.log(JSON.stringify({ initialCap, ownIndex, arrayFrozen, inheritedFrozen, fullRefused, capRefused }));
+    `
+    const result = JSON.parse(execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", source], { encoding: "utf8", timeout: 15_000 }))
+    expect(result).toEqual({ initialCap: 72_000_000, ownIndex: false, arrayFrozen: true, inheritedFrozen: false, fullRefused: true, capRefused: true })
+  })
+
   it.each([false, true])("repeated admitted diagnostic reads skip reconstruction/hash/freeze (extended=%s)", extended => {
     const input = fixture(extended), admitted = lean.admitLeanAllocation(input)
     expect(admitted).not.toBe(input)
