@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: v10-1 conditional baseline prepared; commit allocation before unique MAIN entry
+stopped_at: v10-1 baseline resource stop independently closed; source-only precharge diagnosis in progress
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Conditional baseline independently reviewed and prepared7012 exit0; no baseline charges yet
+last_activity_desc: Baseline43305 failed before charges; unique terminal verifier closed; no retry authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V10-1 BASELINE RESOURCE STOP / SOURCE-ONLY DIAGNOSIS (2026-10-07): UniqueMAIN43305 CLOSED1/detailswithheld; actualchildterminal child_failed/null exit/SIGKILL/179238ms overheldHEADd93811c2/source26c1befe/allocationede8c186. ONEindependenttypedENTRY-terminal-onlyverifier CLOSED0/acceptedfalse/authorizingfalse/current0/cumulative32/entry_terminal_only/cleanupobserved. Noresult; ordinaryempiricalreader NOTinvoked/fabricated. Parentreasonresource_threshold/initiatingCauseunknown/failureReceiptabsent. TerminalparentRSS562851840+childmax609271808+512000000external+335544320guard=2019667968 >2GB; NOT simultaneousfailuretime/throwattribution. SOURCE+HEADhold RELEASED/no activeentry/verifier. Approvedpair ENDED; no newMatch/allocation/unuseddiagnostic/retry/refund/recredit/oldsuccessreuse. Safe GSD source-onlydebug v10-baseline-precharge-memory next; retainunchangedbounds/allcosts32charges93.6Mms15GB300/deadline19:26:58.572Z. Phase265/LEAG/freeze/formation/holdout/public/counting/production/archive-success/tag remain gated. Earlierparagraphshistory.
 
 CURRENT V10-1 BASELINE PREPARED (2026-10-07): MAINdraft2032/finalize60935 CLOSED0; distinct independentBASELINE-DATA/HELPERreviews clean. ExactlyONEprepare7012 CLOSED0/preparation_only/issuedfalse/36planned/zerocharge. Actualallocationede8c186/raw50d2b5d2/source26c1befe; predecessor32charges/81150990ms/17272832B. Checkedreal0700nonsymlinkstore onlyallocation/ledger/time. NEWdiagnosticcheck23564b5d/actualFINAL91213587 prerequisite accepted. Commit allocation/reviews BEFOREuniqueMAINentry; SAMEPROCESScapacity beforeeverycharge/provider; sourceANDHEADfixedthroughterminal+ONEappropriateuniquecheck/no competingheavywork/commits/edits. SAME93.6Mms15GB300/allcosts/original19:26:58.572Zdeadline/reserve1860000;full36fitNOTguaranteed. Anybaselineoutcomeendsapprovedpair/no automaticnextattempt. Phase265/LEAG/freeze/formation/holdout/public/counting/production remain gated. Allolderrecordsimmutable; earlierparagraphshistory.
 
