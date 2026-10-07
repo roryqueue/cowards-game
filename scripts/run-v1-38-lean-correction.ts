@@ -1,7 +1,7 @@
 import { admitLeanRetryTimeboxExtension, LEAN_RETRY_V8_TIMEBOX_EXTENSION, isLeanBookkeepingContinuationV8, leanRetryClosedPrefixFloorV8, leanRetryRootElapsedFloorV8, type LeanRetryTimeboxExtension, isLeanRetryMode, leanRetryOrdinal, leanRetrySetupPath, LEAN_RETRY_V8_APPROVAL_ROOT, LEAN_RETRY_V8_PLAN_ROOT, LEAN_RETRY_V8_POLICY, LEAN_RETRY_V8_CARRY, type LeanRetryMode, type LeanRetryOrdinal } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanRemainingBudgetMode, isLeanRemainingBudgetExtensionV9, LEAN_REMAINING_V9_EXTENSION, LEAN_REMAINING_V9_PHASE, LEAN_REMAINING_V9_REVIEW_PATHS, validateLeanRemainingSurvivorsV9 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanTwentySixMode, isLeanTwentySixExtensionV10, isLeanProspectiveBudgetMode, leanProspectiveBudgetBinding, LEAN_TWENTY_SIX_V10_EXTENSION, LEAN_TWENTY_SIX_V10_REPORT_PATHS, validateLeanTwentySixSurvivorsV10 } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { isLeanTwoPairMode, isLeanTwoPairExtensionV11, LEAN_TWO_PAIR_V11_EXTENSION, LEAN_TWO_PAIR_V11_REPORT_PATHS, type LeanTwoPairMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { isLeanTwoPairMode, isLeanTwoPairExtensionV11, LEAN_TWO_PAIR_V11_EXTENSION, LEAN_TWO_PAIR_V11_REPORT_PATHS, validateLeanTwoPairPredecessorV11, type LeanTwoPairMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { authenticateLeanTwoPairHistoricalCustodyV11, authenticateLeanTwoPairClosedOutcomeV11, authenticateLeanTwoPairTerminalCarryV11 } from "./lib/v1-38-lean-correction-retained.js"
 /** Additive, fixed one-cell diagnostic / conditional 36-cell baseline.
  * Import is inert. Historical requests, stores and empirical readers are never used. */
@@ -519,20 +519,18 @@ const readLeanTwoPairRequestWithPurposeV11 = (path: string, route: LeanCorrectio
 }
 /** Closed previous pair is custody/accounting only; no previous acceptance gate. */
 export const inspectLeanTwoPairPredecessorV11 = (route: LeanCorrectionRoute, atMs: number, mode: LeanTwoPairMode, purpose?: unknown): LeanCorrectionPredecessor => inspectLeanTwoPairPredecessorWithJoinV11(route, atMs, mode, purpose)
-const inspectLeanTwoPairPredecessorWithJoinV11 = (route: LeanCorrectionRoute, atMs: number, mode: LeanTwoPairMode, purpose?: unknown, acceptedJoin?: ReturnType<typeof authenticateLeanTwoPairAcceptedJoinV11>): LeanCorrectionPredecessor => {
+/** Immutable lineage only, shared by live admission and recorded refusal reads.
+ * Destination availability and current optional inventory are NOT history. */
+const readLeanTwoPairPredecessorLineageV11 = (route: LeanCorrectionRoute, atMs: number, mode: LeanTwoPairMode, acceptedJoin?: ReturnType<typeof authenticateLeanTwoPairAcceptedJoinV11>) => {
   if (!isLeanTwoPairMode(mode)) return fail("DIAGNOSTIC_CUSTODY")
-  const b = LEAN_TWO_PAIR_V11_EXTENSION, witness = readLeanRetrySetupWitnessV8(mode), acceptedLineage = purpose !== undefined && readLeanRemainingAcceptedLineagePurposeV9(purpose) === mode
-  if (acceptedLineage && route !== "diagnostic" || !Number.isSafeInteger(atMs) || atMs < witness.observedAtMs || !same(witness.timeboxExtension, b)) return fail("DIAGNOSTIC_CUSTODY")
+  const b = LEAN_TWO_PAIR_V11_EXTENSION, witness = readLeanRetrySetupWitnessV8(mode)
+  if (!Number.isSafeInteger(atMs) || atMs < witness.observedAtMs || !same(witness.timeboxExtension, b)) return fail("DIAGNOSTIC_CUSTODY")
   const history = authenticateLeanTwoPairHistoricalCustodyV11(), previous = mode === "v11-2" ? authenticateLeanTwoPairClosedOutcomeV11("v11-1") : null
   const docs = leanTwoPairDocumentsV11(route, mode), current = leanCorrectionRoutePaths(route, mode)
   const identities = [...history.predecessor.survivors.map(row => row.identity), ...history.identities, docs.setup, current.request, docs.authorization, docs.continuation, ...LEAN_TWO_PAIR_V11_REPORT_PATHS]
   const roots: LabRoot[] = [history.root, witness.root]
   let charged = history.cumulativeCharged
-  if (previous) { charged = previous.cumulativeCharged; roots.push(previous.root); identities.push(...previous.identities) }
-  const spent = (m: LeanTwoPairMode, r: LeanCorrectionRoute) => { const p = leanCorrectionRoutePaths(r, m); return [p.store, p.allocation, join(p.temp, "admission-prepare-start.json"), join(p.temp, "admission-run-start.json"), leanTwoPairDocumentsV11(r, m).carry].some(path => existsSync(path)) }
-  if (mode === "v11-1" && (["diagnostic", "baseline"] as const).some(r => spent("v11-2", r))) return fail("SPENT_DESTINATION")
-  for (const r of ["diagnostic", "baseline"]) { const store = `.strategy-lab/lean-correction-supervisor-${r}-20261007-v11-3`; if ([store, `.planning/artifacts/v1.38-lean-correction-supervisor-${r}-allocation-v11-3.json`, join(`${store}-tmp`, "admission-prepare-start.json"), join(`${store}-tmp`, "admission-run-start.json")].some(path => existsSync(path))) return fail("SPENT_DESTINATION") }
-  if (route === "diagnostic" && !acceptedLineage && spent(mode, "baseline")) return fail("SPENT_DESTINATION")
+  if (previous) { if (previous.closedAtMs > atMs) return fail("DIAGNOSTIC_CUSTODY"); charged = previous.cumulativeCharged; roots.push(previous.root); identities.push(...previous.identities) }
   if (route === "baseline") {
     const joined = acceptedJoin ?? authenticateLeanTwoPairAcceptedJoinV11(mode), c = joined.closure
     if (c.cumulativeCharged !== charged + 1 || c.readerCloseMs > atMs) return fail("DIAGNOSTIC_CUSTODY")
@@ -542,8 +540,36 @@ const inspectLeanTwoPairPredecessorWithJoinV11 = (route: LeanCorrectionRoute, at
   }
   const diagnostic = route === "baseline" ? authenticateLeanTwoPairTerminalCarryV11(mode, "diagnostic") : null
   const inherited = diagnostic ?? previous ?? history.predecessor
+  const elapsed = Math.max(leanRetryElapsedV8(atMs, b), "cumulativeElapsedMs" in inherited ? inherited.cumulativeElapsedMs : inherited.elapsedUpperBoundMs)
+  // Pinned old files and actual immutable setup/request bytes were already
+  // present at preparation; directories/reports can gain optional later rows.
+  const requiredFiles = [...history.identities.filter(path => existsSync(path) && lstatSync(path).isFile()), docs.setup, current.request]
+  return { charged, elapsed, identities, requiredFiles, inherited, setupRoot: witness.root, historyRoot: labRoot("lean-two-pair-predecessor-v11", { roots, atMs, mode, route }) }
+}
+/** Validate a finite recorded snapshot against independent custody, not its own
+ * root alone. Growth is charged prospectively; old exact report bodies stay fixed.
+ * This function never grants admission or bypasses destination checks. */
+export const authenticateLeanTwoPairRecordedPredecessorV11 = (predecessor: LeanCorrectionPredecessor, route: LeanCorrectionRoute, atMs: number, mode: LeanTwoPairMode) => {
+  validateLeanTwoPairPredecessorV11(predecessor)
+  const lineage = readLeanTwoPairPredecessorLineageV11(route, atMs, mode), old = new Map(lineage.inherited.survivors.map(row => [row.identity, row.allocatedBytes])), recorded = new Map(predecessor.survivors.map(row => [row.identity, row.allocatedBytes]))
+  const request = readLeanCorrectionJson(leanCorrectionRoutePaths(route, mode).request) as LeanCorrectionRequest
+  const immutableRows = inventoryLeanSupervisorSurvivors(lineage.requiredFiles)
+  if (request.setupAccountingRoot !== lineage.setupRoot || predecessor.chargedMatches !== lineage.charged || predecessor.historyRoot !== lineage.historyRoot || predecessor.elapsedUpperBoundMs !== lineage.elapsed || immutableRows.some(row => recorded.get(row.identity) !== row.allocatedBytes) || lineage.inherited.survivors.some(row => !recorded.has(row.identity) || recorded.get(row.identity)! < row.allocatedBytes)) return fail("PREDECESSOR_DRIFT")
+  const debit = predecessor.survivors.reduce((bytes, row) => bytes + Math.max(0, row.allocatedBytes - (old.get(row.identity) ?? 0)), lineage.inherited.allocatedDiskBytes)
+  if (!Number.isSafeInteger(debit) || predecessor.allocatedDiskBytes !== Math.max(LEAN_TWO_PAIR_V11_EXTENSION.physicalFloorBytes, debit)) return fail("PREDECESSOR_DRIFT")
+  inventoryLeanTwoPairNoRefundV11(predecessor, [])
+  return predecessor
+}
+const inspectLeanTwoPairPredecessorWithJoinV11 = (route: LeanCorrectionRoute, atMs: number, mode: LeanTwoPairMode, purpose?: unknown, acceptedJoin?: ReturnType<typeof authenticateLeanTwoPairAcceptedJoinV11>): LeanCorrectionPredecessor => {
+  const acceptedLineage = purpose !== undefined && readLeanRemainingAcceptedLineagePurposeV9(purpose) === mode
+  if (acceptedLineage && route !== "diagnostic") return fail("DIAGNOSTIC_CUSTODY")
+  const { charged, elapsed, identities, inherited, historyRoot } = readLeanTwoPairPredecessorLineageV11(route, atMs, mode, acceptedJoin), b = LEAN_TWO_PAIR_V11_EXTENSION
+  const spent = (m: LeanTwoPairMode, r: LeanCorrectionRoute) => { const p = leanCorrectionRoutePaths(r, m); return [p.store, p.allocation, join(p.temp, "admission-prepare-start.json"), join(p.temp, "admission-run-start.json"), leanTwoPairDocumentsV11(r, m).carry].some(path => existsSync(path)) }
+  if (mode === "v11-1" && (["diagnostic", "baseline"] as const).some(r => spent("v11-2", r))) return fail("SPENT_DESTINATION")
+  for (const r of ["diagnostic", "baseline"]) { const store = `.strategy-lab/lean-correction-supervisor-${r}-20261007-v11-3`; if ([store, `.planning/artifacts/v1.38-lean-correction-supervisor-${r}-allocation-v11-3.json`, join(`${store}-tmp`, "admission-prepare-start.json"), join(`${store}-tmp`, "admission-run-start.json")].some(path => existsSync(path))) return fail("SPENT_DESTINATION") }
+  if (route === "diagnostic" && !acceptedLineage && spent(mode, "baseline")) return fail("SPENT_DESTINATION")
   const inventory = inventoryLeanTwoPairNoRefundV11(inherited, identities)
-  const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: charged, elapsedUpperBoundMs: leanRetryElapsedV8(atMs, b), allocatedDiskBytes: Math.max(b.physicalFloorBytes, inventory.allocatedDiskBytes), historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: labRoot("lean-two-pair-predecessor-v11", { roots, atMs, mode, route }), survivors: inventory.survivors }
+  const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: charged, elapsedUpperBoundMs: elapsed, allocatedDiskBytes: Math.max(b.physicalFloorBytes, inventory.allocatedDiskBytes), historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot, survivors: inventory.survivors }
   return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 /** v9 keeps its own exact envelope, reports, and continuation identity end-to-end. */

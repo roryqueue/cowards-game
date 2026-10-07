@@ -531,16 +531,21 @@ it("v11 authenticates a complete inert actual admission/refusal lifecycle, not r
     const witness = rooted({ schemaVersion: "lean-retry-setup-witness-v8", timeboxExtension: b, attemptOrdinal: 1, startedAtMs: b.startedAtMs, observedAtMs: b.startedAtMs, priorElapsedMs: b.priorElapsedMs, consumedTimeBytesRoot: ledgerIO.LEAN_RETRY_V8_CARRY.timeBytesRoot, decisionRoot: b.approvalRoot, threadId: "019fa652-915a-7183-9af1-3b3c05868d86", turnId: b.turnId, source: "codex-task-event-custody" })
     const put = (path: string, value: unknown) => fileIO.writeFileSync(path, ledgerIO.leanCanonicalBytes(value), { mode: 0o600 })
     put(ledgerIO.leanRetrySetupPath(mode), witness)
-    const predecessor = rooted({ schemaVersion: "lean-correction-predecessor-v1", chargedMatches: 32, elapsedUpperBoundMs: b.priorElapsedMs + 1000, allocatedDiskBytes: b.physicalFloorBytes, historicalPeakDiskBytes: "unknown", historicalPeakRssBytes: "unknown", historyRoot: r(20), survivors }) as unknown as ledgerIO.LeanCorrectionPredecessor
-    // Only the pre-existing historical byte authority is injected. All new
-    // admission, request, refusal, reader, report and carry files are real reads.
-    history = vi.spyOn(correctionIO, "inspectLeanTwoPairPredecessorV11").mockReturnValue(predecessor)
+    const historicalPredecessor = rooted({ schemaVersion: "lean-correction-predecessor-v1", chargedMatches: 32, elapsedUpperBoundMs: b.priorElapsedMs, allocatedDiskBytes: b.physicalFloorBytes, historicalPeakDiskBytes: "unknown", historicalPeakRssBytes: "unknown", historyRoot: r(20), survivors }) as unknown as ledgerIO.LeanCorrectionPredecessor
+    // Inject only unavailable old pinned custody, not the live inspector branch.
+    // New admission, request, refusal, reader, report and carry reads are real.
+    history = vi.spyOn(retainedIO, "authenticateLeanTwoPairHistoricalCustodyV11").mockReturnValue({ root: r(21), cumulativeCharged: 32, predecessor: historicalPredecessor, identities: [] } as unknown as ReturnType<typeof retainedIO.authenticateLeanTwoPairHistoricalCustodyV11>)
     const request = correctionIO.createLeanTwoPairRequestDraftV11(mode, route, { sourceRoot: r(1), reviewRoot: r(2), dataReviewRoot: r(3), helperReviewRoot: r(4), setupAccountingRoot: witness.root, reuseGrantRoot: r(6), authorizationRoot: r(7), priorClosureRoot: null, continuationRoot: null, acceptedCheckRoot: null, acceptedReaderCloseRoot: null })
     put(paths.request, request)
     const admission = correctionIO.beginLeanCorrectionAdmission(route, "prepare", resolve(paths.temp), { wallStartMs: b.startedAtMs + 1000, monotonicStartNs: "1000000" }, mode)
     const admissionClose = correctionIO.closeLeanCorrectionAdmission(admission, null, { wallStartMs: b.startedAtMs + 1010, monotonicStartNs: "11000000" })
     const failure = rooted({ schemaVersion: "lean-retry-admission-failure-v8", timeboxExtension: b, authorAgent: "/root", authorizing: false, attemptOrdinal: 1, admissionMode: "prepare", startRoot: admission.root, closeRoot: admissionClose.root, sourceRoot: request.sourceRoot, head, requestBytesRoot: ledgerIO.leanBytesRoot(ledgerIO.leanCanonicalBytes(request)), allocationRoot: null, ledgerBytesRoot: null, timeBytesRoot: null, currentCharges: 0, cumulativeCharged: null, storeAbsent: true, childSpawned: false, cleanup: null, entryAbsent: true, terminalAbsent: true, resultAbsent: true, acceptedCheckAbsent: true })
     put(join(paths.temp, "admission-failure-v8.json"), failure)
+    const predecessor = correctionIO.inspectLeanTwoPairPredecessorV11(route, admission.wallStartMs, mode)
+    for (const changed of [{ chargedMatches: 33 }, { elapsedUpperBoundMs: b.priorElapsedMs }, { historyRoot: r(99) }, { allocatedDiskBytes: predecessor.allocatedDiskBytes + 1 }, { survivors: predecessor.survivors.slice(1) }]) {
+      const { root: _predecessor, ...predecessorBody } = predecessor
+      expect(() => correctionIO.authenticateLeanTwoPairRecordedPredecessorV11(rooted({ ...predecessorBody, ...changed }) as unknown as ledgerIO.LeanCorrectionPredecessor, route, admission.wallStartMs, mode)).toThrow()
+    }
     const start = rooted({ schemaVersion: "lean-two-pair-terminal-verifier-start-v11", authorizing: false, mode, route, sourceRoot: request.sourceRoot, head: failure.head, wallStartMs: b.startedAtMs + 1020, monotonicStartNs: "21000000" })
     const close = rooted({ schemaVersion: "lean-two-pair-terminal-verifier-close-v11", startRoot: start.root, closedAtMs: b.startedAtMs + 1030, wallObservedMs: b.startedAtMs + 1030, monotonicObservedNs: "31000000", elapsedUpperBoundMs: 10 })
     put(join(paths.temp, "terminal-verifier-start-v11.json"), start); put(join(paths.temp, "terminal-verifier-close-v11.json"), close)
@@ -550,6 +555,31 @@ it("v11 authenticates a complete inert actual admission/refusal lifecycle, not r
     expect(retainedIO.publishLeanTwoPairTerminalCarryV11(mode, route)).toMatchObject({ outcome: "refused_before_entry", cumulativeCharged: 32, currentCharges: 0, entryHead: null, resultBytesRoot: null })
     expect(retainedIO.authenticateLeanTwoPairTerminalVerificationV11(mode, route).value).toEqual(check)
     expect(retainedIO.authenticateLeanTwoPairClosedOutcomeV11(mode)).toMatchObject({ cumulativeCharged: 32, baselineCarryRoot: null })
+    const originalReport = fileIO.readFileSync(reportPath), originalCarry = retainedIO.authenticateLeanTwoPairTerminalCarryV11(mode, route)
+    const nextPaths = ledgerIO.leanCorrectionRoutePaths(route, "v11-2")
+    fileIO.mkdirSync(nextPaths.temp, { mode: 0o700 })
+    correctionIO.beginLeanCorrectionAdmission(route, "prepare", resolve(nextPaths.temp), { wallStartMs: b.startedAtMs + 1040, monotonicStartNs: "41000000" }, "v11-2")
+    expect(() => correctionIO.inspectLeanTwoPairPredecessorV11(route, admission.wallStartMs, mode)).toThrow("SPENT_DESTINATION")
+    expect(retainedIO.authenticateLeanTwoPairClosedOutcomeV11(mode)).toMatchObject({ cumulativeCharged: 32, baselineCarryRoot: null })
+    const optionalReport = ledgerIO.LEAN_TWO_PAIR_V11_REPORT_PATHS.at(-1)!
+    fileIO.mkdirSync(resolve(optionalReport, ".."), { recursive: true }); fileIO.writeFileSync(optionalReport, "later optional report".repeat(400), { mode: 0o600 })
+    expect(retainedIO.authenticateLeanTwoPairTerminalCarryV11(mode, route)).toEqual(originalCarry)
+    expect(fileIO.readFileSync(reportPath)).toEqual(originalReport)
+    fileIO.appendFileSync(optionalReport, "further optional growth".repeat(800))
+    expect(retainedIO.authenticateLeanTwoPairTerminalCarryV11(mode, route)).toEqual(originalCarry)
+    expect(fileIO.readFileSync(reportPath)).toEqual(originalReport)
+    const nextInventory = correctionIO.inventoryLeanTwoPairNoRefundV11(originalCarry, [optionalReport])
+    expect(nextInventory.allocatedDiskBytes).toBeGreaterThan(originalCarry.allocatedDiskBytes)
+    expect(nextInventory.survivors.some(row => row.identity === optionalReport)).toBe(true)
+    const { root: _witness, ...witnessBody } = witness
+    put(ledgerIO.leanRetrySetupPath("v11-2"), rooted({ ...witnessBody, attemptOrdinal: 2, observedAtMs: b.startedAtMs + 1040 }))
+    const nextPredecessor = correctionIO.inspectLeanTwoPairPredecessorV11(route, b.startedAtMs + 1040, "v11-2")
+    expect(nextPredecessor.chargedMatches).toBe(32)
+    expect(nextPredecessor.allocatedDiskBytes).toBeGreaterThanOrEqual(nextInventory.allocatedDiskBytes)
+    expect(nextPredecessor.survivors.some(row => row.identity === optionalReport)).toBe(true)
+    expect(nextPredecessor.elapsedUpperBoundMs).toBeGreaterThanOrEqual(originalCarry.cumulativeElapsedMs)
+    fileIO.rmSync(nextPaths.temp, { recursive: true }); fileIO.unlinkSync(optionalReport)
+    expect(() => correctionIO.inventoryLeanTwoPairNoRefundV11(nextPredecessor, [])).toThrow()
     for (const mutation of [{ cumulativeCharged: 33 }, { failureRoot: r(99) }, { predecessor: rooted({ ...predecessor, chargedMatches: 33 }) }, { cumulativeElapsedMs: b.priorElapsedMs }, { entryHead: "a".repeat(40) }, { finalReaderClose: true }]) {
       const { root: _root, ...body } = check; put(reportPath, rooted({ ...body, ...mutation }))
       expect(() => retainedIO.authenticateLeanTwoPairClosedOutcomeV11(mode)).toThrow()
@@ -599,7 +629,7 @@ it("v11 authenticates a complete inert actual admission/refusal lifecycle, not r
         const run = correctionIO.beginLeanCorrectionAdmission(route, "run", resolve(paths.temp), { wallStartMs: b.startedAtMs + 1011, monotonicStartNs: "12000000" }, mode)
         const entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: request.sourceRoot, requestBytesRoot: failure.requestBytesRoot, head, parentPid: 1, childPid: 2, handshakeRoot: r(90), wallStartMs: run.wallStartMs, monotonicStartNs: run.monotonicStartNs }
         put(join(paths.store, "entry.json"), entry)
-        const terminal = ledgerIO.deriveLeanChildTerminal(enteredLedger, entry as ledgerIO.LeanChildEntryV2, { status: "child_failed", exitCode: 1, signal: null, wallObservedMs: b.startedAtMs + 1012, monotonicObservedNs: "13000000", parentRssBytes: 1, childRssObservedBytes: 1, physicalBytes: b.physicalFloorBytes, freeBytes: 20000000000 })
+        const terminal = ledgerIO.deriveLeanChildTerminal(enteredLedger, entry as ledgerIO.LeanChildEntryV2, { status: "child_failed", exitCode: 1, signal: null, wallObservedMs: b.startedAtMs + 1012, monotonicObservedNs: "13000000", parentRssBytes: 1, childRssObservedBytes: 1, physicalBytes: predecessor.allocatedDiskBytes, freeBytes: 20000000000 })
         put(join(paths.store, "child-terminal.json"), terminal)
         ledgerIO.importLeanClosedInterval(enteredLedger, "pilot-entry", run.wallStartMs, terminal.wallObservedMs)
         ledgerIO.importLeanClosedInterval(enteredLedger, "correction-run-finalization", terminal.wallObservedMs, b.startedAtMs + 1013)
