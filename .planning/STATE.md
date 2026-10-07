@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Conditional twenty-hour baseline prepared; commit allocation before unique MAIN entry
-last_updated: "2026-10-06"
+stopped_at: Bookkeeping repair verified; pending one fresh diagnostic and conditional baseline amendment
+last_updated: "2026-10-07"
 last_activity: 2026-10-06
-last_activity_desc: Baseline data independently reviewed clean and ONE36 allocation prepared, zero new charges
+last_activity_desc: Source-only repair clean, validated and verified; fresh empirical continuation awaits direct approval
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT SOURCE REPAIR VERIFIED / HUMAN PROSPECTIVE CONTINUATION PENDING (2026-10-07): Production repair `13b2fe13ce5b0677ab5ac44f2df463914b983e7d` and test-only coverage closure `f56a325e6f0afd2769b38969de3f378969b11597` are complete. Existing Plan16 checked research/plan, RED/GREEN implementation, independent REVIEW-v4 (including test-only addendum), scoped VALIDATION-v1 and independent SOURCE-VERIFICATION-v1 (five truths) are CLOSED. CR01–03 findings remain preserved history and resolved; the dedicated inherited sparse-array coverage limitation was closed by a test-only addition, independently reviewed and MAIN-tested28/28. MAIN configured lab types and actual1413-file privacy-boundary scan pass; no whole-phase suite claim. This proves less repeated bookkeeping, NOT the cause or cure of observed RSS growth. No entry/provider/Match/ordinary empirical reader/source hold is active; prior parent97464/child97547 are absent. The diagnostic v8-1 remains accepted, but its ONE conditional baseline failed the memory guard before any new charge and its unique terminal-only verification is closed. All30 prior charges, costs, files, old readers and allocations remain immutable; no refund/recredit/reuse/fabricated result. `NEW265-16-BOOKKEEPING-CONTINUATION-DECISION-v1.md` remains pending: ONE distinct fresh private diagnostic plus ONLY after full acceptance/actual FINAL closure ONE distinct fresh36 baseline, SAME cumulative72000000ms/15GB/300 and runtime/rules/privacy bounds. No new request/allocation/prepare/run before direct human approval. Carry56000917ms + current time minus1791326194166 continues to include every repair/review/test/admin cost; no budget reset. All nine LEAG requirements, Plan16/Phase265 completion, Phase266 freeze, formation, holdout opening, public/counted/production and successful archive/tag remain gated. Older paragraphs below are historical snapshots, not current instructions.
+
+CURRENT TWENTY-HOUR BASELINE FAILED / SOURCE HOLD RELEASED: UniqueMAIN94895 CLOSED1; actualparent97464/child97547 absent, childterminalcc299189 statuschild_failed/exitnull/SIGKILL/128431ms, reasonc5abccf6 resource_threshold. Independent unique ENTRY-terminal-only verification CLOSED, noordinaryreader/result/charges/headfabrication; allocation851e1337/raw0e5c9a9a/source9ba555e7/heldHEAD1b5f59d6 unchangedthroughactualclosure. Three timeintervalsclosed/final1791330306250; cumulative30spent. GSDboundeddiagnosis CLOSED: staticlogic localizesRSSscratchpredicate, notelapsed (timehelperthrowsbeforecap; samplingexceptionabsent); exacttriggertickoperands/causeofRSSgrowthunknown. Terminalparent519835648B+childmax666226688B+512000000external+335544320buffer=2033606656B vs2GB, valuesnotnecessarilycoinstantaneous. Free201995898880B/notdiskcause. Sourcehold RELEASED. Checkedsource-only allocation/cap-view reuse mayreduceprovenrepeatedbookkeeping, NOTempiricalmemorycure; noresourcepolicyamendment. Approvedconditionalbaseline spent byfailure; NOnewbaseline/diag/Match untilnewhumanprospectiveamendment, oldrouteimmutable/no retry/refund/recredit. Same72000000ms15GB300 and continuouscarry56000917+now−1791326194166/allrepaircosts; Phase265/freeze/formation/holdout/public/counting/production gated. Olderfrontiershistory.
 
 CURRENT TWENTY-HOUR CONDITIONAL BASELINE PREPARED: ActualMAINdraft8033/finalize21731 CLOSED0; independent BASELINE-DATA-REVIEW-v1 clean/zero. Freshrequestraw77f41d3d/datae020b47d binds sameacceptedcheck72ae7d07/FINALclosure6dcab260/source9ba555e7/extensionc9093818. ExactlyONEprepare42131 CLOSED0/preparation_only allocation851e1337/raw0e5c9a9a/36slots. Checkedrealowned0700store onlyallocation/emptyledger/closedtime, predecessor59945271ms/30prior/0newcharges at23:43:08.800Z; all latercostscarry72000000ms15GB300. Commit/pushallocation BEFOREONEuniqueMAINentry/SAMEPROCESScapacity everycharge/provider, thensourceANDHEADfixedthroughterminal+ONEproperunique retainedcheck/noheavywork. Full36fitnotpromised; anybaselinefailure/inadequatereserve endsenvelope. NoPhase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earlierfrontiershistory.
 
