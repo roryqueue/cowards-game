@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Two fresh pairs approved and unused; existing time allowance below unchanged reserve
+stopped_at: Four-hour extension approved; checked prospective two-pair supplement in progress
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Two-pair approval recorded; non-admitting time check blocks launch; time-only extension awaits decision
+last_activity_desc: Exact MAIN start bound; old26h fully carried into new30h cap; research/checked supplement next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT TWO-PAIR TIME EXTENSION APPROVED (2026-10-07): Direct human `yes, approved` recorded in265-16-TWO-PAIR-TIME-APPROVAL-20261007.md. ActualMAINtask01a11852 start1791409410738/21:43:30.738Z bound by local-journal rawf9fc537e; conservatively debitFULLold93600000ms and countALLnewwalltime under108000000ms cumulativecap, deadline2026-10-08T01:43:30.738Z. No clock restart/idle exclusion/refund/reset/recredit. TWOdistinctfresh private diagnostic/conditional36baseline pairs remain0/2, no repeat per-pair approval; existing Plan16 checked additive prospective plumbing required before any allocation. SAME15GB300/all32charges/allcosts/files/reserve1860000/guest1000/host5000/startup2500/Match600000/scratch2GB/allotherbounds. No activeentry/verifier/sourceHEADhold observed; oldsource0055ed48 and all consumed evidence immutable. Research→checked supplement→source execution/review-fix/validation/verification precede freshactualMAINdata/helperreview/newcommittedallocation/uniqueentry/SAMEPROCESScapacity. Only NEWaccepteddiagnostic+actualFINAL permits pairedbaseline; insufficienttime or two unsuccessfulpairs ends honestly. Phase265/LEAG/freeze/formation/holdout/public/counting/production/archive-success/tag remain gated. Earlier paragraphs are history, superseded only as stated.
 
 CURRENT TWO-PAIR APPROVED / TIME CAPACITY BLOCKED (2026-10-07): Direct human approved the two distinct fresh private diagnostic/conditional36baseline pairs under SAMEremaininglimits/no repeat per-pair literals; recorded265-16-TWO-PAIR-APPROVAL-20261007.md against unchangedproposalbytes6a1c6db6. Approval does NOTincrease time or reduce reserve/exclude more idle. Non-admitting frozen-source clock observation19:10:07.458Z gives elapsed92588886/93600000, remaining1011114ms <1860000msreserve by848886; originaldeadline19:26:58.572Z unchanged, latercostcontinues. ZEROnewpairs/allocations/charges/providers/readers; no activeentry/verifier/sourceHEADhold. Oldsource07227237/functional0055ed48/905 reviewed and synchronizedorigin/main, old32charges/allhistory immutable. Do not create an allocation or launch a known time-refused route. Pending265-16-TWO-PAIR-TIME-EXTENSION-DECISION-v1.md proposes FOURprospectiveadditionalhours startingactualfirstMAINresumeAFTERtimeapproval, conservativelydebitfullold26h and newcumulative30h, SAME15GB300/reserve/allotherbounds/two-paircount; NOTapproved/applied. No retrospective idle exclusion/reset/refund. GSDresume capacity gate is a genuinely new resource checkpoint, not another per-attempt literal. Plan16/265/LEAG/freeze/formation/holdout/public/counting/production/archive-success/tag remain gated. Earlier paragraphs are history, superseded only as stated.
 
