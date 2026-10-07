@@ -53,7 +53,7 @@ export const LEAN_TWENTY_SIX_V10_APPROVAL = `${LEAN_REMAINING_V9_PHASE}NEW265-16
 export const LEAN_TWENTY_SIX_V10_PLAN = `${LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-PLAN-v1.md`
 /** Exact MAIN authoring destinations, available without any I/O or execution. */
 export const leanRemainingDocumentsV9 = (route: LeanCorrectionRoute, mode: LeanRetryMode) => {
-  if (isLeanTwentySixMode(mode)) return Object.freeze({ review: `${LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-SOURCE-REVIEW-v1.md`, dataReview: `${LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-${route === "baseline" ? "BASELINE-" : ""}DATA-REVIEW-v1.md`, authorization: `.strategy-lab/lean-retry-authorization-${route}-${mode}.json`, continuation: `.strategy-lab/lean-retry-continuation-${mode}.json`, setup: leanRetrySetupPath(mode) })
+  if (isLeanTwentySixMode(mode)) return Object.freeze({ review: `${LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-SOURCE-REVIEW-v2.md`, dataReview: `${LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-${route === "baseline" ? "BASELINE-" : ""}DATA-REVIEW-v1.md`, authorization: `.strategy-lab/lean-retry-authorization-${route}-${mode}.json`, continuation: `.strategy-lab/lean-retry-continuation-${mode}.json`, setup: leanRetrySetupPath(mode) })
   if (!isLeanRemainingBudgetMode(mode)) return fail("ARGUMENTS")
   const n = leanRetryOrdinal(mode), label = route === "diagnostic" ? `V9-${n}` : `V9-BASELINE-FOR-${n}`
   return Object.freeze({ review: `${LEAN_REMAINING_V9_PHASE}NEW265-16-${label}-SOURCE-REVIEW-v1.md`, dataReview: `${LEAN_REMAINING_V9_PHASE}NEW265-16-${label}-DATA-REVIEW-v1.md`, authorization: `.strategy-lab/lean-retry-authorization-${route}-${mode}.json`, continuation: `.strategy-lab/lean-retry-continuation-${mode}.json`, setup: leanRetrySetupPath(mode) })
@@ -756,7 +756,48 @@ export const inspectLeanRemainingPredecessorV9 = (route: LeanCorrectionRoute, at
 }
 /** New approval carries only finite pinned historical custody, never an old
  * accepted-reader authentication against current source or a legacy grant. */
-const inspectLeanTwentySixPredecessorV10 = (route: LeanCorrectionRoute, atMs: number, purpose?: unknown): LeanCorrectionPredecessor => {
+type LeanTwentySixReportRow = { identity: string; allocatedBytes: number; bytesRoot: LabRoot }
+const twentySixReportSnapshots = new WeakMap<LeanCorrectionPredecessor, readonly LeanTwentySixReportRow[]>()
+export const readLeanTwentySixReportCustodyV10 = (): readonly LeanTwentySixReportRow[] => {
+  // Reject aliases of this supplement, not unrelated historical phase reports.
+  for (const name of readdirSync(LEAN_REMAINING_V9_PHASE)) if (name.startsWith("NEW265-16-TWENTY-SIX-HOUR-") && !LEAN_TWENTY_SIX_V10_REPORT_PATHS.includes(`${LEAN_REMAINING_V9_PHASE}${name}`)) return fail("SURVIVOR")
+  return inventoryLeanSupervisorSurvivors(LEAN_TWENTY_SIX_V10_REPORT_PATHS.filter(path => existsSync(path))).map(row => {
+    const absolute = resolve(row.identity), stat = lstatSync(absolute)
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 262144 || realpathSync(absolute) !== absolute) return fail("SURVIVOR")
+    const fd = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW)
+    try {
+      const before = fstatSync(fd), bytes = readFileSync(fd), after = fstatSync(fd)
+      if (before.ino !== stat.ino || before.dev !== stat.dev || before.blocks * 512 !== row.allocatedBytes || bytes.length !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs || after.ctimeMs !== before.ctimeMs) return fail("SURVIVOR_CHANGED")
+      return { ...row, bytesRoot: leanBytesRoot(bytes) }
+    } finally { closeSync(fd) }
+  })
+}
+/** Only the inventory may update an existing row. New exact v10 administrative
+ * publications are separately charged; old and already published reports stay pinned. */
+export const authenticateLeanTwentySixReportSnapshotV10 = (rows: readonly LeanTwentySixReportRow[], current = readLeanTwentySixReportCustodyV10()) => {
+  if (!Array.isArray(rows) || rows.length > LEAN_TWENTY_SIX_V10_REPORT_PATHS.length || new Set(rows.map(row => row.identity)).size !== rows.length) return fail("PREDECESSOR_DRIFT")
+  if (current.some(row => !LEAN_TWENTY_SIX_V10_REPORT_PATHS.includes(row.identity))) return fail("PREDECESSOR_DRIFT")
+  const inventory = `${LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-PHYSICAL-REPORT-INVENTORY-v1.json`
+  for (const row of rows) {
+    if (!exactLabKeys(row, ["identity", "allocatedBytes", "bytesRoot"]) || typeof row.identity !== "string" || !LEAN_TWENTY_SIX_V10_REPORT_PATHS.includes(row.identity) || typeof row.allocatedBytes !== "number" || !Number.isSafeInteger(row.allocatedBytes) || row.allocatedBytes < 0 || !root(row.bytesRoot)) return fail("PREDECESSOR_DRIFT")
+    const actual = current.find(value => value.identity === row.identity)
+    if (!actual || row.identity !== inventory && !same(row, actual)) return fail("PREDECESSOR_DRIFT")
+  }
+  for (const row of current) if (!rows.some(prior => prior.identity === row.identity) && !row.identity.startsWith(`${LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-`)) return fail("PREDECESSOR_DRIFT")
+  return rows
+}
+export const assertLeanPreparedPredecessor = (prepared: LeanCorrectionPredecessor, inspected: LeanCorrectionPredecessor): void => {
+  if (!same(prepared, inspected)) return fail("PREDECESSOR_DRIFT")
+}
+/** Actual run boundary, also exercised by inert source fixtures. */
+export const authenticateLeanPreparedTwentySixPredecessorV10 = (allocation: LeanCorrectionAllocation, preparedAtMs: number): void => {
+  if (leanSupervisorAllocationMode(allocation) !== "v10-1") return fail("PREDECESSOR_DRIFT")
+  const route = allocation.route, paths = leanCorrectionRoutePaths(route, "v10-1")
+  const snapshot = readLeanCorrectionJson(join(paths.temp, "predecessor-report-snapshot-v10.json")) as { schemaVersion: string; route: string; atMs: number; allocationRoot: LabRoot; rows: LeanTwentySixReportRow[]; root: LabRoot }, { root: claimed, ...body } = snapshot
+  if (!exactLabKeys(snapshot, ["schemaVersion", "route", "atMs", "allocationRoot", "rows", "root"]) || snapshot.schemaVersion !== "lean-predecessor-report-snapshot-v10" || claimed !== labRoot(snapshot.schemaVersion, body) || snapshot.route !== route || snapshot.atMs !== preparedAtMs || snapshot.allocationRoot !== allocation.root) return fail("PREDECESSOR_DRIFT")
+  assertLeanPreparedPredecessor(allocation.predecessor, inspectLeanTwentySixPredecessorV10(route, preparedAtMs, undefined, snapshot.rows))
+}
+const inspectLeanTwentySixPredecessorV10 = (route: LeanCorrectionRoute, atMs: number, purpose?: unknown, reportSnapshot?: readonly LeanTwentySixReportRow[]): LeanCorrectionPredecessor => {
   const mode = "v10-1", b = LEAN_TWENTY_SIX_V10_EXTENSION, witness = readLeanRetrySetupWitnessV8(mode)
   const acceptedLineage = purpose !== undefined && readLeanRemainingAcceptedLineagePurposeV9(purpose) === mode
   if (acceptedLineage && route !== "diagnostic" || !Number.isSafeInteger(atMs) || atMs < witness.observedAtMs || !same(witness.timeboxExtension, b)) return fail("DIAGNOSTIC_CUSTODY")
@@ -780,23 +821,12 @@ const inspectLeanTwentySixPredecessorV10 = (route: LeanCorrectionRoute, atMs: nu
     identities.push(diagnostic.store, diagnostic.temp, diagnostic.request, diagnostic.allocation, diagnosticDocs.authorization)
     roots.push(accepted.root, closure.root)
   }
-  identities.push(...LEAN_TWENTY_SIX_V10_REPORT_PATHS.filter(path => existsSync(path)))
-  const survivors = inventoryLeanSupervisorSurvivors([...new Set(identities.filter(path => existsSync(path)))])
-  // Byte roots for report custody stay outside functional source. The inventory
-  // is measured by allocation itself, never inserted into its own digest rows.
-  const reviewCustody = survivors.filter(row => LEAN_TWENTY_SIX_V10_REPORT_PATHS.includes(row.identity)).map(row => {
-    const absolute = resolve(row.identity), stat = lstatSync(absolute)
-    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 262144 || realpathSync(absolute) !== absolute) return fail("SURVIVOR")
-    const fd = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW)
-    try {
-      const before = fstatSync(fd), bytes = readFileSync(fd), after = fstatSync(fd)
-      if (before.ino !== stat.ino || before.dev !== stat.dev || bytes.length !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs || after.ctimeMs !== before.ctimeMs) return fail("SURVIVOR_CHANGED")
-      return { ...row, bytesRoot: leanBytesRoot(bytes) }
-    } finally { closeSync(fd) }
-  })
+  const currentReports = readLeanTwentySixReportCustodyV10(), reviewCustody = reportSnapshot ? authenticateLeanTwentySixReportSnapshotV10(reportSnapshot, currentReports) : currentReports
+  const survivors = [...inventoryLeanSupervisorSurvivors([...new Set(identities.filter(path => existsSync(path) && !LEAN_TWENTY_SIX_V10_REPORT_PATHS.includes(path)))]), ...reviewCustody.map(({ bytesRoot: _root, ...row }) => row)].sort((a, b) => a.identity.localeCompare(b.identity))
   const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: charged, elapsedUpperBoundMs: elapsed, allocatedDiskBytes: Math.max(b.physicalFloorBytes, history.reserveBytes + survivors.reduce((n, row) => n + row.allocatedBytes, 0)), historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: labRoot("lean-twenty-six-predecessor-v10", { roots, reviewCustody, atMs, route }), survivors }
   const predecessor = { ...body, root: labRoot(body.schemaVersion, body) }
   validateLeanTwentySixSurvivorsV10(predecessor)
+  twentySixReportSnapshots.set(predecessor, reviewCustody)
   return predecessor
 }
 const inspectLeanRemainingPredecessorWithPurposeV9 = (route: LeanCorrectionRoute, atMs: number, mode: LeanRetryMode, purpose?: unknown): LeanCorrectionPredecessor => {
@@ -1034,6 +1064,10 @@ export const prepareLeanCorrection = (path: string, route: LeanCorrectionRoute, 
   const common = { ...(request.timeboxExtension ? { timeboxExtension: request.timeboxExtension } : {}), ...(isLeanRetryMode(supervisor) ? { attemptOrdinal: leanRetryOrdinal(supervisor), priorClosureRoot: request.priorClosureRoot, continuationRoot: request.continuationRoot, acceptedReaderCloseRoot: request.acceptedReaderCloseRoot } : {}), sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route, reuseGrantRoot: reuse.grant.root, predecessor }
   const allocation = supervisor ? createLeanSupervisorCorrectionAllocation({ ...common, supervisorDecisionRoot: request.supervisorDecisionRoot!, acceptedCheckRoot: request.acceptedCheckRoot!, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), dataReviewRoot: request.dataReviewRoot, setupAccountingRoot: request.setupAccountingRoot!, ...((supervisor === "v5" || (supervisor === "v6" || (supervisor === "v7" || isLeanRetryMode(supervisor)))) ? { startupPolicyRoot: request.startupPolicyRoot! } : {}) }, leanSupervisorVersion(supervisor)) : createLeanCorrectionAllocation({ sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route, reuseGrantRoot: reuse.grant.root, diagnosisRoot: request.diagnosis?.root ?? null, predecessor })
   assertLeanCorrectionAdmissionTime(predecessor.elapsedUpperBoundMs, carrier, admissionClock(), allocation)
+  if (isLeanTwentySixMode(supervisor)) {
+    const body = { schemaVersion: "lean-predecessor-report-snapshot-v10", route, atMs: carrier.wallStartMs, allocationRoot: allocation.root, rows: twentySixReportSnapshots.get(predecessor) ?? fail("PREDECESSOR_DRIFT") }
+    publishLeanCorrection(join(paths.temp, "predecessor-report-snapshot-v10.json"), { ...body, root: labRoot(body.schemaVersion, body) })
+  }
   ledger = createLeanLedger(paths.store, allocation)
   publishLeanCorrection(paths.allocation, allocation, ledger)
   completed = true
@@ -1167,7 +1201,10 @@ export const leanCorrectionMain = async (args: readonly string[]) => {
   if (!accountingLedger) accountingLedger = openLeanLedger(paths.store)
   const { request, ledger, allocation } = allocationFor(path, route, supervisor)
   accountingLedger = ledger
-  if (!same(allocation.predecessor, (supervisor ? inspectLeanSupervisorCorrectionPredecessor(route, (readLeanCorrectionJson(join(paths.temp, "admission-prepare-start.json")) as AdmissionClock).wallStartMs, supervisor) : inspectLeanCorrectionPredecessor(route, carrier.root)))) return fail("PREDECESSOR_DRIFT")
+  const preparedAtMs = supervisor ? (readLeanCorrectionJson(join(paths.temp, "admission-prepare-start.json")) as AdmissionClock).wallStartMs : carrier.wallStartMs
+  if (isLeanTwentySixMode(supervisor)) {
+    authenticateLeanPreparedTwentySixPredecessorV10(allocation, preparedAtMs)
+  } else assertLeanPreparedPredecessor(allocation.predecessor, supervisor ? inspectLeanSupervisorCorrectionPredecessor(route, preparedAtMs, supervisor) : inspectLeanCorrectionPredecessor(route, carrier.root))
   const result = await runLeanBoundedParent({ ledger, requestPath: path, allocationPath: paths.allocation, store: resolve(paths.store), sourceRoot: request.sourceRoot, manifestRoot: () => leanCorrectionSourceManifest(supervisor, request.timeboxExtension).root, childMode: leanCorrectionChildMode(route, supervisor), ...(supervisor ? { supervisorObservation: true as const } : {}), ...(isLeanRetryMode(supervisor) ? { onChildCreated: () => { childSpawned = true }, onPreEntryCleanup: (value: { childPid: number; exitCode: number | null; signal: string | null }) => { cleanup = value } } : {}), prospectiveStart: carrier, beforeRelease: () => { assertLeanCorrectionAdmissionTime(readLeanTimeAccounting(ledger).closedElapsedMs, carrier, admissionClock(), ledger.allocation) }, terminalReserveMs: LEAN_CORRECTION_RESERVE.cleanupMs + LEAN_CORRECTION_RESERVE.terminalMs + LEAN_CORRECTION_RESERVE.checkMs + LEAN_CORRECTION_RESERVE.replayMs })
   completed = true
   return result

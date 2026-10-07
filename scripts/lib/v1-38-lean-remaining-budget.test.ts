@@ -29,6 +29,70 @@ const inputV10 = (route: "diagnostic" | "baseline" = "diagnostic") => {
   return { ...f, seed: "inert-v10", timeboxExtension: b, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, predecessor: { ...pb, root: labRoot(pb.schemaVersion, pb) } }
 }
 describe("approved additive v10-1 twenty-six-hour envelope", () => {
+  it("binds only the new v2 source review while preserving the immutable issues_found v1", () => {
+    const b = envelopeV10(), phase = lean.LEAN_REMAINING_V9_PHASE, priorPath = `${phase}NEW265-16-TWENTY-SIX-HOUR-SOURCE-REVIEW-v1.md`, priorBytes = fs.readFileSync(priorPath), sourceRoot = correction.leanCorrectionSourceManifest("v10-1", b).root
+    expect(priorBytes.toString("utf8")).toContain("status: issues_found")
+    expect(() => correction.authenticateLeanCorrectionReview(priorPath, lean.leanBytesRoot(priorBytes), sourceRoot, null, undefined, "v10-1", b)).toThrow("REVIEW")
+    const docs = correction.leanRemainingDocumentsV9("diagnostic", "v10-1"), clean = Buffer.from(`---\nstatus: clean\nsource_root: ${sourceRoot}\nsource_commit: ${"1".repeat(40)}\nindependently_reviewed: true\nauthor_agent: /root/execute_265_twenty_six\nreviewer_agent: /root/review_v10\n---\n`)
+    expect(docs.review).toBe(`${phase}NEW265-16-TWENTY-SIX-HOUR-SOURCE-REVIEW-v2.md`)
+    virtual.bytes.set(resolve(docs.review), clean)
+    expect(() => correction.authenticateLeanCorrectionReview(docs.review, lean.leanBytesRoot(clean), sourceRoot, null, undefined, "v10-1", b)).not.toThrow()
+    expect(correction.leanRemainingDocumentsV9("baseline", "v10-1").review).toBe(docs.review)
+    expect(correction.leanRemainingDocumentsV9("diagnostic", "v9-1").review).toContain("V9-1-SOURCE-REVIEW-v1.md")
+    expect(fs.readFileSync(priorPath)).toEqual(priorBytes)
+  })
+  it.each(["diagnostic", "baseline"] as const)("authenticates the actual %s run predecessor guard after reports without dispatch", route => {
+    const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "lean-v10-prepared-inert-"))), anchor = join(directory, "metadata.json"), mode = "v10-1", paths = lean.leanCorrectionRoutePaths(route, mode), b = envelopeV10(), atMs = b.startedAtMs + 1000
+    fs.writeFileSync(anchor, lean.leanCanonicalBytes({ inert: true }), { mode: 0o600 })
+    const putPrivate = (path: string, value: unknown) => { virtual.anchors.set(resolve(path), anchor); put(path, value) }
+    try {
+      const historical = inputV10().predecessor
+      for (const row of historical.survivors) putPrivate(row.identity, { inert: true })
+      putPrivate(lean.leanRetrySetupPath(mode), correction.createLeanRemainingSetupWitnessV9(mode, b.startedAtMs))
+      putPrivate(paths.request, { inert: "request custody only" })
+      vi.spyOn(retained, "authenticateLeanTwentySixHistoricalCustodyV10").mockReturnValue({ predecessor: historical, reserveBytes: 4_288_512, root: r("pinned-history"), refusalRoot: r("pinned-refusal"), identities: [] } as never)
+      if (route === "baseline") {
+        vi.spyOn(retained, "authenticateLeanSupervisorDiagnosticCheck").mockReturnValue({ root: r("new-check"), readerCloseMs: atMs - 1 } as never)
+        vi.spyOn(retained, "authenticateLeanRetryClosureV8").mockReturnValue({ timeboxExtension: b, closureClass: "accepted", finalReaderClose: true, checkRoot: r("new-check"), cumulativeCharged: 32, currentCharges: 1, readerCloseMs: atMs - 1, closedElapsedMs: b.priorElapsedMs + 999, root: r("new-final") } as never)
+      }
+      const predecessor = correction.inspectLeanRemainingPredecessorV9(route, atMs, mode), snapshot = correction.readLeanTwentySixReportCustodyV10(), allocation = lean.createLeanSupervisorCorrectionAllocation({ ...inputV10(route), predecessor }, 8)
+      const body = { schemaVersion: "lean-predecessor-report-snapshot-v10", route, atMs, allocationRoot: allocation.root, rows: snapshot }
+      putPrivate(join(paths.temp, "predecessor-report-snapshot-v10.json"), { ...body, root: labRoot(body.schemaVersion, body) })
+      const prefix = `${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-`
+      for (const name of route === "diagnostic" ? ["ALLOCATION-v1.json", "PREPARATION-v1.md"] : ["BASELINE-ALLOCATION-v1.json", "BASELINE-PREPARATION-v1.md"]) putPrivate(`${prefix}${name}`, { inert: "post-prepare publication" })
+      putPrivate(`${prefix}PHYSICAL-REPORT-INVENTORY-v1.json`, { inert: "updated report inventory" })
+      expect(() => correction.authenticateLeanPreparedTwentySixPredecessorV10(allocation, atMs)).not.toThrow()
+      // Change the measured historical block row, not any live metadata.
+      virtual.blocks.set(resolve(historical.survivors[0]!.identity), fs.lstatSync(anchor).blocks + 8)
+      expect(() => correction.authenticateLeanPreparedTwentySixPredecessorV10(allocation, atMs)).toThrow("PREDECESSOR_DRIFT")
+    } finally { fs.rmSync(directory, { recursive: true, force: true }) }
+  })
+  it.each(["diagnostic", "baseline"] as const)("keeps the actual %s run comparison immutable across bounded administrative publications", route => {
+    const phase = lean.LEAN_REMAINING_V9_PHASE, prefix = `${phase}NEW265-16-TWENTY-SIX-HOUR-`, inventoryPath = `${prefix}PHYSICAL-REPORT-INVENTORY-v1.json`
+    const anchor = `${prefix}SOURCE-SUMMARY-v1.md`
+    const publishReport = (path: string, label: string) => { virtual.anchors.set(resolve(path), resolve(anchor)); virtual.bytes.set(resolve(path), Buffer.from(label)) }
+    publishReport(inventoryPath, "old inventory")
+    const snapshot = correction.readLeanTwentySixReportCustodyV10(), f = inputV10(route), rows = snapshot.map(({ bytesRoot: _root, ...row }) => row)
+    const { root: _root, ...base } = f.predecessor, preparedBody = { ...base, survivors: [...base.survivors, ...rows], allocatedDiskBytes: base.allocatedDiskBytes + rows.reduce((n, row) => n + row.allocatedBytes, 0), historyRoot: labRoot("inert-prepared-report-custody", snapshot) }
+    const prepared = { ...preparedBody, root: labRoot(preparedBody.schemaVersion, preparedBody) }, allocation = lean.createLeanSupervisorCorrectionAllocation({ ...f, predecessor: prepared }, 8)
+    const before = lean.leanTwentySixReportDeltaBytes(allocation)
+    for (const suffix of route === "diagnostic" ? ["ALLOCATION-v1.json", "PREPARATION-v1.md"] : ["BASELINE-ALLOCATION-v1.json", "BASELINE-PREPARATION-v1.md"]) publishReport(`${prefix}${suffix}`, "new exact administrative publication")
+    publishReport(inventoryPath, "updated inventory with allocation/preparation rows")
+    const current = correction.readLeanTwentySixReportCustodyV10(), authenticated = correction.authenticateLeanTwentySixReportSnapshotV10(snapshot, current)
+    expect(authenticated).toBe(snapshot)
+    // Same comparator actually used before runLeanBoundedParent; its history
+    // digest and rows use the authenticated original snapshot, not current reports.
+    const inspectedBody = { ...preparedBody, survivors: [...base.survivors, ...authenticated.map(({ bytesRoot: _root, ...row }) => row)], historyRoot: labRoot("inert-prepared-report-custody", authenticated) }
+    const inspected = { ...inspectedBody, root: labRoot(inspectedBody.schemaVersion, inspectedBody) }
+    expect(() => correction.assertLeanPreparedPredecessor(allocation.predecessor, inspected)).not.toThrow()
+    const delta = lean.leanTwentySixReportDeltaBytes(allocation)
+    expect(delta - before).toBe(current.filter(row => !snapshot.some(prior => prior.identity === row.identity)).reduce((n, row) => n + row.allocatedBytes, 0))
+    expect(delta).toBeGreaterThan(before)
+    expect(() => correction.assertLeanPreparedPredecessor(prepared, { ...inspected, survivors: inspected.survivors.map((row, i) => i === 0 ? { ...row, allocatedBytes: row.allocatedBytes + 4096 } : row) })).toThrow("PREDECESSOR_DRIFT")
+    expect(() => correction.authenticateLeanTwentySixReportSnapshotV10(snapshot, current.map(row => row.identity === anchor ? { ...row, bytesRoot: r("changed-published-report") } : row))).toThrow("PREDECESSOR_DRIFT")
+    expect(() => correction.authenticateLeanTwentySixReportSnapshotV10(snapshot, [...current, { identity: `${prefix}UNAPPROVED-v1.md`, allocatedBytes: 4096, bytesRoot: r("unapproved") }])).toThrow("PREDECESSOR_DRIFT")
+    expect(lean.leanTwentySixReportDeltaBytes(lean.createLeanSupervisorCorrectionAllocation(input(), 8))).toBe(0)
+  })
   it("admits only the approved binding and routes every CLI and child identity", () => {
     const b = envelopeV10()
     expect(b).toMatchObject({ priorElapsedMs: 71_508_287, startedAtMs: 1791379126859, previousCompletedAtMs: 1791353471340, elapsedMs: 93_600_000, charged: 31, excludedIdleMs: 25_655_519, maximumDiagnostics: 1, maximumBaselines: 1, reserveMs: 1_860_000 })
@@ -302,10 +366,10 @@ describe("approved additive v9 remaining-budget envelope", () => {
 })
 
 /** Composed read-only lineage fixture; no publication or execution. */
-const virtual = vi.hoisted(() => ({ bytes: new Map<string, Buffer>(), fds: new Map<number, string>(), present: new Set<string>(), anchors: new Map<string, string>() }))
+const virtual = vi.hoisted(() => ({ bytes: new Map<string, Buffer>(), fds: new Map<number, string>(), present: new Set<string>(), anchors: new Map<string, string>(), blocks: new Map<string, number>() }))
 vi.mock("node:fs", async original => {
   const real = await original<typeof import("node:fs")>()
-  const adjusted = (stat: fs.Stats, path: string) => virtual.bytes.has(path) ? Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { size: virtual.bytes.get(path)!.length, ...(virtual.anchors.has(path) ? { ino: 1_000_000_000 + [...virtual.anchors.keys()].indexOf(path) } : {}) }) : stat
+  const adjusted = (stat: fs.Stats, path: string) => virtual.bytes.has(path) ? Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { size: virtual.bytes.get(path)!.length, ...(virtual.blocks.has(path) ? { blocks: virtual.blocks.get(path) } : {}), ...(virtual.anchors.has(path) ? { ino: 1_000_000_000 + [...virtual.anchors.keys()].indexOf(path) } : {}) }) : stat
   return { ...real,
     existsSync: (path: fs.PathLike) => virtual.bytes.has(resolve(String(path))) || virtual.present.has(resolve(String(path))) || real.existsSync(path),
     realpathSync: (path: fs.PathLike) => virtual.anchors.has(resolve(String(path))) ? resolve(String(path)) : real.realpathSync(path),
@@ -320,7 +384,7 @@ vi.mock("node:fs", async original => {
   }
 })
 vi.mock("node:child_process", async original => ({ ...await original<typeof import("node:child_process")>(), execFileSync: (command: string) => { if (command !== "git") throw new Error("NO_PROCESS_AUTHORITY"); return "" } }))
-afterEach(() => { virtual.bytes.clear(); virtual.present.clear(); virtual.fds.clear(); virtual.anchors.clear(); vi.restoreAllMocks() })
+afterEach(() => { virtual.bytes.clear(); virtual.present.clear(); virtual.fds.clear(); virtual.anchors.clear(); virtual.blocks.clear(); vi.restoreAllMocks() })
 const put = (path: string, value: unknown) => virtual.bytes.set(resolve(path), Buffer.from(lean.leanCanonicalBytes(value)))
 const fixture = () => {
   const mode = "v9-2" as const, paths = lean.leanCorrectionRoutePaths("diagnostic", mode), docs = correction.leanRemainingDocumentsV9("diagnostic", mode)

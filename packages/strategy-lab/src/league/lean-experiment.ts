@@ -917,6 +917,19 @@ export const LEAN_TWENTY_SIX_V10_REPORT_PATHS = Object.freeze([
   ...["APPROVAL-20261007", "RESEARCH-v1", "PLAN-v1", "PLAN-CHECK-v1", "PLAN-CHECK-v2", "SOURCE-REVIEW-v1", "SOURCE-REVIEW-v2", "REVIEW-FIX-v1", "SOURCE-SUMMARY-v1", "VALIDATION-v1", "SOURCE-VERIFICATION-v1", "DATA-REVIEW-v1", "HELPER-REVIEW-v1", "PREPARATION-v1", "EMPIRICAL-RESULT-v1", "TERMINAL-VERIFICATION-v1", "SUMMARY-v1", "BASELINE-DATA-REVIEW-v1", "BASELINE-HELPER-REVIEW-v1", "BASELINE-PREPARATION-v1"].map(name => `${LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-${name}.md`),
   ...["PHYSICAL-REPORT-INVENTORY-v1", "ALLOCATION-v1", "BASELINE-ALLOCATION-v1", ...(["DIAGNOSTIC", "BASELINE"] as const).flatMap(route => ["REQUEST", "SETUP", "CONTINUATION", "AUTHORIZATION"].map(kind => `${route}-${kind}-v1`))].map(name => `${LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-${name}.json`),
 ])
+/** Additional physical custody after the immutable prepared snapshot. Never
+ * refund old blocks when an inventory publication becomes smaller. */
+export const leanTwentySixReportDeltaBytes = (allocation: AnyLeanAllocation): number => {
+  if (!("timeboxExtension" in allocation) || !isLeanTwentySixExtensionV10(allocation.timeboxExtension) || !("route" in allocation)) return 0
+  for (const name of readdirSync(LEAN_REMAINING_V9_PHASE)) if (name.startsWith("NEW265-16-TWENTY-SIX-HOUR-") && !LEAN_TWENTY_SIX_V10_REPORT_PATHS.includes(`${LEAN_REMAINING_V9_PHASE}${name}`)) return fail("PREDECESSOR_INVENTORY")
+  return LEAN_TWENTY_SIX_V10_REPORT_PATHS.reduce((bytes, path) => {
+    const prior = allocation.predecessor.survivors.find(row => row.identity === path)?.allocatedBytes ?? 0
+    let stat: ReturnType<typeof lstatSync>
+    try { stat = lstatSync(resolve(path)) } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT" && prior === 0) return bytes; throw error }
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== process.getuid?.() || stat.size > 262144 || realpathSync(resolve(path)) !== resolve(path)) return fail("PREDECESSOR_INVENTORY")
+    return bytes + Math.max(0, stat.blocks * 512 - prior)
+  }, 0)
+}
 const validateLeanProspectiveSurvivors = (p: LeanCorrectionPredecessor, b: typeof LEAN_REMAINING_V9_EXTENSION | typeof LEAN_TWENTY_SIX_V10_EXTENSION, reportPaths: readonly string[]): void => {
   if (!exactLabKeys(p, ["schemaVersion", "chargedMatches", "elapsedUpperBoundMs", "allocatedDiskBytes", "historicalPeakDiskBytes", "historicalPeakRssBytes", "historyRoot", "survivors", "root"]) || !Array.isArray(p.survivors) || p.survivors.length < b.historicalRows || !natural(p.allocatedDiskBytes) || p.allocatedDiskBytes < b.physicalFloorBytes) return fail("RETRY_PREDECESSOR")
   const identities = new Set<string>(); let allocated = 0
@@ -1336,13 +1349,13 @@ export const measureLeanPhysicalBytes = (directory: string): number => {
 const assertLeanProspectiveStoreCapacity = (store: string, allocation: AnyLeanAllocation, survivingBytes: unknown, nextFileBytes: number): void => {
   if (!natural(survivingBytes) || !natural(nextFileBytes)) return fail("RESOURCE")
   const owned = leanWritablePaths(allocation).reduce((bytes, path) => bytes + measuredDestinationBlocks(path), 0)
-  const current = survivingBytes + owned + measuredDestinationBlocks(store)
+  const current = survivingBytes + owned + measuredDestinationBlocks(store) + leanTwentySixReportDeltaBytes(allocation)
   const projected = current + Math.ceil(nextFileBytes / 4096) * 4096 + 131_072
   if (!natural(projected) || projected > LEAN_CAPS.retainedBytes || projected + LEAN_CAPS.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes) return fail("RESOURCE")
   const filesystem = statfsSync(dirname(store), { bigint: true })
   if (filesystem.bavail * filesystem.bsize < BigInt(LEAN_CAPS.totalBytes - current)) return fail("RESOURCE")
 }
-export const leanProspectiveOwnedBytes = (ledger: LeanExperimentLedger): number => measureLeanPhysicalBytes(ledger.directory) + leanWritablePaths(ledger.allocation).reduce((bytes, path) => bytes + measuredDestinationBlocks(path), 0)
+export const leanProspectiveOwnedBytes = (ledger: LeanExperimentLedger): number => measureLeanPhysicalBytes(ledger.directory) + leanWritablePaths(ledger.allocation).reduce((bytes, path) => bytes + measuredDestinationBlocks(path), 0) + leanTwentySixReportDeltaBytes(ledger.allocation)
 export const cumulativeLeanPhysicalBytes = (ledger: LeanExperimentLedger): number => leanProspectiveOwnedBytes(ledger) + leanPriorBytes(ledger.allocation)
 export interface LeanChildEntryV2 { schemaVersion: "lean-child-entry-v2"; allocationRoot: LabRoot; sourceRoot: LabRoot; requestBytesRoot: LabRoot; head: string; parentPid: number; childPid: number; handshakeRoot: LabRoot; wallStartMs: number; monotonicStartNs: string }
 export interface LeanChildTerminalV2 { schemaVersion: "lean-child-terminal-v2"; entryBytesRoot: LabRoot; allocationRoot: LabRoot; sourceRoot: LabRoot; head: string; parentPid: number; childPid: number; exitCode: number | null; signal: string | null; wallObservedMs: number; monotonicObservedNs: string; elapsedUpperBoundMs: number; status: "child_exited" | "child_failed"; parentRssBytes: number; childRssObservedBytes: number | null; physicalBytes: number; freeBytes: number | null }
