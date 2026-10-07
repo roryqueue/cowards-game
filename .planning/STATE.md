@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V9-2 diagnostic accepted with actual FINAL; conditional baseline data admission next
+stopped_at: Lineage source repair verified; new prospective time/attempt decision required
 last_updated: "2026-10-07"
 last_activity: 2026-10-06
 last_activity_desc: Direct approval recorded for three fresh diagnostics and one conditional baseline under unchanged cumulative caps
@@ -20,6 +20,14 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT SOURCE REPAIR CLOSED / HUMAN RESOURCE CHECKPOINT (2026-10-07): Baseline-lineage RED8605c261/GREEN51801d24/root1334976f/905entries CLOSED. IndependentSOURCE-REVIEW-v1clean/0; MAIN17512 CLOSED0/24focusedPASS27.37s/configuredtypes/shell/diffPASS; independentSOURCE-VERIFICATION-v1 CLOSED3/3 withallthreev9manifests matching. EphemeralprivateWeakMap-purpose allowsONLYauthenticatedaccepted-diagnosticreadonlylineage toinspectownbaseline lifecycle; revokedfinally, freshdiagnostic/ordinaryreader/topbaseline spent/one-shot/sourceHEAD/capacity/FINAL guardsremainstrict. Composedfixture deliberateACCEPTED_CHARGE stop afteractualrequest/predecessor, NOTempiricalacceptance. Debugsessionrecords reproducibleownmarkerfeedback, originalwithheldMAINthrowunobserved.
+
+Approvedsinglebaselinepreparation52980 anditsONEterminal-onlycheck remainCLOSEDspent/zeroextraMatches; acceptedv9-2diagnosticoneSUCCESS/cumulative31/FINALhistoricalunderoldsource664f2da8. Alloldartifacts immutable/sourceholdRELEASED/noactiveentry/reader/heavyagent. EnvelopeENDED, no unuseddiag3 ornewMatchauthority. SAME72Mms/15GB/300/all31charges/allcosts/deadline06:19:23.053Z/reserve1860000; remainingtimebelownewMatchreserve. NEW265-16-POST-V9-PROSPECTIVE-BUDGET-DECISION-v1.md proposesNOTapproved ONEfreshdiagnostic+conditionalONE36baseline andprospectivecumulative26h (sixadditionalhours), everyoldcost/chargecarried,15GB300/runtime/rules/privacyunchanged. No newprepare/allocation/Match untildirectnewresourceapproval; nohashliteralneeded. Phase265/all9LEAG/266freeze/formation/holdout/public/counting/production/archive-success/tagremain gated. Earlierparagraphshistoricalonly.
+
+CURRENT BASELINE PREPARATION FAILED / ENVELOPE ENDED (2026-10-07): MAINbaseline draft62187/finalize23115 CLOSED0/independentdatareviewclean; exactlyONEprepare52980 CLOSED1/detailswithheld/4404ms/start1791351546464/close1791351550868/nullallocation/ledger. Store/canonicalallocation/entry/result absent, zeroadditionalMatchcharges. ONEindependent PREPARATION-terminal-only verification CLOSED/parent57503absent; noactualentryhead so ordinaryempiricalreader NOTinvoked/fabricated. SOURCE+HEADhold RELEASED. Request5f8f0cea/helper/auth/setup/continuation/markers/accepteddiag2check+FINALimmutable. Singlebaselineoutcome ENDSapprovedremaining envelope; NOnewMatch/prepare/retry/unuseddiag3/oldsuccessreuse. All31charges/costs/filescarry under SAME72Mms15GB300/deadline06:19:23.053Z/reserve1860000.
+
+CheckedSOURCEONLYlineagerepair next: debug/v9-baseline-prepare.md records reproducibleSPENT_DESTINATION and static nestedbaselinebegin→accepteddiagauth→diagfresh-spentguard seesownbaselinebegin; exactwithheldoriginalthrowunobserved. PLAN-CHECK-v1twofindingspreserved/revisedPLAN-CHECK-v2PASS; separateauthenticatedreadonlyacceptedlineagefromfreshexecutionadmission, currentordinalonly/allotherguard/FINAL/source/capsunchanged, fullbaseline lifecycle regression, exactphysicalreportdebit. Noactualnewexecutionauthority. After safe sourcegates, further empiricalprogress needs genuinelynewprospective budget/attemptdecision; Phase265/league/freeze/formation/holdout/public/counting/production stillgated. Earlierparagraphshistory.
 
 CURRENT V9-2 DIAGNOSTIC ACCEPTED (2026-10-07): UniqueMAIN7680 CLOSED0/child_exited/nullsignal/340153ms; actualheldHEAD1665c296/source664f2da8. ONEindependentordinaryretainedverifier CLOSED0 (noCLI sessionid claimed), checkacceptedtrue/retained_valid/oneSUCCESS/cleanupcomplete, check0fd99e98/rawa6febfdd. ActualFINALclosure accepted/FINALtrue/closed1791351187999/elapsed69,224,947ms/current1/cumulative31; no fullphase/freezecredit. SourceANDHEADhold RELEASED, no activeentry/reader/heavywork. SAMEapprovedONEconditional36baseline now mayproceedfreshMAINdata/review/newcommittedallocation/SAMEPROCESScapacity under unchanged72Mms15GB300/deadline06:19:23.053Z/reserve1860000; allcostscarry, full36fitNOTguaranteed. Diagnostic1authorfailure andaccepteddiag2bothimmutable, no retry/recredit/oldreuse. Seriouscurrentrulesfullleague/freeze/formation/holdout/public/counting/production remaingated. Earlierparagraphshistory.
 
