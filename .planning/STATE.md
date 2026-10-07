@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Distinct v9-2 diagnostic prepared; commit allocation before unique MAIN entry
+stopped_at: V9-2 diagnostic accepted with actual FINAL; conditional baseline data admission next
 last_updated: "2026-10-07"
 last_activity: 2026-10-06
 last_activity_desc: Direct approval recorded for three fresh diagnostics and one conditional baseline under unchanged cumulative caps
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V9-2 DIAGNOSTIC ACCEPTED (2026-10-07): UniqueMAIN7680 CLOSED0/child_exited/nullsignal/340153ms; actualheldHEAD1665c296/source664f2da8. ONEindependentordinaryretainedverifier CLOSED0 (noCLI sessionid claimed), checkacceptedtrue/retained_valid/oneSUCCESS/cleanupcomplete, check0fd99e98/rawa6febfdd. ActualFINALclosure accepted/FINALtrue/closed1791351187999/elapsed69,224,947ms/current1/cumulative31; no fullphase/freezecredit. SourceANDHEADhold RELEASED, no activeentry/reader/heavywork. SAMEapprovedONEconditional36baseline now mayproceedfreshMAINdata/review/newcommittedallocation/SAMEPROCESScapacity under unchanged72Mms15GB300/deadline06:19:23.053Z/reserve1860000; allcostscarry, full36fitNOTguaranteed. Diagnostic1authorfailure andaccepteddiag2bothimmutable, no retry/recredit/oldreuse. Seriouscurrentrulesfullleague/freeze/formation/holdout/public/counting/production remaingated. Earlierparagraphshistory.
 
 CURRENT V9-2 PREPARED (2026-10-07): MAINdraft86484/finalize46058 CLOSED0; independentV9-2-DATA-REVIEW-v1clean; actualpurepredecessor404rows/10,780,672bytes+inheritedreserve4,288,512=15,069,184debit. ExactlyONEprepare89005 CLOSED0; allocation5288fa83/raw3afc6625/source664f2da8/oneplannedcell/30priorcharges/elapsed68,812,450ms/debit15,085,568bytes. Real0700nonsymlinkstore onlyallocation,emptyledger,timewithclosedpreparationaccounting; noentry/Match/provider/reader/holdyet. Commit exactcanonicalallocation andsource/datareviews BEFORE uniqueMAINentry. SourceANDHEAD fixedthroughentryterminal+ONEappropriateuniqueactualretainedcheck; avoidcompetingheavywork. Same72Mms15GB300/deadline06:19:23.053Z/1860000reserve; SAMEPROCESSfreshcapacity beforecharge. Failedv9-1immutablezeroMatchcostscarried. No baselineunlessNEWacceptedfullcheck+actualFINAL; nofreeze/formation/holdout/public/counting/production/fullPhase265credit. Earlierparagraphshistory.
 
