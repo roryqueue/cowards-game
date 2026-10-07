@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: v10-1 baseline resource stop independently closed; source-only precharge diagnosis in progress
+stopped_at: Audit dedup repair reviewed and validated; two-pair remaining-budget decision awaits approval
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Baseline43305 failed before charges; unique terminal verifier closed; no retry authority
+last_activity_desc: Source-only repair complete with clean reviews and 109 passing regressions; no new empirical authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT AUDIT DEDUP REPAIR CLOSED / BOUNDED CONTINUATION DECISION (2026-10-07): Existing Plan16 source-only research/checked supplement/RED52bc48b6/GREENb821a6e4/fixture6505088a CLOSED. Independent source REVIEW-v1 and committed-fixture REVIEW-v2 clean; source-verification5/5 with final test gate closed separately. Full worker remaining-budget62/62 and MAIN retained47/47 PASS/zero skips; MAIN selected connected repeat1/1 (61 excluded by filter), labtypes/shell/diff PASS, final factory1415zero. New actual v10 functional manifest0055ed48/905. Exact v10 request/predecessor/terminal consumers retain one full rederived accepted-closure audit each; legacy dual-auth order unchanged. Synthetic namespace isolation preserves real consumed bytes and rejection guards. No nativeRSS reduction, exact failurecause, full36 fit or Phase265/LEAG credit established. Unique diagnostic93653 accepted/check23564b5d/FINAL91213587 and failed baseline43305/terminal-onlycheck remain CLOSED/immutable; no active entry/verifier/sourceHEADhold. Approved one-shot pair ENDED; no new prepare/allocation/Match/ordinary old reader/reuse/recredit/refund authority. Pending265-16-REMAINING-BUDGET-AUTONOMY-DECISION-v1.md proposes atmostTWO distinct fresh private diagnostic/conditional36baseline pairs, without repeat per-pair approvals, under SAME93.6Mms/15GB/300/all32charges/allcosts/original19:26:58.572Zdeadline/reserve1860000/no new idle exclusion; NOTyetapproved. Async human decision requested while safe source work closed. Current-rules league/evaluation/freeze BEFORE formation; holdout unopened/no public/counting/production. Phase265/266freeze/formation/archive-success/tag remain gated. Earlier paragraphs are immutable-outcome history, not current authority.
 
 CURRENT V10-1 BASELINE RESOURCE STOP / SOURCE-ONLY DIAGNOSIS (2026-10-07): UniqueMAIN43305 CLOSED1/detailswithheld; actualchildterminal child_failed/null exit/SIGKILL/179238ms overheldHEADd93811c2/source26c1befe/allocationede8c186. ONEindependenttypedENTRY-terminal-onlyverifier CLOSED0/acceptedfalse/authorizingfalse/current0/cumulative32/entry_terminal_only/cleanupobserved. Noresult; ordinaryempiricalreader NOTinvoked/fabricated. Parentreasonresource_threshold/initiatingCauseunknown/failureReceiptabsent. TerminalparentRSS562851840+childmax609271808+512000000external+335544320guard=2019667968 >2GB; NOT simultaneousfailuretime/throwattribution. SOURCE+HEADhold RELEASED/no activeentry/verifier. Approvedpair ENDED; no newMatch/allocation/unuseddiagnostic/retry/refund/recredit/oldsuccessreuse. Safe GSD source-onlydebug v10-baseline-precharge-memory next; retainunchangedbounds/allcosts32charges93.6Mms15GB300/deadline19:26:58.572Z. Phase265/LEAG/freeze/formation/holdout/public/counting/production/archive-success/tag remain gated. Earlierparagraphshistory.
 
