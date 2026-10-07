@@ -153,6 +153,27 @@ describe("identity-only admitted v8 cap reuse", () => {
     expect(work.hashes).toBeGreaterThan(first.hashes)
   })
 
+  it.each(["hidden-cycle", "symbol-cycle", "deep-hidden-graph", "large-hidden-graph"] as const)("%s conservatively skips caching without changing historical admission", kind => {
+    const input = fixtureInput(8, true), survivors = [...input.predecessor.survivors]
+    if (kind === "hidden-cycle" || kind === "symbol-cycle") Object.defineProperty(survivors, kind === "symbol-cycle" ? Symbol("cycle") : "hidden", { value: survivors })
+    else {
+      let hidden: unknown = null
+      if (kind === "deep-hidden-graph") for (let i = 0; i < 10_000; i++) hidden = Object.freeze({ child: hidden })
+      else hidden = Object.freeze(Array.from({ length: 5000 }, () => Object.freeze({ value: 1 })))
+      Object.defineProperty(survivors, "hidden", { value: hidden })
+    }
+    const { root: _root, ...prior } = input.predecessor
+    const predecessorBody = { ...prior, survivors }
+    const allocation = lean.createLeanSupervisorCorrectionAllocation({ ...input, predecessor: { ...predecessorBody, root: labRoot(prior.schemaVersion, predecessorBody) } }, 8)
+    const admitted = lean.admitLeanAllocation(allocation), before = counts()
+    expect(lean.leanCapsForAllocation(admitted)).toBe(lean.LEAN_RETRY_V8_TIMEBOX_CAPS)
+    expect(work.hashes).toBeGreaterThan(before.hashes)
+    const first = counts()
+    expect(lean.admitLeanAllocation(admitted)).toEqual(admitted)
+    expect(lean.leanCapsForAllocation(admitted)).toBe(lean.LEAN_RETRY_V8_TIMEBOX_CAPS)
+    expect(work.hashes).toBeGreaterThan(first.hashes)
+  })
+
   it.each([2, 3, 4, 5, 6, 7] as const)("supervisor v%s keeps its historical cap and full admission behavior", version => {
     const input = lean.createLeanSupervisorCorrectionAllocation(fixtureInput(version), version), admitted = lean.admitLeanAllocation(input)
     const before = counts(), caps = version === 7 ? lean.LEAN_REPLAY_V7_CAPS : version >= 5 ? lean.LEAN_SUPERVISOR_V5_CAPS : lean.LEAN_CAPS
