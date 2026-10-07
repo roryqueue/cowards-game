@@ -381,11 +381,21 @@ export const authenticateLeanBookkeepingPredecessorV8 = () => {
   const diagnostic = JSON.parse(Buffer.from(closureBytes).toString("utf8")) as LeanRetryAuthenticatedClosureV8
   const { root: claimed, ...body } = diagnostic
   if (leanBytesRoot(leanCanonicalBytes(diagnostic)) !== b.diagnosticClosureBytesRoot || claimed !== b.diagnosticClosureRoot || claimed !== labRoot("lean-retry-closure-v8", body) || diagnostic.schemaVersion !== "lean-retry-closure-v8" || diagnostic.attemptOrdinal !== 1 || diagnostic.closureClass !== "accepted" || diagnostic.authorizing !== false || diagnostic.finalReaderClose !== true || diagnostic.acceptedCheckAbsent !== false || diagnostic.checkRoot !== b.diagnosticCheckRoot || diagnostic.cumulativeCharged !== 30 || diagnostic.currentCharges !== 1 || diagnostic.closedElapsedMs !== 59_338_914 || diagnostic.readerCloseMs !== 1791329532163 || !same(diagnostic.timeboxExtension, LEAN_RETRY_V8_TIMEBOX_EXTENSION)) return fail("CUSTODY")
+  const historicalRequests: LeanCorrectionRequest[] = []
   // Actual finite prefix files still have their accepted closure byte identity.
   for (const [path, pin, limit] of [[join(diagnosticPaths.store, "time.ndjson"), diagnostic.timeBytesRoot, 4194304], [join(diagnosticPaths.store, "ledger.ndjson"), diagnostic.ledgerBytesRoot, 4194304], [join(diagnosticPaths.store, "entry.json"), diagnostic.entryBytesRoot, 262144], [join(diagnosticPaths.store, "child-terminal.json"), diagnostic.terminalBytesRoot, 262144], [diagnosticPaths.request, diagnostic.requestBytesRoot, 262144]] as const) {
-    if (leanBytesRoot(readLeanCorrectionPrivateBytes(path, limit)) !== pin) return fail("CUSTODY")
+    const bytes = readLeanCorrectionPrivateBytes(path, limit)
+    if (leanBytesRoot(bytes) !== pin) return fail("CUSTODY")
+    if (path === diagnosticPaths.request) historicalRequests.push(JSON.parse(Buffer.from(bytes).toString("utf8")) as LeanCorrectionRequest)
   }
-  const rawRoots = Object.fromEntries(Object.keys(b.baselineRawRoots).map(name => [name, leanBytesRoot(readLeanCorrectionPrivateBytes(name === "request" ? paths.request : join(paths.store, name), name.endsWith(".ndjson") ? 4194304 : 262144))]))
+  const rawRoots = Object.fromEntries(Object.keys(b.baselineRawRoots).map(name => {
+    const bytes = readLeanCorrectionPrivateBytes(name === "request" ? paths.request : join(paths.store, name), name.endsWith(".ndjson") ? 4194304 : 262144), rawRoot = leanBytesRoot(bytes)
+    if (name === "request") {
+      if (rawRoot !== b.baselineRawRoots.request) return fail("CUSTODY")
+      historicalRequests.push(JSON.parse(Buffer.from(bytes).toString("utf8")) as LeanCorrectionRequest)
+    }
+    return [name, rawRoot]
+  }))
   if (leanBytesRoot(readLeanCorrectionPrivateBytes(paths.allocation)) !== b.baselineRawRoots["allocation.json"]) return fail("CUSTODY")
   const ledger = openLeanLedger(paths.store), allocation = admitLeanAllocation(ledger.allocation)
   if (!("route" in allocation) || allocation.route !== "baseline" || leanSupervisorAllocationMode(allocation) !== "v8-1" || !same(allocation.timeboxExtension, LEAN_RETRY_V8_TIMEBOX_EXTENSION) || allocation.requestBytesRoot !== rawRoots.request || allocation.acceptedReaderCloseRoot !== diagnostic.root || allocation.acceptedCheckRoot !== diagnostic.checkRoot) return fail("CUSTODY")
@@ -398,8 +408,9 @@ export const authenticateLeanBookkeepingPredecessorV8 = () => {
   const baseline = Object.freeze({ ...custody, root: labRoot("lean-bookkeeping-failed-baseline-custody-v8", custody) })
   // No fictitious reader interval: the original terminal-only verification was
   // a planning metadata report, and the pinned time journal has six records.
-  const request = readLeanCorrectionJson(paths.request) as LeanCorrectionRequest
-  const identities = [paths.store, paths.temp, paths.request, paths.allocation, ...[request.authorizationPath, request.setupAccountingPath, request.reviewPath, request.dataReviewPath].filter((path): path is string => typeof path === "string" && existsSync(path))]
+  // Inventory only; neither historical request reopens authority or a reader.
+  // Parse the same byte-pinned snapshots, not a second mutable-path read.
+  const identities = [paths.store, paths.temp, paths.request, paths.allocation, ...historicalRequests.flatMap(request => [request.authorizationPath, request.setupAccountingPath, request.reviewPath, request.dataReviewPath].filter((path): path is string => typeof path === "string" && existsSync(path)))]
   return { diagnostic, baseline, identities }
 }
 /** Separate terminal-only lifecycle proves actual result absence before spending. */
