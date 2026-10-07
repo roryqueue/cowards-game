@@ -844,15 +844,43 @@ const createLeanRetryAllocationV8 = (input: Parameters<typeof createLeanSupervis
 }
 // Freeze alone does not make accessor/proxy results immutable. This eligibility
 // check runs only after full admission and reads descriptors, never getters.
+const RETRY_CACHE_MAX_DEPTH = 32
+const RETRY_CACHE_MAX_NODES = 4096
+const RETRY_CACHE_MAX_PROPERTIES = 4096
 const immutableRetryData = (value: unknown): boolean => {
-  if (value === null || typeof value !== "object") return typeof value !== "function"
-  if (nodeTypes.isProxy(value)) return false
-  const prototype = Object.getPrototypeOf(value)
-  if ((Array.isArray(value) ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null) || !Object.isFrozen(value)) return false
-  return Reflect.ownKeys(value).every(key => {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key)
-    return descriptor !== undefined && "value" in descriptor && immutableRetryData(descriptor.value)
-  })
+  const pending: { value: unknown; depth: number }[] = [{ value, depth: 0 }]
+  const seen = new WeakSet<object>()
+  let nodes = 0, properties = 0
+  while (pending.length) {
+    const current = pending.pop()!
+    if (current.value === null || typeof current.value !== "object") {
+      if (typeof current.value === "function") return false
+      continue
+    }
+    const object = current.value
+    if (current.depth > RETRY_CACHE_MAX_DEPTH || ++nodes > RETRY_CACHE_MAX_NODES || nodeTypes.isProxy(object) || seen.has(object)) return false
+    seen.add(object)
+    const array = Array.isArray(object), prototype = Object.getPrototypeOf(object)
+    if ((array ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null) || !Object.isFrozen(object)) return false
+    const keys = Reflect.ownKeys(object)
+    properties += keys.length
+    if (properties > RETRY_CACHE_MAX_PROPERTIES) return false
+    if (array) {
+      const length = Object.getOwnPropertyDescriptor(object, "length")
+      if (!length || !("value" in length) || !natural(length.value) || length.value > RETRY_CACHE_MAX_PROPERTIES - properties) return false
+      properties += length.value
+      for (let i = 0; i < length.value; i++) {
+        const index = Object.getOwnPropertyDescriptor(object, String(i))
+        if (!index || !("value" in index)) return false
+      }
+    }
+    for (const key of keys) {
+      const descriptor = Object.getOwnPropertyDescriptor(object, key)
+      if (!descriptor || !("value" in descriptor)) return false
+      pending.push({ value: descriptor.value, depth: current.depth + 1 })
+    }
+  }
+  return true
 }
 // Only safe reconstructed v8 objects returned by successful full admission are
 // registered; caller objects, frozen clones and root strings acquire no authority.
