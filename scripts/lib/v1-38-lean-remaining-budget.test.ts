@@ -14,12 +14,33 @@ import { validateLeanRemainingPreparationCustodyV9, LEAN_REMAINING_V9_PREPARATIO
 
 const r = (label: string) => labRoot("remaining-budget-inert", label)
 const envelope = () => lean.LEAN_REMAINING_V9_EXTENSION
+const envelopeV10 = () => lean.LEAN_TWENTY_SIX_V10_EXTENSION
 const input = (route: "diagnostic" | "baseline" = "diagnostic", ordinal: lean.LeanRetryOrdinal = 1, charges = route === "diagnostic" ? 30 : 31) => {
   const b = envelope()
   const survivors = Array.from({ length: 367 }, (_, i) => ({ identity: `.strategy-lab/inert-v9-history-${i}`, allocatedBytes: i === 0 ? 13_365_248 : 4096 }))
   const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: charges, elapsedUpperBoundMs: 64_594_435, allocatedDiskBytes: 14_864_384, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r("history"), survivors }
   return { timeboxExtension: b, sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: b?.planRoot, supervisorDecisionRoot: b?.approvalRoot, candidateRoots: [r("a"), r("b")], requestRoots: Array.from({ length: route === "diagnostic" ? 1 : 36 }, (_, i) => r(`request-${i}`)), seed: "inert-v9", route, reuseGrantRoot: r("reuse"), acceptedCheckRoot: route === "diagnostic" ? null : r("new-check"), requestBytesRoot: r("bytes"), dataReviewRoot: r("data"), setupAccountingRoot: r("setup"), predecessor: { ...p, root: labRoot(p.schemaVersion, p) }, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, attemptOrdinal: ordinal, priorClosureRoot: ordinal === 1 ? null : r("new-spent-closure"), continuationRoot: ordinal === 1 ? null : r("new-continuation"), acceptedReaderCloseRoot: route === "diagnostic" ? null : r("new-final") }
 }
+describe("approved additive v10-1 twenty-six-hour envelope", () => {
+  it("admits only the approved binding and routes every CLI and child identity", () => {
+    const b = envelopeV10()
+    expect(b).toMatchObject({ priorElapsedMs: 71_508_287, startedAtMs: 1791379126859, previousCompletedAtMs: 1791353471340, elapsedMs: 93_600_000, charged: 31, excludedIdleMs: 25_655_519, maximumDiagnostics: 1, maximumBaselines: 1, reserveMs: 1_860_000 })
+    expect(lean.admitLeanRetryTimeboxExtension(b)).toBe(b)
+    expect(lean.leanRetryRootElapsedFloorV8(b.startedAtMs + 123, b)).toBe(71_508_410)
+    for (const route of ["diagnostic", "baseline"] as const) {
+      const paths = lean.leanCorrectionRoutePaths(route, "v10-1")
+      expect(paths.store).toContain(`20261007-v10-1`)
+      expect(paths).not.toEqual(lean.leanCorrectionRoutePaths(route, "v9-1"))
+      for (const verb of ["prepare", "run", "verify", "verify-terminal"]) {
+        expect(correction.parseLeanCorrectionCommand([`${verb}-supervisor-${route}-v10-1`, "--request", paths.request])).toMatchObject({ supervisor: "v10-1", route })
+        expect(readFileSync("scripts/run-v1-38-lean-correction.sh", "utf8")).toContain(`${verb}-supervisor-${route}-v10-1`)
+      }
+      expect(correction.leanCorrectionChildMode(route, "v10-1")).toBe(`child-supervisor-${route}-v10-1`)
+    }
+    expect(() => correction.parseLeanCorrectionCommand(["prepare-supervisor-diagnostic-v10-2", "--request", "inert"])).toThrow()
+    for (const key of ["approvalRoot", "planRoot", "charged", "startedAtMs", "root", "elapsedMs", "excludedIdleMs"]) expect(() => lean.admitLeanRetryTimeboxExtension({ ...b, [key]: r("forged") })).toThrow()
+  })
+})
 describe("approved additive v9 remaining-budget envelope", () => {
   it("binds the exact carry and unchanged caps without modifying v8", () => {
     expect(envelope()).toMatchObject({ schemaVersion: "lean-remaining-budget-envelope-v9", priorElapsedMs: 64_594_435, startedAtMs: 1791346557488, elapsedMs: 72_000_000, charged: 30, excludedIdleMs: 8_595_857, maximumDiagnostics: 3, maximumBaselines: 1 })
