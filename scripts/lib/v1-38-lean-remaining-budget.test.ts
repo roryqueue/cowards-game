@@ -42,7 +42,8 @@ describe("approved additive v10-1 twenty-six-hour envelope", () => {
     expect(fs.readFileSync(priorPath)).toEqual(priorBytes)
   })
   it.each(["diagnostic", "baseline"] as const)("authenticates the actual %s run predecessor guard after reports without dispatch", route => {
-    const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "lean-v10-prepared-inert-"))), anchor = join(directory, "metadata.json"), mode = "v10-1", paths = lean.leanCorrectionRoutePaths(route, mode), b = envelopeV10(), atMs = b.startedAtMs + 1000
+    const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "lean-v10-prepared-inert-"))), anchor = join(directory, "metadata.json"), mode = "v10-1", paths = isolateV10FreshNamespace(route), b = envelopeV10(), atMs = b.startedAtMs + 1000
+    isolateV10FreshNamespace(route === "baseline" ? "diagnostic" : "baseline")
     fs.writeFileSync(anchor, lean.leanCanonicalBytes({ inert: true }), { mode: 0o600 })
     const putPrivate = (path: string, value: unknown) => { virtual.anchors.set(resolve(path), anchor); put(path, value) }
     try {
@@ -68,10 +69,14 @@ describe("approved additive v10-1 twenty-six-hour envelope", () => {
     } finally { fs.rmSync(directory, { recursive: true, force: true }) }
   })
   it.each(["diagnostic", "baseline"] as const)("keeps the actual %s run comparison immutable across bounded administrative publications", route => {
-    const phase = lean.LEAN_REMAINING_V9_PHASE, prefix = `${phase}NEW265-16-TWENTY-SIX-HOUR-`, inventoryPath = `${prefix}PHYSICAL-REPORT-INVENTORY-v1.json`
-    const anchor = `${prefix}SOURCE-SUMMARY-v1.md`
-    const publishReport = (path: string, label: string) => { virtual.anchors.set(resolve(path), resolve(anchor)); virtual.bytes.set(resolve(path), Buffer.from(label)) }
+    const phase = lean.LEAN_REMAINING_V9_PHASE, prefix = `${phase}NEW265-16-TWENTY-SIX-HOUR-`, inventoryPath = `${prefix}PHYSICAL-REPORT-INVENTORY-v1.json`, sourceSummaryPath = `${prefix}SOURCE-SUMMARY-v1.md`
+    isolateV10FreshNamespace(route)
+    const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "lean-v10-report-inert-"))), anchor = join(directory, "metadata.json")
+    fs.writeFileSync(anchor, "synthetic report anchor", { mode: 0o600 })
+    const publishReport = (path: string, label: string) => { virtual.isolated.add(resolve(path)); virtual.anchors.set(resolve(path), anchor); virtual.bytes.set(resolve(path), Buffer.from(label)); refreshV10ReportDirectory() }
+    try {
     publishReport(inventoryPath, "old inventory")
+    publishReport(sourceSummaryPath, "old source summary")
     const snapshot = correction.readLeanTwentySixReportCustodyV10(), f = inputV10(route), rows = snapshot.map(({ bytesRoot: _root, ...row }) => row)
     const { root: _root, ...base } = f.predecessor, preparedBody = { ...base, survivors: [...base.survivors, ...rows], allocatedDiskBytes: base.allocatedDiskBytes + rows.reduce((n, row) => n + row.allocatedBytes, 0), historyRoot: labRoot("inert-prepared-report-custody", snapshot) }
     const prepared = { ...preparedBody, root: labRoot(preparedBody.schemaVersion, preparedBody) }, allocation = lean.createLeanSupervisorCorrectionAllocation({ ...f, predecessor: prepared }, 8)
@@ -89,9 +94,10 @@ describe("approved additive v10-1 twenty-six-hour envelope", () => {
     expect(delta - before).toBe(current.filter(row => !snapshot.some(prior => prior.identity === row.identity)).reduce((n, row) => n + row.allocatedBytes, 0))
     expect(delta).toBeGreaterThan(before)
     expect(() => correction.assertLeanPreparedPredecessor(prepared, { ...inspected, survivors: inspected.survivors.map((row, i) => i === 0 ? { ...row, allocatedBytes: row.allocatedBytes + 4096 } : row) })).toThrow("PREDECESSOR_DRIFT")
-    expect(() => correction.authenticateLeanTwentySixReportSnapshotV10(snapshot, current.map(row => row.identity === anchor ? { ...row, bytesRoot: r("changed-published-report") } : row))).toThrow("PREDECESSOR_DRIFT")
+    expect(() => correction.authenticateLeanTwentySixReportSnapshotV10(snapshot, current.map(row => row.identity === sourceSummaryPath ? { ...row, bytesRoot: r("changed-published-report") } : row))).toThrow("PREDECESSOR_DRIFT")
     expect(() => correction.authenticateLeanTwentySixReportSnapshotV10(snapshot, [...current, { identity: `${prefix}UNAPPROVED-v1.md`, allocatedBytes: 4096, bytesRoot: r("unapproved") }])).toThrow("PREDECESSOR_DRIFT")
     expect(lean.leanTwentySixReportDeltaBytes(lean.createLeanSupervisorCorrectionAllocation(input(), 8))).toBe(0)
+    } finally { fs.rmSync(directory, { recursive: true, force: true }) }
   })
   it("admits only the approved binding and routes every CLI and child identity", () => {
     const b = envelopeV10()
@@ -398,30 +404,46 @@ describe("approved additive v9 remaining-budget envelope", () => {
 })
 
 /** Composed read-only lineage fixture; no publication or execution. */
-const virtual = vi.hoisted(() => ({ bytes: new Map<string, Buffer>(), fds: new Map<number, string>(), present: new Set<string>(), anchors: new Map<string, string>(), blocks: new Map<string, number>(), head: "" }))
+const virtual = vi.hoisted(() => ({ bytes: new Map<string, Buffer>(), fds: new Map<number, string>(), present: new Set<string>(), anchors: new Map<string, string>(), blocks: new Map<string, number>(), isolated: new Set<string>(), readdir: new Map<string, string[]>(), head: "" }))
 vi.mock("node:fs", async original => {
   const real = await original<typeof import("node:fs")>()
+  const scoped = (path: string) => [...virtual.isolated].some(prefix => path === prefix || path.startsWith(`${prefix}/`))
+  const missing = (path: string): never => { throw Object.assign(new Error(`ENOENT: synthetic path absent: ${path}`), { code: "ENOENT" }) }
   const adjusted = (stat: fs.Stats, path: string) => virtual.bytes.has(path) ? Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { size: virtual.bytes.get(path)!.length, ...(virtual.blocks.has(path) ? { blocks: virtual.blocks.get(path) } : {}), ...(virtual.anchors.has(path) ? { ino: 1_000_000_000 + [...virtual.anchors.keys()].indexOf(path) } : {}) }) : stat
   return { ...real,
-    existsSync: (path: fs.PathLike) => virtual.bytes.has(resolve(String(path))) || virtual.present.has(resolve(String(path))) || real.existsSync(path),
-    realpathSync: (path: fs.PathLike) => virtual.anchors.has(resolve(String(path))) ? resolve(String(path)) : real.realpathSync(path),
-    lstatSync: (path: fs.PathLike) => adjusted(real.lstatSync(virtual.anchors.get(resolve(String(path))) ?? path), resolve(String(path))),
-    openSync: (...args: Parameters<typeof real.openSync>) => { const path = resolve(String(args[0])); const fd = real.openSync(virtual.anchors.get(path) ?? args[0], args[1], args[2]); virtual.fds.set(fd, path); return fd },
+    existsSync: (path: fs.PathLike) => { const full = resolve(String(path)); return virtual.bytes.has(full) || virtual.present.has(full) || (!scoped(full) && real.existsSync(path)) },
+    realpathSync: (path: fs.PathLike) => { const full = resolve(String(path)); if (virtual.anchors.has(full) || virtual.bytes.has(full) || virtual.present.has(full)) return full; if (scoped(full)) return missing(full); return real.realpathSync(path) },
+    lstatSync: (path: fs.PathLike) => { const full = resolve(String(path)), anchor = virtual.anchors.get(full); if (scoped(full) && !anchor && !virtual.bytes.has(full) && !virtual.present.has(full)) return missing(full); return adjusted(real.lstatSync(anchor ?? path), full) },
+    openSync: (...args: Parameters<typeof real.openSync>) => { const path = resolve(String(args[0])); if (scoped(path) && !virtual.anchors.has(path) && !virtual.bytes.has(path)) return missing(path); const fd = real.openSync(virtual.anchors.get(path) ?? args[0], args[1], args[2]); virtual.fds.set(fd, path); return fd },
     fstatSync: (fd: number) => adjusted(real.fstatSync(fd), virtual.fds.get(fd) ?? ""),
     closeSync: (fd: number) => { virtual.fds.delete(fd); real.closeSync(fd) },
     readFileSync: (...args: Parameters<typeof real.readFileSync>) => {
       const path = typeof args[0] === "number" ? virtual.fds.get(args[0]) : resolve(String(args[0])), bytes = path && virtual.bytes.get(path)
-      return bytes ? typeof args[1] === "string" ? bytes.toString(args[1] as BufferEncoding) : bytes : real.readFileSync(...args)
+      return bytes ? typeof args[1] === "string" ? bytes.toString(args[1] as BufferEncoding) : bytes : path && scoped(path) ? missing(path) : real.readFileSync(...args)
     },
+    readdirSync: ((path: fs.PathLike, options?: unknown) => { const full = resolve(String(path)); if (virtual.readdir.has(full)) return virtual.readdir.get(full)!; if (scoped(full)) return [...new Set([...virtual.bytes.keys(), ...virtual.present].filter(value => value.startsWith(`${full}/`)).map(value => value.slice(full.length + 1).split("/")[0]!))]; return real.readdirSync(path as never, options as never) }) as typeof real.readdirSync,
   }
 })
 vi.mock("node:child_process", async original => ({ ...await original<typeof import("node:child_process")>(), execFileSync: (command: string) => { if (command !== "git") throw new Error("NO_PROCESS_AUTHORITY"); return virtual.head } }))
-afterEach(() => { virtual.bytes.clear(); virtual.present.clear(); virtual.fds.clear(); virtual.anchors.clear(); virtual.blocks.clear(); virtual.head = ""; vi.restoreAllMocks() })
-const put = (path: string, value: unknown) => virtual.bytes.set(resolve(path), Buffer.from(lean.leanCanonicalBytes(value)))
+afterEach(() => { virtual.bytes.clear(); virtual.present.clear(); virtual.fds.clear(); virtual.anchors.clear(); virtual.blocks.clear(); virtual.isolated.clear(); virtual.readdir.clear(); virtual.head = ""; vi.restoreAllMocks() })
+const put = (path: string, value: unknown) => { virtual.bytes.set(resolve(path), Buffer.from(lean.leanCanonicalBytes(value))); refreshV10ReportDirectory() }
+const isolateV10FreshNamespace = (route: "diagnostic" | "baseline") => {
+  const paths = lean.leanCorrectionRoutePaths(route, "v10-1"), phaseRelative = lean.LEAN_REMAINING_V9_PHASE.replace(/\/$/u, ""), phase = resolve(phaseRelative)
+  const v10Approval = `${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-APPROVAL-20261007.md`, v10Plan = `${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-PLAN-v1.md`
+  const syntheticReports = lean.LEAN_TWENTY_SIX_V10_REPORT_PATHS.filter(path => path.startsWith(`${lean.LEAN_REMAINING_V9_PHASE}NEW265-16-TWENTY-SIX-HOUR-`) && path !== v10Approval && path !== v10Plan)
+  for (const path of [paths.store, paths.temp, paths.request, paths.allocation, ...syntheticReports]) virtual.isolated.add(resolve(path))
+  virtual.present.add(resolve(paths.temp))
+  virtual.readdir.set(phase, [v10Approval.slice(phaseRelative.length + 1), v10Plan.slice(phaseRelative.length + 1)])
+  return paths
+}
+const refreshV10ReportDirectory = () => {
+  const phase = resolve(lean.LEAN_REMAINING_V9_PHASE), prefix = `${phase}/NEW265-16-TWENTY-SIX-HOUR-`
+  if (virtual.readdir.has(phase)) virtual.readdir.set(phase, [...virtual.bytes.keys()].filter(path => path.startsWith(prefix)).map(path => path.slice(phase.length + 1)))
+}
 /** Direct terminal-adapter fixture: synthetic metadata only, no preparation,
  * ordinary reader, provider or Match, and no live private-store writes. */
 const twentySixTerminalFixture = (stage: "preparation" | "admission" | "entry") => {
-  const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "lean-v10-terminal-inert-"))), anchor = join(directory, "metadata.json"), b = envelopeV10(), paths = lean.leanCorrectionRoutePaths("baseline", "v10-1"), at = b.startedAtMs
+  const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "lean-v10-terminal-inert-"))), anchor = join(directory, "metadata.json"), b = envelopeV10(), paths = isolateV10FreshNamespace("baseline"), at = b.startedAtMs
   fs.writeFileSync(anchor, lean.leanCanonicalBytes({ inert: true }), { mode: 0o600 })
   const putAt = (path: string, value: unknown) => { virtual.anchors.set(resolve(path), anchor); put(path, value) }
   const rooted = <T extends { schemaVersion: string }>(body: T) => ({ ...body, root: labRoot(body.schemaVersion, body) })
@@ -467,7 +489,7 @@ const twentySixTerminalFixture = (stage: "preparation" | "admission" | "entry") 
   vi.spyOn(lean, "cumulativeLeanPhysicalBytes").mockReturnValue(b.physicalFloorBytes)
   const accepted = { root: checkRoot, allocationRoot: r("new-diagnostic-allocation"), readerCloseMs: at + 9 }
   vi.spyOn(retained, "authenticateLeanSupervisorDiagnosticCheck").mockReturnValue(accepted as never)
-  const closure = { timeboxExtension: b, attemptOrdinal: 1, closureClass: "accepted", finalReaderClose: true, acceptedCheckAbsent: false, checkRoot, allocationRoot: accepted.allocationRoot, root: finalRoot, sourceRoot, readerCloseMs: at + 9, cumulativeCharged: 32, currentCharges: 1 }
+  const closure = { timeboxExtension: b, attemptOrdinal: 1, closureClass: "accepted", finalReaderClose: true, acceptedCheckAbsent: false, checkRoot, checkBytesRoot: r("terminal-check-bytes"), allocationRoot: accepted.allocationRoot, root: finalRoot, sourceRoot, head: virtual.head, requestBytesRoot: allocation.requestBytesRoot, readerCloseMs: at + 9, cumulativeCharged: 32, currentCharges: 1 }
   vi.spyOn(retained, "authenticateLeanRetryClosureV8").mockReturnValue(closure as never)
   const publications = vi.spyOn(correction, "publishLeanCorrection").mockImplementation((path, value) => { if (virtual.bytes.has(resolve(path))) throw new Error("EXCLUSIVE_PUBLICATION"); putAt(path, value) })
   vi.spyOn(Date, "now").mockReturnValue(at + 40)
@@ -520,7 +542,7 @@ describe("finite v10 baseline terminal-only actual adapter", () => {
   })
   it("rejects missing accepted diagnostic FINAL", () => {
     const f = twentySixTerminalFixture("preparation")
-    try { f.closure.finalReaderClose = false; expect(() => retained.verifyLeanTwentySixBaselineTerminalOnlyV10(f.paths.request)).toThrow("DIAGNOSTIC_CUSTODY") } finally { f.destroy() }
+    try { f.closure.finalReaderClose = false; expect(() => retained.verifyLeanTwentySixBaselineTerminalOnlyV10(f.paths.request)).toThrow("ACCEPTED_CHECK") } finally { f.destroy() }
   })
   it("rejects unjoined actual entry terminal chronology", () => {
     const f = twentySixTerminalFixture("entry")
@@ -637,6 +659,7 @@ const fixtureV10 = () => {
 }
 describe("composed v10 accepted lineage with strict fresh admission", () => {
   it("composes actual request/predecessor custody for own-baseline lifecycle and revokes purpose", () => {
+    isolateV10FreshNamespace("diagnostic"); isolateV10FreshNamespace("baseline")
     const f = fixtureV10(), baseline = lean.leanCorrectionRoutePaths("baseline", f.mode)
     for (const path of [join(baseline.temp, "admission-prepare-start.json"), baseline.allocation, baseline.store, join(baseline.temp, "admission-run-start.json"), join(baseline.store, "child-terminal.json"), join(baseline.store, "result.json")]) {
       virtual.present.add(resolve(path)); f.evidence.mockClear()
