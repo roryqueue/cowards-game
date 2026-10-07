@@ -664,6 +664,110 @@ it("v11 authenticates a complete inert actual admission/refusal lifecycle, not r
   } finally { source?.mockRestore(); history?.mockRestore(); process.chdir(previousCwd); rmSync(directory, { recursive: true, force: true }) }
 }, 60000)
 
+it("v11 reauthenticates accepted own diagnostic and no-ledger baseline refusal after actual pair2 start", async () => {
+  const nativeFs = await vi.importActual<typeof import("node:fs")>("node:fs")
+  vi.mocked(fileIO.readdirSync).mockImplementation(nativeFs.readdirSync)
+  const previousCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v11-baseline-lineage-")))
+  const b = ledgerIO.LEAN_TWO_PAIR_V11_EXTENSION, mode = "v11-1", diagnostic = ledgerIO.leanCorrectionRoutePaths("diagnostic", mode), baseline = ledgerIO.leanCorrectionRoutePaths("baseline", mode)
+  const r = (n: number) => labRoot("inert-baseline-lineage", n), rooted = (body: Record<string, unknown>) => ({ ...body, root: labRoot(String(body.schemaVersion), body) })
+  const sourceManifest = correctionIO.leanCorrectionSourceManifest(mode, b)
+  const publicDocuments = [correctionIO.LEAN_TWO_PAIR_V11_APPROVAL, correctionIO.LEAN_TWO_PAIR_V11_PAIRS_APPROVAL, correctionIO.LEAN_TWO_PAIR_V11_PLAN, ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-CONTINUATION-DECISION-v1.md", ...sourceManifest.entries.map(entry => entry.path)]
+  for (const path of new Set(publicDocuments)) { const target = join(directory, path); fileIO.mkdirSync(resolve(target, ".."), { recursive: true }); fileIO.copyFileSync(resolve(path), target) }
+  const spies: ReturnType<typeof vi.spyOn>[] = []
+  try {
+    process.chdir(directory); fileIO.mkdirSync(".strategy-lab", { mode: 0o700 }); fileIO.mkdirSync(diagnostic.temp, { mode: 0o700 }); fileIO.mkdirSync(baseline.temp, { mode: 0o700 })
+    execFileSync("git", ["init", "-q"]); execFileSync("git", ["-c", "user.name=Inert fixture", "-c", "user.email=fixture@example.invalid", "commit", "--allow-empty", "-qm", "inert accepted HEAD"])
+    const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), sourceRoot = sourceManifest.root
+    const put = (path: string, value: unknown) => fileIO.writeFileSync(path, ledgerIO.leanCanonicalBytes(value), { mode: 0o600 })
+    expect(correctionIO.leanCorrectionSourceManifest(mode, b)).toEqual(sourceManifest)
+    const survivors = Array.from({ length: 517 }, (_, i) => { const identity = `.strategy-lab/inert-old-${i}`; fileIO.writeFileSync(identity, "inert inherited charge", { mode: 0o600 }); return { identity, allocatedBytes: fileIO.lstatSync(identity).blocks * 512 } })
+    const oldPredecessor = rooted({ schemaVersion: "lean-correction-predecessor-v1", chargedMatches: 32, elapsedUpperBoundMs: b.priorElapsedMs, allocatedDiskBytes: b.physicalFloorBytes, historicalPeakDiskBytes: "unknown", historicalPeakRssBytes: "unknown", historyRoot: r(20), survivors }) as unknown as ledgerIO.LeanCorrectionPredecessor
+    spies.push(vi.spyOn(retainedIO, "authenticateLeanTwoPairHistoricalCustodyV11").mockReturnValue({ root: r(21), cumulativeCharged: 32, predecessor: oldPredecessor, identities: [] } as unknown as ReturnType<typeof retainedIO.authenticateLeanTwoPairHistoricalCustodyV11>))
+    const witness = rooted({ schemaVersion: "lean-retry-setup-witness-v8", timeboxExtension: b, attemptOrdinal: 1, startedAtMs: b.startedAtMs, observedAtMs: b.startedAtMs, priorElapsedMs: b.priorElapsedMs, consumedTimeBytesRoot: ledgerIO.LEAN_RETRY_V8_CARRY.timeBytesRoot, decisionRoot: b.approvalRoot, threadId: "019fa652-915a-7183-9af1-3b3c05868d86", turnId: b.turnId, source: "codex-task-event-custody" }); put(ledgerIO.leanRetrySetupPath(mode), witness)
+    const sources = ["tactical-0", "cold-opponent"].map(role => buildLeanBaselineSource({ role, source: buildPlannerCandidate().source, coldRoot: LEAN_COLD_REUSE_HISTORY.coldRoot, implementationRoot: sourceRoot }))
+    // The unavailable consumed cold grant is historical authority only; all
+    // new source snapshots, actual accepted audit and private dispatch stay real.
+    const reuse = { grant: { root: r(22), coldRoot: LEAN_COLD_REUSE_HISTORY.coldRoot, seed: LEAN_COLD_REUSE_HISTORY.seed, amendmentRoot: LEAN_COLD_REUSE_HISTORY.amendmentRoot }, sources } as unknown as ReturnType<typeof reuseIO.authenticateLeanColdReuse>
+    const reuseValidation = vi.spyOn(reuseIO, "validateLeanColdReuse").mockImplementation(value => { expect(value).toEqual(reuse); return reuse })
+    spies.push(vi.spyOn(reuseIO, "authenticateLeanColdReuse").mockReturnValue(reuse), reuseValidation)
+    const docs = correctionIO.leanTwoPairDocumentsV11("diagnostic", mode)
+    const reviewText = (dataRoot?: string) => `---\nstatus: clean\nsource_root: ${sourceRoot}\nsource_commit: ${head}\nindependently_reviewed: true\nauthor_agent: /root\nreviewer_agent: /root/inert_reviewer\n${dataRoot ? `request_root: ${dataRoot}\n` : ""}---\nInert review fixture, no empirical authority.\n`
+    fileIO.writeFileSync(docs.review, reviewText(), { mode: 0o600 })
+    let request = correctionIO.createLeanTwoPairRequestDraftV11(mode, "diagnostic", { sourceRoot, reviewRoot: leanBytesRoot(fileIO.readFileSync(docs.review)), dataReviewRoot: r(2), helperReviewRoot: r(3), setupAccountingRoot: witness.root, reuseGrantRoot: reuse.grant.root, authorizationRoot: r(4), priorClosureRoot: null, continuationRoot: null, acceptedCheckRoot: null, acceptedReaderCloseRoot: null })
+    const dataRoot = correctionIO.leanCorrectionRequestDataRoot(request)
+    fileIO.writeFileSync(docs.dataReview, reviewText(dataRoot), { mode: 0o600 }); fileIO.writeFileSync(docs.helperReview, reviewText(dataRoot), { mode: 0o600 })
+    request = { ...request, dataReviewRoot: leanBytesRoot(fileIO.readFileSync(docs.dataReview)), helperReviewRoot: leanBytesRoot(fileIO.readFileSync(docs.helperReview)) }
+    const authorization = rooted({ schemaVersion: "lean-two-pair-execution-authorization-v11", timeboxExtension: b, approved: true, executionAuthorized: true, route: "diagnostic", attemptOrdinal: 1, sourceRoot, approvalRoot: b.approvalRoot, pairsApprovalRoot: b.pairsApprovalRoot, planRoot: b.planRoot, policyRoot: b.root, requestDataRoot: correctionIO.leanCorrectionRequestDataRoot(request), helperReviewRoot: request.helperReviewRoot, authorAgent: "/root", reviewerAgent: "/root/inert_reviewer" })
+    put(docs.authorization, authorization); request = { ...request, authorizationRoot: leanBytesRoot(ledgerIO.leanCanonicalBytes(authorization)) }; put(diagnostic.request, request)
+    const prepare = correctionIO.beginLeanCorrectionAdmission("diagnostic", "prepare", resolve(diagnostic.temp), { wallStartMs: b.startedAtMs + 1000, monotonicStartNs: "1000000" }, mode)
+    const predecessor = correctionIO.inspectLeanTwoPairPredecessorV11("diagnostic", prepare.wallStartMs, mode)
+    const allocation = ledgerIO.createLeanSupervisorCorrectionAllocation({ sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route: "diagnostic", reuseGrantRoot: request.reuseGrantRoot, supervisorDecisionRoot: request.supervisorDecisionRoot!, acceptedCheckRoot: null, requestBytesRoot: leanBytesRoot(ledgerIO.leanCanonicalBytes(request)), dataReviewRoot: request.dataReviewRoot, setupAccountingRoot: request.setupAccountingRoot!, predecessor, startupPolicyRoot: request.startupPolicyRoot!, attemptOrdinal: 1, priorClosureRoot: null, continuationRoot: null, acceptedReaderCloseRoot: null, timeboxExtension: b }, 8)
+    const ledger = ledgerIO.createLeanLedger(diagnostic.store, allocation), at = (delta: number) => b.startedAtMs + delta
+    ledgerIO.importLeanClosedInterval(ledger, "correction-preparation", at(1000), at(1010))
+    const run = correctionIO.beginLeanCorrectionAdmission("diagnostic", "run", resolve(diagnostic.temp), { wallStartMs: at(1011), monotonicStartNs: "12000000" }, mode)
+    const entry = { schemaVersion: "lean-child-entry-v2" as const, allocationRoot: allocation.root, sourceRoot, requestBytesRoot: allocation.requestBytesRoot!, head, parentPid: 1, childPid: 2, handshakeRoot: r(30), wallStartMs: run.wallStartMs, monotonicStartNs: run.monotonicStartNs }; put(join(diagnostic.store, "entry.json"), entry)
+    const terminal = ledgerIO.deriveLeanChildTerminal(ledger, entry, { status: "child_exited", exitCode: 0, signal: null, wallObservedMs: at(1012), monotonicObservedNs: "13000000", parentRssBytes: 1, childRssObservedBytes: 1, physicalBytes: predecessor.allocatedDiskBytes, freeBytes: 20000000000 }); put(join(diagnostic.store, "child-terminal.json"), terminal)
+    ledgerIO.importLeanClosedInterval(ledger, "pilot-entry", at(1011), at(1012)); ledgerIO.importLeanClosedInterval(ledger, "correction-run-finalization", at(1012), at(1013))
+    put(join(diagnostic.temp, "admission-run-close.json"), rooted({ schemaVersion: "lean-correction-supervisor-admission-close-v8", attemptOrdinal: 1, startRoot: run.root, route: "diagnostic", mode: "run", elapsedUpperBoundMs: 2, monotonicObservedNs: "14000000", wallObservedMs: at(1013), allocationRoot: allocation.root, ledgerInterval: "correction-run-finalization", importedMs: 1, ledgerCloseMs: at(1013) }))
+    const interval = "correction-supervisor-diagnostic-v8-verifier"
+    ledgerIO.importLeanClosedInterval(ledger, "correction-supervisor-diagnostic-v8-reader-gap", at(1013), at(1020)); ledgerIO.importLeanClosedInterval(ledger, interval, at(1020), at(1030)); ledgerIO.importLeanClosedInterval(ledger, "correction-supervisor-diagnostic-v8-reader-close", at(1030), at(1031))
+    const slot = allocation.slots[0]!, charge = rooted({ schemaVersion: "lean-slot-charge-v1", allocationRoot: allocation.root, slotRoot: slot.root, ordinal: 0 })
+    const compact = { classification: "success", code: "OK", outcome: "DRAW", elapsedMs: 1, cleanupComplete: true, invocationCount: 1, accountingRoot: r(31), executionRoot: r(32), telemetry: { transitions: 0, events: 0 } }
+    const replay = ledgerIO.encodeLeanReplay([{ inert: true }]); fileIO.writeFileSync(join(diagnostic.store, `${charge.root.slice(7)}.gz`), replay.bytes, { mode: 0o600 })
+    const events = [{ kind: "charge", charge }, { kind: "terminal", chargeRoot: charge.root, record: compact, replay: replay.container }, { kind: "stop", reason: "complete" }]
+    fileIO.writeFileSync(join(diagnostic.store, "ledger.ndjson"), Buffer.concat(events.map(event => Buffer.concat([ledgerIO.leanCanonicalBytes(event), Buffer.from("\n")]))), { mode: 0o600 })
+    const evidence = ledgerIO.verifyLeanEvidence(ledger), pair = rooted({ schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: leanBytesRoot(Buffer.alloc(0)), priorLedgerByteLength: 0, priorCharged: 32, bottomRole: sources[0]!.role, bottomSourceRoot: sources[0]!.sourceRoot, bottomSnapshotRoot: sources[0]!.root, topRole: sources[1]!.role, topSourceRoot: sources[1]!.sourceRoot, topSnapshotRoot: sources[1]!.root })
+    const metrics = rooted({ schemaVersion: "lean-baseline-match-metrics-v1", executionRoot: compact.executionRoot, formationComparison: "inconclusive" })
+    const cell = { ordinal: 0, slotRoot: slot.root, bottomRoot: sources[0]!.sourceRoot, topRoot: sources[1]!.sourceRoot, compact, brainInputs: [], strategyInputs: [], trainingHalfPoints: null, semanticRoot: r(33), metrics, decisionRoot: r(34), diagnostic: null }
+    const observation = rooted({ schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }), origin = rooted({ schemaVersion: "lean-startup-origin-envelope-v7", allocationRoot: allocation.root, sourceRoot, pairRoot: pair.root, chargeRoot: charge.root, origins: [] })
+    put(join(diagnostic.store, "pair-0.json"), pair); put(join(diagnostic.store, "observation-0.json"), observation); put(join(diagnostic.store, "correction-origin.json"), origin); put(join(diagnostic.store, "cold-reuse.json"), reuse)
+    for (const snapshot of sources) { put(join(diagnostic.store, `source-${snapshot.role}.json`), snapshot); put(join(diagnostic.store, `publication-${snapshot.role}-v8.json`), sourceIO.leanBaselineSourcePublicationBindingV8(allocation, head, snapshot.root, snapshot.sourceRoot)) }
+    const result = rooted({ schemaVersion: "lean-correction-supervisor-result-v8", privacy: "private_offline", issued: false, route: "diagnostic", attemptOrdinal: 1, allocationRoot: allocation.root, sourceRoot, requestBytesRoot: entry.requestBytesRoot, head, reuseGrantRoot: reuse.grant.root, pipeline: { status: "diagnostic_only", cells: [{ ordinal: 0, slotRoot: slot.root, compact }], training: null, holdoutOpened: false, formationMaterialized: false }, evidenceRoot: evidence.root, cumulativeCharged: 33, holdoutOpened: false, formationMaterialized: false, phaseComplete: false }); put(join(diagnostic.store, "result.json"), result)
+    const reason = rooted({ schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: allocation.root, sourceRoot, requestBytesRoot: entry.requestBytesRoot, entryBytesRoot: leanBytesRoot(ledgerIO.leanCanonicalBytes(entry)), head, parentPid: 1, childPid: 2, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }); put(join(diagnostic.store, ledgerIO.LEAN_SUPERVISOR_CORRECTION_ROUTES.diagnostic.reason), reason)
+    const time = ledgerIO.readLeanTimeAccounting(ledger)
+    const audited = retainedIO.auditLeanCorrectionRetained({ schemaVersion: "lean-correction-supervisor-retained-snapshot-v8", allocation, request, entry, terminal, evidence, time, result, reuse, pairs: [pair], observations: [observation], sources, artifacts: {}, origin, journalBytes: fileIO.readFileSync(join(diagnostic.store, "ledger.ndjson")), supervisorReasonBytes: ledgerIO.leanCanonicalBytes(reason) })
+    const { root: _audited, ...auditBody } = audited
+    const check = rooted({ ...auditBody, attemptOrdinal: 1, cumulativeElapsedMs: b.priorElapsedMs + 1025, cumulativePhysicalBytes: predecessor.allocatedDiskBytes, readerScratchHighWaterBytes: 512000000, readerInterval: interval, readerStartMs: at(1020), readerObservedMs: at(1025) }); put(join(diagnostic.store, diagnostic.check), check)
+    const dispatch = vi.spyOn(correctionIO, "readLeanRemainingAcceptedDiagnosticLineageV9"); spies.push(dispatch)
+    const closure = retainedIO.publishLeanRetryClosureV8(ledger, mode, "accepted")
+    expect(closure.finalReaderClose).toBe(true); expect(closure.checkRoot).toBe(check.root)
+    retainedIO.publishLeanTwoPairTerminalCarryV11(mode, "diagnostic")
+    const baselineDocs = correctionIO.leanTwoPairDocumentsV11("baseline", mode)
+    const baselineRequest = correctionIO.createLeanTwoPairRequestDraftV11(mode, "baseline", { sourceRoot, reviewRoot: request.reviewRoot, dataReviewRoot: r(40), helperReviewRoot: r(41), setupAccountingRoot: witness.root, reuseGrantRoot: reuse.grant.root, authorizationRoot: r(42), priorClosureRoot: null, continuationRoot: null, acceptedCheckRoot: check.root, acceptedReaderCloseRoot: closure.root }); put(baseline.request, baselineRequest)
+    const baselinePrepare = correctionIO.beginLeanCorrectionAdmission("baseline", "prepare", resolve(baseline.temp), { wallStartMs: at(1040), monotonicStartNs: "41000000" }, mode), baselineClose = correctionIO.closeLeanCorrectionAdmission(baselinePrepare, null, { wallStartMs: at(1050), monotonicStartNs: "51000000" })
+    const baselinePredecessor = correctionIO.inspectLeanTwoPairPredecessorV11("baseline", at(1040), mode)
+    const failure = rooted({ schemaVersion: "lean-retry-admission-failure-v8", timeboxExtension: b, authorAgent: "/root", authorizing: false, attemptOrdinal: 1, admissionMode: "prepare", startRoot: baselinePrepare.root, closeRoot: baselineClose.root, sourceRoot, head, requestBytesRoot: leanBytesRoot(ledgerIO.leanCanonicalBytes(baselineRequest)), allocationRoot: null, ledgerBytesRoot: null, timeBytesRoot: null, currentCharges: 0, cumulativeCharged: null, storeAbsent: true, childSpawned: false, cleanup: null, entryAbsent: true, terminalAbsent: true, resultAbsent: true, acceptedCheckAbsent: true }); put(join(baseline.temp, "admission-failure-v8.json"), failure)
+    const start = rooted({ schemaVersion: "lean-two-pair-terminal-verifier-start-v11", authorizing: false, mode, route: "baseline", sourceRoot, head, wallStartMs: at(1060), monotonicStartNs: "61000000" }), close = rooted({ schemaVersion: "lean-two-pair-terminal-verifier-close-v11", startRoot: start.root, closedAtMs: at(1070), wallObservedMs: at(1070), monotonicObservedNs: "71000000", elapsedUpperBoundMs: 10 }); put(join(baseline.temp, "terminal-verifier-start-v11.json"), start); put(join(baseline.temp, "terminal-verifier-close-v11.json"), close)
+    const baselineReport = rooted({ schemaVersion: "lean-two-pair-terminal-verification-v11", authorizing: false, accepted: false, finalReaderClose: false, attemptOrdinal: 1, route: "baseline", sourceRoot, requestBytesRoot: failure.requestBytesRoot, allocationRoot: null, entryHead: null, entryBytesRoot: null, terminalBytesRoot: null, resultAbsent: true, checkAbsent: true, failureRoot: failure.root, currentCharges: 0, cumulativeCharged: 33, predecessor: baselinePredecessor, readerStartRoot: start.root, readerCloseRoot: close.root, closedAtMs: close.closedAtMs, cumulativeElapsedMs: b.priorElapsedMs + 1070 }); put(join(baseline.temp, "terminal-verification-v11.json"), baselineReport)
+    retainedIO.publishLeanTwoPairTerminalCarryV11(mode, "baseline")
+    expect(retainedIO.authenticateLeanTwoPairClosedOutcomeV11(mode)).toMatchObject({ cumulativeCharged: 33, baselineCarryRoot: expect.any(String) })
+    const next = ledgerIO.leanCorrectionRoutePaths("diagnostic", "v11-2"); fileIO.mkdirSync(next.temp, { mode: 0o700 }); correctionIO.beginLeanCorrectionAdmission("diagnostic", "prepare", resolve(next.temp), { wallStartMs: at(1080), monotonicStartNs: "81000000" }, "v11-2")
+    expect(() => correctionIO.inspectLeanTwoPairPredecessorV11("diagnostic", at(1080), mode)).toThrow("SPENT_DESTINATION")
+    expect(() => correctionIO.inspectLeanTwoPairPredecessorV11("baseline", at(1080), mode)).toThrow("SPENT_DESTINATION")
+    for (const fake of [true, {}, Object.freeze({ mode, accepted: true })]) expect(() => correctionIO.inspectLeanTwoPairPredecessorV11("diagnostic", at(1080), mode, fake)).toThrow("CUSTODY")
+    reuseValidation.mockClear(); dispatch.mockClear()
+    expect(retainedIO.authenticateLeanTwoPairClosedOutcomeV11(mode)).toMatchObject({ cumulativeCharged: 33, baselineCarryRoot: expect.any(String) })
+    // The actual full audit calls the old cold-grant validation seam exactly
+    // once. A spy on this module's export would not observe its local call.
+    expect(reuseValidation).toHaveBeenCalledTimes(1); expect(dispatch).toHaveBeenCalledTimes(1)
+    expect(() => retainedIO.readLeanRemainingAcceptedLineagePurposeV9(dispatch.mock.calls[0]![0])).toThrow("CUSTODY")
+    expect(fileIO.readFileSync(join(baseline.temp, "terminal-verification-v11.json"))).toEqual(Buffer.from(ledgerIO.leanCanonicalBytes(baselineReport)))
+    const oldCarry = retainedIO.authenticateLeanTwoPairTerminalCarryV11(mode, "baseline"), optionalReport = ledgerIO.LEAN_TWO_PAIR_V11_REPORT_PATHS.at(-1)!
+    fileIO.writeFileSync(optionalReport, "new optional report".repeat(400), { mode: 0o600 }); fileIO.appendFileSync(optionalReport, "later growth".repeat(800))
+    expect(retainedIO.authenticateLeanTwoPairTerminalCarryV11(mode, "baseline")).toEqual(oldCarry)
+    expect(fileIO.readFileSync(join(baseline.temp, "terminal-verification-v11.json"))).toEqual(Buffer.from(ledgerIO.leanCanonicalBytes(baselineReport)))
+    const nextInventory = correctionIO.inventoryLeanTwoPairNoRefundV11(oldCarry, [optionalReport])
+    expect(nextInventory.allocatedDiskBytes).toBeGreaterThan(oldCarry.allocatedDiskBytes)
+    const { root: _witness, ...witnessBody } = witness
+    put(ledgerIO.leanRetrySetupPath("v11-2"), rooted({ ...witnessBody, attemptOrdinal: 2, observedAtMs: at(1080) }))
+    const nextPredecessor = correctionIO.inspectLeanTwoPairPredecessorV11("diagnostic", at(1080), "v11-2")
+    expect(nextPredecessor.chargedMatches).toBe(33); expect(nextPredecessor.allocatedDiskBytes).toBeGreaterThanOrEqual(nextInventory.allocatedDiskBytes)
+    expect(nextPredecessor.survivors.some(row => row.identity === optionalReport)).toBe(true)
+    fileIO.unlinkSync(optionalReport); expect(() => correctionIO.inventoryLeanTwoPairNoRefundV11(nextInventory, [])).toThrow()
+    expect(fileIO.existsSync(baseline.store)).toBe(false); expect(fileIO.existsSync(baselineDocs.carry)).toBe(true)
+  } finally { for (const spy of spies.reverse()) spy.mockRestore(); process.chdir(previousCwd); rmSync(directory, { recursive: true, force: true }) }
+}, 60000)
+
 it("v11 terminal carry permits pair2 after every authentic closed pair1 outcome without inventing heads", () => {
   const r = (n: number) => `sha256:${String(n).padStart(64, "0")}` as const
   for (const outcome of ["refused_before_entry", "entered_without_result", "failed_result", "closed_result"] as const) {

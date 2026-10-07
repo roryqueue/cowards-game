@@ -565,7 +565,7 @@ const inspectLeanTwoPairPredecessorWithJoinV11 = (route: LeanCorrectionRoute, at
   if (acceptedLineage && route !== "diagnostic") return fail("DIAGNOSTIC_CUSTODY")
   const { charged, elapsed, identities, inherited, historyRoot } = readLeanTwoPairPredecessorLineageV11(route, atMs, mode, acceptedJoin), b = LEAN_TWO_PAIR_V11_EXTENSION
   const spent = (m: LeanTwoPairMode, r: LeanCorrectionRoute) => { const p = leanCorrectionRoutePaths(r, m); return [p.store, p.allocation, join(p.temp, "admission-prepare-start.json"), join(p.temp, "admission-run-start.json"), leanTwoPairDocumentsV11(r, m).carry].some(path => existsSync(path)) }
-  if (mode === "v11-1" && (["diagnostic", "baseline"] as const).some(r => spent("v11-2", r))) return fail("SPENT_DESTINATION")
+  if (mode === "v11-1" && !acceptedLineage && (["diagnostic", "baseline"] as const).some(r => spent("v11-2", r))) return fail("SPENT_DESTINATION")
   for (const r of ["diagnostic", "baseline"]) { const store = `.strategy-lab/lean-correction-supervisor-${r}-20261007-v11-3`; if ([store, `.planning/artifacts/v1.38-lean-correction-supervisor-${r}-allocation-v11-3.json`, join(`${store}-tmp`, "admission-prepare-start.json"), join(`${store}-tmp`, "admission-run-start.json")].some(path => existsSync(path))) return fail("SPENT_DESTINATION") }
   if (route === "diagnostic" && !acceptedLineage && spent(mode, "baseline")) return fail("SPENT_DESTINATION")
   const inventory = inventoryLeanTwoPairNoRefundV11(inherited, identities)
