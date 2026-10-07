@@ -784,7 +784,12 @@ const readTwoPairAdmission = (paths: ReturnType<typeof leanCorrectionRoutePaths>
 }
 /** Reauthenticate absence/refusal and its pre-verifier journal prefix. A rooted
  * report is merely a claim; it has no authority over counts or clocks. */
-export const authenticateLeanTwoPairTerminalVerificationV11 = (mode: LeanTwoPairMode, route: LeanCorrectionRoute) => authenticateTwoPairTerminalVerification(mode, route)
+export const authenticateLeanTwoPairTerminalVerificationV11 = (mode: LeanTwoPairMode, route: LeanCorrectionRoute) => {
+  const verification = authenticateTwoPairTerminalVerification(mode, route), carry = validateLeanTwoPairTerminalCarryV11(readLeanCorrectionJson(leanTwoPairDocumentsV11(route, mode).carry), mode, route)
+  authenticateTwoPairCompletedHold(mode, route, carry)
+  if (carry.verificationRoot !== verification.value.root || carry.verificationBytesRoot !== verification.bytesRoot) return fail("CUSTODY")
+  return verification
+}
 const authenticateTwoPairTerminalVerification = (mode: LeanTwoPairMode, route: LeanCorrectionRoute, authenticatedPredecessor?: LeanCorrectionPredecessor) => {
   const paths = leanCorrectionRoutePaths(route, mode), request = readLeanCorrectionJson(paths.request) as LeanCorrectionRequest
   validateTwoPairTerminalRequest(request, mode, route)
@@ -825,7 +830,7 @@ const deriveLeanTwoPairTerminalCarryV11 = (mode: LeanTwoPairMode, route: LeanCor
   const entry = hasEntry && ledger ? readLeanChildEntry(ledger) : null, terminal = entry && ledger ? readLeanChildTerminal(ledger) : null
   const state = ledger ? readLeanLedger(ledger) : null, time = ledger ? readLeanTimeAccounting(ledger) : null
   if (time?.active || entry && (entry.sourceRoot !== request.sourceRoot || terminal?.head !== entry.head || terminal?.entryBytesRoot !== leanBytesRoot(leanCanonicalBytes(entry)))) return fail("CUSTODY")
-  const verification = hasResult ? readTwoPairRooted(hasCheck ? join(paths.store, paths.check) : join(paths.temp, "result-reader-refusal-v11.json")) : terminalEvidence ?? authenticateLeanTwoPairTerminalVerificationV11(mode, route)
+  const verification = hasResult ? readTwoPairRooted(hasCheck ? join(paths.store, paths.check) : join(paths.temp, "result-reader-refusal-v11.json")) : terminalEvidence ?? authenticateTwoPairTerminalVerification(mode, route)
   const check = verification.value
   if (hasResult ? check.route !== route || check.sourceRoot !== request.sourceRoot || check.allocationRoot !== allocation?.root || check.head !== entry?.head || check.requestBytesRoot !== entry?.requestBytesRoot || check.attemptOrdinal !== leanRetryOrdinal(mode) || check.currentCharged !== state?.charges.size || check.cumulativeCharged !== state?.charged || !time?.closed.has(`correction-supervisor-${route}-v8-reader-close`) : check.schemaVersion !== "lean-two-pair-terminal-verification-v11" || check.route !== route || check.attemptOrdinal !== leanRetryOrdinal(mode) || check.sourceRoot !== request.sourceRoot || check.requestBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)) || check.accepted !== false || check.authorizing !== false || check.entryHead !== (entry?.head ?? null) || check.allocationRoot !== (allocation?.root ?? null)) return fail("CUSTODY")
   const resultBytesRoot = hasResult ? leanBytesRoot(readLeanCorrectionPrivateBytes(join(paths.store, "result.json"), 8388608)) : null
@@ -843,13 +848,46 @@ const deriveLeanTwoPairTerminalCarryV11 = (mode: LeanTwoPairMode, route: LeanCor
   const body = { schemaVersion: "lean-two-pair-terminal-carry-v11" as const, timeboxExtension: LEAN_TWO_PAIR_V11_EXTENSION, authorizing: false as const, accepted: false as const, attemptOrdinal: leanRetryOrdinal(mode) as 1 | 2, route, outcome, sourceRoot: request.sourceRoot, requestBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)), allocationRoot: allocation?.root ?? null, entryHead: entry?.head ?? null, entryBytesRoot: entry ? leanBytesRoot(leanCanonicalBytes(entry)) : null, terminalBytesRoot: terminal ? leanBytesRoot(leanCanonicalBytes(terminal)) : null, resultBytesRoot, verificationRoot: check.root as LabRoot, verificationBytesRoot: verification.bytesRoot, closureRoot: (closure?.value.root ?? check.root) as LabRoot, closedAtMs, cumulativeElapsedMs: Math.max(leanRetryRootElapsedFloorV8(closedAtMs, LEAN_TWO_PAIR_V11_EXTENSION), time?.elapsedMs ?? 0), currentCharges: state?.charges.size ?? 0, cumulativeCharged, allocatedDiskBytes: Math.max(LEAN_TWO_PAIR_V11_EXTENSION.physicalFloorBytes, inventory.allocatedDiskBytes), survivors }
   return validateLeanTwoPairTerminalCarryV11({ ...body, root: labRoot(body.schemaVersion, body) }, mode, route)
 }
+interface TwoPairHoldBinding { sourceRoot: LabRoot; head: string; requestBytesRoot: LabRoot; entryBytesRoot: LabRoot | null }
+const createTwoPairTerminalHold = (mode: LeanTwoPairMode, route: LeanCorrectionRoute, expectedHead: string) => {
+  const paths = leanCorrectionRoutePaths(route, mode), request = readLeanCorrectionJson(paths.request) as LeanCorrectionRequest
+  validateTwoPairTerminalRequest(request, mode, route)
+  const binding: TwoPairHoldBinding = { sourceRoot: request.sourceRoot, head: expectedHead, requestBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)), entryBytesRoot: existsSync(join(paths.store, "entry.json")) ? leanBytesRoot(readLeanCorrectionPrivateBytes(join(paths.store, "entry.json"))) : null }
+  const guard = () => {
+    if (leanCorrectionSourceManifest(mode, LEAN_TWO_PAIR_V11_EXTENSION).root !== binding.sourceRoot || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim() !== binding.head || leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)) !== binding.requestBytesRoot || (existsSync(join(paths.store, "entry.json")) ? leanBytesRoot(readLeanCorrectionPrivateBytes(join(paths.store, "entry.json"))) : null) !== binding.entryBytesRoot) return fail("HOLD_OR_CAPACITY")
+  }
+  guard()
+  return { binding, guard }
+}
+const publishTwoPairHeldCarry = (mode: LeanTwoPairMode, route: LeanCorrectionRoute, hold: ReturnType<typeof createTwoPairTerminalHold>, evidence?: ReturnType<typeof authenticateTwoPairTerminalVerification>) => {
+  const paths = leanCorrectionRoutePaths(route, mode), completePath = join(paths.temp, "terminal-hold-complete-v11.json")
+  try {
+    hold.guard()
+    const carry = deriveLeanTwoPairTerminalCarryV11(mode, route, evidence)
+    hold.guard()
+    publishLeanCorrection(leanTwoPairDocumentsV11(route, mode).carry, carry)
+    hold.guard()
+    const body = { schemaVersion: "lean-two-pair-terminal-hold-complete-v11", mode, route, ...hold.binding, verificationRoot: carry.verificationRoot, verificationBytesRoot: carry.verificationBytesRoot, carryRoot: carry.root, carryBytesRoot: leanBytesRoot(leanCanonicalBytes(carry)) }
+    publishLeanCorrection(completePath, { ...body, root: labRoot(body.schemaVersion, body) })
+    hold.guard()
+    return carry
+  } catch (error) {
+    const refusalPath = join(paths.temp, "terminal-hold-refusal-v11.json")
+    if (!existsSync(refusalPath)) { const body = { schemaVersion: "lean-two-pair-terminal-hold-refusal-v11", authorizing: false, accepted: false, mode, route, ...hold.binding }; publishLeanCorrection(refusalPath, { ...body, root: labRoot(body.schemaVersion, body) }) }
+    throw error
+  }
+}
 export const publishLeanTwoPairTerminalCarryV11 = (mode: LeanTwoPairMode, route: LeanCorrectionRoute) => {
-  const carry = deriveLeanTwoPairTerminalCarryV11(mode, route)
-  publishLeanCorrection(leanTwoPairDocumentsV11(route, mode).carry, carry)
-  return carry
+  const paths = leanCorrectionRoutePaths(route, mode), head = existsSync(join(paths.store, "entry.json")) ? (readLeanCorrectionJson(join(paths.store, "entry.json")) as { head: string }).head : String(readTwoPairRooted(join(paths.temp, "terminal-verifier-start-v11.json")).value.head)
+  return publishTwoPairHeldCarry(mode, route, createTwoPairTerminalHold(mode, route, head))
+}
+const authenticateTwoPairCompletedHold = (mode: LeanTwoPairMode, route: LeanCorrectionRoute, value: LeanTwoPairTerminalCarryV11) => {
+  const paths = leanCorrectionRoutePaths(route, mode), seal = readTwoPairRooted(join(paths.temp, "terminal-hold-complete-v11.json")).value
+  if (existsSync(join(paths.temp, "terminal-hold-refusal-v11.json")) || !exactLabKeys(seal, ["schemaVersion", "mode", "route", "sourceRoot", "head", "requestBytesRoot", "entryBytesRoot", "verificationRoot", "verificationBytesRoot", "carryRoot", "carryBytesRoot", "root"]) || seal.schemaVersion !== "lean-two-pair-terminal-hold-complete-v11" || seal.mode !== mode || seal.route !== route || seal.sourceRoot !== value.sourceRoot || seal.requestBytesRoot !== value.requestBytesRoot || seal.entryBytesRoot !== value.entryBytesRoot || seal.carryRoot !== value.root || seal.carryBytesRoot !== leanBytesRoot(leanCanonicalBytes(value)) || seal.verificationRoot !== value.verificationRoot || seal.verificationBytesRoot !== value.verificationBytesRoot || seal.head !== (value.entryHead ?? readTwoPairRooted(join(paths.temp, "terminal-verifier-start-v11.json")).value.head)) return fail("CUSTODY")
 }
 const authenticateTwoPairCarry = (mode: LeanTwoPairMode, route: LeanCorrectionRoute) => {
   const value = validateLeanTwoPairTerminalCarryV11(readLeanCorrectionJson(leanTwoPairDocumentsV11(route, mode).carry), mode, route), expected = deriveLeanTwoPairTerminalCarryV11(mode, route)
+  authenticateTwoPairCompletedHold(mode, route, value)
   // Inventory gains the immutable carry file after publication. Authenticate the
   // saved rows as a prefix; new bytes are measured and carried, never refunded.
   const { survivors: _s, allocatedDiskBytes: _b, root: _r, ...primitive } = value, { survivors: _es, allocatedDiskBytes: _eb, root: _er, ...ep } = expected
@@ -870,16 +908,19 @@ export const authenticateLeanTwoPairClosedOutcomeV11 = (mode: LeanTwoPairMode) =
   return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 /** One result-absent independent verifier for either v11 route. No fake result/HEAD. */
-export const verifyLeanTwoPairTerminalOnlyV11 = (path: string, mode: LeanTwoPairMode, route: LeanCorrectionRoute) => {
+export const verifyLeanTwoPairTerminalOnlyV11 = (path: string, mode: LeanTwoPairMode, route: LeanCorrectionRoute, precheck?: () => void) => {
   if (!isLeanTwoPairMode(mode)) return fail("CUSTODY")
   const paths = leanCorrectionRoutePaths(route, mode), reportPath = join(paths.temp, "terminal-verification-v11.json")
   if (path !== paths.request || existsSync(join(paths.store, "result.json")) || existsSync(join(paths.store, paths.check)) || existsSync(reportPath) || existsSync(join(paths.temp, "terminal-verifier-start-v11.json"))) return fail("CUSTODY")
   const request = readLeanCorrectionJson(path) as LeanCorrectionRequest, sourceRoot = leanCorrectionSourceManifest(mode, request.timeboxExtension).root, head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim()
   if (request.sourceRoot !== sourceRoot || request.route !== route || request.attemptOrdinal !== leanRetryOrdinal(mode) || !same(request.timeboxExtension, LEAN_TWO_PAIR_V11_EXTENSION) || !/^[a-f0-9]{40}$/u.test(head)) return fail("CUSTODY")
+  const hold = createTwoPairTerminalHold(mode, route, head)
   const startBody = { schemaVersion: "lean-two-pair-terminal-verifier-start-v11", authorizing: false, mode, route, sourceRoot, head, wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
   publishLeanCorrection(join(paths.temp, "terminal-verifier-start-v11.json"), start)
   const ledger = existsSync(paths.store) ? openLeanLedger(paths.store) : null, allocation = ledger?.allocation
+  hold.guard()
   const predecessor = ledger && "route" in ledger.allocation ? ledger.allocation.predecessor : inspectLeanTwoPairPredecessorV11(route, (readLeanCorrectionJson(join(paths.temp, "admission-prepare-start.json")) as { wallStartMs: number }).wallStartMs, mode)
+  hold.guard()
   let entry: ReturnType<typeof readLeanChildEntry> | null = null, terminal: ReturnType<typeof readLeanChildTerminal> | null = null, currentCharges = 0, cumulativeCharged = predecessor.chargedMatches, failureRoot: LabRoot | null = null, intervalStarted = false
   const interval = `correction-supervisor-${route}-v11-terminal-verifier`
   try {
@@ -895,22 +936,31 @@ export const verifyLeanTwoPairTerminalOnlyV11 = (path: string, mode: LeanTwoPair
         if (entry.head !== head || entry.sourceRoot !== sourceRoot || entry.requestBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(path)) || terminal.head !== entry.head || terminal.entryBytesRoot !== leanBytesRoot(leanCanonicalBytes(entry)) || run.route !== route || runClose.route !== route || run.attemptOrdinal !== leanRetryOrdinal(mode) || runClose.attemptOrdinal !== run.attemptOrdinal || runClose.startRoot !== run.root || runClose.allocationRoot !== allocation!.root || runClose.ledgerInterval !== "correction-run-finalization" || time.closes.get("correction-run-finalization") !== runClose.ledgerCloseMs || entry.wallStartMs !== run.wallStartMs || Number(runClose.ledgerCloseMs) > start.wallStartMs || terminal.wallObservedMs > Number(runClose.ledgerCloseMs) || Number(run.wallStartMs) < Number(close.ledgerCloseMs)) return fail("CUSTODY")
       }
     } else if (close.allocationRoot !== null || close.ledgerInterval !== null || close.importedMs !== 0 || existsSync(paths.allocation) || existsSync(join(paths.temp, "admission-run-start.json"))) return fail("CUSTODY")
-    if (!entry) { const failure = authenticateLeanRetryAdmissionFailureV8(mode, true, route); if (failure.head !== head || failure.sourceRoot !== sourceRoot || failure.currentCharges !== 0) return fail("CUSTODY"); failureRoot = failure.root }
+    if (!entry) { const failure = authenticateLeanRetryAdmissionFailureV8(mode, false, route); if (failure.head !== head || failure.sourceRoot !== sourceRoot || failure.currentCharges !== 0) return fail("CUSTODY"); failureRoot = failure.root }
+    hold.guard()
     if (route === "baseline" && ledger) { const joined = authenticateLeanTwoPairAcceptedJoinV11(mode); if (!("acceptedCheckRoot" in allocation!) || allocation!.acceptedCheckRoot !== joined.accepted.root || allocation!.acceptedReaderCloseRoot !== joined.closure.root || joined.accepted.sourceRoot !== sourceRoot) return fail("CUSTODY") }
+    hold.guard()
     if (ledger) { beginLeanInterval(ledger, interval, start.wallStartMs); intervalStarted = true }
+    precheck?.()
+    hold.guard()
     if (leanRetryRootElapsedFloorV8(Date.now(), request.timeboxExtension) >= LEAN_TWO_PAIR_V11_EXTENSION.elapsedMs || process.memoryUsage().rss + LEAN_EXTERNAL_SCRATCH_RESERVE > LEAN_CAPS.scratchBytes || ledger && cumulativeLeanPhysicalBytes(ledger) > LEAN_CAPS.retainedBytes) return fail("HOLD_OR_CAPACITY")
   } finally {
     const observed = { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, elapsedUpperBoundMs = leanCorrectionAdmissionElapsed(start, observed)
     const closedTime = ledger && intervalStarted ? closeLeanInterval(ledger, interval, start.wallStartMs + elapsedUpperBoundMs, BigInt(observed.monotonicStartNs)) : null
+    hold.guard()
     const cb = { schemaVersion: "lean-two-pair-terminal-verifier-close-v11", startRoot: start.root, closedAtMs: closedTime?.closes.get(interval) ?? start.wallStartMs + elapsedUpperBoundMs, wallObservedMs: observed.wallStartMs, monotonicObservedNs: observed.monotonicStartNs, elapsedUpperBoundMs }
     publishLeanCorrection(join(paths.temp, "terminal-verifier-close-v11.json"), { ...cb, root: labRoot(cb.schemaVersion, cb) })
+    hold.guard()
   }
   const closed = readTwoPairRooted(join(paths.temp, "terminal-verifier-close-v11.json")).value
   const body = { schemaVersion: "lean-two-pair-terminal-verification-v11", authorizing: false, accepted: false, finalReaderClose: false, attemptOrdinal: leanRetryOrdinal(mode), route, sourceRoot, requestBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(path)), allocationRoot: allocation?.root ?? null, entryHead: entry?.head ?? null, entryBytesRoot: entry ? leanBytesRoot(leanCanonicalBytes(entry)) : null, terminalBytesRoot: terminal ? leanBytesRoot(leanCanonicalBytes(terminal)) : null, resultAbsent: true, checkAbsent: true, failureRoot, currentCharges, cumulativeCharged, predecessor, readerStartRoot: start.root, readerCloseRoot: closed.root, closedAtMs: closed.closedAtMs, cumulativeElapsedMs: Math.max(leanRetryRootElapsedFloorV8(Number(closed.closedAtMs), request.timeboxExtension), ledger ? readLeanTimeAccounting(ledger).elapsedMs : 0) }
   const report = { ...body, root: labRoot(body.schemaVersion, body) }
+  hold.guard()
   publishLeanCorrection(reportPath, report)
-  const evidence = authenticateTwoPairTerminalVerification(mode, route, predecessor), carry = deriveLeanTwoPairTerminalCarryV11(mode, route, evidence)
-  publishLeanCorrection(leanTwoPairDocumentsV11(route, mode).carry, carry)
+  hold.guard()
+  const evidence = authenticateTwoPairTerminalVerification(mode, route, predecessor)
+  hold.guard()
+  publishTwoPairHeldCarry(mode, route, hold, evidence)
   return report
 }
 /** The one appropriate ordinary reader, followed by finite non-authorizing carry. */

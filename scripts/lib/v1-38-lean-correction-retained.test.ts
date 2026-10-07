@@ -508,16 +508,25 @@ it("v11 rejects the old fabricated partial-request refusal fixture even with rec
   finally { twoPairRemove(directory, { recursive: true, force: true }) }
 })
 
-it("v11 authenticates a complete inert actual admission/refusal lifecycle, not rooted report claims", () => {
+it("v11 authenticates a complete inert actual admission/refusal lifecycle, not rooted report claims", async () => {
+  // Earlier retained-reader fixtures replace the module-level mocked directory
+  // reader. Restore native traversal for this real inert filesystem lifecycle.
+  const nativeFs = await vi.importActual<typeof import("node:fs")>("node:fs")
+  vi.mocked(fileIO.readdirSync).mockImplementation(nativeFs.readdirSync)
   const previousCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v11-actual-lifecycle-")))
   const b = ledgerIO.LEAN_TWO_PAIR_V11_EXTENSION, mode = "v11-1", route = "diagnostic", paths = ledgerIO.leanCorrectionRoutePaths(route, mode)
   const publicDocuments = [correctionIO.LEAN_TWO_PAIR_V11_APPROVAL, correctionIO.LEAN_TWO_PAIR_V11_PAIRS_APPROVAL, correctionIO.LEAN_TWO_PAIR_V11_PLAN]
   for (const path of publicDocuments) { const target = join(directory, path); fileIO.mkdirSync(resolve(target, ".."), { recursive: true }); fileIO.copyFileSync(resolve(path), target) }
   fileIO.mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); fileIO.mkdirSync(join(directory, paths.temp), { mode: 0o700 })
   const r = (n: number) => labRoot("inert-actual-lifecycle", n), rooted = (body: Record<string, unknown>) => ({ ...body, root: labRoot(String(body.schemaVersion), body) })
-  let history: ReturnType<typeof vi.spyOn> | undefined
+  let history: ReturnType<typeof vi.spyOn> | undefined, source: ReturnType<typeof vi.spyOn> | undefined
   try {
     process.chdir(directory)
+    execFileSync("git", ["init", "-q"])
+    execFileSync("git", ["-c", "user.name=Inert fixture", "-c", "user.email=fixture@example.invalid", "commit", "--allow-empty", "-qm", "inert fixture HEAD"])
+    const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim()
+    let observedSourceRoot = r(1)
+    source = vi.spyOn(correctionIO, "leanCorrectionSourceManifest").mockImplementation(() => ({ root: observedSourceRoot, entries: [] }))
     const survivors = Array.from({ length: 517 }, (_, i) => { const identity = `.strategy-lab/inert-history-${i}`; fileIO.writeFileSync(identity, "inert historical debit", { mode: 0o600 }); return { identity, allocatedBytes: fileIO.lstatSync(identity).blocks * 512 } })
     const witness = rooted({ schemaVersion: "lean-retry-setup-witness-v8", timeboxExtension: b, attemptOrdinal: 1, startedAtMs: b.startedAtMs, observedAtMs: b.startedAtMs, priorElapsedMs: b.priorElapsedMs, consumedTimeBytesRoot: ledgerIO.LEAN_RETRY_V8_CARRY.timeBytesRoot, decisionRoot: b.approvalRoot, threadId: "019fa652-915a-7183-9af1-3b3c05868d86", turnId: b.turnId, source: "codex-task-event-custody" })
     const put = (path: string, value: unknown) => fileIO.writeFileSync(path, ledgerIO.leanCanonicalBytes(value), { mode: 0o600 })
@@ -530,15 +539,16 @@ it("v11 authenticates a complete inert actual admission/refusal lifecycle, not r
     put(paths.request, request)
     const admission = correctionIO.beginLeanCorrectionAdmission(route, "prepare", resolve(paths.temp), { wallStartMs: b.startedAtMs + 1000, monotonicStartNs: "1000000" }, mode)
     const admissionClose = correctionIO.closeLeanCorrectionAdmission(admission, null, { wallStartMs: b.startedAtMs + 1010, monotonicStartNs: "11000000" })
-    const failure = rooted({ schemaVersion: "lean-retry-admission-failure-v8", timeboxExtension: b, authorAgent: "/root", authorizing: false, attemptOrdinal: 1, admissionMode: "prepare", startRoot: admission.root, closeRoot: admissionClose.root, sourceRoot: request.sourceRoot, head: "a".repeat(40), requestBytesRoot: ledgerIO.leanBytesRoot(ledgerIO.leanCanonicalBytes(request)), allocationRoot: null, ledgerBytesRoot: null, timeBytesRoot: null, currentCharges: 0, cumulativeCharged: null, storeAbsent: true, childSpawned: false, cleanup: null, entryAbsent: true, terminalAbsent: true, resultAbsent: true, acceptedCheckAbsent: true })
+    const failure = rooted({ schemaVersion: "lean-retry-admission-failure-v8", timeboxExtension: b, authorAgent: "/root", authorizing: false, attemptOrdinal: 1, admissionMode: "prepare", startRoot: admission.root, closeRoot: admissionClose.root, sourceRoot: request.sourceRoot, head, requestBytesRoot: ledgerIO.leanBytesRoot(ledgerIO.leanCanonicalBytes(request)), allocationRoot: null, ledgerBytesRoot: null, timeBytesRoot: null, currentCharges: 0, cumulativeCharged: null, storeAbsent: true, childSpawned: false, cleanup: null, entryAbsent: true, terminalAbsent: true, resultAbsent: true, acceptedCheckAbsent: true })
     put(join(paths.temp, "admission-failure-v8.json"), failure)
     const start = rooted({ schemaVersion: "lean-two-pair-terminal-verifier-start-v11", authorizing: false, mode, route, sourceRoot: request.sourceRoot, head: failure.head, wallStartMs: b.startedAtMs + 1020, monotonicStartNs: "21000000" })
     const close = rooted({ schemaVersion: "lean-two-pair-terminal-verifier-close-v11", startRoot: start.root, closedAtMs: b.startedAtMs + 1030, wallObservedMs: b.startedAtMs + 1030, monotonicObservedNs: "31000000", elapsedUpperBoundMs: 10 })
     put(join(paths.temp, "terminal-verifier-start-v11.json"), start); put(join(paths.temp, "terminal-verifier-close-v11.json"), close)
     const check = rooted({ schemaVersion: "lean-two-pair-terminal-verification-v11", authorizing: false, accepted: false, finalReaderClose: false, attemptOrdinal: 1, route, sourceRoot: request.sourceRoot, requestBytesRoot: failure.requestBytesRoot, allocationRoot: null, entryHead: null, entryBytesRoot: null, terminalBytesRoot: null, resultAbsent: true, checkAbsent: true, failureRoot: failure.root, currentCharges: 0, cumulativeCharged: 32, predecessor, readerStartRoot: start.root, readerCloseRoot: close.root, closedAtMs: close.closedAtMs, cumulativeElapsedMs: b.priorElapsedMs + 1030 })
     const reportPath = join(paths.temp, "terminal-verification-v11.json"); put(reportPath, check)
-    expect(retainedIO.authenticateLeanTwoPairTerminalVerificationV11(mode, route).value).toEqual(check)
+    expect(() => retainedIO.authenticateLeanTwoPairTerminalVerificationV11(mode, route)).toThrow()
     expect(retainedIO.publishLeanTwoPairTerminalCarryV11(mode, route)).toMatchObject({ outcome: "refused_before_entry", cumulativeCharged: 32, currentCharges: 0, entryHead: null, resultBytesRoot: null })
+    expect(retainedIO.authenticateLeanTwoPairTerminalVerificationV11(mode, route).value).toEqual(check)
     expect(retainedIO.authenticateLeanTwoPairClosedOutcomeV11(mode)).toMatchObject({ cumulativeCharged: 32, baselineCarryRoot: null })
     for (const mutation of [{ cumulativeCharged: 33 }, { failureRoot: r(99) }, { predecessor: rooted({ ...predecessor, chargedMatches: 33 }) }, { cumulativeElapsedMs: b.priorElapsedMs }, { entryHead: "a".repeat(40) }, { finalReaderClose: true }]) {
       const { root: _root, ...body } = check; put(reportPath, rooted({ ...body, ...mutation }))
@@ -564,16 +574,65 @@ it("v11 authenticates a complete inert actual admission/refusal lifecycle, not r
     ledgerIO.beginLeanInterval(ledger, interval, Number(start.wallStartMs), 21000000n); ledgerIO.closeLeanInterval(ledger, interval, Number(close.closedAtMs), 31000000n)
     const { root: _check, ...checkBody } = check
     const ledgerCheck = rooted({ ...checkBody, allocationRoot: allocation.root, failureRoot: ledgerFailure.root }); put(reportPath, ledgerCheck)
+    fileIO.unlinkSync(correctionIO.leanTwoPairDocumentsV11(route, mode).carry); fileIO.unlinkSync(join(paths.temp, "terminal-hold-complete-v11.json"))
+    retainedIO.publishLeanTwoPairTerminalCarryV11(mode, route)
     expect(retainedIO.authenticateLeanTwoPairTerminalVerificationV11(mode, route).value).toEqual(ledgerCheck)
     expect(correctionIO.authenticateLeanRetryAdmissionFailureV8(mode, false, route, interval).timeBytesRoot).toBe(ledgerIO.leanBytesRoot(prefixBytes))
     expect(() => correctionIO.authenticateLeanRetryAdmissionFailureV8(mode, false, route)).toThrow()
     const beforeTime = fileIO.readFileSync(join(paths.store, "time.ndjson")); fileIO.writeFileSync(join(paths.store, "time.ndjson"), Buffer.concat([beforeTime, Buffer.from('{"kind":"start","id":"unrelated","atMs":1791409412000}\n{"kind":"close","id":"unrelated","atMs":1791409412001}\n')]))
     expect(() => retainedIO.authenticateLeanTwoPairTerminalVerificationV11(mode, route)).toThrow()
     fileIO.writeFileSync(join(paths.store, "time.ndjson"), beforeTime)
+    const cleanReader = () => {
+      for (const name of ["admission-run-start.json", "admission-run-close.json", "terminal-verifier-start-v11.json", "terminal-verifier-close-v11.json", "terminal-verification-v11.json", "terminal-hold-complete-v11.json", "terminal-hold-refusal-v11.json"]) { const path = join(paths.temp, name); if (fileIO.existsSync(path)) fileIO.unlinkSync(path) }
+      const carry = correctionIO.leanTwoPairDocumentsV11(route, mode).carry; if (fileIO.existsSync(carry)) fileIO.unlinkSync(carry)
+    }
+    // Controlled changes happen AFTER the verifier's initial snapshot and
+    // substantive custody reads, immediately before final close/publication.
+    for (const entered of [false, true]) for (const mutation of ["source", "HEAD", "request", "entry", "post-report", "post-carry", "post-seal", "none"] as const) {
+      if (!entered && mutation === "entry") continue
+      cleanReader(); fileIO.rmSync(paths.store, { recursive: true, force: true })
+      put(paths.request, request); put(join(paths.temp, "admission-prepare-close.json"), admissionClose); put(join(paths.temp, "admission-failure-v8.json"), failure)
+      observedSourceRoot = r(1)
+      if (entered) {
+        const enteredLedger = ledgerIO.createLeanLedger(paths.store, allocation)
+        ledgerIO.importLeanClosedInterval(enteredLedger, "correction-preparation", Number(admission.wallStartMs), Number(admissionClose.ledgerCloseMs)); put(join(paths.temp, "admission-prepare-close.json"), ledgerClose)
+        const run = correctionIO.beginLeanCorrectionAdmission(route, "run", resolve(paths.temp), { wallStartMs: b.startedAtMs + 1011, monotonicStartNs: "12000000" }, mode)
+        const entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: request.sourceRoot, requestBytesRoot: failure.requestBytesRoot, head, parentPid: 1, childPid: 2, handshakeRoot: r(90), wallStartMs: run.wallStartMs, monotonicStartNs: run.monotonicStartNs }
+        put(join(paths.store, "entry.json"), entry)
+        const terminal = ledgerIO.deriveLeanChildTerminal(enteredLedger, entry as ledgerIO.LeanChildEntryV2, { status: "child_failed", exitCode: 1, signal: null, wallObservedMs: b.startedAtMs + 1012, monotonicObservedNs: "13000000", parentRssBytes: 1, childRssObservedBytes: 1, physicalBytes: b.physicalFloorBytes, freeBytes: 20000000000 })
+        put(join(paths.store, "child-terminal.json"), terminal)
+        ledgerIO.importLeanClosedInterval(enteredLedger, "pilot-entry", run.wallStartMs, terminal.wallObservedMs)
+        ledgerIO.importLeanClosedInterval(enteredLedger, "correction-run-finalization", terminal.wallObservedMs, b.startedAtMs + 1013)
+        const runClose = rooted({ schemaVersion: "lean-correction-supervisor-admission-close-v8", attemptOrdinal: 1, startRoot: run.root, route, mode: "run", elapsedUpperBoundMs: 2, monotonicObservedNs: "14000000", wallObservedMs: b.startedAtMs + 1013, allocationRoot: allocation.root, ledgerInterval: "correction-run-finalization", importedMs: 1, ledgerCloseMs: b.startedAtMs + 1013 }); put(join(paths.temp, "admission-run-close.json"), runClose)
+      } else for (const name of ["admission-run-start.json", "admission-run-close.json"]) { const path = join(paths.temp, name); if (fileIO.existsSync(path)) fileIO.unlinkSync(path) }
+      let reached = false
+      const publish = correctionIO.publishLeanCorrection, mutateAt = mutation === "post-report" ? join(paths.temp, "terminal-verification-v11.json") : mutation === "post-carry" ? correctionIO.leanTwoPairDocumentsV11(route, mode).carry : mutation === "post-seal" ? join(paths.temp, "terminal-hold-complete-v11.json") : null
+      const publication = vi.spyOn(correctionIO, "publishLeanCorrection").mockImplementation((path, value, ledger) => { publish(path, value, ledger); if (path === mutateAt) observedSourceRoot = r(98) })
+      const verify = () => retainedIO.verifyLeanTwoPairTerminalOnlyV11(paths.request, mode, route, () => {
+        reached = true
+        if (mutation === "source") observedSourceRoot = r(98)
+        if (mutation === "request") put(paths.request, { ...request, helperReviewRoot: r(97) })
+        if (mutation === "entry") { const entry = ledgerIO.readLeanChildEntry(ledgerIO.openLeanLedger(paths.store)); put(join(paths.store, "entry.json"), { ...entry, handshakeRoot: r(96) }) }
+        if (mutation === "HEAD") execFileSync("git", ["-c", "user.name=Inert fixture", "-c", "user.email=fixture@example.invalid", "commit", "--allow-empty", "-qm", "controlled HEAD mutation"])
+      })
+      try {
+        if (mutation === "none") {
+          expect(verify()).toMatchObject({ currentCharges: 0, cumulativeCharged: 32, entryHead: entered ? head : null })
+          expect(retainedIO.authenticateLeanTwoPairClosedOutcomeV11(mode)).toMatchObject({ cumulativeCharged: 32, baselineCarryRoot: null })
+        } else {
+          expect(verify).toThrow()
+          if (mutation !== "post-seal") expect(fileIO.existsSync(join(paths.temp, "terminal-hold-complete-v11.json"))).toBe(false)
+          expect(() => retainedIO.authenticateLeanTwoPairClosedOutcomeV11(mode)).toThrow()
+          expect(() => retainedIO.authenticateLeanTwoPairTerminalVerificationV11(mode, route)).toThrow()
+        }
+        expect(reached).toBe(true)
+      } finally { publication.mockRestore() }
+      execFileSync("git", ["update-ref", "HEAD", head])
+    }
     fileIO.writeFileSync(survivors[0]!.identity, "")
     expect(() => retainedIO.publishLeanTwoPairTerminalCarryV11(mode, route)).toThrow()
-  } finally { history?.mockRestore(); process.chdir(previousCwd); rmSync(directory, { recursive: true, force: true }) }
-})
+  } finally { source?.mockRestore(); history?.mockRestore(); process.chdir(previousCwd); rmSync(directory, { recursive: true, force: true }) }
+}, 60000)
 
 it("v11 terminal carry permits pair2 after every authentic closed pair1 outcome without inventing heads", () => {
   const r = (n: number) => `sha256:${String(n).padStart(64, "0")}` as const
