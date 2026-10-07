@@ -62,10 +62,15 @@
       "bytes": 4360,
       "allocatedBytes": 8192,
       "bytesRoot": "sha256:dda1fd94aa59a70639fd4c3ec2bb02f74aa62acdd2d0c5c5feba94a9b65646a8"
+    },
+    {
+      "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-SOURCE-VERIFICATION-v1.md",
+      "bytes": 16520,
+      "allocatedBytes": 20480,
+      "bytesRoot": "sha256:596a9b8d560dbc5a3dceb183cb27cc56b6bef237276a320b343e165958466d47"
     }
   ],
   "pending": [
-    ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-SOURCE-VERIFICATION-v1.md",
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-DATA-REVIEW-v1.md",
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-HELPER-REVIEW-v1.md",
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-PREPARATION-v1.md",
@@ -86,6 +91,6 @@
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-CONTINUATION-v1.json",
     ".planning/phases/265-serious-current-rules-league-and-development-red-team/NEW265-16-TWENTY-SIX-HOUR-BASELINE-AUTHORIZATION-v1.json"
   ],
-  "allocatedBytes": 131072,
+  "allocatedBytes": 151552,
   "selfCustody": "direct-canonical-allocation-block-debit-not-self-digest"
 }
