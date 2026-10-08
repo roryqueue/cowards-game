@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Source verification found v13 parent-receipt integration gap; scoped repair next
+stopped_at: Actual v13 parent receipt repaired; fresh independent review and verification next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: Source verification5of6: actual parent selects reason-v1 while v13 custody requires v2; no empirical attempt started
+last_activity_desc: Actual parent integration RED/GREEN closed84of84; legacy controls unchanged; no empirical attempt started
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT ACTUAL PARENT INTEGRATION REPAIR CLOSED (2026-10-08): Isolatedfixer ACTUALLYCLOSED/ffmain ee0851813668fddc317829b346c1843f616a4260 RED ea1da98a. Explicitauthenticatednewv13 selection emitsreason-v2 with/withoutlegacyflag; actualexclusivepublisher bytes accepted by bothstrictconsumers. V12predicate/legacy/defaultcontrols unchanged. Focused84/84zeroSKIP126.03s/configuredtypes/shell/diffPASS, sixinheritedstrictNOTpass. Newfixedmanifest e7d8bf583b09828a34f5cd79d81cb0220242b093dd26e6026b30705347d5b442/930; exactSOURCE-REVIEW-v3/verification-v2/validation-v2/fix-v2physicalentries, oldreports preserved. Freshindependentreview-v3/sourceverification-v2 REQUIRED next; no live/privatehelper/request/allocation/Match/reader/hold,0of5freshprepsspent. Sameapproved165600000/full108M+ALLwall/deadline2026-10-09T02:39:01.097Z/34charges/15GB300/31minreserve/allbounds. No newhuman-onlychoice/nativecauseclaim/Phase265LEAGfreezeformationholdoutpubliccountingproductioncredit. Earlierfrontiershistory.
 
 CURRENT V13 SOURCE VERIFICATION GAP (2026-10-08): Distinct /root/verify_supervisor_retest_v12_source ACTUALLYCLOSED SOURCE-VERIFICATION-v1gaps_found5/6. Confirmed adjacent actualparent scripts/run-v1-38-lean-baseline.ts365 selectsreason-v2 ONLYstrictv12predicate; v13therefore emitsreason-v1 at434–438 despite newv13consumers requiringv2. Existingcomposedfixtures injectv2/stubparent, so48PASSdoesnotdisconfirm. CR01/WR01 sourcefixes verified; originalv12cause stillUNKNOWN. No native/private/Match/capacity/reader/terminalcheck,0of5freshprepsspent. Scopedv13-only actualparentselector/HOSTregression/newsource-reviewversion+verificationversion next; no human-onlyrule/limitdecision. Alloldreports/bytes preserved. Same165600000/full108M+ALLwall/absolute2026-10-09T02:39:01.097Z/34charges/15GB300/31minreserve/allbounds. Phase265/LEAG/freeze/formation/holdout/public/counting/production gated; earlierfrontiershistory.
 
