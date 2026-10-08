@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V13-1 baseline36 prepared; commit allocation then unique MAIN run and held-source verifier
+stopped_at: V13-1 baseline resource-threshold failure; unique terminal verification closed; envelope ended
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: MAIN baseline42536closed0 zerocharge; own accepted diagnostic FINAL joined; unique baseline entry next
+last_activity_desc: Baseline42019closed1 SIGKILL zerocharge; unique terminal30548closed0; resource diagnosis next, no new run grant
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V13-1 BASELINE FAILED / HOLD RELEASED (2026-10-08): UniqueMAIN42019 ACTUALLYCLOSED1; actualparent25850/child25991 absent. Actualchildterminal child_failed/exitnull/SIGKILL/117165ms/21:56:09.736Z, reason-v2 ONLYresource_threshold/uncertaintrue/nofirstsamplingexception/nofailureReceipt/initiatingcauseUNKNOWN. SavedpostexitparentRSS552525824+childmaximum630501376+external512000000+guard335544320=2030571520B >2GB; NOTsimultaneousthresholdoperands/causeproof. ExactlyONEENTRY-terminal-only30548 CLOSED0, savedcarry/holdauth15455 CLOSED0; reportac0c2cf0/carryb80d8ad6/holdd9c0628b/readerclose1791496635485/elapsed148694388/allocated22777856. Noresult/check/ordinaryreader/fabrication;current0/cumulative35/emptyledger/inactive. HeldHEAD5b01e62eec1554f68dce6f80dd24d41646dc50d8/sourcee7d8bf58/allocation5edd320e/raw5f7f963c unchangedthroughclosure;sourceANDHEADholdreleased. EnvelopeENDED;unusedprepsNOTrestartpermission;allconsumedbytesimmutable/noresume/retry/refund/recredit. Boundedsource-onlydiagnosisallowed, NOnewprepare/allocation/Match underendedenvelope. Same165600000/full108M+ALLwall/deadline2026-10-09T02:39:01.097Z/35charges/15GB300/31reserve/allbounds. Diagacceptancepreserved NOTbaseline/Phase265LEAGfreezeformationholdoutpubliccountingproductioncredit. Earlierfrontiershistory.
 
 CURRENT V13-1 CONDITIONAL BASELINE PREPARED (2026-10-08): MAINdraft19554/finalize32612 CLOSED0; distinctBASELINEDATA/HELPERreviews clean0/raw30546efe/680b15a2. ExactlyONEprepare42536 CLOSED0/preparation_only/36planned/zero currentcharge. Allocation5edd320e/raw5f7f963c/request2143bd25/data5e0488a1 joinsowndiagacceptedb6dc30d5+actualFINALb09f70b5/samefixede7d8bf58/930/sourcev3; sharedsetup/continuationunchanged. Realowned0700store onlyallocation/emptyledger/oneclosedtimeinterval;35priorcharges/757rows/22396928B/148472526ms. Commit/pushallocation BEFOREuniqueMAINbaselineentry/freshpassingSAMEPROCESScapacity beforecharge; sourceANDHEADfixedthroughactualterminal+ONEuniqueappropriateverifier/noheavywork. Inspectactualprocesses/markers FIRST, never duplicateentry/helper/reader; currentallocationprepared NOTsuccess. Same165600000/full108M+ALLwall/deadline2026-10-09T02:39:01.097Z/15GB300/31reserve/allbounds; full36fitNOTpromised. Anybaselinefailure/inadequatereserve/terminaloutcome endsenvelope; everyoldconsumedrecordimmutable. Phase265LEAGfreezeformationholdoutpubliccountingproduction gated. Earlierfrontiershistory.
 
