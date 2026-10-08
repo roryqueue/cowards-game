@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V13 source verified6of6; fresh MAIN diagnostic data/helper next
+stopped_at: V13-1 diagnostic prepared zerocharge; allocation commit before unique MAIN run
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: Independent sourceverificationv2closed6of6; actualparent gap closed; no empirical attempt started
+last_activity_desc: Independent fresh data/helper reviews clean; MAIN prepare12725closed0 zerocharge; unique run next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V13-1 DIAGNOSTIC PREPARED (2026-10-08): MAINdraft38896/finalize41429 ACTUALLYCLOSED0; distinct actualDATA/HELPERreviews clean0/rawbd2d3f17/d3e9f99b. ExactlyONEprepare12725 CLOSED0/preparation_only/oneplanned/zerocharge, ordinal1of5 ceiling. Allocationdf5f9449/raw23789846, request06b2f18b/data42ba73c3 binds currentfixede7d8bf58/930/reviewv3. Realowned0700store onlyallocation/emptyledger/oneclosedtimeinterval; predecessor722rows/21286912B/147354000ms,34priorcharges. No activeentry/provider/Match/verifier/hold. Commit/push allocation BEFOREuniqueMAINrun/freshpassingSAMEPROCESScapacity beforecharge; holdsourceANDHEADthroughterminal+ONEappropriateactualcheck/noheavywork. Same165600000/full108M+ALLwall/deadline2026-10-09T02:39:01.097Z/15GB300/31minreserve/allbounds. OnlyowndiagacceptedFINALpermitsconditionalONE36baseline; actualentryfailureendsenvelope; oldbytesimmutable. Noempirical/nativecure/Phase265LEAGfreezeformationholdoutpubliccountingproductioncredit. Earlierfrontiershistory.
 
 CURRENT V13 SOURCE VERIFICATION COMPLETE (2026-10-08): Distinct actualverifier ACTUALLYCLOSED SOURCE-VERIFICATION-v2source_verified6/6. OwnactualparentHOST3selected/33deliberatelyunselectedc342eaCLOSED0, publicmanifestd50846e7d8bf58/930/0private, actualv3reviewgatefa8577PASS/raw8e4528c8/currentfixedsourceequivalentee085181. CR01/WR01fixesunchanged; alloldgaps/reviews/evidencepreserved; sixinheritedstrictNOTpass. Fresh MAIN diagnostichelper/setup/continuation/request→distinctDATA/HELPERreview→finalauthority→newprepare/allocationcommit/empty0700/SAMEPROCESScapacity→uniqueMAINentry/heldsourceHEAD/ONEappropriateactualcheck next.0of5prepsspent/noactiveentry/verifier/hold/noactualempiricaldata yet. Same165600000/full108M+ALLwall/deadline2026-10-09T02:39:01.097Z/34charges/15GB300/31minreserve/allbounds. Sourceverification NOTnativecure/Match/Phase265LEAGfreezeformationholdoutpubliccountingproductioncredit. Earlierfrontiershistory.
 
