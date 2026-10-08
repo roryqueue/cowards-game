@@ -4,6 +4,9 @@ import * as correction from "../run-v1-38-lean-correction.js"
 import * as retained from "./v1-38-lean-correction-retained.js"
 import { LEAN_COLD_REUSE_HISTORY } from "./v1-38-lean-baseline-reuse.js"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 
 describe("fresh v12 supervisor source-only admission", () => {
   it("selects the exact one-pair route and full conservative clock", () => {
@@ -73,5 +76,17 @@ describe("fresh v12 supervisor source-only admission", () => {
     expect(()=>correction.validateLeanSupervisorRetestAuthorizationV12(authorization,{...finalized,dataReviewRoot:r(14)},route)).not.toThrow() // excluded downstream DATA is checked by finalized review bytes, not this semantic authorization
     expect(()=>correction.validateLeanSupervisorRetestAuthorizationV12(authorization,{...finalized,helperReviewRoot:r(14)},route)).toThrow()
     expect(()=>correction.validateLeanSupervisorRetestAuthorizationV12({...authorization,root:r(15)},finalized,route)).toThrow()
+  })
+  it("finalized downstream review bytes stay strict even though review roots are excluded from the semantic input", () => {
+    const original = process.cwd(), directory = mkdtempSync(join(tmpdir(), "v12-finalized-review-only-"))
+    const phase = ".planning/phases/265-serious-current-rules-league-and-development-red-team", path = `${phase}/test-owned-finalized-review.md`
+    const bytes = Buffer.from("---\nstatus: clean\n---\nsynthetic test-owned reviewed bytes\n"), finalizedRoot = accounting.leanBytesRoot(bytes)
+    try {
+      process.chdir(directory); mkdirSync(phase, { recursive: true })
+      writeFileSync(path, Buffer.concat([bytes, Buffer.from("changed after finalization\n")]))
+      // This invokes the actual consumer and fails at its canonical byte-custody gate,
+      // before any source-manifest read. No actual report destination is involved.
+      expect(()=>correction.authenticateLeanCorrectionReview(path, finalizedRoot, labRoot("v12-review-test", 1), null, undefined, "v12-1", accounting.LEAN_SUPERVISOR_RETEST_V12_EXTENSION)).toThrow("LEAN_CORRECTION_REVIEW")
+    } finally { process.chdir(original); rmSync(directory, { recursive: true, force: true }) }
   })
 })
