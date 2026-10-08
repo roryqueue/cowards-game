@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: v11-1 baseline resource stop uniquely verified; source-only diagnosis before unused pair two
+stopped_at: Compile-once source repair reviewed and verified; fresh unused v11-2 authoring
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Pair one closed after accepted diagnostic and zero-charge baseline failure; pair two unused
+last_activity_desc: Pure compile-once repair and prospective source gate closed; pair two still unused
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT COMPILE-ONCE SOURCE REPAIR VERIFIED (2026-10-08): BoundedGSDdiagnosis→research→checkedexistingPlan16addendum→RED0d704fb9/GREEN31091283/SUMMARYac7a5b1b CLOSED. Fullvalidation/security/artifact/revision outputs preserved, actualsinglelocalcompile reused/no cache/publicAPIexpansion/injection. Independent REVIEW-v1 clean and newv11-2-onlySOURCE-REVIEW-v3, SOURCE-VERIFICATION-v1 source_verified5/5/zerointroducedblocker; actualbothmanifest84b80756789cedde6db22e365a7826d47f277ba592fcae710ad296aad77444ba/915, sourcegatev3accepted/oldv2rejected. MAIN95/95zeroSKIP14.29s/factory1417zero/shell/diffPASS, buildsreportedPASS/six inheritedstrictdiagnosticsNOTpass; initialconnectedfixturefail/stable1PASS exactcauseunknown. IndependentactualNON-ADMITTINGfiniteoldclosedpair1authCLOSED0/e03d4938a845fb730d04d6d7b3ea8000093f27b2e1897c4be968c41d2a04c490/carry2005a7df/33charges. Oldsource/reviewv2/evidenceimmutable, fulloldacceptedauthorityintentionallynotreused. NativeRSScure/36fitUNPROVED; freshunusedpair2author/data/helper/newcommittedalloc/empty0700store/SAMEPROCESScapacity gatesnext, no newentry/holdyet. Samecontinuous01:43:30.738Zdeadline108M15GB30033/reserve1860000/SAME2GB768MiBflags/allbounds. NoPhase265/LEAG/freeze/formation/holdout/public/counting/productioncredit. Earlierfrontiershistory.
 
 CURRENT V11-1 BASELINE RESOURCE STOP (2026-10-08): UniqueMAIN43067 CLOSED1/detailswithheld; actualchildterminal child_failed/null exit/SIGKILL/111109ms overheldHEAD5a53c582/sourceda8d5402/allocationd2302741/raw69228501. ONEindependentENTRY-terminal-only33115 CLOSED0/acceptedfalse/authorizingfalse/current0/cumulative33; reporteeafead7/raw9006ca62, actualcarry2005a7df/raw95fa233c outcomeentered_without_result/closedAt1791418748495/102937757ms/19427328B; holdcomplete1c837943. Actualemptyledger/noresult; ordinaryreaderNOTinvoked/fabricated. SourceANDHEADhold RELEASED afteractualclose+uniquecheck/inertfinitejoins/noactiveprocesses. Finiteparentreasonresource_threshold/initiatingCauseunknown/failureReceiptabsent. TerminalparentRSS557600768+childobserved640552960+512000000external+335544320guard=2045698048B >2GB; observationsNOTnecessarilycoinstantaneous/initiatingcauseproof. FirstapprovedpairCLOSED1/2; secondunused/no newhelperallocationcharge. Boundedsource-only GSD diagnosis beforeanyknown-failingunchangedbaseline; no boundincrease/authorityreuse/retry/refund/recredit. Samecontinuousdeadline01:43:30.738Z108M/15GB300/all33spentcostsfiles/reserve1860000ms/allrulesruntimeprivacybounds. NoPhase265/LEAG/freeze/formation/holdout/public/counting/productioncredit. Olderfrontiershistory.
 
