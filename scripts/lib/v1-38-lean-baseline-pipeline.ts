@@ -10,7 +10,7 @@ import { buildLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-b
 import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
 import type { runLeanBaselineMatch } from "./v1-38-lean-baseline-match.js"
 import { inspectLeanSealMetadata } from "./v1-38-lean-seal-metadata.js"
-import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
+import { validateLeanColdReuse, readLeanOwnedReuse, type LeanOwnedReuseAdmission, type LeanOwnedReuseScope, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 
 type Observed = Awaited<ReturnType<typeof runLeanBaselineMatch>>
 export interface LeanBaselineObservedCell extends Omit<Observed, "replayFrames"> { readonly ordinal: number; readonly slotRoot: LabRoot; readonly bottomRoot: LabRoot; readonly topRoot: LabRoot }
@@ -58,6 +58,12 @@ export const executeLeanCurrentPipeline = async (input: LeanCurrentPipelineInput
 export const executeLeanReusedCurrentPipeline = async (input: LeanCurrentPipelineInput & { reuse: LeanColdReuse }) => {
   const reuse = validateLeanColdReuse(input.reuse, input.allocation.sourceRoot)
   if (input.allocation.seed !== reuse.grant.seed || input.allocation.coldRoot !== reuse.grant.coldRoot) return fail("REUSE_ALLOCATION")
+  return executeCurrentPipeline(input, reuse)
+}
+/** Explicit invocation ownership, never inferred by the default entry. */
+export const executeLeanOwnedReusedCurrentPipeline = async (input: LeanCurrentPipelineInput & { admission: LeanOwnedReuseAdmission; reuseScope: LeanOwnedReuseScope }) => {
+  const reuse = readLeanOwnedReuse(input.admission, input.reuseScope)
+  if (input.allocation.root !== input.reuseScope.allocationRoot || input.allocation.sourceRoot !== input.reuseScope.sourceRoot || input.allocation.seed !== reuse.grant.seed || input.allocation.coldRoot !== reuse.grant.coldRoot || !("reuseGrantRoot" in input.allocation) || input.allocation.reuseGrantRoot !== reuse.grant.root) return fail("REUSE_ALLOCATION")
   return executeCurrentPipeline(input, reuse)
 }
 const executeCurrentPipeline = async (input: LeanCurrentPipelineInput, reuse?: LeanColdReuse) => {

@@ -69,7 +69,7 @@ export interface LeanColdReuse {
   readonly proposals: LeanInitialProposalSet
   readonly sources: readonly LeanBaselineSource[]
 }
-const validateInputs = (corpus: Corpus, proposals: LeanInitialProposalSet, sources: readonly LeanBaselineSource[]): void => {
+const validateInputs = (corpus: Corpus, proposals: LeanInitialProposalSet, sources: readonly LeanBaselineSource[]): readonly LeanBaselineSource[] => {
   if (!exactLabKeys(corpus, ["schemaVersion", "seed", "policy", "prefixObservationCounts", "distinctTacticalInputCount", "tacticalInputs", "corpusRoot", "teacherSearchReceipts"]) || corpus.schemaVersion !== "lean-nonlearned-cold-corpus-v1" || corpus.seed !== LEAN_COLD_REUSE_HISTORY.seed || corpus.policy !== "canonical-prefix-turn-left-right-v1" || !same(corpus.prefixObservationCounts, [32, 32]) || deriveLeanColdCorpusRoot(corpus.tacticalInputs) !== corpus.corpusRoot || new Set(corpus.tacticalInputs.map(input => labRoot("runtime-input", input))).size !== corpus.distinctTacticalInputCount) return fail()
   if (!Array.isArray(corpus.teacherSearchReceipts) || corpus.teacherSearchReceipts.length !== 1) return fail()
   const teacher = corpus.teacherSearchReceipts[0]!, records = projectTeacherSearchToLegalTraining(teacher)
@@ -95,11 +95,12 @@ const validateInputs = (corpus: Corpus, proposals: LeanInitialProposalSet, sourc
   for (const candidate of proposals.tactical) validateProposal(candidate, "tactical", corpus.tacticalInputs.map(input => labRoot("runtime-input", input)))
   validateProposal(proposals.teacher, "teacher", Array.from({ length: 64 }, (_, ordinal) => labRoot("runtime-input", records[ordinal % records.length]!.input)))
   if (!Array.isArray(sources) || sources.length !== 7 || !same(sources.map(source => source.role), ROLES)) return fail()
-  sources.forEach((raw, ordinal) => {
+  return sources.map((raw, ordinal) => {
     const source = validateLeanBaselineSource(raw)
     if (source.coldRoot !== LEAN_COLD_REUSE_HISTORY.coldRoot || source.implementationRoot !== LEAN_COLD_REUSE_HISTORY.sourceRoot || leanBytesRoot(leanCanonicalBytes(source)) !== RAW[`source-${source.role}.json` as keyof typeof RAW]) return fail()
     const proposal = ordinal >= 2 && ordinal < 6 ? proposals.tactical[ordinal - 2] : ordinal === 6 ? proposals.teacher : null
     if (proposal && (proposal.sourceRoot !== source.sourceRoot || proposal.structureRoot !== source.structureRoot || proposal.source !== source.source)) return fail()
+    return source
   })
 }
 const grantFor = (newSourceRoot: LabRoot, amendmentRoot: LabRoot, corpus: Corpus, proposals: LeanInitialProposalSet, sources: readonly LeanBaselineSource[]): LeanColdReuseGrant => {
@@ -114,11 +115,49 @@ export const validateLeanColdReuse = (value: unknown, newSourceRoot: LabRoot): L
   if (!exactLabKeys(value, ["grant", "corpus", "proposals", "sources"])) return fail()
   const v = value as unknown as LeanColdReuse
   if (!v.grant || leanBytesRoot(leanCanonicalBytes(v.corpus)) !== RAW["cold-corpus.json"] || leanBytesRoot(leanCanonicalBytes(v.proposals)) !== RAW["initial-proposals.json"]) return fail()
-  validateInputs(v.corpus, v.proposals, v.sources)
+  const sources = validateInputs(v.corpus, v.proposals, v.sources)
   if (!same(v.grant, grantFor(newSourceRoot, v.grant.amendmentRoot, v.corpus, v.proposals, v.sources))) return fail()
   // Own the admitted value so a caller cannot mutate it after validation.
-  return freeze(structuredClone(v))
+  const admitted = freeze({ ...structuredClone({ grant: v.grant, corpus: v.corpus, proposals: v.proposals }), sources })
+  issuedReuse.add(admitted)
+  return admitted
 }
+
+// Completed validation attaches only to our exact detached immutable output.
+// Unknown inputs (even frozen ones) always traverse the ordinary validator.
+const issuedReuse = new WeakSet<object>()
+export interface LeanOwnedReuseScope {
+  readonly invocation: object
+  readonly sourceRoot: LabRoot
+  readonly allocationRoot: LabRoot
+  readonly coldRoot: LabRoot
+  readonly seed: string
+  readonly grantRoot: LabRoot
+}
+export interface LeanOwnedReuseAdmission { readonly kind: "lean-owned-reuse-invocation-v1" }
+const ownedReuse = new WeakMap<object, { reuse: LeanColdReuse; scope: LeanOwnedReuseScope }>()
+const scopeKeys = ["invocation", "sourceRoot", "allocationRoot", "coldRoot", "seed", "grantRoot"] as const
+const validScope = (scope: LeanOwnedReuseScope) => exactLabKeys(scope, scopeKeys) && scope.invocation !== null && typeof scope.invocation === "object" && [scope.sourceRoot, scope.allocationRoot, scope.coldRoot, scope.grantRoot].every(isRoot) && typeof scope.seed === "string"
+export const admitLeanOwnedReuse = (value: LeanColdReuse, scope: LeanOwnedReuseScope): LeanOwnedReuseAdmission => {
+  if (!validScope(scope)) return fail()
+  const reuse = issuedReuse.has(value) ? value : validateLeanColdReuse(value, scope.sourceRoot)
+  if (reuse.grant.newSourceRoot !== scope.sourceRoot || reuse.grant.coldRoot !== scope.coldRoot || reuse.grant.seed !== scope.seed || reuse.grant.root !== scope.grantRoot) return fail()
+  const handle = Object.freeze({ kind: "lean-owned-reuse-invocation-v1" as const })
+  ownedReuse.set(handle, { reuse, scope: Object.freeze({ ...scope }) })
+  return handle
+}
+export const readLeanOwnedReuse = (handle: LeanOwnedReuseAdmission, scope: LeanOwnedReuseScope): LeanColdReuse => {
+  const record = ownedReuse.get(handle)
+  if (!record || !validScope(scope) || scopeKeys.some(key => scope[key] !== record.scope[key])) return fail()
+  return record.reuse
+}
+export const readLeanOwnedReuseSource = (handle: LeanOwnedReuseAdmission, scope: LeanOwnedReuseScope, snapshot: LeanBaselineSource): LeanBaselineSource => {
+  const reuse = readLeanOwnedReuse(handle, scope)
+  if (!reuse.sources.includes(snapshot)) return fail()
+  return snapshot
+}
+/** Idempotent finally cleanup releases the sole strong graph/owner references. */
+export const closeLeanOwnedReuse = (handle: LeanOwnedReuseAdmission): void => { ownedReuse.delete(handle) }
 export const authenticateLeanColdReuseArtifacts = (input: { artifacts: Readonly<Record<string, Uint8Array>>; newSourceRoot: LabRoot; amendmentRoot: LabRoot }): LeanColdReuse => {
   if (!exactLabKeys(input, ["artifacts", "newSourceRoot", "amendmentRoot"]) || !exactLabKeys(input.artifacts, LEAN_COLD_REUSE_FILES)) return fail()
   const values: Record<string, unknown> = {}

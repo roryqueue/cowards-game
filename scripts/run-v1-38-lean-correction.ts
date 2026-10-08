@@ -19,9 +19,9 @@ import { leanCapsForAllocation, type AnyLeanAllocation, LEAN_REPLAY_V7_APPROVAL_
 import { leanBaselineSourceManifest, deriveLeanBaselineRequestRoots, deriveLeanBaselineCandidateRoots, leanBaselinePair, runLeanBoundedParent, assertLeanBaselinePrefixCapacity, admitsLeanBaselineReviewAgents } from "./run-v1-38-lean-baseline.js"
 import { createLeanParentObservationGuard, admitLeanChildRelease, assertLeanEntryBinding } from "./run-v1-38-lean-experiment.js"
 import { observeLeagueAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
-import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY, type LeanColdReuse } from "./lib/v1-38-lean-baseline-reuse.js"
-import { executeLeanReusedCurrentPipeline } from "./lib/v1-38-lean-baseline-pipeline.js"
-import { publishLeanBaselineSource, publishLeanReusedBaselineSource } from "./lib/v1-38-lean-baseline-source.js"
+import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY, admitLeanOwnedReuse, readLeanOwnedReuse, closeLeanOwnedReuse, type LeanColdReuse } from "./lib/v1-38-lean-baseline-reuse.js"
+import { executeLeanReusedCurrentPipeline, executeLeanOwnedReusedCurrentPipeline, type LeanCurrentPipelineInput } from "./lib/v1-38-lean-baseline-pipeline.js"
+import { publishLeanBaselineSource, publishLeanReusedBaselineSource, publishLeanOwnedReusedBaselineSource } from "./lib/v1-38-lean-baseline-source.js"
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { validateLeanPrivateCorrectionOrigin, buildLeanStartupWorkerHarnessV5, buildLeanContainerBrokerSourceV5, buildLeanContainerBrokerSourceV6, buildLeanContainerBrokerSourceV7, type LeanPrivateCorrectionOrigin } from "./lib/v1-38-lean-container-match-session.js"
 import { resolveLeanChildCliTerminal } from "./lib/v1-38-lean-child-cli-terminal.js"
@@ -1404,6 +1404,28 @@ export const publishLeanCorrectionTerminalResult = (ledger: LeanExperimentLedger
     publishLeanCorrection(join(ledger.directory, "result.json"), { ...body, root: labRoot(body.schemaVersion, body) }, ledger)
     return { issued: false, route, status: "closed_pending_unique_check" }
   } catch (error) { if (hostBinding) throw captureLeanHostFailureV7("terminal_result_publication", hostBinding, error); throw error }
+}
+/** Separately callable future source-only seam. No CLI/consumed request selects
+ * it. Any prospective child caller must first satisfy its ordinary route gates.
+ * Both callbacks and pipeline retain the same invocation-owned graph. */
+export const executeLeanOwnedCorrectionPipeline = async (input: { ledger: LeanExperimentLedger; reuse: LeanColdReuse } & Pick<LeanCurrentPipelineInput, "checkpoint" | "retainArtifact" | "dispatch">) => {
+  const allocation = input.ledger.allocation
+  if (!("reuseGrantRoot" in allocation) || !("coldRoot" in allocation)) return fail("REUSE")
+  const reuseScope = { invocation: {}, sourceRoot: allocation.sourceRoot, allocationRoot: allocation.root, coldRoot: allocation.coldRoot, seed: allocation.seed, grantRoot: allocation.reuseGrantRoot }
+  const admission = admitLeanOwnedReuse(input.reuse, reuseScope)
+  try {
+    const reuse = readLeanOwnedReuse(admission, reuseScope)
+    input.checkpoint(); input.retainArtifact("cold-reuse.json", reuse); input.checkpoint()
+    return await executeLeanOwnedReusedCurrentPipeline({ allocation, admission, reuseScope,
+      checkpoint: input.checkpoint, retainArtifact: input.retainArtifact, dispatch: input.dispatch,
+      freezeSource: source => {
+        input.checkpoint()
+        if (reuse.sources.includes(source)) publishLeanOwnedReusedBaselineSource(input.ledger, source, admission, reuseScope)
+        else publishLeanBaselineSource(input.ledger, source)
+        input.checkpoint()
+      },
+    })
+  } finally { closeLeanOwnedReuse(admission) }
 }
 export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrectionRoute, supervisor: LeanSupervisorMode = false) => {
   scope(route, supervisor)

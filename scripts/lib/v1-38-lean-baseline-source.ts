@@ -11,7 +11,7 @@ import { deriveFactoryOraclePacketRoot, deriveFactoryValidationRoot } from "../.
 import { deriveFactorySourceStructureRoot } from "../../packages/strategy-lab/src/factory/fingerprint.js"
 import { admitFactory, authorizeFactorySupervision } from "../../packages/strategy-lab/src/factory/admission.js"
 import { leanCapsForAllocation, admitLeanAllocation, leanSupervisorAllocationMode, readLeanChildEntry, type AnyLeanAllocation, leanBytesRoot, leanCanonicalBytes, writeLeanAll, assertLeanPublicationCapacity, type LeanExperimentLedger } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
+import { validateLeanColdReuse, readLeanOwnedReuseSource, type LeanOwnedReuseAdmission, type LeanOwnedReuseScope, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 
 const fail = (): never => { throw new TypeError("LEAN_BASELINE_SOURCE") }
 const root = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[a-f0-9]{64}$/u.test(v)
@@ -82,6 +82,16 @@ export const publishLeanReusedBaselineSource = (ledger: LeanExperimentLedger, va
   const admitted = validateLeanColdReuse(reuse, allocation.sourceRoot), v = validateLeanBaselineSource(value)
   if (!["lean-current-baseline-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-diagnostic-allocation-v1", "lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-diagnostic-allocation-v4", "lean-correction-supervisor-diagnostic-allocation-v5", "lean-correction-supervisor-baseline-allocation-v4", "lean-correction-supervisor-baseline-allocation-v5", "lean-correction-supervisor-diagnostic-allocation-v6", "lean-correction-supervisor-baseline-allocation-v6", "lean-correction-supervisor-diagnostic-allocation-v7", "lean-correction-supervisor-baseline-allocation-v7", "lean-correction-supervisor-diagnostic-allocation-v8", "lean-correction-supervisor-baseline-allocation-v8"].includes(allocation.schemaVersion) || allocation.coldRoot !== admitted.grant.coldRoot || allocation.seed !== admitted.grant.seed || !admitted.sources.some(original => original.root === v.root && original.role === v.role)) return fail()
   if ((allocation.schemaVersion.endsWith("-v5") || allocation.schemaVersion.endsWith("-v6") || allocation.schemaVersion.endsWith("-v7"))) leanCapsForAllocation(ledger.allocation)
+  publishSourceBytes(ledger, v, leanCanonicalBytes(v))
+}
+
+/** Explicit identity-only static-validation reuse. All ordinary publication
+ * authority/capacity/entry/descriptor/sync checks remain in publishSourceBytes. */
+export const publishLeanOwnedReusedBaselineSource = (ledger: LeanExperimentLedger, value: LeanBaselineSource, handle: LeanOwnedReuseAdmission, scope: LeanOwnedReuseScope): void => {
+  const v = readLeanOwnedReuseSource(handle, scope, value)
+  const allocation = ledger.allocation as unknown as { schemaVersion: string; root: LabRoot; sourceRoot: LabRoot; coldRoot?: LabRoot; seed?: string; reuseGrantRoot?: LabRoot }
+  if (allocation.root !== scope.allocationRoot || allocation.sourceRoot !== scope.sourceRoot || allocation.coldRoot !== scope.coldRoot || allocation.seed !== scope.seed || allocation.reuseGrantRoot !== scope.grantRoot || !["lean-current-baseline-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-diagnostic-allocation-v1", "lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-diagnostic-allocation-v4", "lean-correction-supervisor-diagnostic-allocation-v5", "lean-correction-supervisor-baseline-allocation-v4", "lean-correction-supervisor-baseline-allocation-v5", "lean-correction-supervisor-diagnostic-allocation-v6", "lean-correction-supervisor-baseline-allocation-v6", "lean-correction-supervisor-diagnostic-allocation-v7", "lean-correction-supervisor-baseline-allocation-v7", "lean-correction-supervisor-diagnostic-allocation-v8", "lean-correction-supervisor-baseline-allocation-v8"].includes(allocation.schemaVersion)) return fail()
+  if (allocation.schemaVersion.endsWith("-v5") || allocation.schemaVersion.endsWith("-v6") || allocation.schemaVersion.endsWith("-v7")) leanCapsForAllocation(ledger.allocation)
   publishSourceBytes(ledger, v, leanCanonicalBytes(v))
 }
 
