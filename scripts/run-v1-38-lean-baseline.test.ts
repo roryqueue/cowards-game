@@ -12,6 +12,32 @@ import { leanBaselineMatchSeed } from "./lib/v1-38-lean-baseline-match.js"
 
 const root = (name: string) => labRoot("baseline-cli-test", name)
 
+describe("additive finite supervisor reason-v2 contract", () => {
+  const fixture = () => {
+    const body = { schemaVersion: "lean-parent-supervisor-reasons-v2" as const, allocationRoot: root("allocation"), sourceRoot: root("source"), requestBytesRoot: root("request"), entryBytesRoot: root("entry"), head: "a".repeat(40), parentPid: 100, childPid: 101, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown", resourceSamplingOperation: "none", resourceSamplingSequence: 0, resourceSamplingExitObserved: false } }
+    return { ...body, root: labRoot("lean-parent-supervisor-reasons-v2", body) }
+  }
+  const reroot = (value: any) => { const { root: _ignored, ...body } = value; return { ...body, root: labRoot("lean-parent-supervisor-reasons-v2", body) } }
+  it("accepts only separately rooted exact canonical v2 bytes", () => {
+    const v = fixture(), bytes = leanCanonicalBytes(v)
+    expect(parentApi.validateLeanSupervisorReasonBytesV2(bytes)).toEqual(v)
+    expect(parentApi.leanSupervisorReasonRootV2(v)).toBe(v.root)
+    expect(parentApi.isLeanSupervisorReasonEnvelope(v)).toBe(false)
+    expect(() => parentApi.validateLeanSupervisorReasonBytes(bytes)).toThrow()
+    for (const mutated of [Buffer.concat([Buffer.from(" "), bytes]), Buffer.alloc(4097), Buffer.from("{broken")]) expect(() => parentApi.validateLeanSupervisorReasonBytesV2(mutated)).toThrow()
+  })
+  it("requires finite first-exception attribution and rejects raw or contradictory fields", () => {
+    const clean = fixture()
+    const exception = reroot({ ...clean, uncertain: true, reasons: ["resource_sampling_exception"], observations: { ...clean.observations, resourceSampling: "exception", resourceSamplingOperation: "unknown", resourceSamplingSequence: 2147483647, resourceSamplingExitObserved: true } })
+    expect(parentApi.isLeanSupervisorReasonEnvelopeV2(exception)).toBe(true)
+    for (const patch of [{ resourceSamplingOperation: "none" }, { resourceSamplingOperation: "raw_error" }, { resourceSamplingSequence: 0 }, { resourceSamplingSequence: -1 }, { resourceSamplingSequence: 2147483648 }, { resourceSamplingSequence: 1.5 }, { resourceSamplingExitObserved: "false" }, { rawError: "PRIVATE" }]) expect(parentApi.isLeanSupervisorReasonEnvelopeV2(reroot({ ...exception, observations: { ...exception.observations, ...patch } }))).toBe(false)
+    for (const patch of [{ resourceSamplingOperation: "child_rss" }, { resourceSamplingSequence: 1 }, { resourceSamplingExitObserved: true }]) expect(parentApi.isLeanSupervisorReasonEnvelopeV2(reroot({ ...clean, observations: { ...clean.observations, ...patch } }))).toBe(false)
+    expect(parentApi.isLeanSupervisorReasonEnvelopeV2(reroot({ ...exception, uncertain: false }))).toBe(false)
+    expect(parentApi.isLeanSupervisorReasonEnvelopeV2(reroot({ ...exception, rawError: "PRIVATE" }))).toBe(false)
+    expect(parentApi.isLeanSupervisorReasonEnvelopeV2({ ...exception, root: root("wrong") })).toBe(false)
+  })
+})
+
 const host = vi.hoisted(() => ({ active: false, child: null as any, files: new Map<string, Uint8Array>(), order: [] as string[], entry: null as any, terminal: null as any, allocation: null as any, headCalls: 0, finalDrift: false, finalThrow: false, sampleThrow: false, resourceHigh: false, elapsed: 0, publishFailure: "", terminalFailure: false, capacityFailure: false }))
 vi.mock("node:child_process", async original => {
   const actual = await original<typeof import("node:child_process")>()

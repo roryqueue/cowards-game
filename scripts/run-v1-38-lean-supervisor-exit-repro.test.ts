@@ -52,11 +52,16 @@ const retryAllocation = () => {
   const predecessor = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 30, elapsedUpperBoundMs: extension.priorElapsedMs, allocatedDiskBytes: 13_000_000, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: [{ identity: ".strategy-lab/synthetic-not-created", allocatedBytes: 4096 }] }
   return lean.createLeanSupervisorCorrectionAllocation({ timeboxExtension: extension, sourceRoot: root("source"), reviewRoot: root("review"), coldRoot: root("cold"), planRoot: lean.LEAN_RETRY_V8_PLAN_ROOT, seed: "synthetic-timebox", candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, n) => root(`request-${n}`)), route: "baseline", reuseGrantRoot: root("reuse"), supervisorDecisionRoot: lean.LEAN_RETRY_V8_APPROVAL_ROOT, acceptedCheckRoot: root("check"), acceptedReaderCloseRoot: root("final"), requestBytesRoot: root("request"), dataReviewRoot: root("data"), setupAccountingRoot: root("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, attemptOrdinal: 1, priorClosureRoot: null, continuationRoot: null, predecessor: { ...predecessor, root: labRoot(predecessor.schemaVersion, predecessor) } }, 8)
 }
-const begin = async (mode: Mode) => {
+const retestAllocation = () => {
+  const extension = lean.LEAN_SUPERVISOR_RETEST_V12_EXTENSION
+  const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 34, elapsedUpperBoundMs: extension.priorElapsedMs, allocatedDiskBytes: extension.physicalFloorBytes, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: [{ identity: ".strategy-lab/synthetic-v12-not-created", allocatedBytes: extension.physicalFloorBytes }] }
+  return lean.createLeanSupervisorCorrectionAllocation({ timeboxExtension: extension, sourceRoot: root("source"), reviewRoot: root("review"), coldRoot: root("cold"), planRoot: extension.planRoot, seed: "synthetic-v12", candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, n) => root(`v12-request-${n}`)), route: "baseline", reuseGrantRoot: root("reuse"), supervisorDecisionRoot: extension.approvalRoot, acceptedCheckRoot: root("check"), acceptedReaderCloseRoot: root("final"), requestBytesRoot: root("request"), dataReviewRoot: root("data"), setupAccountingRoot: root("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, attemptOrdinal: 1, priorClosureRoot: root("history-carry"), continuationRoot: root("continuation"), predecessor: { ...p, root: labRoot(p.schemaVersion, p) } }, 8)
+}
+const begin = async (mode: Mode, v12 = false) => {
   vi.useFakeTimers()
   const input = { seed: "synthetic-parent", sourceRoot: root("source"), planRoot: root("plan"), coldRoot: root("cold") }
   const predecessor = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 11, elapsedUpperBoundMs: 3_319_046, allocatedDiskBytes: 0, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: [{ identity: ".strategy-lab/synthetic-not-created", allocatedBytes: 0 }] }
-  const allocation = mode === "reserve" ? retryAllocation() : lean.createLeanCorrectionAllocation({ ...input, reviewRoot: root("review"), candidateRoots: parent.deriveLeanBaselineCandidateRoots(input.coldRoot), requestRoots: parent.deriveLeanBaselineRequestRoots(input), route: "baseline", reuseGrantRoot: root("reuse"), diagnosisRoot: root("diagnosis"), predecessor: { ...predecessor, root: labRoot(predecessor.schemaVersion, predecessor) } })
+  const allocation = v12 ? retestAllocation() : mode === "reserve" ? retryAllocation() : lean.createLeanCorrectionAllocation({ ...input, reviewRoot: root("review"), candidateRoots: parent.deriveLeanBaselineCandidateRoots(input.coldRoot), requestRoots: parent.deriveLeanBaselineRequestRoots(input), route: "baseline", reuseGrantRoot: root("reuse"), diagnosisRoot: root("diagnosis"), predecessor: { ...predecessor, root: labRoot(predecessor.schemaVersion, predecessor) } })
   Object.assign(host, { allocation, entry: null, terminal: null, files: new Map(), order: [], mode, samples: 0, elapsed: mode === "reserve" ? 60_000_000 : 0, thrown: false, gone: false })
   const child = Object.assign(new EventEmitter(), { pid: process.pid + 1000, exitCode: null as number | null, signalCode: null as string | null, kills: [] as string[], send: () => true,
     kill(signal: string) {
@@ -115,10 +120,43 @@ describe("current synthetic supervisor failure mechanism", () => {
     if (mode === "threshold-kill") expect(reason().reasons).toEqual(["resource_threshold", "resource_sampling_exception"])
     else expect(reason().reasons).toEqual(["resource_sampling_exception"])
   })
-  it("RED should retain finite child-RSS operation provenance without weakening failure", async () => {
+  it("legacy opt-in stays reason-v1 with no attribution fields", async () => {
     const retained = await failure("queued-exit-rss")
-    // Prospective diagnostic contract only. Production remains unmodified;
-    // do not turn the queued clean exit or unknown sample error into success.
-    expect(retained.observations).toHaveProperty("resourceSamplingOperation", "child_rss")
+    expect(retained.schemaVersion).toBe("lean-parent-supervisor-reasons-v1")
+    expect(retained.observations).not.toHaveProperty("resourceSamplingOperation")
+  })
+  it.each([
+    ["queued-exit-rss", "child_rss", 1], ["live-rss", "child_rss", 1],
+    ["parent-rss", "parent_rss", 2], ["accounting", "time_budget", 3],
+    ["reserve", "time_budget", 3], ["threshold-kill", "threshold_kill", 3],
+  ] as const)("v12 %s records first finite operation without success exemption", async (mode, operation, sequence) => {
+    const run = await begin(mode, true)
+    if (mode === "reserve") host.elapsed = lean.LEAN_SUPERVISOR_RETEST_V12_EXTENSION.elapsedMs - 1_860_000
+    await vi.advanceTimersByTimeAsync(250)
+    // Repeated throws must never replace first provenance.
+    if (mode === "live-rss") await vi.advanceTimersByTimeAsync(250)
+    if (mode !== "queued-exit-rss") exit()
+    expect((await run.settled).rejected).toBe(true)
+    expect(host.terminal).toMatchObject({ status: "child_failed", exitCode: 0 })
+    const bytes = host.files.get(parent.LEAN_SUPERVISOR_REASON_FILE)!
+    const retained = parent.validateLeanSupervisorReasonBytesV2(bytes)
+    expect(retained.observations).toMatchObject({ resourceSampling: "exception", resourceSamplingOperation: operation, resourceSamplingSequence: sequence, resourceSamplingExitObserved: false, initiatingCause: "unknown" })
+    expect(retained.uncertain).toBe(true)
+    expect(() => parent.validateLeanSupervisorReasonBytes(bytes)).toThrow()
+    expect(Buffer.from(bytes).toString()).not.toContain("SYNTHETIC_PRIVATE_SENTINEL")
+  })
+  it("v12 clean control and deadline keep zero/none attribution", async () => {
+    for (const deadline of [false, true]) {
+      const timers = vi.spyOn(globalThis, "setTimeout")
+      const run = await begin("clean", true)
+      if (deadline) (timers.mock.calls.find(call => call[1] === lean.LEAN_SUPERVISOR_RETEST_V12_EXTENSION.elapsedMs)![0] as () => void)()
+      else await vi.advanceTimersByTimeAsync(250)
+      exit()
+      expect((await run.settled).rejected).toBe(deadline)
+      const retained = parent.validateLeanSupervisorReasonBytesV2(host.files.get(parent.LEAN_SUPERVISOR_REASON_FILE)!)
+      expect(retained.observations).toMatchObject({ resourceSamplingOperation: "none", resourceSamplingSequence: 0, resourceSamplingExitObserved: false })
+      expect(retained.reasons).toEqual(deadline ? ["deadline_timeout"] : [])
+      timers.mockRestore()
+    }
   })
 })
