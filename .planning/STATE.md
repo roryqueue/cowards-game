@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Eight-hour extension approved; first fresh v13-1 source continuation next
+stopped_at: First v13-1 source implemented; independent review findings require scoped fixes
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: Prospective cumulative cap165600000ms approved with unchanged prior debit and all other limits; checked first-route implementation next
+last_activity_desc: 35 focused tests pass; review reproduced terminal publication budget bypass and missing lifecycle coverage; no empirical attempt started
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V13 SOURCE REVIEW FINDINGS (2026-10-08): First-route source RED3250e925/GREENecb1315c/SUMMARYd4f6d87e CLOSED. Focused35/35/configuredlabtypes/shell/diffPASS; six inheritedstrictdiagnosticsNOTpass. Distinct /root/review_preparation_continuation_v13 ACTUALLYCLOSED REVIEW-v1issues_found: CR01 finalterminalcarry/hold publication omits capacityguard (HOST reproduction exceeds unchanged12GBretainedcap by49152B), WR01 actualterminal/wrapper/carry lifecycle insufficientlycovered. No live/helper/request/allocation/Match/reader/hold;0of5preparations spent. Scopedsource/testfix plus NEWactualreviewversion next, preservingv1/oldbytes and allbounds. Approvedcap165600000/deadline2026-10-09T02:39:01.097Z/full108M+ALLwall since1791455941097/34charges/15GB300/31minreserve remains. No human-onlynewdecision identified. All Phase265/LEAG/freeze/formation/holdout/public/counting/production credit gated; earlierfrontiershistory.
 
 CURRENT TIME EXTENSION APPROVED (2026-10-08): Directhuman latest yes-approved answers explicit eight-additional-continuous-hour request. NEW265-16-PREPARATION-TIME-APPROVAL-20261008 plus existingPlan16TIME-SUPPLEMENT-v2 bind prospective firstv13-1 cap165600000ms/absolute2026-10-09T02:39:01.097Z; full108M+ALLwall since1791455941097 unchanged, including approvalwait. No reset/refund/idleexclusion/oldrevival;34charges/15GB300/31minreserve/exact2GB768MiB/guest1000host5000startup2500Match600000/allbounds carry. Fivefreshzero-Matchpreparations ceiling/atmostONEdiag+ownacceptedFINALconditionalONE36baseline approved;0of5started. Checked researchplan minimalfirst-route source/composedtests/review-fix/validate/verify next, then actualfreshrootdata/distinctreview/newcommittedallocation/empty0700store/SAMEPROCESScapacity/uniqueMAINentry/heldsourceHEAD/ONEactualappropriatecheck. Oldv12failedpair/markers/readers/authority immutable andENDED; causeUNKNOWN. No activeentry/verifier/hold. Phase265/LEAG/freeze/formation/holdout/public/counting/production incomplete/gated. Earlierfrontiers history.
 
