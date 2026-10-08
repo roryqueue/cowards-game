@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: blocked
-stopped_at: Two unsuccessful approved pairs exhausted; source-only sampling diagnosis inconclusive; new bounded resource/attempt decision required
-last_updated: "2026-10-07"
-last_activity: 2026-10-07
-last_activity_desc: Closed two-pair outcome and bounded diagnosis retained; no further execution authority under exhausted envelope
+status: in_progress
+stopped_at: Approved new eight-hour supervisor repair and one fresh diagnostic/conditional baseline pair; source-only reproduction first
+last_updated: "2026-10-08"
+last_activity: 2026-10-08
+last_activity_desc: New prospective approval recorded; all34 prior charges and full108Mms carried; no fresh empirical entry yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED SUPERVISOR REPAIR/RETEST (2026-10-08): Directhuman approved ONEnew bounded repair-and-retest round/eight additional continuous hours/ONEfresh diagnostic plus ONLYafter ownacceptedcheck+actualFINAL ONEconditional36baseline. Approval265-16-SUPERVISOR-REPAIR-RETEST-APPROVAL-20261008.md preserves all closed v11 outcomes/oldapprovalbytes; no repeat route literal or authority reuse. Fullold108Mms debit +allnewtime from actualMAINstart1791455941097/rawc892a010 gives136800000ms cap/deadline18:39:01.097Z (2:39p.m.Eastern), same15GB300/34charges/allfilescosts/1860000msreserve/exact2GB768MiB/guest1000host5000Match600000/allbounds. Bounded source-only synthetic reproduction/diagnosis FIRST; confirmed defect repair or finite private attribution only, unknown errors remain fail-closed. Existing Plan16 additive researched/checked supplement/source implementation/review-fix/validation/verification precedes actual new data/helper/newcommittedallocation/empty0700store/SAMEPROCESScapacity/uniqueMAINentry/sourceHEADhold+ONEproperverification. No new empirical request/helper/allocation/entry/provider/Match/reader yet; actual processes and previous agents closed. Onepair failure/refusal/insufficienttime ends envelope; full36fit NOT promised. All Phase265/LEAG/freeze/formation/holdout/public/counting/production completion remains unadmitted. Earlier frontiers history.
 
 CURRENT HUMAN-ONLY TWO-PAIR LIMIT (2026-10-08): Both approved distinct diagnostic/conditional36baseline pairs CLOSED unsuccessfully; explicit TWO-PAIR-TIME-APPROVAL ends envelope at two unsuccessful pairs, so remaining wall time is NOT another route's authority. NEW TWO-PAIR-OUTCOME-v1 records gaps_found/phase_completefalse/34cumulativecharges and source-only debugv11-2-resource-sampling.md inconclusive. Confirmed broad supervision catch lacks throwing-stage attribution; child-exit/synchronousRSS race plausible NOT actual cause proven. No repair, threshold change, new route or empirical acceptance applied by diagnosis. New bounded attempt/resource decision required before further empirical work; do not reuse standing approval to expand later explicit pair limit/reset time. All consumed allocations/results/requests/markers/readers/oldauthority immutable; sourceHEAD hold released only after actual terminal+unique reader+authentic completion seal/no active process. Plan16/Phase265/LEAG remain incomplete, no freeze/archive-success/tag/formation/holdout/public/counting/production credit. Same108Mms continuous cap and absolute01:43:30.738Zdeadline/15GB300/34spent/allcostsfiles/exact2GB768MiB/allbounds; accounting does not restart at this checkpoint. Safe completed source/terminal/outcome/diagnosis committed and pushed origin/main. Earlier frontiers history.
 
