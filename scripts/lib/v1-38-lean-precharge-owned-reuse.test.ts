@@ -41,23 +41,7 @@ vi.mock("../../packages/strategy-lab/src/league/lean-experiment.js", async origi
   return { ...real, assertLeanPublicationCapacity: (ledger: LeanExperimentLedger, bytes: number) => real.assertLeanPublicationCapacity(ledger, bytes, lstatSync(ledger.directory).blocks * 512 + readdirSync(ledger.directory).reduce((sum, name) => sum + lstatSync(join(ledger.directory, name)).blocks * 512, 0)) }
 })
 
-const currentSource = labRoot("precharge-host-source-fixture", 1)
-const fixture = (): LeanColdReuse => {
-  const corpus = buildLeanColdCorpus(HISTORY.seed)
-  const proposals = buildLeanInitialProposals({ commonSourceRoot: HISTORY.coldRoot, tacticalInputs: corpus.tacticalInputs, teacherSearchReceipts: corpus.teacherSearchReceipts })
-  const sources = [emitTacticalSource(), buildPlannerCandidate().source, ...proposals.tactical.map(p => p.source), proposals.teacher.source].map((source, ordinal) => buildLeanBaselineSource({ role: ["cold-opponent", "probe", "tactical-0", "tactical-1", "tactical-2", "tactical-3", "teacher-0"][ordinal]!, source, coldRoot: HISTORY.coldRoot, implementationRoot: HISTORY.sourceRoot }))
-  // PUBLIC source constants, not private artifacts, are the literal grant pins.
-  const publicModule = readFileSync(new URL("./v1-38-lean-baseline-reuse.ts", import.meta.url), "utf8")
-  const raw = publicModule.slice(publicModule.indexOf("const RAW ="), publicModule.indexOf("export const LEAN_COLD_REUSE_FILES"))
-  const artifactRoots = Object.fromEntries([...raw.matchAll(/"([^"]+)": "(sha256:[0-9a-f]{64})"/gu)].map(match => [match[1]!, match[2] as LabRoot]))
-  expect(Object.keys(artifactRoots)).toHaveLength(14)
-  for (const [name, value] of [["cold-corpus.json", corpus], ["initial-proposals.json", proposals], ...sources.map(s => [`source-${s.role}.json`, s])] as const) expect(leanBytesRoot(leanCanonicalBytes(value))).toBe(artifactRoots[name as string])
-  const body = { schemaVersion: "lean-cold-reuse-grant-v1" as const, privacy: "private_offline" as const, amendmentRoot: HISTORY.amendmentRoot, newSourceRoot: currentSource, seed: HISTORY.seed, coldRoot: HISTORY.coldRoot, corpusRoot: corpus.corpusRoot, proposalSetRoot: proposals.root, artifactRoots,
-    sourceBindings: sources.map(s => ({ role: s.role, snapshotRoot: s.root, packetRoot: s.packet.root, proposalRoot: s.proposal.root, validationRoot: s.validation.root, sourceRoot: s.sourceRoot })),
-    predecessor: { sourceRoot: HISTORY.sourceRoot, allocationRoot: HISTORY.allocationRoot, resultBytesRoot: artifactRoots["result.json"]!, terminalBytesRoot: artifactRoots["child-terminal.json"]!, chargeBytesRoot: artifactRoots["ledger.ndjson"]!, timeBytesRoot: artifactRoots["time.ndjson"]!, verificationRoot: HISTORY.verificationRoot, chargedMatches: 10 as const, elapsedMs: 3319046 as const, historicalPeakDiskKnown: false as const, historicalPeakRssKnown: false as const },
-    opportunity: { tacticalEvaluations: 64 as const, teacherSearchNodes: 64 as const, distillationExamples: 64 as const, responseNodes: 128 as const, totalChannelOperations: 320 as const, spentColdOperations: 192 as const, prospectiveResponseNodes: 128 as const } }
-  return { corpus, proposals, sources, grant: { ...body, root: labRoot("lean-cold-reuse-grant-v1", body) } }
-}
+import { LEAN_OWNED_HOST_SOURCE as currentSource, createLeanOwnedReuseHostFixture as fixture } from "./v1-38-lean-owned-reuse-host-fixture.js"
 
 const scopeFor = (reuse: LeanColdReuse, owner = {}) => ({ invocation: owner, sourceRoot: currentSource, allocationRoot: labRoot("precharge-host-allocation", 1), coldRoot: HISTORY.coldRoot, seed: HISTORY.seed, grantRoot: reuse.grant.root })
 const ledgerFor = (directory: string, reuse: LeanColdReuse): LeanExperimentLedger => ({ directory, allocation: { schemaVersion: "lean-correction-baseline-allocation-v1", sourceRoot: currentSource, root: labRoot("precharge-host-allocation", 1), coldRoot: HISTORY.coldRoot, seed: HISTORY.seed, reuseGrantRoot: reuse.grant.root, predecessor: { allocatedDiskBytes: 0 }, slots: Array.from({ length: 36 }, (_, ordinal) => ({ ordinal, condition: ordinal % 4, root: labRoot("precharge-host-slot", ordinal) })) } as unknown as LeanCorrectionAllocation })
