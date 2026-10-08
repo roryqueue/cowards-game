@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: First v13-1 source implemented; independent review findings require scoped fixes
+stopped_at: V13 review fixes implemented; fresh independent re-review next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: 35 focused tests pass; review reproduced terminal publication budget bypass and missing lifecycle coverage; no empirical attempt started
+last_activity_desc: CR01 and WR01 fixed with 48 focused tests passing; all limits unchanged; no empirical attempt started
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V13 REVIEW FIX CLOSED (2026-10-08): Actual isolated /root/fix_preparation_continuation_v13 ACTUALLYCLOSED/fast-forwardmain1baed2eef4d274769e29e1e480590ff39d5550cb; ownworktree/branch/sentinel removed, historicalartifacts preserved. CR01 RED600aa066/GREEN948e1e53 guards projectedblock-rounded/no-refund/time/scratch/terminalpublications inclnoledger; WR01 realterminal/ordinarypublisher/authenticator lifecycle1baed2ee. Final48/48/configuredlabtypes/diff/shellPASS; sixinheritedstrictNOTpass. Newfixedmanifest880d55e93a4ba5ed417f39720457edabb8d2af9116d203066a478113be84a4ae/930; exactfutureSOURCE-REVIEW-v2 pointer/newphysicalallowlistentry, issuesbearingv1immutable. Independentv2review then validation/sourceverification REQUIRED; no live/privatehelper/request/allocation/entry/Match/reader/hold,0of5spent. Template human-verification label refers resource/state validation, not a new limit/product decision; genuinehuman-onlychange not identified. Sameapproved165600000/full108M+ALLwall/absolute2026-10-09T02:39:01.097Z/34charges/15GB300/31minreserve/allbounds. Phase265/LEAG/freeze/formation/holdout/public/counting/production remain gated. Earlierfrontiershistory.
 
 CURRENT V13 SOURCE REVIEW FINDINGS (2026-10-08): First-route source RED3250e925/GREENecb1315c/SUMMARYd4f6d87e CLOSED. Focused35/35/configuredlabtypes/shell/diffPASS; six inheritedstrictdiagnosticsNOTpass. Distinct /root/review_preparation_continuation_v13 ACTUALLYCLOSED REVIEW-v1issues_found: CR01 finalterminalcarry/hold publication omits capacityguard (HOST reproduction exceeds unchanged12GBretainedcap by49152B), WR01 actualterminal/wrapper/carry lifecycle insufficientlycovered. No live/helper/request/allocation/Match/reader/hold;0of5preparations spent. Scopedsource/testfix plus NEWactualreviewversion next, preservingv1/oldbytes and allbounds. Approvedcap165600000/deadline2026-10-09T02:39:01.097Z/full108M+ALLwall since1791455941097/34charges/15GB300/31minreserve remains. No human-onlynewdecision identified. All Phase265/LEAG/freeze/formation/holdout/public/counting/production credit gated; earlierfrontiershistory.
 
