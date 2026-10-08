@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Owned-reuse source repair verified6of6; post-v13 bounded continuation pending human approval
+stopped_at: Post-v13 five-pair continuation approved; checked prospective adapter next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: Source GREEN90a8d563 reviewed clean; MAIN15tests pass; independent sourceverify6of6; fresh envelope proposal pending
+last_activity_desc: Human approved five distinct fresh pairs under unchanged remaining budget; no new route started
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,11 @@ total_plans_in_phase: 16
 
 # State: Coward's Game
 
-CURRENT CHECKPOINT — source repair verified; fresh continuation not yet approved (2026-10-08).
+CURRENT CHECKPOINT — five-pair prospective continuation APPROVED (2026-10-08).
+
+The human directly approved `265-16-POST-V13-BOUNDED-CONTINUATION-DECISION-v1.md`; recorded in `265-16-POST-V13-BOUNDED-CONTINUATION-APPROVAL-20261008.md`. Up to five DISTINCT diagnostic/own-accepted-FINAL/conditional36-baseline pairs, stopping at first independently accepted complete baseline or unchanged budget/reserve limit. Failed routes remain immutable; no unchanged known-failing reruns, no repeat per-attempt literal. Same continuous deadline2026-10-09T02:39:01.097Z/all wall costs/15GB300/2GBscratch/31-minute reserve/35 historical charges. Checked prospective adapter/source review/validation/verification, fresh actor/data/helper gates and new committed allocation/SAME-PROCESS capacity precede any new entry. No entry, verifier or source/HEAD hold active. Source-only GSD supplement next. Earlier pending frontiers below are history, not current approval state.
+
+HISTORICAL CHECKPOINT — source repair verified; fresh continuation not yet approved (superseded by direct approval above).
 
 The diagnostic passed. Its conditional baseline failed at a resource guard before charging any Match; that envelope is ENDED. All consumed evidence remains immutable,35 cumulative charges carry forward, and no entry, verifier or source/HEAD hold is active. The initiating failure cause is still unknown.
 
