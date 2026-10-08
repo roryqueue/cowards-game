@@ -9,6 +9,7 @@ import * as correction from "./run-v1-38-lean-correction.js"
 import * as contracts from "../packages/strategy-lab/src/contracts.js"
 import * as baseline from "./run-v1-38-lean-baseline.js"
 import * as retained from "./lib/v1-38-lean-correction-retained.js"
+import { assertLeanSupervisorReasonCustodyV2 } from "./lib/v1-38-lean-baseline-retained.js"
 import * as reuseIO from "./lib/v1-38-lean-baseline-reuse.js"
 import * as sourceIO from "./lib/v1-38-lean-baseline-source.js"
 import { buildPlannerCandidate } from "../packages/strategy-lab/src/planner/emit.js"
@@ -26,17 +27,18 @@ afterEach(() => vi.restoreAllMocks())
 const labRoot = contracts.labRoot
 
 // Fresh v13 adaptation of the existing closed-world full-audit fixture.
-const acceptedV13Fixture = () => {
+const acceptedV13Fixture = (host?: ReturnType<typeof composedHost>) => {
   const r = (n: number) => labRoot("v13-complete-synthetic-lifecycle", n), mode = "v13-1" as const
-  const extension = accounting.LEAN_PREPARATION_CONTINUATION_V13_EXTENSION, at = extension.startedAtMs
-  const paths = accounting.leanCorrectionRoutePaths("diagnostic", mode), sourceRoot = r(1)
-  const request = correction.createLeanPreparationContinuationRequestDraftV13(mode, "diagnostic", { sourceRoot, reviewRoot: r(2), dataReviewRoot: r(3), helperReviewRoot: r(4), helperPath: correction.leanPreparationContinuationDocumentsV13("diagnostic").helper, helperBytesRoot: r(5), setupAccountingRoot: r(6), reuseGrantRoot: r(7), authorizationRoot: r(8), priorClosureRoot: r(9), continuationRoot: r(10), acceptedCheckRoot: null, acceptedReaderCloseRoot: null })
+  const extension = accounting.LEAN_PREPARATION_CONTINUATION_V13_EXTENSION, at = host ? 1791463000000 : extension.startedAtMs
+  const paths = accounting.leanCorrectionRoutePaths("diagnostic", mode), sourceRoot = host?.sourceRoot ?? r(1)
+  const request = host?.request ?? correction.createLeanPreparationContinuationRequestDraftV13(mode, "diagnostic", { sourceRoot, reviewRoot: r(2), dataReviewRoot: r(3), helperReviewRoot: r(4), helperPath: correction.leanPreparationContinuationDocumentsV13("diagnostic").helper, helperBytesRoot: r(5), setupAccountingRoot: r(6), reuseGrantRoot: r(7), authorizationRoot: r(8), priorClosureRoot: r(9), continuationRoot: r(10), acceptedCheckRoot: null, acceptedReaderCloseRoot: null })
   const predecessorBody = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 34, elapsedUpperBoundMs: 108000000, allocatedDiskBytes: extension.physicalFloorBytes, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r(11), survivors: Array.from({ length: 695 }, (_, ordinal) => ({ identity: `.strategy-lab/v13-only-mocked-survivor-${ordinal}`, allocatedBytes: 4096 })) }
   const input = { sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route: "diagnostic" as const, reuseGrantRoot: request.reuseGrantRoot, supervisorDecisionRoot: extension.approvalRoot, acceptedCheckRoot: null, requestBytesRoot: accounting.leanBytesRoot(accounting.leanCanonicalBytes(request)), dataReviewRoot: request.dataReviewRoot, setupAccountingRoot: request.setupAccountingRoot!, predecessor: { ...predecessorBody, root: labRoot(predecessorBody.schemaVersion, predecessorBody) }, startupPolicyRoot: accounting.LEAN_STARTUP_POLICY_V5.root, timeboxExtension: extension, attemptOrdinal: 1 as const, priorClosureRoot: request.priorClosureRoot!, continuationRoot: request.continuationRoot!, acceptedReaderCloseRoot: null }
-  const allocation = accounting.createLeanSupervisorCorrectionAllocation(input, 8), ledger = { directory: paths.store, allocation }, slot = allocation.slots[0]!
+  const allocation = host?.observation().ledger?.allocation ?? accounting.createLeanSupervisorCorrectionAllocation(input, 8), ledger = { directory: paths.store, allocation }, slot = allocation.slots[0]!
   const sources = ["tactical-0", "cold-opponent"].map(role => sourceIO.buildLeanBaselineSource({ role, source: buildPlannerCandidate().source, coldRoot: allocation.coldRoot, implementationRoot: sourceRoot }))
   const reuse = { grant: { root: request.reuseGrantRoot, coldRoot: allocation.coldRoot, seed: allocation.seed, amendmentRoot: LEAN_COLD_REUSE_HISTORY.amendmentRoot }, sources } as unknown as ReturnType<typeof reuseIO.authenticateLeanColdReuse>
-  const entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot, requestBytesRoot: input.requestBytesRoot, head: "a".repeat(40), parentPid: 123, childPid: 124, handshakeRoot: r(12), wallStartMs: at + 10, monotonicStartNs: "1000000000" }
+  host?.setReuse(reuse)
+  const entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot, requestBytesRoot: input.requestBytesRoot, head: (host ? "b" : "a").repeat(40), parentPid: 123, childPid: 124, handshakeRoot: r(12), wallStartMs: at + 10, monotonicStartNs: "1000000000" }
   const terminal = { schemaVersion: "lean-child-terminal-v2", entryBytesRoot: accounting.leanBytesRoot(accounting.leanCanonicalBytes(entry)), allocationRoot: allocation.root, sourceRoot, head: entry.head, parentPid: 123, childPid: 124, exitCode: 0, signal: null, status: "child_exited" as const, wallObservedMs: at + 50, monotonicObservedNs: "1040000000", elapsedUpperBoundMs: 40, parentRssBytes: 4096, childRssObservedBytes: 4096, physicalBytes: 8192, freeBytes: 15000000000 }
   const rooted = <T extends { schemaVersion: string }>(body: T) => ({ ...body, root: labRoot(body.schemaVersion, body) })
   const compact = { classification: "success" as const, code: "OK" as const, outcome: "DRAW" as const, elapsedMs: 40, cleanupComplete: true, invocationCount: 0, accountingRoot: r(13), executionRoot: r(14), telemetry: { transitions: 1, events: 1 } }
@@ -44,7 +46,8 @@ const acceptedV13Fixture = () => {
   const terminalEvent = { kind: "terminal", chargeRoot: charge.root, record: compact, replay: null }
   const events = [{ kind: "charge", charge }, terminalEvent, { kind: "stop", reason: "complete" }]
   const records = [{ slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: charge.root, terminal: terminalEvent, status: "success" }]
-  const evidence = { records, charged: 35, elapsedMs: 108000100, physicalHighWaterBytes: extension.physicalFloorBytes, scratchHighWaterBytes: 1024, root: labRoot("lean-evidence-v1", { allocationRoot: allocation.root, events, records }) }
+  const elapsed = host ? accounting.leanRetryRootElapsedFloorV8(at + 100, b) : 108000100
+  const evidence = { records, charged: 35, elapsedMs: elapsed, physicalHighWaterBytes: allocation.predecessor.allocatedDiskBytes, scratchHighWaterBytes: 1024, root: labRoot("lean-evidence-v1", { allocationRoot: allocation.root, events, records }) }
   const pair = rooted({ schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: accounting.leanBytesRoot(Buffer.alloc(0)), priorLedgerByteLength: 0, priorCharged: 34, bottomRole: sources[0]!.role, bottomSourceRoot: sources[0]!.sourceRoot, bottomSnapshotRoot: sources[0]!.root, topRole: sources[1]!.role, topSourceRoot: sources[1]!.sourceRoot, topSnapshotRoot: sources[1]!.root })
   const metricBody = { executionRoot: compact.executionRoot, formationComparison: "inconclusive" }
   const cell = { ordinal: 0, slotRoot: slot.root, bottomRoot: pair.bottomSourceRoot, topRoot: pair.topSourceRoot, compact, brainInputs: [], strategyInputs: [], trainingHalfPoints: null, semanticRoot: r(15), metrics: { ...metricBody, root: labRoot("lean-baseline-match-metrics-v1", metricBody) }, decisionRoot: r(16), diagnostic: null }
@@ -56,14 +59,14 @@ const acceptedV13Fixture = () => {
   const interval = "correction-supervisor-diagnostic-v8-verifier", closing = "correction-supervisor-diagnostic-v8-reader-close", gap = "correction-supervisor-diagnostic-v8-reader-gap"
   const starts = new Map([["pilot-entry", at + 10], ["correction-run-finalization", at + 50], [gap, at + 55], [interval, at + 60], [closing, at + 90]])
   const closes = new Map([["pilot-entry", at + 50], ["correction-run-finalization", at + 55], [gap, at + 60], [interval, at + 90], [closing, at + 100]])
-  const time = { active: false, elapsedMs: 108000100, closedElapsedMs: 108000100, starts, closes, closed: new Set(starts.keys()) }
+  const time = { active: false, elapsedMs: elapsed, closedElapsedMs: elapsed, starts, closes, closed: new Set(starts.keys()) }
   const start = rooted({ schemaVersion: "lean-correction-supervisor-admission-v8", attemptOrdinal: 1, route: "diagnostic", mode: "run", parentPid: 123, wallStartMs: at + 10, monotonicStartNs: "1000000000" })
   const close = rooted({ schemaVersion: "lean-correction-supervisor-admission-close-v8", attemptOrdinal: 1, startRoot: start.root, route: "diagnostic", mode: "run", elapsedUpperBoundMs: 40, monotonicObservedNs: "1040000000", wallObservedMs: at + 50, allocationRoot: allocation.root, ledgerInterval: "correction-run-finalization", importedMs: 40, ledgerCloseMs: at + 55 })
   const journalBytes = Buffer.concat(events.map(event => Buffer.concat([accounting.leanCanonicalBytes(event), Buffer.from("\n")])))
-  const files = new Map<string, Uint8Array>(), put = (path: string, value: unknown) => files.set(path, accounting.leanCanonicalBytes(value))
+  const files: Map<string, Uint8Array> = host?.files ?? new Map(), key = (path: string) => host ? resolve(path) : path, put = (path: string, value: unknown) => files.set(key(path), accounting.leanCanonicalBytes(value))
   for (const [name, value] of [["allocation.json", allocation], ["entry.json", entry], ["child-terminal.json", terminal], ["result.json", result], ["cold-reuse.json", reuse], ["pair-0.json", pair], ["observation-0.json", observation], ["correction-origin.json", origin], ["parent-supervisor-reasons.json", reason], ...sources.map(source => [`source-${source.role}.json`, source])] as const) put(join(paths.store, String(name)), value)
   for (const source of sources) put(join(paths.store, `publication-${source.role}-v8.json`), { root: r(17) })
-  files.set(join(paths.store, "ledger.ndjson"), journalBytes); files.set(join(paths.store, "time.ndjson"), Buffer.from("synthetic-only-host-time"))
+  files.set(key(join(paths.store, "ledger.ndjson")), journalBytes); files.set(key(join(paths.store, "time.ndjson")), Buffer.from("synthetic-only-host-time"))
   put(paths.request, request); put(join(paths.temp, "admission-run-start.json"), start); put(join(paths.temp, "admission-run-close.json"), close)
   vi.spyOn(accounting, "openLeanLedger").mockReturnValue(ledger)
   vi.spyOn(accounting, "readLeanChildEntry").mockReturnValue(entry as never); vi.spyOn(accounting, "readLeanChildTerminal").mockReturnValue(terminal as never)
@@ -72,19 +75,24 @@ const acceptedV13Fixture = () => {
   vi.spyOn(accounting, "verifyLeanEvidence").mockReturnValue(evidence as never)
   vi.spyOn(reuseIO, "validateLeanColdReuse").mockReturnValue(reuse)
   vi.spyOn(sourceIO, "readLeanBaselineSource").mockImplementation((_directory, role) => sources.find(source => source.role === role)!)
-  vi.spyOn(correction, "readLeanRemainingAcceptedDiagnosticLineageV9").mockReturnValue({ request, reuse })
-  vi.spyOn(correction, "leanCorrectionSourceManifest").mockReturnValue({ root: sourceRoot } as never)
-  vi.spyOn(correction, "readLeanCorrectionPrivateBytes").mockImplementation(path => { const bytes = files.get(path); if (!bytes) throw new Error("SYNTHETIC_HOST_FILE_ABSENT"); return bytes })
-  vi.spyOn(correction, "readLeanCorrectionJson").mockImplementation(path => { const bytes = files.get(path); if (!bytes) throw new Error("SYNTHETIC_HOST_FILE_ABSENT"); return JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown })
-  vi.spyOn(correction, "publishLeanCorrection").mockImplementation((path, value) => { if (files.has(path)) throw new Error("SYNTHETIC_HOST_DUPLICATE"); put(path, value) })
-  vi.spyOn(fileIO, "existsSync").mockImplementation(path => files.has(String(path)) || [...files.keys()].some(name => name.startsWith(`${String(path)}/`)))
-  vi.spyOn(fileIO, "readdirSync").mockImplementation(path => [...files.keys()].filter(name => name.startsWith(`${String(path)}/`) && !name.slice(String(path).length + 1).includes("/")).map(name => name.slice(String(path).length + 1)) as never)
+  if (host) {
+    vi.spyOn(correction, "readLeanCorrectionRequest").mockImplementation((...args) => host.exports.readLeanCorrectionRequest!(...args))
+    vi.spyOn(correction, "readLeanRemainingAcceptedDiagnosticLineageV9").mockImplementation(purpose => host.exports.readLeanPreparationContinuationRequestWithPurposeV13!(paths.request, "diagnostic", mode, purpose))
+    vi.spyOn(correction, "inventoryLeanSupervisorSurvivors").mockImplementation(identities => [...host.inventory(identities)])
+    vi.spyOn(correction, "inventoryLeanTwoPairNoRefundV11").mockImplementation((...args) => host.exports.inventoryLeanTwoPairNoRefundV11!(...args))
+  } else vi.spyOn(correction, "readLeanRemainingAcceptedDiagnosticLineageV9").mockReturnValue({ request, reuse })
+  vi.spyOn(correction, "leanCorrectionSourceManifest").mockReturnValue({ root: sourceRoot, entries: [] } as never)
+  vi.spyOn(correction, "readLeanCorrectionPrivateBytes").mockImplementation(path => { const bytes = files.get(key(path)); if (!bytes) throw new Error("SYNTHETIC_HOST_FILE_ABSENT"); return bytes })
+  vi.spyOn(correction, "readLeanCorrectionJson").mockImplementation(path => { const bytes = files.get(key(path)); if (!bytes) throw new Error(`SYNTHETIC_HOST_FILE_ABSENT:${path}`); return JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown })
+  vi.spyOn(correction, "publishLeanCorrection").mockImplementation((path, value, owner) => { if (host) return host.exports.publishLeanCorrection!(path, value, owner); if (files.has(key(path))) throw new Error("SYNTHETIC_HOST_DUPLICATE"); put(path, value) })
+  vi.spyOn(fileIO, "existsSync").mockImplementation(path => files.has(key(String(path))) || [...files.keys()].some(name => name.startsWith(`${key(String(path))}/`)))
+  vi.spyOn(fileIO, "readdirSync").mockImplementation(path => [...files.keys()].filter(name => name.startsWith(`${key(String(path))}/`) && !name.slice(key(String(path)).length + 1).includes("/")).map(name => name.slice(key(String(path)).length + 1)) as never)
   vi.spyOn(childIO, "execFileSync").mockImplementation((_file, args) => { if (args?.join(" ") !== "rev-parse HEAD") throw new Error("SYNTHETIC_HOST_GIT_UNEXPECTED"); return entry.head as never })
   const audited = retained.auditLeanCorrectionRetained({ schemaVersion: "lean-correction-supervisor-retained-snapshot-v8", allocation, request, entry, terminal, evidence, time, result, reuse, pairs: [pair], observations: [observation], sources, artifacts: {}, origin, journalBytes, supervisorReasonBytes: accounting.leanCanonicalBytes(reason) })
   const { root: _auditRoot, ...auditBody } = audited
-  const check = rooted({ ...auditBody, attemptOrdinal: 1, cumulativeElapsedMs: 108000090, cumulativePhysicalBytes: extension.physicalFloorBytes, readerScratchHighWaterBytes: 512000000, readerInterval: interval, readerStartMs: at + 60, readerObservedMs: at + 80 })
+  const check = rooted({ ...auditBody, attemptOrdinal: 1, cumulativeElapsedMs: host ? elapsed - 10 : 108000090, cumulativePhysicalBytes: allocation.predecessor.allocatedDiskBytes, readerScratchHighWaterBytes: 512000000, readerInterval: interval, readerStartMs: at + 60, readerObservedMs: at + 80 })
   put(join(paths.store, paths.check), check)
-  return { mode, paths, files, put, input, allocation, ledger, request, entry, terminal, reason, result, rooted, time, check }
+  return { mode, paths, files, put, input, allocation, ledger, request, entry, terminal, reason, result, rooted, time, check, at }
 }
 
 // Exact trusted declarations only; no production dependency injection and no
@@ -96,9 +104,10 @@ const declarationHarness = (path: string, names: readonly string[], dependencies
     if (found.length !== 1) throw new Error(`HOST_DECLARATION_NOT_UNIQUE:${name}`)
     return found[0]!.getText(ast)
   })
-  const compiled = ts.transpileModule(statements.join("\n"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText
+  const compiled = ts.transpileModule(statements.join("\n") + names.map(name => `\nexports.${name} = ${name};`).join(""), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText
   const exports: Record<string, (...args: any[]) => any> = {}
-  new Function(...Object.keys(dependencies), "exports", compiled)(...Object.values(dependencies), exports)
+  const effects = Object.fromEntries(Object.entries(dependencies).filter(([name]) => !names.includes(name)))
+  new Function(...Object.keys(effects), "exports", compiled)(...Object.values(effects), exports)
   return exports
 }
 // CR-01 reproduces the actual final publisher at the reviewer's physical cap.
@@ -148,13 +157,14 @@ function historyFixture(change?: (objects: Record<string, any>) => void) {
   return { objects, raw, paths, validate: (input = raw, forbidden: string[] = []) => exported.validateLeanPreparationHistoryV13!(input, forbidden) }
 }
 
-function composedHost(route: "diagnostic" | "baseline" = "diagnostic", asCli = false) {
+function composedHost(route: "diagnostic" | "baseline" = "diagnostic", asCli = false, actualFinal?: ReturnType<typeof retained.authenticateLeanRetryClosureV8>, actualCarry?: retained.LeanPreparationContinuationTerminalCarryV13) {
   const mode = "v13-1", paths = accounting.leanCorrectionRoutePaths(route, mode), docs = correction.leanPreparationContinuationDocumentsV13(route)
   const history = historyFixture(), files = new Map<string, Buffer>([...history.raw].map(([path, bytes]) => [resolve(path), Buffer.from(bytes)])), descriptors = new Map<number, string>()
-  const sourceRoot = r(1), events: string[] = [], atMs = 1791463000000, opens: { path: string; flags: number; mode?: number }[] = []
+  const sourceRoot = r(1), events: string[] = [], opens: { path: string; flags: number; mode?: number }[] = []
+  let atMs = actualFinal ? actualFinal.readerCloseMs + 100 : 1791463000000, resourceGrowth = 0, rss = 4096, writeEffect: ((path: string) => void) | undefined
   let resolveCli!: (value: unknown) => void, rejectCli!: (error: Error) => void
   const cliCompletion = asCli ? new Promise((yes, no) => { resolveCli = yes; rejectCli = no }) : undefined
-  let nextFd = 1, dispatches = 0, publicationFailure: unknown, effectRefusal: unknown, allocationPublicationRefusal: unknown, ledger: any, closure: any
+  let nextFd = 1, dispatches = 0, publicationFailure: unknown, effectRefusal: unknown, allocationPublicationRefusal: unknown, ledger: any, closure: any, reuseCustody: unknown
   const put = (path: string, value: any) => { files.set(resolve(path), Buffer.isBuffer(value) ? value : Buffer.from(accounting.leanCanonicalBytes(value))) }
   const json = (path: string) => JSON.parse(Buffer.from(files.get(resolve(path))!).toString("utf8"))
   const read = (path: string) => { const bytes = files.get(resolve(path)); if (!bytes) throw new Error("HOST_UNDECLARED_READ"); return bytes }
@@ -165,6 +175,7 @@ function composedHost(route: "diagnostic" | "baseline" = "diagnostic", asCli = f
   const continuation = rooted({ schemaVersion: "lean-preparation-continuation-continuation-v13", timeboxExtension: b, attemptOrdinal: 1, priorClosureRoot: historical.carryRoot, sourceRoot, reviewRoot: r(2), cumulativeCharged: 34, cumulativeElapsedMs: historical.predecessor.elapsedUpperBoundMs, allocatedDiskBytes: historical.predecessor.allocatedDiskBytes })
   put(docs.continuation, continuation)
   closure = rooted({ schemaVersion: "lean-preparation-closure-v13", timeboxExtension: b, attemptOrdinal: 1, cumulativeCharged: 35, closureClass: "accepted", finalReaderClose: true, acceptedCheckAbsent: false, resultAbsent: false, currentCharges: 1, checkRoot: r(20), checkBytesRoot: r(21), allocationRoot: r(22), sourceRoot, requestBytesRoot: r(23), head: "b".repeat(40), readerCloseMs: atMs - 1 })
+  if (actualFinal) closure = actualFinal
   let request = correction.createLeanPreparationContinuationRequestDraftV13(mode, route, { sourceRoot, reviewRoot: r(2), dataReviewRoot: r(3), helperReviewRoot: r(4), helperPath: docs.helper, helperBytesRoot: accounting.leanBytesRoot(read(docs.helper)), setupAccountingRoot: setup.root, reuseGrantRoot: r(5), authorizationRoot: r(6), priorClosureRoot: historical.carryRoot, continuationRoot: continuation.root, acceptedCheckRoot: route === "baseline" ? closure.checkRoot : null, acceptedReaderCloseRoot: route === "baseline" ? closure.root : null })
   const reviewBytes = (data?: contracts.LabRoot) => Buffer.from(`---\nstatus: clean\nsource_root: ${sourceRoot}\nindependently_reviewed: true\nauthor_agent: /root\nreviewer_agent: /root/synthetic_review\nsource_commit: ${"b".repeat(40)}\n${data ? `request_root: ${data}\n` : ""}---\n`)
   put(docs.review, reviewBytes()); request = { ...request, reviewRoot: accounting.leanBytesRoot(read(docs.review)) }
@@ -177,23 +188,26 @@ function composedHost(route: "diagnostic" | "baseline" = "diagnostic", asCli = f
   const authorization = authorize(); put(docs.authorization, authorization); request = { ...request, authorizationRoot: accounting.leanBytesRoot(read(docs.authorization)) }; put(paths.request, request)
   const diagnostic = accounting.leanCorrectionRoutePaths("diagnostic", mode)
   if (route === "baseline") put(join(diagnostic.store, "allocation.json"), Buffer.from("synthetic committed own allocation"))
-  const time = { active: null, starts: new Map<string, number>(), closes: new Map<string, number>() }
+  const time = { active: null, starts: new Map<string, number>(), closes: new Map<string, number>(), closed: new Set<string>(), elapsedMs: accounting.leanRetryRootElapsedFloorV8(atMs, b), closedElapsedMs: accounting.leanRetryRootElapsedFloorV8(atMs, b) }
   const selected = ["trustedGuardCodes", "trustedGuardErrors", "leanCorrectionTrustedGuardError", "fail", "root", "same", "leanRetryExtensionDocumentsV8", "assertLeanRetryExtensionDocumentsV8", "publishLeanCorrection", "beginLeanCorrectionAdmission", "leanCorrectionAdmissionElapsed", "assertLeanCorrectionAdmissionTime", "closeLeanCorrectionAdmission", "authenticateLeanCorrectionReview", "readReview", "authenticateLeanPreparationContinuationHistoricalCustodyV13", "readLeanPreparationContinuationSetupV13", "authenticateLeanPreparationContinuationAcceptedJoinV13", "validateLeanPreparationContinuationAuthorizationV13", "authenticateLeanPreparationContinuationSourceReviewV13", "readLeanPreparationContinuationRequestWithPurposeV13", "readLeanPreparationContinuationRequestV13", "readLeanPreparationContinuationPredecessorLineageV13", "inspectLeanPreparationContinuationPredecessorWithJoinV13", "inspectLeanPreparationContinuationPredecessorV13", "inventoryLeanTwoPairNoRefundV11", "publishLeanRetryAdmissionFailureV8", "prepareLeanCorrection", "leanCorrectionMain"]
   const dependencies: Record<string, unknown> = {
-    ...accounting, ...contracts, ...baseline, ...correction, constants, join, resolve, Buffer, Date: { now: () => atMs }, process: { pid: 123, getuid: () => 123, argv: ["synthetic-node", "/synthetic-cli", `prepare-supervisor-${route}-v13-1`, "--request", paths.request], stdout: { write: (value: string) => resolveCli(JSON.parse(value)) }, stderr: { write: () => rejectCli(new Error("HOST_DIRECT_CLI_REFUSAL")) } }, pathToFileURL: () => ({ href: "file://synthetic-cli" }), LEAN_COLD_REUSE_HISTORY,
+    ...accounting, ...contracts, ...baseline, ...correction, ...retained, assertLeanSupervisorReasonCustodyV2, constants, join, resolve, Buffer, Date: { now: () => atMs }, process: { pid: 123, getuid: () => 123, memoryUsage: () => ({ rss }), resourceUsage: () => ({ maxRSS: rss / 1024 }), uptime: () => 0, hrtime: { bigint: () => BigInt(atMs) * 1000000n }, argv: ["synthetic-node", "/synthetic-cli", `prepare-supervisor-${route}-v13-1`, "--request", paths.request], stdout: { write: (value: string) => resolveCli(JSON.parse(value)) }, stderr: { write: () => rejectCli(new Error("HOST_DIRECT_CLI_REFUSAL")) } }, pathToFileURL: () => ({ href: "file://synthetic-cli" }), LEAN_COLD_REUSE_HISTORY,
     AMENDMENT: ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-CONTINUATION-DECISION-v1.md", LEAN_PREPARATION_V13_HISTORY_PATHS: history.paths,
     validateLeanPreparationHistoryV13: history.validate,
     readFileSync: read,
     readLeanCorrectionPrivateBytes: read, readLeanCorrectionJson: json,
     leanCorrectionSourceManifest: () => ({ root: sourceRoot, entries: [{ path: "synthetic-functional-source.ts" }] }),
     execFileSync: (_exe: string, args: string[]) => args[0] === "rev-parse" ? "b".repeat(40) : args[0] === "show" ? read(join(diagnostic.store, "allocation.json")) : Buffer.alloc(0),
-    existsSync: (path: string) => files.has(resolve(path)) || history.objects["terminal-carry-v12.json"].survivors.some((row: any) => resolve(row.identity) === resolve(path)),
+    existsSync: (path: string) => files.has(resolve(path)) || [...history.objects["terminal-carry-v12.json"].survivors, ...(actualCarry?.survivors ?? [])].some((row: any) => resolve(row.identity) === resolve(path)),
     lstatSync: () => ({ isFile: () => true, isDirectory: () => true, isSymbolicLink: () => false, mode: 0o700, uid: 123 }), realpathSync: (path: string) => resolve(path),
-    inventoryLeanSupervisorSurvivors: (identities: string[]) => [...new Set(identities)].sort().map(identity => ({ identity, allocatedBytes: 4096 })),
-    authenticateLeanColdReuse: () => ({ grant: { root: request.reuseGrantRoot } }),
+    inventoryLeanSupervisorSurvivors: (identities: readonly string[]) => [...new Set(identities.flatMap(identity => {
+      const children = [...files.keys()].filter(path => path.startsWith(`${resolve(identity)}/`))
+      return [identity, ...children.map(path => path.slice(resolve(".").length + 1))]
+    }))].sort().map(identity => ({ identity, allocatedBytes: Math.max(4096, actualCarry?.survivors.find(row => row.identity === identity)?.allocatedBytes ?? 0, Math.ceil((files.get(resolve(identity))?.length ?? 1) / 4096) * 4096) })),
+    authenticateLeanColdReuse: () => reuseCustody ?? ({ grant: { root: request.reuseGrantRoot } }),
     authenticateLeanRetryClosureV8: (actualMode: string) => { expect(actualMode).toBe(mode); events.push("own-FINAL"); return closure },
-    authenticateLeanPreparationContinuationTerminalCarryV13: () => ({ ...historical.predecessor, cumulativeElapsedMs: historical.predecessor.elapsedUpperBoundMs }),
-    readLeanRemainingAcceptedLineagePurposeV9: () => { throw new Error("HOST_OLD_LINEAGE_FORBIDDEN") },
+    authenticateLeanPreparationContinuationTerminalCarryV13: () => actualCarry ?? ({ ...historical.predecessor, cumulativeElapsedMs: historical.predecessor.elapsedUpperBoundMs }),
+    readLeanRemainingAcceptedLineagePurposeV9: retained.readLeanRemainingAcceptedLineagePurposeV9,
     scope: () => { events.push("scope"); if (effectRefusal !== undefined) throw effectRefusal },
     processAdmissionClock: () => ({ wallStartMs: atMs, monotonicStartNs: "1000000" }), admissionClock: () => ({ wallStartMs: atMs + 2, monotonicStartNs: "3000000" }),
     openSync: (path: string, flags: number, permissions?: number) => {
@@ -202,12 +216,14 @@ function composedHost(route: "diagnostic" | "baseline" = "diagnostic", asCli = f
       if (path.endsWith("preparation-failure-v13.json") && publicationFailure !== undefined) throw publicationFailure
       if (flags & constants.O_CREAT) { if (files.has(absolute) && flags & constants.O_EXCL) throw new Error("HOST_EXCLUSIVE"); files.set(absolute, Buffer.alloc(0)) }
       const fd = nextFd++; descriptors.set(fd, absolute); return fd
-    }, writeLeanAll: (fd: number, bytes: Uint8Array) => files.set(descriptors.get(fd)!, Buffer.from(bytes)), fsyncSync: () => {}, closeSync: (fd: number) => descriptors.delete(fd),
+    }, writeLeanAll: (fd: number, bytes: Uint8Array) => { const path = descriptors.get(fd)!; files.set(path, Buffer.from(bytes)); writeEffect?.(path) }, fsyncSync: () => {}, closeSync: (fd: number) => descriptors.delete(fd),
     assertLeanPublicationCapacity: () => {},
     createLeanLedger: (directory: string, allocation: accounting.LeanCorrectionAllocation) => { events.push("ledger"); ledger = { directory, allocation }; put(directory, Buffer.alloc(0)); put(join(directory, "ledger.ndjson"), Buffer.alloc(0)); put(join(directory, "time.ndjson"), Buffer.alloc(0)); return ledger },
     openLeanLedger: () => ledger, readLeanTimeAccounting: () => time, readLeanLedger: () => ({ charges: new Map(), charged: ledger.allocation.predecessor.chargedMatches }),
-    beginLeanInterval: (_ledger: unknown, name: string, at: number) => { time.starts.set(name, at); time.active = name as any; return time },
-    closeLeanInterval: (_ledger: unknown, name: string, at: number) => { time.closes.set(name, at); time.active = null; return time },
+    readLeanChildEntry: () => json(join(paths.store, "entry.json")), readLeanChildTerminal: () => json(join(paths.store, "child-terminal.json")),
+    currentLeanElapsedMs: () => Math.max(time.elapsedMs, accounting.leanRetryRootElapsedFloorV8(atMs, b)), cumulativeLeanPhysicalBytes: () => b.physicalFloorBytes + resourceGrowth,
+    beginLeanInterval: (_ledger: unknown, name: string, at: number) => { time.starts.set(name, at); time.active = name as any; const p = resolve(join(paths.store, "time.ndjson")); if (files.has(p)) files.set(p, Buffer.concat([read(p), Buffer.from(`${JSON.stringify({ kind: "start", id: name, atMs: at })}\n`)])); return time },
+    closeLeanInterval: (_ledger: unknown, name: string, at: number) => { time.closes.set(name, at); time.closed.add(name); time.active = null; const p = resolve(join(paths.store, "time.ndjson")); if (files.has(p)) files.set(p, Buffer.concat([read(p), Buffer.from(`${JSON.stringify({ kind: "close", id: name, atMs: at })}\n`)])); return time },
     runLeanBoundedParent: () => { dispatches++; throw new Error("HOST_MATCH_FORBIDDEN") },
     require: () => ({ verifyLeanPreparationContinuationTerminalOnlyV13: (...args: any[]) => { events.push(`terminal:${args[2]}`); return "terminal" }, verifyLeanPreparationContinuationRetainedV13: (...args: any[]) => { events.push(`retained:${args[2]}`); return "retained" } }),
   }
@@ -216,13 +232,94 @@ function composedHost(route: "diagnostic" | "baseline" = "diagnostic", asCli = f
   const source = readFileSync(new URL("./run-v1-38-lean-correction.ts", import.meta.url), "utf8"), ast = ts.createSourceFile("correction", source, ts.ScriptTarget.ES2022, true)
   const statements = ast.statements.filter(node => ts.isVariableStatement(node) && node.declarationList.declarations.some(d => ts.isIdentifier(d.name) && selected.includes(d.name.text)) || asCli && ts.isIfStatement(node) && node.getText(ast).startsWith("if (process.argv[1]")).map(node => node.getText(ast)).join("\n").replace("import.meta.url", '"file://synthetic-cli"')
   for (const name of [...selected, "readLeanRetrySetupWitnessV8", "readLeanCorrectionRequest", "inspectLeanSupervisorCorrectionPredecessor"]) delete dependencies[name]
-  const compiled = ts.transpileModule(statements + aliases, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText
+  const compiled = ts.transpileModule(statements + aliases + [...selected, "readLeanRetrySetupWitnessV8", "readLeanCorrectionRequest", "inspectLeanSupervisorCorrectionPredecessor"].map(name => `\nexports.${name} = ${name};`).join(""), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText
   const exports: Record<string, (...args: any[]) => any> = {}
   new Function(...Object.keys(dependencies), "exports", compiled)(...Object.values(dependencies), exports)
-  return { files, events, opens, docs, paths, request, setup, history, sourceRoot, put, json, authorize, exports, cliCompletion, prepare: () => exports.prepareLeanCorrection!(paths.request, route, mode), refusal: (value: unknown) => { effectRefusal = value }, sidecarFailure: (value: unknown) => { publicationFailure = value }, allocationFailure: (value: unknown) => { allocationPublicationRefusal = value }, getClosure: () => closure, setClosure: (value: unknown) => { closure = value }, observation: () => ({ dispatches, ledger, descriptors: descriptors.size, time }) }
+  const terminal = () => {
+    atMs += 10
+    const names = ["fail", "same", "rooted", "validateLeanPreparationContinuationTerminalCarryV13", "readPreparationContinuationRooted", "validatePreparationContinuationTerminalRequest", "validateLeanPreparationContinuationTerminalVerificationV13", "readPreparationContinuationAdmission", "authenticatePreparationContinuationTerminalVerification", "deriveLeanPreparationContinuationTerminalCarryV13", "createPreparationContinuationTerminalHold", "preparationContinuationPublicationGuard", "publishPreparationContinuationGuarded", "publishPreparationContinuationHeldCarry", "publishLeanPreparationContinuationTerminalCarryV13", "authenticatePreparationContinuationCompletedHold", "authenticatePreparationContinuationCarry", "authenticateLeanPreparationContinuationTerminalCarryV13", "authenticateLeanPreparationContinuationTerminalVerificationV13", "verifyLeanPreparationContinuationTerminalOnlyV13", "verifyLeanPreparationContinuationRetainedV13"]
+    const actualCorrection = declarationHarness("./run-v1-38-lean-correction.ts", ["authenticateLeanRetryAdmissionFailureV8", "authenticateLeanPreparationContinuationRecordedPredecessorV13"], { ...dependencies, ...exports })
+    return declarationHarness("./lib/v1-38-lean-correction-retained.ts", names, { ...dependencies, ...exports, ...actualCorrection })
+  }
+  return { files, events, opens, docs, paths, request, setup, history, sourceRoot, put, json, authorize, exports, cliCompletion, terminal, setReuse: (value: unknown) => { reuseCustody = value }, inventory: dependencies.inventoryLeanSupervisorSurvivors as (identities: readonly string[]) => accounting.LeanCorrectionPredecessor["survivors"], resources: (growth = 0, wall = atMs, memory = rss) => { resourceGrowth = growth; atMs = wall; rss = memory }, onWrite: (effect: (path: string) => void) => { writeEffect = effect }, prepare: () => exports.prepareLeanCorrection!(paths.request, route, mode), refusal: (value: unknown) => { effectRefusal = value }, sidecarFailure: (value: unknown) => { publicationFailure = value }, allocationFailure: (value: unknown) => { allocationPublicationRefusal = value }, getClosure: () => closure, setClosure: (value: unknown) => { closure = value }, observation: () => ({ dispatches, ledger, descriptors: descriptors.size, time }) }
 }
 
 describe("first prospective v13-1 continuation (source-only HOST)", () => {
+  it("WR-01 composes the actual ordinary wrapper/full audit/own FINAL/carry into its conditional36 join", async () => {
+    const h = composedHost(); h.prepare()
+    const f = acceptedV13Fixture(h), interval = "correction-supervisor-diagnostic-v8-verifier", closing = "correction-supervisor-diagnostic-v8-reader-close", gap = "correction-supervisor-diagnostic-v8-reader-gap"
+    h.files.delete(resolve(join(h.paths.store, h.paths.check)))
+    for (const id of [interval, closing, gap]) { f.time.starts.delete(id); f.time.closes.delete(id); f.time.closed.delete(id) }
+    vi.spyOn(Date, "now").mockReturnValue(f.at + 60); vi.spyOn(process, "uptime").mockReturnValue(0)
+    vi.spyOn(process, "memoryUsage").mockReturnValue({ rss: 4096 } as never); vi.spyOn(process, "resourceUsage").mockReturnValue({ maxRSS: 4 } as never)
+    vi.spyOn(accounting, "currentLeanElapsedMs").mockReturnValue(f.time.elapsedMs)
+    vi.spyOn(accounting, "cumulativeLeanPhysicalBytes").mockReturnValue(f.allocation.predecessor.allocatedDiskBytes)
+    vi.spyOn(accounting, "beginLeanInterval").mockImplementation((_ledger, id, at = f.at + 60) => { if (f.time.starts.has(id)) throw new Error("HOST_DUPLICATE_INTERVAL"); f.time.starts.set(id, at); f.time.active = id as never; return f.time as never })
+    vi.spyOn(accounting, "closeLeanInterval").mockImplementation((_ledger, id, at = f.at + 60) => { f.time.closes.set(id, at); f.time.closed.add(id); f.time.active = false; return f.time as never })
+    vi.spyOn(accounting, "importLeanClosedInterval").mockImplementation((_ledger, id, from, to) => { f.time.starts.set(id, from); f.time.closes.set(id, to); f.time.closed.add(id); return f.time as never })
+    const report = await retained.verifyLeanPreparationContinuationRetainedV13(h.paths.request, "v13-1", "diagnostic")
+    expect(report).toMatchObject({ accepted: true, currentCharged: 1, cumulativeCharged: 35 })
+    const carry = retained.authenticateLeanPreparationContinuationTerminalCarryV13("v13-1", "diagnostic")
+    expect(carry).toMatchObject({ outcome: "closed_result", accepted: false, currentCharges: 1, cumulativeCharged: 35 })
+    const actualJoin = correction.authenticateLeanPreparationContinuationAcceptedJoinV13("v13-1")
+    expect(actualJoin.closure).toMatchObject({ finalReaderClose: true, currentCharges: 1, cumulativeCharged: 35 })
+    const next = composedHost("baseline", false, actualJoin.closure, carry)
+    expect(next.prepare()).toMatchObject({ plannedCells: 36, charged: 0 })
+    const saved = h.json(h.docs.carry), { root: _root, ...body } = saved
+    h.put(h.docs.carry, rooted({ ...body, verificationRoot: r(999) }))
+    expect(() => retained.authenticateLeanPreparationContinuationTerminalCarryV13("v13-1", "diagnostic")).toThrow()
+    expect(h.observation().dispatches + next.observation().dispatches).toBe(0)
+  }, 60000)
+  it.each([false, true])("WR-01 closes actual unique terminal owner/carry/authenticator with ledger=%s", allocated => {
+    const h = composedHost()
+    if (allocated) h.allocationFailure(new Error("HOST_ALLOCATION_PUBLICATION_REFUSAL")); else h.refusal(new Error("HOST_SCOPE_REFUSAL"))
+    expect(h.prepare).toThrow()
+    const owner = h.terminal(), report = owner.verifyLeanPreparationContinuationTerminalOnlyV13!(h.paths.request, "v13-1", "diagnostic")
+    expect(report).toMatchObject({ accepted: false, authorizing: false, resultAbsent: true, currentCharges: 0, cumulativeCharged: 34 })
+    const carry = owner.authenticateLeanPreparationContinuationTerminalCarryV13!("v13-1", "diagnostic")
+    expect(carry).toMatchObject({ outcome: "refused_before_entry", cumulativeCharged: 34, currentCharges: 0 })
+    expect(owner.authenticateLeanPreparationContinuationTerminalVerificationV13!("v13-1", "diagnostic").value).toEqual(report)
+    expect(() => owner.verifyLeanPreparationContinuationTerminalOnlyV13!(h.paths.request, "v13-1", "diagnostic")).toThrow()
+    expect(h.observation()).toMatchObject({ dispatches: 0, descriptors: 0 })
+    for (const name of ["terminal-verification-v13.json", "terminal-carry-v13.json", "terminal-hold-complete-v13.json"]) expect(h.opens.find(row => row.path.endsWith(name))).toMatchObject({ mode: 0o600, flags: constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW })
+    const saved = h.json(join(h.paths.temp, "terminal-verification-v13.json")), { root: _root, ...body } = saved
+    h.put(join(h.paths.temp, "terminal-verification-v13.json"), rooted({ ...body, cumulativeCharged: 35 }))
+    expect(() => owner.authenticateLeanPreparationContinuationTerminalCarryV13!("v13-1", "diagnostic")).toThrow()
+  }, 60000)
+  it("WR-01 closes an actual entered/result-absent terminal without inventing an accepted result", () => {
+    const h = composedHost(); h.prepare()
+    const allocation = h.observation().ledger.allocation, at = 1791463000000
+    const entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: h.sourceRoot, requestBytesRoot: accounting.leanBytesRoot(accounting.leanCanonicalBytes(h.request)), head: "b".repeat(40), parentPid: 123, childPid: 124, handshakeRoot: r(32), wallStartMs: at + 10, monotonicStartNs: "1000000000" }
+    const terminal = { schemaVersion: "lean-child-terminal-v2", allocationRoot: allocation.root, sourceRoot: h.sourceRoot, entryBytesRoot: accounting.leanBytesRoot(accounting.leanCanonicalBytes(entry)), head: entry.head, parentPid: 123, childPid: 124, exitCode: 1, signal: null, status: "child_failed", wallObservedMs: at + 20 }
+    h.put(join(h.paths.store, "entry.json"), entry); h.put(join(h.paths.store, "child-terminal.json"), terminal)
+    const start = rooted({ schemaVersion: "lean-correction-supervisor-admission-v8", route: "diagnostic", mode: "run", attemptOrdinal: 1, parentPid: 123, wallStartMs: at + 10, monotonicStartNs: "1000000000" })
+    const close = rooted({ schemaVersion: "lean-correction-supervisor-admission-close-v8", route: "diagnostic", mode: "run", attemptOrdinal: 1, startRoot: start.root, wallObservedMs: at + 20, monotonicObservedNs: "1010000000", elapsedUpperBoundMs: 10, importedMs: 0, ledgerInterval: "correction-run-finalization", ledgerCloseMs: at + 20, allocationRoot: allocation.root })
+    h.put(join(h.paths.temp, "admission-run-start.json"), start); h.put(join(h.paths.temp, "admission-run-close.json"), close)
+    const time = h.observation().time; time.starts.set("correction-run-finalization", at + 10); time.closes.set("correction-run-finalization", at + 20); time.closed.add("correction-run-finalization")
+    const reason = rooted({ schemaVersion: "lean-parent-supervisor-reasons-v2", allocationRoot: allocation.root, sourceRoot: h.sourceRoot, requestBytesRoot: entry.requestBytesRoot, entryBytesRoot: terminal.entryBytesRoot, head: entry.head, parentPid: 123, childPid: 124, exitCode: 1, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown", resourceSamplingOperation: "none", resourceSamplingSequence: 0, resourceSamplingExitObserved: false } })
+    h.put(join(h.paths.store, "parent-supervisor-reasons.json"), reason); h.resources(0, at + 30)
+    const owner = h.terminal()
+    owner.verifyLeanPreparationContinuationTerminalOnlyV13!(h.paths.request, "v13-1", "diagnostic")
+    expect(owner.authenticateLeanPreparationContinuationTerminalCarryV13!("v13-1", "diagnostic")).toMatchObject({ outcome: "entered_without_result", accepted: false })
+    expect(h.files.has(resolve(join(h.paths.store, "result.json")))).toBe(false)
+  }, 60000)
+  it.each(["projected-disk", "projected-time", "scratch", "final-disk", "final-time", "exclusive", "publication"])("WR-01 actual terminal owner refuses %s without completed custody", kind => {
+    const h = composedHost(); h.allocationFailure(new Error("HOST_ALLOCATION_PUBLICATION_REFUSAL")); expect(h.prepare).toThrow()
+    const owner = h.terminal(), deadlineWithReserve = b.startedAtMs + b.elapsedMs - b.priorElapsedMs - b.reserveMs
+    if (kind === "projected-disk") h.resources(11999995904 - b.physicalFloorBytes)
+    if (kind === "projected-time") h.resources(0, deadlineWithReserve)
+    if (kind === "scratch") h.resources(0, 1791463000010, accounting.LEAN_CAPS.scratchBytes)
+    if (kind === "exclusive") h.put(h.docs.carry, { exclusive: "already spent" })
+    h.onWrite(path => {
+      if (path.endsWith("terminal-verification-v13.json") && kind === "final-disk") h.resources(accounting.LEAN_CAPS.retainedBytes)
+      if (path.endsWith("terminal-verification-v13.json") && kind === "final-time") h.resources(0, deadlineWithReserve)
+      if (path.endsWith("terminal-carry-v13.json") && kind === "publication") throw new Error("HOST_WRITE_FAILURE")
+    })
+    expect(() => owner.verifyLeanPreparationContinuationTerminalOnlyV13!(h.paths.request, "v13-1", "diagnostic")).toThrow()
+    expect(h.files.has(resolve(join(h.paths.temp, "terminal-hold-complete-v13.json")))).toBe(false)
+    expect(() => owner.authenticateLeanPreparationContinuationTerminalCarryV13!("v13-1", "diagnostic")).toThrow()
+    expect(h.observation()).toMatchObject({ dispatches: 0, descriptors: 0 })
+  }, 60000)
   it("CR-01 refuses actual final carry/hold publication before crossing the retained cap", () => {
     const h = heldPublicationHost(11999995904)
     expect(h.publish).toThrow()
