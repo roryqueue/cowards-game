@@ -78,17 +78,78 @@ const acceptedV12Fixture = () => {
   vi.spyOn(correction, "readLeanCorrectionPrivateBytes").mockImplementation(path => { const bytes = files.get(path); if (!bytes) throw new Error("SYNTHETIC_HOST_FILE_ABSENT"); return bytes })
   vi.spyOn(correction, "readLeanCorrectionJson").mockImplementation(path => { const bytes = files.get(path); if (!bytes) throw new Error("SYNTHETIC_HOST_FILE_ABSENT"); return JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown })
   vi.spyOn(correction, "publishLeanCorrection").mockImplementation((path, value) => { if (files.has(path)) throw new Error("SYNTHETIC_HOST_DUPLICATE"); put(path, value) })
-  vi.spyOn(fileIO, "existsSync").mockImplementation(path => files.has(String(path)))
+  vi.spyOn(fileIO, "existsSync").mockImplementation(path => files.has(String(path)) || [...files.keys()].some(name => name.startsWith(`${String(path)}/`)))
   vi.spyOn(fileIO, "readdirSync").mockImplementation(path => [...files.keys()].filter(name => name.startsWith(`${String(path)}/`) && !name.slice(String(path).length + 1).includes("/")).map(name => name.slice(String(path).length + 1)) as never)
   vi.spyOn(childIO, "execFileSync").mockImplementation((_file, args) => { if (args?.join(" ") !== "rev-parse HEAD") throw new Error("SYNTHETIC_HOST_GIT_UNEXPECTED"); return entry.head as never })
   const audited = retained.auditLeanCorrectionRetained({ schemaVersion: "lean-correction-supervisor-retained-snapshot-v8", allocation, request, entry, terminal, evidence, time, result, reuse, pairs: [pair], observations: [observation], sources, artifacts: {}, origin, journalBytes, supervisorReasonBytes: accounting.leanCanonicalBytes(reason) })
   const { root: _auditRoot, ...auditBody } = audited
   const check = rooted({ ...auditBody, attemptOrdinal: 1, cumulativeElapsedMs: 108000090, cumulativePhysicalBytes: extension.physicalFloorBytes, readerScratchHighWaterBytes: 512000000, readerInterval: interval, readerStartMs: at + 60, readerObservedMs: at + 80 })
   put(join(paths.store, paths.check), check)
-  return { mode, paths, files, put, input, allocation, ledger, request, entry, time, check }
+  return { mode, paths, files, put, input, allocation, ledger, request, entry, terminal, reason, result, rooted, time, check }
+}
+
+/** Controlled host reader completion; production wrapper, refusal, carry and
+ * hold seal execute unchanged against virtual IO. No ordinary reader is rerun. */
+const pendingBaselineV12Fixture = () => {
+  const s = acceptedV12Fixture(), paths = accounting.leanCorrectionRoutePaths("baseline", s.mode)
+  const request = correction.createLeanSupervisorRetestRequestDraftV12(s.mode, "baseline", { sourceRoot: s.request.sourceRoot, reviewRoot: s.request.reviewRoot, dataReviewRoot: s.request.dataReviewRoot, setupAccountingRoot: s.request.setupAccountingRoot!, reuseGrantRoot: s.request.reuseGrantRoot, authorizationRoot: s.request.authorizationRoot!, priorClosureRoot: s.request.priorClosureRoot!, continuationRoot: s.request.continuationRoot!, helperReviewRoot: s.request.helperReviewRoot!, helperBytesRoot: s.request.helperBytesRoot!, helperPath: correction.leanSupervisorRetestDocumentsV12("baseline").helper, acceptedCheckRoot: s.check.root, acceptedReaderCloseRoot: labRoot("synthetic-own-final", {}) })
+  const { root: _oldPredecessorRoot, ...prior } = s.input.predecessor
+  const predecessor = { ...prior, chargedMatches: 35, root: labRoot(prior.schemaVersion, { ...prior, chargedMatches: 35 }) }
+  const requestBytesRoot = accounting.leanBytesRoot(accounting.leanCanonicalBytes(request))
+  const allocation = accounting.createLeanSupervisorCorrectionAllocation({ ...s.input, route: "baseline", requestRoots: request.requestRoots, acceptedCheckRoot: request.acceptedCheckRoot!, acceptedReaderCloseRoot: request.acceptedReaderCloseRoot!, requestBytesRoot, predecessor }, 8)
+  const ledger = { directory: paths.store, allocation }, entry = { ...s.entry, allocationRoot: allocation.root, requestBytesRoot }
+  const entryBytesRoot = accounting.leanBytesRoot(accounting.leanCanonicalBytes(entry)), terminal = { ...s.terminal, allocationRoot: allocation.root, entryBytesRoot }
+  const { root: _oldReasonRoot, ...oldReason } = s.reason
+  const reason = s.rooted({ ...oldReason, allocationRoot: allocation.root, requestBytesRoot, entryBytesRoot })
+  const { root: _oldResultRoot, ...oldResult } = s.result
+  const result = s.rooted({ ...oldResult, route: "baseline", allocationRoot: allocation.root, requestBytesRoot, cumulativeCharged: 36 })
+  const check = s.rooted({ schemaVersion: "lean-correction-supervisor-retained-v8", accepted: true, route: "baseline", allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot, head: entry.head, attemptOrdinal: 1, currentCharged: 1, cumulativeCharged: 36, resultRoot: result.root })
+  s.put(paths.request, request)
+  for (const [name, value] of [["allocation.json", allocation], ["entry.json", entry], ["child-terminal.json", terminal], ["parent-supervisor-reasons.json", reason], ["result.json", result]] as const) s.put(join(paths.store, name), value)
+  vi.mocked(accounting.openLeanLedger).mockReturnValue(ledger)
+  vi.mocked(accounting.readLeanChildEntry).mockReturnValue(entry as never); vi.mocked(accounting.readLeanChildTerminal).mockReturnValue(terminal as never)
+  vi.mocked(accounting.readLeanLedger).mockReturnValue({ stopped: true, charged: 36, charges: new Map([[allocation.slots[0]!.root, {}]]) } as never)
+  const time = { ...s.time, active: true, starts: new Map<string, number>(), closes: new Map<string, number>(), closed: new Set<string>() }
+  vi.mocked(accounting.readLeanTimeAccounting).mockReturnValue(time)
+  vi.spyOn(correction, "inventoryLeanTwoPairNoRefundV11").mockImplementation(prior => ({ survivors: [...prior.survivors], allocatedDiskBytes: prior.allocatedDiskBytes }))
+  let fulfill!: (value: typeof check) => void, reject!: (error: Error) => void
+  const pending = new Promise<typeof check>((yes, no) => { fulfill = yes; reject = no })
+  // Attach immediately even against the pre-fix wrapper, which abandons this
+  // promise after its premature carry. The wrapper still must propagate it.
+  void pending.catch(() => undefined)
+  const reader = vi.spyOn(baselineRetained, "verifyLeanRetryBaselineRetainedV8").mockReturnValue(pending as never)
+  const close = () => {
+    time.active = false
+    const at = accounting.LEAN_SUPERVISOR_RETEST_V12_EXTENSION.startedAtMs
+    for (const [id, start, end] of [["correction-supervisor-baseline-v8-verifier", 60, 90], ["correction-supervisor-baseline-v8-reader-close", 90, 100]] as const) { time.starts.set(id, at + start); time.closes.set(id, at + end); time.closed.add(id) }
+  }
+  const finish = (success: boolean) => { close(); if (success) { s.put(join(paths.store, paths.check), check); fulfill(check) } else reject(new Error("CONTROLLED_BASELINE_READER_REJECTION")) }
+  return { ...s, paths, request, check, reader, finish }
 }
 
 describe("fresh v12 supervisor source-only admission", () => {
+  for (const success of [true, false]) it(`awaits the pending production baseline wrapper before ${success ? "fulfilled carry" : "rejected refusal and carry"}`, async () => {
+    const s = pendingBaselineV12Fixture(), carryPath = correction.leanSupervisorRetestDocumentsV12("baseline", s.mode).carry
+    const sealPath = join(s.paths.temp, "terminal-hold-complete-v12.json"), refusalPath = join(s.paths.temp, "result-reader-refusal-v12.json")
+    let settled = false
+    const action = Promise.resolve().then(() => retained.verifyLeanSupervisorRetestRetainedV12(s.paths.request, s.mode, "baseline"))
+    const observed = action.then(value => { settled = true; return { value, error: null } }, error => { settled = true; return { value: null, error } })
+    try {
+      await new Promise<void>(done => setImmediate(done))
+      expect(s.reader).toHaveBeenCalledExactlyOnceWith(s.paths.request, s.mode, undefined)
+      expect(settled).toBe(false)
+      expect([carryPath, sealPath, refusalPath, join(s.paths.temp, "terminal-hold-refusal-v12.json")].some(path => s.files.has(path))).toBe(false)
+      s.finish(success)
+      const outcome = await observed
+      expect(s.reader).toHaveBeenCalledTimes(1)
+      if (success) { expect(outcome.error).toBeNull(); expect(outcome.value).toEqual(s.check); expect(s.files.has(refusalPath)).toBe(false) }
+      else { expect(outcome.error).toBeInstanceOf(Error); expect(outcome.error.message).toBe("CONTROLLED_BASELINE_READER_REJECTION"); expect(s.files.has(refusalPath)).toBe(true) }
+      const carry = correction.readLeanCorrectionJson(carryPath) as retained.LeanSupervisorRetestTerminalCarryV12
+      expect(carry).toMatchObject({ authorizing: false, accepted: false, outcome: success ? "closed_result" : "failed_result", currentCharges: 1, cumulativeCharged: 36, allocatedDiskBytes: accounting.LEAN_SUPERVISOR_RETEST_V12_EXTENSION.physicalFloorBytes, closedAtMs: accounting.LEAN_SUPERVISOR_RETEST_V12_EXTENSION.startedAtMs + 100, cumulativeElapsedMs: 108000100 })
+      expect(s.files.has(sealPath)).toBe(true)
+      expect(s.files.has(join(s.paths.temp, "terminal-hold-refusal-v12.json"))).toBe(false)
+    } finally { s.finish(success); await observed; vi.restoreAllMocks() }
+  }, 30000)
   it("publishes and reauthenticates its saved accepted v12 closure through the full audit before its own baseline join", () => {
     try {
       const s = acceptedV12Fixture()

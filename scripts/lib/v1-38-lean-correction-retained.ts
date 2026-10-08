@@ -1235,9 +1235,9 @@ export const verifyLeanSupervisorRetestTerminalOnlyV12 = (path: string, mode: Le
   return report
 }
 /** The one appropriate ordinary reader, followed by finite non-authorizing carry. */
-export const verifyLeanSupervisorRetestRetainedV12 = (path: string, mode: LeanSupervisorRetestMode, route: LeanCorrectionRoute, precheck?: () => void) => {
+export const verifyLeanSupervisorRetestRetainedV12 = async (path: string, mode: LeanSupervisorRetestMode, route: LeanCorrectionRoute, precheck?: () => void) => {
   try {
-    const report = route === "baseline" ? verifyLeanRetryBaselineRetainedV8(path, mode, precheck) : verifyLeanCorrectionRetained(path, route, mode, precheck)
+    const report = await (route === "baseline" ? verifyLeanRetryBaselineRetainedV8(path, mode, precheck) : verifyLeanCorrectionRetained(path, route, mode, precheck))
     publishLeanSupervisorRetestTerminalCarryV12(mode, route)
     return report
   } catch (error) {
