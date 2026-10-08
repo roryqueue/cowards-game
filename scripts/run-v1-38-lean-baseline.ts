@@ -4,7 +4,7 @@ import { fork, execFileSync } from "node:child_process"
 import { randomBytes } from "node:crypto"
 import { join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
-import { leanCapsForAllocation } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { isLeanSupervisorRetestMode, leanCapsForAllocation, leanSupervisorAllocationMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { exactLabKeys, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createLeanCurrentBaselineAllocation, createLeanLedger, openLeanLedger, readLeanLedger, readLeanTimeAccounting, readLeanChildEntry, publishLeanChildEntry, beginLeanInterval, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, stopLeanLedger, verifyLeanEvidence, deriveLeanChildTerminal, publishLeanChildTerminal, cumulativeLeanPhysicalBytes, assertLeanPublicationCapacity, currentLeanElapsedMs, currentBaselineSlotKind, leanCanonicalBytes, leanBytesRoot, writeLeanAll, LEAN_BASELINE_REQUEST, LEAN_BASELINE_STORE, LEAN_BASELINE_WRITABLE_PATHS, LEAN_CAPS, LEAN_EXTERNAL_SCRATCH_RESERVE, type LeanExperimentLedger, type LeanChildEntryV2, type LeanSlot } from "../packages/strategy-lab/src/league/lean-experiment.js"
@@ -78,6 +78,48 @@ export const validateLeanSupervisorReasonBytes = (bytes: Uint8Array): LeanSuperv
   try { value = JSON.parse(Buffer.from(bytes).toString("utf8")) } catch { return fail("SUPERVISOR_REASONS") }
   if (!isLeanSupervisorReasonEnvelope(value) || leanBytesRoot(bytes) !== leanBytesRoot(leanCanonicalBytes(value))) return fail("SUPERVISOR_REASONS")
   return value
+}
+export const LEAN_SUPERVISOR_SAMPLING_OPERATIONS_V2 = Object.freeze(["none", "child_rss", "parent_rss", "time_budget", "threshold_kill", "unknown"] as const)
+export type LeanSupervisorSamplingOperationV2 = typeof LEAN_SUPERVISOR_SAMPLING_OPERATIONS_V2[number]
+export interface LeanSupervisorReasonEnvelopeV2 extends Omit<LeanSupervisorReasonEnvelope, "schemaVersion" | "observations"> {
+  schemaVersion: "lean-parent-supervisor-reasons-v2"
+  observations: LeanSupervisorReasonEnvelope["observations"] & {
+    resourceSamplingOperation: LeanSupervisorSamplingOperationV2
+    resourceSamplingSequence: number
+    resourceSamplingExitObserved: boolean
+  }
+}
+/** A distinct root domain; legacy v1 remains strict and rejects this schema. */
+export const leanSupervisorReasonRootV2 = (value: Omit<LeanSupervisorReasonEnvelopeV2, "root"> | LeanSupervisorReasonEnvelopeV2): LabRoot => {
+  const { root: _ignored, ...body } = value as LeanSupervisorReasonEnvelopeV2
+  return labRoot("lean-parent-supervisor-reasons-v2", body)
+}
+export const isLeanSupervisorReasonEnvelopeV2 = (value: unknown): value is LeanSupervisorReasonEnvelopeV2 => {
+  if (!value || typeof value !== "object" || !exactLabKeys(value, ["schemaVersion", "allocationRoot", "sourceRoot", "requestBytesRoot", "entryBytesRoot", "head", "parentPid", "childPid", "exitCode", "signal", "uncertain", "reasons", "observations", "root"])) return false
+  const v = value as LeanSupervisorReasonEnvelopeV2, o = v.observations
+  if (v.schemaVersion !== "lean-parent-supervisor-reasons-v2" || !o || !exactLabKeys(o, ["entry", "childReady", "resourceSampling", "finalIdentity", "failureReceipt", "cleanup", "terminalization", "initiatingCause", "resourceSamplingOperation", "resourceSamplingSequence", "resourceSamplingExitObserved"])) return false
+  const { resourceSamplingOperation, resourceSamplingSequence, resourceSamplingExitObserved, ...legacyObservations } = o
+  if (!LEAN_SUPERVISOR_SAMPLING_OPERATIONS_V2.includes(resourceSamplingOperation) || !Number.isInteger(resourceSamplingSequence) || resourceSamplingSequence < 0 || resourceSamplingSequence > 2147483647 || typeof resourceSamplingExitObserved !== "boolean") return false
+  if (o.resourceSampling === "exception" ? resourceSamplingOperation === "none" || resourceSamplingSequence === 0 : resourceSamplingOperation !== "none" || resourceSamplingSequence !== 0 || resourceSamplingExitObserved !== false) return false
+  const { root: _ignored, ...body } = v
+  const legacyBody = { ...body, schemaVersion: "lean-parent-supervisor-reasons-v1" as const, observations: legacyObservations }
+  // Reuse all v1 identity/reason consistency checks without accepting v2 as v1.
+  try {
+    if (!isLeanSupervisorReasonEnvelope({ ...legacyBody, root: labRoot("lean-parent-supervisor-reasons-v1", legacyBody) })) return false
+    return v.root === leanSupervisorReasonRootV2(v) && leanCanonicalBytes(v).length <= LEAN_SUPERVISOR_REASON_MAX_BYTES
+  } catch { return false }
+}
+export const validateLeanSupervisorReasonBytesV2 = (bytes: Uint8Array): LeanSupervisorReasonEnvelopeV2 => {
+  if (!(bytes instanceof Uint8Array) || bytes.length > LEAN_SUPERVISOR_REASON_MAX_BYTES) return fail("SUPERVISOR_REASONS_V2")
+  let value: unknown
+  try { value = JSON.parse(Buffer.from(bytes).toString("utf8")) } catch { return fail("SUPERVISOR_REASONS_V2") }
+  if (!isLeanSupervisorReasonEnvelopeV2(value) || leanBytesRoot(bytes) !== leanBytesRoot(leanCanonicalBytes(value))) return fail("SUPERVISOR_REASONS_V2")
+  return value
+}
+/** Saturation is local ordering only, not an elapsed clock or native cause. */
+export const nextLeanSupervisorSamplingSequenceV2 = (sequence: number): number => {
+  if (!Number.isInteger(sequence) || sequence < 0 || sequence > 2147483647) return fail("SUPERVISOR_SEQUENCE_V2")
+  return Math.min(2147483647, sequence + 1)
 }
 const SOURCE_PATHS = [
   "scripts/run-v1-38-lean-baseline.ts", "scripts/run-v1-38-lean-baseline.sh",
@@ -318,6 +360,10 @@ export const leanBoundedParentTimeBudget = (ledger: LeanExperimentLedger, termin
 }
 export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string; prospectiveStart?: { wallStartMs: number; monotonicStartNs: string }; beforeRelease?: () => void; terminalReserveMs?: number; supervisorObservation?: true; onChildCreated?: () => void; onPreEntryCleanup?: (value: { childPid: number; exitCode: number | null; signal: string | null }) => void }) => {
   const { ledger, requestPath, store: STORE } = options, allocation = ledger.allocation
+  // Allocation family is authenticated by the same strict caps/mode admission;
+  // a legacy caller's opt-in flag can never select reason-v2.
+  const reasonV2 = isLeanSupervisorRetestMode(leanSupervisorAllocationMode(allocation))
+  const supervisorObservation = reasonV2 || options.supervisorObservation === true
   const committed = execFileSync("git", ["show", `HEAD:${options.allocationPath}`], { maxBuffer: 262144 })
   if (leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(allocation)) || leanBytesRoot(committed) !== leanBytesRoot(safeBytes(options.allocationPath))) return fail("UNCOMMITTED_ALLOCATION")
   if (readLeanLedger(ledger).events.length || readLeanTimeAccounting(ledger).active || readLeanTimeAccounting(ledger).starts.has("pilot-entry") || readdirSync(STORE).some(name => ["entry.json", "child-terminal.json", "result.json", "entry-failure.json"].includes(name))) return fail("ALLOCATION_USED")
@@ -330,7 +376,17 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
   options.onChildCreated?.()
   let entered = false, uncertain = false, childRssObservedBytes: number | null = null, childFailure: LeanChildFailureReceipt | LeanChildFailureReceiptV7 | null = null
   const reasons = new Set<LeanSupervisorReasonCode>()
-  const observe = (reason: LeanSupervisorReasonCode) => { if (options.supervisorObservation === true) reasons.add(reason) }
+  const observe = (reason: LeanSupervisorReasonCode) => { if (supervisorObservation) reasons.add(reason) }
+  let exitEventObserved = false, samplingSequence = 0
+  let samplingOperation: LeanSupervisorSamplingOperationV2 = "unknown"
+  let firstSamplingException: { resourceSamplingOperation: LeanSupervisorSamplingOperationV2; resourceSamplingSequence: number; resourceSamplingExitObserved: boolean } | null = null
+  const sample = <T>(operation: Exclude<LeanSupervisorSamplingOperationV2, "none" | "unknown">, run: () => T): T => {
+    samplingSequence = nextLeanSupervisorSamplingSequenceV2(samplingSequence)
+    samplingOperation = operation
+    const value = run()
+    samplingOperation = "unknown"
+    return value
+  }
   let finalIdentity: LeanSupervisorReasonEnvelope["observations"]["finalIdentity"] = "matched"
   child.on("error", () => { uncertain = true; observe("child_error") })
   child.on("message", leanParentFailureReceiptHandler(ledger, child.pid, receipt => { childFailure = receipt }, reason => { uncertain = true; observe(reason) }))
@@ -349,13 +405,16 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     child.send({ release: token })
     const period = setInterval(() => {
       try {
-        const rss = rssOf(child.pid!)
+        const rss = sample("child_rss", () => rssOf(child.pid!))
         childRssObservedBytes = Math.max(childRssObservedBytes ?? 0, rss)
-        if (process.memoryUsage().rss + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes || leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).elapsedMs >= leanCapsForAllocation(allocation).elapsedMs) { uncertain = true; observe("resource_threshold"); child.kill("SIGKILL") }
-      } catch { uncertain = true; observe("resource_sampling_exception"); child.kill("SIGKILL") }
+        if (sample("parent_rss", () => process.memoryUsage().rss) + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes || sample("time_budget", () => leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).elapsedMs >= leanCapsForAllocation(allocation).elapsedMs)) { uncertain = true; observe("resource_threshold"); sample("threshold_kill", () => child.kill("SIGKILL")) }
+      } catch {
+        if (!firstSamplingException) firstSamplingException = { resourceSamplingOperation: samplingOperation, resourceSamplingSequence: Math.max(1, samplingSequence), resourceSamplingExitObserved: exitEventObserved }
+        uncertain = true; observe("resource_sampling_exception"); child.kill("SIGKILL")
+      }
     }, 250)
     const timeout = setTimeout(() => { uncertain = true; observe("deadline_timeout"); child.kill("SIGKILL") }, leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).timeoutMs)
-    const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => resolveExit({ code, signal })))
+    const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => { exitEventObserved = true; resolveExit({ code, signal }) }))
     clearInterval(period); clearTimeout(timeout)
     try { if (head() !== fixedHead || options.manifestRoot() !== fixedManifest || requestBytesRoot(requestPath) !== fixedRequest) { uncertain = true; observe("final_identity_mismatch"); finalIdentity = "mismatch" } } catch { uncertain = true; observe("final_identity_exception"); finalIdentity = "exception" }
     const terminalFs = statfsSync(STORE, { bigint: true }), terminalFree = terminalFs.bavail * terminalFs.bsize
@@ -363,7 +422,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
       receipt => exclusive(join(STORE, "entry-failure.json"), receipt, ledger),
       receiptUncertain => {
         if (receiptUncertain) { uncertain = true; observe("failure_receipt_publication_uncertain") }
-        if (options.supervisorObservation === true) {
+        if (supervisorObservation) {
           try {
             const body: Omit<LeanSupervisorReasonEnvelope, "root"> = {
               schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: allocation.root, sourceRoot: options.sourceRoot,
@@ -372,8 +431,11 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
               reasons: LEAN_SUPERVISOR_REASON_CODES.filter(reason => reasons.has(reason)),
               observations: { entry: "published", childReady: "observed", resourceSampling: reasons.has("resource_sampling_exception") ? "exception" : "observed", finalIdentity, failureReceipt: childFailure === null ? "absent" : receiptUncertain ? "publication_failed" : "published", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" },
             }
-            const envelope = { ...body, root: labRoot("lean-parent-supervisor-reasons-v1", body) }
-            if (!isLeanSupervisorReasonEnvelope(envelope)) return fail("SUPERVISOR_REASONS")
+            const envelope = reasonV2 ? (() => {
+              const v2Body: Omit<LeanSupervisorReasonEnvelopeV2, "root"> = { ...body, schemaVersion: "lean-parent-supervisor-reasons-v2", observations: { ...body.observations, ...(firstSamplingException ?? { resourceSamplingOperation: "none" as const, resourceSamplingSequence: 0, resourceSamplingExitObserved: false }) } }
+              return { ...v2Body, root: leanSupervisorReasonRootV2(v2Body) }
+            })() : { ...body, root: labRoot("lean-parent-supervisor-reasons-v1", body) }
+            if (!(reasonV2 ? isLeanSupervisorReasonEnvelopeV2(envelope) : isLeanSupervisorReasonEnvelope(envelope))) return fail("SUPERVISOR_REASONS")
             exclusive(join(STORE, LEAN_SUPERVISOR_REASON_FILE), envelope, ledger)
           } catch {
             // No retry or success override: existing terminal/cleanup attempts

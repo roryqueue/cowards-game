@@ -4,13 +4,32 @@ import { LEAN_TWO_PAIR_V11_EXTENSION } from "../../packages/strategy-lab/src/lea
 import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCurrentBaselineAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanColdProcedureRoot, compactLeanBaselineCell, executeLeanCurrentPipeline, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
-import { auditLeanCurrentBaselineRetained, assertLeanRetryBaselineJoinV8, verifyLeanRetryBaselineRetainedV8, type LeanBaselineRetainedSnapshot } from "./v1-38-lean-baseline-retained.js"
+import { auditLeanCurrentBaselineRetained, assertLeanRetryBaselineJoinV8, verifyLeanRetryBaselineRetainedV8, assertLeanSupervisorReasonCustodyV2, type LeanBaselineRetainedSnapshot } from "./v1-38-lean-baseline-retained.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
 import { CANONICAL_ARENA_CATALOG_V1_37, type StrategyInputV119 } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { LEAN_BASELINE_REQUIRED_METRICS, type LeanBaselineMetricReceipt } from "./v1-38-lean-baseline-metrics.js"
 
 const root = (name: string): LabRoot => labRoot("lean-retained-test-v1", name)
+describe("strict v12 finite attribution custody join", () => {
+  const fixture = () => {
+    const actual = { allocationRoot: root("allocation"), sourceRoot: root("source"), requestBytesRoot: root("request"), entryBytesRoot: root("entry"), head: "a".repeat(40), parentPid: 100, childPid: 101, exitCode: 0, signal: null, status: "child_failed" as const }
+    const { status: _status, ...identity } = actual
+    const body = { schemaVersion: "lean-parent-supervisor-reasons-v2", ...identity, uncertain: true, reasons: ["resource_sampling_exception"], observations: { entry: "published", childReady: "observed", resourceSampling: "exception", resourceSamplingOperation: "child_rss", resourceSamplingSequence: 1, resourceSamplingExitObserved: false, finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
+    return { actual, bytes: leanCanonicalBytes({ ...body, root: labRoot("lean-parent-supervisor-reasons-v2", body) }) }
+  }
+  it("joins authentic finite failed evidence but rejects forged clean terminal and every identity mutation", () => {
+    const { actual, bytes } = fixture()
+    expect(assertLeanSupervisorReasonCustodyV2(bytes, actual)).toMatchObject({ uncertain: true })
+    for (const patch of [{ allocationRoot: root("cross") }, { sourceRoot: root("cross") }, { requestBytesRoot: root("cross") }, { entryBytesRoot: root("cross") }, { head: "b".repeat(40) }, { parentPid: 102 }, { childPid: 102 }, { exitCode: 1 }, { signal: "SIGKILL" }, { status: "child_exited" }, { rawError: "PRIVATE" }]) expect(() => assertLeanSupervisorReasonCustodyV2(bytes, { ...actual, ...patch } as never)).toThrow()
+  })
+  it("rejects reason-v1 even when every actual terminal identity matches", () => {
+    const { actual, bytes } = fixture(), v = JSON.parse(Buffer.from(bytes).toString())
+    const { resourceSamplingOperation: _operation, resourceSamplingSequence: _sequence, resourceSamplingExitObserved: _exit, ...observations } = v.observations
+    const { root: _root, ...body } = { ...v, schemaVersion: "lean-parent-supervisor-reasons-v1", observations }
+    expect(() => assertLeanSupervisorReasonCustodyV2(leanCanonicalBytes({ ...body, root: labRoot("lean-parent-supervisor-reasons-v1", body) }), actual)).toThrow()
+  })
+})
 describe("selected retry baseline authority owner", () => {
   it("v11 source publication authority uses one audited closure and rejects cross-pair FINAL", () => {
     const b = LEAN_TWO_PAIR_V11_EXTENSION, check = { root: root("v11-check"), allocationRoot: root("v11-diag"), readerCloseMs: b.startedAtMs + 1 }

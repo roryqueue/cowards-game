@@ -19,10 +19,26 @@ import { emitTacticalSource } from "../../packages/strategy-oracle-tactical/src/
 import { authenticateLeanBaselineReview, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselineSourceManifest } from "../run-v1-38-lean-baseline.js"
 import { authenticateLeanSupervisorDiagnosticCheck, authenticateLeanRetryClosureV8 } from "./v1-38-lean-correction-retained.js"
 import { admitLeanRetryTimeboxExtension, admitLeanAllocation, leanCorrectionRoutePaths, leanSupervisorAllocationMode, isLeanRetryMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { leanCorrectionSourceManifest, authenticateLeanTwoPairAcceptedJoinV11 } from "../run-v1-38-lean-correction.js"
-import { isLeanTwoPairMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { leanCorrectionSourceManifest, authenticateLeanTwoPairAcceptedJoinV11, authenticateLeanSupervisorRetestAcceptedJoinV12 } from "../run-v1-38-lean-correction.js"
+import { isLeanTwoPairMode, isLeanSupervisorRetestMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { validateLeanSupervisorReasonBytesV2 } from "../run-v1-38-lean-baseline.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_RETAINED_${code}`) }
+/** Strict v12 custody join, shared by ordinary and terminal-only readers.
+ * The caller authenticates the actual allocation/request/entry/terminal files;
+ * this function accepts no filenames, IO, legacy upgrades or implied cleanup. */
+export const assertLeanSupervisorReasonCustodyV2 = (bytes: Uint8Array, actual: {
+  allocationRoot: LabRoot; sourceRoot: LabRoot; requestBytesRoot: LabRoot; entryBytesRoot: LabRoot
+  head: string; parentPid: number; childPid: number; exitCode: number | null
+  signal: NodeJS.Signals | null; status: "child_exited" | "child_failed"
+}) => {
+  const reason = validateLeanSupervisorReasonBytesV2(bytes)
+  if (!exactLabKeys(actual, ["allocationRoot", "sourceRoot", "requestBytesRoot", "entryBytesRoot", "head", "parentPid", "childPid", "exitCode", "signal", "status"]) ||
+    reason.allocationRoot !== actual.allocationRoot || reason.sourceRoot !== actual.sourceRoot || reason.requestBytesRoot !== actual.requestBytesRoot || reason.entryBytesRoot !== actual.entryBytesRoot || reason.head !== actual.head || reason.parentPid !== actual.parentPid || reason.childPid !== actual.childPid || reason.exitCode !== actual.exitCode || reason.signal !== actual.signal || !["child_exited", "child_failed"].includes(actual.status)) return fail("SUPERVISOR_CUSTODY_V2")
+  const clean = reason.exitCode === 0 && !reason.uncertain && reason.observations.failureReceipt === "absent"
+  if (actual.status !== (clean ? "child_exited" : "child_failed")) return fail("SUPERVISOR_CUSTODY_V2")
+  return reason
+}
 /** Selected v8 baseline authority is the actual diagnostic check + FINAL close,
  * not an observation, synthetic report, or terminal-only/refusal receipt. */
 export const assertLeanRetryBaselineJoinV8 = (allocation: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanCorrectionAllocation, check: { root: LabRoot; allocationRoot: LabRoot; readerCloseMs: number }, closure: { attemptOrdinal: number; closureClass: string; checkRoot: LabRoot | null; allocationRoot: LabRoot | null; root: LabRoot; readerCloseMs: number; finalReaderClose: boolean; acceptedCheckAbsent: boolean; sourceRoot: LabRoot; head: string; timeboxExtension?: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanRetryTimeboxExtension }, head: string) => {
@@ -34,7 +50,7 @@ export const authenticateLeanRetryBaselineAuthorityV8 = (allocation: import("../
   admitLeanAllocation(allocation)
   const mode = leanSupervisorAllocationMode(allocation)
   if (!isLeanRetryMode(mode)) return fail("RETRY_ACCEPTED_FINAL_JOIN")
-  const { accepted: check, closure } = isLeanTwoPairMode(mode) ? authenticateLeanTwoPairAcceptedJoinV11(mode) : { accepted: authenticateLeanSupervisorDiagnosticCheck(mode), closure: authenticateLeanRetryClosureV8(mode) }
+  const { accepted: check, closure } = isLeanSupervisorRetestMode(mode) ? authenticateLeanSupervisorRetestAcceptedJoinV12(mode) : isLeanTwoPairMode(mode) ? authenticateLeanTwoPairAcceptedJoinV11(mode) : { accepted: authenticateLeanSupervisorDiagnosticCheck(mode), closure: authenticateLeanRetryClosureV8(mode) }
   assertLeanRetryBaselineJoinV8(allocation, check, closure, head)
   const lean = { diagnostic: leanCorrectionRoutePaths("diagnostic", mode), baseline: leanCorrectionRoutePaths("baseline", mode) }
   const diagnostic = openLeanLedger(lean.diagnostic.store), diagnosticEntry = readLeanChildEntry(diagnostic)
@@ -59,6 +75,8 @@ export const verifyLeanRetryBaselineRetainedV8 = async (path: string, mode: impo
   const ledger = openLeanLedger(paths.store), allocation = lean.admitLeanAllocation(ledger.allocation)
   if (!("route" in allocation) || allocation.route !== "baseline") return fail("RETRY_ACCEPTED_FINAL_JOIN")
   authenticateLeanRetryBaselineAuthorityV8(allocation, readLeanChildEntry(ledger).head)
+  // The selected v12 wrapper enters through this owner; invoke the shared
+  // generic audit exactly once, not the wrapper again (which would recurse).
   return reader.verifyLeanCorrectionRetained(path, "baseline", mode, precheck)
 }
 const rooted = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[0-9a-f]{64}$/u.test(v)

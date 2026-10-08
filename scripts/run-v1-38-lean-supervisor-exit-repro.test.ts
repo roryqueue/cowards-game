@@ -54,11 +54,12 @@ const retryAllocation = () => {
 }
 const retestAllocation = () => {
   const extension = lean.LEAN_SUPERVISOR_RETEST_V12_EXTENSION
-  const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 34, elapsedUpperBoundMs: extension.priorElapsedMs, allocatedDiskBytes: extension.physicalFloorBytes, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: [{ identity: ".strategy-lab/synthetic-v12-not-created", allocatedBytes: extension.physicalFloorBytes }] }
+  const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 35, elapsedUpperBoundMs: extension.priorElapsedMs, allocatedDiskBytes: extension.physicalFloorBytes, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: Array.from({ length: 661 }, (_, n) => ({ identity: `.strategy-lab/synthetic-v12-not-created-${n}`, allocatedBytes: n === 0 ? extension.physicalFloorBytes : 0 })) }
   return lean.createLeanSupervisorCorrectionAllocation({ timeboxExtension: extension, sourceRoot: root("source"), reviewRoot: root("review"), coldRoot: root("cold"), planRoot: extension.planRoot, seed: "synthetic-v12", candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, n) => root(`v12-request-${n}`)), route: "baseline", reuseGrantRoot: root("reuse"), supervisorDecisionRoot: extension.approvalRoot, acceptedCheckRoot: root("check"), acceptedReaderCloseRoot: root("final"), requestBytesRoot: root("request"), dataReviewRoot: root("data"), setupAccountingRoot: root("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, attemptOrdinal: 1, priorClosureRoot: root("history-carry"), continuationRoot: root("continuation"), predecessor: { ...p, root: labRoot(p.schemaVersion, p) } }, 8)
 }
-const begin = async (mode: Mode, v12 = false) => {
+const begin = async (mode: Mode, v12 = false, deadlineFixture = false) => {
   vi.useFakeTimers()
+  const timers = deadlineFixture ? vi.spyOn(globalThis, "setTimeout") : null
   const input = { seed: "synthetic-parent", sourceRoot: root("source"), planRoot: root("plan"), coldRoot: root("cold") }
   const predecessor = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 11, elapsedUpperBoundMs: 3_319_046, allocatedDiskBytes: 0, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: [{ identity: ".strategy-lab/synthetic-not-created", allocatedBytes: 0 }] }
   const allocation = v12 ? retestAllocation() : mode === "reserve" ? retryAllocation() : lean.createLeanCorrectionAllocation({ ...input, reviewRoot: root("review"), candidateRoots: parent.deriveLeanBaselineCandidateRoots(input.coldRoot), requestRoots: parent.deriveLeanBaselineRequestRoots(input), route: "baseline", reuseGrantRoot: root("reuse"), diagnosisRoot: root("diagnosis"), predecessor: { ...predecessor, root: labRoot(predecessor.schemaVersion, predecessor) } })
@@ -80,7 +81,7 @@ const begin = async (mode: Mode, v12 = false) => {
   child.emit("message", { ready: child.pid })
   await Promise.resolve(); await Promise.resolve()
   expect(host.entry).not.toBeNull()
-  return { child, settled }
+  return { child, settled, timers }
 }
 const exit = () => { host.child.exitCode = 0; host.order.push("exit_event"); host.child.emit("exit", 0, null) }
 const reason = () => parent.validateLeanSupervisorReasonBytes(host.files.get(parent.LEAN_SUPERVISOR_REASON_FILE)!)
@@ -147,16 +148,15 @@ describe("current synthetic supervisor failure mechanism", () => {
   })
   it("v12 clean control and deadline keep zero/none attribution", async () => {
     for (const deadline of [false, true]) {
-      const timers = vi.spyOn(globalThis, "setTimeout")
-      const run = await begin("clean", true)
-      if (deadline) (timers.mock.calls.find(call => call[1] === lean.LEAN_SUPERVISOR_RETEST_V12_EXTENSION.elapsedMs)![0] as () => void)()
+      const run = await begin("clean", true, deadline)
+      if (deadline) (run.timers!.mock.calls.find(call => call[1] === lean.LEAN_SUPERVISOR_RETEST_V12_EXTENSION.elapsedMs)![0] as () => void)()
       else await vi.advanceTimersByTimeAsync(250)
       exit()
       expect((await run.settled).rejected).toBe(deadline)
       const retained = parent.validateLeanSupervisorReasonBytesV2(host.files.get(parent.LEAN_SUPERVISOR_REASON_FILE)!)
       expect(retained.observations).toMatchObject({ resourceSamplingOperation: "none", resourceSamplingSequence: 0, resourceSamplingExitObserved: false })
       expect(retained.reasons).toEqual(deadline ? ["deadline_timeout"] : [])
-      timers.mockRestore()
+      run.timers?.mockRestore()
     }
   })
 })

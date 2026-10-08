@@ -13,8 +13,8 @@ import { leanBaselineMatchSeed } from "./lib/v1-38-lean-baseline-match.js"
 const root = (name: string) => labRoot("baseline-cli-test", name)
 
 describe("additive finite supervisor reason-v2 contract", () => {
-  const fixture = () => {
-    const body = { schemaVersion: "lean-parent-supervisor-reasons-v2" as const, allocationRoot: root("allocation"), sourceRoot: root("source"), requestBytesRoot: root("request"), entryBytesRoot: root("entry"), head: "a".repeat(40), parentPid: 100, childPid: 101, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown", resourceSamplingOperation: "none", resourceSamplingSequence: 0, resourceSamplingExitObserved: false } }
+  const fixture = (): parentApi.LeanSupervisorReasonEnvelopeV2 => {
+    const body: Omit<parentApi.LeanSupervisorReasonEnvelopeV2, "root"> = { schemaVersion: "lean-parent-supervisor-reasons-v2", allocationRoot: root("allocation"), sourceRoot: root("source"), requestBytesRoot: root("request"), entryBytesRoot: root("entry"), head: "a".repeat(40), parentPid: 100, childPid: 101, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown", resourceSamplingOperation: "none", resourceSamplingSequence: 0, resourceSamplingExitObserved: false } }
     return { ...body, root: labRoot("lean-parent-supervisor-reasons-v2", body) }
   }
   const reroot = (value: any) => { const { root: _ignored, ...body } = value; return { ...body, root: labRoot("lean-parent-supervisor-reasons-v2", body) } }
@@ -35,6 +35,12 @@ describe("additive finite supervisor reason-v2 contract", () => {
     expect(parentApi.isLeanSupervisorReasonEnvelopeV2(reroot({ ...exception, uncertain: false }))).toBe(false)
     expect(parentApi.isLeanSupervisorReasonEnvelopeV2(reroot({ ...exception, rawError: "PRIVATE" }))).toBe(false)
     expect(parentApi.isLeanSupervisorReasonEnvelopeV2({ ...exception, root: root("wrong") })).toBe(false)
+  })
+  it("saturates operation order without wrapping or accepting invalid counters", () => {
+    expect(parentApi.nextLeanSupervisorSamplingSequenceV2(0)).toBe(1)
+    expect(parentApi.nextLeanSupervisorSamplingSequenceV2(2147483646)).toBe(2147483647)
+    expect(parentApi.nextLeanSupervisorSamplingSequenceV2(2147483647)).toBe(2147483647)
+    for (const invalid of [-1, 0.5, 2147483648, NaN, Infinity]) expect(() => parentApi.nextLeanSupervisorSamplingSequenceV2(invalid)).toThrow()
   })
 })
 
