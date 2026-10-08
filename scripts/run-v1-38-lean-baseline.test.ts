@@ -9,6 +9,8 @@ import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import * as parentApi from "./run-v1-38-lean-baseline.js"
 import { admitsLeanBaselineReviewAgents, assertLeanBaselineWritableScope, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselinePair, leanBaselineSourceManifest, parseLeanBaselineCommand } from "./run-v1-38-lean-baseline.js"
 import { leanBaselineMatchSeed } from "./lib/v1-38-lean-baseline-match.js"
+import { validateLeanPreparationContinuationReasonJoinV13 } from "./lib/v1-38-lean-correction-retained.js"
+import { assertLeanSupervisorReasonCustodyV2 } from "./lib/v1-38-lean-baseline-retained.js"
 
 const root = (name: string) => labRoot("baseline-cli-test", name)
 
@@ -92,6 +94,34 @@ const beginParent = (enabled: boolean, configure?: () => void) => {
 }
 const readyParent = async (child: ReturnType<typeof beginParent>["child"]) => { child.emit("message", { ready: child.pid }); await Promise.resolve(); await Promise.resolve() }
 const exitParent = (child: ReturnType<typeof beginParent>["child"]) => { child.exitCode = 0; child.emit("exit", 0, null) }
+
+const preparationParentAllocation = (mode: "v12-1" | "v13-1") => {
+  const extension = mode === "v13-1" ? lean.LEAN_PREPARATION_CONTINUATION_V13_EXTENSION : lean.LEAN_SUPERVISOR_RETEST_V12_EXTENSION
+  const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 34, elapsedUpperBoundMs: extension.priorElapsedMs, allocatedDiskBytes: extension.physicalFloorBytes, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: Array.from({ length: 695 }, (_, ordinal) => ({ identity: `.strategy-lab/inert-parent-survivor-${ordinal}`, allocatedBytes: 4096 })) }
+  return lean.createLeanSupervisorCorrectionAllocation({ sourceRoot: root("source"), reviewRoot: root("review"), coldRoot: root("cold"), planRoot: extension.planRoot, seed: "inert-preparation-parent", candidateRoots: [root("a"), root("b")], requestRoots: [root("request")], route: "diagnostic", reuseGrantRoot: root("reuse"), supervisorDecisionRoot: extension.approvalRoot, acceptedCheckRoot: null, acceptedReaderCloseRoot: null, requestBytesRoot: root("request"), dataReviewRoot: root("data"), setupAccountingRoot: root("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, timeboxExtension: extension, attemptOrdinal: 1, priorClosureRoot: root("old-carry"), continuationRoot: root("continuation"), predecessor: { ...p, root: labRoot(p.schemaVersion, p) } }, 8)
+}
+describe("actual authenticated preparation parent reason publication", () => {
+  it.each([false, true])("publishes actual v13 reason-v2 accepted by both strict consumers (legacy opt-in %s)", async enabled => {
+    const { child, settled } = beginParent(enabled, () => { host.allocation = preparationParentAllocation("v13-1") })
+    await readyParent(child); exitParent(child)
+    expect((await settled).error).toBeNull()
+    const bytes = host.files.get("parent-supervisor-reasons.json")!
+    expect(bytes).toBeDefined()
+    const reason = parentApi.validateLeanSupervisorReasonBytesV2(bytes)
+    const entry = host.entry, terminal = host.terminal
+    expect(assertLeanSupervisorReasonCustodyV2(bytes, { allocationRoot: entry.allocationRoot, sourceRoot: entry.sourceRoot, requestBytesRoot: entry.requestBytesRoot, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(entry)), head: entry.head, parentPid: entry.parentPid, childPid: entry.childPid, exitCode: terminal.exitCode, signal: terminal.signal, status: terminal.status })).toEqual(reason)
+    expect(validateLeanPreparationContinuationReasonJoinV13(bytes, entry, terminal)).toEqual(reason)
+    expect(host.order.indexOf("parent-supervisor-reasons.json")).toBeLessThan(host.order.indexOf("derive-terminal"))
+    expect(reason.observations.initiatingCause).toBe("unknown")
+  })
+  it("keeps the strict v12 predicate narrow and its actual no-opt-in reason-v2 publication unchanged", async () => {
+    expect(lean.isLeanSupervisorRetestMode("v13-1")).toBe(false)
+    const { child, settled } = beginParent(false, () => { host.allocation = preparationParentAllocation("v12-1") })
+    await readyParent(child); exitParent(child)
+    expect((await settled).error).toBeNull()
+    expect(parentApi.validateLeanSupervisorReasonBytesV2(host.files.get("parent-supervisor-reasons.json")!).schemaVersion).toBe("lean-parent-supervisor-reasons-v2")
+  })
+})
 
 const timeboxBaseline = (extended: boolean, bookkeeping = false) => {
   const extension = bookkeeping ? lean.LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION : lean.LEAN_RETRY_V8_TIMEBOX_EXTENSION
