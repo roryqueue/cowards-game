@@ -8,8 +8,8 @@ import {
   type StrategyRuntimeMetadata,
 } from "@cowards/spec"
 import { createStrategyRevisionId, hashStrategySource } from "./hash.js"
-import { buildTypeScriptSourceArtifact } from "./source-artifact.js"
-import { validateStrategySource } from "./validation.js"
+import { buildTypeScriptSourceArtifactFromCompilation } from "./source-artifact.js"
+import { validateStrategySourceWithCompilation } from "./validation.js"
 
 const deepFreeze = <T>(value: T): T => {
   if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
@@ -31,16 +31,22 @@ export const buildStrategyRevision = (input: {
 }): StrategyRevision => {
   const sourceHash = hashStrategySource(input.source)
   const runtime = input.runtime ?? defaultRuntimeMetadata("typescript")
-  const validation = validateStrategySource(input.source, { runtime })
+  const { validation, transpiled } = validateStrategySourceWithCompilation(
+    input.source,
+    { runtime },
+  )
   const metadata = input.metadata ?? {}
   const sourceArtifact =
     runtime.language.id === "typescript"
       ? (metadata.sourceArtifact ??
-        buildTypeScriptSourceArtifact({
-          source: input.source,
-          validation,
-          runtime,
-        }))
+        buildTypeScriptSourceArtifactFromCompilation(
+          {
+            source: input.source,
+            validation,
+            runtime,
+          },
+          transpiled,
+        ))
       : metadata.sourceArtifact
   const compatibilityKey = runtimeCompatibilityKey({
     runtime,

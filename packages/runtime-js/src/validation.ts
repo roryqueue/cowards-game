@@ -191,7 +191,8 @@ const ASYNC_METHOD_PATTERNS = [
   /\bsoldierBrain\s*:\s*async\b/,
 ]
 
-export const validateStrategySource = (
+/** Internal module seam: computes its own real compilation, never accepts one. */
+export const validateStrategySourceWithCompilation = (
   source: string,
   options?: {
     runtimeVersion?: string
@@ -199,7 +200,10 @@ export const validateStrategySource = (
     engineVersion?: string
     runtime?: unknown
   },
-): StrategyRevisionValidationReport => {
+): {
+  validation: StrategyRevisionValidationReport
+  transpiled: ReturnType<typeof transpileStrategySource>
+} => {
   const sourceBytes = sourceByteLength(source)
   const errors: StrategyRevisionValidationIssue[] = []
   const forbiddenPatterns: string[] = []
@@ -311,7 +315,7 @@ export const validateStrategySource = (
     }
   }
 
-  return {
+  const validation: StrategyRevisionValidationReport = {
     valid: errors.length === 0,
     errors,
     warnings: runtimeIssues.filter(
@@ -326,4 +330,16 @@ export const validateStrategySource = (
       engine: engineVersion,
     },
   }
+  return { validation, transpiled }
 }
+
+export const validateStrategySource = (
+  source: string,
+  options?: {
+    runtimeVersion?: string
+    specVersion?: string
+    engineVersion?: string
+    runtime?: unknown
+  },
+): StrategyRevisionValidationReport =>
+  validateStrategySourceWithCompilation(source, options).validation

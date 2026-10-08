@@ -59,7 +59,7 @@ export const LEAN_TWO_PAIR_V11_PLAN = `${LEAN_REMAINING_V9_PHASE}265-16-TWO-PAIR
 export const leanTwoPairDocumentsV11 = (route: LeanCorrectionRoute, mode: LeanTwoPairMode) => {
   if (!isLeanTwoPairMode(mode) || route !== "diagnostic" && route !== "baseline") return fail("ARGUMENTS")
   const label = `${route.toUpperCase()}-${mode.toUpperCase()}`
-  return Object.freeze({ review: `${LEAN_REMAINING_V9_PHASE}265-16-TWO-PAIR-SOURCE-REVIEW-v2.md`, dataReview: `${LEAN_REMAINING_V9_PHASE}265-16-TWO-PAIR-${label}-DATA-REVIEW-v1.md`, helperReview: `${LEAN_REMAINING_V9_PHASE}265-16-TWO-PAIR-${label}-HELPER-REVIEW-v1.md`, authorization: `.strategy-lab/lean-retry-authorization-${route}-${mode}.json`, continuation: `.strategy-lab/lean-retry-continuation-${mode}.json`, setup: leanRetrySetupPath(mode), carry: join(leanCorrectionRoutePaths(route, mode).temp, "terminal-carry-v11.json"), pairClosure: `.strategy-lab/lean-pair-closure-${mode}.json` })
+  return Object.freeze({ review: `${LEAN_REMAINING_V9_PHASE}265-16-TWO-PAIR-SOURCE-REVIEW-${mode === "v11-2" ? "v3" : "v2"}.md`, dataReview: `${LEAN_REMAINING_V9_PHASE}265-16-TWO-PAIR-${label}-DATA-REVIEW-v1.md`, helperReview: `${LEAN_REMAINING_V9_PHASE}265-16-TWO-PAIR-${label}-HELPER-REVIEW-v1.md`, authorization: `.strategy-lab/lean-retry-authorization-${route}-${mode}.json`, continuation: `.strategy-lab/lean-retry-continuation-${mode}.json`, setup: leanRetrySetupPath(mode), carry: join(leanCorrectionRoutePaths(route, mode).temp, "terminal-carry-v11.json"), pairClosure: `.strategy-lab/lean-pair-closure-${mode}.json` })
 }
 /** Exact MAIN authoring destinations, available without any I/O or execution. */
 export const leanRemainingDocumentsV9 = (route: LeanCorrectionRoute, mode: LeanRetryMode) => {
@@ -232,6 +232,7 @@ export const leanCorrectionSourceManifest = (supervisor: LeanSupervisorMode = fa
     assertLeanRetryExtensionDocumentsV8(extension, supervisor)
     const closure = new Map(leanCorrectionSourceManifest("v9-1", LEAN_REMAINING_V9_EXTENSION).entries.map(entry => [entry.path, entry]))
     for (const path of [LEAN_TWO_PAIR_V11_APPROVAL, LEAN_TWO_PAIR_V11_PAIRS_APPROVAL, LEAN_TWO_PAIR_V11_PLAN, `${LEAN_REMAINING_V9_PHASE}265-16-TWO-PAIR-RESEARCH-v1.md`, "packages/strategy-lab/src/league/lean-experiment.test.ts"]) closure.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
+    for (const path of ["packages/runtime-js/src/revision-compile-once.test.ts", "scripts/run-v1-38-lean-compile-once.test.ts", ...["RESEARCH-v1", "PLAN-v1", "PLAN-CHECK-v1"].map(name => `${LEAN_REMAINING_V9_PHASE}265-16-TWO-PAIR-COMPILE-ONCE-${name}.md`)]) closure.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
     const entries = [...closure.values()].sort((a, b) => a.path.localeCompare(b.path))
     return { entries, root: labRoot("lean-two-pair-reviewed-source-v11", { entries, extension, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())), brokerRoot: leanBytesRoot(Buffer.from(buildLeanContainerBrokerSourceV7())) }) }
   }

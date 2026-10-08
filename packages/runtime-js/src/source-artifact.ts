@@ -88,7 +88,21 @@ export const buildTypeScriptSourceArtifact = (input: {
   validation: StrategyRevisionValidationReport
   runtime: StrategyRuntimeMetadata
 }): SourceLanguageStrategyArtifact | null => {
-  const transpiled = transpileStrategySource(input.source)
+  return buildTypeScriptSourceArtifactFromCompilation(
+    input,
+    transpileStrategySource(input.source),
+  )
+}
+
+/** Internal module seam; not exported by the runtime-js package entry point. */
+export const buildTypeScriptSourceArtifactFromCompilation = (
+  input: {
+    source: string
+    validation: StrategyRevisionValidationReport
+    runtime: StrategyRuntimeMetadata
+  },
+  transpiled: ReturnType<typeof transpileStrategySource>,
+): SourceLanguageStrategyArtifact | null => {
   if (!transpiled.ok) {
     return null
   }
