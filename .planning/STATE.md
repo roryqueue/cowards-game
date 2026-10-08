@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Five-attempt continuation approved; first-route feasibility assessed and additional time decision pending
+stopped_at: Five-attempt continuation source plan checked; eight-hour resource extension awaits human decision
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: Human approved five fresh setups with unchanged deadline; no new empirical attempt, first-route source/gates cannot safely fit before diagnostic start frontier
+last_activity_desc: Conditional source plan independently passed; no source adapter or empirical attempt; unchanged timebox cannot safely admit fresh diagnostic after required gates
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION PLAN CHECK CLOSED / HUMAN TIME DECISION (2026-10-08): Actual independent /root/check_continuation_plan CLOSED, NEW265-16-PREPARATION-CONTINUATION-PLAN-CHECK-v1 conditional source-plan PASS, live admission explicitly NOTcleared. Firstv13-1 prospective-only minimalplan covers finite savedv12failedcustody/nooldreader, current reviewedsource/actualcomposedHOSTsemanticjoins/freshimmutableallocation/capacity/ownacceptedFINALbaseline; unused2–5rejectuntilsource-ready. No adapter implementation, helper/request/allocation/entry/Match/ordinaryreader/terminalchecker/private mutation. Fivepreparationapproval remainsvalid ceiling undercurrentcap, but requiredsource/gates do not realistically fit before17:58UTC safe fullcell+31minreserve start. MAINeight-additional-continuous-hour question pending genuineNEWhumanresourcechoice; no cap/deadline amendment, idle exclusion or reset has occurred. If approved, narrowprospective resourcebinding and checkedPlan16 execution/review-fix/validate/verify precede any live admission; ifnot, honest timebox/gaps outcome, not false completion or another known-unreadyrun. All oldbytes immutable,34charges/allcosts underfull108M+wall/cap136800000/deadline18:39:01.097Z/15GB300/allbounds. Phase265/LEAG/freeze/formation/holdout/public/counting/production incomplete/gated. Older frontiers history.
 
 CURRENT FIVE-ATTEMPT CONTINUATION APPROVED / TIME FEASIBILITY (2026-10-08): Directhuman “yes, approved” adopts265-16-PREPARATION-CONTINUATION-DECISION-v1; newAPPROVAL-20261008 records up to5distinctzero-Matchpreparations/maxONEdiag+ownacceptedFINALconditionalONE36baseline, each spent attempt immutable, realentry/Matchfailure orbaselineoutcome ends envelope. No extra time approved: full108M+ALLwall since1791455941097/cap136800000/absolute18:39:01.097Z/34prior/15GB300/31minreserve/allbounds unchanged, including approval-waittime. Actualtop-level17:28UTC start had~71min incl31reserve. Bounded readonlyscout CLOSED17:33:38 writes only existingPlan16RESEARCH-PLAN-v1: smallestfirst-routev13-1 needs newsource/approval/request/setup/allocation/finitesavedv12failedcarry/readerFINAL joins, not filename-only;30–45min source/tests+8–15min independentgates/data doesn't fit17:58UTC defensible fullcell+reserve start. No adapter/helper/request/allocation/entry/Match/private mutation/oldreader. MAINasynchronous eight-additional-continuous-hour resource request PENDING/NOTapplied; no cap/deadline reset or early live admission. Safe approval/research/planning continue, source-onlyprovenance repair remains independently verified. Oldv12pair/evidence/authority/checks immutable andENDED; no acceptedFINAL/baseline/LEAG/freeze/formation/holdout/public/counting/production credit. Older frontiers history.
 
