@@ -96,7 +96,7 @@ export const leanSupervisorReasonRootV2 = (value: Omit<LeanSupervisorReasonEnvel
 }
 export const isLeanSupervisorReasonEnvelopeV2 = (value: unknown): value is LeanSupervisorReasonEnvelopeV2 => {
   if (!value || typeof value !== "object" || !exactLabKeys(value, ["schemaVersion", "allocationRoot", "sourceRoot", "requestBytesRoot", "entryBytesRoot", "head", "parentPid", "childPid", "exitCode", "signal", "uncertain", "reasons", "observations", "root"])) return false
-  const v = value as LeanSupervisorReasonEnvelopeV2, o = v.observations
+  const v = value as unknown as LeanSupervisorReasonEnvelopeV2, o = v.observations
   if (v.schemaVersion !== "lean-parent-supervisor-reasons-v2" || !o || !exactLabKeys(o, ["entry", "childReady", "resourceSampling", "finalIdentity", "failureReceipt", "cleanup", "terminalization", "initiatingCause", "resourceSamplingOperation", "resourceSamplingSequence", "resourceSamplingExitObserved"])) return false
   const { resourceSamplingOperation, resourceSamplingSequence, resourceSamplingExitObserved, ...legacyObservations } = o
   if (!LEAN_SUPERVISOR_SAMPLING_OPERATIONS_V2.includes(resourceSamplingOperation) || !Number.isInteger(resourceSamplingSequence) || resourceSamplingSequence < 0 || resourceSamplingSequence > 2147483647 || typeof resourceSamplingExitObserved !== "boolean") return false

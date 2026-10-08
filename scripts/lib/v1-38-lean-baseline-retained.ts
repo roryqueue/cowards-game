@@ -30,7 +30,7 @@ const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_RETAI
 export const assertLeanSupervisorReasonCustodyV2 = (bytes: Uint8Array, actual: {
   allocationRoot: LabRoot; sourceRoot: LabRoot; requestBytesRoot: LabRoot; entryBytesRoot: LabRoot
   head: string; parentPid: number; childPid: number; exitCode: number | null
-  signal: NodeJS.Signals | null; status: "child_exited" | "child_failed"
+  signal: string | null; status: "child_exited" | "child_failed"
 }) => {
   const reason = validateLeanSupervisorReasonBytesV2(bytes)
   if (!exactLabKeys(actual, ["allocationRoot", "sourceRoot", "requestBytesRoot", "entryBytesRoot", "head", "parentPid", "childPid", "exitCode", "signal", "status"]) ||
