@@ -28,6 +28,20 @@ const allocation = (route: "diagnostic" | "baseline", reuse?: ReturnType<typeof 
 }
 afterEach(() => { vi.restoreAllMocks(); host.child = null; host.failSample = false; host.samples = 0 })
 
+it("parses five exact CLI/child identities but refuses incomplete live custody before reservation", async () => {
+  for (const n of [1, 2, 3, 4, 5] as const) for (const route of ["diagnostic", "baseline"] as const) {
+    const mode = `v14-${n}` as const, path = lean.leanCorrectionRoutePaths(route, mode).request
+    expect(correction.leanCorrectionChildSupervisor(correction.leanCorrectionChildMode(route, mode))).toBe(mode)
+    for (const action of ["prepare", "run", "verify", "verify-terminal"]) {
+      const args = [`${action}-supervisor-${route}-${mode}`, "--request", path]
+      expect(correction.parseLeanCorrectionCommand(args)).toMatchObject({ route, supervisor: mode, request: path })
+      await expect(correction.leanCorrectionMain(args)).rejects.toThrow("POST_V13_CUSTODY_UNAVAILABLE")
+    }
+    expect(() => correction.readLeanCorrectionRequest(path, route, mode)).toThrow("POST_V13_CUSTODY_UNAVAILABLE")
+  }
+  for (const mode of ["v14-0", "v14-6", "v14-01"]) expect(() => correction.parseLeanCorrectionCommand([`run-supervisor-diagnostic-${mode}`, "--request", ".strategy-lab/invalid"])).toThrow()
+})
+
 it("selects owned reuse only from a strictly admitted v14 baseline, never a flag or malformed root", () => {
   const baseline = allocation("baseline"), diagnostic = allocation("diagnostic")
   expect(correction.leanCorrectionUsesOwnedPipeline(baseline)).toBe(true)
@@ -64,12 +78,13 @@ it.each([false, true])("actual parent publishes strict reason-v2 with legacy obs
 
 it("actual selected owned pipeline retains the same issued graph and closes on rejecting full custody", async () => {
   const reuse = reuseAPI.validateLeanColdReuse(createLeanOwnedReuseHostFixture(), LEAN_OWNED_HOST_SOURCE), a = allocation("baseline", reuse)
-  const directory = realpathSync(mkdtempSync(join(tmpdir(), "v14-owned-host-"))), ledger = { directory, allocation: a } as lean.LeanExperimentLedger
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "v14-owned-host-"))), before = process.cwd(), ledger = { directory, allocation: a } as lean.LeanExperimentLedger
   const owned = vi.spyOn(reuseAPI, "admitLeanOwnedReuse"), closed = vi.spyOn(reuseAPI, "closeLeanOwnedReuse"), retained: unknown[] = []
   try {
+    process.chdir(directory)
     await expect(correction.executeLeanCorrectionBaselinePipeline({ ledger, reuse, checkpoint: () => {}, retainArtifact: (name, value) => { if (name === "cold-reuse.json") retained.push(value) }, dispatch: async () => { throw new Error("HOST_PROVIDER_FORBIDDEN") } })).rejects.toThrow()
     expect(owned).toHaveBeenCalledTimes(1); expect(owned.mock.calls[0]![0]).toBe(reuse)
     expect(retained).toEqual([reuse]); expect(retained[0]).toBe(reuse)
     expect(closed).toHaveBeenCalledTimes(1)
-  } finally { rmSync(directory, { recursive: true, force: true }) }
+  } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
 }, 45000)

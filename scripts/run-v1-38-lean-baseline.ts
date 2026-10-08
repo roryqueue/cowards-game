@@ -4,7 +4,7 @@ import { fork, execFileSync } from "node:child_process"
 import { randomBytes } from "node:crypto"
 import { join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
-import { isLeanPreparationContinuationMode, isLeanSupervisorRetestMode, leanCapsForAllocation, leanSupervisorAllocationMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { isLeanPostV13FivePairMode, isLeanPreparationContinuationMode, isLeanSupervisorRetestMode, leanCapsForAllocation, leanSupervisorAllocationMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { exactLabKeys, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createLeanCurrentBaselineAllocation, createLeanLedger, openLeanLedger, readLeanLedger, readLeanTimeAccounting, readLeanChildEntry, publishLeanChildEntry, beginLeanInterval, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, stopLeanLedger, verifyLeanEvidence, deriveLeanChildTerminal, publishLeanChildTerminal, cumulativeLeanPhysicalBytes, assertLeanPublicationCapacity, currentLeanElapsedMs, currentBaselineSlotKind, leanCanonicalBytes, leanBytesRoot, writeLeanAll, LEAN_BASELINE_REQUEST, LEAN_BASELINE_STORE, LEAN_BASELINE_WRITABLE_PATHS, LEAN_CAPS, LEAN_EXTERNAL_SCRATCH_RESERVE, type LeanExperimentLedger, type LeanChildEntryV2, type LeanSlot } from "../packages/strategy-lab/src/league/lean-experiment.js"
@@ -363,7 +363,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
   // Allocation family is authenticated by the same strict caps/mode admission;
   // a legacy caller's opt-in flag can never select reason-v2.
   const authenticatedMode = leanSupervisorAllocationMode(allocation)
-  const reasonV2 = isLeanSupervisorRetestMode(authenticatedMode) || isLeanPreparationContinuationMode(authenticatedMode)
+  const reasonV2 = isLeanSupervisorRetestMode(authenticatedMode) || isLeanPreparationContinuationMode(authenticatedMode) || isLeanPostV13FivePairMode(authenticatedMode)
   const supervisorObservation = reasonV2 || options.supervisorObservation === true
   const committed = execFileSync("git", ["show", `HEAD:${options.allocationPath}`], { maxBuffer: 262144 })
   if (leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(allocation)) || leanBytesRoot(committed) !== leanBytesRoot(safeBytes(options.allocationPath))) return fail("UNCOMMITTED_ALLOCATION")

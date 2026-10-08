@@ -6,6 +6,8 @@ import { authenticateLeanSupervisorRetestHistoricalCustodyV12, authenticateLeanS
 import { isLeanPreparationContinuationMode, isLeanPreparationContinuationExtensionV13, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION, LEAN_PREPARATION_CONTINUATION_V13_REPORT_PATHS, validateLeanPreparationContinuationPredecessorV13, type LeanPreparationContinuationMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { authenticateLeanPreparationContinuationTerminalCarryV13 } from "./lib/v1-38-lean-correction-retained.js"
 import { validateLeanPreparationHistoryV13, LEAN_PREPARATION_V13_HISTORY_PATHS } from "./lib/v1-38-lean-preparation-continuation-v13.js"
+import { isLeanPostV13FivePairMode, isLeanPostV13FivePairExtensionV14, LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION, LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS, type LeanPostV13FivePairOrdinal, type LeanPostV13FivePairMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { leanFivePairDocumentsV14 } from "./lib/v1-38-lean-post-v13-five-pair.js"
 import { isLeanTwoPairMode, isLeanTwoPairExtensionV11, LEAN_TWO_PAIR_V11_EXTENSION, LEAN_TWO_PAIR_V11_REPORT_PATHS, validateLeanTwoPairPredecessorV11, type LeanTwoPairMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { authenticateLeanTwoPairHistoricalCustodyV11, authenticateLeanTwoPairClosedOutcomeV11, authenticateLeanTwoPairTerminalCarryV11 } from "./lib/v1-38-lean-correction-retained.js"
 /** Additive, fixed one-cell diagnostic / conditional 36-cell baseline.
@@ -82,6 +84,7 @@ export const leanPreparationContinuationDocumentsV13 = (route: LeanCorrectionRou
  return Object.freeze({ review: `${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-CONTINUATION-SOURCE-REVIEW-v3.md`, dataReview: `${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-CONTINUATION-${label}-V13-1-DATA-REVIEW-v1.md`, helperReview: `${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-CONTINUATION-${label}-V13-1-HELPER-REVIEW-v1.md`, authorization: `.strategy-lab/lean-preparation-authorization-${route}-v13-1.json`, helper: `.strategy-lab/lean-preparation-${route}-v13-1-helper.mts`, continuation: ".strategy-lab/lean-preparation-continuation-v13-1.json", setup: leanRetrySetupPath(mode), carry: join(paths.temp, "terminal-carry-v13.json"), pairClosure: ".strategy-lab/lean-preparation-pair-closure-v13.json" })
 }
 export const leanRemainingDocumentsV9 = (route: LeanCorrectionRoute, mode: LeanRetryMode) => {
+  if (isLeanPostV13FivePairMode(mode)) return leanFivePairDocumentsV14(route, mode)
   if (isLeanPreparationContinuationMode(mode)) return leanPreparationContinuationDocumentsV13(route, mode)
   if (isLeanSupervisorRetestMode(mode)) return leanSupervisorRetestDocumentsV12(route, mode)
   if (isLeanTwoPairMode(mode)) return leanTwoPairDocumentsV11(route, mode)
@@ -91,6 +94,8 @@ export const leanRemainingDocumentsV9 = (route: LeanCorrectionRoute, mode: LeanR
   return Object.freeze({ review: `${LEAN_REMAINING_V9_PHASE}NEW265-16-${label}-SOURCE-REVIEW-v1.md`, dataReview: `${LEAN_REMAINING_V9_PHASE}NEW265-16-${label}-DATA-REVIEW-v1.md`, authorization: `.strategy-lab/lean-retry-authorization-${route}-${mode}.json`, continuation: `.strategy-lab/lean-retry-continuation-${mode}.json`, setup: leanRetrySetupPath(mode) })
 }
 const leanRetryExtensionDocumentsV8 = (extension: LeanRetryTimeboxExtension, mode: LeanRetryMode) => {
+  if (isLeanPostV13FivePairExtensionV14(extension)) { if (!isLeanPostV13FivePairMode(mode)) return fail("SUPERVISOR_REQUEST"); return { decision: `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-BOUNDED-CONTINUATION-APPROVAL-20261008.md`, plan: `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-FIVE-PAIR-ADAPTER-PLAN-v1.md` } }
+  if (isLeanPostV13FivePairMode(mode)) return fail("SUPERVISOR_REQUEST")
   if (isLeanPreparationContinuationExtensionV13(extension)) { if (!isLeanPreparationContinuationMode(mode)) return fail("SUPERVISOR_REQUEST"); return { decision: LEAN_PREPARATION_CONTINUATION_V13_APPROVAL, plan: LEAN_PREPARATION_CONTINUATION_V13_PLAN } }
   if (isLeanPreparationContinuationMode(mode)) return fail("SUPERVISOR_REQUEST")
   if (isLeanSupervisorRetestExtensionV12(extension)) { if (!isLeanSupervisorRetestMode(mode)) return fail("SUPERVISOR_REQUEST"); return { decision: LEAN_SUPERVISOR_RETEST_V12_APPROVAL, plan: LEAN_SUPERVISOR_RETEST_V12_PLAN } }
@@ -252,6 +257,16 @@ export const closeLeanCorrectionAdmission = (carrier: ReturnType<typeof beginLea
   return closed
 }
 export const leanCorrectionSourceManifest = (supervisor: LeanSupervisorMode = false, timeboxExtension?: LeanRetryTimeboxExtension): { entries: Array<{ path: string; root: string }>; root: LabRoot } => {
+  if (isLeanPostV13FivePairMode(supervisor)) {
+    const extension = admitLeanRetryTimeboxExtension(timeboxExtension)
+    if (!isLeanPostV13FivePairExtensionV14(extension)) return fail("SUPERVISOR_REQUEST")
+    assertLeanRetryExtensionDocumentsV8(extension, supervisor)
+    const closure = new Map(leanCorrectionSourceManifest("v13-1", LEAN_PREPARATION_CONTINUATION_V13_EXTENSION).entries.map(entry => [entry.path, entry]))
+    for (const path of LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS) if (/(?:SOURCE-REVIEW|REVIEW-FIX|VALIDATION|SOURCE-VERIFICATION|SOURCE-SUMMARY)/u.test(path)) closure.delete(path)
+    for (const path of ["scripts/lib/v1-38-lean-post-v13-five-pair.ts", "scripts/lib/v1-38-lean-post-v13-five-pair.test.ts", "scripts/lib/v1-38-lean-post-v13-five-pair-custody.test.ts", "scripts/run-v1-38-lean-post-v13-five-pair.test.ts", "scripts/lib/v1-38-lean-owned-reuse-host-fixture.ts", "scripts/lib/v1-38-lean-precharge-owned-reuse.test.ts", ...["ADAPTER-PLAN", "PLAN-CHECK"].map(name => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-FIVE-PAIR-${name}-v1.md`), `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-BOUNDED-CONTINUATION-DECISION-v1.md`, `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-BOUNDED-CONTINUATION-APPROVAL-20261008.md`]) closure.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
+    const entries = [...closure.values()].sort((a,b) => a.path.localeCompare(b.path))
+    return { entries, root: labRoot("lean-post-v13-five-pair-reviewed-source-v14", { entries, extension, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())), brokerRoot: leanBytesRoot(Buffer.from(buildLeanContainerBrokerSourceV7())) }) }
+  }
   if (isLeanPreparationContinuationMode(supervisor)) {
     const extension = admitLeanRetryTimeboxExtension(timeboxExtension)
     if (!isLeanPreparationContinuationExtensionV13(extension)) return fail("SUPERVISOR_REQUEST")
@@ -366,9 +381,9 @@ export const publishLeanCorrection = (path: string, value: unknown, ledger?: Lea
 }
 export const parseLeanCorrectionCommand = (args: readonly string[]) => {
   const mode = args[0]
-  if (mode && /^(prepare|run|verify|verify-terminal)-supervisor-(diagnostic|baseline)-(?:v[89]-[123]|v10-1|v11-[12]|v12-1|v13-1)$/u.test(mode)) {
-    const route: LeanCorrectionRoute = mode.includes("-diagnostic-") ? "diagnostic" : "baseline", supervisor = mode.match(/(v10-1|v11-[12]|v12-1|v13-1|v[89]-[123])$/u)![1] as LeanRetryMode
-    if (args.length !== 3 || args[1] !== "--request" || args[2] !== leanCorrectionRoutePaths(route, supervisor).request || mode.startsWith("verify-terminal-") && route !== "diagnostic" && !isLeanTwentySixMode(supervisor) && !isLeanTwoPairMode(supervisor) && !isLeanSupervisorRetestMode(supervisor) && !isLeanPreparationContinuationMode(supervisor)) return fail("ARGUMENTS")
+  if (mode && /^(prepare|run|verify|verify-terminal)-supervisor-(diagnostic|baseline)-(?:v[89]-[123]|v10-1|v11-[12]|v12-1|v13-1|v14-[1-5])$/u.test(mode)) {
+    const route: LeanCorrectionRoute = mode.includes("-diagnostic-") ? "diagnostic" : "baseline", supervisor = mode.match(/(v10-1|v11-[12]|v12-1|v13-1|v14-[1-5]|v[89]-[123])$/u)![1] as LeanRetryMode
+    if (args.length !== 3 || args[1] !== "--request" || args[2] !== leanCorrectionRoutePaths(route, supervisor).request || mode.startsWith("verify-terminal-") && route !== "diagnostic" && !isLeanTwentySixMode(supervisor) && !isLeanTwoPairMode(supervisor) && !isLeanSupervisorRetestMode(supervisor) && !isLeanPreparationContinuationMode(supervisor) && !isLeanPostV13FivePairMode(supervisor)) return fail("ARGUMENTS")
     return { mode, route, request: args[2]!, supervisor }
   }
   if (mode && /^(prepare|run|verify)-supervisor-(diagnostic|baseline)-v[234567]$/u.test(mode)) {
@@ -401,7 +416,7 @@ export const validateLeanCorrectionDiagnosis = (value: unknown, checkRoot: LabRo
 export interface LeanCorrectionRequest {
   helperPath?: string; helperBytesRoot?: LabRoot; helperReviewPath?: string; helperReviewRoot?: LabRoot
   timeboxExtension?: LeanRetryTimeboxExtension; startupPolicyRoot?: LabRoot; authorizationPath?: string; authorizationRoot?: LabRoot
-  attemptOrdinal?: LeanRetryOrdinal; priorClosureRoot?: LabRoot | null; continuationRoot?: LabRoot | null; acceptedReaderCloseRoot?: LabRoot | null
+  attemptOrdinal?: LeanRetryOrdinal | LeanPostV13FivePairOrdinal; priorClosureRoot?: LabRoot | null; continuationRoot?: LabRoot | null; acceptedReaderCloseRoot?: LabRoot | null
   schemaVersion: "lean-correction-supervisor-request-v13" | "lean-correction-supervisor-request-v12" | "lean-correction-supervisor-request-v8" | "lean-correction-supervisor-request-v7" | "lean-correction-supervisor-request-v6" | "lean-correction-supervisor-request-v5" | "lean-correction-supervisor-request-v4" | "lean-correction-request-v1" | "lean-correction-supervisor-request-v2" | "lean-correction-supervisor-request-v3"; route: LeanCorrectionRoute; sourceRoot: LabRoot; planRoot: LabRoot; amendmentRoot: LabRoot
   reviewPath: string; reviewRoot: LabRoot; dataReviewPath: string; dataReviewRoot: LabRoot; coldRoot: LabRoot; seed: string; reuseGrantRoot: LabRoot
   candidateRoots: readonly LabRoot[]; requestRoots: readonly LabRoot[]; diagnosis: LeanCorrectionDiagnosis | null
@@ -433,6 +448,9 @@ export const deriveLeanCorrectionRequestRoots = (input: { route: LeanCorrectionR
   return (input.route === "diagnostic" ? roots.slice(0, 1) : roots).map((historicalIntentRoot, ordinal) => labRoot("lean-correction-request-slot-v1", { route: input.route, historicalIntentRoot, ordinal }))
 }
 export const readLeanCorrectionRequest = (path: string, route: LeanCorrectionRoute, supervisor: LeanSupervisorMode = false): { request: LeanCorrectionRequest; reuse: LeanColdReuse } => {
+  // Source-only selection is not live authority until fresh custody consumers
+  // and terminal writers are complete. Never enter a historical reader.
+  if (isLeanPostV13FivePairMode(supervisor)) return fail("POST_V13_CUSTODY_UNAVAILABLE")
   if (supervisor) return readLeanSupervisorCorrectionRequest(path, route, supervisor)
   if (path !== LEAN_CORRECTION_ROUTES[route].request) return fail("REQUEST_PATH")
   const request = readLeanCorrectionJson(path) as LeanCorrectionRequest
@@ -1427,6 +1445,17 @@ export const executeLeanOwnedCorrectionPipeline = async (input: { ledger: LeanEx
     })
   } finally { closeLeanOwnedReuse(admission) }
 }
+/** Static allocation admission selects the seam; the actual child invokes it
+ * only after request, committed allocation, entry/PID, parent and resource gates. */
+export const leanCorrectionUsesOwnedPipeline = (value: unknown): boolean => {
+  leanCapsForAllocation(value)
+  const allocation = value as AnyLeanAllocation
+  return isLeanPostV13FivePairMode(leanSupervisorAllocationMode(allocation)) && "route" in allocation && allocation.route === "baseline"
+}
+export const executeLeanCorrectionBaselinePipeline = async (input: Parameters<typeof executeLeanOwnedCorrectionPipeline>[0]) => {
+  if (!leanCorrectionUsesOwnedPipeline(input.ledger.allocation)) return fail("ALLOCATION_VERSION")
+  return executeLeanOwnedCorrectionPipeline(input)
+}
 export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrectionRoute, supervisor: LeanSupervisorMode = false) => {
   scope(route, supervisor)
   const { request, reuse, ledger, allocation } = allocationFor(path, route, supervisor), entry = readLeanChildEntry(ledger)
@@ -1478,6 +1507,8 @@ export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrec
       // Exact predecessor condition0/seed/Smoke state; no authoring, solver or feedback.
       const cell = await dispatch(allocation.slots[0]!, bottom, top)
       pipeline = { status: "diagnostic_only", cells: [{ ordinal: cell.ordinal, slotRoot: cell.slotRoot, compact: cell.compact }], training: null, holdoutOpened: false, formationMaterialized: false }
+    } else if (isLeanPostV13FivePairMode(supervisor)) {
+      pipeline = await executeLeanCorrectionBaselinePipeline({ ledger, reuse, checkpoint, retainArtifact: (name, value) => { if (!/^(?:cold-reuse|seal-metadata|cold-corpus|cold-reuse-grant|initial-proposals|initial-selection|initial-training|initial-analysis|response-work|response-node-receipts|response-training|current-analysis)\.json$/u.test(name)) return fail("ARTIFACT"); checkpoint(); publishLeanCorrection(join(ledger.directory, name), value, ledger); checkpoint() }, dispatch })
     } else {
       publishLeanCorrection(join(ledger.directory, "cold-reuse.json"), reuse, ledger)
       pipeline = await executeLeanReusedCurrentPipeline({ allocation, reuse, checkpoint, freezeSource: source => { checkpoint(); if (reuse.sources.some(s => s.root === source.root)) publishLeanReusedBaselineSource(ledger, source, reuse); else publishLeanBaselineSource(ledger, source); checkpoint() }, retainArtifact: (name, value) => { if (!/^(?:seal-metadata|cold-corpus|cold-reuse-grant|initial-proposals|initial-selection|initial-training|initial-analysis|response-work|response-node-receipts|response-training|current-analysis)\.json$/u.test(name)) return fail("ARTIFACT"); checkpoint(); publishLeanCorrection(join(ledger.directory, name), value, ledger); checkpoint() }, dispatch })
@@ -1500,6 +1531,7 @@ const child = async (path: string, route: LeanCorrectionRoute, supervisor: LeanS
 export const leanCorrectionChildMode = (route: LeanCorrectionRoute, supervisor: LeanSupervisorMode) => isLeanRetryMode(supervisor) ? `child-supervisor-${route}-${supervisor}` : supervisor ? `child-supervisor-${route}-v${leanSupervisorVersion(supervisor)}` : `child-${route}`
 export const leanCorrectionMain = async (args: readonly string[]) => {
   const command = parseLeanCorrectionCommand(args), { route, request: path } = command, supervisor: LeanSupervisorMode = ("supervisor" in command ? command.supervisor : false) ?? false, paths = leanCorrectionRoutePaths(route, supervisor)
+  if (isLeanPostV13FivePairMode(supervisor)) return fail("POST_V13_CUSTODY_UNAVAILABLE")
   if (command.mode.startsWith("prepare-")) return prepareLeanCorrection(path, route, supervisor)
   if (command.mode.startsWith("verify-terminal-") && isLeanRetryMode(supervisor)) {
     const reader = await import("./lib/v1-38-lean-correction-retained.js")
@@ -1539,7 +1571,7 @@ export const leanCorrectionMain = async (args: readonly string[]) => {
   return result
   } finally { closeLeanCorrectionAdmission(carrier, accountingLedger); if (!completed && (route === "diagnostic" || isLeanTwentySixMode(supervisor) || isLeanTwoPairMode(supervisor) || isLeanSupervisorRetestMode(supervisor) || isLeanPreparationContinuationMode(supervisor)) && isLeanRetryMode(supervisor) && !existsSync(join(paths.store, "entry.json"))) publishLeanRetryAdmissionFailureV8(supervisor, carrier.mode, childSpawned, cleanup, route) }
 }
-export const leanCorrectionChildSupervisor = (command: string): LeanSupervisorMode => /^child-supervisor-(diagnostic|baseline)-v13-1$/u.test(command) ? "v13-1" : /^child-supervisor-(diagnostic|baseline)-v12-1$/u.test(command) ? "v12-1" : /^child-supervisor-(diagnostic|baseline)-v11-[12]$/u.test(command) ? command.slice(-5) as LeanTwoPairMode : /^child-supervisor-(diagnostic|baseline)-v10-1$/u.test(command) ? "v10-1" : /^child-supervisor-(diagnostic|baseline)-v[89]-[123]$/u.test(command) ? command.slice(-4) as LeanRetryMode : /^child-supervisor-(diagnostic|baseline)-v[234567]$/u.test(command) ? command.endsWith("-v7") ? "v7" : command.endsWith("-v6") ? "v6" : command.endsWith("-v5") ? "v5" : command.endsWith("-v4") ? "v4" : command.endsWith("-v3") ? "v3" : true : false
+export const leanCorrectionChildSupervisor = (command: string): LeanSupervisorMode => /^child-supervisor-(diagnostic|baseline)-v14-[1-5]$/u.test(command) ? command.slice(-5) as LeanPostV13FivePairMode : /^child-supervisor-(diagnostic|baseline)-v13-1$/u.test(command) ? "v13-1" : /^child-supervisor-(diagnostic|baseline)-v12-1$/u.test(command) ? "v12-1" : /^child-supervisor-(diagnostic|baseline)-v11-[12]$/u.test(command) ? command.slice(-5) as LeanTwoPairMode : /^child-supervisor-(diagnostic|baseline)-v10-1$/u.test(command) ? "v10-1" : /^child-supervisor-(diagnostic|baseline)-v[89]-[123]$/u.test(command) ? command.slice(-4) as LeanRetryMode : /^child-supervisor-(diagnostic|baseline)-v[234567]$/u.test(command) ? command.endsWith("-v7") ? "v7" : command.endsWith("-v6") ? "v6" : command.endsWith("-v5") ? "v5" : command.endsWith("-v4") ? "v4" : command.endsWith("-v3") ? "v3" : true : false
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const args = process.argv.slice(2), supervisor = leanCorrectionChildSupervisor(args[0] ?? ""), childRoute = supervisor ? (args[0]!.includes("-diagnostic-") ? "diagnostic" : "baseline") : args[0] === "child-diagnostic" ? "diagnostic" : args[0] === "child-baseline" ? "baseline" : null
   const dispatch = () => childRoute !== null && args.length === 3 && args[1] === "--request" && args[2] === leanCorrectionRoutePaths(childRoute, supervisor).request ? child(args[2], childRoute, supervisor) : leanCorrectionMain(args)
