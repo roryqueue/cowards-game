@@ -1,0 +1,7 @@
+# Plan16 prospective time-binding supplement
+
+This supplements, not replaces, the independently checked `265-16-PREPARATION-CONTINUATION-RESEARCH-PLAN-v1.md`. The direct human approval in `265-16-PREPARATION-TIME-APPROVAL-20261008.md` changes its first prospective v13-1 binding to165600000ms and absolute2026-10-09T02:39:01.097Z. Full108000000ms prior debit plus all wall since1791455941097 remains exact; no clock reset. Every other task, negative regression, immutable history pin, gate, resource and terminal condition in the checked plan remains required.
+
+Resolve saved v12-1 roots from `265-16-SUPERVISOR-RETEST-DIAGNOSTIC-V12-1-TERMINAL-VERIFICATION-v1.md` before implementation. This is finite historical custody/accounting only: refused_before_entry,34 cumulative charges, carry48d7c26de178e5803182c705fa9816f4a1983fabbaba3d06c6cecb412b3706c1, hold0b400cfa1858bbe9ad9424bd07e66b7aaae8c6dfb35dee95793971f7ae9ef019. Never reinvoke its verifier or reinterpret the failed route as success.
+
+Sequence: first-route source/composed regression → independent review/fix → focused validation and scoped verification → actual MAIN fresh helper/request plus distinct review → fresh preparation/allocation commit → SAME-PROCESS capacity/unique entry → one actual appropriate retained check → conditional own-FINAL36 baseline only if eligible and time permits. Permission proves neither live capacity nor completion fit. Do not prebuild five copies or invent additional numbered plans.
