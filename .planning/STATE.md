@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V13 re-review clean and MAIN validation passed; scoped source verification next
+stopped_at: Source verification found v13 parent-receipt integration gap; scoped repair next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: Independent v2 review clean; MAIN48/48 and types, boundary, source-review gates passed; no empirical attempt started
+last_activity_desc: Source verification5of6: actual parent selects reason-v1 while v13 custody requires v2; no empirical attempt started
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V13 SOURCE VERIFICATION GAP (2026-10-08): Distinct /root/verify_supervisor_retest_v12_source ACTUALLYCLOSED SOURCE-VERIFICATION-v1gaps_found5/6. Confirmed adjacent actualparent scripts/run-v1-38-lean-baseline.ts365 selectsreason-v2 ONLYstrictv12predicate; v13therefore emitsreason-v1 at434–438 despite newv13consumers requiringv2. Existingcomposedfixtures injectv2/stubparent, so48PASSdoesnotdisconfirm. CR01/WR01 sourcefixes verified; originalv12cause stillUNKNOWN. No native/private/Match/capacity/reader/terminalcheck,0of5freshprepsspent. Scopedv13-only actualparentselector/HOSTregression/newsource-reviewversion+verificationversion next; no human-onlyrule/limitdecision. Alloldreports/bytes preserved. Same165600000/full108M+ALLwall/absolute2026-10-09T02:39:01.097Z/34charges/15GB300/31minreserve/allbounds. Phase265/LEAG/freeze/formation/holdout/public/counting/production gated; earlierfrontiershistory.
 
 CURRENT V13 RE-REVIEW AND VALIDATION CLOSED (2026-10-08): Distinct /root/review_preparation_continuation_v13 ACTUALLYCLOSED SOURCE-REVIEW-v2clean0 closesCR01/WR01, v1preserved. MAIN3556 CLOSED0/48of48/zeroSKIP119.05s; configured21722/diff/shellPASS; boundary4077zero1422; publicmanifest67397root880d55e9/930/0private; actualreviewconsumer91065PASS/rawb609ee8f. SixinheritedstrictNOTpass. ScopedVALIDATION-v1 complete; distinct sourceverification next, notempirical/wholephasecredit. No activeentry/verifier/hold or privatehelper/request/allocation/Match;0of5prepsspent. Same165600000/full108M+ALLwall/absolute2026-10-09T02:39:01.097Z/34charges/15GB300/31minreserve/allbounds. After sourceverification freshactualMAINdata/helper/distinctreview/newcommittedallocation/empty0700/SAMEPROCESScapacity/uniqueentry/ONEappropriateactualcheck remain. All Phase265/LEAG/freeze/formation/holdout/public/counting/production gated; earlierfrontiershistory.
 
