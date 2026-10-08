@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V13-1 baseline resource-threshold failure; unique terminal verification closed; envelope ended
+stopped_at: Owned-reuse source repair verified6of6; post-v13 bounded continuation pending human approval
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: Baseline42019closed1 SIGKILL zerocharge; unique terminal30548closed0; resource diagnosis next, no new run grant
+last_activity_desc: Source GREEN90a8d563 reviewed clean; MAIN15tests pass; independent sourceverify6of6; fresh envelope proposal pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT OWNED-REUSE REPAIR VERIFIED / HUMAN CONTINUATION CHECKPOINT (2026-10-08): BoundedGSDdiagnosisclosed/inconclusivecause/sourceprovenredundancy; checkedexistingPlan16addendum RED539fdd83/GREEN90a8d5638b0282d6d58260fed1fc0564011ac999/summary0ab0a570. Explicitfuture-only ownedimmutablegraph+completed7staticvalidations/zeroextra7publicationbuilds/defaultlegacy/fullaccepted-auditguardsunchanged; NOexistingCLIselectsseam. IndependentREVIEW-v1clean0/raw1c8b5751/HOST4of4; MAIN12634 CLOSED0/15of15zeroSKIP33.79s/configuredtypes/shell/diffPASS/importstrict0ownership0reportonly19. Distinctsourceverifier48626 CLOSED0/HOST4of4/23.56s, SOURCE-VERIFICATION-v1source_verified6of6 scopedtruths. Positivefullacceptedbaselineauditfixture/postacceptedGittamperproof UNESTABLISHED; repeatedfullauditcostUNRESOLVED/nativecause/RSS-cure/full36fitUNKNOWN. Oldv13envelopeENDED/35charges/allbytesimmutable/noactiveentry/verifier/hold/newrouteauthority. NEW265-16-POST-V13-BOUNDED-CONTINUATION-DECISION-v1 proposedNOTapproved: upto5DISTINCTfreshdiag+ownacceptedFINALconditional36baselinepairs, firstacceptedcompletebaseline orunchangedbudget/reservelimitstop, no unchangedknownfailure reruns/no repeatedliteral, fixedreviewednewsource/newalloc/SAMEPROCESScapacity/uniqueentry+checkeach. No prospectivebinding/prepare/allocation/Match beforehumanapproval. Same165600000/full108M+ALLwall/deadline2026-10-09T02:39:01.097Z/15GB300/2GBscratch/31reserve/allbounds; approvalwaitcounts. Onlysourcefixready, NOTPhase265LEAGfreezeformationholdoutpubliccountingproductioncredit. Quietunchangedpending. Earlierfrontiershistory.
 
 CURRENT V13-1 BASELINE FAILED / HOLD RELEASED (2026-10-08): UniqueMAIN42019 ACTUALLYCLOSED1; actualparent25850/child25991 absent. Actualchildterminal child_failed/exitnull/SIGKILL/117165ms/21:56:09.736Z, reason-v2 ONLYresource_threshold/uncertaintrue/nofirstsamplingexception/nofailureReceipt/initiatingcauseUNKNOWN. SavedpostexitparentRSS552525824+childmaximum630501376+external512000000+guard335544320=2030571520B >2GB; NOTsimultaneousthresholdoperands/causeproof. ExactlyONEENTRY-terminal-only30548 CLOSED0, savedcarry/holdauth15455 CLOSED0; reportac0c2cf0/carryb80d8ad6/holdd9c0628b/readerclose1791496635485/elapsed148694388/allocated22777856. Noresult/check/ordinaryreader/fabrication;current0/cumulative35/emptyledger/inactive. HeldHEAD5b01e62eec1554f68dce6f80dd24d41646dc50d8/sourcee7d8bf58/allocation5edd320e/raw5f7f963c unchangedthroughclosure;sourceANDHEADholdreleased. EnvelopeENDED;unusedprepsNOTrestartpermission;allconsumedbytesimmutable/noresume/retry/refund/recredit. Boundedsource-onlydiagnosisallowed, NOnewprepare/allocation/Match underendedenvelope. Same165600000/full108M+ALLwall/deadline2026-10-09T02:39:01.097Z/35charges/15GB300/31reserve/allbounds. Diagacceptancepreserved NOTbaseline/Phase265LEAGfreezeformationholdoutpubliccountingproductioncredit. Earlierfrontiershistory.
 
