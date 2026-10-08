@@ -659,12 +659,14 @@ export const readLeanRemainingRequestV9 = (path: string, route: LeanCorrectionRo
 /** Only an ephemeral purpose issued inside accepted-check authentication can enter. */
 export const readLeanRemainingAcceptedDiagnosticLineageV9 = (purpose: unknown) => {
   const mode = readLeanRemainingAcceptedLineagePurposeV9(purpose)
+  if (isLeanPostV13FivePairMode(mode)) return fail("POST_V13_CUSTODY_UNAVAILABLE")
   if (isLeanPreparationContinuationMode(mode)) return readLeanPreparationContinuationRequestWithPurposeV13(leanCorrectionRoutePaths("diagnostic", mode).request, "diagnostic", mode, purpose)
   if (isLeanSupervisorRetestMode(mode)) return readLeanSupervisorRetestRequestWithPurposeV12(leanCorrectionRoutePaths("diagnostic", mode).request, "diagnostic", mode, purpose)
   if (isLeanTwoPairMode(mode)) return readLeanTwoPairRequestWithPurposeV11(leanCorrectionRoutePaths("diagnostic", mode).request, "diagnostic", mode, purpose)
   return readLeanRemainingRequestWithPurposeV9(leanCorrectionRoutePaths("diagnostic", mode).request, "diagnostic", mode, purpose)
 }
 const readLeanRemainingRequestWithPurposeV9 = (path: string, route: LeanCorrectionRoute, mode: LeanRetryMode, purpose?: unknown): { request: LeanCorrectionRequest; reuse: LeanColdReuse } => {
+  if (isLeanPostV13FivePairMode(mode)) return fail("POST_V13_CUSTODY_UNAVAILABLE")
   if (isLeanPreparationContinuationMode(mode)) return readLeanPreparationContinuationRequestWithPurposeV13(path, route, mode, purpose)
   if (isLeanSupervisorRetestMode(mode)) return readLeanSupervisorRetestRequestWithPurposeV12(path, route, mode, purpose)
   if (isLeanTwoPairMode(mode)) return readLeanTwoPairRequestWithPurposeV11(path, route, mode, purpose)
@@ -1712,6 +1714,15 @@ export const authenticateLeanPreparationContinuationAcceptedJoinV13 = (mode: Lea
   const closure = authenticateLeanRetryClosureV8(mode)
   if (closure.cumulativeCharged !== 35) return fail("ACCEPTED_CHECK")
   if (!same(closure.timeboxExtension, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION) || closure.attemptOrdinal !== leanRetryOrdinal(mode) || closure.closureClass !== "accepted" || closure.finalReaderClose !== true || closure.acceptedCheckAbsent !== false || closure.resultAbsent !== false || closure.currentCharges !== 1 || !root(closure.checkRoot) || !root(closure.checkBytesRoot) || !root(closure.allocationRoot) || !root(closure.sourceRoot) || !root(closure.requestBytesRoot) || !/^[a-f0-9]{40}$/u.test(closure.head) || !Number.isSafeInteger(closure.readerCloseMs)) return fail("ACCEPTED_CHECK")
+  return Object.freeze({ closure, accepted: Object.freeze({ root: closure.checkRoot, bytesRoot: closure.checkBytesRoot, allocationRoot: closure.allocationRoot, sourceRoot: closure.sourceRoot, head: closure.head, attemptOrdinal: closure.attemptOrdinal, readerCloseMs: closure.readerCloseMs, cumulativeCharged: closure.cumulativeCharged }) })
+}
+/** New-mode accepted join still invokes the complete existing diagnostic
+ * filesystem audit on EVERY publication; an owned reuse handle is not custody. */
+export const authenticateLeanPostV13FivePairAcceptedJoinV14 = (mode: LeanPostV13FivePairMode) => {
+  if (!isLeanPostV13FivePairMode(mode)) return fail("ACCEPTED_CHECK")
+  const closure = authenticateLeanRetryClosureV8(mode)
+  const ledger = openLeanLedger(leanCorrectionRoutePaths("diagnostic", mode).store), allocation = ledger.allocation
+  if (!("route" in allocation) || allocation.route !== "diagnostic" || leanSupervisorAllocationMode(allocation) !== mode || !same(closure.timeboxExtension, LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION) || closure.attemptOrdinal !== leanRetryOrdinal(mode) || closure.closureClass !== "accepted" || closure.finalReaderClose !== true || closure.acceptedCheckAbsent !== false || closure.resultAbsent !== false || closure.currentCharges !== 1 || closure.cumulativeCharged !== allocation.predecessor.chargedMatches + 1 || !root(closure.checkRoot) || !root(closure.checkBytesRoot) || closure.allocationRoot !== allocation.root || closure.sourceRoot !== allocation.sourceRoot || !root(closure.requestBytesRoot) || !/^[a-f0-9]{40}$/u.test(closure.head) || !Number.isSafeInteger(closure.readerCloseMs)) return fail("ACCEPTED_CHECK")
   return Object.freeze({ closure, accepted: Object.freeze({ root: closure.checkRoot, bytesRoot: closure.checkBytesRoot, allocationRoot: closure.allocationRoot, sourceRoot: closure.sourceRoot, head: closure.head, attemptOrdinal: closure.attemptOrdinal, readerCloseMs: closure.readerCloseMs, cumulativeCharged: closure.cumulativeCharged }) })
 }
 export const validateLeanPreparationContinuationAuthorizationV13 = (value: unknown, request: LeanCorrectionRequest, route: LeanCorrectionRoute): void => {

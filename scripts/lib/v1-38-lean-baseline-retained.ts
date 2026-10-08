@@ -19,8 +19,8 @@ import { emitTacticalSource } from "../../packages/strategy-oracle-tactical/src/
 import { authenticateLeanBaselineReview, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselineSourceManifest } from "../run-v1-38-lean-baseline.js"
 import { authenticateLeanSupervisorDiagnosticCheck, authenticateLeanRetryClosureV8 } from "./v1-38-lean-correction-retained.js"
 import { admitLeanRetryTimeboxExtension, admitLeanAllocation, leanCorrectionRoutePaths, leanSupervisorAllocationMode, isLeanRetryMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { leanCorrectionSourceManifest, authenticateLeanTwoPairAcceptedJoinV11, authenticateLeanSupervisorRetestAcceptedJoinV12, authenticateLeanPreparationContinuationAcceptedJoinV13 } from "../run-v1-38-lean-correction.js"
-import { isLeanTwoPairMode, isLeanSupervisorRetestMode, isLeanPreparationContinuationMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { leanCorrectionSourceManifest, authenticateLeanTwoPairAcceptedJoinV11, authenticateLeanSupervisorRetestAcceptedJoinV12, authenticateLeanPreparationContinuationAcceptedJoinV13, authenticateLeanPostV13FivePairAcceptedJoinV14 } from "../run-v1-38-lean-correction.js"
+import { isLeanTwoPairMode, isLeanSupervisorRetestMode, isLeanPreparationContinuationMode, isLeanPostV13FivePairMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { validateLeanSupervisorReasonBytesV2 } from "../run-v1-38-lean-baseline.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_RETAINED_${code}`) }
@@ -50,7 +50,7 @@ export const authenticateLeanRetryBaselineAuthorityV8 = (allocation: import("../
   admitLeanAllocation(allocation)
   const mode = leanSupervisorAllocationMode(allocation)
   if (!isLeanRetryMode(mode)) return fail("RETRY_ACCEPTED_FINAL_JOIN")
-  const { accepted: check, closure } = isLeanPreparationContinuationMode(mode) ? authenticateLeanPreparationContinuationAcceptedJoinV13(mode) : isLeanSupervisorRetestMode(mode) ? authenticateLeanSupervisorRetestAcceptedJoinV12(mode) : isLeanTwoPairMode(mode) ? authenticateLeanTwoPairAcceptedJoinV11(mode) : { accepted: authenticateLeanSupervisorDiagnosticCheck(mode), closure: authenticateLeanRetryClosureV8(mode) }
+  const { accepted: check, closure } = isLeanPostV13FivePairMode(mode) ? authenticateLeanPostV13FivePairAcceptedJoinV14(mode) : isLeanPreparationContinuationMode(mode) ? authenticateLeanPreparationContinuationAcceptedJoinV13(mode) : isLeanSupervisorRetestMode(mode) ? authenticateLeanSupervisorRetestAcceptedJoinV12(mode) : isLeanTwoPairMode(mode) ? authenticateLeanTwoPairAcceptedJoinV11(mode) : { accepted: authenticateLeanSupervisorDiagnosticCheck(mode), closure: authenticateLeanRetryClosureV8(mode) }
   assertLeanRetryBaselineJoinV8(allocation, check, closure, head)
   const lean = { diagnostic: leanCorrectionRoutePaths("diagnostic", mode), baseline: leanCorrectionRoutePaths("baseline", mode) }
   const diagnostic = openLeanLedger(lean.diagnostic.store), diagnosticEntry = readLeanChildEntry(diagnostic)
