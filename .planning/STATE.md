@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V13-1 diagnostic prepared zerocharge; allocation commit before unique MAIN run
+stopped_at: V13-1 diagnostic accepted FINAL closed; fresh conditional baseline gates next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: Independent fresh data/helper reviews clean; MAIN prepare12725closed0 zerocharge; unique run next
+last_activity_desc: MAIN diagnostic54112closed0; unique reader63890accepted ownFINAL;35charges; conditional baseline next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V13-1 DIAGNOSTIC ACCEPTED (2026-10-08): UniqueMAIN54112 ACTUALLYCLOSED0/577420ms. ONEordinaryreader63890 CLOSED0/retained_valid/accepted/current1successfulcleanup/cumulative35. Savedcurrentauth12330 CLOSED0/checkb6dc30d5/ownFINALb09f70b5/finalReaderClose1791495944960/closedelapsed148003863; authenticcarry42849e70/completedholded80366d5. HeldHEAD514985e079df3e1800d94e8b65d9e477227d5236/sourcee7d8bf58/allocationdf5f9449raw23789846/result97faae01 unchangedthroughactualclosure; parent76616/child76664absent. SourceANDHEADholdreleased afteruniquecheck; allconsumedrecordsimmutable. ConditionalONE36baseline destinations absent; freshMAINhelper/data/distinctreview/newcommittedallocation/SAMEPROCESScapacity/uniqueentry/heldsourceHEAD/ONEappropriateactualcheck next. Same165600000/full108M+ALLwall/deadline2026-10-09T02:39:01.097Z/35charges/15GB300/31minreserve/allbounds; full36fitNOTpromised. No nativecure/robustpure/Phase265LEAGfreezeformationholdoutpubliccountingproductioncredit. Earlierfrontiershistory.
 
 CURRENT V13-1 DIAGNOSTIC PREPARED (2026-10-08): MAINdraft38896/finalize41429 ACTUALLYCLOSED0; distinct actualDATA/HELPERreviews clean0/rawbd2d3f17/d3e9f99b. ExactlyONEprepare12725 CLOSED0/preparation_only/oneplanned/zerocharge, ordinal1of5 ceiling. Allocationdf5f9449/raw23789846, request06b2f18b/data42ba73c3 binds currentfixede7d8bf58/930/reviewv3. Realowned0700store onlyallocation/emptyledger/oneclosedtimeinterval; predecessor722rows/21286912B/147354000ms,34priorcharges. No activeentry/provider/Match/verifier/hold. Commit/push allocation BEFOREuniqueMAINrun/freshpassingSAMEPROCESScapacity beforecharge; holdsourceANDHEADthroughterminal+ONEappropriateactualcheck/noheavywork. Same165600000/full108M+ALLwall/deadline2026-10-09T02:39:01.097Z/15GB300/31minreserve/allbounds. OnlyowndiagacceptedFINALpermitsconditionalONE36baseline; actualentryfailureendsenvelope; oldbytesimmutable. Noempirical/nativecure/Phase265LEAGfreezeformationholdoutpubliccountingproductioncredit. Earlierfrontiershistory.
 
