@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Supervisor retest source gates closed; MAIN fresh diagnostic helper/data preparation next
+stopped_at: V12-1 preparation refusal closed; bounded source-only provenance repair next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: Final v12 review clean, MAIN81/81 and63/63 tests pass, independent source verification6/6; no fresh empirical entry yet
+last_activity_desc: Preparation9358 refused before allocation; unique terminal check closed, zero new charges; diagnosis inconclusive and source-only repair plan checked
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V12-1 PREPARATION REFUSAL CLOSED (2026-10-08): Actual MAIN draft79804/finalize66459 CLOSED0, distinct DATA/HELPER reviews clean. ExactlyONEprepare9358 CLOSED1 in2988ms/detailswithheld; no retained allocation/store/entry/result/check or child spawn, zero new charges. Initiating cause UNKNOWN. ONEindependent terminal-only23267 and finite authentication55209 CLOSED0 over heldHEADf3e89016/source72c7432d; authentic refused_before_entry carry48d7c26d/holdseal0b400cfa,34cumulative/114897342ms/21020672B695survivors at check closure. No actual entryHEAD or acceptedFINAL; ordinary empirical reader NOTinvoked/fabricated. Hold RELEASED after actual closure/authentication/PIDabsence. Approved ONEpair ENDED; baseline absent/ineligible, no further preparation/Match under that authority. All private requests/helper/setup/authorization/admission/failure/verifier/carry/seal bytes immutable. Bounded diagnosis CLOSED inconclusive: actual scope/parser HOST probe87428 PASS valid wrapper; five synthetic guard failures all suppressed, NOT historical cause. ExistingPlan16 source-only finite provenance supplement/PLAN-CHECK-v2PASS next; no new execution authority or numbered plan. Same full108M+everycurrentwall/136800000ms/absolute18:39:01.097Z/34spent/15GB300/31minreserve/exact2GB768MiB/allbounds; all later costs continue counting. Further empirical progress requires a genuinely new prospective attempt approval. Phase265/LEAG/freeze/formation/holdout/public/counting/production incomplete/gated. Older frontiers history.
 
 CURRENT V12 SOURCE GATES CLOSED (2026-10-08): Finalsource d94ede0f/root72c7432d319166689a13b6598b467d923483c91fb0d2e0d68957cdd394a19df3/922; CR01/CR02/CR03 independently SOURCE-REVIEW-v3 clean/raw6f29d1e2 CLOSED. MAIN guarded81/81fourfiles26.17s and63/63threefiles45.41s PASS; currentmanifest/source-equivalent actualreview gatesbothroutes/configuredlabtypes/factory1419zero/shell/diffPASS. Strictsix inherited errors NOTpass; five inheritedseriousboundary findings NOTcurrentpassingclaim. ScopedVALIDATION-v1 and actual distinct /root/verify_supervisor_retest_v12_source SOURCE-VERIFICATION-v1 CLOSED source_verified6/6/zerogaps; its own lost-session inert invocation outcome unestablished/notrepeated, MAINactualclosedgates supplyevidence. Independentexists-only18/18 prospective destinationsABSENT, noactiveentry/verifier. MAINalone freshhelper/data author+actualdistinctreview/newcommittedallocation/emptyreal0700store/SAMEPROCESScapacity/uniqueentry andONEproperretainedcheck next. Source-only syntheticfullsavedclosure/pendingwrapper proof NOTnativecure/empirical/full36fit/Phase265LEAGcompletion. SameONEpair/full108M+currentwall/136800000ms/deadline18:39:01.097Z/34spent/15GB300/31minreserve/exact2GB768MiB/allbounds; allcosts carry. Oldfailedv11 history/authority/readers/markers immutable, freeze/formation/holdout/public/counting/production gated. Older frontiers history.
 
