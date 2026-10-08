@@ -4,7 +4,7 @@ import { LEAN_REPLAY_V7_CAPS, LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION, LEAN_RETRY
 import { isLeanRemainingBudgetMode, isLeanRemainingBudgetExtensionV9, LEAN_REMAINING_V9_PHASE, LEAN_REMAINING_V9_EXTENSION } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanTwentySixMode, isLeanProspectiveBudgetMode, LEAN_TWENTY_SIX_V10_EXTENSION } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanSupervisorRetestMode, LEAN_SUPERVISOR_RETEST_V12_EXTENSION, validateLeanSupervisorRetestPredecessorV12, type LeanSupervisorRetestMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { isLeanPreparationContinuationMode, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION, validateLeanPreparationContinuationPredecessorV13, type LeanPreparationContinuationMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { isLeanPreparationContinuationMode, LEAN_PREPARATION_CONTINUATION_V13_REPORT_PATHS, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION, validateLeanPreparationContinuationPredecessorV13, type LeanPreparationContinuationMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanSupervisorRetestDocumentsV12, createLeanSupervisorRetestRequestDraftV12, authenticateLeanSupervisorRetestAcceptedJoinV12, authenticateLeanSupervisorRetestRecordedPredecessorV12, inspectLeanSupervisorRetestPredecessorV12 } from "../run-v1-38-lean-correction.js"
 import { leanPreparationContinuationDocumentsV13, createLeanPreparationContinuationRequestDraftV13, authenticateLeanPreparationContinuationAcceptedJoinV13, authenticateLeanPreparationContinuationRecordedPredecessorV13, inspectLeanPreparationContinuationPredecessorV13 } from "../run-v1-38-lean-correction.js"
 import { assertLeanSupervisorReasonCustodyV2, verifyLeanRetryBaselineRetainedV8 } from "./v1-38-lean-baseline-retained.js"
@@ -1375,21 +1375,43 @@ const createPreparationContinuationTerminalHold = (mode: LeanPreparationContinua
   guard()
   return { binding, guard }
 }
+/** Same hard envelope even before a ledger exists. Required old identities and
+ * every currently observed source/report/helper/temp/store byte remain debited.
+ * The finite projection uses allocator blocks, never serialized byte lengths. */
+const preparationContinuationPublicationGuard = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute, projectedBytes = 0) => {
+  const paths = leanCorrectionRoutePaths(route, mode), docs = leanPreparationContinuationDocumentsV13(route, mode)
+  const ledger = existsSync(paths.store) ? openLeanLedger(paths.store) : null
+  if (ledger && (!("route" in ledger.allocation) || leanSupervisorAllocationMode(ledger.allocation) !== mode || ledger.allocation.route !== route)) return fail("CUSTODY")
+  const predecessor = ledger && "route" in ledger.allocation ? ledger.allocation.predecessor : inspectLeanPreparationContinuationPredecessorV13(route, Number((readLeanCorrectionJson(join(paths.temp, "admission-prepare-start.json")) as { wallStartMs: number }).wallStartMs), mode)
+  const inventory = inventoryLeanTwoPairNoRefundV11(predecessor, [paths.temp, paths.store, paths.allocation, paths.request, ...Object.values(docs), ...LEAN_PREPARATION_CONTINUATION_V13_REPORT_PATHS, ...leanCorrectionSourceManifest(mode, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION).entries.map(row => row.path)])
+  const physical = Math.max(LEAN_PREPARATION_CONTINUATION_V13_EXTENSION.physicalFloorBytes, inventory.allocatedDiskBytes, ledger ? cumulativeLeanPhysicalBytes(ledger) : 0)
+  const scratch = process.memoryUsage().rss + LEAN_EXTERNAL_SCRATCH_RESERVE, elapsed = Math.max(leanRetryRootElapsedFloorV8(Date.now(), LEAN_PREPARATION_CONTINUATION_V13_EXTENSION), ledger ? currentLeanElapsedMs(ledger) : 0)
+  if (!Number.isSafeInteger(projectedBytes) || projectedBytes < 0 || !Number.isSafeInteger(physical) || !Number.isSafeInteger(scratch) || scratch > LEAN_CAPS.scratchBytes || physical + projectedBytes + 65536 > LEAN_CAPS.retainedBytes || physical + projectedBytes + scratch + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || elapsed + LEAN_PREPARATION_CONTINUATION_V13_EXTENSION.reserveMs >= LEAN_PREPARATION_CONTINUATION_V13_EXTENSION.elapsedMs) return fail("HOLD_OR_CAPACITY")
+  return ledger ?? undefined
+}
+const publishPreparationContinuationGuarded = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute, path: string, value: unknown) => {
+  const ledger = preparationContinuationPublicationGuard(mode, route, Math.ceil(leanCanonicalBytes(value).length / 4096) * 4096)
+  publishLeanCorrection(path, value, ledger)
+  preparationContinuationPublicationGuard(mode, route)
+}
 const publishPreparationContinuationHeldCarry = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute, hold: ReturnType<typeof createPreparationContinuationTerminalHold>, evidence?: ReturnType<typeof authenticatePreparationContinuationTerminalVerification>) => {
   const paths = leanCorrectionRoutePaths(route, mode), completePath = join(paths.temp, "terminal-hold-complete-v13.json")
   try {
     hold.guard()
     const carry = deriveLeanPreparationContinuationTerminalCarryV13(mode, route, evidence)
     hold.guard()
-    publishLeanCorrection(leanPreparationContinuationDocumentsV13(route, mode).carry, carry)
-    hold.guard()
     const body = { schemaVersion: "lean-preparation-continuation-terminal-hold-complete-v13", mode, route, ...hold.binding, verificationRoot: carry.verificationRoot, verificationBytesRoot: carry.verificationBytesRoot, carryRoot: carry.root, carryBytesRoot: leanBytesRoot(leanCanonicalBytes(carry)) }
-    publishLeanCorrection(completePath, { ...body, root: labRoot(body.schemaVersion, body) })
+    const complete = { ...body, root: labRoot(body.schemaVersion, body) }
+    preparationContinuationPublicationGuard(mode, route, Math.ceil(leanCanonicalBytes(carry).length / 4096) * 4096 + Math.ceil(leanCanonicalBytes(complete).length / 4096) * 4096)
+    publishPreparationContinuationGuarded(mode, route, leanPreparationContinuationDocumentsV13(route, mode).carry, carry)
+    hold.guard()
+    publishPreparationContinuationGuarded(mode, route, completePath, complete)
     hold.guard()
     return carry
   } catch (error) {
     const refusalPath = join(paths.temp, "terminal-hold-refusal-v13.json")
-    if (!existsSync(refusalPath)) { const body = { schemaVersion: "lean-preparation-continuation-terminal-hold-refusal-v13", authorizing: false, accepted: false, mode, route, ...hold.binding }; publishLeanCorrection(refusalPath, { ...body, root: labRoot(body.schemaVersion, body) }) }
+    // A refusal cannot itself bypass an exhausted envelope or mask the cause.
+    try { if (!existsSync(refusalPath)) { const body = { schemaVersion: "lean-preparation-continuation-terminal-hold-refusal-v13", authorizing: false, accepted: false, mode, route, ...hold.binding }; publishPreparationContinuationGuarded(mode, route, refusalPath, { ...body, root: labRoot(body.schemaVersion, body) }) } } catch { /* terminal refusal remains non-authorizing */ }
     throw error
   }
 }
@@ -1398,6 +1420,7 @@ export const publishLeanPreparationContinuationTerminalCarryV13 = (mode: LeanPre
   return publishPreparationContinuationHeldCarry(mode, route, createPreparationContinuationTerminalHold(mode, route, head))
 }
 const authenticatePreparationContinuationCompletedHold = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute, value: LeanPreparationContinuationTerminalCarryV13) => {
+  preparationContinuationPublicationGuard(mode, route)
   const paths = leanCorrectionRoutePaths(route, mode), seal = readPreparationContinuationRooted(join(paths.temp, "terminal-hold-complete-v13.json")).value
   if (existsSync(join(paths.temp, "terminal-hold-refusal-v13.json")) || !exactLabKeys(seal, ["schemaVersion", "mode", "route", "sourceRoot", "head", "requestBytesRoot", "entryBytesRoot", "verificationRoot", "verificationBytesRoot", "carryRoot", "carryBytesRoot", "root"]) || seal.schemaVersion !== "lean-preparation-continuation-terminal-hold-complete-v13" || seal.mode !== mode || seal.route !== route || seal.sourceRoot !== value.sourceRoot || seal.requestBytesRoot !== value.requestBytesRoot || seal.entryBytesRoot !== value.entryBytesRoot || seal.carryRoot !== value.root || seal.carryBytesRoot !== leanBytesRoot(leanCanonicalBytes(value)) || seal.verificationRoot !== value.verificationRoot || seal.verificationBytesRoot !== value.verificationBytesRoot || seal.head !== (value.entryHead ?? readPreparationContinuationRooted(join(paths.temp, "terminal-verifier-start-v13.json")).value.head)) return fail("CUSTODY")
 }
@@ -1421,7 +1444,7 @@ export const verifyLeanPreparationContinuationTerminalOnlyV13 = (path: string, m
   if (request.sourceRoot !== sourceRoot || request.route !== route || request.attemptOrdinal !== leanRetryOrdinal(mode) || !same(request.timeboxExtension, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION) || !/^[a-f0-9]{40}$/u.test(head)) return fail("CUSTODY")
   const hold = createPreparationContinuationTerminalHold(mode, route, head)
   const startBody = { schemaVersion: "lean-preparation-continuation-terminal-verifier-start-v13", authorizing: false, mode, route, sourceRoot, head, wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
-  publishLeanCorrection(join(paths.temp, "terminal-verifier-start-v13.json"), start)
+  publishPreparationContinuationGuarded(mode, route, join(paths.temp, "terminal-verifier-start-v13.json"), start)
   const ledger = existsSync(paths.store) ? openLeanLedger(paths.store) : null, allocation = ledger?.allocation
   hold.guard()
   const predecessor = ledger && "route" in ledger.allocation ? ledger.allocation.predecessor : inspectLeanPreparationContinuationPredecessorV13(route, (readLeanCorrectionJson(join(paths.temp, "admission-prepare-start.json")) as { wallStartMs: number }).wallStartMs, mode)
@@ -1454,14 +1477,14 @@ export const verifyLeanPreparationContinuationTerminalOnlyV13 = (path: string, m
     const closedTime = ledger && intervalStarted ? closeLeanInterval(ledger, interval, start.wallStartMs + elapsedUpperBoundMs, BigInt(observed.monotonicStartNs)) : null
     hold.guard()
     const cb = { schemaVersion: "lean-preparation-continuation-terminal-verifier-close-v13", startRoot: start.root, closedAtMs: closedTime?.closes.get(interval) ?? start.wallStartMs + elapsedUpperBoundMs, wallObservedMs: observed.wallStartMs, monotonicObservedNs: observed.monotonicStartNs, elapsedUpperBoundMs }
-    publishLeanCorrection(join(paths.temp, "terminal-verifier-close-v13.json"), { ...cb, root: labRoot(cb.schemaVersion, cb) })
+    publishPreparationContinuationGuarded(mode, route, join(paths.temp, "terminal-verifier-close-v13.json"), { ...cb, root: labRoot(cb.schemaVersion, cb) })
     hold.guard()
   }
   const closed = readPreparationContinuationRooted(join(paths.temp, "terminal-verifier-close-v13.json")).value
   const body = { schemaVersion: "lean-preparation-continuation-terminal-verification-v13", authorizing: false, accepted: false, finalReaderClose: false, attemptOrdinal: leanRetryOrdinal(mode), route, sourceRoot, requestBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(path)), allocationRoot: allocation?.root ?? null, entryHead: entry?.head ?? null, entryBytesRoot: entry ? leanBytesRoot(leanCanonicalBytes(entry)) : null, terminalBytesRoot: terminal ? leanBytesRoot(leanCanonicalBytes(terminal)) : null, resultAbsent: true, checkAbsent: true, failureRoot, currentCharges, cumulativeCharged, predecessor, readerStartRoot: start.root, readerCloseRoot: closed.root, closedAtMs: closed.closedAtMs, cumulativeElapsedMs: Math.max(leanRetryRootElapsedFloorV8(Number(closed.closedAtMs), request.timeboxExtension), ledger ? readLeanTimeAccounting(ledger).elapsedMs : 0) }
   const report = { ...body, root: labRoot(body.schemaVersion, body) }
   hold.guard()
-  publishLeanCorrection(reportPath, report)
+  publishPreparationContinuationGuarded(mode, route, reportPath, report)
   hold.guard()
   const evidence = authenticatePreparationContinuationTerminalVerification(mode, route, predecessor)
   hold.guard()
@@ -1479,7 +1502,7 @@ export const verifyLeanPreparationContinuationRetainedV13 = async (path: string,
     if (!existsSync(join(paths.store, paths.check)) && existsSync(join(paths.store, "result.json")) && time.closed.has(interval) && time.closed.has(closing) && !existsSync(join(paths.temp, "result-reader-refusal-v13.json"))) {
       const entry = readLeanChildEntry(ledger), state = readLeanLedger(ledger), result = readLeanCorrectionJson(join(paths.store, "result.json"), 8388608) as Record<string, unknown>
       const body = { schemaVersion: "lean-preparation-continuation-result-reader-refusal-v13", authorizing: false, accepted: false, attemptOrdinal: leanRetryOrdinal(mode), route, allocationRoot: ledger.allocation.root, sourceRoot: ledger.allocation.sourceRoot, head: entry.head, requestBytesRoot: entry.requestBytesRoot, resultRoot: result.root, currentCharged: state.charges.size, cumulativeCharged: state.charged, readerInterval: interval, closedAtMs: time.closes.get(closing) }
-      publishLeanCorrection(join(paths.temp, "result-reader-refusal-v13.json"), { ...body, root: labRoot(body.schemaVersion, body) })
+      publishPreparationContinuationGuarded(mode, route, join(paths.temp, "result-reader-refusal-v13.json"), { ...body, root: labRoot(body.schemaVersion, body) })
       publishLeanPreparationContinuationTerminalCarryV13(mode, route)
     }
     throw error

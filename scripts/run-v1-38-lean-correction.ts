@@ -79,7 +79,7 @@ export const LEAN_PREPARATION_CONTINUATION_V13_PLAN = `${LEAN_REMAINING_V9_PHASE
 export const leanPreparationContinuationDocumentsV13 = (route: LeanCorrectionRoute, mode: LeanPreparationContinuationMode = "v13-1") => {
  if (!isLeanPreparationContinuationMode(mode) || route !== "diagnostic" && route !== "baseline") return fail("ARGUMENTS")
  const paths = leanCorrectionRoutePaths(route, mode), label = route.toUpperCase()
- return Object.freeze({ review: `${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-CONTINUATION-SOURCE-REVIEW-v1.md`, dataReview: `${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-CONTINUATION-${label}-V13-1-DATA-REVIEW-v1.md`, helperReview: `${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-CONTINUATION-${label}-V13-1-HELPER-REVIEW-v1.md`, authorization: `.strategy-lab/lean-preparation-authorization-${route}-v13-1.json`, helper: `.strategy-lab/lean-preparation-${route}-v13-1-helper.mts`, continuation: ".strategy-lab/lean-preparation-continuation-v13-1.json", setup: leanRetrySetupPath(mode), carry: join(paths.temp, "terminal-carry-v13.json"), pairClosure: ".strategy-lab/lean-preparation-pair-closure-v13.json" })
+ return Object.freeze({ review: `${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-CONTINUATION-SOURCE-REVIEW-v2.md`, dataReview: `${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-CONTINUATION-${label}-V13-1-DATA-REVIEW-v1.md`, helperReview: `${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-CONTINUATION-${label}-V13-1-HELPER-REVIEW-v1.md`, authorization: `.strategy-lab/lean-preparation-authorization-${route}-v13-1.json`, helper: `.strategy-lab/lean-preparation-${route}-v13-1-helper.mts`, continuation: ".strategy-lab/lean-preparation-continuation-v13-1.json", setup: leanRetrySetupPath(mode), carry: join(paths.temp, "terminal-carry-v13.json"), pairClosure: ".strategy-lab/lean-preparation-pair-closure-v13.json" })
 }
 export const leanRemainingDocumentsV9 = (route: LeanCorrectionRoute, mode: LeanRetryMode) => {
   if (isLeanPreparationContinuationMode(mode)) return leanPreparationContinuationDocumentsV13(route, mode)
@@ -257,6 +257,9 @@ export const leanCorrectionSourceManifest = (supervisor: LeanSupervisorMode = fa
     if (!isLeanPreparationContinuationExtensionV13(extension)) return fail("SUPERVISOR_REQUEST")
     assertLeanRetryExtensionDocumentsV8(extension, supervisor)
     const closure = new Map(leanCorrectionSourceManifest("v12-1", LEAN_SUPERVISOR_RETEST_V12_EXTENSION).entries.map(entry => [entry.path, entry]))
+    // Downstream independent review bytes are physical debit, not functional
+    // source inputs: neither findings-bearing v1 nor forthcoming v2 self-binds.
+    for (const version of [1, 2]) closure.delete(`${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-CONTINUATION-SOURCE-REVIEW-v${version}.md`)
     for (const path of ["scripts/lib/v1-38-lean-preparation-continuation-v13.ts", "scripts/run-v1-38-lean-preparation-continuation-v13.test.ts", "scripts/run-v1-38-lean-preparation-provenance-v12.test.ts", LEAN_PREPARATION_CONTINUATION_V13_APPROVAL, LEAN_PREPARATION_CONTINUATION_V13_PLAN, `${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-CONTINUATION-APPROVAL-20261008.md`, `${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-CONTINUATION-TIME-SUPPLEMENT-v2.md`, `${LEAN_REMAINING_V9_PHASE}NEW265-16-PREPARATION-CONTINUATION-PLAN-CHECK-v2.md`]) closure.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
     const entries = [...closure.values()].sort((a,b) => a.path.localeCompare(b.path))
     return { entries, root: labRoot("lean-preparation-continuation-reviewed-source-v13", { entries, extension, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())), brokerRoot: leanBytesRoot(Buffer.from(buildLeanContainerBrokerSourceV7())) }) }
@@ -345,11 +348,21 @@ export const readLeanCorrectionJson = (path: string, limit = 262144): unknown =>
 }
 export const publishLeanCorrection = (path: string, value: unknown, ledger?: LeanExperimentLedger): void => {
   const bytes = leanCanonicalBytes(value)
+  // The new ordinary reader's report/FINAL use this shared publisher. Keep
+  // legacy generations untouched, but carry v13's terminal/time headroom at
+  // every write, not only before the later carry publisher is reached.
+  const guardV13 = (projected = Math.ceil(bytes.length / 4096) * 4096) => {
+    if (!ledger || !("route" in ledger.allocation) || leanSupervisorAllocationMode(ledger.allocation) !== "v13-1") return
+    const physical = cumulativeLeanPhysicalBytes(ledger), scratch = process.memoryUsage().rss + LEAN_EXTERNAL_SCRATCH_RESERVE, elapsed = Math.max(currentLeanElapsedMs(ledger), leanRetryRootElapsedFloorV8(Date.now(), LEAN_PREPARATION_CONTINUATION_V13_EXTENSION))
+    if (physical + projected + 65536 > LEAN_CAPS.retainedBytes || scratch > LEAN_CAPS.scratchBytes || physical + projected + scratch + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || elapsed + LEAN_PREPARATION_CONTINUATION_V13_EXTENSION.reserveMs >= LEAN_PREPARATION_CONTINUATION_V13_EXTENSION.elapsedMs) return fail("CAPACITY")
+  }
+  guardV13()
   if (ledger) assertLeanPublicationCapacity(ledger, bytes.length)
   const fd = openSync(resolve(path), constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600)
   try { writeLeanAll(fd, bytes); fsyncSync(fd) } finally { closeSync(fd) }
   const directory = openSync(resolve(path, ".."), constants.O_RDONLY)
   try { fsyncSync(directory) } finally { closeSync(directory) }
+  guardV13(0)
 }
 export const parseLeanCorrectionCommand = (args: readonly string[]) => {
   const mode = args[0]

@@ -109,6 +109,7 @@ const heldPublicationHost = (allocatedDiskBytes: number) => {
   const writes = new Map<string, unknown>(), carry = { verificationRoot: r(1), verificationBytesRoot: r(2), root: r(3), allocatedDiskBytes, survivors: Array.from({ length: 695 }, (_, i) => ({ identity: `synthetic-${i}`, allocatedBytes: 4096 })) }
   let physical = allocatedDiskBytes
   const dependencies = { ...accounting, ...contracts, ...correction, join, process: { memoryUsage: () => ({ rss: 4096 }) }, Date: { now: () => b.startedAtMs + 100 }, existsSync: (p: string) => writes.has(p), openLeanLedger: () => { throw new Error("NO_LEDGER") }, readLeanCorrectionJson: () => ({ wallStartMs: b.startedAtMs }), inspectLeanPreparationContinuationPredecessorV13: () => ({ ...carry, chargedMatches: 34 }), inventoryLeanTwoPairNoRefundV11: () => ({ survivors: carry.survivors, allocatedDiskBytes: physical }), deriveLeanPreparationContinuationTerminalCarryV13: () => carry, fail: () => { throw new Error("HOLD_OR_CAPACITY") }, publishLeanCorrection: (p: string, v: unknown) => { if (writes.has(p)) throw new Error("EXCLUSIVE"); writes.set(p, v); physical += Math.ceil(accounting.leanCanonicalBytes(v).length / 4096) * 4096 } }
+  Object.assign(dependencies, { leanCorrectionSourceManifest: () => ({ entries: [] }) })
   const source = readFileSync(new URL("./lib/v1-38-lean-correction-retained.ts", import.meta.url), "utf8")
   const names = ["publishPreparationContinuationHeldCarry", ...(source.includes("const preparationContinuationPublicationGuard =") ? ["preparationContinuationPublicationGuard", "publishPreparationContinuationGuarded"] : [])]
   const ast = ts.createSourceFile("retained", source, ts.ScriptTarget.ES2022, true), statements = names.map(name => ast.statements.find(node => ts.isVariableStatement(node) && node.declarationList.declarations.some(d => ts.isIdentifier(d.name) && d.name.text === name))!.getText(ast)).join("\n")
@@ -228,6 +229,13 @@ describe("first prospective v13-1 continuation (source-only HOST)", () => {
     expect(h.writes.has(h.docs.carry)).toBe(false)
     expect(h.writes.has(join(h.paths.temp, "terminal-hold-complete-v13.json"))).toBe(false)
     expect(h.physical()).toBe(11999995904)
+  })
+  it("CR-01 admits below-cap actual carry/hold and remeasures both writes", () => {
+    const h = heldPublicationHost(11999000000)
+    expect(h.publish()).toBeTruthy()
+    expect(h.physical()).toBeGreaterThan(11999000000)
+    expect(h.physical() + 65536).toBeLessThanOrEqual(accounting.LEAN_CAPS.retainedBytes)
+    expect(h.writes.has(join(h.paths.temp, "terminal-hold-complete-v13.json"))).toBe(true)
   })
   it("selects a distinct first route and rejects unused preparation ordinals", () => {
     const request = ".strategy-lab/lean-correction-supervisor-diagnostic-request-20261008-v13-1.json"
