@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Preparation provenance repair verified; new bounded continuation decision awaits human approval
+stopped_at: Five-attempt continuation approved; first-route feasibility assessed and additional time decision pending
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: Source repair9a3644c2 independently clean, MAIN58/58 and lab types pass, source verification4/4; old pair ended and no fresh execution authority
+last_activity_desc: Human approved five fresh setups with unchanged deadline; no new empirical attempt, first-route source/gates cannot safely fit before diagnostic start frontier
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT FIVE-ATTEMPT CONTINUATION APPROVED / TIME FEASIBILITY (2026-10-08): Directhuman “yes, approved” adopts265-16-PREPARATION-CONTINUATION-DECISION-v1; newAPPROVAL-20261008 records up to5distinctzero-Matchpreparations/maxONEdiag+ownacceptedFINALconditionalONE36baseline, each spent attempt immutable, realentry/Matchfailure orbaselineoutcome ends envelope. No extra time approved: full108M+ALLwall since1791455941097/cap136800000/absolute18:39:01.097Z/34prior/15GB300/31minreserve/allbounds unchanged, including approval-waittime. Actualtop-level17:28UTC start had~71min incl31reserve. Bounded readonlyscout CLOSED17:33:38 writes only existingPlan16RESEARCH-PLAN-v1: smallestfirst-routev13-1 needs newsource/approval/request/setup/allocation/finitesavedv12failedcarry/readerFINAL joins, not filename-only;30–45min source/tests+8–15min independentgates/data doesn't fit17:58UTC defensible fullcell+reserve start. No adapter/helper/request/allocation/entry/Match/private mutation/oldreader. MAINasynchronous eight-additional-continuous-hour resource request PENDING/NOTapplied; no cap/deadline reset or early live admission. Safe approval/research/planning continue, source-onlyprovenance repair remains independently verified. Oldv12pair/evidence/authority/checks immutable andENDED; no acceptedFINAL/baseline/LEAG/freeze/formation/holdout/public/counting/production credit. Older frontiers history.
 
 CURRENT PREPARATION PROVENANCE REPAIR CLOSED / HUMAN CHECKPOINT (2026-10-08): Checked existingPlan16 source-only supplement implemented RED2f691065/GREEN9a3644c2/summaryb295a228. Private prospective v12 finite eight-stage/WeakMap code sidecar, unknown errors stayunknown, exclusive best-effort publication cannot mask original refusal; originalfinally/guards/legacy/success/authority pointers unchanged. Independent REVIEW-v1clean/zero; MAIN86608 CLOSED0/58of58/17.01s, configuredlabtypes164535/diff8142fc/shell7b43c4/factory98841zero1420PASS. Six inherited strict errors NOTpass. Distinct SOURCE-VERIFICATION-v1 CLOSED source_verified4/4/zeroscopedgaps. No empirical/private route operation. Original preparation9358 cause UNKNOWN, oldv12-1 pair ENDED/zero new34total/no acceptedFINAL or eligiblebaseline; all consumedbytes immutable. No activeentry/verifier/sourcehold. New265-16-PREPARATION-CONTINUATION-DECISION-v1 proposesNOTapproved up to5distinctzero-Matchpreparations then at mostONEdiag+ownacceptedFINALconditionalONE36baseline within SAME existing full108M+everycurrentwall/136800000ms/absolute18:39:01.097Z/15GB300/31minreserve/exact2GB768MiB/allbounds. No clockreset/newtime/oldreuse/extraMatches; no repeat hash literal needed, but new plain-English human approval is required. Source-only repair complete, no additional safe implementation prerequisite identified. Phase265/LEAG/freeze/formation/holdout/public/counting/production incomplete/gated. Older frontiers history.
 
