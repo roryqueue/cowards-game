@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh v11-2 diagnostic prepared; commit before unique MAIN entry
+stopped_at: Both approved pairs closed; v11-2 failed-result verification complete; source-only sampling diagnosis next
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Independent pair-two data/helper review clean; new one-cell allocation prepared with zero charges
+last_activity_desc: Pair-two diagnostic process-invalid after one successful retained cell; unique reader refused; 34 cumulative charges
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V11-2 DIAGNOSTIC FAILED-RESULT CLOSED (2026-10-08): Unique MAIN24965 CLOSED1/detailswithheld, actual child_failed/exitCode0/nullsignal/507769ms over heldHEADce68a908/source84b80756/allocationbe869c37/raw03a483a0. Fresh SAME-PROCESS capacity passed before exactly one charge. Compact terminal success/OK/cleanupComplete=true DOES NOT override parent resource_sampling_exception or independent refusal. Actual result3be5df5e/raw7e2f13e9 exists. ONE independent ordinary reader /root/verify_v11_2_diagnostic session29841 CLOSED1/detailswithheld; no accepted check/FINALfalse/refused, finite marker authentication12800 CLOSED0. Refusalf9cf55fa/carry2cb8f651/raw0d787c32/closure9baf9809/holdseal2aac2504; actual readerclose1791421485608/105674871ms/inactive/34cumulative1currentcharge1terminal. Actual source915/HEAD unchanged through unique check; hold completion authenticated, no active experiment/verifier process, sourceANDHEAD hold RELEASED. Both approved pairs CLOSED; pair-two baseline NOT admitted/created, no further Match/allocation under exhausted pair allowance. Bounded source-only GSD sampling diagnosis next; exact cause unknown, do not reinterpret old success/failed artifacts or repeat readers. Same continuous01:43:30.738Z deadline108Mms/15GB300/all34spent/allcostsfiles/1860000msreserve/exact2000000000B scratch/768MiB oldspace/allrulesruntimeprivacybounds. Source/administration costs continue counting. No Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earlier frontiers history.
 
 CURRENT V11-2 DIAGNOSTIC PREPARED (2026-10-08): Actual MAIN draft15622/finalize12165 CLOSED0; actual independent /root/review_v11_2_data DATA9588b1d7/HELPERf6489432 clean, helperdc64fd12/requestdataee5ad327/requestbytese3ea318e/setup10588dba/continuation1b0b1ece. Exactly ONE prepare20052 CLOSED0/preparation_only/issuedfalse/oneplanned/zerocharges. Allocationbe869c37a88ca74f06985fc0dc2b1ced409a69f50bc6bcea4cd4226caaae9ffc/raw03a483a0d3bdded3d382508daefc16fa0478d52857fda14e961252b9374f08b3/source84b80756/915. Actual owned real0700 nonsymlink store contains only allocation/emptyledger/time; canonical/private allocation bytes identical, preparation interval closed/inactive. Predecessor33charges/105069997ms/19623936B, historical peaks remain unknown, finite prior closed pair1e03d4938 is custody/accounting ONLY. Commit/push new immutable allocation and reviews BEFORE unique MAIN entry; fresh SAME-PROCESS capacity BEFORE charge/provider, fixed source AND HEAD through actual terminal and ONE appropriate unique independent check, no competing heavy work/edits/commits. Only this pair's own new accepted diagnostic and actual FINAL permit its conditional36baseline; full fit NOT promised. Same continuous absolute 01:43:30.738Z deadline/108Mms/15GB/300Matches/all33spent/allcostsfiles/1860000ms reserve/2GB scratch/768MiB oldspace/all bounds. No Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earlier frontiers remain history.
 
