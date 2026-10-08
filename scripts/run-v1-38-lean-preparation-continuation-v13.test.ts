@@ -101,6 +101,21 @@ const declarationHarness = (path: string, names: readonly string[], dependencies
   new Function(...Object.keys(dependencies), "exports", compiled)(...Object.values(dependencies), exports)
   return exports
 }
+// CR-01 reproduces the actual final publisher at the reviewer's physical cap.
+// Its already-authenticated carry is synthetic; only publication HOST effects
+// are substituted, so an absent resource guard cannot hide behind admission.
+const heldPublicationHost = (allocatedDiskBytes: number) => {
+  const paths = accounting.leanCorrectionRoutePaths("diagnostic", "v13-1"), docs = correction.leanPreparationContinuationDocumentsV13("diagnostic")
+  const writes = new Map<string, unknown>(), carry = { verificationRoot: r(1), verificationBytesRoot: r(2), root: r(3), allocatedDiskBytes, survivors: Array.from({ length: 695 }, (_, i) => ({ identity: `synthetic-${i}`, allocatedBytes: 4096 })) }
+  let physical = allocatedDiskBytes
+  const dependencies = { ...accounting, ...contracts, ...correction, join, process: { memoryUsage: () => ({ rss: 4096 }) }, Date: { now: () => b.startedAtMs + 100 }, existsSync: (p: string) => writes.has(p), openLeanLedger: () => { throw new Error("NO_LEDGER") }, readLeanCorrectionJson: () => ({ wallStartMs: b.startedAtMs }), inspectLeanPreparationContinuationPredecessorV13: () => ({ ...carry, chargedMatches: 34 }), inventoryLeanTwoPairNoRefundV11: () => ({ survivors: carry.survivors, allocatedDiskBytes: physical }), deriveLeanPreparationContinuationTerminalCarryV13: () => carry, fail: () => { throw new Error("HOLD_OR_CAPACITY") }, publishLeanCorrection: (p: string, v: unknown) => { if (writes.has(p)) throw new Error("EXCLUSIVE"); writes.set(p, v); physical += Math.ceil(accounting.leanCanonicalBytes(v).length / 4096) * 4096 } }
+  const source = readFileSync(new URL("./lib/v1-38-lean-correction-retained.ts", import.meta.url), "utf8")
+  const names = ["publishPreparationContinuationHeldCarry", ...(source.includes("const preparationContinuationPublicationGuard =") ? ["preparationContinuationPublicationGuard", "publishPreparationContinuationGuarded"] : [])]
+  const ast = ts.createSourceFile("retained", source, ts.ScriptTarget.ES2022, true), statements = names.map(name => ast.statements.find(node => ts.isVariableStatement(node) && node.declarationList.declarations.some(d => ts.isIdentifier(d.name) && d.name.text === name))!.getText(ast)).join("\n")
+  const compiled = ts.transpileModule(statements + "\nexports.publish = publishPreparationContinuationHeldCarry;", { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText, exported: any = {}
+  new Function(...Object.keys(dependencies), "exports", compiled)(...Object.values(dependencies), exported)
+  return { writes, docs, paths, publish: () => exported.publish("v13-1", "diagnostic", { guard: () => {}, binding: { sourceRoot: r(4), head: "b".repeat(40), requestBytesRoot: r(5), entryBytesRoot: null } }), physical: () => physical }
+}
 const r = (n: number) => contracts.labRoot("synthetic-v13-host", n)
 const rooted = <T extends { schemaVersion: string }>(body: T) => ({ ...body, root: contracts.labRoot(body.schemaVersion, body) })
 const b = accounting.LEAN_PREPARATION_CONTINUATION_V13_EXTENSION
@@ -207,6 +222,13 @@ function composedHost(route: "diagnostic" | "baseline" = "diagnostic", asCli = f
 }
 
 describe("first prospective v13-1 continuation (source-only HOST)", () => {
+  it("CR-01 refuses actual final carry/hold publication before crossing the retained cap", () => {
+    const h = heldPublicationHost(11999995904)
+    expect(h.publish).toThrow()
+    expect(h.writes.has(h.docs.carry)).toBe(false)
+    expect(h.writes.has(join(h.paths.temp, "terminal-hold-complete-v13.json"))).toBe(false)
+    expect(h.physical()).toBe(11999995904)
+  })
   it("selects a distinct first route and rejects unused preparation ordinals", () => {
     const request = ".strategy-lab/lean-correction-supervisor-diagnostic-request-20261008-v13-1.json"
     expect(correction.parseLeanCorrectionCommand(["prepare-supervisor-diagnostic-v13-1", "--request", request])).toMatchObject({ supervisor: "v13-1", route: "diagnostic", request })
