@@ -27,7 +27,7 @@ function host(mode: string | boolean = "v12-1", route = "diagnostic") {
   const opens: { path: string; flags: number; mode: number | undefined }[] = []
   const allocation = { root: hash("synthetic-allocation", route), slots: [{}] }, ledger = { allocation }
   const carrier = { root: hash("synthetic-admission", { mode, route }), route, mode: "prepare", directory, wallStartMs: 100, monotonicStartNs: "1000000" }
-  let failingStage: Stage | undefined, refusal: unknown, publicationFailure: unknown, nextFd = 1, dispatches = 0
+  let failingStage: Stage | undefined, refusal: unknown, publicationFailure: unknown, nextFd = 1, dispatches = 0, spent = false
   let closedLedger: unknown = undefined, custody: unknown = undefined, capacityCalls = 0
   const step = (stage: Stage) => { if (events.at(-1) !== stage) events.push(stage); if (stage === failingStage) throw refusal }
   const predecessor = { elapsedUpperBoundMs: 10 }
@@ -56,7 +56,7 @@ function host(mode: string | boolean = "v12-1", route = "diagnostic") {
       events.push("admission"); return carrier
     },
     scope: () => step("scope"),
-    existsSync: () => { step("destination"); return false },
+    existsSync: () => { step("destination"); return spent },
     readLeanCorrectionRequest: () => { step("request"); return { request, reuse: { grant: { root: "reuse" } } } },
     inspectLeanSupervisorCorrectionPredecessor: () => { step("predecessor"); return predecessor },
     inspectLeanCorrectionPredecessor: () => { step("predecessor"); return predecessor },
@@ -82,7 +82,7 @@ function host(mode: string | boolean = "v12-1", route = "diagnostic") {
     if (path === paths.allocation && flags & constants.O_CREAT) step("allocation_publication")
     return originalOpen(path, flags, permissions)
   }
-  const exports: Record<string, any> = {}
+  const exports = {} as { leanCorrectionTrustedGuardError: (code: string) => Error; prepareLeanCorrection: (path: string, route: string, mode: string | boolean) => unknown }
   new Function(...Object.keys(dependencies), "exports", compiled)(...Object.values(dependencies), exports)
   const sidecarPath = join(directory, sidecarName)
   return {
@@ -90,6 +90,7 @@ function host(mode: string | boolean = "v12-1", route = "diagnostic") {
     trusted: (code = "LEAN_CORRECTION_WRITABLE_SCOPE") => exports.leanCorrectionTrustedGuardError(code) as Error,
     refuse: (stage: Stage, error: unknown) => { failingStage = stage; refusal = error },
     failPublication: (error: unknown) => { publicationFailure = error },
+    spendDestination: () => { spent = true },
     prepare: () => exports.prepareLeanCorrection("/synthetic/request.json", route, mode),
     receipt: () => { const bytes = files.get(sidecarPath); expect(bytes).toBeDefined(); return JSON.parse(bytes!) as Record<string, unknown> },
     observation: () => ({ closedLedger, custody, dispatches, capacityCalls, openDescriptors: descriptors.size }),
@@ -97,8 +98,9 @@ function host(mode: string | boolean = "v12-1", route = "diagnostic") {
 }
 
 function originalRefusal(h: ReturnType<typeof host>, error: unknown) {
-  let caught: unknown
-  try { h.prepare() } catch (value) { caught = value }
+  let caught: unknown, threw = false
+  try { h.prepare() } catch (value) { caught = value; threw = true }
+  expect(threw).toBe(true)
   expect(caught).toBe(error)
   expect(h.observation()).toMatchObject({ dispatches: 0, openDescriptors: 0, custody: ["v12-1", "prepare", false, null, h.carrier.route] })
   expect(h.events.slice(-2)).toEqual(["close", "custody"])
@@ -125,7 +127,7 @@ describe("prospective v12 actual preparation failure provenance (synthetic HOST 
 
   it("binds baseline admission and ignores message, getters, proxies, primitives and lookalikes", () => {
     const hostile = new Proxy({}, { get: () => { throw new Error("HOST_ERROR_MUST_NOT_BE_INSPECTED") }, getOwnPropertyDescriptor: () => { throw new Error("HOST_ERROR_MUST_NOT_BE_INSPECTED") } })
-    for (const error of [hostile, null, undefined, "LEAN_CORRECTION_WRITABLE_SCOPE", { message: "LEAN_CORRECTION_WRITABLE_SCOPE", code: "LEAN_CORRECTION_WRITABLE_SCOPE" }]) {
+    for (const error of [hostile, null, undefined, "LEAN_CORRECTION_WRITABLE_SCOPE", new TypeError("LEAN_CORRECTION_WRITABLE_SCOPE"), { message: "LEAN_CORRECTION_WRITABLE_SCOPE", code: "LEAN_CORRECTION_WRITABLE_SCOPE" }]) {
       const h = host("v12-1", "baseline"); h.refuse("request", error); originalRefusal(h, error)
       expect(h.receipt()).toMatchObject({ route: "baseline", startRoot: h.carrier.root, guardCode: "unknown" })
     }
@@ -143,9 +145,18 @@ describe("prospective v12 actual preparation failure provenance (synthetic HOST 
       if (kind === "duplicate") h.files.set(h.sidecarPath, "immutable prior synthetic bytes")
       else h.failPublication(new Error("SYNTHETIC_PUBLICATION_FAILURE"))
       h.refuse(stage, error); originalRefusal(h, error)
+      expect(h.opens.filter(value => value.path === h.sidecarPath)).toHaveLength(1)
       expect(h.files.get(h.sidecarPath)).toBe(kind === "duplicate" ? "immutable prior synthetic bytes" : undefined)
       expect(h.observation().closedLedger).toBe(stage === "allocation_publication" ? h.ledger : null)
     }
+  })
+
+  it("retains the actual spent-destination guard before request access", () => {
+    const h = host(); h.spendDestination()
+    expect(() => h.prepare()).toThrow("LEAN_CORRECTION_SPENT_DESTINATION")
+    expect(h.receipt()).toMatchObject({ stage: "destination", guardCode: "LEAN_CORRECTION_SPENT_DESTINATION" })
+    expect(h.events).toEqual(["admission", "scope", "destination", "close", "custody"])
+    expect(h.observation()).toMatchObject({ dispatches: 0, closedLedger: null })
   })
 
   it("has no success sidecar and leaves legacy success/refusal behavior unchanged", () => {

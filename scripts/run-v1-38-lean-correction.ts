@@ -1280,25 +1280,46 @@ export const authenticateLeanRetryAdmissionFailureV8 = (mode: LeanRetryMode, cur
   if (value.requestBytesRoot !== (existsSync(paths.request) ? leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)) : null)) return fail("ADMISSION_CUSTODY")
   return { ...value, admissionCloseMs: close.ledgerCloseMs }
 }
+type LeanPreparationStageV12 = "scope" | "destination" | "request" | "predecessor" | "allocation" | "time_admission" | "ledger" | "allocation_publication"
 export const prepareLeanCorrection = (path: string, route: LeanCorrectionRoute, supervisor: LeanSupervisorMode = false) => {
   const paths = leanCorrectionRoutePaths(route, supervisor)
   const carrier = beginLeanCorrectionAdmission(route, "prepare", resolve(paths.temp), processAdmissionClock(), supervisor)
   let ledger: LeanExperimentLedger | null = null, completed = false
+  let stage: LeanPreparationStageV12 = "scope"
   try {
   scope(route, supervisor)
+  stage = "destination"
   if (supervisor && (existsSync(paths.store) || existsSync(paths.allocation))) return fail("SPENT_DESTINATION")
-  const { request, reuse } = readLeanCorrectionRequest(path, route, supervisor), predecessor = supervisor ? inspectLeanSupervisorCorrectionPredecessor(route, carrier.wallStartMs, supervisor) : inspectLeanCorrectionPredecessor(route, carrier.root)
+  stage = "request"
+  const { request, reuse } = readLeanCorrectionRequest(path, route, supervisor)
+  stage = "predecessor"
+  const predecessor = supervisor ? inspectLeanSupervisorCorrectionPredecessor(route, carrier.wallStartMs, supervisor) : inspectLeanCorrectionPredecessor(route, carrier.root)
+  stage = "allocation"
   const common = { ...(request.timeboxExtension ? { timeboxExtension: request.timeboxExtension } : {}), ...(isLeanRetryMode(supervisor) ? { attemptOrdinal: leanRetryOrdinal(supervisor), priorClosureRoot: request.priorClosureRoot, continuationRoot: request.continuationRoot, acceptedReaderCloseRoot: request.acceptedReaderCloseRoot } : {}), sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route, reuseGrantRoot: reuse.grant.root, predecessor }
   const allocation = supervisor ? createLeanSupervisorCorrectionAllocation({ ...common, supervisorDecisionRoot: request.supervisorDecisionRoot!, acceptedCheckRoot: request.acceptedCheckRoot!, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), dataReviewRoot: request.dataReviewRoot, setupAccountingRoot: request.setupAccountingRoot!, ...((supervisor === "v5" || (supervisor === "v6" || (supervisor === "v7" || isLeanRetryMode(supervisor)))) ? { startupPolicyRoot: request.startupPolicyRoot! } : {}) }, leanSupervisorVersion(supervisor)) : createLeanCorrectionAllocation({ sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, route, reuseGrantRoot: reuse.grant.root, diagnosisRoot: request.diagnosis?.root ?? null, predecessor })
+  stage = "time_admission"
   assertLeanCorrectionAdmissionTime(predecessor.elapsedUpperBoundMs, carrier, admissionClock(), allocation)
   if (isLeanTwentySixMode(supervisor)) {
     const body = { schemaVersion: "lean-predecessor-report-snapshot-v10", route, atMs: carrier.wallStartMs, allocationRoot: allocation.root, rows: twentySixReportSnapshots.get(predecessor) ?? fail("PREDECESSOR_DRIFT") }
     publishLeanCorrection(join(paths.temp, "predecessor-report-snapshot-v10.json"), { ...body, root: labRoot(body.schemaVersion, body) })
   }
+  stage = "ledger"
   ledger = createLeanLedger(paths.store, allocation)
+  stage = "allocation_publication"
   publishLeanCorrection(paths.allocation, allocation, ledger)
   completed = true
   return { issued: false, evidenceClass: "preparation_only", route, allocationRoot: allocation.root, plannedCells: allocation.slots.length, charged: 0 }
+  } catch (error) {
+    if (isLeanSupervisorRetestMode(supervisor)) {
+      // Prospective private diagnostics only: no error property inspection,
+      // success/legacy receipt, new authority, or change to failure custody.
+      try {
+        const guardCode = typeof error === "object" && error !== null ? trustedGuardErrors.get(error) ?? "unknown" : "unknown"
+        const body = { schemaVersion: "lean-correction-preparation-failure-v12", issued: false, authorizing: false, startRoot: carrier.root, admissionMode: carrier.mode, supervisorMode: supervisor, route: carrier.route, stage, guardCode }
+        publishLeanCorrection(join(carrier.directory, "preparation-failure-v12.json"), { ...body, root: labRoot(body.schemaVersion, body) }, ledger ?? undefined)
+      } catch { /* Best-effort exclusive diagnostics must never mask refusal. */ }
+    }
+    throw error
   } finally { closeLeanCorrectionAdmission(carrier, ledger); if (!completed && (route === "diagnostic" || isLeanTwentySixMode(supervisor) || isLeanTwoPairMode(supervisor) || isLeanSupervisorRetestMode(supervisor)) && isLeanRetryMode(supervisor)) publishLeanRetryAdmissionFailureV8(supervisor, carrier.mode, false, null, route) }
 }
 const allocationFor = (path: string, route: LeanCorrectionRoute, supervisor: LeanSupervisorMode = false) => {
