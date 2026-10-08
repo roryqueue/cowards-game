@@ -69,7 +69,7 @@ export const LEAN_SUPERVISOR_RETEST_V12_PLAN = `${LEAN_REMAINING_V9_PHASE}265-16
 export const leanSupervisorRetestDocumentsV12 = (route: LeanCorrectionRoute, mode: LeanSupervisorRetestMode = "v12-1") => {
  if (!isLeanSupervisorRetestMode(mode) || route !== "diagnostic" && route !== "baseline") return fail("ARGUMENTS")
  const paths = leanCorrectionRoutePaths(route, mode), label = route.toUpperCase()
- return Object.freeze({ review: `${LEAN_REMAINING_V9_PHASE}265-16-SUPERVISOR-RETEST-SOURCE-REVIEW-v1.md`, dataReview: `${LEAN_REMAINING_V9_PHASE}265-16-SUPERVISOR-RETEST-${label}-V12-1-DATA-REVIEW-v1.md`, helperReview: `${LEAN_REMAINING_V9_PHASE}265-16-SUPERVISOR-RETEST-${label}-V12-1-HELPER-REVIEW-v1.md`, authorization: `.strategy-lab/lean-retest-authorization-${route}-v12-1.json`, helper: `.strategy-lab/lean-retest-${route}-v12-1-helper.mts`, continuation: ".strategy-lab/lean-retest-continuation-v12-1.json", setup: leanRetrySetupPath(mode), carry: join(paths.temp, "terminal-carry-v12.json"), pairClosure: ".strategy-lab/lean-retest-pair-closure-v12.json" })
+ return Object.freeze({ review: `${LEAN_REMAINING_V9_PHASE}265-16-SUPERVISOR-RETEST-SOURCE-REVIEW-v3.md`, dataReview: `${LEAN_REMAINING_V9_PHASE}265-16-SUPERVISOR-RETEST-${label}-V12-1-DATA-REVIEW-v1.md`, helperReview: `${LEAN_REMAINING_V9_PHASE}265-16-SUPERVISOR-RETEST-${label}-V12-1-HELPER-REVIEW-v1.md`, authorization: `.strategy-lab/lean-retest-authorization-${route}-v12-1.json`, helper: `.strategy-lab/lean-retest-${route}-v12-1-helper.mts`, continuation: ".strategy-lab/lean-retest-continuation-v12-1.json", setup: leanRetrySetupPath(mode), carry: join(paths.temp, "terminal-carry-v12.json"), pairClosure: ".strategy-lab/lean-retest-pair-closure-v12.json" })
 }
 export const leanRemainingDocumentsV9 = (route: LeanCorrectionRoute, mode: LeanRetryMode) => {
   if (isLeanSupervisorRetestMode(mode)) return leanSupervisorRetestDocumentsV12(route, mode)
@@ -1466,6 +1466,13 @@ export const validateLeanSupervisorRetestAuthorizationV12 = (value: unknown, req
   if (!exactLabKeys(authorization, ["schemaVersion", "timeboxExtension", "approved", "executionAuthorized", "route", "attemptOrdinal", "sourceRoot", "approvalRoot", "planRoot", "policyRoot", "requestDataRoot", "helperPath", "helperBytesRoot", "helperReviewRoot", "authorAgent", "reviewerAgent", "root"]) || authorization.schemaVersion !== "lean-supervisor-retest-execution-authorization-v12" || !same(authorization.timeboxExtension, b) || authorization.approved !== true || authorization.executionAuthorized !== true || authorization.route !== route || authorization.attemptOrdinal !== request.attemptOrdinal || authorization.sourceRoot !== request.sourceRoot || authorization.approvalRoot !== b.approvalRoot || authorization.planRoot !== b.planRoot || authorization.policyRoot !== b.root || authorization.requestDataRoot !== leanCorrectionRequestDataRoot(request) || authorization.helperPath !== request.helperPath || authorization.helperBytesRoot !== request.helperBytesRoot || authorization.helperReviewRoot !== request.helperReviewRoot || authorization.authorAgent !== "/root" || !admitsLeanSupervisorReviewAgents(authorization.authorAgent, authorization.reviewerAgent) || claimed !== labRoot(String(authorization.schemaVersion), ab) || request.authorizationRoot !== leanBytesRoot(leanCanonicalBytes(authorization))) return fail("SUPERVISOR_REQUEST")
 }
 export const readLeanSupervisorRetestRequestV12 = (path: string, route: LeanCorrectionRoute, mode: LeanSupervisorRetestMode) => readLeanSupervisorRetestRequestWithPurposeV12(path, route, mode)
+/** The selected v12 source-review gate, shared by the actual request consumer.
+ * Review bytes remain downstream of source; this never grants execution. */
+export const authenticateLeanSupervisorRetestSourceReviewV12 = (request: LeanCorrectionRequest, route: LeanCorrectionRoute, mode: LeanSupervisorRetestMode): void => {
+  const docs = leanSupervisorRetestDocumentsV12(route, mode)
+  if (request.reviewPath !== docs.review) return fail("SUPERVISOR_REQUEST")
+  readReview(docs.review, request.reviewRoot, request.sourceRoot, null, undefined, mode, LEAN_SUPERVISOR_RETEST_V12_EXTENSION)
+}
 const readLeanSupervisorRetestRequestWithPurposeV12 = (path: string, route: LeanCorrectionRoute, mode: LeanSupervisorRetestMode, purpose?: unknown): { request: LeanCorrectionRequest; reuse: LeanColdReuse } => {
   if (!isLeanSupervisorRetestMode(mode) || path !== leanCorrectionRoutePaths(route, mode).request) return fail("REQUEST_PATH")
   const b = LEAN_SUPERVISOR_RETEST_V12_EXTENSION, docs = leanSupervisorRetestDocumentsV12(route, mode), request = readLeanCorrectionJson(path) as LeanCorrectionRequest
@@ -1489,7 +1496,7 @@ const readLeanSupervisorRetestRequestWithPurposeV12 = (path: string, route: Lean
   inspectLeanSupervisorRetestPredecessorWithJoinV12(route, Date.now(), mode, purpose, acceptedJoin)
   const reuse = authenticateLeanColdReuse({ directory: LEAN_BASELINE_STORE, newSourceRoot: request.sourceRoot, amendmentRoot: request.amendmentRoot })
   if (reuse.grant.root !== request.reuseGrantRoot) return fail("REUSE")
-  readReview(docs.review, request.reviewRoot, request.sourceRoot, null, undefined, mode, b)
+  authenticateLeanSupervisorRetestSourceReviewV12(request, route, mode)
   readReview(docs.dataReview, request.dataReviewRoot, request.sourceRoot, null, leanCorrectionRequestDataRoot(request), mode, b)
   readReview(docs.helperReview, request.helperReviewRoot!, request.sourceRoot, null, leanCorrectionRequestDataRoot(request), mode, b)
   return { request, reuse }

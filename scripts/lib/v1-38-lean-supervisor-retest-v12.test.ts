@@ -12,7 +12,7 @@ import { LEAN_COLD_REUSE_HISTORY } from "./v1-38-lean-baseline-reuse.js"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 
 vi.mock("node:fs", async importOriginal => {
   const original = await importOriginal<typeof import("node:fs")>()
@@ -128,6 +128,60 @@ const pendingBaselineV12Fixture = () => {
 }
 
 describe("fresh v12 supervisor source-only admission", () => {
+  it("the actual v12 source-review consumer selects final v3 and rejects failed, stale, borrowed or uncommitted evidence", () => {
+    const mode = "v12-1" as const, e = accounting.LEAN_SUPERVISOR_RETEST_V12_EXTENSION
+    const phase = accounting.LEAN_REMAINING_V9_PHASE, finalPath = `${phase}265-16-SUPERVISOR-RETEST-SOURCE-REVIEW-v3.md`
+    // Capture only the inert source-manifest's own reads, including source-only
+    // fixtures used to construct intermediate inventories. No private reader.
+    const sourceBytes = new Map<string, Buffer>(), originalRead = fileIO.readFileSync
+    const preload = vi.spyOn(fileIO, "readFileSync").mockImplementation(path => {
+      const bytes = originalRead(path)
+      sourceBytes.set(resolve(String(path)), Buffer.from(bytes))
+      return bytes as never
+    })
+    const source = correction.leanCorrectionSourceManifest(mode, e), r = (n: number) => labRoot("v12-synthetic-review-consumer", n)
+    preload.mockRestore()
+    const commit = "f".repeat(40)
+    const clean = Buffer.from(`---\nstatus: clean\nsource_root: ${source.root}\nsource_commit: ${commit}\nindependently_reviewed: true\nauthor_agent: /root/fix_265_correction_reader\nreviewer_agent: /root/review_265_twenty_hour\n---\nSynthetic only: no actual final review is authored.\n`)
+    const reports = new Map([[resolve(finalPath), clean]])
+    vi.spyOn(fileIO, "readFileSync").mockImplementation(path => {
+      const bytes = reports.get(String(path)) ?? sourceBytes.get(resolve(String(path)))
+      if (!bytes) throw new Error(`SYNTHETIC_SOURCE_REVIEW_HOST_FILE_ABSENT:${String(path)}`)
+      return bytes as never
+    })
+    const git = vi.spyOn(childIO, "execFileSync").mockImplementation((file, args) => {
+      expect(file).toBe("git")
+      expect(args?.slice(0, 4)).toEqual(["diff", "--exit-code", commit, "--"])
+      expect(args?.slice(4)).toEqual(source.entries.map(entry => entry.path))
+      return Buffer.alloc(0) as never
+    })
+    try {
+      for (const route of ["diagnostic", "baseline"] as const) {
+        const draft = correction.createLeanSupervisorRetestRequestDraftV12(mode, route, { sourceRoot: source.root, reviewRoot: accounting.leanBytesRoot(clean), dataReviewRoot: r(2), helperReviewRoot: r(3), helperPath: correction.leanSupervisorRetestDocumentsV12(route).helper, helperBytesRoot: r(4), setupAccountingRoot: r(5), reuseGrantRoot: r(6), authorizationRoot: r(7), priorClosureRoot: r(8), continuationRoot: r(9), acceptedCheckRoot: route === "diagnostic" ? null : r(10), acceptedReaderCloseRoot: route === "diagnostic" ? null : r(11) })
+        const request = { ...draft, reviewPath: finalPath }
+        expect(() => correction.authenticateLeanSupervisorRetestSourceReviewV12(request, route, mode)).not.toThrow()
+        expect(draft.reviewPath).toBe(finalPath)
+        expect(git).toHaveBeenCalled()
+        expect(() => correction.authenticateLeanSupervisorRetestSourceReviewV12({ ...request, reviewPath: `${phase}265-16-SUPERVISOR-RETEST-SOURCE-REVIEW-v1.md` }, route, mode)).toThrow("SUPERVISOR_REQUEST")
+        for (const mutation of [clean.toString().replace("status: clean", "status: issues_found"), clean.toString().replace(source.root, r(12)), clean.toString().replace("reviewer_agent: /root/review_265_twenty_hour", "reviewer_agent: /root/fix_265_correction_reader"), clean.toString().replace(commit, "not-a-commit")]) {
+          const bytes = Buffer.from(mutation); reports.set(resolve(finalPath), bytes)
+          expect(() => correction.authenticateLeanSupervisorRetestSourceReviewV12({ ...request, reviewRoot: accounting.leanBytesRoot(bytes) }, route, mode)).toThrow("LEAN_CORRECTION_REVIEW")
+        }
+        reports.set(resolve(finalPath), Buffer.concat([clean, Buffer.from("borrowed different raw bytes\n")]))
+        expect(() => correction.authenticateLeanSupervisorRetestSourceReviewV12(request, route, mode)).toThrow("LEAN_CORRECTION_REVIEW")
+        reports.set(resolve(finalPath), clean)
+        expect(() => correction.authenticateLeanSupervisorRetestSourceReviewV12({ ...request, sourceRoot: r(13) }, route, mode)).toThrow("LEAN_CORRECTION_REVIEW")
+        git.mockImplementationOnce(() => { throw new Error("SYNTHETIC_COMMITTED_SOURCE_DIFF") })
+        expect(() => correction.authenticateLeanSupervisorRetestSourceReviewV12(request, route, mode)).toThrow("REVIEW_SOURCE")
+      }
+      for (const name of ["SOURCE-REVIEW-v2", "SOURCE-REVIEW-v3", "REVIEW-FIX-v2"]) {
+        const path = `${phase}265-16-SUPERVISOR-RETEST-${name}.md`
+        expect(accounting.LEAN_SUPERVISOR_RETEST_V12_REPORT_PATHS).toContain(path)
+        expect(source.entries.some(entry => entry.path === path)).toBe(false)
+      }
+      expect(accounting.LEAN_SUPERVISOR_RETEST_V12_REPORT_PATHS).not.toContain(`${phase}265-16-SUPERVISOR-RETEST-SOURCE-REVIEW-v4.md`)
+    } finally { vi.restoreAllMocks() }
+  }, 30000)
   for (const success of [true, false]) it(`awaits the pending production baseline wrapper before ${success ? "fulfilled carry" : "rejected refusal and carry"}`, async () => {
     const s = pendingBaselineV12Fixture(), carryPath = correction.leanSupervisorRetestDocumentsV12("baseline", s.mode).carry
     const sealPath = join(s.paths.temp, "terminal-hold-complete-v12.json"), refusalPath = join(s.paths.temp, "result-reader-refusal-v12.json")

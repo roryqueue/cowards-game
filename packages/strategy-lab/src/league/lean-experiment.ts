@@ -1771,6 +1771,7 @@ const createLeanSupervisorRetestAllocationV12 = (input: Parameters<typeof create
 export const LEAN_SUPERVISOR_RETEST_V12_REPORT_PATHS: readonly string[] = Object.freeze([
  ...LEAN_TWO_PAIR_V11_REPORT_PATHS,
  ...["SOURCE-REVIEW", "REVIEW-FIX", "SOURCE-SUMMARY", "VALIDATION", "SOURCE-VERIFICATION", "PLAN-CHECK", "RESEARCH", "PLAN", "OUTCOME"].map(name => `${LEAN_REMAINING_V9_PHASE}265-16-SUPERVISOR-RETEST-${name}-v1.md`),
+ ...["SOURCE-REVIEW-v2", "SOURCE-REVIEW-v3", "REVIEW-FIX-v2"].map(name => `${LEAN_REMAINING_V9_PHASE}265-16-SUPERVISOR-RETEST-${name}.md`),
  ...[2,3].map(n => `${LEAN_REMAINING_V9_PHASE}265-16-SUPERVISOR-RETEST-PLAN-CHECK-v${n}.md`),
  `${LEAN_REMAINING_V9_PHASE}265-16-SUPERVISOR-REPAIR-RETEST-APPROVAL-20261008.md`, ".planning/debug/supervisor-sampling-repair.md",
  ...(["DIAGNOSTIC", "BASELINE"] as const).flatMap(route => ["DATA-REVIEW", "HELPER-REVIEW", "PREPARATION", "TERMINAL-VERIFICATION"].map(name => `${LEAN_REMAINING_V9_PHASE}265-16-SUPERVISOR-RETEST-${route}-V12-1-${name}-v1.md`)),
