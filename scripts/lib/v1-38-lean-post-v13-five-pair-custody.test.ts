@@ -6,6 +6,18 @@ import { join } from "node:path"
 import * as correction from "../run-v1-38-lean-correction.js"
 import * as retained from "./v1-38-lean-correction-retained.js"
 
+it("binds only ROOT-observed finite failed-v13 metadata, not an old ordinary reader", () => {
+  const oldReader = vi.spyOn(retained, "authenticateLeanSupervisorDiagnosticCheck")
+  try {
+    const history = correction.authenticateLeanPostV13HistoricalCustodyV14()
+    expect(history.cumulativeCharged).toBe(35)
+    expect(history.predecessor.elapsedUpperBoundMs).toBe(148694388)
+    expect(history.predecessor.allocatedDiskBytes).toBe(22777856)
+    expect(history.predecessor.survivors.length).toBe(774)
+    expect(oldReader).not.toHaveBeenCalled()
+  } finally { oldReader.mockRestore() }
+})
+
 it("new accepted-join dispatch rejects missing real same-pair custody on every call", () => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "v14-custody-host-"))), before = process.cwd()
   const audit = vi.spyOn(retained, "authenticateLeanRetryClosureV8")
