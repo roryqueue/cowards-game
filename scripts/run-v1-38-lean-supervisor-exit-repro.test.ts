@@ -5,7 +5,7 @@ import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import * as parent from "./run-v1-38-lean-baseline.js"
 
-type Mode = "clean" | "queued-exit-rss" | "live-rss" | "parent-rss" | "accounting" | "reserve" | "threshold-kill"
+type Mode = "clean" | "queued-exit-rss" | "observed-exit-rss" | "live-rss" | "parent-rss" | "accounting" | "reserve" | "threshold-kill"
 const host = vi.hoisted(() => ({ child: null as any, allocation: null as any, entry: null as any, terminal: null as any, files: new Map<string, Uint8Array>(), order: [] as string[], mode: "clean" as Mode, samples: 0, elapsed: 0, thrown: false, gone: false }))
 const syntheticError = () => new Error("SYNTHETIC_PRIVATE_SENTINEL")
 
@@ -15,11 +15,12 @@ vi.mock("node:child_process", async original => {
     if (command === "git") return args[0] === "show" ? lean.leanCanonicalBytes(host.allocation) : "a".repeat(40)
     if (command !== "ps") throw syntheticError()
     host.samples++; host.order.push("child_rss")
-    if (host.samples > 1 && (host.mode === "queued-exit-rss" || host.mode === "live-rss")) {
+    if (host.samples > 1 && (host.mode === "queued-exit-rss" || host.mode === "observed-exit-rss" || host.mode === "live-rss")) {
       if (host.mode === "queued-exit-rss") {
         host.gone = true; host.order.push("os_clean_exit_queued")
         Promise.resolve().then(() => { host.child.exitCode = 0; host.order.push("exit_event"); host.child.emit("exit", 0, null) })
       }
+      if (host.mode === "observed-exit-rss") { host.child.exitCode = 0; host.order.push("exit_event"); host.child.emit("exit", 0, null) }
       throw syntheticError()
     }
     return "100"
@@ -77,7 +78,7 @@ const begin = async (mode: Mode, v12 = false, deadlineFixture = false) => {
     if (mode === "parent-rss" && host.samples > 1 && !host.thrown) { host.thrown = true; throw syntheticError() }
     return { rss: mode === "threshold-kill" && host.samples > 1 ? lean.LEAN_CAPS.scratchBytes : 10_000_000, heapTotal: 0, heapUsed: 0, external: 0, arrayBuffers: 0 }
   })
-  const settled = parent.runLeanBoundedParent({ ledger: { allocation } as lean.LeanExperimentLedger, store: "/synthetic-no-store", requestPath: "/synthetic/request.json", allocationPath: "/synthetic/allocation.json", sourceRoot: root("source"), manifestRoot: () => root("source"), childMode: "synthetic-never-forked", supervisorObservation: true }).then(value => ({ value, rejected: false }), () => ({ value: null, rejected: true }))
+  const settled = parent.runLeanBoundedParent({ ledger: { allocation } as lean.LeanExperimentLedger, store: "/synthetic-no-store", requestPath: "/synthetic/request.json", allocationPath: "/synthetic/allocation.json", sourceRoot: root("source"), manifestRoot: () => root("source"), childMode: "synthetic-never-forked", ...(v12 ? {} : { supervisorObservation: true as const }) }).then(value => ({ value, rejected: false }), () => ({ value: null, rejected: true }))
   child.emit("message", { ready: child.pid })
   await Promise.resolve(); await Promise.resolve()
   expect(host.entry).not.toBeNull()
@@ -158,5 +159,12 @@ describe("current synthetic supervisor failure mechanism", () => {
       expect(retained.reasons).toEqual(deadline ? ["deadline_timeout"] : [])
       run.timers?.mockRestore()
     }
+  })
+  it("v12 records an actually delivered exit event without clearing failure", async () => {
+    const run = await begin("observed-exit-rss", true)
+    await vi.advanceTimersByTimeAsync(250)
+    expect((await run.settled).rejected).toBe(true)
+    expect(host.terminal.status).toBe("child_failed")
+    expect(parent.validateLeanSupervisorReasonBytesV2(host.files.get(parent.LEAN_SUPERVISOR_REASON_FILE)!).observations).toMatchObject({ resourceSamplingOperation: "child_rss", resourceSamplingSequence: 1, resourceSamplingExitObserved: true })
   })
 })
