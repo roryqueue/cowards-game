@@ -11,6 +11,19 @@ import { LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES, LEAN_FRESH_S
 import { writeLeanAll, createLeanAllocation, chargeLeanSlot, createLeanLedger, retainLeanMatch, verifyLeanEvidence, chooseLeanTier, encodeLeanReplay, decodeLeanReplay, leanSchedule, readLeanLedger } from "./lean-experiment.js"
 import * as twoPair from "./lean-experiment.js"
 
+it("v14 keeps every cap and original clock while adding five distinct prospective identities", () => {
+  const b = twoPair.LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION
+  expect(twoPair.LEAN_POST_V13_FIVE_PAIR_V14_CAPS).toEqual({ ...LEAN_CAPS, elapsedMs: 165600000 })
+  expect(twoPair.leanRetryRootElapsedFloorV8(1791496635485, b)).toBe(148694388)
+  for (const n of [1, 2, 3, 4, 5] as const) {
+    const mode = `v14-${n}` as const
+    expect(twoPair.leanProspectiveBudgetBinding(mode)).toBe(b)
+    expect(twoPair.leanRetrySetupPath(mode)).toBe(`.strategy-lab/lean-five-pair-setup-${mode}.json`)
+    expect(twoPair.leanCorrectionRoutePaths("baseline", mode).store).not.toBe(twoPair.leanCorrectionRoutePaths("baseline", "v13-1").store)
+  }
+  expect(twoPair.LEAN_PREPARATION_CONTINUATION_V13_EXTENSION.maximumDiagnostics).toBe(1)
+})
+
 it("v11 pins two fresh pairs and exact uninterrupted thirty-hour accounting without altering v10", () => {
   const b = twoPair.LEAN_TWO_PAIR_V11_EXTENSION
   expect(b).toMatchObject({ schemaVersion: "lean-two-pair-envelope-v11", priorElapsedMs: 93600000, startedAtMs: 1791409410738, elapsedMs: 108000000, charged: 32, excludedIdleMs: 0, maximumDiagnostics: 2, maximumBaselines: 2, reserveMs: 1860000 })
