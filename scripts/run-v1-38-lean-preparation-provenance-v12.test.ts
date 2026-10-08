@@ -69,6 +69,7 @@ function host(mode: string | boolean = "v12-1", route = "diagnostic") {
     },
     publishLeanRetryAdmissionFailureV8: (...args: unknown[]) => { custody = args; events.push("custody") },
     isLeanSupervisorRetestMode: (v: unknown) => v === "v12-1",
+    isLeanPreparationContinuationMode: (v: unknown) => v === "v13-1",
     isLeanRetryMode: (v: unknown) => typeof v === "string" && /^v(?:[89]-[123]|10-1|11-[12]|12-1)$/u.test(v),
     isLeanTwoPairMode: (v: unknown) => v === "v11-1" || v === "v11-2",
     isLeanTwentySixMode: (v: unknown) => v === "v10-1",

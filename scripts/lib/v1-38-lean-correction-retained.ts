@@ -1,10 +1,12 @@
 
-const leanRetryClosureFile = (mode: LeanSupervisorMode) => isLeanSupervisorRetestMode(mode) ? "retest-closure-v12.json" : "retry-closure-v8.json"
+const leanRetryClosureFile = (mode: LeanSupervisorMode)  => isLeanPreparationContinuationMode(mode) ? "preparation-closure-v13.json" : isLeanSupervisorRetestMode(mode) ? "retest-closure-v12.json" : "retry-closure-v8.json"
 import { LEAN_REPLAY_V7_CAPS, LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION, LEAN_RETRY_V8_TIMEBOX_EXTENSION, validateLeanBookkeepingBaselineCustodyV8, isLeanRetryMode, leanRetryOrdinal, type LeanRetryMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanRemainingBudgetMode, isLeanRemainingBudgetExtensionV9, LEAN_REMAINING_V9_PHASE, LEAN_REMAINING_V9_EXTENSION } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanTwentySixMode, isLeanProspectiveBudgetMode, LEAN_TWENTY_SIX_V10_EXTENSION } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanSupervisorRetestMode, LEAN_SUPERVISOR_RETEST_V12_EXTENSION, validateLeanSupervisorRetestPredecessorV12, type LeanSupervisorRetestMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { isLeanPreparationContinuationMode, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION, validateLeanPreparationContinuationPredecessorV13, type LeanPreparationContinuationMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanSupervisorRetestDocumentsV12, createLeanSupervisorRetestRequestDraftV12, authenticateLeanSupervisorRetestAcceptedJoinV12, authenticateLeanSupervisorRetestRecordedPredecessorV12, inspectLeanSupervisorRetestPredecessorV12 } from "../run-v1-38-lean-correction.js"
+import { leanPreparationContinuationDocumentsV13, createLeanPreparationContinuationRequestDraftV13, authenticateLeanPreparationContinuationAcceptedJoinV13, authenticateLeanPreparationContinuationRecordedPredecessorV13, inspectLeanPreparationContinuationPredecessorV13 } from "../run-v1-38-lean-correction.js"
 import { assertLeanSupervisorReasonCustodyV2, verifyLeanRetryBaselineRetainedV8 } from "./v1-38-lean-baseline-retained.js"
 import { isLeanTwoPairMode, LEAN_TWO_PAIR_V11_EXTENSION, validateLeanTwoPairPredecessorV11, type LeanTwoPairMode, type LeanCorrectionPredecessor } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanTwoPairDocumentsV11, createLeanTwoPairRequestDraftV11, inventoryLeanTwoPairNoRefundV11, inventoryLeanSupervisorSurvivors, authenticateLeanTwoPairAcceptedJoinV11, authenticateLeanTwoPairRecordedPredecessorV11, inspectLeanTwoPairPredecessorV11 } from "../run-v1-38-lean-correction.js"
@@ -103,8 +105,8 @@ export const auditLeanCorrectionRetained = (value: unknown, guard: () => void = 
   const s = value as unknown as LeanCorrectionRetainedSnapshot, a = admitLeanAllocation(s.allocation), r = s.result
   if ((supervisor === "v5" || (supervisor === "v6" || (supervisor === "v7" || isLeanRetryMode(supervisor)))) && (!Number.isSafeInteger(s.time.elapsedMs) || s.time.elapsedMs < 0 || !Number.isSafeInteger(s.evidence.charged))) return fail("ACCOUNTING")
   if (!("route" in a) || leanSupervisorAllocationMode(a) !== supervisor || !supervisor && s.schemaVersion !== "lean-correction-retained-snapshot-v1") return fail("ALLOCATION")
-  const reason = supervisor ? isLeanSupervisorRetestMode(supervisor) ? validateLeanSupervisorRetestReasonJoinV12(s.supervisorReasonBytes!, s.entry, s.terminal) : validateLeanSupervisorReasonJoin(s.supervisorReasonBytes!, s.entry, s.terminal) : null
-  if (supervisor && (s.request.schemaVersion !== `lean-correction-supervisor-request-v${isLeanSupervisorRetestMode(supervisor) ? 12 : leanSupervisorVersion(supervisor)}` || s.request.supervisorDecisionRoot !== a.supervisorDecisionRoot || s.request.acceptedCheckRoot !== a.acceptedCheckRoot || s.request.diagnosis !== null || a.requestBytesRoot !== leanBytesRoot(leanCanonicalBytes(s.request)) || s.request.dataReviewRoot !== a.dataReviewRoot || s.request.setupAccountingRoot !== a.setupAccountingRoot || (supervisor === "v5" || (supervisor === "v6" || (supervisor === "v7" || isLeanRetryMode(supervisor)))) && s.request.startupPolicyRoot !== a.startupPolicyRoot)) return fail("SUPERVISOR_REQUEST")
+  const reason = supervisor ? (isLeanSupervisorRetestMode(supervisor) || isLeanPreparationContinuationMode(supervisor)) ? validateLeanSupervisorRetestReasonJoinV12(s.supervisorReasonBytes!, s.entry, s.terminal) : validateLeanSupervisorReasonJoin(s.supervisorReasonBytes!, s.entry, s.terminal) : null
+  if (supervisor && (s.request.schemaVersion !== `lean-correction-supervisor-request-v${isLeanPreparationContinuationMode(supervisor) ? 13 : isLeanSupervisorRetestMode(supervisor) ? 12 : leanSupervisorVersion(supervisor)}` || s.request.supervisorDecisionRoot !== a.supervisorDecisionRoot || s.request.acceptedCheckRoot !== a.acceptedCheckRoot || s.request.diagnosis !== null || a.requestBytesRoot !== leanBytesRoot(leanCanonicalBytes(s.request)) || s.request.dataReviewRoot !== a.dataReviewRoot || s.request.setupAccountingRoot !== a.setupAccountingRoot || (supervisor === "v5" || (supervisor === "v6" || (supervisor === "v7" || isLeanRetryMode(supervisor)))) && s.request.startupPolicyRoot !== a.startupPolicyRoot)) return fail("SUPERVISOR_REQUEST")
   if (isLeanRetryMode(supervisor) && (!same(s.request.timeboxExtension ?? null, a.timeboxExtension ?? null) || s.request.attemptOrdinal !== a.attemptOrdinal || r.attemptOrdinal !== a.attemptOrdinal || s.request.acceptedReaderCloseRoot !== a.acceptedReaderCloseRoot)) return fail("CUSTODY")
   const reuse = validateLeanColdReuse(s.reuse, a.sourceRoot), route = a.route
   if (!same(s.request.requestRoots, a.requestRoots) || s.request.route !== route || s.request.sourceRoot !== a.sourceRoot || s.request.reuseGrantRoot !== a.reuseGrantRoot || reuse.grant.root !== a.reuseGrantRoot || s.entry.allocationRoot !== a.root || s.entry.sourceRoot !== a.sourceRoot || s.entry.requestBytesRoot !== leanBytesRoot(leanCanonicalBytes(s.request)) || s.terminal.entryBytesRoot !== leanBytesRoot(leanCanonicalBytes(s.entry)) || s.terminal.allocationRoot !== a.root || s.terminal.sourceRoot !== a.sourceRoot || s.terminal.head !== s.entry.head || s.terminal.status !== "child_exited" || s.terminal.exitCode !== 0 || s.terminal.signal !== null || s.time.active || !s.time.closed.has("pilot-entry")) return fail("CUSTODY")
@@ -415,7 +417,7 @@ const deriveLeanRetryClosureV8 = (ledger: Parameters<typeof readLeanLedger>[0], 
   if (currentHold && (leanCorrectionSourceManifest(mode, allocation.timeboxExtension).root !== allocation.sourceRoot || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim() !== entry.head)) return fail("HOLD_OR_CAPACITY")
   const accepted = closureClass === "accepted" ? authenticateLeanSupervisorDiagnosticCheck(mode) : null
   if (accepted && accepted.readerCloseMs !== time.closes.get(closing)) return fail("ACCEPTED_READER_CLOSURE")
-const body = { ...(allocation.timeboxExtension ? { timeboxExtension: allocation.timeboxExtension } : {}), schemaVersion: "lean-retry-closure-v8", privacy: "private_offline", attemptOrdinal: leanRetryOrdinal(mode), closureClass, authorizing: false, allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, head: entry.head, requestBytesRoot: entry.requestBytesRoot, entryBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "entry.json"))), terminalBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "child-terminal.json"))), resultBytesRoot: resultExists ? leanBytesRoot(readLeanCorrectionPrivateBytes(resultPath, 8388608)) : null, ledgerBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "ledger.ndjson"), 4194304)), timeBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "time.ndjson"), 4194304)), readerInterval: interval, readerStartMs: time.starts.get(interval)!, readerCloseMs: time.closes.get(closing)!, finalReaderClose: !isLeanProspectiveBudgetMode(mode) || closureClass === "accepted", checkRoot: accepted?.root ?? null, checkBytesRoot: accepted?.bytesRoot ?? null, acceptedCheckAbsent: !checkExists, resultAbsent: !resultExists, closedElapsedMs: Math.max(time.elapsedMs, leanRetryRootElapsedFloorV8(time.closes.get(closing)!, allocation.timeboxExtension)), cumulativeCharged: state.charged, currentCharges: state.charges.size }
+const body = { ...(allocation.timeboxExtension ? { timeboxExtension: allocation.timeboxExtension } : {}), schemaVersion: isLeanPreparationContinuationMode(mode) ? "lean-preparation-closure-v13" : "lean-retry-closure-v8", privacy: "private_offline", attemptOrdinal: leanRetryOrdinal(mode), closureClass, authorizing: false, allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, head: entry.head, requestBytesRoot: entry.requestBytesRoot, entryBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "entry.json"))), terminalBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "child-terminal.json"))), resultBytesRoot: resultExists ? leanBytesRoot(readLeanCorrectionPrivateBytes(resultPath, 8388608)) : null, ledgerBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "ledger.ndjson"), 4194304)), timeBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(join(ledger.directory, "time.ndjson"), 4194304)), readerInterval: interval, readerStartMs: time.starts.get(interval)!, readerCloseMs: time.closes.get(closing)!, finalReaderClose: !isLeanProspectiveBudgetMode(mode) || closureClass === "accepted", checkRoot: accepted?.root ?? null, checkBytesRoot: accepted?.bytesRoot ?? null, acceptedCheckAbsent: !checkExists, resultAbsent: !resultExists, closedElapsedMs: Math.max(time.elapsedMs, leanRetryRootElapsedFloorV8(time.closes.get(closing)!, allocation.timeboxExtension)), cumulativeCharged: state.charged, currentCharges: state.charges.size }
   return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 export const publishLeanRetryClosureV8 = (ledger: Parameters<typeof readLeanLedger>[0], mode: LeanRetryMode, closureClass: LeanRetryClosureClass) => {
@@ -1253,6 +1255,238 @@ export const verifyLeanSupervisorRetestRetainedV12 = async (path: string, mode: 
 }
 
 export const validateLeanSupervisorRetestReasonJoinV12 = (bytes: Uint8Array, entry: ReturnType<typeof readLeanChildEntry>, terminal: ReturnType<typeof readLeanChildTerminal>) => {
+ const reason = assertLeanSupervisorReasonCustodyV2(bytes, { allocationRoot: entry.allocationRoot, sourceRoot: entry.sourceRoot, requestBytesRoot: entry.requestBytesRoot, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(entry)), head: entry.head, parentPid: entry.parentPid, childPid: entry.childPid, exitCode: terminal.exitCode, signal: terminal.signal, status: terminal.status })
+ if (reason.uncertain || reason.reasons.length || reason.observations.resourceSampling !== "observed" || reason.observations.finalIdentity !== "matched" || reason.observations.failureReceipt !== "absent" || terminal.status !== "child_exited" || reason.exitCode !== 0 || reason.signal !== null) return fail("SUPERVISOR_REASON_CUSTODY")
+ return reason
+}
+
+
+/** Prospective first preparation continuation; old v12 declarations above remain unchanged. */
+export interface LeanPreparationContinuationTerminalCarryV13 {
+  schemaVersion: "lean-preparation-continuation-terminal-carry-v13"; timeboxExtension: typeof LEAN_PREPARATION_CONTINUATION_V13_EXTENSION; authorizing: false; accepted: false; attemptOrdinal: 1; route: LeanCorrectionRoute
+  outcome: "refused_before_entry" | "entered_without_result" | "failed_result" | "closed_result"; sourceRoot: LabRoot; requestBytesRoot: LabRoot; allocationRoot: LabRoot | null; entryHead: string | null; entryBytesRoot: LabRoot | null; terminalBytesRoot: LabRoot | null; resultBytesRoot: LabRoot | null
+  verificationRoot: LabRoot; verificationBytesRoot: LabRoot; closureRoot: LabRoot; closedAtMs: number; cumulativeElapsedMs: number; currentCharges: number; cumulativeCharged: number; allocatedDiskBytes: number; survivors: LeanCorrectionPredecessor["survivors"]; root: LabRoot
+}
+/** Pure shape/integrity validation; authenticity is re-derived by the reader below. */
+export const validateLeanPreparationContinuationTerminalCarryV13 = (value: unknown, mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute): LeanPreparationContinuationTerminalCarryV13 => {
+  if (!isLeanPreparationContinuationMode(mode) || !exactLabKeys(value, ["schemaVersion", "timeboxExtension", "authorizing", "accepted", "attemptOrdinal", "route", "outcome", "sourceRoot", "requestBytesRoot", "allocationRoot", "entryHead", "entryBytesRoot", "terminalBytesRoot", "resultBytesRoot", "verificationRoot", "verificationBytesRoot", "closureRoot", "closedAtMs", "cumulativeElapsedMs", "currentCharges", "cumulativeCharged", "allocatedDiskBytes", "survivors", "root"])) return fail("CUSTODY")
+  const v = value as unknown as LeanPreparationContinuationTerminalCarryV13, { root: r, ...body } = v, entered = v.outcome !== "refused_before_entry", result = v.outcome === "failed_result" || v.outcome === "closed_result"
+  if (v.schemaVersion !== "lean-preparation-continuation-terminal-carry-v13" || !same(v.timeboxExtension, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION) || v.authorizing !== false || v.accepted !== false || v.attemptOrdinal !== leanRetryOrdinal(mode) || v.route !== route || !["refused_before_entry", "entered_without_result", "failed_result", "closed_result"].includes(v.outcome) || ![v.sourceRoot, v.requestBytesRoot, v.verificationRoot, v.verificationBytesRoot, v.closureRoot].every(rooted) || (entered ? !rooted(v.allocationRoot) || !rooted(v.entryBytesRoot) || !rooted(v.terminalBytesRoot) || typeof v.entryHead !== "string" || !/^[a-f0-9]{40}$/u.test(v.entryHead) : v.entryHead !== null || v.entryBytesRoot !== null || v.terminalBytesRoot !== null || v.allocationRoot !== null && !rooted(v.allocationRoot)) || (result ? !rooted(v.resultBytesRoot) : v.resultBytesRoot !== null) || !Number.isSafeInteger(v.closedAtMs) || v.closedAtMs < LEAN_PREPARATION_CONTINUATION_V13_EXTENSION.startedAtMs || !Number.isSafeInteger(v.cumulativeElapsedMs) || v.cumulativeElapsedMs < leanRetryRootElapsedFloorV8(v.closedAtMs, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION) || !Number.isSafeInteger(v.currentCharges) || v.currentCharges < 0 || v.currentCharges > (route === "diagnostic" ? 1 : 36) || !entered && v.currentCharges !== 0 || !Number.isSafeInteger(v.cumulativeCharged) || v.cumulativeCharged < 34 + v.currentCharges || v.cumulativeCharged > LEAN_CAPS.matches || !Number.isSafeInteger(v.allocatedDiskBytes) || v.allocatedDiskBytes < LEAN_PREPARATION_CONTINUATION_V13_EXTENSION.physicalFloorBytes || v.allocatedDiskBytes > LEAN_CAPS.retainedBytes || !Array.isArray(v.survivors) || !v.survivors.length || new Set(v.survivors.map(row => row.identity)).size !== v.survivors.length || v.survivors.some(row => !exactLabKeys(row, ["identity", "allocatedBytes"]) || typeof row.identity !== "string" || row.identity.includes("..") || !Number.isSafeInteger(row.allocatedBytes) || Number(row.allocatedBytes) < 0) || v.survivors.reduce((n, row) => n + row.allocatedBytes, 0) > v.allocatedDiskBytes || r !== labRoot(v.schemaVersion, body)) return fail("CUSTODY")
+  return Object.freeze(v)
+}
+const readPreparationContinuationRooted = (path: string, domain?: string, limit = 4194304) => {
+  const bytes = readLeanCorrectionPrivateBytes(path, limit), value = JSON.parse(Buffer.from(bytes).toString("utf8")) as Record<string, unknown>, { root: r, ...body } = value
+  if (leanBytesRoot(leanCanonicalBytes(value)) !== leanBytesRoot(bytes)) return fail("CUSTODY")
+  if (typeof value.schemaVersion !== "string" || r !== labRoot(domain ?? value.schemaVersion, body)) return fail("CUSTODY")
+  return { value, bytesRoot: leanBytesRoot(bytes) }
+}
+const validatePreparationContinuationTerminalRequest = (request: LeanCorrectionRequest, mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute) => {
+  const expected = createLeanPreparationContinuationRequestDraftV13(mode, route, { sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, dataReviewRoot: request.dataReviewRoot, helperReviewRoot: request.helperReviewRoot!, helperPath: request.helperPath!, helperBytesRoot: request.helperBytesRoot!, setupAccountingRoot: request.setupAccountingRoot!, reuseGrantRoot: request.reuseGrantRoot, authorizationRoot: request.authorizationRoot!, priorClosureRoot: request.priorClosureRoot!, continuationRoot: request.continuationRoot!, acceptedCheckRoot: request.acceptedCheckRoot!, acceptedReaderCloseRoot: request.acceptedReaderCloseRoot! })
+  if (!same(request, expected) || (!rooted(request.priorClosureRoot) || !rooted(request.continuationRoot)) || (route === "diagnostic" ? request.acceptedCheckRoot !== null || request.acceptedReaderCloseRoot !== null : !rooted(request.acceptedCheckRoot) || !rooted(request.acceptedReaderCloseRoot))) return fail("CUSTODY")
+}
+/** Finite, complete report schema. Its expected body comes ONLY from the actual
+ * admission/entry/time records in the authenticator below, never from itself. */
+export const validateLeanPreparationContinuationTerminalVerificationV13 = (value: unknown, expectedBody: Record<string, unknown>) => {
+  const expected = { ...expectedBody, root: labRoot("lean-preparation-continuation-terminal-verification-v13", expectedBody) }
+  if (!exactLabKeys(value, Object.keys(expected)) || !same(value, expected)) return fail("CUSTODY")
+  return expected
+}
+const readPreparationContinuationAdmission = (paths: ReturnType<typeof leanCorrectionRoutePaths>, mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute, admissionMode: "prepare" | "run") => {
+  const start = readPreparationContinuationRooted(join(paths.temp, `admission-${admissionMode}-start.json`)).value, close = readPreparationContinuationRooted(join(paths.temp, `admission-${admissionMode}-close.json`)).value
+  if (!exactLabKeys(start, ["schemaVersion", "attemptOrdinal", "route", "mode", "parentPid", "wallStartMs", "monotonicStartNs", "root"]) || !exactLabKeys(close, ["schemaVersion", "attemptOrdinal", "startRoot", "route", "mode", "elapsedUpperBoundMs", "monotonicObservedNs", "wallObservedMs", "allocationRoot", "ledgerInterval", "importedMs", "ledgerCloseMs", "root"]) || start.schemaVersion !== "lean-correction-supervisor-admission-v8" || close.schemaVersion !== "lean-correction-supervisor-admission-close-v8" || start.mode !== admissionMode || close.mode !== admissionMode || start.route !== route || close.route !== route || start.attemptOrdinal !== leanRetryOrdinal(mode) || close.attemptOrdinal !== start.attemptOrdinal || close.startRoot !== start.root || !Number.isSafeInteger(start.parentPid) || Number(start.parentPid) <= 0 || !Number.isSafeInteger(close.importedMs) || Number(close.importedMs) < 0 || !Number.isSafeInteger(close.ledgerCloseMs) || Number(close.ledgerCloseMs) < Number(start.wallStartMs) + Number(close.elapsedUpperBoundMs) || close.elapsedUpperBoundMs !== leanCorrectionAdmissionElapsed(start as unknown as { wallStartMs: number; monotonicStartNs: string }, { wallStartMs: Number(close.wallObservedMs), monotonicStartNs: String(close.monotonicObservedNs) })) return fail("CUSTODY")
+  return { start, close }
+}
+/** Reauthenticate absence/refusal and its pre-verifier journal prefix. A rooted
+ * report is merely a claim; it has no authority over counts or clocks. */
+export const authenticateLeanPreparationContinuationTerminalVerificationV13 = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute) => {
+  const verification = authenticatePreparationContinuationTerminalVerification(mode, route), carry = validateLeanPreparationContinuationTerminalCarryV13(readLeanCorrectionJson(leanPreparationContinuationDocumentsV13(route, mode).carry), mode, route)
+  authenticatePreparationContinuationCompletedHold(mode, route, carry)
+  if (carry.verificationRoot !== verification.value.root || carry.verificationBytesRoot !== verification.bytesRoot) return fail("CUSTODY")
+  return verification
+}
+const authenticatePreparationContinuationTerminalVerification = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute, authenticatedPredecessor?: LeanCorrectionPredecessor) => {
+  const paths = leanCorrectionRoutePaths(route, mode), request = readLeanCorrectionJson(paths.request) as LeanCorrectionRequest
+  validatePreparationContinuationTerminalRequest(request, mode, route)
+  if ([join(paths.store, "result.json"), join(paths.store, paths.check)].some(path => existsSync(path))) return fail("CUSTODY")
+  const ledger = existsSync(paths.store) ? openLeanLedger(paths.store) : null, allocation = ledger?.allocation, preparation = readPreparationContinuationAdmission(paths, mode, route, "prepare")
+  const time = ledger ? readLeanTimeAccounting(ledger) : null, state = ledger ? readLeanLedger(ledger) : null
+  const entry = ledger && existsSync(join(paths.store, "entry.json")) ? readLeanChildEntry(ledger) : null, terminal = entry && ledger ? readLeanChildTerminal(ledger) : null
+  const verification = readPreparationContinuationRooted(join(paths.temp, "terminal-verification-v13.json"))
+  const predecessor = allocation && "route" in allocation ? allocation.predecessor : authenticateLeanPreparationContinuationRecordedPredecessorV13(verification.value.predecessor as LeanCorrectionPredecessor, route, Number(preparation.start.wallStartMs), mode)
+  if (authenticatedPredecessor && !same(authenticatedPredecessor, predecessor)) return fail("CUSTODY")
+  validateLeanPreparationContinuationPredecessorV13(predecessor)
+  const start = readPreparationContinuationRooted(join(paths.temp, "terminal-verifier-start-v13.json")).value, close = readPreparationContinuationRooted(join(paths.temp, "terminal-verifier-close-v13.json")).value, interval = `correction-supervisor-${route}-v13-terminal-verifier`
+  if (!exactLabKeys(start, ["schemaVersion", "authorizing", "mode", "route", "sourceRoot", "head", "wallStartMs", "monotonicStartNs", "root"]) || !exactLabKeys(close, ["schemaVersion", "startRoot", "closedAtMs", "wallObservedMs", "monotonicObservedNs", "elapsedUpperBoundMs", "root"]) || start.schemaVersion !== "lean-preparation-continuation-terminal-verifier-start-v13" || close.schemaVersion !== "lean-preparation-continuation-terminal-verifier-close-v13" || start.authorizing !== false || start.mode !== mode || start.route !== route || start.sourceRoot !== request.sourceRoot || typeof start.head !== "string" || !/^[a-f0-9]{40}$/u.test(start.head) || !Number.isSafeInteger(start.wallStartMs) || Number(start.wallStartMs) < Number(preparation.close.ledgerCloseMs) || !Number.isSafeInteger(close.closedAtMs) || close.startRoot !== start.root || close.elapsedUpperBoundMs !== leanCorrectionAdmissionElapsed(start as unknown as { wallStartMs: number; monotonicStartNs: string }, { wallStartMs: Number(close.wallObservedMs), monotonicStartNs: String(close.monotonicObservedNs) }) || Number(close.closedAtMs) < Number(start.wallStartMs) + Number(close.elapsedUpperBoundMs)) return fail("CUSTODY")
+  if (ledger) {
+    if (!allocation || leanSupervisorAllocationMode(allocation) !== mode || !("route" in allocation) || allocation.route !== route || allocation.sourceRoot !== request.sourceRoot || allocation.requestBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)) || time!.active || !time!.closed.has(interval) || time!.starts.get(interval) !== start.wallStartMs || time!.closes.get(interval) !== close.closedAtMs || preparation.close.allocationRoot !== allocation.root || preparation.close.ledgerInterval !== "correction-preparation" || time!.closes.get("correction-preparation") !== preparation.close.ledgerCloseMs || state!.charged !== predecessor.chargedMatches + state!.charges.size) return fail("CUSTODY")
+  } else if (preparation.close.allocationRoot !== null || preparation.close.ledgerInterval !== null || preparation.close.importedMs !== 0 || existsSync(paths.allocation)) return fail("CUSTODY")
+  let failureRoot: LabRoot | null = null
+  if (entry) {
+    const run = readPreparationContinuationAdmission(paths, mode, route, "run")
+    if (entry.head !== start.head || entry.sourceRoot !== request.sourceRoot || entry.allocationRoot !== allocation!.root || entry.requestBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)) || terminal!.head !== entry.head || terminal!.entryBytesRoot !== leanBytesRoot(leanCanonicalBytes(entry)) || run.start.wallStartMs !== entry.wallStartMs || Number(run.start.wallStartMs) < Number(preparation.close.ledgerCloseMs) || run.close.allocationRoot !== allocation!.root || run.close.ledgerInterval !== "correction-run-finalization" || time!.closes.get("correction-run-finalization") !== run.close.ledgerCloseMs || terminal!.wallObservedMs > Number(run.close.ledgerCloseMs) || Number(run.close.ledgerCloseMs) > Number(start.wallStartMs)) return fail("CUSTODY")
+  } else {
+    if (existsSync(join(paths.store, "child-terminal.json"))) return fail("CUSTODY")
+    const failure = authenticateLeanRetryAdmissionFailureV8(mode, false, route, interval)
+    if (!same(failure.timeboxExtension, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION) || failure.head !== start.head || failure.sourceRoot !== request.sourceRoot || failure.requestBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)) || failure.currentCharges !== 0 || failure.admissionCloseMs > Number(start.wallStartMs) || ledger && failure.cumulativeCharged !== predecessor.chargedMatches || !ledger && existsSync(join(paths.temp, "admission-run-start.json"))) return fail("CUSTODY")
+    failureRoot = failure.root
+  }
+  const body = { schemaVersion: "lean-preparation-continuation-terminal-verification-v13", authorizing: false, accepted: false, finalReaderClose: false, attemptOrdinal: leanRetryOrdinal(mode), route, sourceRoot: request.sourceRoot, requestBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)), allocationRoot: allocation?.root ?? null, entryHead: entry?.head ?? null, entryBytesRoot: entry ? leanBytesRoot(leanCanonicalBytes(entry)) : null, terminalBytesRoot: terminal ? leanBytesRoot(leanCanonicalBytes(terminal)) : null, resultAbsent: true, checkAbsent: true, failureRoot, currentCharges: state?.charges.size ?? 0, cumulativeCharged: state?.charged ?? predecessor.chargedMatches, predecessor, readerStartRoot: start.root, readerCloseRoot: close.root, closedAtMs: close.closedAtMs, cumulativeElapsedMs: Math.max(leanRetryRootElapsedFloorV8(Number(close.closedAtMs), LEAN_PREPARATION_CONTINUATION_V13_EXTENSION), time?.elapsedMs ?? 0) }
+  validateLeanPreparationContinuationTerminalVerificationV13(verification.value, body)
+  return { ...verification, predecessor, start, close }
+}
+const deriveLeanPreparationContinuationTerminalCarryV13 = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute, terminalEvidence?: ReturnType<typeof authenticatePreparationContinuationTerminalVerification>): LeanPreparationContinuationTerminalCarryV13 => {
+  if (!isLeanPreparationContinuationMode(mode)) return fail("CUSTODY")
+  const paths = leanCorrectionRoutePaths(route, mode), request = readLeanCorrectionJson(paths.request) as LeanCorrectionRequest
+  if (request.route !== route || request.attemptOrdinal !== leanRetryOrdinal(mode) || !same(request.timeboxExtension, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION)) return fail("CUSTODY")
+  const ledger = existsSync(paths.store) ? openLeanLedger(paths.store) : null, allocation = ledger?.allocation
+  if (allocation && (leanSupervisorAllocationMode(allocation) !== mode || !("route" in allocation) || allocation.route !== route || allocation.sourceRoot !== request.sourceRoot || allocation.requestBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)))) return fail("CUSTODY")
+  const hasEntry = existsSync(join(paths.store, "entry.json")), hasResult = existsSync(join(paths.store, "result.json")), hasCheck = existsSync(join(paths.store, paths.check))
+  if (hasResult && !hasEntry) return fail("CUSTODY")
+  const entry = hasEntry && ledger ? readLeanChildEntry(ledger) : null, terminal = entry && ledger ? readLeanChildTerminal(ledger) : null
+  if (entry && terminal) assertLeanSupervisorReasonCustodyV2(readLeanCorrectionPrivateBytes(join(paths.store, LEAN_SUPERVISOR_REASON_FILE), LEAN_SUPERVISOR_REASON_MAX_BYTES), { allocationRoot: entry.allocationRoot, sourceRoot: entry.sourceRoot, requestBytesRoot: entry.requestBytesRoot, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(entry)), head: entry.head, parentPid: entry.parentPid, childPid: entry.childPid, exitCode: terminal.exitCode, signal: terminal.signal, status: terminal.status })
+  const state = ledger ? readLeanLedger(ledger) : null, time = ledger ? readLeanTimeAccounting(ledger) : null
+  if (time?.active || entry && (entry.sourceRoot !== request.sourceRoot || terminal?.head !== entry.head || terminal?.entryBytesRoot !== leanBytesRoot(leanCanonicalBytes(entry)))) return fail("CUSTODY")
+  const verification = hasResult ? readPreparationContinuationRooted(hasCheck ? join(paths.store, paths.check) : join(paths.temp, "result-reader-refusal-v13.json")) : terminalEvidence ?? authenticatePreparationContinuationTerminalVerification(mode, route)
+  const check = verification.value
+  if (hasResult ? check.route !== route || check.sourceRoot !== request.sourceRoot || check.allocationRoot !== allocation?.root || check.head !== entry?.head || check.requestBytesRoot !== entry?.requestBytesRoot || check.attemptOrdinal !== leanRetryOrdinal(mode) || check.currentCharged !== state?.charges.size || check.cumulativeCharged !== state?.charged || !time?.closed.has(`correction-supervisor-${route}-v8-reader-close`) : check.schemaVersion !== "lean-preparation-continuation-terminal-verification-v13" || check.route !== route || check.attemptOrdinal !== leanRetryOrdinal(mode) || check.sourceRoot !== request.sourceRoot || check.requestBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)) || check.accepted !== false || check.authorizing !== false || check.entryHead !== (entry?.head ?? null) || check.allocationRoot !== (allocation?.root ?? null)) return fail("CUSTODY")
+  const resultBytesRoot = hasResult ? leanBytesRoot(readLeanCorrectionPrivateBytes(join(paths.store, "result.json"), 8388608)) : null
+  if (hasResult && check.resultRoot !== (readLeanCorrectionJson(join(paths.store, "result.json"), 8388608) as Record<string, unknown>).root) return fail("CUSTODY")
+  const closure = route === "diagnostic" && hasResult ? readPreparationContinuationRooted(join(paths.store, "preparation-closure-v13.json")) : null
+  if (closure && (closure.value.sourceRoot !== request.sourceRoot || closure.value.checkRoot !== (check.accepted === true ? check.root : null) || closure.value.checkBytesRoot !== (check.accepted === true ? verification.bytesRoot : null) || closure.value.resultBytesRoot !== resultBytesRoot || closure.value.head !== entry?.head || closure.value.finalReaderClose !== (check.accepted === true) || closure.value.cumulativeCharged !== state?.charged)) return fail("CUSTODY")
+  const closedAtMs = hasResult ? time!.closes.get(`correction-supervisor-${route}-v8-reader-close`)! : Number(check.closedAtMs)
+  const outcome = !entry ? "refused_before_entry" : !hasResult ? "entered_without_result" : check.accepted === true ? "closed_result" : "failed_result"
+  // Use the predecessor already authenticated at admission/the terminal check.
+  // Neither the closed carry consumer nor ordinal2 reopens old accepted readers.
+  const predecessor = allocation && "predecessor" in allocation ? allocation.predecessor : check.predecessor as LeanCorrectionPredecessor
+  if (!predecessor || predecessor.chargedMatches < 34 || predecessor.elapsedUpperBoundMs < LEAN_PREPARATION_CONTINUATION_V13_EXTENSION.priorElapsedMs || predecessor.survivors.length < 695 || predecessor.allocatedDiskBytes < LEAN_PREPARATION_CONTINUATION_V13_EXTENSION.physicalFloorBytes) return fail("CUSTODY")
+  const inventory = inventoryLeanTwoPairNoRefundV11(predecessor, [paths.temp, ...(ledger ? [paths.store, paths.allocation] : []), paths.request, leanPreparationContinuationDocumentsV13(route, mode).authorization, leanPreparationContinuationDocumentsV13(route, mode).helper]), survivors = inventory.survivors
+  const cumulativeCharged = state?.charged ?? Number(check.cumulativeCharged)
+  const body = { schemaVersion: "lean-preparation-continuation-terminal-carry-v13" as const, timeboxExtension: LEAN_PREPARATION_CONTINUATION_V13_EXTENSION, authorizing: false as const, accepted: false as const, attemptOrdinal: leanRetryOrdinal(mode) as 1, route, outcome, sourceRoot: request.sourceRoot, requestBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)), allocationRoot: allocation?.root ?? null, entryHead: entry?.head ?? null, entryBytesRoot: entry ? leanBytesRoot(leanCanonicalBytes(entry)) : null, terminalBytesRoot: terminal ? leanBytesRoot(leanCanonicalBytes(terminal)) : null, resultBytesRoot, verificationRoot: check.root as LabRoot, verificationBytesRoot: verification.bytesRoot, closureRoot: (closure?.value.root ?? check.root) as LabRoot, closedAtMs, cumulativeElapsedMs: Math.max(leanRetryRootElapsedFloorV8(closedAtMs, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION), time?.elapsedMs ?? 0), currentCharges: state?.charges.size ?? 0, cumulativeCharged, allocatedDiskBytes: Math.max(LEAN_PREPARATION_CONTINUATION_V13_EXTENSION.physicalFloorBytes, inventory.allocatedDiskBytes), survivors }
+  return validateLeanPreparationContinuationTerminalCarryV13({ ...body, root: labRoot(body.schemaVersion, body) }, mode, route)
+}
+interface PreparationContinuationHoldBinding { sourceRoot: LabRoot; head: string; requestBytesRoot: LabRoot; entryBytesRoot: LabRoot | null }
+const createPreparationContinuationTerminalHold = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute, expectedHead: string) => {
+  const paths = leanCorrectionRoutePaths(route, mode), request = readLeanCorrectionJson(paths.request) as LeanCorrectionRequest
+  validatePreparationContinuationTerminalRequest(request, mode, route)
+  const binding: PreparationContinuationHoldBinding = { sourceRoot: request.sourceRoot, head: expectedHead, requestBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)), entryBytesRoot: existsSync(join(paths.store, "entry.json")) ? leanBytesRoot(readLeanCorrectionPrivateBytes(join(paths.store, "entry.json"))) : null }
+  const guard = () => {
+    if (leanCorrectionSourceManifest(mode, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION).root !== binding.sourceRoot || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim() !== binding.head || leanBytesRoot(readLeanCorrectionPrivateBytes(paths.request)) !== binding.requestBytesRoot || (existsSync(join(paths.store, "entry.json")) ? leanBytesRoot(readLeanCorrectionPrivateBytes(join(paths.store, "entry.json"))) : null) !== binding.entryBytesRoot) return fail("HOLD_OR_CAPACITY")
+  }
+  guard()
+  return { binding, guard }
+}
+const publishPreparationContinuationHeldCarry = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute, hold: ReturnType<typeof createPreparationContinuationTerminalHold>, evidence?: ReturnType<typeof authenticatePreparationContinuationTerminalVerification>) => {
+  const paths = leanCorrectionRoutePaths(route, mode), completePath = join(paths.temp, "terminal-hold-complete-v13.json")
+  try {
+    hold.guard()
+    const carry = deriveLeanPreparationContinuationTerminalCarryV13(mode, route, evidence)
+    hold.guard()
+    publishLeanCorrection(leanPreparationContinuationDocumentsV13(route, mode).carry, carry)
+    hold.guard()
+    const body = { schemaVersion: "lean-preparation-continuation-terminal-hold-complete-v13", mode, route, ...hold.binding, verificationRoot: carry.verificationRoot, verificationBytesRoot: carry.verificationBytesRoot, carryRoot: carry.root, carryBytesRoot: leanBytesRoot(leanCanonicalBytes(carry)) }
+    publishLeanCorrection(completePath, { ...body, root: labRoot(body.schemaVersion, body) })
+    hold.guard()
+    return carry
+  } catch (error) {
+    const refusalPath = join(paths.temp, "terminal-hold-refusal-v13.json")
+    if (!existsSync(refusalPath)) { const body = { schemaVersion: "lean-preparation-continuation-terminal-hold-refusal-v13", authorizing: false, accepted: false, mode, route, ...hold.binding }; publishLeanCorrection(refusalPath, { ...body, root: labRoot(body.schemaVersion, body) }) }
+    throw error
+  }
+}
+export const publishLeanPreparationContinuationTerminalCarryV13 = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute) => {
+  const paths = leanCorrectionRoutePaths(route, mode), head = existsSync(join(paths.store, "entry.json")) ? (readLeanCorrectionJson(join(paths.store, "entry.json")) as { head: string }).head : String(readPreparationContinuationRooted(join(paths.temp, "terminal-verifier-start-v13.json")).value.head)
+  return publishPreparationContinuationHeldCarry(mode, route, createPreparationContinuationTerminalHold(mode, route, head))
+}
+const authenticatePreparationContinuationCompletedHold = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute, value: LeanPreparationContinuationTerminalCarryV13) => {
+  const paths = leanCorrectionRoutePaths(route, mode), seal = readPreparationContinuationRooted(join(paths.temp, "terminal-hold-complete-v13.json")).value
+  if (existsSync(join(paths.temp, "terminal-hold-refusal-v13.json")) || !exactLabKeys(seal, ["schemaVersion", "mode", "route", "sourceRoot", "head", "requestBytesRoot", "entryBytesRoot", "verificationRoot", "verificationBytesRoot", "carryRoot", "carryBytesRoot", "root"]) || seal.schemaVersion !== "lean-preparation-continuation-terminal-hold-complete-v13" || seal.mode !== mode || seal.route !== route || seal.sourceRoot !== value.sourceRoot || seal.requestBytesRoot !== value.requestBytesRoot || seal.entryBytesRoot !== value.entryBytesRoot || seal.carryRoot !== value.root || seal.carryBytesRoot !== leanBytesRoot(leanCanonicalBytes(value)) || seal.verificationRoot !== value.verificationRoot || seal.verificationBytesRoot !== value.verificationBytesRoot || seal.head !== (value.entryHead ?? readPreparationContinuationRooted(join(paths.temp, "terminal-verifier-start-v13.json")).value.head)) return fail("CUSTODY")
+}
+const authenticatePreparationContinuationCarry = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute) => {
+  const value = validateLeanPreparationContinuationTerminalCarryV13(readLeanCorrectionJson(leanPreparationContinuationDocumentsV13(route, mode).carry), mode, route), expected = deriveLeanPreparationContinuationTerminalCarryV13(mode, route)
+  authenticatePreparationContinuationCompletedHold(mode, route, value)
+  // Inventory gains the immutable carry file after publication. Authenticate the
+  // saved rows as a prefix; new bytes are measured and carried, never refunded.
+  const { survivors: _s, allocatedDiskBytes: _b, root: _r, ...primitive } = value, { survivors: _es, allocatedDiskBytes: _eb, root: _er, ...ep } = expected
+  if (!same(primitive, ep) || expected.allocatedDiskBytes < value.allocatedDiskBytes || value.survivors.some(row => !expected.survivors.some(actual => actual.identity === row.identity && actual.allocatedBytes >= row.allocatedBytes))) return fail("CUSTODY")
+  return value
+}
+export const authenticateLeanPreparationContinuationTerminalCarryV13 = (mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute) => authenticatePreparationContinuationCarry(mode, route)
+/** Only a closed complete pair crosses to ordinal2. Previous success is not authority. */
+/** One result-absent independent verifier for either v11 route. No fake result/HEAD. */
+export const verifyLeanPreparationContinuationTerminalOnlyV13 = (path: string, mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute, precheck?: () => void) => {
+  if (!isLeanPreparationContinuationMode(mode)) return fail("CUSTODY")
+  const paths = leanCorrectionRoutePaths(route, mode), reportPath = join(paths.temp, "terminal-verification-v13.json")
+  if (path !== paths.request || existsSync(join(paths.store, "result.json")) || existsSync(join(paths.store, paths.check)) || existsSync(reportPath) || existsSync(join(paths.temp, "terminal-verifier-start-v13.json"))) return fail("CUSTODY")
+  const request = readLeanCorrectionJson(path) as LeanCorrectionRequest, sourceRoot = leanCorrectionSourceManifest(mode, request.timeboxExtension).root, head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim()
+  if (request.sourceRoot !== sourceRoot || request.route !== route || request.attemptOrdinal !== leanRetryOrdinal(mode) || !same(request.timeboxExtension, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION) || !/^[a-f0-9]{40}$/u.test(head)) return fail("CUSTODY")
+  const hold = createPreparationContinuationTerminalHold(mode, route, head)
+  const startBody = { schemaVersion: "lean-preparation-continuation-terminal-verifier-start-v13", authorizing: false, mode, route, sourceRoot, head, wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, start = { ...startBody, root: labRoot(startBody.schemaVersion, startBody) }
+  publishLeanCorrection(join(paths.temp, "terminal-verifier-start-v13.json"), start)
+  const ledger = existsSync(paths.store) ? openLeanLedger(paths.store) : null, allocation = ledger?.allocation
+  hold.guard()
+  const predecessor = ledger && "route" in ledger.allocation ? ledger.allocation.predecessor : inspectLeanPreparationContinuationPredecessorV13(route, (readLeanCorrectionJson(join(paths.temp, "admission-prepare-start.json")) as { wallStartMs: number }).wallStartMs, mode)
+  hold.guard()
+  let entry: ReturnType<typeof readLeanChildEntry> | null = null, terminal: ReturnType<typeof readLeanChildTerminal> | null = null, currentCharges = 0, cumulativeCharged = predecessor.chargedMatches, failureRoot: LabRoot | null = null, intervalStarted = false
+  const interval = `correction-supervisor-${route}-v13-terminal-verifier`
+  try {
+    const prepare = readPreparationContinuationRooted(join(paths.temp, "admission-prepare-start.json")).value, close = readPreparationContinuationRooted(join(paths.temp, "admission-prepare-close.json")).value
+    if (prepare.schemaVersion !== "lean-correction-supervisor-admission-v8" || close.schemaVersion !== "lean-correction-supervisor-admission-close-v8" || prepare.attemptOrdinal !== leanRetryOrdinal(mode) || close.attemptOrdinal !== prepare.attemptOrdinal || prepare.route !== route || close.route !== route || prepare.mode !== "prepare" || close.mode !== "prepare" || close.startRoot !== prepare.root || Number(close.ledgerCloseMs) > start.wallStartMs || close.elapsedUpperBoundMs !== leanCorrectionAdmissionElapsed(prepare as unknown as { wallStartMs: number; monotonicStartNs: string }, { wallStartMs: Number(close.wallObservedMs), monotonicStartNs: String(close.monotonicObservedNs) })) return fail("CUSTODY")
+    if (ledger) {
+      const time = readLeanTimeAccounting(ledger), state = readLeanLedger(ledger)
+      if (leanSupervisorAllocationMode(allocation!) !== mode || !("route" in allocation!) || allocation!.route !== route || allocation!.sourceRoot !== sourceRoot || allocation!.requestBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(path)) || time.active || [...time.starts.keys()].some(id => id.includes("verifier")) || close.allocationRoot !== allocation!.root || close.ledgerInterval !== "correction-preparation" || time.closes.get("correction-preparation") !== close.ledgerCloseMs || state.charged !== predecessor.chargedMatches + state.charges.size) return fail("CUSTODY")
+      currentCharges = state.charges.size; cumulativeCharged = state.charged
+      if (existsSync(join(paths.store, "entry.json"))) {
+        entry = readLeanChildEntry(ledger); terminal = readLeanChildTerminal(ledger)
+        const run = readPreparationContinuationRooted(join(paths.temp, "admission-run-start.json")).value, runClose = readPreparationContinuationRooted(join(paths.temp, "admission-run-close.json")).value
+        if (entry.head !== head || entry.sourceRoot !== sourceRoot || entry.requestBytesRoot !== leanBytesRoot(readLeanCorrectionPrivateBytes(path)) || terminal.head !== entry.head || terminal.entryBytesRoot !== leanBytesRoot(leanCanonicalBytes(entry)) || run.route !== route || runClose.route !== route || run.attemptOrdinal !== leanRetryOrdinal(mode) || runClose.attemptOrdinal !== run.attemptOrdinal || runClose.startRoot !== run.root || runClose.allocationRoot !== allocation!.root || runClose.ledgerInterval !== "correction-run-finalization" || time.closes.get("correction-run-finalization") !== runClose.ledgerCloseMs || entry.wallStartMs !== run.wallStartMs || Number(runClose.ledgerCloseMs) > start.wallStartMs || terminal.wallObservedMs > Number(runClose.ledgerCloseMs) || Number(run.wallStartMs) < Number(close.ledgerCloseMs)) return fail("CUSTODY")
+      }
+    } else if (close.allocationRoot !== null || close.ledgerInterval !== null || close.importedMs !== 0 || existsSync(paths.allocation) || existsSync(join(paths.temp, "admission-run-start.json"))) return fail("CUSTODY")
+    if (!entry) { const failure = authenticateLeanRetryAdmissionFailureV8(mode, false, route); if (failure.head !== head || failure.sourceRoot !== sourceRoot || failure.currentCharges !== 0) return fail("CUSTODY"); failureRoot = failure.root }
+    hold.guard()
+    if (route === "baseline" && ledger) { const joined = authenticateLeanPreparationContinuationAcceptedJoinV13(mode); if (!("acceptedCheckRoot" in allocation!) || allocation!.acceptedCheckRoot !== joined.accepted.root || allocation!.acceptedReaderCloseRoot !== joined.closure.root || joined.accepted.sourceRoot !== sourceRoot) return fail("CUSTODY") }
+    hold.guard()
+    if (ledger) { beginLeanInterval(ledger, interval, start.wallStartMs); intervalStarted = true }
+    precheck?.()
+    hold.guard()
+    if (leanRetryRootElapsedFloorV8(Date.now(), request.timeboxExtension) >= LEAN_PREPARATION_CONTINUATION_V13_EXTENSION.elapsedMs || process.memoryUsage().rss + LEAN_EXTERNAL_SCRATCH_RESERVE > LEAN_CAPS.scratchBytes || ledger && cumulativeLeanPhysicalBytes(ledger) > LEAN_CAPS.retainedBytes) return fail("HOLD_OR_CAPACITY")
+  } finally {
+    const observed = { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, elapsedUpperBoundMs = leanCorrectionAdmissionElapsed(start, observed)
+    const closedTime = ledger && intervalStarted ? closeLeanInterval(ledger, interval, start.wallStartMs + elapsedUpperBoundMs, BigInt(observed.monotonicStartNs)) : null
+    hold.guard()
+    const cb = { schemaVersion: "lean-preparation-continuation-terminal-verifier-close-v13", startRoot: start.root, closedAtMs: closedTime?.closes.get(interval) ?? start.wallStartMs + elapsedUpperBoundMs, wallObservedMs: observed.wallStartMs, monotonicObservedNs: observed.monotonicStartNs, elapsedUpperBoundMs }
+    publishLeanCorrection(join(paths.temp, "terminal-verifier-close-v13.json"), { ...cb, root: labRoot(cb.schemaVersion, cb) })
+    hold.guard()
+  }
+  const closed = readPreparationContinuationRooted(join(paths.temp, "terminal-verifier-close-v13.json")).value
+  const body = { schemaVersion: "lean-preparation-continuation-terminal-verification-v13", authorizing: false, accepted: false, finalReaderClose: false, attemptOrdinal: leanRetryOrdinal(mode), route, sourceRoot, requestBytesRoot: leanBytesRoot(readLeanCorrectionPrivateBytes(path)), allocationRoot: allocation?.root ?? null, entryHead: entry?.head ?? null, entryBytesRoot: entry ? leanBytesRoot(leanCanonicalBytes(entry)) : null, terminalBytesRoot: terminal ? leanBytesRoot(leanCanonicalBytes(terminal)) : null, resultAbsent: true, checkAbsent: true, failureRoot, currentCharges, cumulativeCharged, predecessor, readerStartRoot: start.root, readerCloseRoot: closed.root, closedAtMs: closed.closedAtMs, cumulativeElapsedMs: Math.max(leanRetryRootElapsedFloorV8(Number(closed.closedAtMs), request.timeboxExtension), ledger ? readLeanTimeAccounting(ledger).elapsedMs : 0) }
+  const report = { ...body, root: labRoot(body.schemaVersion, body) }
+  hold.guard()
+  publishLeanCorrection(reportPath, report)
+  hold.guard()
+  const evidence = authenticatePreparationContinuationTerminalVerification(mode, route, predecessor)
+  hold.guard()
+  publishPreparationContinuationHeldCarry(mode, route, hold, evidence)
+  return report
+}
+/** The one appropriate ordinary reader, followed by finite non-authorizing carry. */
+export const verifyLeanPreparationContinuationRetainedV13 = async (path: string, mode: LeanPreparationContinuationMode, route: LeanCorrectionRoute, precheck?: () => void) => {
+  try {
+    const report = await (route === "baseline" ? verifyLeanRetryBaselineRetainedV8(path, mode, precheck) : verifyLeanCorrectionRetained(path, route, mode, precheck))
+    publishLeanPreparationContinuationTerminalCarryV13(mode, route)
+    return report
+  } catch (error) {
+    const paths = leanCorrectionRoutePaths(route, mode), ledger = openLeanLedger(paths.store), time = readLeanTimeAccounting(ledger), interval = `correction-supervisor-${route}-v8-verifier`, closing = `correction-supervisor-${route}-v8-reader-close`
+    if (!existsSync(join(paths.store, paths.check)) && existsSync(join(paths.store, "result.json")) && time.closed.has(interval) && time.closed.has(closing) && !existsSync(join(paths.temp, "result-reader-refusal-v13.json"))) {
+      const entry = readLeanChildEntry(ledger), state = readLeanLedger(ledger), result = readLeanCorrectionJson(join(paths.store, "result.json"), 8388608) as Record<string, unknown>
+      const body = { schemaVersion: "lean-preparation-continuation-result-reader-refusal-v13", authorizing: false, accepted: false, attemptOrdinal: leanRetryOrdinal(mode), route, allocationRoot: ledger.allocation.root, sourceRoot: ledger.allocation.sourceRoot, head: entry.head, requestBytesRoot: entry.requestBytesRoot, resultRoot: result.root, currentCharged: state.charges.size, cumulativeCharged: state.charged, readerInterval: interval, closedAtMs: time.closes.get(closing) }
+      publishLeanCorrection(join(paths.temp, "result-reader-refusal-v13.json"), { ...body, root: labRoot(body.schemaVersion, body) })
+      publishLeanPreparationContinuationTerminalCarryV13(mode, route)
+    }
+    throw error
+  }
+}
+
+export const validateLeanPreparationContinuationReasonJoinV13 = (bytes: Uint8Array, entry: ReturnType<typeof readLeanChildEntry>, terminal: ReturnType<typeof readLeanChildTerminal>) => {
  const reason = assertLeanSupervisorReasonCustodyV2(bytes, { allocationRoot: entry.allocationRoot, sourceRoot: entry.sourceRoot, requestBytesRoot: entry.requestBytesRoot, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(entry)), head: entry.head, parentPid: entry.parentPid, childPid: entry.childPid, exitCode: terminal.exitCode, signal: terminal.signal, status: terminal.status })
  if (reason.uncertain || reason.reasons.length || reason.observations.resourceSampling !== "observed" || reason.observations.finalIdentity !== "matched" || reason.observations.failureReceipt !== "absent" || terminal.status !== "child_exited" || reason.exitCode !== 0 || reason.signal !== null) return fail("SUPERVISOR_REASON_CUSTODY")
  return reason
