@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: v11-1 diagnostic accepted and uniquely verified; fresh conditional baseline authoring
+stopped_at: v11-1 conditional baseline prepared; commit allocation before unique MAIN entry
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: One successful diagnostic cell and actual FINAL; 33 cumulative charges, no baseline entry yet
+last_activity_desc: Fresh baseline reviews clean and allocation prepared at zero new charges
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V11-1 CONDITIONAL BASELINE PREPARED (2026-10-08): ActualMAINdraft58330/finalize22081 CLOSED0; independent actual /root/review_two_pair_v11_baseline_data DATA77903eb1/HELPER258881ab clean, exacthelperd71ae5e2/requestdata44cfbfdb/requestbytesde5b35b4. ExactlyONEprepare13961 CLOSED0/preparation_only/issuedfalse/36planned/zerocharges. Allocationd2302741c57959f209607282659dded60bbea3a9733a456e366b3b21dc0fb1a5/raw692285013a9931186b45082883acbeb12e6558ae74428daf5899b8e90d62dd1f/sourceda8d5402. Checkedrealowned0700nonsymlinkstore onlyallocation/emptyledger/time; predecessor33charges/102681800ms/18743296B, inactiveclosed102715847msafterprepare. OwnNEWdiagcheck65ae9a68/actualFINALfb80f008 prerequisite accepted. Commitimmutableallocation BEFOREuniqueMAINentry; freshSAMEPROCESScapacitybeforeeverycharge/provider; holdsourceANDHEADthroughactualterminal+ONEappropriateuniquecheck, no competingheavywork/edits/commits. Sameabsolute01:43:30.738Zdeadline108Mms/15GB300/all33spentcostsfiles/reserve1860000ms/allbounds. Full36fitnotpromised; partial/failure remainsincomplete, noPhase265/LEAG/freeze/formation/holdout/public/counting/productioncredit. Distinctpair2 requiresauthenticclosedpair1andremainingcapacity; oldauthorityimmutable. Earlierfrontiershistory.
 
 CURRENT V11-1 DIAGNOSTIC ACCEPTED (2026-10-08): UniqueMAIN98211 CLOSED0/childexited/449432ms over heldHEAD270c5b07/sourceda8d5402/allocationc2fb3831. ONEindependentactualreader14321 CLOSED0 acceptedretained_valid/limited_exploratory; check65ae9a686ba58ecdaeabb507d8120d1570a509a56f781f51f4d2673eda062fcd/raw85d5493d; actualFINALfb80f00876ccac8e0ef2da23c42abe440c88156a73f5535d7d3e8441f9a51353/readerclose1791418082215. Onecharge/terminal/success, cumulative33;cleanupcomplete/all6intervalsclosedinactive/closedelapsed102271477ms. SourceANDHEADhold RELEASED afteractualreaderclosure/inertfinitepostchecks/noactiveentryreader. FreshMAINownpairconditionalbaseline draft58330 underway; actualDATA/HELPERreview/newcommittedallocation/SAMEPROCESScapacity stillrequired beforeuniqueentry. No re-useofoldsuccess/oldordinaryreader/retry/refund/recredit. Samecontinuousabsolute01:43:30.738Zdeadline108Mms/15GB300/allcosts33charges/reserve1860000ms/allbounds;full36fitnotpromised. NoPhase265/LEAG/freeze/formation/holdout/public/counting/productioncredit. Earlierfrontiershistory.
 
