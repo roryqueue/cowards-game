@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Approved new eight-hour supervisor repair and one fresh diagnostic/conditional baseline pair; source-only reproduction first
+stopped_at: Supervisor retest source repair and two review fixes closed; independent re-review and source validation/verification next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: New prospective approval recorded; all34 prior charges and full108Mms carried; no fresh empirical entry yet
+last_activity_desc: V12 source GREEN and CR01/CR02 fixes integrated; all34 prior charges and full108Mms carried; no fresh empirical entry yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V12 SOURCE REPAIR / REVIEW FIX CLOSED (2026-10-08): Actual executor /root/execute_supervisor_retest_v12 CLOSED source GREEN3ce53f0a/summaryb7787391; independent SOURCE-REVIEW-v1 found CR01 saved accepted closure filename and CR02 missing awaited baseline reader. Actual separate /root/fix_265_correction_reader CLOSED isolated RED/GREEN fixes41fd1b64/7b5b21f1 integrated ff-only MAIN; dedicated worktree removed, unrelated history/markers preserved. New actual positive manifest8e7956bdebbc1da5ffec6ddc8d9bfac6e77eee8a141851c3e63d6e0f98b2758c/922. Fixer new-v12 tests10/10PASS; six inherited strict errors NOTpass. Full synthetic accepted diagnostic publication/saved reauthentication/own baseline join and controlled pending reader success/refusal now covered, not native/empirical proof. Independent re-review plus source validation/verification still REQUIRED; review and fix reports preserved, no human-only new decision implied by report template wording. All18 actual prospective destinations absent at executor closure; no new request/helper/allocation/entry/provider/Match/retained empirical reader or hold. Same ONEpair/absolute18:39:01.097Z deadline/full108M+currentwall/136800000ms/34charges/15GB300/31minreserve/exact2GB/768MiB/allrulesruntimeprivacybounds. No Phase265/LEAG/freeze/formation/holdout/public/counting/production completion credit. Older frontiers history.
 
 CURRENT APPROVED SUPERVISOR REPAIR/RETEST (2026-10-08): Directhuman approved ONEnew bounded repair-and-retest round/eight additional continuous hours/ONEfresh diagnostic plus ONLYafter ownacceptedcheck+actualFINAL ONEconditional36baseline. Approval265-16-SUPERVISOR-REPAIR-RETEST-APPROVAL-20261008.md preserves all closed v11 outcomes/oldapprovalbytes; no repeat route literal or authority reuse. Fullold108Mms debit +allnewtime from actualMAINstart1791455941097/rawc892a010 gives136800000ms cap/deadline18:39:01.097Z (2:39p.m.Eastern), same15GB300/34charges/allfilescosts/1860000msreserve/exact2GB768MiB/guest1000host5000Match600000/allbounds. Bounded source-only synthetic reproduction/diagnosis FIRST; confirmed defect repair or finite private attribution only, unknown errors remain fail-closed. Existing Plan16 additive researched/checked supplement/source implementation/review-fix/validation/verification precedes actual new data/helper/newcommittedallocation/empty0700store/SAMEPROCESScapacity/uniqueMAINentry/sourceHEADhold+ONEproperverification. No new empirical request/helper/allocation/entry/provider/Match/reader yet; actual processes and previous agents closed. Onepair failure/refusal/insufficienttime ends envelope; full36fit NOT promised. All Phase265/LEAG/freeze/formation/holdout/public/counting/production completion remains unadmitted. Earlier frontiers history.
 
