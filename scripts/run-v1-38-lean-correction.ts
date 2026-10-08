@@ -7,7 +7,7 @@ import { isLeanPreparationContinuationMode, isLeanPreparationContinuationExtensi
 import { authenticateLeanPreparationContinuationTerminalCarryV13 } from "./lib/v1-38-lean-correction-retained.js"
 import { validateLeanPreparationHistoryV13, LEAN_PREPARATION_V13_HISTORY_PATHS } from "./lib/v1-38-lean-preparation-continuation-v13.js"
 import { isLeanPostV13FivePairMode, isLeanPostV13FivePairExtensionV14, LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION, LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS, type LeanPostV13FivePairOrdinal, type LeanPostV13FivePairMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { leanFivePairDocumentsV14 } from "./lib/v1-38-lean-post-v13-five-pair.js"
+import { leanFivePairDocumentsV14, validateLeanPostV13HistoryV14, LEAN_FIVE_PAIR_V14_HISTORY_PINS } from "./lib/v1-38-lean-post-v13-five-pair.js"
 import { isLeanTwoPairMode, isLeanTwoPairExtensionV11, LEAN_TWO_PAIR_V11_EXTENSION, LEAN_TWO_PAIR_V11_REPORT_PATHS, validateLeanTwoPairPredecessorV11, type LeanTwoPairMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { authenticateLeanTwoPairHistoricalCustodyV11, authenticateLeanTwoPairClosedOutcomeV11, authenticateLeanTwoPairTerminalCarryV11 } from "./lib/v1-38-lean-correction-retained.js"
 /** Additive, fixed one-cell diagnostic / conditional 36-cell baseline.
@@ -1698,6 +1698,7 @@ export const assertLeanPreparedSupervisorRetestPredecessorV12 = (prepared: LeanC
 }
 
 
+export const authenticateLeanPostV13HistoricalCustodyV14 = () => validateLeanPostV13HistoryV14(new Map(LEAN_FIVE_PAIR_V14_HISTORY_PINS.map(pin => [pin.path, readLeanCorrectionPrivateBytes(pin.path, 4194304)])))
 export const authenticateLeanPreparationContinuationHistoricalCustodyV13 = () => {
   const old = leanCorrectionRoutePaths("diagnostic", "v12-1")
   const forbidden = [old.store, old.allocation, join(old.temp, "admission-run-start.json"), join(old.temp, "terminal-hold-refusal-v12.json")].filter(path => existsSync(path))

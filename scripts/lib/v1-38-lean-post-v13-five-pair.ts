@@ -1,9 +1,34 @@
 import { exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
-import { LEAN_CAPS, LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS, LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION as binding, isLeanPostV13FivePairMode, leanCorrectionRoutePaths, type LeanPostV13FivePairMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_CAPS, leanBytesRoot, LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS, LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION as binding, isLeanPostV13FivePairMode, leanCorrectionRoutePaths, type LeanCorrectionPredecessor, type LeanPostV13FivePairMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 
 /** Pure prospective contracts, NOT a filesystem admission or accepted reader.
  * ROOT must bind authentic raw historical custody separately; no pins invented here. */
 export const LEAN_FIVE_PAIR_V14_HISTORICAL_CARRY_ROOT: LabRoot = "sha256:b80d8ad678f6d2ee81c999905d46256c482a8665e9c9f6aa10b9f125ef726169"
+/** Raw pins independently observed by ROOT. These three finite metadata files
+ * are historical accounting only, never accepted-check or old reader authority. */
+export const LEAN_FIVE_PAIR_V14_HISTORY_PINS = Object.freeze([
+  { path: ".strategy-lab/lean-correction-supervisor-baseline-20261008-v13-1-tmp/terminal-verification-v13.json", bytesRoot: "sha256:08c0738c01cb634572675a4a8f639acfa44bd7bda3d26242cee08d85f0a6f5a3", root: "sha256:ac0c2cf0734fdfd5f2405912a64603abb746cd45fd79ac084074e55de97272b6" },
+  { path: ".strategy-lab/lean-correction-supervisor-baseline-20261008-v13-1-tmp/terminal-carry-v13.json", bytesRoot: "sha256:fc01e8d7e4a19de3574e91f3f4114879918e52c1e0c037ead8ca113c10d405eb", root: LEAN_FIVE_PAIR_V14_HISTORICAL_CARRY_ROOT },
+  { path: ".strategy-lab/lean-correction-supervisor-baseline-20261008-v13-1-tmp/terminal-hold-complete-v13.json", bytesRoot: "sha256:a3c5f5e88297319b972425a60e09770b6702bedbbeef1cb7609b8a2b0aacbf14", root: "sha256:d9c0628b0e3a74fc9f3f621dae78ec1f43da6e161c5567198172b88f55d9d5bb" },
+] as const)
+export const validateLeanPostV13HistoryV14 = (bytes: ReadonlyMap<string, Uint8Array>) => {
+  if (bytes.size !== 3) return fail()
+  const records = LEAN_FIVE_PAIR_V14_HISTORY_PINS.map(pin => {
+    const raw = bytes.get(pin.path)
+    if (!raw || leanBytesRoot(raw) !== pin.bytesRoot) return fail()
+    const value = JSON.parse(new TextDecoder().decode(raw)) as Record<string, unknown>, { root: claimed, ...body } = value
+    if (claimed !== pin.root || typeof value.schemaVersion !== "string" || claimed !== labRoot(value.schemaVersion, body)) return fail()
+    return value
+  })
+  const [verification, carry, hold] = records as [Record<string, unknown>, Record<string, unknown>, Record<string, unknown>]
+  const head = "5b01e62eec1554f68dce6f80dd24d41646dc50d8", source = "sha256:e7d8bf583b09828a34f5cd79d81cb0220242b093dd26e6026b30705347d5b442", allocation = "sha256:5edd320e53cba57dcbf38f0a4fa170e5f5be5527f932735264c2121ec9a9cd81"
+  if (verification.accepted !== false || verification.authorizing !== false || verification.finalReaderClose !== false || verification.resultAbsent !== true || verification.checkAbsent !== true || verification.route !== "baseline" || verification.currentCharges !== 0 || verification.cumulativeCharged !== 35 || verification.entryHead !== head || verification.sourceRoot !== source || verification.allocationRoot !== allocation || verification.closedAtMs !== 1791496635485 || verification.cumulativeElapsedMs !== 148694388 || carry.outcome !== "entered_without_result" || carry.accepted !== false || carry.authorizing !== false || carry.route !== "baseline" || carry.currentCharges !== 0 || carry.cumulativeCharged !== 35 || carry.entryHead !== head || carry.sourceRoot !== source || carry.allocationRoot !== allocation || carry.resultBytesRoot !== null || carry.closedAtMs !== verification.closedAtMs || carry.cumulativeElapsedMs !== verification.cumulativeElapsedMs || carry.allocatedDiskBytes !== 22777856 || carry.verificationRoot !== verification.root || carry.verificationBytesRoot !== LEAN_FIVE_PAIR_V14_HISTORY_PINS[0].bytesRoot || carry.closureRoot !== verification.root || hold.head !== head || hold.sourceRoot !== source || hold.mode !== "v13-1" || hold.route !== "baseline" || hold.carryRoot !== carry.root || hold.carryBytesRoot !== LEAN_FIVE_PAIR_V14_HISTORY_PINS[1].bytesRoot || hold.verificationRoot !== verification.root || hold.verificationBytesRoot !== carry.verificationBytesRoot || hold.requestBytesRoot !== carry.requestBytesRoot || hold.entryBytesRoot !== carry.entryBytesRoot) return fail()
+  const survivors = carry.survivors as LeanCorrectionPredecessor["survivors"]
+  if (!Array.isArray(survivors) || survivors.length !== 774 || new Set(survivors.map(row => row.identity)).size !== survivors.length || survivors.some(row => !exactLabKeys(row, ["identity", "allocatedBytes"]) || typeof row.identity !== "string" || row.identity.startsWith("/") || row.identity.split("/").includes("..") || !natural(row.allocatedBytes)) || survivors.reduce((sum, row) => sum + row.allocatedBytes, 0) > 22777856) return fail()
+  const historyRoot = labRoot("lean-post-v13-finite-history-v14", LEAN_FIVE_PAIR_V14_HISTORY_PINS)
+  const body = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 35, elapsedUpperBoundMs: 148694388, allocatedDiskBytes: 22777856, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot, survivors }
+  return freezeLabValue({ root: historyRoot, cumulativeCharged: 35, carryRoot: LEAN_FIVE_PAIR_V14_HISTORICAL_CARRY_ROOT, holdRoot: LEAN_FIVE_PAIR_V14_HISTORY_PINS[2].root, identities: LEAN_FIVE_PAIR_V14_HISTORY_PINS.map(pin => pin.path), predecessor: { ...body, root: labRoot(body.schemaVersion, body) } })
+}
 const phase = ".planning/phases/265-serious-current-rules-league-and-development-red-team/"
 export const LEAN_FIVE_PAIR_V14_REPORT_PATHS = LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS
 export const leanFivePairDocumentsV14 = (route: "diagnostic" | "baseline", mode: LeanPostV13FivePairMode) => {
