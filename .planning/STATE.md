@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V13 review fixes implemented; fresh independent re-review next
+stopped_at: V13 re-review clean and MAIN validation passed; scoped source verification next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: CR01 and WR01 fixed with 48 focused tests passing; all limits unchanged; no empirical attempt started
+last_activity_desc: Independent v2 review clean; MAIN48/48 and types, boundary, source-review gates passed; no empirical attempt started
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V13 RE-REVIEW AND VALIDATION CLOSED (2026-10-08): Distinct /root/review_preparation_continuation_v13 ACTUALLYCLOSED SOURCE-REVIEW-v2clean0 closesCR01/WR01, v1preserved. MAIN3556 CLOSED0/48of48/zeroSKIP119.05s; configured21722/diff/shellPASS; boundary4077zero1422; publicmanifest67397root880d55e9/930/0private; actualreviewconsumer91065PASS/rawb609ee8f. SixinheritedstrictNOTpass. ScopedVALIDATION-v1 complete; distinct sourceverification next, notempirical/wholephasecredit. No activeentry/verifier/hold or privatehelper/request/allocation/Match;0of5prepsspent. Same165600000/full108M+ALLwall/absolute2026-10-09T02:39:01.097Z/34charges/15GB300/31minreserve/allbounds. After sourceverification freshactualMAINdata/helper/distinctreview/newcommittedallocation/empty0700/SAMEPROCESScapacity/uniqueentry/ONEappropriateactualcheck remain. All Phase265/LEAG/freeze/formation/holdout/public/counting/production gated; earlierfrontiershistory.
 
 CURRENT V13 REVIEW FIX CLOSED (2026-10-08): Actual isolated /root/fix_preparation_continuation_v13 ACTUALLYCLOSED/fast-forwardmain1baed2eef4d274769e29e1e480590ff39d5550cb; ownworktree/branch/sentinel removed, historicalartifacts preserved. CR01 RED600aa066/GREEN948e1e53 guards projectedblock-rounded/no-refund/time/scratch/terminalpublications inclnoledger; WR01 realterminal/ordinarypublisher/authenticator lifecycle1baed2ee. Final48/48/configuredlabtypes/diff/shellPASS; sixinheritedstrictNOTpass. Newfixedmanifest880d55e93a4ba5ed417f39720457edabb8d2af9116d203066a478113be84a4ae/930; exactfutureSOURCE-REVIEW-v2 pointer/newphysicalallowlistentry, issuesbearingv1immutable. Independentv2review then validation/sourceverification REQUIRED; no live/privatehelper/request/allocation/entry/Match/reader/hold,0of5spent. Template human-verification label refers resource/state validation, not a new limit/product decision; genuinehuman-onlychange not identified. Sameapproved165600000/full108M+ALLwall/absolute2026-10-09T02:39:01.097Z/34charges/15GB300/31minreserve/allbounds. Phase265/LEAG/freeze/formation/holdout/public/counting/production remain gated. Earlierfrontiershistory.
 
