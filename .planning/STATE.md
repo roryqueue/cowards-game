@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Compile-once source repair reviewed and verified; fresh unused v11-2 authoring
+stopped_at: Fresh v11-2 diagnostic prepared; commit before unique MAIN entry
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Pure compile-once repair and prospective source gate closed; pair two still unused
+last_activity_desc: Independent pair-two data/helper review clean; new one-cell allocation prepared with zero charges
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT V11-2 DIAGNOSTIC PREPARED (2026-10-08): Actual MAIN draft15622/finalize12165 CLOSED0; actual independent /root/review_v11_2_data DATA9588b1d7/HELPERf6489432 clean, helperdc64fd12/requestdataee5ad327/requestbytese3ea318e/setup10588dba/continuation1b0b1ece. Exactly ONE prepare20052 CLOSED0/preparation_only/issuedfalse/oneplanned/zerocharges. Allocationbe869c37a88ca74f06985fc0dc2b1ced409a69f50bc6bcea4cd4226caaae9ffc/raw03a483a0d3bdded3d382508daefc16fa0478d52857fda14e961252b9374f08b3/source84b80756/915. Actual owned real0700 nonsymlink store contains only allocation/emptyledger/time; canonical/private allocation bytes identical, preparation interval closed/inactive. Predecessor33charges/105069997ms/19623936B, historical peaks remain unknown, finite prior closed pair1e03d4938 is custody/accounting ONLY. Commit/push new immutable allocation and reviews BEFORE unique MAIN entry; fresh SAME-PROCESS capacity BEFORE charge/provider, fixed source AND HEAD through actual terminal and ONE appropriate unique independent check, no competing heavy work/edits/commits. Only this pair's own new accepted diagnostic and actual FINAL permit its conditional36baseline; full fit NOT promised. Same continuous absolute 01:43:30.738Z deadline/108Mms/15GB/300Matches/all33spent/allcostsfiles/1860000ms reserve/2GB scratch/768MiB oldspace/all bounds. No Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earlier frontiers remain history.
 
 CURRENT COMPILE-ONCE SOURCE REPAIR VERIFIED (2026-10-08): BoundedGSDdiagnosis→research→checkedexistingPlan16addendum→RED0d704fb9/GREEN31091283/SUMMARYac7a5b1b CLOSED. Fullvalidation/security/artifact/revision outputs preserved, actualsinglelocalcompile reused/no cache/publicAPIexpansion/injection. Independent REVIEW-v1 clean and newv11-2-onlySOURCE-REVIEW-v3, SOURCE-VERIFICATION-v1 source_verified5/5/zerointroducedblocker; actualbothmanifest84b80756789cedde6db22e365a7826d47f277ba592fcae710ad296aad77444ba/915, sourcegatev3accepted/oldv2rejected. MAIN95/95zeroSKIP14.29s/factory1417zero/shell/diffPASS, buildsreportedPASS/six inheritedstrictdiagnosticsNOTpass; initialconnectedfixturefail/stable1PASS exactcauseunknown. IndependentactualNON-ADMITTINGfiniteoldclosedpair1authCLOSED0/e03d4938a845fb730d04d6d7b3ea8000093f27b2e1897c4be968c41d2a04c490/carry2005a7df/33charges. Oldsource/reviewv2/evidenceimmutable, fulloldacceptedauthorityintentionallynotreused. NativeRSScure/36fitUNPROVED; freshunusedpair2author/data/helper/newcommittedalloc/empty0700store/SAMEPROCESScapacity gatesnext, no newentry/holdyet. Samecontinuous01:43:30.738Zdeadline108M15GB30033/reserve1860000/SAME2GB768MiBflags/allbounds. NoPhase265/LEAG/freeze/formation/holdout/public/counting/productioncredit. Earlierfrontiershistory.
 
