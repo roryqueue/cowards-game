@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Both approved pairs closed; v11-2 failed-result verification complete; source-only sampling diagnosis next
+status: blocked
+stopped_at: Two unsuccessful approved pairs exhausted; source-only sampling diagnosis inconclusive; new bounded resource/attempt decision required
 last_updated: "2026-10-07"
 last_activity: 2026-10-07
-last_activity_desc: Pair-two diagnostic process-invalid after one successful retained cell; unique reader refused; 34 cumulative charges
+last_activity_desc: Closed two-pair outcome and bounded diagnosis retained; no further execution authority under exhausted envelope
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT HUMAN-ONLY TWO-PAIR LIMIT (2026-10-08): Both approved distinct diagnostic/conditional36baseline pairs CLOSED unsuccessfully; explicit TWO-PAIR-TIME-APPROVAL ends envelope at two unsuccessful pairs, so remaining wall time is NOT another route's authority. NEW TWO-PAIR-OUTCOME-v1 records gaps_found/phase_completefalse/34cumulativecharges and source-only debugv11-2-resource-sampling.md inconclusive. Confirmed broad supervision catch lacks throwing-stage attribution; child-exit/synchronousRSS race plausible NOT actual cause proven. No repair, threshold change, new route or empirical acceptance applied by diagnosis. New bounded attempt/resource decision required before further empirical work; do not reuse standing approval to expand later explicit pair limit/reset time. All consumed allocations/results/requests/markers/readers/oldauthority immutable; sourceHEAD hold released only after actual terminal+unique reader+authentic completion seal/no active process. Plan16/Phase265/LEAG remain incomplete, no freeze/archive-success/tag/formation/holdout/public/counting/production credit. Same108Mms continuous cap and absolute01:43:30.738Zdeadline/15GB300/34spent/allcostsfiles/exact2GB768MiB/allbounds; accounting does not restart at this checkpoint. Safe completed source/terminal/outcome/diagnosis committed and pushed origin/main. Earlier frontiers history.
 
 CURRENT V11-2 DIAGNOSTIC FAILED-RESULT CLOSED (2026-10-08): Unique MAIN24965 CLOSED1/detailswithheld, actual child_failed/exitCode0/nullsignal/507769ms over heldHEADce68a908/source84b80756/allocationbe869c37/raw03a483a0. Fresh SAME-PROCESS capacity passed before exactly one charge. Compact terminal success/OK/cleanupComplete=true DOES NOT override parent resource_sampling_exception or independent refusal. Actual result3be5df5e/raw7e2f13e9 exists. ONE independent ordinary reader /root/verify_v11_2_diagnostic session29841 CLOSED1/detailswithheld; no accepted check/FINALfalse/refused, finite marker authentication12800 CLOSED0. Refusalf9cf55fa/carry2cb8f651/raw0d787c32/closure9baf9809/holdseal2aac2504; actual readerclose1791421485608/105674871ms/inactive/34cumulative1currentcharge1terminal. Actual source915/HEAD unchanged through unique check; hold completion authenticated, no active experiment/verifier process, sourceANDHEAD hold RELEASED. Both approved pairs CLOSED; pair-two baseline NOT admitted/created, no further Match/allocation under exhausted pair allowance. Bounded source-only GSD sampling diagnosis next; exact cause unknown, do not reinterpret old success/failed artifacts or repeat readers. Same continuous01:43:30.738Z deadline108Mms/15GB300/all34spent/allcostsfiles/1860000msreserve/exact2000000000B scratch/768MiB oldspace/allrulesruntimeprivacybounds. Source/administration costs continue counting. No Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earlier frontiers history.
 
