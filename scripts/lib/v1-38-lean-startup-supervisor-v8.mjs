@@ -3,7 +3,7 @@ export async function superviseLeanStartupV8(binding, hostBudgetMs, host) {
   const entered = host.startedAtMs ?? host.now(), deadline = entered + Math.min(5000, hostBudgetMs), startupDeadline = Math.min(deadline, entered + 2500)
   const bucket = ms => !Number.isFinite(ms) || ms < 0 ? "unknown" : ms < 10 ? "0_9ms" : ms < 50 ? "10_49ms" : ms < 100 ? "50_99ms" : ms < 250 ? "100_249ms" : ms < 500 ? "250_499ms" : ms < 1000 ? "500_999ms" : ms < 2500 ? "1000_2499ms" : "2500_plus"
   const remaining = () => Math.max(0, Math.floor(deadline - host.now()))
-  let completed, worker = false, ready = false, go = false, wait = "unavailable", stage = "startup", branch = "construction_failure", termination = "unknown", unknown = true
+  let completed, constructionBegan, worker = false, ready = false, go = false, wait = "unavailable", stage = "startup", branch = "construction_failure", termination = "unknown", unknown = true
   let constructorDurationBucket = "unknown", prefixMilestone = "unknown", readyPublicationDurationBucket = "unknown", finalAtomicState = "unavailable", lifecycleBeforeTermination = "unknown", deadlineOutcome = "construction_failure"
   const lifecycle = () => typeof host.lifecycle === "function" ? host.lifecycle() : "unknown"
   const failed = () => ["error_seen", "exit_seen", "both_seen"].includes(lifecycle())
@@ -16,7 +16,7 @@ export async function superviseLeanStartupV8(binding, hostBudgetMs, host) {
   }
   try {
     if (!Number.isFinite(hostBudgetMs) || hostBudgetMs <= 0 || hostBudgetMs > 5000 || typeof host.waitAsync !== "function" || typeof host.lifecycleFailure !== "function") throw new Error("ASYNC_STARTUP_UNAVAILABLE_V8")
-    const constructionBegan = host.now()
+    constructionBegan = host.now()
     worker = true
     host.construct()
     constructorDurationBucket = bucket(host.now() - constructionBegan)
@@ -48,7 +48,7 @@ export async function superviseLeanStartupV8(binding, hostBudgetMs, host) {
         }
       }
     }
-  } catch { unknown = true; if (branch === "construction_failure") constructorDurationBucket = bucket(host.now() - entered) }
+  } catch { unknown = true; if (branch === "construction_failure" && constructionBegan !== undefined) constructorDurationBucket = bucket(host.now() - constructionBegan) }
   finally {
     // Snapshot before forced termination. Later cleanup events cannot rewrite attribution.
     try { lifecycleBeforeTermination = lifecycle() } catch {}
