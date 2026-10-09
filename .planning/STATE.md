@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Source-only checkpoint repair checked; execute existing Plan16 supplement next
+stopped_at: Checkpoint source repair verified; prospective failed-prefix cost contract next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Diagnosis closed unknown cause/confirmed duplicate observations; plan checker v2 PASS corrects v1 mistaken finding; no new empirical route
+last_activity_desc: Independent checkpoint source verification closed 5/5; fresh v3 review and MAIN validation retained; no empirical admission
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — CHECKPOINT SOURCE GATES CLOSED / ARCHIVED COST CONTRACT NEXT (2026-10-09).
+
+Functional source47425b37/root6f843d86/955 has actual independent clean checkpoint review and exact fresh RESOURCE-WINDOW-SOURCE-REVIEW-v3. MAIN45 focused passed before typing-only fix,20 checkpoint passed afterward; configured types/shell/diff/factory1434zero and exact v3 consumer PASS. Strict six inherited diagnostics and prior legacy/monitor NOTPASS remain explicit. Independent SOURCE-VERIFICATION-v1 ACTUALLYCLOSED verified_source_only5/5: rederived manifest/actual v3 consumer/one named actual-composition test PASS7.79s, no full-suite or empirical rerun. No active entry/helper/reader/hold. Source-only existingPlan16 research/plan next for finite archived failed-prefix RAW custody carrying all37charges/costs and concrete repaired-call-chain distinction; old refused v15-2/operator hold-refusal never becomes accepted authority. Later modes remain failclosed. Exact18:38:33UTC/allwall223171903/31min reserve/600000ms Match means a fresh entry cannot fit after17:57:33UTC even before other work; no automatic extension/re-anchor. Same RAM3GB/unchanged disk/runtime/privacy bounds; no Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earlier checkpoints history.
 
 CURRENT CHECKPOINT — SOURCE-ONLY CHECKPOINT REPAIR PLAN CHECKED (2026-10-09).
 
