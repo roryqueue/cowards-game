@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: v15-3 bounded diagnosis closed; checked immutable-policy performance repair next
+stopped_at: policy-cache source supplement independently checked; isolated implementation next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Readonly diagnosis CLOSED/inconclusivecause; pure selectedpolicy144to151ms twice and allocation160to217ms; preservefreshguards, source repair planning next
+last_activity_desc: Source-only policy-cache Revision Gate PASS; three serial tasks, ten38-charge metadata pins, authentic-size baseline eligibility checked; no empirical authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — POLICY-CACHE SOURCE SUPPLEMENT CHECKED (2026-10-09).
+
+Distinct researcher/planner/checker ACTUALLYCLOSED; NEW POLICY-CACHE-PLAN-v1 rawbc54e7c5b530fe355395f566d12bad2eb0e4f3ad6f315d50ab435f90b1f09e2a and PLAN-CHECK-v1 raw9eb79b6c163e93f0f3c2344cfe8d06d72b2483d4f0dfba3e560673efdc871ed4 PASS/issues[]. Ten raw/canonical pins and seven embedded roots independently match; failed3 cost only38charges/final970survivors/27303936B/228267940ms/unknownpeaks. Three serial source tasks: safe host-issued identity policy/caps cache with ALLfreshguards; finite opt-in4 private bridge-catch attribution; strict same-bounds4 cost/distinction/review-v5/source/retained joins. Actual inert36slot baseline1016nodes/3248unique descriptors/1051dense-element checks fits separate new4096budgets; olddoublecount4299 misses oldcache. Existing immutableRetryData/admittedRetryCaps remain byte-identical; this is bounded internal eligibility, NOT resource extension. Exact4input/6output/10physical amendment and13 ordered reviewed source paths; actualv5 must be0600/default-consumer validated. ROOT schedules isolated source executor, then independent review/fix/ROOTvalidation/distinctsourceverification/actualhit pureprobe BEFORE any new route gates. Sourceonlyreadiness/structure PASS is not runtime recovery/empiricaladmission; initiatingcauseUNKNOWN. Oldconsumedpolicies2/3/artifacts/authority/verifiers unchanged;5dormant, no oldreader/publisher. Same02:14:32UTC/cap250530903/ALLwall/originalflooranchor/31reserve/RAM3GBdisk15GB/300Matches/runtimeprivacybounds. No active empirical entry/verifier/sourceHEADhold. Phase265/LEAG/baseline/freeze/formation/holdout/public/counting/production incomplete. Earlier checkpoints history.
 
 CURRENT CHECKPOINT — DIAGNOSIS CLOSED / BOUNDED SOURCE REPAIR NEXT (2026-10-09).
 
