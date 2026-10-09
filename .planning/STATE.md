@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh v15-3 diagnostic and unique verifier closed refused; bounded diagnosis next
+stopped_at: v15-3 bounded diagnosis closed; checked immutable-policy performance repair next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: ROOTentry50108 CLOSED0; one systemfailure/38cumulative; uniqueordinary46258 CLOSED1/refused; closedpair26137 CLOSED0; sourcehold released
+last_activity_desc: Readonly diagnosis CLOSED/inconclusivecause; pure selectedpolicy144to151ms twice and allocation160to217ms; preservefreshguards, source repair planning next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — DIAGNOSIS CLOSED / BOUNDED SOURCE REPAIR NEXT (2026-10-09).
+
+Distinct /root/diagnose_265_v15_3_failure read-only GSD diagnosis ACTUALLYCLOSED/investigation_inconclusive; no writes/reader/provider/Match. Initiatingthrow stillUNKNOWN: runtime-bridge.ts:77 discardscaughtcause, compactfailurecollapses toSUPERVISOR_FAILURE. Compact604411ms/90returnedaccountingentries, resource-eventdelta643198ms andentry769902ms haveDIFFERENTclockscopes; not guest/lifetimeproof. Failureconstruction discardsaccumulatedtransitions, sozero retainedtelemetry isNOTproof ofzero gameplay/attempts. Parentnormalexit/no reasons contradictparentkill. Called freshcheckpointrepair exists; whole manifestnotperinvoke. Residualselectedpolicy1959 reconstructs alreadyadmittedallocation repeatedly(atleasteightselections percalledcheckpoint graph), separate fromREQUIREDthree freshfileadmissions. ONEpureprobe63dfdf CLOSED0/1560ms/cache-disabled/941survivors: allocation217.284/160.619ms; policy144.745/150.529ms, roots538fad78/466ba6fa. This establishes currentreduciblecomputationcost, notpastcausalattributionor recovery. Next checkedexistingPlan16source repair: immutablehost-issued-object policy memoization precedent only, preservingALLfreshobservations/before-ledger-afterfileadmissions/guards; finitehost-issuedcatchphase/code attribution without privatepayload/errorinspection; authentic38-charge immediateprefix anddormantordinal4contracts underUNCHANGEDapprovedbounds. Research/checkedplan/sourceTDD/reviewfix/validate/verify precedeactualfreshroute. No unchangedfailure rerun/newresourcechange/consumedbytealteration. Same02:14:32UTC/250530903/ALLwall/31reserve/3GB15GB;4/5currentlydormant. Phase265/LEAG/baseline/freeze/formation/holdout/public/counting/production incomplete. Earlier checkpoints history.
 
 CURRENT CHECKPOINT — DIAGNOSTICv15-3 REFUSED / SOURCE HOLD RELEASED (2026-10-09).
 
