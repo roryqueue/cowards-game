@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
+import { readFileSync } from "node:fs"
 import ts from "typescript"
 import { afterEach, describe, expect, it, vi } from "vitest"
 const nativeStreamMock = vi.hoisted(() => ({ worker: undefined as any }))
@@ -18,7 +19,13 @@ import { encodeCandidateHostEnvelopeV117 } from "../../packages/runtime-js/src/c
 import { registerCandidateEvidenceFixture } from "../../packages/runtime-js/src/candidate-evidence-fixture.js"
 const LEAN_CONTAINER_IMAGE = LAB_ADMITTED_ROOTS.image
 describe("startup-origin-v8 inert control", () => {
-  const root = `sha256:${"a".repeat(64)}`
+  it("[startup-origin-v8] selects session protocol only through the host-issued V8 claim", () => {
+    const source = readFileSync(new URL("./v1-38-lean-container-match-session.ts", import.meta.url), "utf8")
+    expect(source).toContain('leanStartupAuthorityDescriptorV8(authority) ? claimLeanStartupAuthorityV8(authority, binding, "session")')
+    expect(source).toContain('startup.version === 8 ? buildLeanContainerBrokerSourceV8()')
+    expect(source).toContain('startup?.version === 8 ? validateLeanStartupOriginV8(value.startupOrigin, startupBinding)')
+  })
+  const root: `sha256:${string}` = `sha256:${"a".repeat(64)}`
   const binding = { allocationRoot: root, chargeRoot: root, seat: "bottom" as const, policyRoot: root, harnessRoot: root, requestOrdinal: 1, requestRoot: root, method: "selectActivations" as const, inputRoot: root, sourceRoot: root, executableRoot: root }
   it.each(["error", "exit"])("[startup-origin-v8] observes early pre-GO %s before deadline and termination", async kind => {
     const { superviseLeanStartupV8 } = await import("./v1-38-lean-startup-supervisor-v8.mjs")
@@ -32,7 +39,7 @@ describe("startup-origin-v8 inert control", () => {
       now: () => performance.now() - started,
       construct() { worker = new NativeWorker(new URL(`data:text/javascript,${encodeURIComponent(kind === "error" ? 'throw new Error("inert")' : 'process.exit(0)')}`)); worker.on("error", () => { error = true; observedAt = performance.now() - started; resolveLifecycle() }); worker.on("exit", () => { exit = true; observedAt = Math.min(observedAt, performance.now() - started); resolveLifecycle() }) },
       load: () => Atomics.load(signal, 0), compareExchange: (a, b) => Atomics.compareExchange(signal, 0, a, b), notify: () => { throw Error("GO forbidden") },
-      waitAsync: async (state, ms) => { const wait = Atomics.waitAsync(signal, 0, state, ms); return await wait.value },
+      waitAsync: async (state, ms) => { const atomic = Atomics as typeof Atomics & { waitAsync(a: Int32Array, i: number, v: number, ms: number): { value: string | Promise<string> } }; const wait = atomic.waitAsync(signal, 0, state, ms); return await wait.value },
       lifecycleFailure: () => failure, lifecycle: () => error && exit ? "both_seen" : error ? "error_seen" : exit ? "exit_seen" : "neither_seen",
       attribution: () => ({ prefixMilestone: "not_entered", readyPublicationMs: undefined }),
       reconcile: async () => { throw Error("guest forbidden") }, terminate: async () => { expect(observedAt).toBeLessThan(2500); expect(forced).toBe(false); forced = true; await worker.terminate() }, close() {},
