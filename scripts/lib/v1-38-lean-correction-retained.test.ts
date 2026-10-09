@@ -30,6 +30,43 @@ import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY } from "./v1-38-lean
 import * as reuseIO from "./v1-38-lean-baseline-reuse.js"
 import { buildPlannerCandidate } from "../../packages/strategy-lab/src/planner/emit.js"
 import { correctionAllocationFixture } from "../run-v1-38-lean-correction.test.js"
+import { buildLeanStartupWorkerHarnessV8 } from "./v1-38-lean-container-match-session.js"
+
+describe("startup-origin-v8 private retained envelope", () => {
+  const fixtureV8 = () => {
+    const r = (n: number) => labRoot("NON_AUTHORIZING-retained-v8", n)
+    const binding = { allocationRoot: r(1), sourceRoot: r(2), pairRoot: r(3), chargeRoot: r(4), bottomSourceRoot: r(5), topSourceRoot: r(6) }
+    const transport = { method: "selectActivations", requestOrdinal: 1, requestRoot: r(7), payloadRoot: r(8), inputRoot: r(9), executableRoot: r(10) }
+    const metadata = { schemaVersion: "v1.38-lean-startup-origin-v8", allocationRoot: binding.allocationRoot, chargeRoot: binding.chargeRoot, sourceRoot: binding.bottomSourceRoot, executableRoot: transport.executableRoot, inputRoot: transport.inputRoot, method: transport.method, requestOrdinal: 1, requestRoot: transport.requestRoot, seat: "bottom", policyRoot: ledgerIO.LEAN_STARTUP_POLICY_V5.root, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())), stage: "startup", branch: "lifecycle_failure", ready: false, go: false, wait: "changed", termination: "completed", unknown: true, constructorDurationBucket: "0_9ms", prefixMilestone: "not_entered", readyPublicationDurationBucket: "unknown", finalAtomicState: "state_0", lifecycleBeforeTermination: "error_seen", deadlineOutcome: "unknown" }
+    const body = { schemaVersion: "lean-startup-origin-envelope-v8", allocationRoot: binding.allocationRoot, sourceRoot: binding.sourceRoot, pairRoot: binding.pairRoot, chargeRoot: binding.chargeRoot, origins: [{ metadata, sourceRoot: binding.bottomSourceRoot, seat: "bottom", binding: transport }] }
+    const rooted = (next: typeof body) => ({ ...next, root: labRoot(next.schemaVersion, next) })
+    return { binding, body, rooted, origin: rooted(body), r }
+  }
+  it("[startup-origin-v8] validates only its finite envelope and mandatory retained identity joins", () => {
+    const f = fixtureV8(), check = (value: unknown) => (retainedIO as any).validateLeanStartupRetainedOriginV8(value, f.binding)
+    expect(check(f.origin)).toBe(f.origin.root)
+    for (const key of ["allocationRoot", "sourceRoot", "pairRoot", "chargeRoot"]) expect(() => check(f.rooted({ ...f.body, [key]: f.r(99) }))).toThrow()
+    for (const key of ["sourceRoot", "allocationRoot", "chargeRoot", "harnessRoot", "policyRoot", "executableRoot", "inputRoot", "requestRoot"]) {
+      const row = f.body.origins[0]!, metadata = { ...row.metadata, [key]: f.r(99) }
+      expect(() => check(f.rooted({ ...f.body, origins: [{ ...row, metadata }] }))).toThrow()
+    }
+    expect(() => check(f.rooted({ ...f.body, origins: [{ ...f.body.origins[0]!, seat: "top" }] }))).toThrow()
+  })
+  it("[startup-origin-v8] rejects unknown fields, private payloads, nonfinite buckets and legacy upgrade", () => {
+    expect(typeof (retainedIO as any).validateLeanStartupRetainedOriginV8).toBe("function")
+    const f = fixtureV8(), check = (value: unknown) => (retainedIO as any).validateLeanStartupRetainedOriginV8(value, f.binding), row = f.body.origins[0]!
+    for (const patch of [{ rawError: "PRIVATE_CANARY" }, { source: "PRIVATE_CANARY" }, { stdout: "PRIVATE_CANARY" }, { constructorDurationBucket: "NaN" }, { finalAtomicState: 0 }, { schemaVersion: "v1.38-lean-startup-origin-v7" }]) expect(() => check(f.rooted({ ...f.body, origins: [{ ...row, metadata: { ...row.metadata, ...patch } as any }] }))).toThrow()
+    expect(() => check({ ...f.origin, path: "glob/**" })).toThrow()
+    expect(() => check(f.rooted({ ...f.body, origins: [{ ...row, binding: { ...row.binding, private: "PRIVATE_CANARY" } as any }] }))).toThrow()
+    expect(JSON.stringify(f.origin)).not.toContain("PRIVATE_CANARY")
+  })
+  it("[startup-origin-v8] uses the finite validator in the actual audit while keeping public and phase credit false", () => {
+    const source = fileIO.readFileSync(new URL("./v1-38-lean-correction-retained.ts", import.meta.url), "utf8")
+    expect(source.includes("validateLeanStartupRetainedOriginV8(origin,")).toBe(true)
+    expect(source.includes('supervisor === "v15-5" ? "lean-startup-origin-envelope-v8"')).toBe(true)
+    for (const flag of ["publicAuthorized: false", "countedAuthorized: false", "productionAuthorized: false", "phaseComplete: false", "freezeAdmitted: false", "holdoutOpened: false", "formationMaterialized: false"]) expect(source.includes(flag)).toBe(true)
+  })
+})
 
 const reuseDirectory = process.env.LEAN_COLD_REUSE_FIXTURE_DIR ?? LEAN_BASELINE_STORE
 describe("prospective v3 authenticated reader gap", () => {
