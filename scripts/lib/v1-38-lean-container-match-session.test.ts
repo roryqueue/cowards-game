@@ -53,6 +53,20 @@ describe("startup-origin-v8 inert control", () => {
     const result = await superviseLeanStartupV8(binding, 5000, { now: () => now, construct() { now = 2500; state = 1 }, load: () => state, compareExchange: () => { throw Error("GO forbidden") }, notify() {}, waitAsync: async () => "ok", lifecycleFailure: () => new Promise(() => {}), lifecycle: () => "neither_seen", attribution: () => ({ prefixMilestone: "ready_published", readyPublicationMs: 2500 }), reconcile: async () => ({}), terminate: async () => {}, close() {} })
     expect(result.origin).toMatchObject({ branch: "startup_expired", ready: false, go: false, deadlineOutcome: "late_or_boundary", constructorDurationBucket: "2500_plus", finalAtomicState: "state_1" })
   })
+  it("[startup-origin-v8] never reanchors the broker epoch after binding validation", async () => {
+    const { superviseLeanStartupV8 } = await import("./v1-38-lean-startup-supervisor-v8.mjs")
+    let now = 2499
+    const result = await superviseLeanStartupV8(binding, 5000, { startedAtMs: 0, now: () => now, construct() { now = 2501 }, load: () => 1, compareExchange: () => 1, notify() {}, waitAsync: async () => "timed-out", lifecycleFailure: () => new Promise(() => {}), lifecycle: () => "neither_seen", attribution: () => ({ prefixMilestone: "ready_published", readyPublicationMs: 2501 }), reconcile: async () => ({}), terminate: async () => {}, close() {} } as any)
+    expect(result.origin).toMatchObject({ branch: "startup_expired", ready: false, go: false, deadlineOutcome: "late_or_boundary", constructorDurationBucket: "0_9ms", readyPublicationDurationBucket: "2500_plus" })
+  })
+  it("[startup-origin-v8] keeps an incomplete READY publication unknown and never grants GO", async () => {
+    const { superviseLeanStartupV8 } = await import("./v1-38-lean-startup-supervisor-v8.mjs")
+    let now = 1
+    const notify = vi.fn()
+    const result = await superviseLeanStartupV8(binding, 5000, { startedAtMs: 0, now: () => now, construct() {}, load: () => 1, compareExchange: () => 1, notify, waitAsync: async () => "timed-out", waitReadyPublication: async () => { now = 2500; return "timed-out" }, lifecycleFailure: () => new Promise(() => {}), lifecycle: () => "neither_seen", attribution: () => ({ prefixMilestone: "entered", readyPublicationMs: undefined }), reconcile: async () => ({}), terminate: async () => {}, close() {} } as any)
+    expect(result.origin).toMatchObject({ ready: false, go: false, readyPublicationDurationBucket: "unknown", prefixMilestone: "entered" })
+    expect(notify).not.toHaveBeenCalled()
+  })
   it("[startup-origin-v8] accepts atomic READY only and preserves guest and cleanup budgets", async () => {
     const { superviseLeanStartupV8 } = await import("./v1-38-lean-startup-supervisor-v8.mjs")
     let now = 0, state = 0, notified = false
@@ -78,6 +92,8 @@ describe("startup-origin-v8 inert control", () => {
     const parsed = ts.createSourceFile("v8.mjs", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
     expect((parsed as any).parseDiagnostics).toHaveLength(0)
     const harness = s.buildLeanStartupWorkerHarnessV8()
+    expect(harness.indexOf("trustedCasV5(trustedControlV5,0,0,1)")).toBeLessThan(harness.indexOf("trustedStoreV5(trustedControlV5,2,published)"))
+    expect(harness).toContain("trustedStoreV5(trustedControlV5,3,1)")
     expect(harness.indexOf("trustedWaitGoV5();")).toBeLessThan(harness.indexOf("const workerData=Object.freeze"))
     expect(s.buildLeanContainerBrokerSourceV7()).not.toContain("waitAsync")
   })
