@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Eight-hour continuation approved at actual resume; checked prospective timing source joins next
+stopped_at: Checked archived-prefix successor supplement executing source-only
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Human approved eight hours; all prior221730903ms carried; newcap250530903/deadline02:14:32UTC; old consumed policy unchanged
+last_activity_desc: Independent PLAN-CHECK-v3 PASS; three serial source tasks next under approved successor window; no empirical admission
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — SUCCESSOR SOURCE SUPPLEMENT CHECKED / IMPLEMENTATION NEXT (2026-10-09).
+
+Distinct researcher/planner/checker CLOSED. ARCHIVED-PREFIX-PLAN-v3/checkv3 PASS has three serial source-only tasks: exact11 RAW cost-only archive, newly named strict v15-3 successor policy with all called guards including retained publication/exhaustion, and concrete checkpoint distinction/exact nine-file reviewv4/finite17-path source-debit amendment. Consumed v15-2 policy/reviewv3/history unchanged; v15-4/5 dormant. Approved cap250530903/deadline02:14:32UTC/original108M floor+ALLwall/31minreserve/RAM3GB/disk15GB and all37charges remain. ROOT schedules manual isolated source worktree and owns integration/independent review-fix/validation/verification before any actual fresh route gates/allocation/entry. No active empirical entry/verifier/sourceHEADhold; no LEAG/Phase265/baseline/freeze/formation/holdout/public/counting/production credit. Earlier checkpoints are history.
 
 CURRENT APPROVED CHECKPOINT — EIGHT-HOUR CONTINUATION / SOURCE JOINS NEXT (2026-10-09).
 
