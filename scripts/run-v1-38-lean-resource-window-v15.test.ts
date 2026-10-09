@@ -62,18 +62,45 @@ it("finite documents and missing or forged predecessor/own FINAL never authorize
   expect(() => authenticateLeanResourceWindowPriorPairV15(new Map())).toThrow()
   expect(() => authenticateLeanResourceWindowAcceptedJoinV15("v15-2", {}, {} as never)).toThrow()
 })
-it("selects only the exact fresh v2 source review without accepting the immutable issues-found v1", () => {
+it("selects only the exact fresh v3 source review without accepting immutable v1/v2", () => {
   const phase = ".planning/phases/265-serious-current-rules-league-and-development-red-team/"
   for (const n of [2, 3, 4, 5] as const) for (const route of ["diagnostic", "baseline"] as const) {
     const docs = leanResourceWindowDocumentsV15(route, `v15-${n}`)
-    expect(docs.review).toBe(`${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v2.md`)
+    expect(docs.review).toBe(`${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v3.md`)
     expect(correction.leanPreparationProtocolDocuments(route, `v15-${n}`).review).toBe(docs.review)
     const request = { reviewPath: `${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v1.md` } as Parameters<typeof correction.authenticateLeanPreparationContinuationSourceReviewV13>[0]
     expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13(request, route, `v15-${n}`)).toThrow("SUPERVISOR_REQUEST")
+    expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13({ ...request, reviewPath: `${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v2.md` }, route, `v15-${n}`)).toThrow("SUPERVISOR_REQUEST")
   }
   // No fake clean review or successful source gate is produced here.
   const legacy = correction.leanPreparationProtocolDocuments("diagnostic", "v14-1")
   expect(legacy.review).toBe(`${phase}265-16-POST-V13-FIVE-PAIR-SOURCE-REVIEW-v2.md`)
+})
+it("debits only the exact finite eight repair reports plus the new strict v3 review, retaining old reports", () => {
+  const phase = lean.LEAN_REMAINING_V9_PHASE
+  const expected = ["PLAN-v1", "PLAN-CHECK-v1", "PLAN-CHECK-v2", "SOURCE-SUMMARY-v1", "REVIEW-FIX-v1", "SOURCE-REVIEW-v1", "VALIDATION-v1", "SOURCE-VERIFICATION-v1"].map(role => `${phase}265-16-POST-V15-CHECKPOINT-REPAIR-${role}.md`)
+  expected.push(`${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v3.md`)
+  for (const path of expected) expect(lean.LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS).toContain(path)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS.filter(p => p.includes("POST-V15-CHECKPOINT-REPAIR-"))).toEqual(expected.slice(0, 8))
+  for (const version of [1, 2]) expect(lean.LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS).toContain(`${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v${version}.md`)
+})
+it("every newly enumerated report is physically debited, growth charged and charged shrink/disappearance refused", () => {
+  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-repair-debit-")))
+  try {
+    process.chdir(directory); mkdirSync(lean.LEAN_REMAINING_V9_PHASE, { recursive: true, mode: 0o700 })
+    const a = allocation(), paths = lean.LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS.filter(p => p.includes("POST-V15-CHECKPOINT-REPAIR-") || p.endsWith("POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v3.md"))
+    expect(paths).toHaveLength(9)
+    for (const path of paths) {
+      const prior = lean.leanTwentySixReportDeltaBytes(a)
+      writeFileSync(path, "INERT".repeat(3000), { mode: 0o600 })
+      const debit = lean.leanTwentySixReportDeltaBytes(a)
+      expect(debit).toBeGreaterThan(prior)
+      writeFileSync(path, "INERT".repeat(6000)); expect(lean.leanTwentySixReportDeltaBytes(a)).toBeGreaterThan(debit)
+      const charged = { ...a, predecessor: { ...a.predecessor, survivors: [{ identity: path, allocatedBytes: 32768 }, ...a.predecessor.survivors.slice(1)] } }
+      writeFileSync(path, "INERT"); expect(() => lean.leanTwentySixReportDeltaBytes(charged)).toThrow("PREDECESSOR_DRIFT")
+      rmSync(path); expect(() => lean.leanTwentySixReportDeltaBytes(charged)).toThrow("PREDECESSOR_DRIFT")
+    }
+  } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
 })
 
 it("ROOT authority frontier: finite selected dispatcher refuses absent authentic custody without writes", async () => {
