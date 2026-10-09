@@ -82,6 +82,30 @@ it("successor envelope actual inert ledger and evidence carry selected policy ro
   } finally { clock.mockRestore(); process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
 })
 
+it("successor amendment physically charges exact seventeen paths, growth and no refund for excluded outputs", () => {
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_AMENDMENT_PATHS).toHaveLength(17)
+  const paths = lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_AMENDMENT_PATHS
+  expect(new Set(paths).size).toBe(17)
+  for (const path of paths) expect(lean.LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS).toContain(path)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS).not.toContain(lean.LEAN_REMAINING_V9_PHASE + "265-16-POST-V15-ARCHIVED-PREFIX-SOURCE-REVIEW-v99.md")
+  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-archived-debit-")))
+  try {
+    process.chdir(directory); mkdirSync(lean.LEAN_REMAINING_V9_PHASE, { recursive: true, mode: 0o700 })
+    const a = lean.createLeanSupervisorCorrectionAllocation(successorInput(), 8)
+    for (const path of paths) {
+      const prior = lean.leanTwentySixReportDeltaBytes(a)
+      writeFileSync(path, "NON_AUTHORIZING".repeat(2000), { mode: 0o600 })
+      expect(lean.leanTwentySixReportDeltaBytes(a)).toBe(prior + lstatSync(path).blocks * 512)
+    }
+    const path = lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS[0]!, prior = lean.leanTwentySixReportDeltaBytes(a), blocks = lstatSync(path).blocks * 512
+    writeFileSync(path, "NON_AUTHORIZING".repeat(4000)); expect(lean.leanTwentySixReportDeltaBytes(a)).toBeGreaterThan(prior)
+    const { root: _root, ...p } = a.predecessor, charged = { ...p, survivors: [...p.survivors, { identity: path, allocatedBytes: lstatSync(path).blocks * 512 }] }
+    const tracked = { ...a, predecessor: { ...charged, root: labRoot(charged.schemaVersion, charged) } }
+    writeFileSync(path, "INERT"); expect(() => lean.leanTwentySixReportDeltaBytes(tracked)).toThrow()
+    rmSync(path); expect(() => lean.leanTwentySixReportDeltaBytes(tracked)).toThrow()
+    expect(blocks).toBeGreaterThan(0)
+  } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
+})
 it("reconstructs allocation policy without caching mutable caller values or widening disk", () => {
   const a = lean.createLeanSupervisorCorrectionAllocation(input(), 8)
   expect(lean.leanSupervisorAllocationMode(a)).toBe("v15-2")

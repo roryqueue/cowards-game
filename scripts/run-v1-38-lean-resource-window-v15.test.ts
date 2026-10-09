@@ -87,6 +87,67 @@ it("successor producers and actual child/prefix guards agree on mode3 roots caps
   expect(() => correction.createLeanResourceWindowSetupV15("v15-3", 1791596012000)).toThrow()
   for (const mode of ["v15-4", "v15-5"] as const) expect(() => correction.createLeanResourceWindowSetupV15(mode, b.actualResumeMs)).toThrow()
 })
+const successorReviewFixture = () => {
+  const mode = "v15-3" as const, b = lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY, docs = custody.leanResourceWindowDocumentsV15("diagnostic", mode)
+  const history = correction.readLeanResourceWindowPriorPairV15(mode, path => archivedBytes().get(path)!), sourceRoot = r(61), commit = "1111111111111111111111111111111111111111"
+  const files = ["scripts/run-v1-38-lean-correction.ts", "scripts/run-v1-38-lean-baseline.ts", "scripts/lib/v1-38-lean-checkpoint-observation-v15.ts", "scripts/run-v1-38-lean-checkpoint-observation-v15.test.ts", "packages/strategy-lab/src/league/lean-experiment.ts", "scripts/lib/v1-38-lean-resource-window-v15.ts", "scripts/run-v1-38-lean-resource-window-v15.test.ts", "packages/strategy-lab/src/league/lean-resource-window-v15.test.ts", "scripts/lib/v1-38-lean-correction-retained.ts"]
+  const receipt = Buffer.from(`---\nsource_commit: ${commit}\nsource_root: ${sourceRoot}\nsource_entries: 9\ndiff_base: 7250223f67620ccc274a3a2fc80d099718ea58ea\nauthor_agent: /root/execute_265_archived_prefix\nreviewer_agent: /root/review_265_archived_prefix\nindependently_reviewed: true\nfiles_reviewed: 9\nfiles_reviewed_list:\n${files.map(path => `  - ${path}`).join("\n")}\nfindings_open: 0\nstatus: clean\ndistinction: fresh_synchronous_checkpoint_observation_v15\nidentity_only: false\n---\nNON_AUTHORIZING inert receipt. Not a real independent review.\n`)
+  const reviewRoot = lean.leanBytesRoot(receipt), setup = correction.createLeanResourceWindowSetupV15(mode, b.actualResumeMs)
+  const continuation = correction.createLeanResourceWindowContinuationV15(mode, { priorClosureRoot: history.carryRoot, sourceRoot, reviewRoot, cumulativeCharged: 37, cumulativeElapsedMs: 221730903, allocatedDiskBytes: history.predecessor.allocatedDiskBytes, distinction: { kind: "fresh_synchronous_checkpoint_observation_v15", evidenceRoot: sourceRoot, reviewRoot } })
+  const request = correction.createLeanResourceWindowRequestDraftV15(mode, "diagnostic", { sourceRoot, reviewRoot, dataReviewRoot: r(63), setupAccountingRoot: setup.root, reuseGrantRoot: r(64), authorizationRoot: r(65), priorClosureRoot: history.carryRoot, continuationRoot: continuation.root, acceptedCheckRoot: null, acceptedReaderCloseRoot: null, helperReviewRoot: r(66), helperPath: docs.helper, helperBytesRoot: r(67) })
+  const attestationBody = { schemaVersion: "lean-resource-window-policy-attestation-v15", status: "prospective_distinction_verified", kind: "fresh_synchronous_checkpoint_observation_v15", identityOnly: false, summary: "NON_AUTHORIZING source semantics fixture, not measured speedup or initiating cause.", priorClosureRoot: history.carryRoot, priorHoldRoot: history.holdRoot, priorCustodyRoot: history.root, sourceRoot, sourceCommit: commit, requestIntentRoot: labRoot("lean-resource-window-request-intent-v15", Object.fromEntries(Object.entries(request).filter(([key]) => !["continuationRoot", "authorizationRoot", "dataReviewRoot", "helperReviewRoot"].includes(key)))), policyRoot: b.root, memoryApprovalRoot: b.memoryApprovalRoot, approvalRoot: b.approvalRoot, diagnosticAttestationRoot: null, repairBaseCommit: "7250223f67620ccc274a3a2fc80d099718ea58ea", repairPaths: files, route: "diagnostic", attemptOrdinal: 3, authorAgent: "/root", reviewerAgent: "/root/review_fixture", independentlyReviewed: true }
+  const attestation = lean.leanCanonicalBytes({ ...attestationBody, root: labRoot(attestationBody.schemaVersion, attestationBody) }), map = new Map<string, Uint8Array>([[docs.review, receipt], [docs.distinctionReview, attestation], [docs.dataReview, Buffer.from(`---\ncontinuation_distinction_root: ${lean.leanBytesRoot(attestation)}\n---\nNON_AUTHORIZING\n`)], [docs.helperReview, Buffer.from(`---\ncontinuation_distinction_root: ${lean.leanBytesRoot(attestation)}\n---\nNON_AUTHORIZING\n`)]])
+  const observations = { readBytes: (path: string, maximum: number) => { const bytes = map.get(path); if (!bytes || bytes.length > maximum) throw new Error("INERT_MISSING"); return bytes }, currentIdentity: () => ({ manifest: { root: sourceRoot, entries: files.map(path => ({ path, root: r(69) })) }, assertCommit: (observed: string) => { if (observed !== commit) throw new Error("INERT_COMMIT_DRIFT") } }) }
+  return { mode, b, docs, history, sourceRoot, commit, files, receipt, continuation, request, map, observations, attestationBody }
+}
+it("successor distinction connects raw custody producers and actual continuation/source-review consumers to exact v4", () => {
+  expect(custody.leanResourceWindowDocumentsV15("diagnostic", "v15-3").review).toBe(lean.LEAN_REMAINING_V9_PHASE + "265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v4.md")
+  const f = successorReviewFixture(), old = vi.spyOn(custody, "authenticateLeanResourceWindowPriorPairV15")
+  try {
+    expect(() => correction.validateLeanResourceWindowContinuationV15(f.continuation, f.request, "diagnostic", f.mode, f.history, f.observations)).not.toThrow()
+    expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13(f.request, "diagnostic", f.mode, f.observations)).not.toThrow()
+    expect(old).not.toHaveBeenCalled()
+    expect(f.history).not.toHaveProperty("accepted"); expect(f.history).not.toHaveProperty("finalReaderClose")
+    expect(custody.leanResourceWindowDocumentsV15("diagnostic", "v15-2").review).toBe(lean.LEAN_REMAINING_V9_PHASE + "265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v3.md")
+    for (const mode of ["v15-4", "v15-5"] as const) expect(() => custody.leanResourceWindowDocumentsV15("diagnostic", mode)).toThrow()
+  } finally { old.mockRestore() }
+})
+it("successor distinction actual consumers reject stale receipt identity actors closure and semantic promotion", () => {
+  expect(custody.leanResourceWindowDocumentsV15("diagnostic", "v15-3").review).toContain("SOURCE-REVIEW-v4.md")
+  const f = successorReviewFixture()
+  const mutations = [["source_commit: " + f.commit, "source_commit: " + "2".repeat(40)], ["source_root: " + f.sourceRoot, "source_root: " + r(70)], ["source_entries: 9", "source_entries: 8"], ["diff_base: 7250223f67620ccc274a3a2fc80d099718ea58ea", "diff_base: 47425b37ee8d4a9ebdf0851667689d6d5ec0713e"], ["author_agent: /root/execute_265_archived_prefix", "author_agent: /root"], ["reviewer_agent: /root/review_265_archived_prefix", "reviewer_agent: /root/execute_265_archived_prefix"], ["files_reviewed: 9", "files_reviewed: 8"], ["  - scripts/lib/v1-38-lean-correction-retained.ts", "  - scripts/INERT-unrelated.ts"], ["findings_open: 0", "findings_open: 1"], ["status: clean", "status: gaps_found"], ["identity_only: false", "identity_only: true"], ["distinction: fresh_synchronous_checkpoint_observation_v15", "distinction: source_identity_drift"], ["independently_reviewed: true", "independently_reviewed: false"]]
+  for (const [from, to] of mutations) {
+    const bytes = Buffer.from(f.receipt.toString("utf8").replace(from!, to!)), request = { ...f.request, reviewRoot: lean.leanBytesRoot(bytes) }
+    f.map.set(f.docs.review, bytes)
+    expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13(request, "diagnostic", f.mode, f.observations)).toThrow()
+  }
+  f.map.set(f.docs.review, f.receipt)
+  for (const patch of [{ reviewPath: f.docs.review.replace("v4", "v3") }, { timeboxExtension: lean.LEAN_RESOURCE_WINDOW_V15_POLICY }, { attemptOrdinal: 4 }, { sourceRoot: r(71) }, { reviewRoot: r(72) }]) expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13({ ...f.request, ...patch }, "diagnostic", f.mode, f.observations)).toThrow()
+  for (const patch of [{ kind: "source_identity_drift" }, { evidenceRoot: f.b.memoryApprovalRoot }, { reviewRoot: r(73) }]) {
+    const { root: _root, ...body } = f.continuation, changed = { ...body, distinction: { ...body.distinction, ...patch } }
+    expect(() => correction.validateLeanResourceWindowContinuationV15({ ...changed, root: labRoot(changed.schemaVersion, changed) }, f.request, "diagnostic", f.mode, f.history, f.observations)).toThrow()
+  }
+  for (const patch of [{ cumulativeCharged: 36 }, { authorizing: true }, { accepted: true }]) expect(() => correction.validateLeanResourceWindowContinuationV15(f.continuation, f.request, "diagnostic", f.mode, { ...f.history, ...patch }, f.observations)).toThrow()
+  for (const patch of [{ identityOnly: true }, { repairBaseCommit: "47425b37ee8d4a9ebdf0851667689d6d5ec0713e" }, { policyRoot: lean.LEAN_RESOURCE_WINDOW_V15_POLICY.root }, { kind: "source_identity_drift" }]) {
+    const body = { ...f.attestationBody, ...patch }
+    f.map.set(f.docs.distinctionReview, lean.leanCanonicalBytes({ ...body, root: labRoot(body.schemaVersion, body) }))
+    expect(() => correction.validateLeanResourceWindowContinuationV15(f.continuation, f.request, "diagnostic", f.mode, f.history, f.observations)).toThrow()
+  }
+})
+it("successor source manifest includes exactly eleven amendment inputs and retained dependency, excluding only six outputs", () => {
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_INPUTS).toHaveLength(11)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS).toHaveLength(6)
+  const b = lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY, unrelated = lean.LEAN_REMAINING_V9_PHASE + "265-16-POST-V15-ARCHIVED-PREFIX-SOURCE-REVIEW-v99.md"
+  const bytes = (path: string) => readFileSync(resolve(path))
+  const entries = [...lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS, unrelated].map(path => ({ path, root: r(75) }))
+  const source = correction.leanCorrectionSourceManifest("v15-3", b, { readBytes: bytes, baseEntries: entries })
+  const paths = source.entries.map(row => row.path)
+  for (const path of lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_INPUTS) { expect(paths).toContain(path); expect(source.entries.find(row => row.path === path)!.root).toBe(lean.leanBytesRoot(bytes(path))) }
+  for (const path of lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS) expect(paths).not.toContain(path)
+  expect(paths).toContain("scripts/lib/v1-38-lean-correction-retained.ts"); expect(paths).toContain(unrelated)
+  const tampered = (path: string) => path.endsWith("TIMING-APPROVAL-20261009.md") ? Buffer.from("INERT_TAMPER") : bytes(path)
+  expect(() => correction.leanCorrectionSourceManifest("v15-3", b, { readBytes: tampered, baseEntries: entries })).toThrow()
+})
 const allocation = (chargedReport?: { identity: string; allocatedBytes: number }) => {
   const b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY, p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 36, elapsedUpperBoundMs: 208771903, allocatedDiskBytes: 24780800, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r(1), survivors: Array.from({ length: 854 }, (_, n) => ({ identity: `.strategy-lab/NON_AUTHORIZING-history-${n}`, allocatedBytes: 0 })) }
   if (chargedReport) p.survivors[0] = chargedReport
