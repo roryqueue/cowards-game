@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Post-v14 memory/time decision approved after its fixed deadline; prospective replacement window needed
+stopped_at: Replacement four-hour window approved and anchored; prospective source research and checked Plan16 supplement next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Direct approval recorded; approved 06:39UTC deadline exhausted before receipt; no new run or source change
+last_activity_desc: Resume14:38:33UTC anchors deadline18:38:33UTC; all208771903ms prior cost charged; prospective3GB memory source gates pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — REPLACEMENT WINDOW APPROVED / SOURCE GATES NEXT (2026-10-09).
+
+Human `yes, approved` adopts replacementFOURhours at actual ROOTresume2026-10-09T14:38:33Z/ms1791556713000; record265-16-POST-V14-REPLACEMENT-WINDOW-APPROVAL-20261009.md. FULL108000000+ALLwall since1791455941097 carries208771903ms prior, newcap223171903/deadline2026-10-09T18:38:33Z (2:38:33p.m.Eastern); same31reserve/allfuturewall/no reset/refund/exclusion/re-anchor. Approved aggregateRAM3000000000B includes unchanged512000000+335544320reserves, NOTdiskincrease; disk scratch2GB/retained12GB/total15GB/300Matches/768MiBoldspace/guest1000/host5000/startup2500/Match600000/sampling250 and allotherbounds remain. FOUR unused distinct diagnostic/conditional36pairs only; fresh reviewedsource/contracts/actorDATAHELPER/newcommittedallocation/empty0700/SAMEPROCESScapacity/uniqueROOTentry/fixedsourceHEAD/uniqueactualverification mandatory. No newsource/allocation/Match yet; no auditbypass/unchangedfailingrun/oldauthorityreuse. Research→checked existingPlan16supplement→sourceimplementation/reviewfix/validate/verify next. Allconsumedhistory36charges immutable; diagnosticaccepted/baselineinconclusive/Phase265LEAGfreezeformationholdoutpubliccountingproductioncredit absent. Earlier checkpoints below are history; no repeat approval literal required for this adopted scope.
 
 CURRENT HUMAN-ONLY TIMING CHECKPOINT — APPROVED WINDOW EXHAUSTED BEFORE RECEIPT (2026-10-09).
 
