@@ -9,16 +9,31 @@ import * as retained from "./v1-38-lean-correction-retained.js"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION as policy, leanCanonicalBytes, leanBytesRoot, leanCorrectionRoutePaths } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanFivePairDocumentsV14, LEAN_FIVE_PAIR_V14_HISTORY_PINS } from "./v1-38-lean-post-v13-five-pair.js"
+import { createLeanPostV13HostHistoryFixtureV14 } from "./v1-38-lean-post-v13-five-pair-host-fixture.js"
+
+// Explicit low-level NON-AUTHORIZING history accounting seam only. Real writer,
+// carry/hold/pair authenticators and accepted audits remain untouched. Neither
+// fixture metadata nor this mocked input is successful production authority.
+vi.mock("./v1-38-lean-post-v13-five-pair.js", async original => {
+  const real = await original<typeof import("./v1-38-lean-post-v13-five-pair.js")>()
+  const { createLeanPostV13HostHistoryFixtureV14: build } = await import("./v1-38-lean-post-v13-five-pair-host-fixture.js")
+  const fixture = build()
+  return { ...real, LEAN_FIVE_PAIR_V14_HISTORY_PINS: fixture.pins, validateLeanPostV13HistoryV14: (bytes: ReadonlyMap<string, Uint8Array>) => real.validateLeanPostV13FiniteHistoryV14(bytes, fixture.pins), validateProductionHistoryForHostTest: real.validateLeanPostV13HistoryV14 }
+})
 
 it("real no-ledger refusal publishes and reauthenticates terminal, carry, hold and spent-pair bytes", async () => {
   const before = process.cwd(), mode = "v14-1", route = "diagnostic", directory = realpathSync(mkdtempSync(join(tmpdir(), "v14-terminal-host-")))
-  // Copy public functional bytes and the three permitted finite metadata files.
+  // Copy public functional bytes and sanitized source-fixture metadata only.
   // Historical payload fixtures are opaque allocated bytes: never read/execute
   // old private Strategy or trace contents and never pretend they authorize play.
   const manifest = correction.leanCorrectionSourceManifest(mode, policy)
-  const metadata = LEAN_FIVE_PAIR_V14_HISTORY_PINS.map(pin => ({ path: pin.path, bytes: readFileSync(pin.path) }))
-  const history = correction.authenticateLeanPostV13HistoricalCustodyV14()
+  const fixture = createLeanPostV13HostHistoryFixtureV14()
+  const metadata = fixture.pins.map(pin => ({ path: pin.path, bytes: fixture.bytes.get(pin.path)! }))
   try {
+    for (const value of metadata) { const path = join(directory, value.path); mkdirSync(dirname(path), { recursive: true, mode: 0o700 }); writeFileSync(path, value.bytes, { mode: 0o600 }) }
+    process.chdir(directory)
+    const history = correction.authenticateLeanPostV13HistoricalCustodyV14()
+    process.chdir(before)
     for (const entry of manifest.entries) { const path = join(directory, entry.path); mkdirSync(dirname(path), { recursive: true, mode: 0o700 }); writeFileSync(path, readFileSync(resolve(before, entry.path)), { mode: 0o600 }) }
     for (const row of history.predecessor.survivors) {
       const path = join(directory, row.identity), isDirectory = history.predecessor.survivors.some(other => other.identity.startsWith(`${row.identity}/`))
@@ -55,6 +70,8 @@ it("real no-ledger refusal publishes and reauthenticates terminal, carry, hold a
     writeFileSync(docs.review, reviewBytes, { mode: 0o600 })
     const gateRequest = { ...request, reviewRoot: leanBytesRoot(reviewBytes) }
     correction.authenticateLeanPostV13SourceReviewV14(gateRequest, route, mode)
+    expect(correction.leanCorrectionSourceManifest(mode, policy).root).toBe(sourceRoot)
+    writeFileSync(docs.distinctionReview, "HOST invalid attestation; never authorizes", { mode: 0o600 })
     expect(correction.leanCorrectionSourceManifest(mode, policy).root).toBe(sourceRoot)
     expect(() => correction.authenticateLeanPostV13SourceReviewV14({ ...gateRequest, reviewPath: ".planning/old-review.md" }, route, mode)).toThrow()
     const sourcePath = manifest.entries.find(entry => entry.path.endsWith(".ts"))!.path, sourceBytes = readFileSync(sourcePath)
@@ -108,16 +125,24 @@ it("constructs exact fresh request drafts and binds immutable setup origin for a
   }
 })
 
-it("binds only ROOT-observed finite failed-v13 metadata, not an old ordinary reader", () => {
+it("portable finite metadata contract uses custom nonauthorizing pins; production refuses them", async () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "v14-portable-history-host-"))), before = process.cwd()
+  const fixture = createLeanPostV13HostHistoryFixtureV14()
   const oldReader = vi.spyOn(retained, "authenticateLeanSupervisorDiagnosticCheck")
   try {
+    process.chdir(directory)
+    for (const [path, bytes] of fixture.bytes) { mkdirSync(dirname(path), { recursive: true, mode: 0o700 }); writeFileSync(path, bytes, { mode: 0o600 }) }
+    const module = await import("./v1-38-lean-post-v13-five-pair.js") as typeof import("./v1-38-lean-post-v13-five-pair.js") & { validateProductionHistoryForHostTest: (bytes: ReadonlyMap<string, Uint8Array>) => unknown }
+    expect(() => module.validateProductionHistoryForHostTest(fixture.bytes)).toThrow()
     const history = correction.authenticateLeanPostV13HistoricalCustodyV14()
     expect(history.cumulativeCharged).toBe(35)
     expect(history.predecessor.elapsedUpperBoundMs).toBe(148694388)
     expect(history.predecessor.allocatedDiskBytes).toBe(22777856)
     expect(history.predecessor.survivors.length).toBe(774)
     expect(oldReader).not.toHaveBeenCalled()
-  } finally { oldReader.mockRestore() }
+    const changed = new Map(fixture.bytes); changed.set(fixture.pins[0]!.path, Buffer.from("HOST-tamper"))
+    expect(() => module.validateLeanPostV13FiniteHistoryV14(changed, fixture.pins)).toThrow()
+  } finally { process.chdir(before); oldReader.mockRestore(); rmSync(directory, { recursive: true, force: true }) }
 })
 
 it("new accepted-join dispatch rejects missing real same-pair custody on every call", () => {
