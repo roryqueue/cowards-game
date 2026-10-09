@@ -62,6 +62,19 @@ it("finite documents and missing or forged predecessor/own FINAL never authorize
   expect(() => authenticateLeanResourceWindowPriorPairV15(new Map())).toThrow()
   expect(() => authenticateLeanResourceWindowAcceptedJoinV15("v15-2", {}, {} as never)).toThrow()
 })
+it("selects only the exact fresh v2 source review without accepting the immutable issues-found v1", () => {
+  const phase = ".planning/phases/265-serious-current-rules-league-and-development-red-team/"
+  for (const n of [2, 3, 4, 5] as const) for (const route of ["diagnostic", "baseline"] as const) {
+    const docs = leanResourceWindowDocumentsV15(route, `v15-${n}`)
+    expect(docs.review).toBe(`${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v2.md`)
+    expect(correction.leanPreparationProtocolDocuments(route, `v15-${n}`).review).toBe(docs.review)
+    const request = { reviewPath: `${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v1.md` } as Parameters<typeof correction.authenticateLeanPreparationContinuationSourceReviewV13>[0]
+    expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13(request, route, `v15-${n}`)).toThrow("SUPERVISOR_REQUEST")
+  }
+  // No fake clean review or successful source gate is produced here.
+  const legacy = correction.leanPreparationProtocolDocuments("diagnostic", "v14-1")
+  expect(legacy.review).toBe(`${phase}265-16-POST-V13-FIVE-PAIR-SOURCE-REVIEW-v2.md`)
+})
 
 it("ROOT authority frontier: finite selected dispatcher refuses absent authentic custody without writes", async () => {
   const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v15-inert-")))

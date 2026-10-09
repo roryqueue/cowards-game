@@ -1,6 +1,6 @@
 /** Portable NON-AUTHORIZING resource contracts; no routes, provider or Match. */
 import { expect, it, vi } from "vitest"
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { labRoot } from "../contracts.js"
@@ -29,6 +29,35 @@ it("reconstructs allocation policy without caching mutable caller values or wide
 it("enumerates only four unused global resource-window ordinals", () => {
   for (const mode of ["v15-2", "v15-3", "v15-4", "v15-5"]) expect(lean.isLeanResourceWindowModeV15(mode)).toBe(true)
   for (const mode of ["v15-1", "v15-6", "v15-02", "v14-2", null, {}]) expect(lean.isLeanResourceWindowModeV15(mode)).toBe(false)
+})
+it("charges the exact fresh review and fix report blocks and growth without a broad allowlist or refund", () => {
+  const phase = ".planning/phases/265-serious-current-rules-league-and-development-red-team/", prefix = `${phase}265-16-POST-V14-RESOURCE-WINDOW-`
+  const reports = ["SOURCE-REVIEW-v2", "REVIEW-FIX-v1", "REVIEW-FIX-v2"].map(role => `${prefix}${role}.md`)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS).toContain(`${prefix}SOURCE-REVIEW-v1.md`)
+  for (const path of reports) expect(lean.LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS).toContain(path)
+  for (const role of ["SOURCE-REVIEW-v99", "REVIEW-FIX-v99", "SOURCE-REVIEW-v2-extra", "arbitrary-report"]) expect(lean.LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS).not.toContain(`${prefix}${role}.md`)
+  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-v15-report-debit-")))
+  try {
+    process.chdir(directory); mkdirSync(phase, { recursive: true, mode: 0o700 })
+    const a = lean.createLeanSupervisorCorrectionAllocation(input(), 8)
+    expect(lean.leanTwentySixReportDeltaBytes(a)).toBe(0)
+    for (const path of reports) writeFileSync(path, "NON_AUTHORIZING_REPORT\n".repeat(1024), { mode: 0o600 })
+    const blocks = () => reports.map(path => lstatSync(path).blocks * 512), prepared = blocks()
+    expect(prepared.every(bytes => bytes > 0)).toBe(true)
+    expect(lean.leanTwentySixReportDeltaBytes(a)).toBe(prepared.reduce((sum, bytes) => sum + bytes, 0))
+    const original = input(), { root: _old, ...body } = original.predecessor
+    const survivors = body.survivors.map((row, n) => n < reports.length ? { identity: reports[n]!, allocatedBytes: prepared[n]! } : row)
+    const predecessorBody = { ...body, survivors }, snapshot = lean.createLeanSupervisorCorrectionAllocation({ ...original, predecessor: { ...predecessorBody, root: labRoot(predecessorBody.schemaVersion, predecessorBody) } }, 8)
+    expect(lean.leanTwentySixReportDeltaBytes(snapshot)).toBe(0)
+    writeFileSync(reports[0]!, "NON_AUTHORIZING_GROWTH\n".repeat(8192), { mode: 0o600 })
+    const growth = blocks()[0]! - prepared[0]!
+    expect(growth).toBeGreaterThan(0)
+    expect(lean.leanTwentySixReportDeltaBytes(snapshot)).toBe(growth)
+    writeFileSync(reports[0]!, "NON_AUTHORIZING_SHRINK", { mode: 0o600 })
+    expect(() => lean.leanTwentySixReportDeltaBytes(snapshot)).toThrow("PREDECESSOR_DRIFT")
+    rmSync(reports[0]!)
+    expect(() => lean.leanTwentySixReportDeltaBytes(snapshot)).toThrow("PREDECESSOR_DRIFT")
+  } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
 })
 
 it("roots the approved continuous window and separates memory from unchanged disk", () => {
