@@ -15,7 +15,7 @@ export const leanResourceWindowDocumentsV15 = (route: Route, mode: LeanResourceW
   // Diagnostic and conditional baseline share one pair continuation/setup/close;
   // actual authorizations, helpers and review gates stay distinct per route.
   const pairPath = (role: string) => `${phase}265-16-POST-V14-RESOURCE-WINDOW-diagnostic-${mode}-${role}-v1.json`
-  return Object.freeze({ review: `${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v2.md`, distinctionReview: path("POLICY-ATTESTATION"), dataReview: path("DATA-REVIEW", "md"), helperReview: path("HELPER-REVIEW", "md"), helper: `.strategy-lab/lean-resource-window-${route}-${mode}-helper.mts`, authorization: path("AUTHORIZATION"), setup: pairPath("SETUP"), continuation: pairPath("CONTINUATION"), pairClosure: pairPath("PAIR-CLOSURE"), carry: `${paths.temp}/terminal-carry-v15.json`, hold: `${paths.temp}/terminal-hold-complete-v15.json` })
+  return Object.freeze({ review: `${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v3.md`, distinctionReview: path("POLICY-ATTESTATION"), dataReview: path("DATA-REVIEW", "md"), helperReview: path("HELPER-REVIEW", "md"), helper: `.strategy-lab/lean-resource-window-${route}-${mode}-helper.mts`, authorization: path("AUTHORIZATION"), setup: pairPath("SETUP"), continuation: pairPath("CONTINUATION"), pairClosure: pairPath("PAIR-CLOSURE"), carry: `${paths.temp}/terminal-carry-v15.json`, hold: `${paths.temp}/terminal-hold-complete-v15.json` })
 }
 
 /** Full raw digests from the actual saved closed v14-1 metadata. This authority

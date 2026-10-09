@@ -278,10 +278,12 @@ export const leanCorrectionSourceManifest = (supervisor: LeanSupervisorMode = fa
     if (!isLeanResourceWindowExtensionV15(extension)) return fail("SUPERVISOR_REQUEST")
     assertLeanRetryExtensionDocumentsV8(extension, supervisor)
     const closure = new Map(leanCorrectionSourceManifest("v14-1", LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION).entries.map(entry => [entry.path, entry]))
+    for (const path of ["scripts/lib/v1-38-lean-checkpoint-observation-v15.ts", "scripts/run-v1-38-lean-checkpoint-observation-v15.test.ts", `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-CHECKPOINT-REPAIR-PLAN-v1.md`, `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-CHECKPOINT-REPAIR-PLAN-CHECK-v1.md`, `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-CHECKPOINT-REPAIR-PLAN-CHECK-v2.md`]) closure.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
     for (const path of ["scripts/lib/v1-38-lean-resource-window-v15.ts", "packages/strategy-lab/src/league/lean-resource-window-v15.test.ts", "scripts/run-v1-38-lean-resource-window-v15.test.ts", "scripts/run-v1-38-lean-correction.sh", ...["RESOURCE-WINDOW-RESEARCH-v1", "RESOURCE-WINDOW-PLAN-v1", "RESOURCE-WINDOW-PLAN-CHECK-v2", "MEMORY-AND-TIME-DECISION-v1", "MEMORY-AND-TIME-APPROVAL-20261009", "REPLACEMENT-WINDOW-APPROVAL-20261009"].map(role => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-${role}.md`)]) closure.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
     // Only finite named output gates/helper/data paths are excluded from this
     // source graph. They remain separately hashed and physically charged.
     for (const path of LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS) if (path.includes("POST-V14-RESOURCE-WINDOW-") && !["RESEARCH-v1.md", "PLAN-v1.md", "PLAN-CHECK-v2.md"].some(suffix => path.endsWith(suffix))) closure.delete(path)
+    for (const path of LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS) if (path.includes("POST-V15-CHECKPOINT-REPAIR-") && !["PLAN-v1.md", "PLAN-CHECK-v1.md", "PLAN-CHECK-v2.md"].some(suffix => path.endsWith(suffix))) closure.delete(path)
     const entries = [...closure.values()].sort((a, b) => a.path.localeCompare(b.path))
     return { entries, root: labRoot("lean-resource-window-reviewed-source-v15", { entries, extension, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())), brokerRoot: leanBytesRoot(Buffer.from(buildLeanContainerBrokerSourceV7())) }) }
   }

@@ -13,8 +13,9 @@ import { auditLeanCorrectionRetained, assertLeanResourceWindowReaderV15, validat
 import * as baseline from "./run-v1-38-lean-baseline.js"
 
 const r = (n: number) => labRoot("NON_AUTHORIZING_v15_HOST", n)
-const allocation = () => {
+const allocation = (chargedReport?: { identity: string; allocatedBytes: number }) => {
   const b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY, p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 36, elapsedUpperBoundMs: 208771903, allocatedDiskBytes: 24780800, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r(1), survivors: Array.from({ length: 854 }, (_, n) => ({ identity: `.strategy-lab/NON_AUTHORIZING-history-${n}`, allocatedBytes: 0 })) }
+  if (chargedReport) p.survivors[0] = chargedReport
   return lean.createLeanSupervisorCorrectionAllocation({ sourceRoot: r(2), reviewRoot: r(3), coldRoot: r(4), planRoot: b.planRoot, candidateRoots: [r(5), r(6)], requestRoots: [r(7)], seed: "non-authorizing-host", route: "diagnostic", reuseGrantRoot: r(8), supervisorDecisionRoot: b.approvalRoot, acceptedCheckRoot: null, requestBytesRoot: r(9), dataReviewRoot: r(10), setupAccountingRoot: r(11), predecessor: { ...p, root: labRoot(p.schemaVersion, p) }, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, timeboxExtension: b, attemptOrdinal: 2, priorClosureRoot: r(12), continuationRoot: r(13), acceptedReaderCloseRoot: null }, 8)
 }
 it("actual compaction forwards live projected guards, permits v15 RAM, and preserves independent disk and legacy refusal", () => {
@@ -96,11 +97,17 @@ it("every newly enumerated report is physically debited, growth charged and char
       const debit = lean.leanTwentySixReportDeltaBytes(a)
       expect(debit).toBeGreaterThan(prior)
       writeFileSync(path, "INERT".repeat(6000)); expect(lean.leanTwentySixReportDeltaBytes(a)).toBeGreaterThan(debit)
-      const charged = { ...a, predecessor: { ...a.predecessor, survivors: [{ identity: path, allocatedBytes: 32768 }, ...a.predecessor.survivors.slice(1)] } }
+      const charged = allocation({ identity: path, allocatedBytes: 32768 })
       writeFileSync(path, "INERT"); expect(() => lean.leanTwentySixReportDeltaBytes(charged)).toThrow("PREDECESSOR_DRIFT")
       rmSync(path); expect(() => lean.leanTwentySixReportDeltaBytes(charged)).toThrow("PREDECESSOR_DRIFT")
     }
   } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
+})
+it("actual finite source manifest includes the repair implementation and plan but excludes cyclic downstream outputs", () => {
+  const m = correction.leanCorrectionSourceManifest("v15-2", lean.LEAN_RESOURCE_WINDOW_V15_POLICY), paths = new Set(m.entries.map(e => e.path))
+  for (const path of ["scripts/lib/v1-38-lean-checkpoint-observation-v15.ts", "scripts/run-v1-38-lean-checkpoint-observation-v15.test.ts", `${lean.LEAN_REMAINING_V9_PHASE}265-16-POST-V15-CHECKPOINT-REPAIR-PLAN-v1.md`]) expect(paths.has(path)).toBe(true)
+  for (const role of ["SOURCE-SUMMARY-v1", "REVIEW-FIX-v1", "SOURCE-REVIEW-v1", "VALIDATION-v1", "SOURCE-VERIFICATION-v1"]) expect(paths.has(`${lean.LEAN_REMAINING_V9_PHASE}265-16-POST-V15-CHECKPOINT-REPAIR-${role}.md`)).toBe(false)
+  expect(paths.has(`${lean.LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v3.md`)).toBe(false)
 })
 
 it("ROOT authority frontier: finite selected dispatcher refuses absent authentic custody without writes", async () => {

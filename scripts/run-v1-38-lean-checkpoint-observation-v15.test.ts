@@ -89,7 +89,7 @@ it("actual allocation admission catches on-disk replacement before entry and dur
     o.charged.mockImplementation(() => lean.readLeanLedger(ledger).charged)
     expect(() => correction.assertLeanCorrectionCheckpointV15(a, o)).not.toThrow()
     const changed = { ...a, sourceRoot: labRoot("INERT_DRIFT", 1) }
-    o.physicalBytes.mockImplementation(() => { writeFileSync(join(ledger.directory, "allocation.json"), lean.leanCanonicalBytes(changed)); return 25000000 })
+    o.disk.mockImplementation(() => { writeFileSync(join(ledger.directory, "allocation.json"), lean.leanCanonicalBytes(changed)); return { bufferBytes: 400, scratchBytes: 500 } })
     expect(() => correction.assertLeanCorrectionCheckpointV15(a, o)).toThrow()
     expect(() => correction.authenticateLeanCheckpointAllocationV15(ledger, a)).toThrow()
   } finally { process.chdir(before); rmSync(dir, { recursive: true, force: true }) }
