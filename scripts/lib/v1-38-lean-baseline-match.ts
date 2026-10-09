@@ -7,8 +7,8 @@ import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js
 import { encodeSubprocessIpcRequest } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { admitFactory, authorizeFactorySupervision, type FactorySupervisionProvider } from "../../packages/strategy-lab/src/factory/admission.js"
-import { runCanonicalLabMatch, type LabMatchExecution } from "../../packages/strategy-lab/src/runtime-bridge.js"
-import { isLeanRetryMode, leanSupervisorAllocationMode, LEAN_CAPS, type LeanExperimentLedger, type LeanCharge, type LeanSlot, type LeanCompactMatchRecord } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { runCanonicalLabMatch, readLabHostFailureV15, type LabHostBindingV15, type LabMatchExecution } from "../../packages/strategy-lab/src/runtime-bridge.js"
+import { admitLeanAllocation, isLeanRetryMode, leanSupervisorAllocationMode, LEAN_CAPS, type LeanExperimentLedger, type LeanCharge, type LeanSlot, type LeanCompactMatchRecord } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { compactExecution, deriveLeanSupervisorDiagnostic } from "../run-v1-38-lean-experiment.js"
 import { createFactorySupervisedRuntime, getFactoryPrivateDiagnostic } from "./v1-38-factory-supervised-runtime.js"
 import { prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
@@ -109,6 +109,7 @@ export const runLeanBaselineMatch = async (input: {
   unregister: (provider: Pick<FactorySupervisionProvider, "close">) => void
 }) => {
   const hostBinding: LeanHostFailureBindingV7 | undefined = (input.ledger.allocation.schemaVersion.endsWith("-v7") || input.ledger.allocation.schemaVersion.endsWith("-v8")) && "route" in input.ledger.allocation ? { route: input.ledger.allocation.route, allocationRoot: input.ledger.allocation.root, chargeRoot: input.charge.root, slotRoot: input.slot.root } : undefined
+  const hostBindingV15: LabHostBindingV15 | undefined = leanSupervisorAllocationMode(input.ledger.allocation) === "v15-4" && leanSupervisorAllocationMode(admitLeanAllocation(input.ledger.allocation)) === "v15-4" ? { allocationRoot: input.ledger.allocation.root, chargeRoot: input.charge.root, slotRoot: input.slot.root } : undefined
   let bottomSource: LeanBaselineSource, topSource: LeanBaselineSource, scenario: ReturnType<typeof leanBaselineScenario>
   try {
     bottomSource = validateLeanBaselineSource(input.bottom); topSource = validateLeanBaselineSource(input.top)
@@ -167,7 +168,7 @@ export const runLeanBaselineMatch = async (input: {
     let bottom: FactorySupervisionProvider, top: FactorySupervisionProvider
     try { bottom = create(bottomSource, "bottom"); top = create(topSource, "top") }
     catch (error) { if (hostBinding) throw captureLeanHostFailureV7("match_preparation", hostBinding, error); throw error }
-    actual = await runCanonicalLabMatch({ match: { matchId: `lean-${input.charge.root.slice(7, 31)}`, seed: scenario.seed, arenaVariant: scenario.arena, bottomPlayerId: scenario.bottomPlayerId, topPlayerId: scenario.topPlayerId, initialInitiativePlayerId: scenario.initialInitiativePlayerId, bottomStrategyRevisionId: bottom.identity.revisionId, topStrategyRevisionId: top.identity.revisionId }, providers: { [scenario.bottomPlayerId]: bottom, [scenario.topPlayerId]: top } })
+    actual = await runCanonicalLabMatch({ match: { matchId: `lean-${input.charge.root.slice(7, 31)}`, seed: scenario.seed, arenaVariant: scenario.arena, bottomPlayerId: scenario.bottomPlayerId, topPlayerId: scenario.topPlayerId, initialInitiativePlayerId: scenario.initialInitiativePlayerId, bottomStrategyRevisionId: bottom.identity.revisionId, topStrategyRevisionId: top.identity.revisionId }, providers: { [scenario.bottomPlayerId]: bottom, [scenario.topPlayerId]: top }, ...(hostBindingV15 ? { hostBindingV15 } : {}) })
   } catch (error) { if (hostBinding) throw captureLeanHostFailureV7("match_composition_postprocessing", hostBinding, error); actual = { kind: "failure", privacy: "private_offline", unchangedState: null, transitions: [], accounting: [], failure: { classification: "system_failure", code: "LEAN_BASELINE_SUPERVISOR_FAILURE" } } }
   finally {
     let cleanupFailure: unknown
@@ -196,7 +197,7 @@ export const runLeanBaselineMatch = async (input: {
   const invocationBinding = origin && retainedOrigin && failedEvidence && provider ? bindLeanCorrectionInvocation(retainedOrigin.origin, retainedOrigin.transport, failedEvidence, origin, provider.identity.sourceRoot === bottomSource.sourceRoot ? "bottom" : "top") : undefined
   const baseDiagnostic = compact.classification !== "success" ? deriveLeanSupervisorDiagnostic(input.charge.root, actual, origin ? { stage: "native_response", reason: ["stream_exchange", "outer_frame", "inner_response", "executor"].includes(origin.stage) ? origin.stage as "stream_exchange" | "outer_frame" | "inner_response" | "executor" : "system_failure", method: failedEvidence!.method, ordinal: failedEvidence!.ordinal, code: !failedEvidence!.result.ok && "systemFailure" in failedEvidence!.result ? failedEvidence!.result.systemFailure.code : undefined } : undefined) : null
   const diagnostic = baseDiagnostic && invocationBinding ? { ...baseDiagnostic, invocationBinding } : baseDiagnostic
-  return { compact, replayFrames: replayFrames(), brainInputs, strategyInputs, trainingHalfPoints, semanticRoot, metrics, decisionRoot: labRoot("lean-baseline-observed-decisions-v1", decisionRows), diagnostic }
+  return { compact, replayFrames: replayFrames(), brainInputs, strategyInputs, trainingHalfPoints, semanticRoot, metrics, decisionRoot: labRoot("lean-baseline-observed-decisions-v1", decisionRows), diagnostic, ...(hostBindingV15 ? { hostFailureV15: compact.classification === "success" ? null : readLabHostFailureV15(actual, hostBindingV15) } : {}) }
 }
 const diagnosticProviders = new WeakMap<object, (evidence: Parameters<typeof getFactoryPrivateDiagnostic>[1]) => ReturnType<typeof getFactoryPrivateDiagnostic>>()
 const diagnosticTransportBindings = new WeakMap<object, Map<number, { origin: LeanPrivateCorrectionOrigin; transport: LeanCorrectionInvocationTransportBinding }>>()
