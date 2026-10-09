@@ -1,8 +1,14 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { MATCH_KERNEL } from "@cowards/engine"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { LAB_ADMITTED_ROOTS, labRoot } from "./contracts.js"
 import { runCanonicalLabMatch, type LabSupervisedProvider, type LabRuntimeEvidence } from "./runtime-bridge.js"
+import * as bridge from "./runtime-bridge.js"
+
+vi.mock("@cowards/engine", async importOriginal => {
+  const actual = await importOriginal<typeof import("@cowards/engine")>()
+  return { ...actual, MATCH_KERNEL: { ...actual.MATCH_KERNEL } }
+})
 
 const root = labRoot("synthetic-test", "identity")
 const match = { matchId: "lab-synthetic", seed: "lab-fixed", arenaVariant: CANONICAL_ARENA_CATALOG_V1_37.arenas[0]!, bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: "revision-bottom", topStrategyRevisionId: "revision-top", initialInitiativePlayerId: "bottom", maxPhases: 1 }
@@ -18,6 +24,50 @@ const synthetic = (side: string, alter?: (e: LabRuntimeEvidence) => LabRuntimeEv
     return output
   }, verify(e) { return issued.has(e) }, close() { return { cleanupComplete: true, orphanedChild: false } } }
 }
+
+describe("policy cache host attribution inert host leaves", () => {
+  const binding = { allocationRoot: root, chargeRoot: labRoot("inert-charge", 1), slotRoot: labRoot("inert-slot", 1) }
+  const machine = { initialState: {}, semanticTuple: { tupleId: MATCH_KERNEL.tupleId }, state: {} } as any
+  const complete = () => ({ kind: "completed", machine, record: { events: [] } } as any)
+  const effect = () => ({ kind: "effect", machine, request: { requestId: "inert-request", kind: "selectActivations", input: {}, coordinates: { actingPlayerId: "bottom" } } } as any)
+  it.each(["machine_construction", "provider_binding", "kernel_step", "provider_invoke", "evidence_verification", "result_projection", "cleanup"] as const)("policy cache host attribution records %s without inspecting thrown payload", async phase => {
+    expect(typeof bridge.readLabHostFailureV15).toBe("function")
+    let inspections = 0
+    const hostile = new Proxy({}, { get() { inspections++; throw Error("must-not-read") }, ownKeys() { inspections++; throw Error("must-not-enumerate") } })
+    const create = vi.spyOn(MATCH_KERNEL, "createMachineV119").mockImplementation(() => { if (phase === "machine_construction") throw hostile; return machine })
+    const step = vi.spyOn(MATCH_KERNEL, "stepMatch").mockImplementation(() => { if (phase === "kernel_step") throw hostile; if (["provider_invoke", "evidence_verification"].includes(phase)) return effect(); const v = complete(); if (phase === "result_projection") Object.defineProperty(v.record, "events", { get() { throw hostile } }); return v })
+    const bottom = synthetic("bottom"), top = synthetic("top")
+    if (phase === "provider_binding") Object.defineProperty(bottom, "identity", { get() { throw hostile } })
+    if (phase === "provider_invoke") bottom.invoke = () => { throw hostile }
+    if (phase === "evidence_verification") bottom.verify = () => { throw hostile }
+    if (phase === "cleanup") bottom.close = () => { throw hostile }
+    try {
+      const execution = await runCanonicalLabMatch({ match, providers: { bottom, top }, hostBindingV15: binding })
+      expect(execution.kind).toBe("failure")
+      const attributed = bridge.readLabHostFailureV15(execution, binding)
+      expect(attributed).toMatchObject({ schemaVersion: "lean-private-host-failure-v15-4-v1", ...binding, phase, code: phase === "cleanup" ? "CLEANUP_INCOMPLETE" : "HOST_THROW" })
+      expect(Object.keys(attributed.phaseTotalsMs)).toHaveLength(7)
+      expect(Object.values(attributed.phaseTotalsMs).every(n => Number.isSafeInteger(n) && n >= 0)).toBe(true)
+      expect(bridge.readLabHostFailureV15({ ...execution }, binding).phase).toBe("unknown")
+      expect(bridge.readLabHostFailureV15(execution, { ...binding, slotRoot: root }).phase).toBe("unknown")
+      expect(inspections).toBe(0)
+      expect(execution).not.toHaveProperty("hostFailureV15")
+    } finally { create.mockRestore(); step.mockRestore() }
+  })
+  it("policy cache host attribution preserves first failure on cleanup replacement and leaves default shape inert", async () => {
+    expect(typeof bridge.readLabHostFailureV15).toBe("function")
+    const create = vi.spyOn(MATCH_KERNEL, "createMachineV119").mockImplementation(() => { throw null })
+    const bottom = synthetic("bottom"); bottom.close = () => ({ cleanupComplete: false, orphanedChild: true })
+    try {
+      const execution = await runCanonicalLabMatch({ match, providers: { bottom, top: synthetic("top") }, hostBindingV15: binding })
+      expect(execution).toMatchObject({ kind: "failure", failure: { code: "LAB_CLEANUP_INCOMPLETE" } })
+      expect(bridge.readLabHostFailureV15(execution, binding).phase).toBe("machine_construction")
+      const defaultExecution = await runCanonicalLabMatch({ match, providers: { bottom, top: synthetic("top") } })
+      expect(bridge.readLabHostFailureV15(defaultExecution, binding).phase).toBe("unknown")
+      expect(Object.keys(defaultExecution).sort()).toEqual(["accounting", "failure", "kind", "privacy", "transitions", "unchangedState"])
+    } finally { create.mockRestore() }
+  })
+})
 
 describe("private canonical effect pump (synthetic effects, no source execution)", () => {
   it("matches canonical final state, ordered transitions and events", async () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
@@ -6,8 +6,47 @@ import { buildPlannerCandidate } from "../../packages/strategy-lab/src/planner/e
 import { emitTacticalSource } from "../../packages/strategy-oracle-tactical/src/emit.js"
 import { type LeanSlot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { buildLeanBaselineSource } from "./v1-38-lean-baseline-source.js"
-import { bindLeanCorrectionInvocation, leanBaselineMatchSeed, leanBaselineScenario, leanBaselineSemanticRoot, leanCorrectionInvocationTransportBinding } from "./v1-38-lean-baseline-match.js"
+import { bindLeanCorrectionInvocation, leanBaselineMatchSeed, leanBaselineScenario, leanBaselineSemanticRoot, leanCorrectionInvocationTransportBinding, runLeanBaselineMatch } from "./v1-38-lean-baseline-match.js"
 import type { LabMatchExecution } from "../../packages/strategy-lab/src/runtime-bridge.js"
+import * as lean from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import * as sourceModule from "./v1-38-lean-baseline-source.js"
+import * as admissionModule from "../../packages/strategy-lab/src/factory/admission.js"
+import * as revisionModule from "../../packages/runtime-js/src/revision.js"
+import * as runtimeModule from "./v1-38-factory-supervised-runtime.js"
+import * as authorityModule from "./v1-38-lean-experiment-authority.js"
+import * as lifetimeModule from "./v1-38-league-prospective-lifetime.js"
+import { LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js"
+
+vi.mock("../../packages/strategy-lab/src/runtime-bridge.js", async importOriginal => {
+  const actual = await importOriginal<typeof import("../../packages/strategy-lab/src/runtime-bridge.js")>()
+  // Fault at construction input before any machine/state or Match can exist;
+  // use the actual bridge catch and actual host-issued reader, not a fake brand.
+  return { ...actual, runCanonicalLabMatch: (options: Parameters<typeof actual.runCanonicalLabMatch>[0]) => actual.runCanonicalLabMatch({ ...options, match: new Proxy(options.match, { get() { throw null }, ownKeys() { throw null } }) }) }
+})
+
+it.each(["v15-3", "v15-4"] as const)("policy cache host attribution actual wrapper opts in only admitted %s", async mode => {
+  const r = (n: number) => labRoot("non-authorizing-host-wrapper", n), b = lean.leanResourceWindowPolicyForModeV15(mode)
+  const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: b.charged, elapsedUpperBoundMs: 228267940, allocatedDiskBytes: 27303936, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r(1), survivors: Array.from({ length: 970 }, (_, n) => ({ identity: `.strategy-lab/inert-wrapper-${n}`, allocatedBytes: 0 })) }
+  const allocation = lean.admitLeanAllocation(lean.createLeanSupervisorCorrectionAllocation({ sourceRoot: r(2), reviewRoot: r(3), coldRoot: r(4), planRoot: b.planRoot, candidateRoots: [r(5), r(6)], requestRoots: [r(7)], seed: "non-authorizing-wrapper", route: "diagnostic", reuseGrantRoot: r(8), supervisorDecisionRoot: b.approvalRoot, acceptedCheckRoot: null, requestBytesRoot: r(9), dataReviewRoot: r(10), setupAccountingRoot: r(11), predecessor: { ...p, root: labRoot(p.schemaVersion, p) }, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, timeboxExtension: b, attemptOrdinal: Number(mode.slice(-1)) as 3 | 4, priorClosureRoot: r(12), continuationRoot: r(13), acceptedReaderCloseRoot: null }, 8))
+  const bottom = { sourceRoot: r(5), role: "initial-tactical", source: "inert-no-source-execution", packet: {}, proposal: {}, validation: {} } as any
+  const top = { ...bottom, sourceRoot: r(6), role: "initial-teacher" }
+  const mocks = [
+    vi.spyOn(sourceModule, "validateLeanBaselineSource").mockImplementation(v => v as any),
+    vi.spyOn(admissionModule, "admitFactory").mockReturnValue({} as any),
+    vi.spyOn(admissionModule, "authorizeFactorySupervision").mockReturnValue({} as any),
+    vi.spyOn(revisionModule, "buildStrategyRevision").mockReturnValue({ id: "inert-revision", validation: { valid: true }, metadata: { sourceArtifact: { bytesBase64: "", hash: "a".repeat(64) } } } as any),
+    vi.spyOn(lifetimeModule, "prospectiveLeagueRuntimeBinding").mockReturnValue({} as any),
+    vi.spyOn(authorityModule, "issueLeanCorrectionRuntimeAuthority").mockReturnValue({} as any),
+    vi.spyOn(runtimeModule, "createFactorySupervisedRuntime").mockReturnValue({ identity: { revisionId: "inert-revision", tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image }, close: () => ({ cleanupComplete: true, orphanedChild: false }), invoke: () => { throw Error("inert-no-invoke") }, verify: () => false } as any),
+  ]
+  try {
+    const charge = { root: r(20) } as any, slot = allocation.slots[0]!
+    const result = await runLeanBaselineMatch({ ledger: { allocation } as any, charge, slot, seed: "non-authorizing-wrapper", bottom, top, correction: { reuse: {} as any }, checkpoint: vi.fn(), register: vi.fn(), unregister: vi.fn() })
+    expect(result.compact.classification).toBe("system_failure")
+    if (mode === "v15-4") expect(result).toHaveProperty("hostFailureV15", expect.objectContaining({ phase: "machine_construction", code: "HOST_THROW", allocationRoot: allocation.root, chargeRoot: charge.root, slotRoot: slot.root }))
+    else expect(result).not.toHaveProperty("hostFailureV15")
+  } finally { for (const mock of mocks) mock.mockRestore() }
+})
 
 describe("current canonical baseline scenario, without provider execution", () => {
   it("preserves arena, source side, initiative and seed in the four exact repeats", () => {
