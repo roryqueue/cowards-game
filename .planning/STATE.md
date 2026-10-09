@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Baselinev14-1 closed; source diagnosis assessed; prospective memory/time decision pending
+stopped_at: Post-v14 memory/time decision approved after its fixed deadline; prospective replacement window needed
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Diagnostic accepted; baseline memory guard inferred; new 3GB aggregate-memory/four-hour prospective proposal unapplied
+last_activity_desc: Direct approval recorded; approved 06:39UTC deadline exhausted before receipt; no new run or source change
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT HUMAN-ONLY TIMING CHECKPOINT — APPROVED WINDOW EXHAUSTED BEFORE RECEIPT (2026-10-09).
+
+Human direct `approved` adopts exact POST-V14-MEMORY-AND-TIME-DECISION-v1/rawb446191f; recorded POST-V14-MEMORY-AND-TIME-APPROVAL-20261009.md. Proposed3GB aggregate-memory/unchanged2GB disk scratch15GBtotal/four unusedpairs is approved prospectively but source NOTimplemented/admitted. Exact approvedcap180000000/deadline2026-10-09T06:39:01.097Z includes ALL approvalwait. Actualclock13:15:04Z givesFULL108M+ALLwall203762903ms, beyondcap23762903ms; no automatic reset or fourhoursfromreceipt. No activeagent/entry/helper/verifier/hold, oldPIDsabsent; no source/allocation/Match started. New human timing decision needed: replacement FOURhours anchored at nextactive resume, cap derived from allpriorcontinuouscosts+14400000ms, same31reserve/approvedresources/remainingfourpairs. This replacement is NOTapproved; no execution until explicitadoption. All consumed artifacts/36charges immutable; diagnosticaccepted/baselineinconclusive; Phase265/LEAG/freeze/formation/holdout/public/counting/production incomplete. Earlier checkpoints below are history, not current pending memory approval.
 
 CURRENT HUMAN-ONLY RESOURCE CHECKPOINT — POSTv14 DECISION PENDING (2026-10-09).
 
