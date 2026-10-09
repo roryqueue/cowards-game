@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Diagnosticv14-1 accepted and actualFINAL authenticated; conditional baseline data next
+stopped_at: Conditional baselinev14-1 prepared zerocharge; unique root entry next after allocation commit
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
 last_activity_desc: CR-01/WR-01 fixes committed6abed48f; portable focused tests pass, re-review pending
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — CONDITIONALBASELINEv14-1 PREPARED (2026-10-09).
+
+ROOTdraft65112/finalize11182 ACTUALLYCLOSED0; distinctBASELINEattestationraw7658b1a9/DATA7da8c7c4/HELPER535905a1 clean bind current27cd87ac/requestda7f052e/source6d986074941 and OWNactualaccepteddiag9c8a0663/FINALad65294c, not oldauthority. ExactlyONEprepare37767 CLOSED0/preparation_only/36planned/zero currentcharges, allocation2c824541/raw1436700c. Realowned0700store onlyallocation/emptyledger/closedpreparetime;36priorcharges/835rows/24248320B/161033841ms. Commitallocation/gates BEFORE uniqueMAINentry/freshpassing SAMEPROCESScapacity beforecharge. SourceANDHEADfixed through terminal+ONEuniqueappropriateactualcheck; no competingheavywork. Unknownnative/RSS/full36fit remain unknown; firstfullacceptedbaseline orguardoutcome retainedhonestly. Same02:39:01.097Z deadline/ALLwall/FULL108M/15GB300/2GBscratch/31reserve/allotherbounds; noPhase265/LEAG/freeze/formation/holdout/public/counting/production credit.
 
 CURRENT CHECKPOINT — DIAGNOSTICv14-1 ACCEPTED / HOLD RELEASED (2026-10-09).
 
