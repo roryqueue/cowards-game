@@ -1241,7 +1241,7 @@ const boundedFrameEstimate = (value: unknown, remaining: number): number => {
   }
   visit(value, 0); return bytes
 }
-export const boundLeanReplayFrame = (value: unknown) => { const upper = boundedFrameEstimate(value, REPLAY_MAX); assertTransient(upper * 3) }
+export const boundLeanReplayFrame = (value: unknown, allocation?: AnyLeanAllocation, guard?: (additionalBytes?: number) => void) => { const upper = boundedFrameEstimate(value, REPLAY_MAX); assertTransient(upper * 3, allocation, guard) }
 export const encodeLeanReplay = (frames: Iterable<unknown>, maximumBytes = REPLAY_MAX, allocation?: AnyLeanAllocation, guard?: (additionalBytes?: number) => void): { container: LeanReplayContainer; bytes: Uint8Array } => {
   const limit = Math.min(maximumBytes, REPLAY_MAX), chunks: Buffer[] = []
   let length = 0, count = 0

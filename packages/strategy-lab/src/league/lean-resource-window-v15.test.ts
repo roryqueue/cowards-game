@@ -75,6 +75,17 @@ it("requires the projected child replay callback while RAM does not masquerade a
     expect(() => lean.encodeLeanReplay([], 1048576, a, () => lean.assertLeanProcessMemoryV15(2152455681, p))).toThrow("MEMORY_CAP")
   } finally { spy.mockRestore() }
 })
+it("bounds frames with authenticated policy and a required projected callback without widening frame size", () => {
+  const a = lean.createLeanSupervisorCorrectionAllocation(input(), 8), usage = process.memoryUsage()
+  const spy = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...usage, rss: 2100000000, arrayBuffers: 4096 }), projected: number[] = []
+  try {
+    expect(() => lean.boundLeanReplayFrame({ kind: "NON_AUTHORIZING" }, a, bytes => projected.push(bytes ?? 0))).not.toThrow()
+    expect(projected[0]).toBeGreaterThan(0)
+    expect(() => lean.boundLeanReplayFrame({}, a)).toThrow("RESOURCE_GUARD")
+    expect(() => lean.boundLeanReplayFrame({ value: "x".repeat(43000000) }, a, () => {})).toThrow("REPLAY_LIMIT")
+    expect(() => lean.boundLeanReplayFrame({})).toThrow("BUFFER_CAP")
+  } finally { spy.mockRestore() }
+})
 it("journals independent v15 memory and measured-disk fields, rejecting overflow before publication", () => {
   // Synthetic store in an owned OS temporary directory: no gate, entry,
   // charge, Match, provider or accepted diagnostic is created by this fixture.

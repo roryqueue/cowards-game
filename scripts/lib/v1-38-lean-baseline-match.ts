@@ -104,7 +104,7 @@ export const runLeanBaselineMatch = async (input: {
   ledger: LeanExperimentLedger; charge: LeanCharge; slot: LeanSlot; seed: string
   bottom: LeanBaselineSource; top: LeanBaselineSource; observedRole?: string
   correction?: { reuse: LeanColdReuse; observe?: (metadata: LeanPrivateCorrectionOrigin, sourceRoot: LabRoot, seat: "bottom" | "top", binding: LeanCorrectionInvocationTransportBinding) => void }
-  checkpoint: () => void
+  checkpoint: (additionalBytes?: number) => void
   register: (provider: Pick<FactorySupervisionProvider, "close">) => void
   unregister: (provider: Pick<FactorySupervisionProvider, "close">) => void
 }) => {
@@ -180,7 +180,7 @@ export const runLeanBaselineMatch = async (input: {
     if (cleanupFailure) throw cleanupFailure
   }
   input.checkpoint()
-  const elapsedMs = Math.ceil(performance.now() - began), compact = compactExecution(actual, elapsedMs, cleanupComplete, scenario.bottomPlayerId)
+  const elapsedMs = Math.ceil(performance.now() - began), compact = compactExecution(actual, elapsedMs, cleanupComplete, scenario.bottomPlayerId, input.ledger.allocation, input.checkpoint)
   const observedSeat = input.observedRole === bottomSource.role ? "bottom" : input.observedRole === topSource.role ? "top" : null
   const { trainingHalfPoints, semanticRoot, metrics } = leanBaselineMatchEvidence(actual, compact, observedSeat)
   function* replayFrames() {

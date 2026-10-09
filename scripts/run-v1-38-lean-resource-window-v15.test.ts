@@ -7,7 +7,7 @@ import { join, resolve } from "node:path"
 import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import * as correction from "./run-v1-38-lean-correction.js"
-import { assessLeanPrefixCapacity } from "./run-v1-38-lean-experiment.js"
+import { assessLeanPrefixCapacity, compactExecution } from "./run-v1-38-lean-experiment.js"
 import { leanResourceWindowDocumentsV15, authenticateLeanResourceWindowPriorPairV15, authenticateLeanResourceWindowAcceptedJoinV15 } from "./lib/v1-38-lean-resource-window-v15.js"
 import { auditLeanCorrectionRetained, assertLeanResourceWindowReaderV15 } from "./lib/v1-38-lean-correction-retained.js"
 
@@ -16,6 +16,28 @@ const allocation = () => {
   const b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY, p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 36, elapsedUpperBoundMs: 208771903, allocatedDiskBytes: 24780800, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r(1), survivors: Array.from({ length: 854 }, (_, n) => ({ identity: `.strategy-lab/NON_AUTHORIZING-history-${n}`, allocatedBytes: 0 })) }
   return lean.createLeanSupervisorCorrectionAllocation({ sourceRoot: r(2), reviewRoot: r(3), coldRoot: r(4), planRoot: b.planRoot, candidateRoots: [r(5), r(6)], requestRoots: [r(7)], seed: "non-authorizing-host", route: "diagnostic", reuseGrantRoot: r(8), supervisorDecisionRoot: b.approvalRoot, acceptedCheckRoot: null, requestBytesRoot: r(9), dataReviewRoot: r(10), setupAccountingRoot: r(11), predecessor: { ...p, root: labRoot(p.schemaVersion, p) }, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, timeboxExtension: b, attemptOrdinal: 2, priorClosureRoot: r(12), continuationRoot: r(13), acceptedReaderCloseRoot: null }, 8)
 }
+it("actual compaction forwards live projected guards, permits v15 RAM, and preserves independent disk and legacy refusal", () => {
+  const a = allocation(), policy = lean.LEAN_RESOURCE_WINDOW_V15_POLICY
+  const execution = { kind: "failure", failure: { code: "NON_AUTHORIZING" }, unchangedState: {}, transitions: [], accounting: [] } as unknown as Parameters<typeof compactExecution>[0]
+  const usage = process.memoryUsage(), spy = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...usage, rss: 2100000000, arrayBuffers: 4096 })
+  let projected = 0, parent = 40000000
+  const guard = (additional = 0) => { projected = additional; lean.assertLeanAggregateMemoryV15({ parentRssBytes: parent, childRssBytes: process.memoryUsage().rss + additional }, policy) }
+  try {
+    expect(compactExecution(execution, 1, true, "bottom", a, guard).classification).toBe("system_failure")
+    expect(projected).toBeGreaterThan(0)
+    parent = policy.memoryBytes - policy.externalReserveBytes - policy.guardBytes - 2100000000 - projected
+    expect(() => compactExecution(execution, 1, true, "bottom", a, guard)).not.toThrow()
+    parent++
+    expect(() => compactExecution(execution, 1, true, "bottom", a, guard)).toThrow("MEMORY_CAP")
+    expect(() => compactExecution(execution, 1, true, "bottom", a)).toThrow("RESOURCE_GUARD")
+    expect(() => compactExecution(execution, 1, true, "bottom")).toThrow("BUFFER_CAP")
+    parent = 0
+    spy.mockReturnValue({ ...usage, rss: 2100000000, arrayBuffers: lean.LEAN_CAPS.scratchBytes - projected })
+    expect(() => compactExecution(execution, 1, true, "bottom", a, guard)).not.toThrow()
+    spy.mockReturnValue({ ...usage, rss: 2100000000, arrayBuffers: lean.LEAN_CAPS.scratchBytes - projected + 1 })
+    expect(() => compactExecution(execution, 1, true, "bottom", a, guard)).toThrow("BUFFER_CAP")
+  } finally { spy.mockRestore() }
+})
 it("finite documents and missing or forged predecessor/own FINAL never authorize", () => {
   expect(leanResourceWindowDocumentsV15("diagnostic", "v15-2").helper).toBe(".strategy-lab/lean-resource-window-diagnostic-v15-2-helper.mts")
   expect(leanResourceWindowDocumentsV15("baseline", "v15-2").dataReview).toContain("RESOURCE-WINDOW-baseline-v15-2-DATA-REVIEW-v1.md")

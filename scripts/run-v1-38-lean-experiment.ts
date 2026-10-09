@@ -171,8 +171,8 @@ const redactReplay = (value: unknown): unknown => {
   if (value !== null && typeof value === "object") return Object.fromEntries(Object.entries(value).filter(([key]) => !/(?:source|memory|objective|input|output|stdio|prompt)/iu.test(key)).map(([key, v]) => [key, redactReplay(v)]))
   return value
 }
-export const compactExecution = (e: LabMatchExecution, elapsedMs: number, cleanupComplete: boolean, bottom: string): LeanCompactMatchRecord => {
-  boundLeanReplayFrame(e)
+export const compactExecution = (e: LabMatchExecution, elapsedMs: number, cleanupComplete: boolean, bottom: string, allocation?: AnyLeanAllocation, guard?: (additionalBytes?: number) => void): LeanCompactMatchRecord => {
+  boundLeanReplayFrame(e, allocation, guard)
   const system = e.kind === "failure" || e.accounting.some(a => !a.result.ok && "systemFailure" in a.result)
   const player = e.accounting.some(a => !a.result.ok && !("systemFailure" in a.result))
   const classification = system || !cleanupComplete ? "system_failure" : player ? "player_violation" : "success"
