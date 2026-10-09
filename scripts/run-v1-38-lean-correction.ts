@@ -8,7 +8,7 @@ import { authenticateLeanPreparationContinuationTerminalCarryV13, authenticateLe
 import { validateLeanPreparationHistoryV13, LEAN_PREPARATION_V13_HISTORY_PATHS } from "./lib/v1-38-lean-preparation-continuation-v13.js"
 import { isLeanPostV13FivePairMode, isLeanPostV13FivePairExtensionV14, LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION, LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS, type LeanPostV13FivePairOrdinal, type LeanPostV13FivePairMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanResourceWindowModeV15, isLeanResourceWindowExtensionV15, leanResourceWindowPolicyForModeV15, LEAN_RESOURCE_WINDOW_V15_POLICY, LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS, leanMemoryLimitForAllocation, leanResourcePolicyForAllocationV15, assertLeanAggregateMemoryV15, observeLeanResourceWindowDiskV15, type LeanResourceWindowModeV15, type LeanResourceWindowPolicyV15 } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_INPUTS, LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_EXCLUSIONS, LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_INPUTS, LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_INPUTS, LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_EXCLUSIONS, LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_BOUNDARY_SOURCE_INPUTS, LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_BOUNDARY_SOURCE_EXCLUSIONS, LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_INPUTS, LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { assertLeanProcessMemoryV15 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanResourceWindowDocumentsV15, LEAN_RESOURCE_WINDOW_V15_HISTORY_PINS, LEAN_RESOURCE_WINDOW_ARCHIVED_V15_3_PINS, authenticateLeanResourceWindowArchivedPrefixV15_3, validateLeanPrivateHostFailureV15, LEAN_RESOURCE_WINDOW_ARCHIVED_V15_2_PINS, authenticateLeanResourceWindowArchivedPrefixV15_2, authenticateLeanResourceWindowPriorPairV15 as authenticateResourceWindowPriorMetadataV15, authenticateLeanResourceWindowAcceptedJoinV15 as validateResourceWindowAcceptedJoinV15 } from "./lib/v1-38-lean-resource-window-v15.js"
 import { leanFivePairDocumentsV14, validateLeanPostV13HistoryV14, LEAN_FIVE_PAIR_V14_HISTORY_PINS } from "./lib/v1-38-lean-post-v13-five-pair.js"
@@ -296,8 +296,8 @@ export const leanCorrectionSourceManifest = (supervisor: LeanSupervisorMode = fa
       for (const path of LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS) closure.delete(path)
     }
     if (supervisor === "v15-4") {
-      for (const path of [...LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_REVIEW_FILES, ...LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_INPUTS]) closure.set(path, { path, root: leanBytesRoot(readBytes(path)) })
-      for (const path of LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_EXCLUSIONS) closure.delete(path)
+      for (const path of [...LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_REVIEW_FILES, ...LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_INPUTS, ...LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_BOUNDARY_SOURCE_INPUTS]) closure.set(path, { path, root: leanBytesRoot(readBytes(path)) })
+      for (const path of [...LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_EXCLUSIONS, ...LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_BOUNDARY_SOURCE_EXCLUSIONS]) closure.delete(path)
     }
     const entries = [...closure.values()].sort((a, b) => a.path.localeCompare(b.path))
     return { entries, root: labRoot("lean-resource-window-reviewed-source-v15", { entries, extension, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())), brokerRoot: leanBytesRoot(Buffer.from(buildLeanContainerBrokerSourceV7())) }) }
@@ -537,6 +537,7 @@ export interface LeanResourceWindowReviewObservationsV15 {
   currentIdentity(): { manifest: LeanCorrectionSourceManifest; assertCommit(commit: string): void }
 }
 export const authenticateLeanCorrectionReview = (path: string, expected: LabRoot, source: LabRoot, diagnosisRoot: LabRoot | null, dataRequestRoot?: LabRoot, supervisor: LeanSupervisorMode = false, timeboxExtension?: LeanRetryTimeboxExtension, observations?: LeanResourceWindowReviewObservationsV15) => {
+  if (supervisor === "v15-4" && dataRequestRoot === undefined && path !== leanResourceWindowDocumentsV15("diagnostic", supervisor).review) return fail("REVIEW_SOURCE")
   const absolute = resolve(path)
   if (!absolute.startsWith(`${resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team")}/`)) return fail("REVIEW")
   const bytes = Buffer.from(observations ? observations.readBytes(path, 262144) : supervisor === "v15-4" && path === leanResourceWindowDocumentsV15("diagnostic", supervisor).review ? readLeanCorrectionPrivateBytes(path, 262144) : readFileSync(absolute))
@@ -557,7 +558,7 @@ export const authenticateLeanCorrectionReview = (path: string, expected: LabRoot
     }
     const files = front.match(/^files_reviewed_list:\n((?:  - [^\n]+\n)+)/mu)?.[1]?.trimEnd().split("\n").map(row => row.slice(4))
     const required = ["source_commit", "source_root", "source_entries", "diff_base", "author_agent", "reviewer_agent", "independently_reviewed", "files_reviewed", "files_reviewed_list", "findings_open", "status", "distinction", "identity_only"]
-    if (required.some(key => (front.match(new RegExp(`^${key}:`, "gmu")) ?? []).length !== 1) || identity.manifest.root !== source || field("source_entries") !== String(identity.manifest.entries.length) || field("diff_base") !== LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_FAILED_SOURCE_BASE || field("author_agent") !== "/root/execute_265_policy_cache" || field("reviewer_agent") !== "/root/review_265_policy_cache" || field("files_reviewed") !== "13" || !same(files, LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_REVIEW_FILES) || field("findings_open") !== "0" || field("distinction") !== "host_issued_immutable_policy_cache_v15" || field("identity_only") !== "false") return fail("REVIEW_SOURCE")
+    if (required.some(key => (front.match(new RegExp(`^${key}:`, "gmu")) ?? []).length !== 1) || identity.manifest.root !== source || field("source_entries") !== String(identity.manifest.entries.length) || field("diff_base") !== LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_FAILED_SOURCE_BASE || field("author_agent") !== "/root/fix_265_policy_cache" || field("reviewer_agent") !== "/root/review_265_policy_cache" || field("files_reviewed") !== "13" || !same(files, LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_REVIEW_FILES) || field("findings_open") !== "0" || field("distinction") !== "host_issued_immutable_policy_cache_v15" || field("identity_only") !== "false") return fail("REVIEW_SOURCE")
     try { identity.assertCommit(commit) } catch { return fail("REVIEW_SOURCE") }
     return
   }

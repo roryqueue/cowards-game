@@ -1,6 +1,6 @@
 /** Portable NON-AUTHORIZING host fixtures. Never Strategy/Match/provider work. */
 import { expect, it, vi } from "vitest"
-import { mkdtempSync, mkdirSync, realpathSync, readdirSync, rmSync, readFileSync, writeFileSync, statSync } from "node:fs"
+import { mkdtempSync, mkdirSync, realpathSync, readdirSync, rmSync, readFileSync, writeFileSync, statSync, chmodSync, unlinkSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
@@ -113,7 +113,7 @@ const policyCacheReviewFixture = () => {
   const mode = "v15-4" as const, b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY, docs = custody.leanResourceWindowDocumentsV15("diagnostic", mode)
   const pinned = policyCacheBytes(), history = correction.readLeanResourceWindowPriorPairV15(mode, path => pinned.get(path)!), sourceRoot = r(61), commit = "1111111111111111111111111111111111111111"
   const files = [...correction.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_REVIEW_FILES]
-  const receipt = Buffer.from(`---\nsource_commit: ${commit}\nsource_root: ${sourceRoot}\nsource_entries: 13\ndiff_base: 763174fdbbadb21982acdfb6f4c9bedd007241cf\nauthor_agent: /root/execute_265_policy_cache\nreviewer_agent: /root/review_265_policy_cache\nindependently_reviewed: true\nfiles_reviewed: 13\nfiles_reviewed_list:\n${files.map(path => `  - ${path}`).join("\n")}\nfindings_open: 0\nstatus: clean\ndistinction: host_issued_immutable_policy_cache_v15\nidentity_only: false\n---\nNON_AUTHORIZING inert receipt. Not a real independent review.\n`)
+  const receipt = Buffer.from(`---\nsource_commit: ${commit}\nsource_root: ${sourceRoot}\nsource_entries: 13\ndiff_base: 763174fdbbadb21982acdfb6f4c9bedd007241cf\nauthor_agent: /root/fix_265_policy_cache\nreviewer_agent: /root/review_265_policy_cache\nindependently_reviewed: true\nfiles_reviewed: 13\nfiles_reviewed_list:\n${files.map(path => `  - ${path}`).join("\n")}\nfindings_open: 0\nstatus: clean\ndistinction: host_issued_immutable_policy_cache_v15\nidentity_only: false\n---\nNON_AUTHORIZING inert receipt. Not a real independent review.\n`)
   const reviewRoot = lean.leanBytesRoot(receipt), setup = correction.createLeanResourceWindowSetupV15(mode, b.actualResumeMs)
   const continuation = correction.createLeanResourceWindowContinuationV15(mode, { priorClosureRoot: history.carryRoot, sourceRoot, reviewRoot, cumulativeCharged: 38, cumulativeElapsedMs: 228267940, allocatedDiskBytes: history.predecessor.allocatedDiskBytes, distinction: { kind: "host_issued_immutable_policy_cache_v15", evidenceRoot: sourceRoot, reviewRoot } })
   const request = correction.createLeanResourceWindowRequestDraftV15(mode, "diagnostic", { sourceRoot, reviewRoot, dataReviewRoot: r(63), setupAccountingRoot: setup.root, reuseGrantRoot: r(64), authorizationRoot: r(65), priorClosureRoot: history.carryRoot, continuationRoot: continuation.root, acceptedCheckRoot: null, acceptedReaderCloseRoot: null, helperReviewRoot: r(66), helperPath: docs.helper, helperBytesRoot: r(67) })
@@ -138,11 +138,11 @@ const policyCacheAllocation = (requestBytesRoot?: ReturnType<typeof r>) => {
   }
   return lean.createLeanSupervisorCorrectionAllocation(input, 8)
 }
-it("policy cache actual source review and continuation consume exact thirteen-file v5 and root-issued distinction", () => {
+it("policy cache actual source review and continuation consume exact thirteen-file v6 and root-issued distinction", () => {
   const f = policyCacheReviewFixture()
   expect(() => correction.validateLeanResourceWindowContinuationV15(f.continuation, f.request, "diagnostic", f.mode, f.history, f.observations)).not.toThrow()
   expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13(f.request, "diagnostic", f.mode, f.observations)).not.toThrow()
-  const mutations = [["source_entries: 13", "source_entries: 966"], ["files_reviewed: 13", "files_reviewed: 9"], ["diff_base: 763174fdbbadb21982acdfb6f4c9bedd007241cf", "diff_base: 356ff8abd4c058b2bdcca0bde8aceaba2a6107d0"], ["author_agent: /root/execute_265_policy_cache", "author_agent: /root"], ["reviewer_agent: /root/review_265_policy_cache", "reviewer_agent: /root/execute_265_policy_cache"], ["distinction: host_issued_immutable_policy_cache_v15", "distinction: source_identity_drift"], ["findings_open: 0", "findings_open: 1"], ["identity_only: false", "identity_only: true"], ["status: clean", "status: gaps_found"], ["independently_reviewed: true", "independently_reviewed: false"], ["  - packages/strategy-lab/src/runtime-bridge.ts", "  - scripts/INERT-unrelated.ts"]]
+  const mutations = [["source_entries: 13", "source_entries: 966"], ["files_reviewed: 13", "files_reviewed: 9"], ["diff_base: 763174fdbbadb21982acdfb6f4c9bedd007241cf", "diff_base: 356ff8abd4c058b2bdcca0bde8aceaba2a6107d0"], ["author_agent: /root/fix_265_policy_cache", "author_agent: /root"], ["author_agent: /root/fix_265_policy_cache", "author_agent: /root/execute_265_policy_cache"], ["reviewer_agent: /root/review_265_policy_cache", "reviewer_agent: /root/fix_265_policy_cache"], ["distinction: host_issued_immutable_policy_cache_v15", "distinction: source_identity_drift"], ["findings_open: 0", "findings_open: 1"], ["identity_only: false", "identity_only: true"], ["status: clean", "status: gaps_found"], ["independently_reviewed: true", "independently_reviewed: false"], ["  - packages/strategy-lab/src/runtime-bridge.ts", "  - scripts/INERT-unrelated.ts"]]
   for (const [from, to] of mutations) {
     const bytes = Buffer.from(f.receipt.toString().replace(from!, to!)); f.map.set(f.docs.review, bytes)
     expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13({ ...f.request, reviewRoot: lean.leanBytesRoot(bytes) }, "diagnostic", f.mode, f.observations)).toThrow()
@@ -153,12 +153,41 @@ it("policy cache actual source review and continuation consume exact thirteen-fi
     expect(() => correction.validateLeanResourceWindowContinuationV15(f.continuation, f.request, "diagnostic", f.mode, f.history, f.observations)).toThrow()
   }
 })
-it("policy cache real manifest includes inherited inputs plus four exact inputs thirteen source files and excludes only six cyclic outputs", () => {
+const boundaryInputs = ["BOUNDARY-PLAN-v1", "BOUNDARY-PLAN-CHECK-v1"].map(role => `${lean.LEAN_REMAINING_V9_PHASE}265-16-POST-V15-POLICY-CACHE-${role}.md`)
+const boundaryOutputs = [
+  ...["SOURCE-SUMMARY-v2", "SOURCE-REVIEW-v2", "REVIEW-FIX-v2", "VALIDATION-v2", "SOURCE-VERIFICATION-v2"].map(role => `${lean.LEAN_REMAINING_V9_PHASE}265-16-POST-V15-POLICY-CACHE-${role}.md`),
+  `${lean.LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v6.md`,
+]
+it("policy cache boundary amendment selects only v6 and refuses historical v5 and mismatched commit identity", () => {
+  const f = policyCacheReviewFixture(), oldReview = `${lean.LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v5.md`
+  expect(f.docs.review).toBe(boundaryOutputs[5])
+  expect(custody.leanResourceWindowDocumentsV15("baseline", "v15-4").review).toBe(f.docs.review)
+  expect(custody.leanResourceWindowDocumentsV15("diagnostic", "v15-3").review).toMatch(/SOURCE-REVIEW-v4.md$/u)
+  expect(custody.leanResourceWindowDocumentsV15("diagnostic", "v15-2").review).toMatch(/SOURCE-REVIEW-v3.md$/u)
+  expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13({ ...f.request, reviewPath: oldReview }, "diagnostic", f.mode, f.observations)).toThrow()
+  expect(() => correction.authenticateLeanCorrectionReview(oldReview, f.request.reviewRoot, f.sourceRoot, null, undefined, f.mode, f.b, f.observations)).toThrow()
+  const wrongIdentity = { ...f.observations, currentIdentity: () => ({ ...f.observations.currentIdentity(), assertCommit: () => { throw new Error("NON_AUTHORIZING_NOT_ANCESTOR_OR_CHANGED_SOURCE") } }) }
+  expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13(f.request, "diagnostic", f.mode, wrongIdentity)).toThrow("REVIEW_SOURCE")
+})
+it("policy cache boundary amendment private byte consumer accepts only owned0600 bounded inert v6 bytes", () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-private-v6-")))
+  const path = join(directory, "NON_AUTHORIZING-SOURCE-REVIEW-v6.md"), bytes = Buffer.from("NON_AUTHORIZING inert bytes, not a review receipt")
+  try {
+    writeFileSync(path, bytes, { mode: 0o600 })
+    expect(correction.readLeanCorrectionPrivateBytes(path, bytes.length)).toEqual(bytes)
+    expect(() => correction.readLeanCorrectionPrivateBytes(path, bytes.length - 1)).toThrow("PRIVATE_FILE")
+    chmodSync(path, 0o644)
+    expect(() => correction.readLeanCorrectionPrivateBytes(path)).toThrow("PRIVATE_FILE")
+  } finally { rmSync(directory, { recursive: true, force: true }) }
+})
+it("policy cache real manifest includes inherited inputs plus exact boundary inputs thirteen source files and excludes exact generated outputs", () => {
   const bytes = (path: string) => readFileSync(resolve(path)), unrelated = lean.LEAN_REMAINING_V9_PHASE + "265-16-POST-V15-POLICY-CACHE-SOURCE-REVIEW-v99.md"
-  const entries = [...lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_EXCLUSIONS, ...lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS, unrelated].map(path => ({ path, root: r(75) }))
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_BOUNDARY_SOURCE_INPUTS).toEqual(boundaryInputs)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_BOUNDARY_SOURCE_EXCLUSIONS).toEqual(boundaryOutputs)
+  const entries = [...lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_EXCLUSIONS, ...lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS, ...boundaryInputs, ...boundaryOutputs, unrelated, boundaryInputs[0]!, boundaryOutputs[0]!].map(path => ({ path, root: r(75) }))
   const source = correction.leanCorrectionSourceManifest("v15-4", lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY, { readBytes: bytes, baseEntries: entries }), paths = source.entries.map(row => row.path)
-  for (const path of [...lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_INPUTS, ...lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_INPUTS, ...correction.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_REVIEW_FILES]) expect(source.entries.find(row => row.path === path)?.root).toBe(lean.leanBytesRoot(bytes(path)))
-  for (const path of [...lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_EXCLUSIONS, ...lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS]) expect(paths).not.toContain(path)
+  for (const path of [...lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_INPUTS, ...boundaryInputs, ...lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_INPUTS, ...correction.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_REVIEW_FILES]) expect(source.entries.find(row => row.path === path)?.root).toBe(lean.leanBytesRoot(bytes(path)))
+  for (const path of [...lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_EXCLUSIONS, ...boundaryOutputs, ...lean.LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS]) expect(paths).not.toContain(path)
   expect(new Set(paths).size).toBe(paths.length); expect(paths).toContain(unrelated)
   expect(() => correction.leanCorrectionSourceManifest("v15-4", lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY, { readBytes: path => path.endsWith("POLICY-CACHE-PLAN-v1.md") ? Buffer.from("INERT_TAMPER") : bytes(path), baseEntries: entries })).toThrow()
 })
@@ -174,12 +203,15 @@ it("policy cache setup request child guards and finite continuation preserve con
   expect(() => correction.createLeanResourceWindowContinuationV15("v15-4", { ...f.continuation, distinction: { kind: "fresh_synchronous_checkpoint_observation_v15", evidenceRoot: f.sourceRoot, reviewRoot: f.request.reviewRoot } } as never)).toThrow()
   expect(() => custody.authenticateLeanResourceWindowAcceptedJoinV15("v15-4", {}, {} as never)).toThrow()
 })
-it("policy cache exact ten physical amendment paths debit measured blocks through actual report consumer", () => {
+it("policy cache exact eighteen physical amendment paths append all eight boundary paths and debit measured blocks", () => {
   const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-policy-cache-debit-")))
   try {
     process.chdir(directory); mkdirSync(".strategy-lab", { mode: 0o700 }); mkdirSync(".planning", { mode: 0o700 }); mkdirSync(".planning/phases"); mkdirSync(lean.LEAN_REMAINING_V9_PHASE)
-    const expected = lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_AMENDMENT_PATHS
-    expect(expected).toHaveLength(10)
+    const expected = [...lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_AMENDMENT_PATHS, ...lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_BOUNDARY_AMENDMENT_PATHS]
+    expect(expected).toHaveLength(18)
+    expect(expected.slice(10)).toEqual([...boundaryInputs, ...boundaryOutputs])
+    expect(lean.LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS.slice(-8)).toEqual([...boundaryInputs, ...boundaryOutputs])
+    expect(new Set(expected).size).toBe(18)
     for (const path of expected) writeFileSync(path, "NON_AUTHORIZING", { mode: 0o600 })
     const a = policyCacheAllocation(), observed = expected.reduce((sum, path) => sum + statSync(path).blocks * 512, 0)
     expect(lean.leanTwentySixReportDeltaBytes(a)).toBe(observed)
@@ -191,11 +223,16 @@ it("policy cache actual no-refund inventory preserves prior blocks after physica
   const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-policy-cache-shrink-")))
   try {
     process.chdir(directory); mkdirSync(".planning", { mode: 0o700 }); mkdirSync(".planning/phases"); mkdirSync(lean.LEAN_REMAINING_V9_PHASE)
-    const expected = lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_AMENDMENT_PATHS
+    const expected = [...lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_AMENDMENT_PATHS, ...lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_BOUNDARY_AMENDMENT_PATHS]
     for (const path of expected) writeFileSync(path, Buffer.alloc(8193), { mode: 0o600 })
     const survivors = expected.map(identity => ({ identity, allocatedBytes: statSync(identity).blocks * 512 })), allocatedDiskBytes = survivors.reduce((sum, row) => sum + row.allocatedBytes, 0), prior = { allocatedDiskBytes, survivors }
     writeFileSync(expected[0]!, "x")
     expect(() => correction.inventoryLeanTwoPairNoRefundV11(prior, expected)).toThrow("PREDECESSOR_DRIFT")
+    writeFileSync(expected[0]!, Buffer.alloc(8193))
+    unlinkSync(expected[expected.length - 1]!)
+    // The native missing-file observation refuses before the later drift check.
+    expect(() => correction.inventoryLeanTwoPairNoRefundV11(prior, expected)).toThrow()
+    writeFileSync(expected[expected.length - 1]!, Buffer.alloc(8193), { mode: 0o600 })
     const kept = expected.slice(1), inventory = correction.inventoryLeanTwoPairNoRefundV11({ allocatedDiskBytes, survivors: survivors.slice(1) }, kept)
     expect(inventory.allocatedDiskBytes).toBeGreaterThanOrEqual(allocatedDiskBytes)
   } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
@@ -227,8 +264,8 @@ it.each(Array.from({ length: 10 }, (_, n) => n))("policy cache raw pin %s refuse
   const record = JSON.parse(raw.toString()), promoted = new Map(bytes); promoted.set(path, lean.leanCanonicalBytes({ ...record, accepted: true, finalReaderClose: true, cumulativeCharged: 0 })); expect(() => authenticate(promoted)).toThrow()
   const extra = new Map(bytes); extra.set("inert-extra", raw); expect(() => authenticate(extra)).toThrow()
 })
-it("policy cache ordinal4 selects fresh exact v5 review and meaningful source closure, not old v4", () => {
-  expect(custody.leanResourceWindowDocumentsV15("diagnostic", "v15-4").review).toContain("SOURCE-REVIEW-v5.md")
+it("policy cache ordinal4 selects fresh exact v6 review and meaningful source closure, not historical v5 or old v4", () => {
+  expect(custody.leanResourceWindowDocumentsV15("diagnostic", "v15-4").review).toContain("SOURCE-REVIEW-v6.md")
   expect(correction.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_REVIEW_FILES).toHaveLength(13)
   expect(correction.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_FAILED_SOURCE_BASE).toBe("763174fdbbadb21982acdfb6f4c9bedd007241cf")
 })
