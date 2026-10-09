@@ -35,6 +35,24 @@ import { LeagueRecordGraph } from "../run-v1-38-serious-league.js"
 import { mkdtempSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import * as startupAuthority from "./v1-38-lean-experiment-authority.js"
+import * as startupSession from "./v1-38-lean-container-match-session.js"
+
+describe("startup-origin-v8 planner opt-in", () => {
+  it("[startup-origin-v8] propagates the private descriptor and binds the V8 harness before any session work", () => {
+    const rev = revision()
+    const authority = { seat: "bottom", runtime: {} } as any
+    const descriptor = { version: 8, harnessRoot: `sha256:${createHash("sha256").update(startupSession.buildLeanStartupWorkerHarnessV8()).digest("hex")}` } as any
+    vi.spyOn(startupAuthority, "leanStartupAuthorityDescriptorV8").mockReturnValue(descriptor)
+    const claim = vi.spyOn(startupAuthority, "claimLeanStartupAuthorityV8").mockReturnValue({ lifetimeMs: 600000, receiptMs: 5000, startup: descriptor })
+    const legacy = vi.spyOn(startupAuthority, "claimLeanRuntimeAuthority")
+    const session = vi.spyOn(startupSession, "createLeanContainerMatchSession").mockImplementation(() => { throw Error("INERT_SESSION_STOP") })
+    expect(() => createPlannerSupervisedRuntime({ revision: rev, leanExperimentAuthority: authority, attemptRoot: root, budgetRoot: root, matchId: "inert-v8", containerName: "inert-v8", ownershipLabel: "inert-v8", image: LAB_ADMITTED_ROOTS.image })).toThrow("INERT_SESSION_STOP")
+    expect(claim).toHaveBeenCalledOnce(); expect(claim.mock.calls[0]![2]).toBe("planner")
+    expect(legacy).not.toHaveBeenCalled(); expect(session.mock.calls[0]![0].leanExperimentAuthority).toBe(authority)
+    expect(session.mock.calls[0]![0].leanExperimentBinding!.runtime.executableRoot).toBe(`sha256:${rev.metadata.sourceArtifact!.hash}`)
+  })
+})
 const receiptDirectories: string[] = []
 afterEach(() => { for (const directory of receiptDirectories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 

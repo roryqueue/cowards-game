@@ -24,6 +24,7 @@ import { wrapLeagueProbeProvider } from "./v1-38-league-response-runtime.js"
 import { issueProspectiveLeagueHostReceiptAuthority, claimProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
 import { createLeagueRepository } from "../../packages/strategy-lab/src/league/repository.js"
 import { LeagueRecordGraph } from "../run-v1-38-serious-league.js"
+import * as startupAuthority from "./v1-38-lean-experiment-authority.js"
 // Only module-level unit injection; no caller constructor override is supplied
 // to v4 and no guest/container or real assessment operation is performed.
 vi.mock("./v1-38-planner-supervised-runtime.js", async (original) => ({ ...await original<typeof import("./v1-38-planner-supervised-runtime.js")>(), createPlannerSupervisedRuntime: vi.fn(() => { throw Error("unit container construction forbidden") }) }))
@@ -54,6 +55,19 @@ const admitted = () => {
   const proposal = factoryProposalFromPacket(packet), validation = factoryValidationFixture(proposal)
   return { packet, proposal, validation, admission: authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet, proposal, sourceBytes }), validation }) }
 }
+describe("startup-origin-v8 factory opt-in", () => {
+  it("[startup-origin-v8] selects only the host-issued claim and forwards the same opaque authority", () => {
+    const { admission } = admitted(), authority = { seat: "bottom", runtime: {} } as any
+    const descriptor = { version: 8 } as any
+    vi.spyOn(startupAuthority, "leanStartupAuthorityDescriptorV8").mockReturnValue(descriptor)
+    const claim = vi.spyOn(startupAuthority, "claimLeanStartupAuthorityV8").mockReturnValue({ lifetimeMs: 600000, receiptMs: 5000, startup: descriptor })
+    const legacy = vi.spyOn(startupAuthority, "claimLeanRuntimeAuthority")
+    const planner = vi.mocked(createPlannerSupervisedRuntime); planner.mockClear()
+    expect(() => createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, factoryLifetimeMs: 600000, budgetRoot: root("a"), attemptRoot: root("b"), matchId: "inert-v8", containerName: "inert-v8", ownershipLabel: "inert-v8" })).toThrow("unit container construction forbidden")
+    expect(claim).toHaveBeenCalledOnce(); expect(claim.mock.calls[0]![2]).toBe("factory")
+    expect(legacy).not.toHaveBeenCalled(); expect(planner.mock.calls[0]![0].leanExperimentAuthority).toBe(authority)
+  })
+})
 describe("private IPC diagnostics injected factory", () => {
   // This unit checks private failure plumbing, not the mission corpus. Keep
   // its valid snapshot local so the strict script gate has no new planner seam.
