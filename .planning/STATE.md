@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Prospective resource-window research and independent plan check closed; serial source-only execution next
+stopped_at: Resource-window source implementation closed; independent review found two fixable connected-path blockers
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Checked existing Plan16 supplement; exact18:38:33UTC deadline and all prior costs preserved; source-only implementation then independent gates
+last_activity_desc: Source7bfc9344/root4e1bccdb950;17 focusedPASS; independentCR01compaction/CR02reason-schema fixes next before admission
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — RESOURCE-WINDOW SOURCE REVIEW CLOSED / FIXES NEXT (2026-10-09).
+
+Source tasks1/2 CLOSED at7bfc9344/SOURCE-SUMMARY5356c0ab/root4e1bccdb950;17 focusedPASS/package types/shell/diffPASS, strict inheritedsixNOTPASS. Distinct SOURCE-REVIEW-v1 CLOSED issues_found/two blockers: selected Match compaction still calls legacy2GB guard, parent emits v1 reason record while selected ordinary audit requires v2. ROOT schedules only the necessary called scripts/lib/v1-38-lean-baseline-match.ts seam in existing Task2 plus scoped compaction/parent/test fixes; no pinned plan-byte alteration, new numbered plan, or authority expansion. Independent review supplies concrete reproduced defects/minimal fixes. Isolated source fixer then distinct re-review/ROOT validation/verification before any task3. No active entry/helper/allocation/Match/hold; all36 historicalcharges immutable. Exact18:38:33UTC deadline/allwall223171903ms/31reserve/RAM3GB/unchanged disk/runtime bounds remain. Laterv15-3..5 finite paths stay dormant/failclosed pending concrete checked distinction; no unchanged-failure rerun. No empirical/Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earlier checkpoints are history.
 
 CURRENT CHECKPOINT — RESOURCE-WINDOW SOURCE PLAN CHECKED (2026-10-09).
 
