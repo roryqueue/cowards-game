@@ -1833,12 +1833,14 @@ export const LEAN_PREPARATION_CONTINUATION_V13_REPORT_PATHS: readonly string[] =
  `${LEAN_REMAINING_V9_PHASE}265-16-PREPARATION-TIME-APPROVAL-20261008.md`,
  ...[1,2].map(n => `${LEAN_REMAINING_V9_PHASE}NEW265-16-PREPARATION-CONTINUATION-PLAN-CHECK-v${n}.md`),
 ])
-export const LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS: readonly string[] = Object.freeze([
+export const LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS: readonly string[] = Object.freeze([...new Set([
+ ...LEAN_TWENTY_SIX_V10_REPORT_PATHS, ...LEAN_TWO_PAIR_V11_REPORT_PATHS, ...LEAN_SUPERVISOR_RETEST_V12_REPORT_PATHS,
  ...LEAN_PREPARATION_CONTINUATION_V13_REPORT_PATHS,
  ...["ADAPTER-PLAN", "PLAN-CHECK", "SOURCE-REVIEW", "REVIEW-FIX", "VALIDATION", "SOURCE-VERIFICATION", "SOURCE-SUMMARY"].map(name => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-FIVE-PAIR-${name}-v1.md`),
+ `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-FIVE-PAIR-SOURCE-SUMMARY-v2.md`,
  `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-BOUNDED-CONTINUATION-DECISION-v1.md`, `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-BOUNDED-CONTINUATION-APPROVAL-20261008.md`,
  ...[1, 2, 3, 4, 5].flatMap(n => ["DIAGNOSTIC", "BASELINE"].flatMap(route => ["DATA-REVIEW", "HELPER-REVIEW", "PREPARATION", "TERMINAL-VERIFICATION"].map(name => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-FIVE-PAIR-${route}-V14-${n}-${name}-v1.md`))),
-])
+])])
 export const validateLeanPostV13FivePairPredecessorV14 = (p: LeanCorrectionPredecessor): void => {
   const { root: claimed, ...body } = p, reports = new Set(LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS), identities = new Set<string>()
   if (!exactLabKeys(p, ["schemaVersion", "chargedMatches", "elapsedUpperBoundMs", "allocatedDiskBytes", "historicalPeakDiskBytes", "historicalPeakRssBytes", "historyRoot", "survivors", "root"]) || p.schemaVersion !== "lean-correction-predecessor-v1" || claimed !== labRoot(p.schemaVersion, body) || !natural(p.chargedMatches) || p.chargedMatches < 35 || p.chargedMatches > 220 || !natural(p.elapsedUpperBoundMs) || p.elapsedUpperBoundMs < 148694388 || !natural(p.allocatedDiskBytes) || p.allocatedDiskBytes < LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION.physicalFloorBytes || p.allocatedDiskBytes > LEAN_CAPS.retainedBytes || p.historicalPeakDiskBytes !== "unknown" || p.historicalPeakRssBytes !== "unknown" || !root(p.historyRoot) || !Array.isArray(p.survivors) || p.survivors.length < 695) return fail("RETRY_PREDECESSOR")

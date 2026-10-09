@@ -1,7 +1,7 @@
 /** HOST source-only tests. Static public source construction, no provider/Match. */
 import { afterEach, expect, it, vi } from "vitest"
 import { EventEmitter } from "node:events"
-import { mkdtempSync, realpathSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs"
+import { mkdtempSync, realpathSync, mkdirSync, writeFileSync, readFileSync, rmSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { execFileSync } from "node:child_process"
@@ -28,18 +28,23 @@ const allocation = (route: "diagnostic" | "baseline", reuse?: ReturnType<typeof 
 }
 afterEach(() => { vi.restoreAllMocks(); host.child = null; host.failSample = false; host.samples = 0 })
 
-it("parses five exact CLI/child identities but refuses incomplete live custody before reservation", async () => {
+it("parses all five CLI/child identities and real dispatch refuses absent custody without a reservation", async () => {
+  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "v14-cli-refusal-host-")))
+  try {
+  process.chdir(directory)
   for (const n of [1, 2, 3, 4, 5] as const) for (const route of ["diagnostic", "baseline"] as const) {
     const mode = `v14-${n}` as const, path = lean.leanCorrectionRoutePaths(route, mode).request
     expect(correction.leanCorrectionChildSupervisor(correction.leanCorrectionChildMode(route, mode))).toBe(mode)
     for (const action of ["prepare", "run", "verify", "verify-terminal"]) {
       const args = [`${action}-supervisor-${route}-${mode}`, "--request", path]
       expect(correction.parseLeanCorrectionCommand(args)).toMatchObject({ route, supervisor: mode, request: path })
-      await expect(correction.leanCorrectionMain(args)).rejects.toThrow("POST_V13_CUSTODY_UNAVAILABLE")
+      await expect(correction.leanCorrectionMain(args)).rejects.toThrow()
     }
-    expect(() => correction.readLeanCorrectionRequest(path, route, mode)).toThrow("POST_V13_CUSTODY_UNAVAILABLE")
+    expect(() => correction.readLeanCorrectionRequest(path, route, mode)).toThrow()
   }
   for (const mode of ["v14-0", "v14-6", "v14-01"]) expect(() => correction.parseLeanCorrectionCommand([`run-supervisor-diagnostic-${mode}`, "--request", ".strategy-lab/invalid"])).toThrow()
+  expect(readdirSync(directory)).toEqual([])
+  } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
 })
 
 it("selects owned reuse only from a strictly admitted v14 baseline, never a flag or malformed root", () => {

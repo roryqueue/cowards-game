@@ -35,7 +35,9 @@ it("real no-ledger refusal publishes and reauthenticates terminal, carry, hold a
     process.chdir(directory)
     const paths = leanCorrectionRoutePaths(route, mode), docs = leanFivePairDocumentsV14(route, mode), root = labRoot("HOST-unaccepted-review", 1)
     mkdirSync(paths.temp, { recursive: true, mode: 0o700 }); chmodSync(paths.temp, 0o700)
-    const setup = correction.createLeanPostV13SetupV14(mode, Date.now() - 1)
+    // Actual CLI process starts after ROOT's setup. This imported module's
+    // already captured process clock must likewise follow the fixture witness.
+    const setup = correction.createLeanPostV13SetupV14(mode, 1791496635485)
     correction.publishLeanCorrection(docs.setup, setup)
     expect(correction.readLeanPostV13SetupV14(mode)).toEqual(setup)
     const helperBytes = Buffer.from("HOST inert helper, never executed")
@@ -46,10 +48,24 @@ it("real no-ledger refusal publishes and reauthenticates terminal, carry, hold a
     const request = correction.createLeanPostV13RequestDraftV14(mode, route, { sourceRoot, reviewRoot: root, dataReviewRoot: root, helperReviewRoot: root, helperPath: docs.helper, helperBytesRoot: leanBytesRoot(helperBytes), setupAccountingRoot: setup.root, reuseGrantRoot: root, authorizationRoot: root, priorClosureRoot: history.carryRoot, continuationRoot: continuation.root, acceptedCheckRoot: null, acceptedReaderCloseRoot: null })
     correction.publishLeanCorrection(paths.request, request)
     execFileSync("git", ["init", "-q"], { stdio: "pipe" }); execFileSync("git", ["add", ...manifest.entries.map(entry => entry.path)], { stdio: "pipe" }); execFileSync("git", ["-c", "user.name=HOST fixture", "-c", "user.email=host@example.invalid", "commit", "-qm", "HOST public source fixture"], { stdio: "pipe" })
+    // Real source-gate parser/Git equivalence on explicit HOST actor metadata;
+    // this is not independent review of the adapter or DATA/HELPER authority.
+    const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim()
+    const reviewBytes = Buffer.from(`---\nstatus: clean\nsource_root: ${sourceRoot}\nsource_commit: ${head}\nindependently_reviewed: true\nauthor_agent: /root/host_fixture_author\nreviewer_agent: /root/host_fixture_reviewer\n---\nHOST metadata fixture only; not adapter acceptance.\n`)
+    writeFileSync(docs.review, reviewBytes, { mode: 0o600 })
+    const gateRequest = { ...request, reviewRoot: leanBytesRoot(reviewBytes) }
+    correction.authenticateLeanPostV13SourceReviewV14(gateRequest, route, mode)
+    expect(correction.leanCorrectionSourceManifest(mode, policy).root).toBe(sourceRoot)
+    expect(() => correction.authenticateLeanPostV13SourceReviewV14({ ...gateRequest, reviewPath: ".planning/old-review.md" }, route, mode)).toThrow()
+    const sourcePath = manifest.entries.find(entry => entry.path.endsWith(".ts"))!.path, sourceBytes = readFileSync(sourcePath)
+    writeFileSync(sourcePath, Buffer.concat([sourceBytes, Buffer.from("\n// HOST source drift\n")]))
+    expect(() => correction.authenticateLeanPostV13SourceReviewV14(gateRequest, route, mode)).toThrow()
+    writeFileSync(sourcePath, sourceBytes)
     // Genuine scope refusal before any request authority or allocation. The
     // following success is a non-authorizing failure writer, not admission.
     expect(() => correction.prepareLeanCorrection(paths.request, route, mode)).toThrow()
     expect(existsSync(paths.store)).toBe(false); expect(existsSync(paths.allocation)).toBe(false)
+    await expect(retained.verifyLeanPostV13RetainedV14(paths.request, mode, route)).rejects.toThrow()
     const report = retained.verifyLeanPostV13TerminalOnlyV14(paths.request, mode, route)
     expect(report).toMatchObject({ accepted: false, authorizing: false, currentCharges: 0, cumulativeCharged: 35, entryHead: null, allocationRoot: null, resultAbsent: true })
     const authenticated = retained.authenticateLeanPostV13TerminalVerificationV14(mode, route)
@@ -58,10 +74,27 @@ it("real no-ledger refusal publishes and reauthenticates terminal, carry, hold a
     expect(carry).toMatchObject({ outcome: "refused_before_entry", accepted: false, currentCharges: 0, cumulativeCharged: 35 })
     expect(pair).toMatchObject({ historicalCharged: 35, attemptOrdinal: 1, baselineCarryRoot: null, endsEnvelope: false })
     expect(correction.readLeanPostV13PriorPairV14("v14-2").carryRoot).toBe(pair.root)
+    expect(() => correction.readLeanPostV13PriorPairV14("v14-3")).toThrow()
+    expect(() => retained.assertLeanPostV13TerminalPublicationV14(mode, route, 12000000000)).toThrow("HOLD_OR_CAPACITY")
+    const memory = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 2000000000 })
+    try {
+      expect(() => retained.assertLeanPostV13TerminalPublicationV14(mode, route)).toThrow("HOLD_OR_CAPACITY")
+      memory.mockReturnValue({ ...process.memoryUsage(), rss: 1300000000 })
+      // External 512 MB plus the unchanged 320 MiB guard exceed 2 GB.
+      expect(() => retained.assertLeanPostV13TerminalPublicationV14(mode, route)).toThrow("HOLD_OR_CAPACITY")
+    } finally { memory.mockRestore() }
+    const clock = vi.spyOn(Date, "now").mockReturnValue(policy.absoluteDeadlineMs - policy.reserveMs)
+    try { expect(() => retained.assertLeanPostV13TerminalPublicationV14(mode, route)).toThrow("HOLD_OR_CAPACITY") } finally { clock.mockRestore() }
+    const heldBytes = readFileSync(docs.hold), held = JSON.parse(heldBytes.toString("utf8")), { root: heldRoot, ...heldBody } = held
+    const changedBody = { ...heldBody, head: "1".repeat(40) }
+    writeFileSync(docs.hold, leanCanonicalBytes({ ...changedBody, root: labRoot(held.schemaVersion, changedBody) }))
+    expect(() => retained.authenticateLeanPostV13TerminalCarryV14(mode, route)).toThrow()
+    writeFileSync(docs.hold, heldBytes)
+    expect(retained.authenticateLeanPostV13ClosedPairV14(mode).root).toBe(pair.root)
     expect(() => retained.verifyLeanPostV13TerminalOnlyV14(paths.request, mode, route)).toThrow()
     expect(() => correction.prepareLeanCorrection(paths.request, route, mode)).toThrow()
   } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
-}, 45000)
+}, 60000)
 
 it("constructs exact fresh request drafts and binds immutable setup origin for all five ordinals", () => {
   const root = labRoot("v14-draft-host", 1)
@@ -101,6 +134,6 @@ it("new accepted-join dispatch rejects missing real same-pair custody on every c
 
 it("legacy request authorities cannot enter the v14 data path or reopen old readers", () => {
   for (const route of ["diagnostic", "baseline"] as const) {
-    expect(() => correction.readLeanRemainingRequestV9(".strategy-lab/old-request.json", route, "v14-1")).toThrow("POST_V13_CUSTODY_UNAVAILABLE")
+    expect(() => correction.readLeanRemainingRequestV9(".strategy-lab/old-request.json", route, "v14-1")).toThrow("REQUEST_PATH")
   }
 })
