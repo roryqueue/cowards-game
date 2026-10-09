@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh v15-3 diagnostic prepared; commit allocation before unique ROOT entry
+stopped_at: Fresh v15-3 diagnostic and unique verifier closed refused; bounded diagnosis next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: ROOTactualdraft49263/join81156/finalize64172 and prepare84240 CLOSED0; one plannedcell zerocharges; allocation538fad78/sourcec0
+last_activity_desc: ROOTentry50108 CLOSED0; one systemfailure/38cumulative; uniqueordinary46258 CLOSED1/refused; closedpair26137 CLOSED0; sourcehold released
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — DIAGNOSTICv15-3 REFUSED / SOURCE HOLD RELEASED (2026-10-09).
+
+UniqueMAINentry50108 ACTUALLYCLOSED0/child_exited_pending_independent_verification/terminalElapsedUpperBound769902ms. Actualparent47588/child47653 absent; heldHEAD356ff8abd4c058b2bdcca0bde8aceaba2a6107d0/sourcec0d3b102/966/allocation538fad78/raw3cbd203e unchanged. Actualresult25e2f96b1a0b6f8fb41b8176c3982c2e9c03dd67c9ef377ac2db1a72058d65c9/raw0e78193abdc77faad6fceadd1d4f8fe42aaa369e3155cb32f315750fbee74036, childterminalraw1fb3237b; one retainedsystem_failure/SUPERVISOR_FAILURE/cleanuptrue/90invocations/zero retainedtelemetryeventsortransitions/no outcome, initiatingcauseUNKNOWN. Distinct /root/verify_265_v15_3_diagnostic invoked exactlyONEordinary46258 ACTUALLYCLOSED1/refused; no fallback/retry/reader success. Refusal eaa46341/raw2b374d5c, resourcewindowclosure refused/finalReaderClosefalse/checkabsent, carry98f59a41/raw1d2e705f/outcomefailed_result/current1/cumulative38/cumulativeElapsed228267940ms/27168768B, holdcb95d720/rawcd732293; no operatorholdrefusal. Automaticuniqueverifier alreadypublishedcarry/hold/pair: NEVERrepeatpublisher. ROOT boundedclosedpairauth26137 CLOSED0/f0ee5f7852e69e65a13abb664f3502ebf2a118c828953739e55cc7d12fd57b20/27303936B/endsEnvelopefalse/authorizingfalse. Actualentry+uniqueverifier+custodyclosed; sourceANDHEADhold RELEASED. Allconsumedbytes immutable/non-authorizing, no baselinepermitted. Boundedsource-onlydiagnosis next; no unchangedknownfailure rerun. V15-4/5 remain dormant until genuineindependentlychecked prospective repair/prefix contracts under existingapprovedcap/deadline; unusedroutes aren'tautomaticadmission. Same02:14:32UTC/250530903/ALLwall/31reserve/3GB15GB/allotherbounds. Phase265/LEAG/baseline/freeze/formation/holdout/public/counting/production incomplete. Earlier checkpoints history.
 
 CURRENT CHECKPOINT — FRESH DIAGNOSTICv15-3 PREPARED / UNIQUE ENTRY NEXT (2026-10-09).
 
