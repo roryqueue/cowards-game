@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh diagnosticv14-1 prepared zerocharge; allocation commit before unique root entry next
+stopped_at: Diagnosticv14-1 accepted and actualFINAL authenticated; conditional baseline data next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
 last_activity_desc: CR-01/WR-01 fixes committed6abed48f; portable focused tests pass, re-review pending
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — DIAGNOSTICv14-1 ACCEPTED / HOLD RELEASED (2026-10-09).
+
+UniqueMAIN36792 ACTUALLYCLOSED0/child_exited/nullsignal/583808ms; actualparent39613/child39672 absent. ONEindependentordinaryreader73017 CLOSED0/retained_valid/accepted/current1/cumulative36/cleanupcomplete, actualcheck9c8a0663/closuread65294c/FINALtrue/readerClose1791508355318/elapsed160414221. Extraobserver wrongly called result-ABSENT terminal authenticator on actualresult; expectedrefusal transparently preserved/corrected by reporter, NOTroutefailure/retry/secondreader. ROOTcorrect savedordinarycarry+acceptedjoin92266 CLOSED0/carry96074cbe/outcomeclosed_result/debit24084480/current1/cumulative36/actualFINALtrue; heldHEAD0f596f46/source6d986074941/allocation8d2e0a4/rawb3b58d78/request2f74dc73 unchangedthroughactualclosure. SourceANDHEADhold RELEASED after actualprocessclosure+uniqueappropriatecheck+correctsavedcustody authentication. Everyconsumedrecord immutable. ConditionalONE36baseline now requires separatefreshROOTrequest/helper/ownactualattestation/DATAHELPER/newcommittedallocation/empty0700/SAMEPROCESS capacity/uniqueentry/fixedsourceHEAD/ONEactualcheck. Same continuousdeadline02:39:01.097Z/allwall/15GB300/2GBscratch/31reserve/allruntimebounds; no fullfitpromise/Phase265LEAGfreezeformationholdoutpubliccountingproductioncredit.
 
 CURRENT CHECKPOINT — DIAGNOSTICv14-1 PREPARED (2026-10-09).
 
