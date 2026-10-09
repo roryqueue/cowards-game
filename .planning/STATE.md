@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: bounded source repair independently verified; fresh private route gates next
+stopped_at: fresh private diagnostic v15-4 prepared; unique main entry next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Policy-cache boundary repair reviewed validated and source-verified; fresh v15-4 gates next, no empirical credit
+last_activity_desc: Fresh v15-4 reviewed finalized and prepared with zero current charges; allocation commit before unique entry
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — FRESH DIAGNOSTICv15-4 PREPARED / UNIQUE MAIN ENTRY NEXT (2026-10-09).
+
+ROOT newhelper1bc9ad70 draft57146/join98219/finalize57469 ACTUALLYCLOSED0; actual independent /root/review_265_v15_4_diagnostic attestationraw5fd6c98f/DATA4ca47334/HELPER588d8eb3 clean0/private600/defaultconsumers+continuationCLOSED0. ROOT readFULL; reviewer preexecution transformNOTPASS retained. Actualsource158012ab/f4c63242/974/selectedv6raw5820f7b6 unchanged aftersourcegates. Requestdata7f5bca79/intentf98aae0a/continuation01e269a2/finalrequestb35181c2/authorizationfa0cf7ab bindactual13-path host-issued-cache distinction. ExactlyONEprepare34915 ACTUALLYCLOSED0/preparation_only/oneplanned/zero currentcharges. Allocation1a910d3fb3d5d8284774bff5491cc0b25ed517d7baede9d5b693cf3130996c8d/raw86014a21f3ecc5ffbc1bf1ac6d758796cf8aec2aa851b9fa3f335ae67b2efc8e/135364B; prior38charges/996survivors/27770880B/236996763ms. Actualownedreal700store onlyallocation/emptyledger/closedpreparetime; entry/resultabsent. Commitexactallocation+gates BEFOREuniqueMAINentry, freshpassingSAMEPROCESScapacity BEFOREcharge/provider. SourceANDHEAD held fromactualentry throughterminal+ONEappropriateactualverifier; no competingheavywork. Ownaccepted4diagnostic+actualFINAL onlyconditional36baseline;5dormant. Allconsumedolderbytes immutable/costonly/no retry/refund/authorityreuse. Same02:14:32UTC/cap250530903/ALLwall/originalanchor/FULL108M/31reserve/RAM3GBdisk15GB300Matches/runtimeprivacy bounds. Actualruntime/recovery/full36fit unproved, originalcauseUNKNOWN/historicalNOTPASS retained. No Phase265/LEAG/baseline/freeze/formation/holdout/public/counting/production credit. Earliercheckpoints history.
 
 CURRENT CHECKPOINT — POLICY-CACHE BOUNDARY SOURCE VERIFIED / FRESH ROOT GATES NEXT (2026-10-09).
 
