@@ -1,9 +1,317 @@
 /** Finite private metadata custody. No ordinary historical reader, provider,
  * allocation writer or entry is invoked by importing this module. */
 import { freezeLabValue, labRoot, exactLabKeys, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
+import { constants, lstatSync, openSync, fstatSync, readFileSync, closeSync, realpathSync } from "node:fs"
+import { resolve } from "node:path"
 import { leanBytesRoot, leanCanonicalBytes, isLeanResourceWindowModeV15, leanResourceWindowPolicyForModeV15, LEAN_RESOURCE_WINDOW_V15_POLICY as policy, leanCorrectionRoutePaths, type LeanResourceWindowModeV15, type LeanCorrectionPredecessor } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 
 const phase = ".planning/phases/265-serious-current-rules-league-and-development-red-team/"
+/** Exact closed ordinal4 pins in master order. Each is cost-only and non-authorizing. */
+export const LEAN_RESOURCE_WINDOW_ARCHIVED_V15_4_PINS = freezeLabValue([
+  {
+    "path": ".planning/artifacts/v1.38-lean-correction-supervisor-diagnostic-allocation-v15-4.json",
+    "bytes": 135364,
+    "bytesRoot": "sha256:86014a21f3ecc5ffbc1bf1ac6d758796cf8aec2aa851b9fa3f335ae67b2efc8e",
+    "canonicalRoot": "sha256:d4982cfeed7b0dd72ebae1daa0e6843f866cb5aec8b5904ce4a74413a462fbf4",
+    "root": "sha256:1a910d3fb3d5d8284774bff5491cc0b25ed517d7baede9d5b693cf3130996c8d",
+    "schemaVersion": "lean-correction-supervisor-diagnostic-allocation-v8",
+    "keys": [
+      "acceptedCheckRoot",
+      "acceptedReaderCloseRoot",
+      "attemptOrdinal",
+      "candidateRoots",
+      "caps",
+      "coldRoot",
+      "continuationRoot",
+      "dataReviewRoot",
+      "diagnosisRoot",
+      "planRoot",
+      "predecessor",
+      "priorClosureRoot",
+      "privacy",
+      "requestBytesRoot",
+      "requestRoots",
+      "reuseGrantRoot",
+      "reviewRoot",
+      "root",
+      "route",
+      "runtimeRoot",
+      "sampleSlotRoots",
+      "schemaVersion",
+      "seed",
+      "setupAccountingRoot",
+      "slots",
+      "sourceRoot",
+      "startupPolicyRoot",
+      "supervisorDecisionRoot",
+      "timeboxExtension",
+      "tupleRoot"
+    ]
+  },
+  {
+    "path": ".strategy-lab/lean-correction-supervisor-diagnostic-request-20261009-v15-4.json",
+    "bytes": 3775,
+    "bytesRoot": "sha256:b35181c2cb37995688f722f8dce2498b4295c6fcb8af3b8a32b52cbe252edd59",
+    "canonicalRoot": "sha256:3b08074e9d5049457d62a75e5c68534be409ec40e8927047724d69c5901011aa",
+    "root": null,
+    "schemaVersion": "lean-correction-supervisor-request-v15",
+    "keys": [
+      "acceptedCheckRoot",
+      "acceptedReaderCloseRoot",
+      "amendmentRoot",
+      "attemptOrdinal",
+      "authorizationPath",
+      "authorizationRoot",
+      "candidateRoots",
+      "coldRoot",
+      "continuationRoot",
+      "dataReviewPath",
+      "dataReviewRoot",
+      "diagnosis",
+      "helperBytesRoot",
+      "helperPath",
+      "helperReviewPath",
+      "helperReviewRoot",
+      "planRoot",
+      "priorClosureRoot",
+      "requestRoots",
+      "reuseGrantRoot",
+      "reviewPath",
+      "reviewRoot",
+      "route",
+      "schemaVersion",
+      "seed",
+      "setupAccountingPath",
+      "setupAccountingRoot",
+      "sourceRoot",
+      "startupPolicyRoot",
+      "supervisorDecisionRoot",
+      "timeboxExtension"
+    ]
+  },
+  {
+    "path": ".strategy-lab/lean-correction-supervisor-diagnostic-20261009-v15-4/entry.json",
+    "bytes": 551,
+    "bytesRoot": "sha256:3208a3daa7476339e9c40dd7cc8c59f6621ac0d6994bbcb5687063f98af59ace",
+    "canonicalRoot": "sha256:667a39f9f63515e08cb2d457356089bc183e70ac3e2af22cb3ed338256c3c5f0",
+    "root": null,
+    "schemaVersion": "lean-child-entry-v2",
+    "keys": [
+      "allocationRoot",
+      "childPid",
+      "handshakeRoot",
+      "head",
+      "monotonicStartNs",
+      "parentPid",
+      "requestBytesRoot",
+      "schemaVersion",
+      "sourceRoot",
+      "wallStartMs"
+    ]
+  },
+  {
+    "path": ".strategy-lab/lean-correction-supervisor-diagnostic-20261009-v15-4/child-terminal.json",
+    "bytes": 659,
+    "bytesRoot": "sha256:4d4b7229ad1d015119df321fa0b9de878a11e915460b5fa731fdd315bda21003",
+    "canonicalRoot": "sha256:a4606a407656aefd814d2b82434c84034935aafd957de7346eaa8fc06490bb49",
+    "root": null,
+    "schemaVersion": "lean-child-terminal-v2",
+    "keys": [
+      "allocationRoot",
+      "childPid",
+      "childRssObservedBytes",
+      "elapsedUpperBoundMs",
+      "entryBytesRoot",
+      "exitCode",
+      "freeBytes",
+      "head",
+      "monotonicObservedNs",
+      "parentPid",
+      "parentRssBytes",
+      "physicalBytes",
+      "schemaVersion",
+      "signal",
+      "sourceRoot",
+      "status",
+      "wallObservedMs"
+    ]
+  },
+  {
+    "path": ".strategy-lab/lean-correction-supervisor-diagnostic-20261009-v15-4/result.json",
+    "bytes": 1409,
+    "bytesRoot": "sha256:ed33b26e46ab9e4a3e4093efa7b46acf650ba5bfd76116a08293b3f80f7225d1",
+    "canonicalRoot": "sha256:7ca24faae6dd8db298f2ebae530d778cb73d116a976e6e44a5a10e2e2f69cfe5",
+    "root": "sha256:2b2502887332542fd1ab65450f34b3f012a03fa6e5ee1b5f23c88b50b6054d7f",
+    "schemaVersion": "lean-correction-supervisor-result-v8",
+    "keys": [
+      "allocationRoot",
+      "attemptOrdinal",
+      "cumulativeCharged",
+      "evidenceRoot",
+      "formationMaterialized",
+      "head",
+      "holdoutOpened",
+      "issued",
+      "phaseComplete",
+      "pipeline",
+      "privacy",
+      "requestBytesRoot",
+      "reuseGrantRoot",
+      "root",
+      "route",
+      "schemaVersion",
+      "sourceRoot"
+    ]
+  },
+  {
+    "path": ".strategy-lab/lean-correction-supervisor-diagnostic-20261009-v15-4-tmp/result-reader-refusal-v15.json",
+    "bytes": 765,
+    "bytesRoot": "sha256:d41736584b1efd9d6a64a6cf0c929e8a3ddc35eff762729a5726083b690c39d3",
+    "canonicalRoot": "sha256:307497f624bcfbb3c19fa8f43fc787ba8a602051d6d6006dc7334769da163f97",
+    "root": "sha256:6c70e9f302bc5503780f0ea99067dae8f4bf03e7388dedee446493e6b6f7a892",
+    "schemaVersion": "lean-resource-window-result-reader-refusal-v15",
+    "keys": [
+      "accepted",
+      "allocationRoot",
+      "attemptOrdinal",
+      "authorizing",
+      "closedAtMs",
+      "cumulativeCharged",
+      "currentCharged",
+      "head",
+      "readerInterval",
+      "requestBytesRoot",
+      "resultRoot",
+      "root",
+      "route",
+      "schemaVersion",
+      "sourceRoot"
+    ]
+  },
+  {
+    "path": ".strategy-lab/lean-correction-supervisor-diagnostic-20261009-v15-4/resource-window-closure-v15.json",
+    "bytes": 2380,
+    "bytesRoot": "sha256:9608052500c0862098d89ada72bc77b410a9a24a915b12cfcf37c9094ea584c0",
+    "canonicalRoot": "sha256:e0395379c052456c02bbfca39c329d9a81832a9a939020022eb456f5d092033f",
+    "root": "sha256:0e2ae6339b658ebb8867358e1eeb1481f3005f99fe9c54707653d897b5d9e633",
+    "schemaVersion": "lean-resource-window-diagnostic-closure-v15",
+    "keys": [
+      "acceptedCheckAbsent",
+      "allocationRoot",
+      "attemptOrdinal",
+      "authorizing",
+      "checkBytesRoot",
+      "checkRoot",
+      "closedElapsedMs",
+      "closureClass",
+      "cumulativeCharged",
+      "currentCharges",
+      "entryBytesRoot",
+      "finalReaderClose",
+      "head",
+      "ledgerBytesRoot",
+      "privacy",
+      "readerCloseMs",
+      "readerInterval",
+      "readerStartMs",
+      "requestBytesRoot",
+      "resultAbsent",
+      "resultBytesRoot",
+      "root",
+      "schemaVersion",
+      "sourceRoot",
+      "terminalBytesRoot",
+      "timeBytesRoot",
+      "timeboxExtension"
+    ]
+  },
+  {
+    "path": ".strategy-lab/lean-correction-supervisor-diagnostic-20261009-v15-4-tmp/terminal-carry-v15.json",
+    "bytes": 137232,
+    "bytesRoot": "sha256:c2b0ad86340df9917d9e33de8db17113c17d60d7a923bcbf8070910bafe6cd6a",
+    "canonicalRoot": "sha256:72c0f77dfcec20ae093f8cd3ac60ec2e7c344c8b2b8fbb2c2cb086c34cf89b68",
+    "root": "sha256:80aa3950b8ffbe04895e26a53931f8505610818df68bfe5a3dc08621715adb6d",
+    "schemaVersion": "lean-resource-window-terminal-carry-v15",
+    "keys": [
+      "accepted",
+      "allocatedDiskBytes",
+      "allocationRoot",
+      "attemptOrdinal",
+      "authorizing",
+      "closedAtMs",
+      "closureRoot",
+      "cumulativeCharged",
+      "cumulativeElapsedMs",
+      "currentCharges",
+      "entryBytesRoot",
+      "entryHead",
+      "outcome",
+      "requestBytesRoot",
+      "resultBytesRoot",
+      "root",
+      "route",
+      "schemaVersion",
+      "sourceRoot",
+      "survivors",
+      "terminalBytesRoot",
+      "timeboxExtension",
+      "verificationBytesRoot",
+      "verificationRoot"
+    ]
+  },
+  {
+    "path": ".strategy-lab/lean-correction-supervisor-diagnostic-20261009-v15-4-tmp/terminal-hold-complete-v15.json",
+    "bytes": 873,
+    "bytesRoot": "sha256:84f636771250e9b58fb0380b01934aa39bb16be17460c658d8d3c339b42c9a95",
+    "canonicalRoot": "sha256:34fc4793a291b889e63e193d1db64a71df06e0d2ecb5d3870e140ab352a22668",
+    "root": "sha256:deb8809b28493d97a56b769ddd537064d59f13a07399fca2c70b9216ccbdea85",
+    "schemaVersion": "lean-resource-window-terminal-hold-complete-v15",
+    "keys": [
+      "carryBytesRoot",
+      "carryRoot",
+      "entryBytesRoot",
+      "head",
+      "mode",
+      "requestBytesRoot",
+      "root",
+      "route",
+      "schemaVersion",
+      "sourceRoot",
+      "verificationBytesRoot",
+      "verificationRoot"
+    ]
+  },
+  {
+    "path": ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-POST-V14-RESOURCE-WINDOW-diagnostic-v15-4-PAIR-CLOSURE-v1.json",
+    "bytes": 137101,
+    "bytesRoot": "sha256:e7066c18c2d73282f239c99fe9684d464300d7ebcec7fc26de9c95633c047b51",
+    "canonicalRoot": "sha256:748f613077d43dedf15d691924b79363fee5fa6a388f67a46918342436d6625f",
+    "root": "sha256:dbd33c0400c816f472668b40e25e3d94bec4178d5f1a13dcbae7179892817bad",
+    "schemaVersion": "lean-resource-window-pair-closure-v15",
+    "keys": [
+      "allocatedDiskBytes",
+      "attemptOrdinal",
+      "authorizing",
+      "baselineCarryRoot",
+      "closedAtMs",
+      "cumulativeCharged",
+      "cumulativeElapsedMs",
+      "diagnosticCarryRoot",
+      "endReason",
+      "endsEnvelope",
+      "historicalCharged",
+      "holdBytesRoot",
+      "holdRoot",
+      "lastRoute",
+      "priorClosureRoot",
+      "root",
+      "schemaVersion",
+      "sourceRoot",
+      "survivors",
+      "timeboxExtension"
+    ]
+  }
+] as const)
 /** Ten independently pinned failed-prefix metadata records; cost-only, never FINAL authority. */
 export const LEAN_RESOURCE_WINDOW_ARCHIVED_V15_3_PINS = freezeLabValue([
   {
@@ -370,6 +678,73 @@ export const authenticateLeanResourceWindowArchivedPrefixV15_3 = (bytes: Readonl
 }
 
 const fail = (): never => { throw new TypeError("LEAN_RESOURCE_WINDOW_V15_CUSTODY") }
+export const authenticateLeanResourceWindowArchivedPrefixV15_4 = (bytes: ReadonlyMap<string, Uint8Array>) => {
+  const policy = leanResourceWindowPolicyForModeV15("v15-4")
+  if (bytes.size !== LEAN_RESOURCE_WINDOW_ARCHIVED_V15_4_PINS.length || [...bytes.keys()].some(path => !LEAN_RESOURCE_WINDOW_ARCHIVED_V15_4_PINS.some(pin => pin.path === path))) return fail()
+  const records = LEAN_RESOURCE_WINDOW_ARCHIVED_V15_4_PINS.map(pin => {
+    const raw = bytes.get(pin.path)
+    if (!raw || raw.byteLength !== pin.bytes || leanBytesRoot(raw) !== pin.bytesRoot) return fail()
+    let record: Record<string, any>
+    try { record = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(raw)) } catch { return fail() }
+    if (!exactKeys(record, pin.keys) || record.schemaVersion !== pin.schemaVersion || labRoot("lean-resource-window-archived-v15-4-pin-v1", record) !== pin.canonicalRoot) return fail()
+    const { root, ...body } = record
+    if (pin.root === null ? root !== undefined : root !== pin.root || labRoot(pin.schemaVersion, body) !== root) return fail()
+    return record
+  })
+  const [allocation, request, entry, terminal, result, refusal, closure, carry, hold, pair] = records as Record<string, any>[]
+  const rawRoot = (index: number) => LEAN_RESOURCE_WINDOW_ARCHIVED_V15_4_PINS[index]!.bytesRoot
+  const same = (a: unknown, b: unknown) => labRoot("lean-resource-window-archived-role-join-v1", a) === labRoot("lean-resource-window-archived-role-join-v1", b)
+  const all = [allocation!, request!, result!, closure!, refusal!, carry!, pair!]
+  if (all.some(v => v.attemptOrdinal !== 4) || [allocation!, request!, result!, refusal!, carry!, hold!!].some(v => v.route !== "diagnostic") || records.some(v => v.sourceRoot !== allocation!.sourceRoot) || allocation!.requestBytesRoot !== rawRoot(1) || allocation!.acceptedCheckRoot !== null || allocation!.acceptedReaderCloseRoot !== null || request!.acceptedCheckRoot !== null || request!.acceptedReaderCloseRoot !== null || allocation!.predecessor.chargedMatches !== 38 || !same(allocation!.timeboxExtension, policy) || !same(request!.timeboxExtension, policy)) return fail()
+  for (const key of ["sourceRoot", "planRoot", "reviewRoot", "coldRoot", "seed", "candidateRoots", "requestRoots", "continuationRoot", "priorClosureRoot", "setupAccountingRoot", "startupPolicyRoot", "supervisorDecisionRoot", "dataReviewRoot", "reuseGrantRoot"]) if (!same(allocation![key], request![key])) return fail()
+  for (const v of [entry!, terminal!, result!, closure!, refusal!, carry!]) if (v.allocationRoot !== allocation!.root) return fail()
+  for (const v of [entry!, result!, closure!, refusal!, carry!, hold!!]) if (v.requestBytesRoot !== rawRoot(1)) return fail()
+  for (const v of [terminal!, result!, closure!, refusal!, hold!!]) if (v.head !== entry!.head) return fail()
+  if (carry!.entryHead !== entry!.head || !/^[a-f0-9]{40}$/u.test(entry!.head) || terminal!.entryBytesRoot !== rawRoot(2) || terminal!.parentPid !== entry!.parentPid || terminal!.childPid !== entry!.childPid || !natural(terminal!.elapsedUpperBoundMs) || !natural(terminal!.wallObservedMs) || terminal!.wallObservedMs < entry!.wallStartMs || result!.cumulativeCharged !== 39 || result!.issued !== false || result!.phaseComplete !== false || result!.formationMaterialized !== false || result!.holdoutOpened !== false) return fail()
+  if (closure!.authorizing !== false || closure!.closureClass !== "refused" || closure!.finalReaderClose !== false || closure!.acceptedCheckAbsent !== true || closure!.resultAbsent !== false || closure!.checkRoot !== null || closure!.checkBytesRoot !== null || closure!.currentCharges !== 1 || closure!.cumulativeCharged !== 39 || closure!.entryBytesRoot !== rawRoot(2) || closure!.terminalBytesRoot !== rawRoot(3) || closure!.resultBytesRoot !== rawRoot(4) || !rooted(closure!.ledgerBytesRoot) || !rooted(closure!.timeBytesRoot) || !same(closure!.timeboxExtension, policy)) return fail()
+  if (refusal!.accepted !== false || refusal!.authorizing !== false || refusal!.currentCharged !== 1 || refusal!.cumulativeCharged !== 39 || refusal!.resultRoot !== result!.root || refusal!.closedAtMs !== closure!.readerCloseMs || !same(refusal!.readerInterval, closure!.readerInterval)) return fail()
+  if (carry!.authorizing !== false || carry!.accepted !== false || carry!.outcome !== "failed_result" || carry!.currentCharges !== 1 || carry!.cumulativeCharged !== 39 || carry!.closedAtMs !== closure!.readerCloseMs || carry!.closureRoot !== closure!.root || carry!.verificationRoot !== refusal!.root || carry!.verificationBytesRoot !== rawRoot(5) || carry!.entryBytesRoot !== rawRoot(2) || carry!.resultBytesRoot !== rawRoot(4) || carry!.terminalBytesRoot !== rawRoot(3) || !same(carry!.timeboxExtension, policy)) return fail()
+  if (hold!.mode !== "v15-4" || hold!.carryRoot !== carry!.root || hold!.carryBytesRoot !== rawRoot(7) || hold!.verificationRoot !== refusal!.root || hold!.verificationBytesRoot !== rawRoot(5) || hold!.entryBytesRoot !== rawRoot(2)) return fail()
+  if (pair!.authorizing !== false || pair!.historicalCharged !== 38 || pair!.cumulativeCharged !== 39 || pair!.baselineCarryRoot !== null || pair!.diagnosticCarryRoot !== carry!.root || pair!.priorClosureRoot !== allocation!.priorClosureRoot || pair!.lastRoute !== "diagnostic" || pair!.holdRoot !== hold!.root || pair!.holdBytesRoot !== rawRoot(8) || pair!.closedAtMs !== closure!.readerCloseMs || pair!.endsEnvelope !== false || pair!.endReason !== null || !same(pair!.timeboxExtension, policy)) return fail()
+  const survivorMap = (v: Record<string, any>) => {
+    if (!natural(v.allocatedDiskBytes) || v.allocatedDiskBytes > 12000000000 || !Array.isArray(v.survivors)) return fail()
+    const rows = new Map<string, number>()
+    for (const row of v.survivors) {
+      if (!exactKeys(row, ["identity", "allocatedBytes"]) || typeof row.identity !== "string" || row.identity.startsWith("/") || row.identity.includes("..") || row.identity.includes("\\") || rows.has(row.identity) || !natural(row.allocatedBytes)) return fail()
+      rows.set(row.identity, row.allocatedBytes)
+    }
+    if ([...rows.values()].reduce((sum, value) => sum + value, 0) > v.allocatedDiskBytes) return fail()
+    return rows
+  }
+  const inherited = allocation!.predecessor, carried = survivorMap(carry!), final = survivorMap(pair!), prior = survivorMap(inherited)
+  if (inherited.historicalPeakDiskBytes !== "unknown" || inherited.historicalPeakRssBytes !== "unknown" || prior.size < 970 || carried.size !== 1023 || final.size !== 1025 || inherited.allocatedDiskBytes < 27303936 || carry!.allocatedDiskBytes !== 28520448 || pair!.allocatedDiskBytes !== 28663808 || inherited.elapsedUpperBoundMs < 228267940 || pair!.cumulativeElapsedMs !== 237585642 || [...prior].some(([path, size]) => (carried.get(path) ?? -1) < size) || [...carried].some(([path, size]) => (final.get(path) ?? -1) < size) || carry!.allocatedDiskBytes < inherited.allocatedDiskBytes || pair!.allocatedDiskBytes < carry!.allocatedDiskBytes || pair!.cumulativeElapsedMs !== carry!.cumulativeElapsedMs || carry!.cumulativeElapsedMs !== closure!.closedElapsedMs || closure!.closedElapsedMs < inherited.elapsedUpperBoundMs || closure!.closedElapsedMs < policy.priorElapsedMs + closure!.readerCloseMs - policy.startedAtMs || !natural(closure!.readerStartMs) || closure!.readerStartMs < terminal!.wallObservedMs || closure!.readerCloseMs < closure!.readerStartMs) return fail()
+  if (entry!.head !== "be3509cbb0780dc68c8227f4ce27d78860998d1c" || allocation!.sourceRoot !== "sha256:f4c6324252682707ab59f93eb63170bdeeb962dd13dd7d008514a183d18591ed" || terminal!.status !== "child_exited" || terminal!.exitCode !== 0 || terminal!.signal !== null || carry!.closureRoot !== closure!.root || pair!.priorClosureRoot !== "sha256:f0ee5f7852e69e65a13abb664f3502ebf2a118c828953739e55cc7d12fd57b20") return fail()
+  const provenance = { allocationRoot: allocation!.root, entryBytesRoot: rawRoot(2), requestBytesRoot: rawRoot(1), sourceRoot: allocation!.sourceRoot, head: entry!.head, refusalRoot: refusal!.root, rootClosureRoot: closure!.root, completedHoldMetadataRoot: hold!.root, pairClosureRoot: pair!.root }
+  const historyRoot = labRoot("v15-4-failed-prefix-cost-only-v1", { pins: LEAN_RESOURCE_WINDOW_ARCHIVED_V15_4_PINS, provenance })
+  const predecessorBody = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 39, elapsedUpperBoundMs: Number(pair!.cumulativeElapsedMs), allocatedDiskBytes: Number(pair!.allocatedDiskBytes), historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot, survivors: pair!.survivors as LeanCorrectionPredecessor["survivors"] }
+  const body = { schemaVersion: "v15-4-failed-prefix-cost-only-v1" as const, authorizing: false as const, currentCharges: 1, cumulativeCharged: 39, carryRoot: pair!.root as LabRoot, holdRoot: hold!.root as LabRoot, provenance, identities: LEAN_RESOURCE_WINDOW_ARCHIVED_V15_4_PINS.map(pin => pin.path), predecessor: { ...predecessorBody, root: labRoot(predecessorBody.schemaVersion, predecessorBody) } }
+  return freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
+}
+
+/** Read only the exact finite pins, with owned regular no-follow descriptor custody. */
+export const readLeanResourceWindowArchivedPrefixV15_4 = (repositoryRoot = process.cwd()) => {
+  const base = resolve(repositoryRoot)
+  if (realpathSync(base) !== base) return fail()
+  const bytes = new Map<string, Uint8Array>(); let physicalBytes = 0
+  for (const pin of LEAN_RESOURCE_WINDOW_ARCHIVED_V15_4_PINS) {
+    const path = resolve(base, pin.path), stat = lstatSync(path)
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600 || stat.size !== pin.bytes || realpathSync(path) !== path) return fail()
+    const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
+    try {
+      const opened = fstatSync(fd)
+      if (!opened.isFile() || opened.uid !== stat.uid || opened.dev !== stat.dev || opened.ino !== stat.ino || opened.nlink !== 1 || opened.size !== pin.bytes || (opened.mode & 0o777) !== 0o600) return fail()
+      const raw = readFileSync(fd), final = fstatSync(fd)
+      if (final.size !== opened.size || final.mtimeMs !== opened.mtimeMs || final.ctimeMs !== opened.ctimeMs) return fail()
+      bytes.set(pin.path, raw); physicalBytes += opened.blocks * 512
+    } finally { closeSync(fd) }
+  }
+  return Object.freeze({ history: authenticateLeanResourceWindowArchivedPrefixV15_4(bytes), pinPhysicalBytes: physicalBytes })
+}
 const rooted = (v: unknown): v is LabRoot => typeof v === "string" && /^sha256:[a-f0-9]{64}$/u.test(v)
 const natural = (v: unknown): v is number => Number.isSafeInteger(v) && Number(v) >= 0
 const exactKeys = (value: unknown, keys: readonly string[]): boolean => exactLabKeys(value, [...keys])
@@ -390,7 +765,7 @@ export const leanResourceWindowDocumentsV15 = (route: Route, mode: LeanResourceW
   // Diagnostic and conditional baseline share one pair continuation/setup/close;
   // actual authorizations, helpers and review gates stay distinct per route.
   const pairPath = (role: string) => `${phase}265-16-POST-V14-RESOURCE-WINDOW-diagnostic-${mode}-${role}-v1.json`
-  return Object.freeze({ review: `${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v${mode === "v15-4" ? 6 : mode === "v15-3" ? 4 : 3}.md`, distinctionReview: path("POLICY-ATTESTATION"), dataReview: path("DATA-REVIEW", "md"), helperReview: path("HELPER-REVIEW", "md"), helper: `.strategy-lab/lean-resource-window-${route}-${mode}-helper.mts`, authorization: path("AUTHORIZATION"), setup: pairPath("SETUP"), continuation: pairPath("CONTINUATION"), pairClosure: pairPath("PAIR-CLOSURE"), carry: `${paths.temp}/terminal-carry-v15.json`, hold: `${paths.temp}/terminal-hold-complete-v15.json` })
+  return Object.freeze({ review: `${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v${mode === "v15-5" ? 7 : mode === "v15-4" ? 6 : mode === "v15-3" ? 4 : 3}.md`, distinctionReview: path("POLICY-ATTESTATION"), dataReview: path("DATA-REVIEW", "md"), helperReview: path("HELPER-REVIEW", "md"), helper: `.strategy-lab/lean-resource-window-${route}-${mode}-helper.mts`, authorization: path("AUTHORIZATION"), setup: pairPath("SETUP"), continuation: pairPath("CONTINUATION"), pairClosure: pairPath("PAIR-CLOSURE"), carry: `${paths.temp}/terminal-carry-v15.json`, hold: `${paths.temp}/terminal-hold-complete-v15.json` })
 }
 
 /** Full raw digests from the actual saved closed v14-1 metadata. This authority
