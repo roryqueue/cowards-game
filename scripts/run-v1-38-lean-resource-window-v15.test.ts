@@ -97,7 +97,7 @@ it("successor retained publication and called pair exhaustion use selected deadl
   expect(typeof retained.deriveLeanPostV13ClosedPairV14).toBe("function")
   const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-successor-retained-"))), b = lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY
   const old = allocation(), { root: _root, ...p } = old.predecessor, predecessor = { ...p, chargedMatches: 37, elapsedUpperBoundMs: 221730903 }
-  const { root: _allocationRoot, ...a } = old
+  const a = Object.fromEntries(["sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "route", "reuseGrantRoot", "supervisorDecisionRoot", "acceptedCheckRoot", "requestBytesRoot", "dataReviewRoot", "setupAccountingRoot", "predecessor", "startupPolicyRoot", "attemptOrdinal", "priorClosureRoot", "continuationRoot", "acceptedReaderCloseRoot", "timeboxExtension"].map(key => [key, old[key as keyof typeof old]]))
   const actual = lean.createLeanSupervisorCorrectionAllocation({ ...a, timeboxExtension: b, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, attemptOrdinal: 3, predecessor: { ...predecessor, root: labRoot(p.schemaVersion, predecessor) } } as Parameters<typeof lean.createLeanSupervisorCorrectionAllocation>[0], 8)
   const clock = vi.spyOn(Date, "now").mockReturnValue(1791571113000 + 1), usage = process.memoryUsage(), memory = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...usage, rss: 1000000000, arrayBuffers: 4096 })
   const manifest = vi.spyOn(correction, "leanCorrectionSourceManifest").mockReturnValue({ root: actual.sourceRoot, entries: [] })

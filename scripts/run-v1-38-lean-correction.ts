@@ -7,7 +7,7 @@ import { isLeanPreparationContinuationMode, isLeanPreparationContinuationExtensi
 import { authenticateLeanPreparationContinuationTerminalCarryV13, authenticateLeanPostV13ClosedPairV14, authenticateLeanResourceWindowClosedPairV15 } from "./lib/v1-38-lean-correction-retained.js"
 import { validateLeanPreparationHistoryV13, LEAN_PREPARATION_V13_HISTORY_PATHS } from "./lib/v1-38-lean-preparation-continuation-v13.js"
 import { isLeanPostV13FivePairMode, isLeanPostV13FivePairExtensionV14, LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION, LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS, type LeanPostV13FivePairOrdinal, type LeanPostV13FivePairMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { isLeanResourceWindowModeV15, isLeanResourceWindowExtensionV15, LEAN_RESOURCE_WINDOW_V15_POLICY, LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS, leanMemoryLimitForAllocation, leanResourcePolicyForAllocationV15, assertLeanAggregateMemoryV15, observeLeanResourceWindowDiskV15, type LeanResourceWindowModeV15 } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { isLeanResourceWindowModeV15, isLeanResourceWindowExtensionV15, leanResourceWindowPolicyForModeV15, LEAN_RESOURCE_WINDOW_V15_POLICY, LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS, leanMemoryLimitForAllocation, leanResourcePolicyForAllocationV15, assertLeanAggregateMemoryV15, observeLeanResourceWindowDiskV15, type LeanResourceWindowModeV15, type LeanResourceWindowPolicyV15 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { assertLeanProcessMemoryV15 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanResourceWindowDocumentsV15, LEAN_RESOURCE_WINDOW_V15_HISTORY_PINS, LEAN_RESOURCE_WINDOW_ARCHIVED_V15_2_PINS, authenticateLeanResourceWindowArchivedPrefixV15_2, authenticateLeanResourceWindowPriorPairV15 as authenticateResourceWindowPriorMetadataV15, authenticateLeanResourceWindowAcceptedJoinV15 as validateResourceWindowAcceptedJoinV15 } from "./lib/v1-38-lean-resource-window-v15.js"
 import { leanFivePairDocumentsV14, validateLeanPostV13HistoryV14, LEAN_FIVE_PAIR_V14_HISTORY_PINS } from "./lib/v1-38-lean-post-v13-five-pair.js"
@@ -102,12 +102,15 @@ export const leanRemainingDocumentsV9 = (route: LeanCorrectionRoute, mode: LeanR
  * constants/paths; no authority follows from selecting this family. */
 export type LeanPreparationFamilyMode = LeanPreparationContinuationMode | LeanPostV13FivePairMode | LeanResourceWindowModeV15
 export const isLeanPreparationFamilyMode = (mode: unknown): mode is LeanPreparationFamilyMode => isLeanPreparationContinuationMode(mode) || isLeanPostV13FivePairMode(mode) || isLeanResourceWindowModeV15(mode)
-export const leanPreparationProtocolBinding = (mode: LeanPreparationFamilyMode) => isLeanResourceWindowModeV15(mode) ? LEAN_RESOURCE_WINDOW_V15_POLICY : isLeanPostV13FivePairMode(mode) ? LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION : LEAN_PREPARATION_CONTINUATION_V13_EXTENSION
+export const leanPreparationProtocolBinding = (mode: LeanPreparationFamilyMode) => isLeanResourceWindowModeV15(mode) ? leanResourceWindowPolicyForModeV15(mode) : isLeanPostV13FivePairMode(mode) ? LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION : LEAN_PREPARATION_CONTINUATION_V13_EXTENSION
 export const leanPreparationProtocolDocuments = (route: LeanCorrectionRoute, mode: LeanPreparationFamilyMode) => isLeanResourceWindowModeV15(mode) ? leanResourceWindowDocumentsV15(route, mode) : isLeanPostV13FivePairMode(mode) ? leanFivePairDocumentsV14(route, mode) : leanPreparationContinuationDocumentsV13(route, mode)
 export const leanPreparationProtocolVersion = (mode: LeanPreparationFamilyMode) => isLeanResourceWindowModeV15(mode) ? 15 : isLeanPostV13FivePairMode(mode) ? 14 : 13
 export const leanPreparationProtocolSchema = (mode: LeanPreparationFamilyMode, suffix: string) => `lean-${isLeanResourceWindowModeV15(mode) ? "resource-window" : isLeanPostV13FivePairMode(mode) ? "post-v13-five-pair" : "preparation-continuation"}-${suffix}-v${leanPreparationProtocolVersion(mode)}`
 const leanRetryExtensionDocumentsV8 = (extension: LeanRetryTimeboxExtension, mode: LeanRetryMode) => {
-  if (isLeanResourceWindowExtensionV15(extension)) { if (!isLeanResourceWindowModeV15(mode)) return fail("SUPERVISOR_REQUEST"); return { decision: `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-REPLACEMENT-WINDOW-APPROVAL-20261009.md`, plan: `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-PLAN-v1.md` } }
+  if (isLeanResourceWindowExtensionV15(extension)) {
+    if (!isLeanResourceWindowModeV15(mode) || extension !== leanResourceWindowPolicyForModeV15(mode)) return fail("SUPERVISOR_REQUEST")
+    return mode === "v15-3" ? { decision: `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-TIMING-APPROVAL-20261009.md`, plan: `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-ARCHIVED-PREFIX-PLAN-v3.md` } : { decision: `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-REPLACEMENT-WINDOW-APPROVAL-20261009.md`, plan: `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-PLAN-v1.md` }
+  }
   if (isLeanResourceWindowModeV15(mode)) return fail("SUPERVISOR_REQUEST")
   if (isLeanPostV13FivePairExtensionV14(extension)) { if (!isLeanPostV13FivePairMode(mode)) return fail("SUPERVISOR_REQUEST"); return { decision: `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-BOUNDED-CONTINUATION-APPROVAL-20261008.md`, plan: `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-FIVE-PAIR-ADAPTER-PLAN-v1.md` } }
   if (isLeanPostV13FivePairMode(mode)) return fail("SUPERVISOR_REQUEST")
@@ -213,7 +216,7 @@ export const assertLeanCorrectionAdmissionTime = (priorMs: number, start: Admiss
   const caps = allocation === undefined ? LEAN_CAPS : leanCapsForAllocation(allocation)
   const extension = allocation && "timeboxExtension" in allocation ? allocation.timeboxExtension : undefined
   const elapsed = Math.max(priorMs + leanCorrectionAdmissionElapsed(start, now), extension ? leanRetryRootElapsedFloorV8(now.wallStartMs, extension) : 0)
-  const reserve = LEAN_CAPS.matchMs + (allocation && leanResourcePolicyForAllocationV15(allocation) ? LEAN_RESOURCE_WINDOW_V15_POLICY.reserveMs : LEAN_CORRECTION_RESERVE.cleanupMs + LEAN_CORRECTION_RESERVE.terminalMs + LEAN_CORRECTION_RESERVE.checkMs + LEAN_CORRECTION_RESERVE.replayMs)
+  const reserve = LEAN_CAPS.matchMs + (allocation ? leanResourcePolicyForAllocationV15(allocation)?.reserveMs ?? LEAN_CORRECTION_RESERVE.cleanupMs + LEAN_CORRECTION_RESERVE.terminalMs + LEAN_CORRECTION_RESERVE.checkMs + LEAN_CORRECTION_RESERVE.replayMs : LEAN_CORRECTION_RESERVE.cleanupMs + LEAN_CORRECTION_RESERVE.terminalMs + LEAN_CORRECTION_RESERVE.checkMs + LEAN_CORRECTION_RESERVE.replayMs)
   if (!Number.isSafeInteger(priorMs) || priorMs < 3319046 || !Number.isSafeInteger(elapsed) || elapsed + reserve >= caps.elapsedMs) return fail("ADMISSION_TIME")
   return elapsed
 }
@@ -275,7 +278,7 @@ export const closeLeanCorrectionAdmission = (carrier: ReturnType<typeof beginLea
 export const leanCorrectionSourceManifest = (supervisor: LeanSupervisorMode = false, timeboxExtension?: LeanRetryTimeboxExtension): { entries: Array<{ path: string; root: string }>; root: LabRoot } => {
   if (isLeanResourceWindowModeV15(supervisor)) {
     const extension = admitLeanRetryTimeboxExtension(timeboxExtension)
-    if (!isLeanResourceWindowExtensionV15(extension)) return fail("SUPERVISOR_REQUEST")
+    if (!isLeanResourceWindowExtensionV15(extension) || extension !== leanResourceWindowPolicyForModeV15(supervisor)) return fail("SUPERVISOR_REQUEST")
     assertLeanRetryExtensionDocumentsV8(extension, supervisor)
     const closure = new Map(leanCorrectionSourceManifest("v14-1", LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION).entries.map(entry => [entry.path, entry]))
     for (const path of ["scripts/lib/v1-38-lean-checkpoint-observation-v15.ts", "scripts/run-v1-38-lean-checkpoint-observation-v15.test.ts", `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-CHECKPOINT-REPAIR-PLAN-v1.md`, `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-CHECKPOINT-REPAIR-PLAN-CHECK-v1.md`, `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-CHECKPOINT-REPAIR-PLAN-CHECK-v2.md`]) closure.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
@@ -393,7 +396,7 @@ export const readLeanCorrectionJson = (path: string, limit = 262144): unknown =>
 }
 export const publishLeanCorrection = (path: string, value: unknown, ledger?: LeanExperimentLedger): void => {
   const bytes = leanCanonicalBytes(value)
-  const publicationMemory = (policy: typeof LEAN_RESOURCE_WINDOW_V15_POLICY) => {
+  const publicationMemory = (policy: LeanResourceWindowPolicyV15) => {
     const ownRss = Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024) + bytes.length
     if (ledger && existsSync(join(ledger.directory, "entry.json"))) {
       const entry = readLeanChildEntry(ledger)
@@ -409,9 +412,9 @@ export const publishLeanCorrection = (path: string, value: unknown, ledger?: Lea
   const prospectivePublicationGuard = (projected = Math.ceil(bytes.length / 4096) * 4096) => {
     if (!selectedPublication || ledger) return
     const { mode, route, paths } = selectedPublication, b = leanPreparationProtocolBinding(mode)
-    if (!same(b, LEAN_RESOURCE_WINDOW_V15_POLICY)) return fail("RESOURCE_POLICY")
+    if (!isLeanResourceWindowExtensionV15(b) || b !== leanResourceWindowPolicyForModeV15(mode)) return fail("RESOURCE_POLICY")
     assertLeanRetryExtensionDocumentsV8(b, mode)
-    publicationMemory(LEAN_RESOURCE_WINDOW_V15_POLICY)
+    publicationMemory(b)
     const history = readLeanResourceWindowPriorPairV15(mode), docs = leanResourceWindowDocumentsV15(route, mode), inventory = inventoryLeanTwoPairNoRefundV11(history.predecessor, [paths.temp, paths.store, paths.allocation, paths.request, ...Object.values(docs), ...LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS])
     const scratch = process.memoryUsage().arrayBuffers + (existsSync(paths.temp) ? measureLeanPhysicalBytes(paths.temp) : 0), elapsed = leanRetryRootElapsedFloorV8(Date.now(), b)
     if (inventory.allocatedDiskBytes + projected + 65536 > LEAN_CAPS.retainedBytes || scratch + bytes.length > LEAN_CAPS.scratchBytes || inventory.allocatedDiskBytes + projected + scratch + bytes.length + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || elapsed + b.reserveMs >= b.elapsedMs) return fail("CAPACITY")
@@ -421,7 +424,7 @@ export const publishLeanCorrection = (path: string, value: unknown, ledger?: Lea
   // every write, not only before the later carry publisher is reached.
   const guardV13 = (projected = Math.ceil(bytes.length / 4096) * 4096) => {
     if (ledger && leanResourcePolicyForAllocationV15(ledger.allocation)) {
-      const b = LEAN_RESOURCE_WINDOW_V15_POLICY, physical = cumulativeLeanPhysicalBytes(ledger), disk = observeLeanResourceWindowDiskV15(ledger), elapsed = Math.max(currentLeanElapsedMs(ledger), leanRetryRootElapsedFloorV8(Date.now(), b))
+      const b = leanResourcePolicyForAllocationV15(ledger.allocation)!, physical = cumulativeLeanPhysicalBytes(ledger), disk = observeLeanResourceWindowDiskV15(ledger), elapsed = Math.max(currentLeanElapsedMs(ledger), leanRetryRootElapsedFloorV8(Date.now(), b))
       publicationMemory(b)
       if (physical + projected + 65536 > LEAN_CAPS.retainedBytes || disk.bufferBytes + disk.scratchBytes + bytes.length > LEAN_CAPS.scratchBytes || physical + projected + disk.bufferBytes + disk.scratchBytes + bytes.length + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || elapsed + b.reserveMs >= b.elapsedMs) return fail("CAPACITY")
       return
@@ -1684,7 +1687,7 @@ export const leanCorrectionMain = async (args: readonly string[]) => {
   } else if (isLeanTwoPairMode(supervisor)) {
     assertLeanPreparedTwoPairPredecessorV11(allocation.predecessor, inspectLeanTwoPairPredecessorV11(route, preparedAtMs, supervisor))
   } else assertLeanPreparedPredecessor(allocation.predecessor, supervisor ? inspectLeanSupervisorCorrectionPredecessor(route, preparedAtMs, supervisor) : inspectLeanCorrectionPredecessor(route, carrier.root))
-  const result = await runLeanBoundedParent({ ledger, requestPath: path, allocationPath: paths.allocation, store: resolve(paths.store), sourceRoot: request.sourceRoot, manifestRoot: () => leanCorrectionSourceManifest(supervisor, request.timeboxExtension).root, childMode: leanCorrectionChildMode(route, supervisor), ...(supervisor ? { supervisorObservation: true as const } : {}), ...(isLeanRetryMode(supervisor) ? { onChildCreated: () => { childSpawned = true }, onPreEntryCleanup: (value: { childPid: number; exitCode: number | null; signal: string | null }) => { cleanup = value } } : {}), prospectiveStart: carrier, beforeRelease: () => { assertLeanCorrectionAdmissionTime(readLeanTimeAccounting(ledger).closedElapsedMs, carrier, admissionClock(), ledger.allocation) }, terminalReserveMs: isLeanResourceWindowModeV15(supervisor) ? LEAN_RESOURCE_WINDOW_V15_POLICY.reserveMs : LEAN_CORRECTION_RESERVE.cleanupMs + LEAN_CORRECTION_RESERVE.terminalMs + LEAN_CORRECTION_RESERVE.checkMs + LEAN_CORRECTION_RESERVE.replayMs })
+  const result = await runLeanBoundedParent({ ledger, requestPath: path, allocationPath: paths.allocation, store: resolve(paths.store), sourceRoot: request.sourceRoot, manifestRoot: () => leanCorrectionSourceManifest(supervisor, request.timeboxExtension).root, childMode: leanCorrectionChildMode(route, supervisor), ...(supervisor ? { supervisorObservation: true as const } : {}), ...(isLeanRetryMode(supervisor) ? { onChildCreated: () => { childSpawned = true }, onPreEntryCleanup: (value: { childPid: number; exitCode: number | null; signal: string | null }) => { cleanup = value } } : {}), prospectiveStart: carrier, beforeRelease: () => { assertLeanCorrectionAdmissionTime(readLeanTimeAccounting(ledger).closedElapsedMs, carrier, admissionClock(), ledger.allocation) }, terminalReserveMs: isLeanResourceWindowModeV15(supervisor) ? leanResourceWindowPolicyForModeV15(supervisor).reserveMs : LEAN_CORRECTION_RESERVE.cleanupMs + LEAN_CORRECTION_RESERVE.terminalMs + LEAN_CORRECTION_RESERVE.checkMs + LEAN_CORRECTION_RESERVE.replayMs })
   completed = true
   return result
   } finally { closeLeanCorrectionAdmission(carrier, accountingLedger); if (!completed && (route === "diagnostic" || isLeanTwentySixMode(supervisor) || isLeanTwoPairMode(supervisor) || isLeanSupervisorRetestMode(supervisor) || isLeanPreparationContinuationMode(supervisor) || isLeanPreparationFamilyMode(supervisor)) && isLeanRetryMode(supervisor) && !existsSync(join(paths.store, "entry.json"))) publishLeanRetryAdmissionFailureV8(supervisor, carrier.mode, childSpawned, cleanup, route) }
@@ -1975,13 +1978,13 @@ export const readLeanResourceWindowPriorPairV15 = (mode: LeanResourceWindowModeV
   return authenticateResourceWindowPriorMetadataV15(bytes, mode)
 }
 export const createLeanResourceWindowSetupV15 = (mode: LeanResourceWindowModeV15, observedAtMs: number) => {
-  const b = LEAN_RESOURCE_WINDOW_V15_POLICY
+  const b = leanResourceWindowPolicyForModeV15(mode)
   if (!isLeanResourceWindowModeV15(mode) || !Number.isSafeInteger(observedAtMs) || observedAtMs < b.actualResumeMs || observedAtMs + b.reserveMs + LEAN_CAPS.matchMs >= b.absoluteDeadlineMs) return fail("SETUP_WITNESS")
-  const body = { schemaVersion: "lean-resource-window-setup-witness-v15", timeboxExtension: b, attemptOrdinal: leanRetryOrdinal(mode), startedAtMs: b.startedAtMs, observedAtMs, priorElapsedMs: b.priorElapsedMs, consumedTimeBytesRoot: LEAN_RESOURCE_WINDOW_V15_HISTORY_PINS[1].bytesRoot, decisionRoot: b.approvalRoot, memoryApprovalRoot: b.memoryApprovalRoot, threadId: "019fa652-915a-7183-9af1-3b3c05868d86", turnId: b.turnId, source: "codex-task-event-custody" }
+  const body = { schemaVersion: "lean-resource-window-setup-witness-v15", timeboxExtension: b, attemptOrdinal: leanRetryOrdinal(mode), startedAtMs: b.startedAtMs, observedAtMs, priorElapsedMs: b.priorElapsedMs, consumedTimeBytesRoot: LEAN_RESOURCE_WINDOW_V15_HISTORY_PINS[1].bytesRoot, decisionRoot: b.approvalRoot, memoryApprovalRoot: b.memoryApprovalRoot, ...(mode === "v15-2" ? { threadId: "019fa652-915a-7183-9af1-3b3c05868d86", turnId: b.turnId, source: "codex-task-event-custody" } : { approvalPath: `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-TIMING-APPROVAL-20261009.md`, actualResumeMs: b.actualResumeMs, source: "exact-successor-approval-document" }) }
   return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 export const readLeanResourceWindowSetupV15 = (mode: LeanResourceWindowModeV15) => {
-  assertLeanRetryExtensionDocumentsV8(LEAN_RESOURCE_WINDOW_V15_POLICY, mode)
+  assertLeanRetryExtensionDocumentsV8(leanResourceWindowPolicyForModeV15(mode), mode)
   const value = readLeanCorrectionJson(leanRetrySetupPath(mode)) as ReturnType<typeof createLeanResourceWindowSetupV15>
   if (!same(value, createLeanResourceWindowSetupV15(mode, value.observedAtMs))) return fail("SETUP_WITNESS")
   return value
@@ -1993,8 +1996,8 @@ export const createLeanResourceWindowRequestDraftV15 = (mode: LeanResourceWindow
   return Object.freeze({ ...createLeanRemainingRequestDraftV9(mode, route, common), schemaVersion: "lean-correction-supervisor-request-v15", helperReviewPath: docs.helperReview, helperReviewRoot, helperPath, helperBytesRoot })
 }
 export const createLeanResourceWindowContinuationV15 = (mode: LeanResourceWindowModeV15, input: { priorClosureRoot: LabRoot; sourceRoot: LabRoot; reviewRoot: LabRoot; cumulativeCharged: number; cumulativeElapsedMs: number; allocatedDiskBytes: number; distinction: { kind: "approved_prospective_memory_policy"; evidenceRoot: LabRoot; reviewRoot: LabRoot } }) => {
-  const b = LEAN_RESOURCE_WINDOW_V15_POLICY
-  if (!isLeanResourceWindowModeV15(mode) || !exactLabKeys(input, ["priorClosureRoot", "sourceRoot", "reviewRoot", "cumulativeCharged", "cumulativeElapsedMs", "allocatedDiskBytes", "distinction"]) || ![input.priorClosureRoot, input.sourceRoot, input.reviewRoot].every(root) || !Number.isSafeInteger(input.cumulativeCharged) || input.cumulativeCharged < b.charged || input.cumulativeCharged > b.charged + 37 * (leanRetryOrdinal(mode) - 2) || !Number.isSafeInteger(input.cumulativeElapsedMs) || input.cumulativeElapsedMs < b.priorElapsedMs + b.actualResumeMs - b.startedAtMs || !Number.isSafeInteger(input.allocatedDiskBytes) || input.allocatedDiskBytes < b.physicalFloorBytes || input.allocatedDiskBytes > LEAN_CAPS.retainedBytes || !exactLabKeys(input.distinction, ["kind", "evidenceRoot", "reviewRoot"]) || input.distinction.kind !== "approved_prospective_memory_policy" || input.distinction.evidenceRoot !== b.memoryApprovalRoot || !root(input.distinction.reviewRoot)) return fail("DIAGNOSTIC_CUSTODY")
+  const b = leanResourceWindowPolicyForModeV15(mode)
+  if (!isLeanResourceWindowModeV15(mode) || !exactLabKeys(input, ["priorClosureRoot", "sourceRoot", "reviewRoot", "cumulativeCharged", "cumulativeElapsedMs", "allocatedDiskBytes", "distinction"]) || ![input.priorClosureRoot, input.sourceRoot, input.reviewRoot].every(root) || !Number.isSafeInteger(input.cumulativeCharged) || input.cumulativeCharged < b.charged || input.cumulativeCharged !== b.charged || !Number.isSafeInteger(input.cumulativeElapsedMs) || input.cumulativeElapsedMs < b.priorElapsedMs + b.actualResumeMs - b.startedAtMs || !Number.isSafeInteger(input.allocatedDiskBytes) || input.allocatedDiskBytes < b.physicalFloorBytes || input.allocatedDiskBytes > LEAN_CAPS.retainedBytes || !exactLabKeys(input.distinction, ["kind", "evidenceRoot", "reviewRoot"]) || input.distinction.kind !== "approved_prospective_memory_policy" || input.distinction.evidenceRoot !== b.memoryApprovalRoot || !root(input.distinction.reviewRoot)) return fail("DIAGNOSTIC_CUSTODY")
   const body = { schemaVersion: leanPreparationProtocolSchema(mode, "continuation"), timeboxExtension: b, attemptOrdinal: leanRetryOrdinal(mode), ...input }
   return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
 }
@@ -2003,7 +2006,7 @@ export const authenticateLeanResourceWindowAcceptedJoinV15 = (mode: LeanResource
   // This invokes the original complete accepted-result audit, including real
   // immutable allocation, source/HEAD, request, child, reason and actual FINAL.
   const closure = authenticateLeanRetryClosureV8(mode), ledger = openLeanLedger(leanCorrectionRoutePaths("diagnostic", mode).store), allocation = ledger.allocation
-  if (!("route" in allocation) || allocation.route !== "diagnostic" || leanSupervisorAllocationMode(allocation) !== mode || !same(closure.timeboxExtension, LEAN_RESOURCE_WINDOW_V15_POLICY) || closure.cumulativeCharged !== allocation.predecessor.chargedMatches + 1 || closure.allocationRoot !== allocation.root || closure.sourceRoot !== allocation.sourceRoot) return fail("ACCEPTED_CHECK")
+  if (!("route" in allocation) || allocation.route !== "diagnostic" || leanSupervisorAllocationMode(allocation) !== mode || !same(closure.timeboxExtension, leanResourceWindowPolicyForModeV15(mode)) || closure.cumulativeCharged !== allocation.predecessor.chargedMatches + 1 || closure.allocationRoot !== allocation.root || closure.sourceRoot !== allocation.sourceRoot) return fail("ACCEPTED_CHECK")
   const accepted = Object.freeze({ root: closure.checkRoot!, bytesRoot: closure.checkBytesRoot!, allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, head: closure.head!, attemptOrdinal: closure.attemptOrdinal, readerCloseMs: closure.readerCloseMs!, cumulativeCharged: closure.cumulativeCharged })
   validateResourceWindowAcceptedJoinV15(mode, closure, accepted)
   return Object.freeze({ closure, accepted })
@@ -2031,7 +2034,7 @@ export const validateLeanResourceWindowContinuationV15 = (value: Record<string, 
   for (const path of [docs.dataReview, docs.helperReview]) if (readFileSync(path, "utf8").split("\n---", 2)[0]!.match(/^continuation_distinction_root: (sha256:[a-f0-9]{64})$/mu)?.[1] !== leanBytesRoot(bytes)) return fail("DIAGNOSTIC_CUSTODY")
 }
 export const assertLeanResourceWindowReservationV15 = (route: LeanCorrectionRoute, mode: LeanResourceWindowModeV15) => {
-  const b = LEAN_RESOURCE_WINDOW_V15_POLICY, paths = leanCorrectionRoutePaths(route, mode), docs = leanResourceWindowDocumentsV15(route, mode), now = Date.now(), history = readLeanResourceWindowPriorPairV15(mode)
+  const b = leanResourceWindowPolicyForModeV15(mode), paths = leanCorrectionRoutePaths(route, mode), docs = leanResourceWindowDocumentsV15(route, mode), now = Date.now(), history = readLeanResourceWindowPriorPairV15(mode)
   if (now + b.reserveMs + LEAN_CAPS.matchMs >= b.absoluteDeadlineMs || Math.max(history.predecessor.elapsedUpperBoundMs, leanRetryRootElapsedFloorV8(now, b)) + b.reserveMs + LEAN_CAPS.matchMs >= b.elapsedMs || [paths.store, paths.allocation, docs.carry, docs.pairClosure, join(paths.temp, "admission-prepare-start.json"), join(paths.temp, "admission-run-start.json")].some(path => existsSync(path))) return fail("SPENT_DESTINATION")
   if (route === "baseline") {
     const joined = authenticateLeanResourceWindowAcceptedJoinV15(mode), carry = authenticateLeanPreparationContinuationTerminalCarryV13(mode, "diagnostic")
@@ -2043,7 +2046,7 @@ export const assertLeanResourceWindowReservationV15 = (route: LeanCorrectionRout
   return history
 }
 export const inspectLeanResourceWindowPredecessorV15 = (route: LeanCorrectionRoute, atMs: number, mode: LeanResourceWindowModeV15, purpose?: unknown, acceptedJoin?: ReturnType<typeof authenticateLeanResourceWindowAcceptedJoinV15>): LeanCorrectionPredecessor => {
-  const b = LEAN_RESOURCE_WINDOW_V15_POLICY, witness = readLeanResourceWindowSetupV15(mode), history = readLeanResourceWindowPriorPairV15(mode), docs = leanResourceWindowDocumentsV15(route, mode), current = leanCorrectionRoutePaths(route, mode)
+  const b = leanResourceWindowPolicyForModeV15(mode), witness = readLeanResourceWindowSetupV15(mode), history = readLeanResourceWindowPriorPairV15(mode), docs = leanResourceWindowDocumentsV15(route, mode), current = leanCorrectionRoutePaths(route, mode)
   if (!Number.isSafeInteger(atMs) || atMs < witness.observedAtMs || atMs + b.reserveMs >= b.absoluteDeadlineMs) return fail("DIAGNOSTIC_CUSTODY")
   const acceptedLineage = purpose !== undefined && readLeanRemainingAcceptedLineagePurposeV9(purpose) === mode, baseline = leanCorrectionRoutePaths("baseline", mode)
   if (acceptedLineage && route !== "diagnostic" || route === "diagnostic" && !acceptedLineage && [baseline.store, baseline.allocation, join(baseline.temp, "admission-prepare-start.json"), leanResourceWindowDocumentsV15("baseline", mode).carry].some(path => existsSync(path))) return fail("SPENT_DESTINATION")
@@ -2074,7 +2077,7 @@ export const validateLeanPreparationContinuationAuthorizationV13 = (value: unkno
   const mode: LeanPreparationFamilyMode = isLeanResourceWindowExtensionV15(request.timeboxExtension) ? `v15-${request.attemptOrdinal}` as LeanResourceWindowModeV15 : isLeanPostV13FivePairExtensionV14(request.timeboxExtension) ? `v14-${request.attemptOrdinal}` as LeanPostV13FivePairMode : "v13-1"
   if (!isLeanPreparationFamilyMode(mode)) return fail("SUPERVISOR_REQUEST")
   const b = leanPreparationProtocolBinding(mode), authorization = value as Record<string, unknown>, { root: claimed, ...ab } = authorization
-  if (!exactLabKeys(authorization, ["schemaVersion", "timeboxExtension", "approved", "executionAuthorized", "route", "attemptOrdinal", "sourceRoot", "approvalRoot", "planRoot", "policyRoot", "requestDataRoot", "helperPath", "helperBytesRoot", "helperReviewRoot", "authorAgent", "reviewerAgent", "root"]) || authorization.schemaVersion !== leanPreparationProtocolSchema(mode, "execution-authorization") || !same(authorization.timeboxExtension, b) || authorization.approved !== true || authorization.executionAuthorized !== true || authorization.route !== route || authorization.attemptOrdinal !== request.attemptOrdinal || authorization.sourceRoot !== request.sourceRoot || authorization.approvalRoot !== b.approvalRoot || authorization.planRoot !== b.planRoot || authorization.policyRoot !== b.root || authorization.requestDataRoot !== leanCorrectionRequestDataRoot(request) || authorization.helperPath !== request.helperPath || authorization.helperBytesRoot !== request.helperBytesRoot || authorization.helperReviewRoot !== request.helperReviewRoot || authorization.authorAgent !== "/root" || !admitsLeanSupervisorReviewAgents(authorization.authorAgent, authorization.reviewerAgent) || claimed !== labRoot(String(authorization.schemaVersion), ab) || request.authorizationRoot !== leanBytesRoot(leanCanonicalBytes(authorization))) return fail("SUPERVISOR_REQUEST")
+  if (!exactLabKeys(authorization, ["schemaVersion", "timeboxExtension", "approved", "executionAuthorized", "route", "attemptOrdinal", "sourceRoot", "approvalRoot", "planRoot", "policyRoot", "requestDataRoot", "helperPath", "helperBytesRoot", "helperReviewRoot", "authorAgent", "reviewerAgent", "root"]) || authorization.schemaVersion !== leanPreparationProtocolSchema(mode, "execution-authorization") || !same(request.timeboxExtension, b) || !same(authorization.timeboxExtension, b) || authorization.approved !== true || authorization.executionAuthorized !== true || authorization.route !== route || authorization.attemptOrdinal !== request.attemptOrdinal || authorization.sourceRoot !== request.sourceRoot || authorization.approvalRoot !== b.approvalRoot || authorization.planRoot !== b.planRoot || authorization.policyRoot !== b.root || authorization.requestDataRoot !== leanCorrectionRequestDataRoot(request) || authorization.helperPath !== request.helperPath || authorization.helperBytesRoot !== request.helperBytesRoot || authorization.helperReviewRoot !== request.helperReviewRoot || authorization.authorAgent !== "/root" || !admitsLeanSupervisorReviewAgents(authorization.authorAgent, authorization.reviewerAgent) || claimed !== labRoot(String(authorization.schemaVersion), ab) || request.authorizationRoot !== leanBytesRoot(leanCanonicalBytes(authorization))) return fail("SUPERVISOR_REQUEST")
 }
 export const readLeanPreparationContinuationRequestV13 = (path: string, route: LeanCorrectionRoute, mode: LeanPreparationFamilyMode) => readLeanPreparationContinuationRequestWithPurposeV13(path, route, mode)
 export const readLeanPostV13RequestV14 = (path: string, route: LeanCorrectionRoute, mode: LeanPostV13FivePairMode) => {
