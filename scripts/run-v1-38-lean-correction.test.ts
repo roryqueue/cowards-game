@@ -4,6 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { EventEmitter } from "node:events"
 import type { ChildProcess } from "node:child_process"
+import { execFileSync } from "node:child_process"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { LEAN_CAPS, createLeanCorrectionAllocation, admitLeanAllocation, leanWritablePaths, type LeanCorrectionPredecessor } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import * as accounting from "../packages/strategy-lab/src/league/lean-experiment.js"
@@ -15,6 +16,27 @@ import * as retainedTwoPair from "./lib/v1-38-lean-correction-retained.js"
 import * as startupResource from "./lib/v1-38-lean-resource-window-v15.js"
 
 describe("startup-origin-v8 exact source and archive selectors", () => {
+  it("[startup-origin-v8] binds regular reviewed-tree blobs and refuses the untracked file that git diff misses", () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-startup-tree-")))
+    const git = (args: string[]) => execFileSync("git", args, { cwd: directory, maxBuffer: 262144 })
+    try {
+      git(["init", "--quiet"])
+      writeFileSync(join(directory, "committed.ts"), "INERT_COMMITTED_BYTES")
+      git(["add", "committed.ts"])
+      git(["-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false", "-c", "user.name=/root/execute_265_startup_attribution", "-c", "user.email=inert@example.invalid", "commit", "--quiet", "-m", "NON_AUTHORIZING inert fixture"])
+      const reviewed = git(["rev-parse", "HEAD"]).toString().trim(), entry = { path: "committed.ts", root: accounting.leanBytesRoot(readFileSync(join(directory, "committed.ts"))) }
+      const manifest = { entries: [entry], root: labRoot("inert-manifest", 1) }
+      const check = (entries = manifest.entries) => (correction as any).assertLeanStartupReviewedTreeV8(reviewed, { ...manifest, entries }, directory)
+      expect(() => check()).not.toThrow()
+      writeFileSync(join(directory, "untracked.ts"), "INERT_UNTRACKED_BYTES")
+      expect(() => git(["diff", "--exit-code", reviewed, "--", "committed.ts", "untracked.ts"])).not.toThrow()
+      expect(() => check([...manifest.entries, { path: "untracked.ts", root: accounting.leanBytesRoot(readFileSync(join(directory, "untracked.ts"))) }])).toThrow()
+      expect(() => check([{ ...entry, root: labRoot("inert-mismatch", 1) }])).toThrow()
+      symlinkSync("committed.ts", join(directory, "symlink.ts")); git(["add", "symlink.ts"])
+      git(["-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false", "-c", "user.name=/root/execute_265_startup_attribution", "-c", "user.email=inert@example.invalid", "commit", "--quiet", "-m", "NON_AUTHORIZING symlink fixture"])
+      expect(() => (correction as any).assertLeanStartupReviewedTreeV8(git(["rev-parse", "HEAD"]).toString().trim(), { ...manifest, entries: [{ path: "symlink.ts", root: accounting.leanBytesRoot(Buffer.from("committed.ts")) }] }, directory)).toThrow()
+    } finally { rmSync(directory, { recursive: true, force: true }) }
+  })
   it("[startup-origin-v8] requires its own semantic continuation, actual independent review, and archived4 costs", () => {
     const mode = "v15-5" as const, b = accounting.LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY, docs = startupResource.leanResourceWindowDocumentsV15("diagnostic", mode)
     const r = (n: number) => labRoot("NON_AUTHORIZING-startup-continuation", n), files = correction.LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_REVIEW_FILES, sourceRoot = r(1), commit = "a".repeat(40)
