@@ -19,6 +19,46 @@ const successorInput = () => {
   const body = { ...prior, chargedMatches: 37, elapsedUpperBoundMs: 221730903 }
   return { ...old, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, timeboxExtension: b, attemptOrdinal: 3 as const, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
 }
+const policyCacheInput = (route: "diagnostic" | "baseline" = "diagnostic", count = route === "baseline" ? 971 : 970) => {
+  const old = successorInput(), b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY
+  const { root: _root, ...prior } = old.predecessor
+  const body = { ...prior, chargedMatches: route === "baseline" ? 39 : 38, elapsedUpperBoundMs: 228267940, allocatedDiskBytes: 27303936, survivors: Array.from({ length: count }, (_, n) => ({ identity: `.strategy-lab/non-authorizing-cache-${n}`, allocatedBytes: 0 })) }
+  return { ...old, route, attemptOrdinal: 4 as const, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, timeboxExtension: b, acceptedCheckRoot: route === "baseline" ? r(40) : null, acceptedReaderCloseRoot: route === "baseline" ? r(41) : null, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
+}
+it("policy cache hits the exact host-returned authentic-size diagnostic and 36-slot baseline, never caller clones", () => {
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY).toBeDefined()
+  for (const route of ["diagnostic", "baseline"] as const) {
+    const caller = lean.createLeanSupervisorCorrectionAllocation(policyCacheInput(route), 8)
+    const a = lean.admitLeanAllocation(caller), before = lean.readLeanPolicyCacheCountersV15()
+    expect(a.slots).toHaveLength(route === "baseline" ? 36 : 1)
+    expect(lean.leanResourcePolicyForAllocationV15(a)).toBe(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY)
+    expect(lean.leanResourcePolicyForAllocationV15(a)).toBe(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY)
+    expect(lean.leanCapsForAllocation(a)).toBe(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_CAPS)
+    expect(lean.leanCapsForAllocation(a)).toBe(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_CAPS)
+    expect(lean.readLeanPolicyCacheCountersV15().hits - before.hits).toBe(4)
+    const clone = JSON.parse(JSON.stringify(a)), miss = lean.readLeanPolicyCacheCountersV15().misses
+    lean.leanResourcePolicyForAllocationV15(clone); lean.leanResourcePolicyForAllocationV15(clone)
+    expect(lean.readLeanPolicyCacheCountersV15().misses - miss).toBe(2)
+    clone.caps.totalBytes++
+    expect(() => lean.leanResourcePolicyForAllocationV15(clone)).toThrow()
+  }
+})
+it("policy cache strict ordinal4 keeps old roots, identical bounds, five dormant and exact ten physical paths", () => {
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY).toBeDefined()
+  const b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY.root).toBe("sha256:6be6d3c607613c407a11dd24d89bd3bfec22f5abf013171eed6e1d284bb47c89")
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY.root).toBe("sha256:466ba6fabf888b9f3e6772df42a2c53c86d75d05821629b7ada79506090cd88c")
+  expect(b).toMatchObject({ schemaVersion: "lean-resource-window-policy-cache-envelope-v15-4-v1", charged: 38, attemptOrdinals: [4], predecessorExtensionRoot: lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY.root, elapsedMs: 250530903, absoluteDeadlineMs: 1791598472000, startedAtMs: 1791455941097, priorElapsedMs: 108000000, reserveMs: 1860000, memoryBytes: 3000000000 })
+  expect(b.planRoot).toBe("sha256:bc54e7c5b530fe355395f566d12bad2eb0e4f3ad6f315d50ab435f90b1f09e2a")
+  expect(lean.admitLeanRetryTimeboxExtension(b)).toBe(b)
+  expect(lean.leanResourceWindowPolicyForModeV15("v15-4")).toBe(b)
+  expect(() => lean.leanResourceWindowPolicyForModeV15("v15-5")).toThrow()
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_CAPS).toEqual(lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_INPUTS).toHaveLength(4)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_EXCLUSIONS).toHaveLength(6)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_AMENDMENT_PATHS).toHaveLength(10)
+  for (const path of lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_AMENDMENT_PATHS) expect(lean.LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS).toContain(path)
+})
 it("successor envelope preserves consumed bytes and selects only approved mode3 without reanchor or doubled floor", () => {
   expect(typeof lean.leanResourceWindowPolicyForModeV15).toBe("function")
   const old = lean.LEAN_RESOURCE_WINDOW_V15_POLICY, b = lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY
