@@ -13,6 +13,75 @@ const input = () => {
   return { sourceRoot: r(2), reviewRoot: r(3), coldRoot: r(4), planRoot: b.planRoot, candidateRoots: [r(5), r(6)], requestRoots: [r(7)], seed: "non-authorizing-v15", route: "diagnostic" as const, reuseGrantRoot: r(8), supervisorDecisionRoot: b.approvalRoot, acceptedCheckRoot: null, requestBytesRoot: r(9), dataReviewRoot: r(10), setupAccountingRoot: r(11), predecessor: { ...p, root: labRoot(p.schemaVersion, p) }, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, timeboxExtension: b, attemptOrdinal: 2 as const, priorClosureRoot: r(12), continuationRoot: r(13), acceptedReaderCloseRoot: null }
 }
 
+const successorInput = () => {
+  const old = input(), b = lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY
+  const { root: _root, ...prior } = old.predecessor
+  const body = { ...prior, chargedMatches: 37, elapsedUpperBoundMs: 221730903 }
+  return { ...old, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, timeboxExtension: b, attemptOrdinal: 3 as const, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
+}
+it("successor envelope preserves consumed bytes and selects only approved mode3 without reanchor or doubled floor", () => {
+  expect(typeof lean.leanResourceWindowPolicyForModeV15).toBe("function")
+  const old = lean.LEAN_RESOURCE_WINDOW_V15_POLICY, b = lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY
+  expect(lean.leanBytesRoot(lean.leanCanonicalBytes(old))).toBe("sha256:f5b30f535a0f9b9cd3dc0a7c5cf60066689cae80365aa2bf300b3dd71b16a741")
+  expect(old.root).toBe("sha256:6be6d3c607613c407a11dd24d89bd3bfec22f5abf013171eed6e1d284bb47c89")
+  expect(lean.leanResourceWindowPolicyForModeV15("v15-2")).toBe(old)
+  expect(lean.leanResourceWindowPolicyForModeV15("v15-3")).toBe(b)
+  expect(b).toMatchObject({ schemaVersion: "lean-resource-window-successor-envelope-v15-3-v1", predecessorExtensionRoot: old.root, elapsedMs: 250530903, absoluteDeadlineMs: 1791598472000, actualResumeMs: 1791569672000, startedAtMs: 1791455941097, priorElapsedMs: 108000000, charged: 37, attemptOrdinals: [3], maximumDiagnostics: 1, maximumBaselines: 1, reserveMs: 1860000, memoryApprovalRoot: old.memoryApprovalRoot })
+  expect(b.approvalRoot).toBe(lean.leanBytesRoot(readFileSync(lean.LEAN_REMAINING_V9_PHASE + "265-16-POST-V15-TIMING-APPROVAL-20261009.md")))
+  expect(b.planRoot).toBe(lean.leanBytesRoot(readFileSync(lean.LEAN_REMAINING_V9_PHASE + "265-16-POST-V15-ARCHIVED-PREFIX-PLAN-v3.md")))
+  const { root: br, ...body } = b
+  expect(br).toBe(labRoot(b.schemaVersion, body))
+  expect(lean.admitLeanRetryTimeboxExtension(b)).toBe(b)
+  for (const mode of ["v15-4", "v15-5"] as const) expect(() => lean.leanResourceWindowPolicyForModeV15(mode)).toThrow()
+  for (const patch of [{ priorElapsedMs: 221730903 }, { startedAtMs: b.actualResumeMs }, { elapsedMs: old.elapsedMs + 28800000 }, { memoryBytes: 3000000001 }]) {
+    const wrong = { ...body, ...patch }
+    expect(() => lean.admitLeanRetryTimeboxExtension({ ...wrong, root: labRoot(b.schemaVersion, wrong) })).toThrow()
+  }
+  expect(lean.leanRetryRootElapsedFloorV8(b.actualResumeMs, b)).toBe(221730903)
+  expect(lean.leanRetryRootElapsedFloorV8(b.actualResumeMs + 17, b)).toBe(221730920)
+  expect(lean.leanRetryRootElapsedFloorV8(b.absoluteDeadlineMs, b)).toBe(250530903)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS).toEqual({ ...lean.LEAN_CAPS, elapsedMs: 250530903 })
+})
+it("successor envelope reconstructs actual allocation caps and memory and refuses wrong ordinal/policy", () => {
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY).toBeDefined()
+  const b = lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY, a = lean.createLeanSupervisorCorrectionAllocation(successorInput(), 8)
+  expect(lean.leanSupervisorAllocationMode(a)).toBe("v15-3")
+  expect(lean.admitLeanAllocation(JSON.parse(JSON.stringify(a)))).toEqual(a)
+  expect(lean.leanResourcePolicyForAllocationV15(a)).toBe(b)
+  expect(lean.leanCapsForAllocation(a)).toEqual(lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS)
+  expect(lean.leanMemoryLimitForAllocation(a)).toBe(3000000000)
+  expect(lean.assertLeanAggregateMemoryV15({ parentRssBytes: 1000000000, childRssBytes: 1152455680 }, b)).toBe(3000000000)
+  expect(lean.assertLeanProcessMemoryV15(2152455680, b)).toBe(3000000000)
+  expect(() => lean.assertLeanProcessMemoryV15(2152455681, b)).toThrow("MEMORY_CAP")
+  for (const patch of [{ attemptOrdinal: 2 }, { attemptOrdinal: 4 }, { timeboxExtension: lean.LEAN_RESOURCE_WINDOW_V15_POLICY }, { caps: lean.LEAN_RESOURCE_WINDOW_V15_CAPS }]) expect(() => lean.admitLeanAllocation({ ...a, ...patch })).toThrow()
+  for (const patch of [{ attemptOrdinal: 4 }, { attemptOrdinal: 5 }, { timeboxExtension: lean.LEAN_RESOURCE_WINDOW_V15_POLICY }]) expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...successorInput(), ...patch }, 8)).toThrow()
+  const { root: _root, ...p } = a.predecessor
+  expect(() => lean.validateLeanResourceWindowPredecessorV15(a.predecessor, b)).not.toThrow()
+  const below = { ...p, chargedMatches: 36 }
+  expect(() => lean.validateLeanResourceWindowPredecessorV15({ ...below, root: labRoot(below.schemaVersion, below) }, b)).toThrow()
+  const atCutoff = { ...p, elapsedUpperBoundMs: 250530903 - 1860000 - 600000 }
+  expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...successorInput(), predecessor: { ...atCutoff, root: labRoot(atCutoff.schemaVersion, atCutoff) } }, 8)).toThrow()
+})
+it("successor envelope actual inert ledger and evidence carry selected policy root with once-only wall accounting", () => {
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY).toBeDefined()
+  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-successor-ledger-"))), b = lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY
+  const clock = vi.spyOn(Date, "now").mockReturnValue(b.actualResumeMs + 19)
+  try {
+    process.chdir(directory); mkdirSync(".strategy-lab", { mode: 0o700 })
+    const a = lean.createLeanSupervisorCorrectionAllocation(successorInput(), 8), paths = lean.leanCorrectionRoutePaths("diagnostic", "v15-3")
+    mkdirSync(paths.temp, { mode: 0o700 })
+    const ledger = lean.createLeanLedger(paths.store, a)
+    expect(lean.currentLeanElapsedMs(ledger)).toBe(221730922)
+    lean.checkpointLeanResources(ledger, 221730922, 4096, 0, 3000000000)
+    expect(lean.readLeanLedger(ledger)).toMatchObject({ charged: 37, elapsedMs: 221730922, memoryHighWaterBytes: 3000000000 })
+    expect(lean.verifyLeanEvidence(ledger, () => {})).toMatchObject({ issued: false, memoryPolicyRoot: b.root, charged: 37 })
+    const event = JSON.parse(readFileSync(join(paths.store, "ledger.ndjson"), "utf8"))
+    expect(event.memoryPolicyRoot).toBe(b.root)
+    expect(() => lean.checkpointLeanResources(ledger, 221730922, 2000000001, 0, 0)).toThrow()
+    expect(() => lean.checkpointLeanResources(ledger, 221730922, 0, 0, 3000000001)).toThrow()
+  } finally { clock.mockRestore(); process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
+})
+
 it("reconstructs allocation policy without caching mutable caller values or widening disk", () => {
   const a = lean.createLeanSupervisorCorrectionAllocation(input(), 8)
   expect(lean.leanSupervisorAllocationMode(a)).toBe("v15-2")

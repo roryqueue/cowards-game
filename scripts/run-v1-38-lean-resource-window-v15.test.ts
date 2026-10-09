@@ -66,6 +66,26 @@ it("archived exact-key cost custody refuses each missing/tampered/substituted/ex
   exchanged.set(paths[8]!, bytes.get(paths[9]!)!); exchanged.set(paths[9]!, bytes.get(paths[8]!)!)
   expect(() => authenticate(exchanged)).toThrow("CUSTODY")
 })
+it("successor producers and actual child/prefix guards agree on mode3 roots caps and reserve equality", () => {
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY).toBeDefined()
+  const b = lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY, old = allocation(), { root: _root, ...prior } = old.predecessor
+  const p = { ...prior, chargedMatches: 37, elapsedUpperBoundMs: 221730903 }
+  const a = lean.createLeanSupervisorCorrectionAllocation({ sourceRoot: old.sourceRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot, planRoot: b.planRoot, candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, seed: old.seed, route: "diagnostic", reuseGrantRoot: old.reuseGrantRoot, supervisorDecisionRoot: b.approvalRoot, acceptedCheckRoot: null, requestBytesRoot: old.requestBytesRoot!, dataReviewRoot: old.dataReviewRoot!, setupAccountingRoot: old.setupAccountingRoot!, predecessor: { ...p, root: labRoot(p.schemaVersion, p) }, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, timeboxExtension: b, attemptOrdinal: 3, priorClosureRoot: r(12), continuationRoot: r(13), acceptedReaderCloseRoot: null }, 8)
+  expect(correction.leanPreparationProtocolBinding("v15-3")).toBe(b)
+  expect(lean.leanProspectiveBudgetBinding("v15-3")).toBe(b)
+  const setup = correction.createLeanResourceWindowSetupV15("v15-3", b.actualResumeMs)
+  expect(setup).toMatchObject({ timeboxExtension: b, startedAtMs: 1791455941097, priorElapsedMs: 108000000, decisionRoot: b.approvalRoot, attemptOrdinal: 3 })
+  const docs = custody.leanResourceWindowDocumentsV15("diagnostic", "v15-3")
+  const draft = correction.createLeanResourceWindowRequestDraftV15("v15-3", "diagnostic", { sourceRoot: a.sourceRoot, reviewRoot: a.reviewRoot, dataReviewRoot: r(3), setupAccountingRoot: setup.root, reuseGrantRoot: r(5), authorizationRoot: r(6), priorClosureRoot: r(7), continuationRoot: r(8), acceptedCheckRoot: null, acceptedReaderCloseRoot: null, helperReviewRoot: r(9), helperPath: docs.helper, helperBytesRoot: r(10) })
+  expect(draft).toMatchObject({ timeboxExtension: b, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, attemptOrdinal: 3 })
+  const m = { elapsedMs: 221730903, charged: 37, physicalBytes: 24780800, parentRss: 1000000000, childRss: 1152455680, freeBytes: 15000000000, availableMemoryBytes: 2000000000 }
+  expect(correction.assertLeanCorrectionResources(m, a)).toBe(3000000000)
+  expect(assessLeanPrefixCapacity({ parentRss: m.parentRss, childRss: m.childRss, freeBytes: m.freeBytes, allocatedBytes: m.physicalBytes, elapsedMs: m.elapsedMs }, b.guardBytes, a)).toBe(2152455680)
+  expect(() => correction.assertLeanCorrectionResources({ ...m, elapsedMs: b.elapsedMs - b.reserveMs - 600000 }, a)).toThrow()
+  expect(() => correction.assertLeanCorrectionResources({ ...m, childRss: m.childRss + 1 }, a)).toThrow("MEMORY_CAP")
+  expect(() => correction.createLeanResourceWindowSetupV15("v15-3", 1791596012000)).toThrow()
+  for (const mode of ["v15-4", "v15-5"] as const) expect(() => correction.createLeanResourceWindowSetupV15(mode, b.actualResumeMs)).toThrow()
+})
 const allocation = (chargedReport?: { identity: string; allocatedBytes: number }) => {
   const b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY, p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 36, elapsedUpperBoundMs: 208771903, allocatedDiskBytes: 24780800, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r(1), survivors: Array.from({ length: 854 }, (_, n) => ({ identity: `.strategy-lab/NON_AUTHORIZING-history-${n}`, allocatedBytes: 0 })) }
   if (chargedReport) p.survivors[0] = chargedReport
