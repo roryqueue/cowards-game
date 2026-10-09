@@ -1,0 +1,26 @@
+# Plan 265-16 startup-attribution predecessor pins
+
+Status: source input, cost-only, non-authorizing. This exact finite inventory binds the closed v15-4 failure; it is not a reader, acceptance, route grant or historical repair. All old bytes remain immutable. Current charge1 / cumulative39; no accepted check/FINAL or conditional baseline.
+
+The independently closed terminal supplement records the nine applicable raw digests and seven embedded body roots. ROOT resolved only the missing full final-request digest with one read-only SHA-256 operation; the observed full digest matches its previously retained prefix. ROOT also observed the exact ten sizes and mode0600/singlelink metadata once. This is a finite metadata join, not a materializing history scan or repeated empirical reader. Source-derived failure attribution and unknown physical startup cause remain as recorded in the debug session.
+
+All paths below are repository-relative and exact. `store` means `.strategy-lab/lean-correction-supervisor-diagnostic-20261009-v15-4`; `temp` means that exact path plus `-tmp`; `phase` means `.planning/phases/265-serious-current-rules-league-and-development-red-team`. Resolve these aliases only to the stated exact paths. No glob, directory ordering, latest selector, symlink, hard-link alias or path substitution may admit a pin. Require owned regular no-follow files, mode0600, link count1, exact size and raw digest. Embedded-root absence is itself exact for request/entry/child-terminal; do not fabricate roots. New canonical wrappers use the distinct cost-only domain `lean-resource-window-archived-v15-4-pin-v1` and must validate the actual document schema/body root and joins, never treat deserialized roots as host issuance.
+
+| # | Exact path | Bytes | Raw SHA-256 | Embedded body root |
+|---|---|---:|---|---|
+| 1 | `.planning/artifacts/v1.38-lean-correction-supervisor-diagnostic-allocation-v15-4.json` | 135364 | `86014a21f3ecc5ffbc1bf1ac6d758796cf8aec2aa851b9fa3f335ae67b2efc8e` | `1a910d3fb3d5d8284774bff5491cc0b25ed517d7baede9d5b693cf3130996c8d` |
+| 2 | `.strategy-lab/lean-correction-supervisor-diagnostic-request-20261009-v15-4.json` | 3775 | `b35181c2cb37995688f722f8dce2498b4295c6fcb8af3b8a32b52cbe252edd59` | absent |
+| 3 | `store/entry.json` | 551 | `3208a3daa7476339e9c40dd7cc8c59f6621ac0d6994bbcb5687063f98af59ace` | absent |
+| 4 | `store/child-terminal.json` | 659 | `4d4b7229ad1d015119df321fa0b9de878a11e915460b5fa731fdd315bda21003` | absent |
+| 5 | `store/result.json` | 1409 | `ed33b26e46ab9e4a3e4093efa7b46acf650ba5bfd76116a08293b3f80f7225d1` | `2b2502887332542fd1ab65450f34b3f012a03fa6e5ee1b5f23c88b50b6054d7f` |
+| 6 | `temp/result-reader-refusal-v15.json` | 765 | `d41736584b1efd9d6a64a6cf0c929e8a3ddc35eff762729a5726083b690c39d3` | `6c70e9f302bc5503780f0ea99067dae8f4bf03e7388dedee446493e6b6f7a892` |
+| 7 | `store/resource-window-closure-v15.json` | 2380 | `9608052500c0862098d89ada72bc77b410a9a24a915b12cfcf37c9094ea584c0` | `0e2ae6339b658ebb8867358e1eeb1481f3005f99fe9c54707653d897b5d9e633` |
+| 8 | `temp/terminal-carry-v15.json` | 137232 | `c2b0ad86340df9917d9e33de8db17113c17d60d7a923bcbf8070910bafe6cd6a` | `80aa3950b8ffbe04895e26a53931f8505610818df68bfe5a3dc08621715adb6d` |
+| 9 | `temp/terminal-hold-complete-v15.json` | 873 | `84f636771250e9b58fb0380b01934aa39bb16be17460c658d8d3c339b42c9a95` | `deb8809b28493d97a56b769ddd537064d59f13a07399fca2c70b9216ccbdea85` |
+| 10 | `phase/265-16-POST-V14-RESOURCE-WINDOW-diagnostic-v15-4-PAIR-CLOSURE-v1.json` | 137101 | `e7066c18c2d73282f239c99fe9684d464300d7ebcec7fc26de9c95633c047b51` | `dbd33c0400c816f472668b40e25e3d94bec4178d5f1a13dcbae7179892817bad` |
+
+Direct ten-document logical bytes total420109; this is not physical allocation debit. Actual surviving block debit remains carried independently, with all added inventory/review/source/retained files charged under the existing physical accounting. Do not reset or subtract old blocks/work. Refusal→carry→closure and carry→hold→pair must join the actual entry/source/allocation and failed_result; pair has baselineCarry:null, endsEnvelope:false and no authority. Seven embedded body roots and three exact root absences must all be checked.
+
+Pinned actual old entry HEAD `be3509cbb0780dc68c8227f4ce27d78860998d1c`; functional source commit `158012abb0e0f2b774fea7b7c75911856ea8bef6`, source root `f4c6324252682707ab59f93eb63170bdeeb962dd13dd7d008514a183d18591ed`, 974 entries. Actual terminal parent78564/child78631 absent, child_exited/0/null/369909ms. Carry continuous elapsed237585642ms /28520448B /1023survivors; pair28663808B /1025survivors. Subsequent ALL-wall/report growth remains charged. No raw Strategy, objective, memory, runtime IO/stdio/error details belong in this inventory.
+
+This is one exact prospective source input only. Original policy versions2/3/4, old4/6/10 and boundary2/6/8 source/inventory arrays, old reviews/authority/results/publishers/readers remain byte-identical. Prospective5 remains dormant pending independently checked genuine same-bounds repair, fixed-source review and ROOT's complete fresh gates. Same absolute02:14:32UTC stop, ALL-wall anchor/cap, reserve, RAM/disk/Match/runtime/privacy limits; no freeze/formation/holdout/public/counting/production permission.
