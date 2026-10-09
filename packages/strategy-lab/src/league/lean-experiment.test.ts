@@ -11,6 +11,27 @@ import { LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES, LEAN_FRESH_S
 import { writeLeanAll, createLeanAllocation, chargeLeanSlot, createLeanLedger, retainLeanMatch, verifyLeanEvidence, chooseLeanTier, encodeLeanReplay, decodeLeanReplay, leanSchedule, readLeanLedger } from "./lean-experiment.js"
 import * as twoPair from "./lean-experiment.js"
 
+it("[startup-origin-v8] binds only distinct ordinal5 policy, unchanged limits and STARTUP6/6/12", () => {
+  const lean = twoPair as any, p = lean.LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY
+  expect(p).toMatchObject({ schemaVersion: "lean-resource-window-startup-attribution-envelope-v15-5-v1", charged: 39, attemptOrdinals: [5], elapsedMs: 250530903, absoluteDeadlineMs: 1791598472000, startedAtMs: 1791455941097, priorElapsedMs: 108000000, reserveMs: 1860000, memoryBytes: 3000000000, predecessorExtensionRoot: lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY.root })
+  expect(lean.leanResourceWindowPolicyForModeV15("v15-5")).toBe(p)
+  expect(lean.admitLeanRetryTimeboxExtension(p)).toBe(p)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_STARTUP_SOURCE_INPUTS).toHaveLength(6)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_STARTUP_SOURCE_EXCLUSIONS).toHaveLength(6)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_STARTUP_AMENDMENT_PATHS).toHaveLength(12)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_INPUTS).toHaveLength(4)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_EXCLUSIONS).toHaveLength(6)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_AMENDMENT_PATHS).toHaveLength(10)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_BOUNDARY_SOURCE_INPUTS).toHaveLength(2)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_BOUNDARY_SOURCE_EXCLUSIONS).toHaveLength(6)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_BOUNDARY_AMENDMENT_PATHS).toHaveLength(8)
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY.root).toBe("sha256:6be6d3c607613c407a11dd24d89bd3bfec22f5abf013171eed6e1d284bb47c89")
+  expect(lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY.root).toBe("sha256:466ba6fabf888b9f3e6772df42a2c53c86d75d05821629b7ada79506090cd88c")
+  expect(lean.leanCorrectionRoutePaths("diagnostic", "v15-5").allocation).toContain("diagnostic-allocation-v15-5")
+  expect(lean.leanCorrectionRoutePaths("baseline", "v15-5").allocation).toContain("baseline-allocation-v15-5")
+  expect(() => lean.admitLeanRetryTimeboxExtension({ ...p, charged: 38 })).toThrow()
+})
+
 it("v14 keeps every cap and original clock while adding five distinct prospective identities", () => {
   const b = twoPair.LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION
   expect(twoPair.LEAN_POST_V13_FIVE_PAIR_V14_CAPS).toEqual({ ...LEAN_CAPS, elapsedMs: 165600000 })

@@ -7,6 +7,19 @@ import { labRoot } from "../contracts.js"
 import * as lean from "./lean-experiment.js"
 
 const r = (n: number) => labRoot("NON_AUTHORIZING_v15_contract", n)
+it("[startup-origin-v8] admits inert ordinal5 allocation only with the exact new policy and conserved costs", () => {
+  const l = lean as any, b = l.LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY
+  expect(b).toBeDefined()
+  const old = policyCacheInput(), { root: _r, ...p } = old.predecessor
+  const body = { ...p, chargedMatches: 39, elapsedUpperBoundMs: 237585642, allocatedDiskBytes: 28663808, survivors: Array.from({ length: 1025 }, (_, n) => ({ identity: `.strategy-lab/NON_AUTHORIZING-startup-${n}`, allocatedBytes: 0 })) }
+  const i = { ...old, attemptOrdinal: 5, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, timeboxExtension: b, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
+  const a = l.createLeanSupervisorCorrectionAllocation(i, 8)
+  expect(l.leanSupervisorAllocationMode(a)).toBe("v15-5")
+  expect(l.leanResourcePolicyForAllocationV15(a)).toBe(b)
+  expect(l.leanCapsForAllocation(a)).toEqual(l.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_CAPS)
+  expect(a.startupPolicyRoot).toBe(l.LEAN_STARTUP_POLICY_V5.root)
+  for (const patch of [{ attemptOrdinal: 4 }, { timeboxExtension: l.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY }]) expect(() => l.createLeanSupervisorCorrectionAllocation({ ...i, ...patch }, 8)).toThrow()
+})
 const input = () => {
   const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 36, elapsedUpperBoundMs: 208771903, allocatedDiskBytes: 24780800, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r(1), survivors: Array.from({ length: 854 }, (_, n) => ({ identity: `.strategy-lab/NON_AUTHORIZING-metadata-${n}`, allocatedBytes: 0 })) }
   const b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY

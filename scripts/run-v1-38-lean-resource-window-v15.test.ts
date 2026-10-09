@@ -1,5 +1,18 @@
 /** Portable NON-AUTHORIZING host fixtures. Never Strategy/Match/provider work. */
 import { expect, it, vi } from "vitest"
+it("[startup-origin-v8] selects reviewer-owned v7 only for mode5 and pins exactly ten cost-only metadata documents", () => {
+  const c = custody as any
+  expect(c.leanResourceWindowDocumentsV15("diagnostic", "v15-5").review).toContain("SOURCE-REVIEW-v7.md")
+  expect(c.leanResourceWindowDocumentsV15("diagnostic", "v15-4").review).toContain("SOURCE-REVIEW-v6.md")
+  expect(c.LEAN_RESOURCE_WINDOW_ARCHIVED_V15_4_PINS).toHaveLength(10)
+  expect(c.LEAN_RESOURCE_WINDOW_ARCHIVED_V15_4_PINS.reduce((n: number, p: any) => n + p.bytes, 0)).toBe(420109)
+  expect(c.LEAN_RESOURCE_WINDOW_ARCHIVED_V15_4_PINS.filter((p: any) => p.root === null)).toHaveLength(3)
+  expect(() => c.authenticateLeanResourceWindowArchivedPrefixV15_4(new Map())).toThrow()
+  const inert = new Map(c.LEAN_RESOURCE_WINDOW_ARCHIVED_V15_4_PINS.map((p: any) => [p.path, new Uint8Array(p.bytes)]))
+  expect(() => c.authenticateLeanResourceWindowArchivedPrefixV15_4(inert)).toThrow()
+  inert.set(".strategy-lab/unlisted.json", new Uint8Array())
+  expect(() => c.authenticateLeanResourceWindowArchivedPrefixV15_4(inert)).toThrow()
+})
 import { mkdtempSync, mkdirSync, realpathSync, readdirSync, rmSync, readFileSync, writeFileSync, statSync, chmodSync, unlinkSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
