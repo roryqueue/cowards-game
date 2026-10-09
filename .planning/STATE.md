@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: policy-cache source supplement independently checked; isolated implementation next
+stopped_at: source validation found boundary and fixture gaps; bounded correction checked
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Source-only policy-cache Revision Gate PASS; three serial tasks, ten38-charge metadata pins, authentic-size baseline eligibility checked; no empirical authority
+last_activity_desc: Policy-cache validation gaps retained; exact two-task boundary correction and v6 inventory independently checked, no empirical route
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — SOURCE VALIDATION GAPS / BOUNDED CORRECTION CHECKED (2026-10-09).
+
+Original source mergedb21db143; intermediate reviewv1/selectedv5 clean0 preserved, no-fix56869147. ROOT actualsaved-v5 consumer42261 CLOSED0/e3833116/972/receipt1bc4dfdf; focused70044 CLOSED0/25PASS36skipped29.19s, configuredpackage52689 CLOSED0. Actualfactory23969 CLOSED1/10violations: NEWruntime-bridge node:perf_hooks outsideexistingboundary. Strict64417 CLOSED2 includes twoNEWscriptfixture errors plus sixknownproduction andfivebyte-identical oldnullablebaseline-test errors; NOTPASS, no six-onlyclaim. Scheduled POLICY-CACHE-VALIDATION-v1 source_gaps_found/open2 preservesalloutcomes; no comparativeprobe/sourceverification/empiricalgate. ROOTBOUNDARY-PLAN-v1 rawfba98989ebb370251642cfbf45a69d229a5ab3170a8c1b1bad9adc332510f60c, distinctcheckv1 raw16a18496bf5a7135ab6bfde2cd6cb2c192f567ae1842110e19b2f1861c30971a PASS/issues[]. Two serialsource-onlycorrections: hostwrapper-supplied opt-in clock (bridge noNode/systemclock, phase truth preservedwithouttime) andtwocomplete typedinertfixtures; then exactnewv6actualfixer/sourcejoins/twoinputs/sixoutputs/eightphysical amendment. Original2/3/4policybytes/bounds/receipts/history unchanged; v5immutable/notusedmodifiedsource. ROOTschedulesmanualisolated/root/fix_265_policy_cache, thenindependentreview/root/review_265_policy_cache/fix/selectedv6/default0600/validation/distinctverification/pureprobe BEFOREfreshroute. Same02:14:32UTC/cap250530903/originalanchor/FULL108M/allwall/31reserve/RAM3GBdisk15GB300Matches/runtimeprivacy; all38chargescostonly,4unusednotauthority,5dormant. Noactiveentry/verifier/sourceHEADhold. Phase265/LEAG/baseline/freeze/formation/holdout/public/counting/production incomplete. Earliercheckpoints history.
 
 CURRENT CHECKPOINT — POLICY-CACHE SOURCE SUPPLEMENT CHECKED (2026-10-09).
 
