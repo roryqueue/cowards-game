@@ -1,6 +1,6 @@
 /** Closure-free trusted host control. Lifecycle signals failure, never READY. */
 export async function superviseLeanStartupV8(binding, hostBudgetMs, host) {
-  const entered = host.now(), deadline = entered + Math.min(5000, hostBudgetMs), startupDeadline = Math.min(deadline, entered + 2500)
+  const entered = host.startedAtMs ?? host.now(), deadline = entered + Math.min(5000, hostBudgetMs), startupDeadline = Math.min(deadline, entered + 2500)
   const bucket = ms => !Number.isFinite(ms) || ms < 0 ? "unknown" : ms < 10 ? "0_9ms" : ms < 50 ? "10_49ms" : ms < 100 ? "50_99ms" : ms < 250 ? "100_249ms" : ms < 500 ? "250_499ms" : ms < 1000 ? "500_999ms" : ms < 2500 ? "1000_2499ms" : "2500_plus"
   const remaining = () => Math.max(0, Math.floor(deadline - host.now()))
   let completed, worker = false, ready = false, go = false, wait = "unavailable", stage = "startup", branch = "construction_failure", termination = "unknown", unknown = true
@@ -16,14 +16,19 @@ export async function superviseLeanStartupV8(binding, hostBudgetMs, host) {
   }
   try {
     if (!Number.isFinite(hostBudgetMs) || hostBudgetMs <= 0 || hostBudgetMs > 5000 || typeof host.waitAsync !== "function" || typeof host.lifecycleFailure !== "function") throw new Error("ASYNC_STARTUP_UNAVAILABLE_V8")
+    const constructionBegan = host.now()
     worker = true
     host.construct()
-    constructorDurationBucket = bucket(host.now() - entered)
+    constructorDurationBucket = bucket(host.now() - constructionBegan)
     branch = "inconsistent_state"; deadlineOutcome = "unknown"
     await waitUntil(0, startupDeadline)
+    if (host.load() === 1 && host.now() < startupDeadline && !failed() && host.attribution().prefixMilestone !== "ready_published" && typeof host.waitReadyPublication === "function") {
+      const result = await Promise.race([host.waitReadyPublication(Math.min(remaining(), Math.max(0, startupDeadline - host.now()))), host.lifecycleFailure().then(() => "lifecycle")])
+      wait = result === "timed-out" ? "timed_out" : "changed"
+    }
     if (host.now() >= startupDeadline) { branch = "startup_expired"; wait = "timed_out"; deadlineOutcome = host.load() === 1 ? "late_or_boundary" : "startup_deadline" }
     else if (failed()) branch = "lifecycle_failure"
-    else if (host.load() !== 1) branch = "inconsistent_state"
+    else if (host.load() !== 1 || host.attribution().prefixMilestone !== "ready_published" || !Number.isFinite(host.attribution().readyPublicationMs) || host.attribution().readyPublicationMs < 0 || host.attribution().readyPublicationMs >= 2500) branch = "inconsistent_state"
     else {
       ready = true; deadlineOutcome = "ready_before_deadline"
       if (remaining() < 2500) branch = "go_refused"

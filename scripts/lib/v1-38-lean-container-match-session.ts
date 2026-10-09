@@ -308,13 +308,14 @@ export interface LeanStartupOriginV8 extends Omit<LeanStartupOriginV5, "schemaVe
   deadlineOutcome: "ready_before_deadline" | "startup_deadline" | "late_or_boundary" | "construction_failure" | "unknown";
 }
 export interface LeanStartupSupervisorHostV8 extends Omit<LeanStartupSupervisorHostV5, "wait"> {
+  startedAtMs?: number; waitReadyPublication?(ms: number): Promise<string>;
   waitAsync(state: number, ms: number): Promise<string>; lifecycleFailure(): Promise<void>;
   lifecycle(): LeanStartupOriginV8["lifecycleBeforeTermination"];
   attribution(): { prefixMilestone: LeanStartupOriginV8["prefixMilestone"]; readyPublicationMs: number | undefined };
 }
 export const buildLeanStartupWorkerHarnessV8 = (): string => buildLeanStartupWorkerHarnessV5()
   .replace("trustedControlV5.length!==1", "trustedControlV5.length!==4")
-  .replace("const trustedPublishReadyV5=()=>{", 'trustedStoreV5(trustedControlV5,1,1);\nconst trustedPublishReadyV5=()=>{const published=Math.floor(Number(trustedNowV5()-BigInt(rawWorkerData.startupEnteredNs))/1000000);if(!Number.isSafeInteger(published)||published<0||published>5000)throw new Error("STARTUP_CLOCK_V8");trustedStoreV5(trustedControlV5,2,published);trustedStoreV5(trustedControlV5,1,2);')
+  .replace('const trustedPublishReadyV5=()=>{if(trustedCasV5(trustedControlV5,0,0,1)!==0)throw new Error("STARTUP_STATE_V5");trustedNotifyV5(trustedControlV5,0)}', 'trustedStoreV5(trustedControlV5,1,1);\nconst trustedPublishReadyV5=()=>{if(trustedCasV5(trustedControlV5,0,0,1)!==0)throw new Error("STARTUP_STATE_V8");const published=Math.floor(Number(trustedNowV5()-BigInt(rawWorkerData.startupEnteredNs))/1000000);if(!Number.isSafeInteger(published)||published<0||published>5000)throw new Error("STARTUP_CLOCK_V8");trustedStoreV5(trustedControlV5,2,published);trustedStoreV5(trustedControlV5,1,2);trustedStoreV5(trustedControlV5,3,1);trustedNotifyV5(trustedControlV5,3);trustedNotifyV5(trustedControlV5,0)}')
 export const validateLeanStartupOriginV8 = (value: unknown, expected?: LeanStartupBindingV5): LeanStartupOriginV8 => {
   const extra = ["constructorDurationBucket", "prefixMilestone", "readyPublicationDurationBucket", "finalAtomicState", "lifecycleBeforeTermination", "deadlineOutcome"] as const
   if (!value || typeof value !== "object" || Array.isArray(value) || Buffer.byteLength(JSON.stringify(value)) > 4096) throw new TypeError("LEAN_STARTUP_ORIGIN_V8")
@@ -334,11 +335,11 @@ export const buildLeanContainerBrokerSourceV8 = (): string => {
   source = replace(source, LEAN_STARTUP_SUPERVISOR_SOURCE_V5, LEAN_STARTUP_SUPERVISOR_SOURCE_V8)
   source = source.replaceAll(JSON.stringify(buildLeanStartupWorkerHarnessV5()), JSON.stringify(buildLeanStartupWorkerHarnessV8())).replaceAll(JSON.stringify(leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5()))), JSON.stringify(leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8()))))
   source = replace(source, "const binding=q.startup.binding;const entered=now();let worker,port,signal,reconcile;", "const binding=q.startup.binding;const entered=now();let worker,port,signal,reconcile,errorSeen=false,exitSeen=false,failLifecycle;const lifecyclePromise=new Promise(resolve=>{failLifecycle=resolve});")
-  source = replace(source, "superviseLeanStartupV5(binding,q.startup.hostBudgetMs,{", "superviseLeanStartupV8(binding,q.startup.hostBudgetMs-Number(now()-entered)/1000000,{")
+  source = replace(source, "superviseLeanStartupV5(binding,q.startup.hostBudgetMs,{", "superviseLeanStartupV8(binding,q.startup.hostBudgetMs,{startedAtMs:0,")
   source = replace(source, "new SharedArrayBuffer(4)", "new SharedArrayBuffer(16)")
   source = replace(source, "signalBuffer,policyRoot:binding.policyRoot", "signalBuffer,startupEnteredNs:entered.toString(),policyRoot:binding.policyRoot")
   source = replace(source, "reconcile=supervise(q,worker,port,entered+", 'worker.on("error",()=>{errorSeen=true;failLifecycle()});worker.on("exit",()=>{exitSeen=true;failLifecycle()});reconcile=supervise(q,worker,port,entered+')
-  source = replace(source, "wait:(state,ms)=>Atomics.wait(signal,0,state,ms)", 'waitAsync:typeof Atomics.waitAsync!=="function"?undefined:async(state,ms)=>await Atomics.waitAsync(signal,0,state,ms).value,lifecycleFailure:()=>lifecyclePromise,lifecycle:()=>errorSeen&&exitSeen?"both_seen":errorSeen?"error_seen":exitSeen?"exit_seen":"neither_seen",attribution:()=>({prefixMilestone:Atomics.load(signal,1)===2?"ready_published":Atomics.load(signal,1)===1?"entered":"not_entered",readyPublicationMs:Atomics.load(signal,1)===2?Atomics.load(signal,2):undefined})')
+  source = replace(source, "wait:(state,ms)=>Atomics.wait(signal,0,state,ms)", 'waitAsync:typeof Atomics.waitAsync!=="function"?undefined:async(state,ms)=>await Atomics.waitAsync(signal,0,state,ms).value,waitReadyPublication:async(ms)=>await Atomics.waitAsync(signal,3,0,ms).value,lifecycleFailure:()=>lifecyclePromise,lifecycle:()=>errorSeen&&exitSeen?"both_seen":errorSeen?"error_seen":exitSeen?"exit_seen":"neither_seen",attribution:()=>({prefixMilestone:Atomics.load(signal,3)===1?"ready_published":Atomics.load(signal,1)!==0?"entered":"not_entered",readyPublicationMs:Atomics.load(signal,3)===1?Atomics.load(signal,2):undefined})')
   return source.replaceAll("v1.38-lean-startup-v5:", "v1.38-lean-startup-v8:")
 }
 
