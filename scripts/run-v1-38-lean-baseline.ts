@@ -4,7 +4,7 @@ import { fork, execFileSync } from "node:child_process"
 import { randomBytes } from "node:crypto"
 import { join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
-import { isLeanPostV13FivePairMode, isLeanPreparationContinuationMode, isLeanSupervisorRetestMode, leanCapsForAllocation, leanSupervisorAllocationMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { isLeanPostV13FivePairMode, isLeanPreparationContinuationMode, isLeanSupervisorRetestMode, isLeanResourceWindowModeV15, leanCapsForAllocation, leanSupervisorAllocationMode, type AnyLeanAllocation } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { exactLabKeys, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createLeanCurrentBaselineAllocation, createLeanLedger, openLeanLedger, readLeanLedger, readLeanTimeAccounting, readLeanChildEntry, publishLeanChildEntry, beginLeanInterval, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, stopLeanLedger, verifyLeanEvidence, deriveLeanChildTerminal, publishLeanChildTerminal, cumulativeLeanPhysicalBytes, assertLeanPublicationCapacity, currentLeanElapsedMs, currentBaselineSlotKind, leanCanonicalBytes, leanBytesRoot, writeLeanAll, LEAN_BASELINE_REQUEST, LEAN_BASELINE_STORE, LEAN_BASELINE_WRITABLE_PATHS, LEAN_CAPS, LEAN_EXTERNAL_SCRATCH_RESERVE, type LeanExperimentLedger, type LeanChildEntryV2, type LeanSlot } from "../packages/strategy-lab/src/league/lean-experiment.js"
@@ -116,6 +116,25 @@ export const validateLeanSupervisorReasonBytesV2 = (bytes: Uint8Array): LeanSupe
   try { value = JSON.parse(Buffer.from(bytes).toString("utf8")) } catch { return fail("SUPERVISOR_REASONS_V2") }
   if (!isLeanSupervisorReasonEnvelopeV2(value) || leanBytesRoot(bytes) !== leanBytesRoot(leanCanonicalBytes(value))) return fail("SUPERVISOR_REASONS_V2")
   return value
+}
+/** Select only after allocation authentication; caller flags cannot widen legacy custody. */
+export const leanParentUsesReasonV2 = (allocation: AnyLeanAllocation): boolean => {
+  leanCapsForAllocation(allocation)
+  const mode = leanSupervisorAllocationMode(allocation)
+  return isLeanSupervisorRetestMode(mode) || isLeanPreparationContinuationMode(mode) || isLeanPostV13FivePairMode(mode) || isLeanResourceWindowModeV15(mode)
+}
+/** Actual parent's pure reason producer, also exercised by inert custody regressions. */
+export const deriveLeanParentSupervisorReason = (allocation: AnyLeanAllocation, body: Omit<LeanSupervisorReasonEnvelope, "root">, sampling?: Pick<LeanSupervisorReasonEnvelopeV2["observations"], "resourceSamplingOperation" | "resourceSamplingSequence" | "resourceSamplingExitObserved">): LeanSupervisorReasonEnvelope | LeanSupervisorReasonEnvelopeV2 => {
+  if (body.allocationRoot !== allocation.root) return fail("SUPERVISOR_REASONS")
+  if (leanParentUsesReasonV2(allocation)) {
+    const v2Body: Omit<LeanSupervisorReasonEnvelopeV2, "root"> = { ...body, schemaVersion: "lean-parent-supervisor-reasons-v2", observations: { ...body.observations, ...(sampling ?? { resourceSamplingOperation: "none" as const, resourceSamplingSequence: 0, resourceSamplingExitObserved: false }) } }
+    const envelope = { ...v2Body, root: leanSupervisorReasonRootV2(v2Body) }
+    if (!isLeanSupervisorReasonEnvelopeV2(envelope)) return fail("SUPERVISOR_REASONS")
+    return envelope
+  }
+  const envelope = { ...body, root: labRoot("lean-parent-supervisor-reasons-v1", body) }
+  if (!isLeanSupervisorReasonEnvelope(envelope)) return fail("SUPERVISOR_REASONS")
+  return envelope
 }
 /** Saturation is local ordering only, not an elapsed clock or native cause. */
 export const nextLeanSupervisorSamplingSequenceV2 = (sequence: number): number => {
@@ -363,8 +382,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
   const { ledger, requestPath, store: STORE } = options, allocation = ledger.allocation
   // Allocation family is authenticated by the same strict caps/mode admission;
   // a legacy caller's opt-in flag can never select reason-v2.
-  const authenticatedMode = leanSupervisorAllocationMode(allocation)
-  const reasonV2 = isLeanSupervisorRetestMode(authenticatedMode) || isLeanPreparationContinuationMode(authenticatedMode) || isLeanPostV13FivePairMode(authenticatedMode)
+  const reasonV2 = leanParentUsesReasonV2(allocation)
   const supervisorObservation = reasonV2 || options.supervisorObservation === true
   const committed = execFileSync("git", ["show", `HEAD:${options.allocationPath}`], { maxBuffer: 262144 })
   if (leanBytesRoot(committed) !== leanBytesRoot(leanCanonicalBytes(allocation)) || leanBytesRoot(committed) !== leanBytesRoot(safeBytes(options.allocationPath))) return fail("UNCOMMITTED_ALLOCATION")
@@ -433,11 +451,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
               reasons: LEAN_SUPERVISOR_REASON_CODES.filter(reason => reasons.has(reason)),
               observations: { entry: "published", childReady: "observed", resourceSampling: reasons.has("resource_sampling_exception") ? "exception" : "observed", finalIdentity, failureReceipt: childFailure === null ? "absent" : receiptUncertain ? "publication_failed" : "published", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" },
             }
-            const envelope = reasonV2 ? (() => {
-              const v2Body: Omit<LeanSupervisorReasonEnvelopeV2, "root"> = { ...body, schemaVersion: "lean-parent-supervisor-reasons-v2", observations: { ...body.observations, ...(firstSamplingException ?? { resourceSamplingOperation: "none" as const, resourceSamplingSequence: 0, resourceSamplingExitObserved: false }) } }
-              return { ...v2Body, root: leanSupervisorReasonRootV2(v2Body) }
-            })() : { ...body, root: labRoot("lean-parent-supervisor-reasons-v1", body) }
-            if (!(reasonV2 ? isLeanSupervisorReasonEnvelopeV2(envelope) : isLeanSupervisorReasonEnvelope(envelope))) return fail("SUPERVISOR_REASONS")
+            const envelope = deriveLeanParentSupervisorReason(allocation, body, firstSamplingException ?? undefined)
             exclusive(join(STORE, LEAN_SUPERVISOR_REASON_FILE), envelope, ledger)
           } catch {
             // No retry or success override: existing terminal/cleanup attempts

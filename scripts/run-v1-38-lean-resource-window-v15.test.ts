@@ -9,7 +9,8 @@ import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import * as correction from "./run-v1-38-lean-correction.js"
 import { assessLeanPrefixCapacity, compactExecution } from "./run-v1-38-lean-experiment.js"
 import { leanResourceWindowDocumentsV15, authenticateLeanResourceWindowPriorPairV15, authenticateLeanResourceWindowAcceptedJoinV15 } from "./lib/v1-38-lean-resource-window-v15.js"
-import { auditLeanCorrectionRetained, assertLeanResourceWindowReaderV15 } from "./lib/v1-38-lean-correction-retained.js"
+import { auditLeanCorrectionRetained, assertLeanResourceWindowReaderV15, validateLeanSupervisorRetestReasonJoinV12 } from "./lib/v1-38-lean-correction-retained.js"
+import * as baseline from "./run-v1-38-lean-baseline.js"
 
 const r = (n: number) => labRoot("NON_AUTHORIZING_v15_HOST", n)
 const allocation = () => {
@@ -37,6 +38,23 @@ it("actual compaction forwards live projected guards, permits v15 RAM, and prese
     spy.mockReturnValue({ ...usage, rss: 2100000000, arrayBuffers: lean.LEAN_CAPS.scratchBytes - projected + 1 })
     expect(() => compactExecution(execution, 1, true, "bottom", a, guard)).toThrow("BUFFER_CAP")
   } finally { spy.mockRestore() }
+})
+it("actual parent producer emits v15 canonical v2 accepted only by matching strict retained joins", () => {
+  const a = allocation(), entry = { allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot!, head: "a".repeat(40), parentPid: 101, childPid: 102 }
+  const terminal = { exitCode: 0, signal: null, status: "child_exited" }
+  const body: Omit<baseline.LeanSupervisorReasonEnvelope, "root"> = { ...entry, schemaVersion: "lean-parent-supervisor-reasons-v1", entryBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(entry)), exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
+  const reason = baseline.deriveLeanParentSupervisorReason(a, body), bytes = lean.leanCanonicalBytes(reason)
+  expect(reason).toMatchObject({ schemaVersion: "lean-parent-supervisor-reasons-v2", observations: { resourceSamplingOperation: "none", resourceSamplingSequence: 0, resourceSamplingExitObserved: false } })
+  const join = (e = entry, t = terminal, b = bytes) => validateLeanSupervisorRetestReasonJoinV12(b, e as never, t as never)
+  expect(join()).toEqual(reason)
+  for (const patch of [{ allocationRoot: r(99) }, { sourceRoot: r(99) }, { requestBytesRoot: r(99) }, { head: "b".repeat(40) }, { parentPid: 103 }, { childPid: 103 }, { extra: "altered-entry-bytes" }]) expect(() => join({ ...entry, ...patch })).toThrow()
+  for (const patch of [{ exitCode: 1 }, { signal: "SIGKILL" }, { status: "child_failed" }]) expect(() => join(entry, { ...terminal, ...patch } as typeof terminal)).toThrow()
+  const legacy = lean.createLeanAllocation({ seed: "non-authorizing", sourceRoot: r(2), reviewRoot: r(3), candidateRoots: [r(5), r(6)] })
+  const legacyReason = baseline.deriveLeanParentSupervisorReason(legacy, { ...body, allocationRoot: legacy.root })
+  expect(legacyReason.schemaVersion).toBe("lean-parent-supervisor-reasons-v1")
+  expect(baseline.isLeanSupervisorReasonEnvelope(legacyReason)).toBe(true)
+  expect(() => baseline.validateLeanSupervisorReasonBytesV2(lean.leanCanonicalBytes(legacyReason))).toThrow()
+  expect(() => baseline.deriveLeanParentSupervisorReason({ ...a, sourceRoot: r(99) }, body)).toThrow()
 })
 it("finite documents and missing or forged predecessor/own FINAL never authorize", () => {
   expect(leanResourceWindowDocumentsV15("diagnostic", "v15-2").helper).toBe(".strategy-lab/lean-resource-window-diagnostic-v15-2-helper.mts")
