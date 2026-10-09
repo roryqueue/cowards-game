@@ -1,5 +1,17 @@
 import { expect, it, vi } from "vitest"
 import { checkpointLeanObservationV15 } from "./lib/v1-38-lean-checkpoint-observation-v15.js"
+import * as correction from "./run-v1-38-lean-correction.js"
+import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { labRoot } from "../packages/strategy-lab/src/contracts.js"
+import { mkdtempSync, realpathSync, mkdirSync, writeFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+
+const allocation = () => {
+  const r = (n: number) => labRoot("NON_AUTHORIZING_checkpoint", n), b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY
+  const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 36, elapsedUpperBoundMs: 208771903, allocatedDiskBytes: 24780800, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r(1), survivors: Array.from({ length: 854 }, (_, n) => ({ identity: `.strategy-lab/NON_AUTHORIZING-history-${n}`, allocatedBytes: 0 })) }
+  return lean.createLeanSupervisorCorrectionAllocation({ sourceRoot: r(2), reviewRoot: r(3), coldRoot: r(4), planRoot: b.planRoot, candidateRoots: [r(5), r(6)], requestRoots: [r(7)], seed: "non-authorizing-host", route: "diagnostic", reuseGrantRoot: r(8), supervisorDecisionRoot: b.approvalRoot, acceptedCheckRoot: null, requestBytesRoot: r(9), dataReviewRoot: r(10), setupAccountingRoot: r(11), predecessor: { ...p, root: labRoot(p.schemaVersion, p) }, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, timeboxExtension: b, attemptOrdinal: 2, priorClosureRoot: r(12), continuationRoot: r(13), acceptedReaderCloseRoot: null }, 8)
+}
 
 const fixture = () => {
   const ops = {
@@ -45,4 +57,40 @@ it("does not reuse time, RSS, survivor, disk, memory or ledger values across cal
   checkpointLeanObservationV15(o, 9)
   expect(o.correction.mock.calls[1][0]).toEqual({ elapsedMs: 220000000, charged: 38, physicalBytes: 35000000, childRss: 1009, parentRss: 1200, freeBytes: 14000000000, availableMemoryBytes: 1000000000 })
   expect(o.diskGuard.mock.calls[1][0]).toEqual({ physicalBytes: 35000000, bufferBytes: 609, scratchBytes: 700 })
+})
+it("actual selected correction composition enforces projected max RSS, exact RAM and disk/time/reserve boundaries", () => {
+  const a = allocation(), o = fixture(), b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY
+  o.parentRss.mockReturnValue(1000000000)
+  const child = b.memoryBytes - b.externalReserveBytes - b.guardBytes - 1000000000
+  o.childRss.mockReturnValue({ current: child - 1, maximum: child })
+  expect(correction.assertLeanCorrectionCheckpointV15(a, o)).toBe(b.memoryBytes)
+  expect(() => correction.assertLeanCorrectionCheckpointV15(a, o, 1)).toThrow()
+  o.childRss.mockReturnValue({ current: 100, maximum: 200 })
+  o.disk.mockReturnValue({ bufferBytes: lean.LEAN_CAPS.scratchBytes - 500, scratchBytes: 500 })
+  expect(() => correction.assertLeanCorrectionCheckpointV15(a, o)).not.toThrow()
+  expect(() => correction.assertLeanCorrectionCheckpointV15(a, o, 1)).toThrow("CAPACITY")
+  o.disk.mockReturnValue({ bufferBytes: 400, scratchBytes: 500 })
+  o.elapsedMs.mockReturnValue(b.elapsedMs - b.reserveMs - lean.LEAN_CAPS.matchMs - 1)
+  expect(() => correction.assertLeanCorrectionCheckpointV15(a, o)).not.toThrow()
+  o.elapsedMs.mockReturnValue(b.elapsedMs - b.reserveMs - lean.LEAN_CAPS.matchMs)
+  expect(() => correction.assertLeanCorrectionCheckpointV15(a, o)).toThrow()
+})
+it.each(["parentRss", "availableMemoryBytes", "freeBytes", "charged"] as const)("actual guards reject fresh deteriorated %s on the next call", key => {
+  const a = allocation(), o = fixture(); correction.assertLeanCorrectionCheckpointV15(a, o)
+  o[key].mockReturnValue(key === "charged" ? 300 : key === "parentRss" ? 3000000000 : 0)
+  expect(() => correction.assertLeanCorrectionCheckpointV15(a, o)).toThrow()
+})
+it("actual allocation admission catches on-disk replacement before entry and during observation; ledger admission stays fresh", () => {
+  const before = process.cwd(), dir = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-checkpoint-")))
+  try {
+    process.chdir(dir); mkdirSync(".strategy-lab", { mode: 0o700 })
+    const a = allocation(), paths = lean.leanCorrectionRoutePaths("diagnostic", "v15-2"), ledger = lean.createLeanLedger(paths.store, a), o = fixture()
+    o.authenticateAllocation.mockImplementation(() => correction.authenticateLeanCheckpointAllocationV15(ledger, a))
+    o.charged.mockImplementation(() => lean.readLeanLedger(ledger).charged)
+    expect(() => correction.assertLeanCorrectionCheckpointV15(a, o)).not.toThrow()
+    const changed = { ...a, sourceRoot: labRoot("INERT_DRIFT", 1) }
+    o.physicalBytes.mockImplementation(() => { writeFileSync(join(ledger.directory, "allocation.json"), lean.leanCanonicalBytes(changed)); return 25000000 })
+    expect(() => correction.assertLeanCorrectionCheckpointV15(a, o)).toThrow()
+    expect(() => correction.authenticateLeanCheckpointAllocationV15(ledger, a)).toThrow()
+  } finally { process.chdir(before); rmSync(dir, { recursive: true, force: true }) }
 })

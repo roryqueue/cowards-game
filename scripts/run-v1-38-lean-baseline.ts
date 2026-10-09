@@ -11,6 +11,7 @@ import { createLeanCurrentBaselineAllocation, createLeanLedger, openLeanLedger, 
 import { observeLeagueAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
 import { factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
 import { assessLeanPrefixCapacity, createLeanParentObservationGuard, admitLeanChildRelease, assertLeanEntryBinding, readLeanSafeFile } from "./run-v1-38-lean-experiment.js"
+import { leanResourcePolicyForAllocationV15 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanMemoryLimitForAllocation } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { executeLeanCurrentPipeline, leanColdProcedureRoot, compactLeanBaselineCell } from "./lib/v1-38-lean-baseline-pipeline.js"
 import { publishLeanBaselineSource } from "./lib/v1-38-lean-baseline-source.js"
@@ -239,6 +240,11 @@ const rssOf = (pid: number): number => {
   const kib = Number(execFileSync("ps", ["-o", "rss=", "-p", String(pid)], { encoding: "utf8", timeout: 1000, maxBuffer: 128 }).trim())
   if (!Number.isSafeInteger(kib) || kib <= 0 || kib * 1024 > Number.MAX_SAFE_INTEGER) return fail("PROCESS_RSS")
   return kib * 1024
+}
+export const assessLeanBaselineObservedPrefixCapacityV15 = (m: Parameters<typeof assessLeanPrefixCapacity>[0], allocation: LeanExperimentLedger["allocation"]): number => {
+  const policy = leanResourcePolicyForAllocationV15(allocation)
+  if (!policy) return fail("PREFIX_CAPACITY")
+  return assessLeanPrefixCapacity(m, policy.guardBytes, allocation)
 }
 export const assertLeanBaselinePrefixCapacity = (ledger: LeanExperimentLedger, parentPid: number, reserveBytes = 320 * 1024 * 1024): number => {
   if (process.ppid !== parentPid || !process.connected) return fail("PARENT_LOST")

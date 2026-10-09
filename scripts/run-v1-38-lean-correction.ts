@@ -21,7 +21,8 @@ import { dirname, join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { exactLabKeys, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { leanCapsForAllocation, type AnyLeanAllocation, LEAN_REPLAY_V7_APPROVAL_ROOT, LEAN_REPLAY_V7_SUPPLEMENT_ROOT, LEAN_REPLAY_V7_SETUP_PATH, LEAN_REPLAY_V7_CARRY, LEAN_REPLAY_V7_POLICY, validateLeanReplayV7PredecessorCustody, LEAN_REPLAY_V6_APPROVAL_ROOT, LEAN_REPLAY_V6_SUPPLEMENT_ROOT, LEAN_REPLAY_V6_SETUP_PATH, LEAN_REPLAY_V6_CARRY, validateLeanReplayV6PredecessorCustody, LEAN_STARTUP_POLICY_V5, LEAN_STARTUP_APPROVAL_ROOT, LEAN_STARTUP_SUPPLEMENT_ROOT, LEAN_STARTUP_V5_SETUP_PATH, LEAN_CAPS, LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES, leanCorrectionRoutePaths, leanSupervisorAllocationMode, leanSupervisorVersion, type LeanSupervisorMode, createLeanSupervisorCorrectionAllocation, LEAN_EXTERNAL_SCRATCH_RESERVE, LEAN_BASELINE_STORE, LEAN_BASELINE_WRITABLE_PATHS, createLeanCorrectionAllocation, createLeanLedger, openLeanLedger, readLeanLedger, readLeanTimeAccounting, readLeanChildEntry, readLeanChildTerminal, beginLeanInterval, closeLeanInterval, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, stopLeanLedger, verifyLeanEvidence, currentLeanElapsedMs, cumulativeLeanPhysicalBytes, measureLeanPhysicalBytes, inspectLeanClosedV7Predecessor, leanBytesRoot, leanCanonicalBytes, writeLeanAll, assertLeanPublicationCapacity, type LeanCorrectionPredecessor, type LeanCorrectionAllocation, type LeanExperimentLedger } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { leanBaselineSourceManifest, deriveLeanBaselineRequestRoots, deriveLeanBaselineCandidateRoots, leanBaselinePair, runLeanBoundedParent, assertLeanBaselinePrefixCapacity, admitsLeanBaselineReviewAgents } from "./run-v1-38-lean-baseline.js"
+import { leanBaselineSourceManifest, deriveLeanBaselineRequestRoots, deriveLeanBaselineCandidateRoots, leanBaselinePair, runLeanBoundedParent, assertLeanBaselinePrefixCapacity, assessLeanBaselineObservedPrefixCapacityV15, admitsLeanBaselineReviewAgents } from "./run-v1-38-lean-baseline.js"
+import { checkpointLeanObservationV15, type LeanCheckpointOperationsV15 } from "./lib/v1-38-lean-checkpoint-observation-v15.js"
 import { createLeanParentObservationGuard, admitLeanChildRelease, assertLeanEntryBinding } from "./run-v1-38-lean-experiment.js"
 import { observeLeagueAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
 import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY, admitLeanOwnedReuse, readLeanOwnedReuse, closeLeanOwnedReuse, type LeanColdReuse } from "./lib/v1-38-lean-baseline-reuse.js"
@@ -461,6 +462,21 @@ export const assertLeanCorrectionResources = (m: { elapsedMs: number; charged: n
   }
   if (!exactLabKeys(m, ["elapsedMs", "charged", "physicalBytes", "childRss", "parentRss", "freeBytes", "availableMemoryBytes"]) || !Object.values(m).every(n => Number.isSafeInteger(n) && n >= 0) || m.elapsedMs < 3319046 || m.charged < 10 || m.charged >= LEAN_CAPS.matches || m.elapsedMs + LEAN_CAPS.matchMs + LEAN_CORRECTION_RESERVE.cleanupMs + LEAN_CORRECTION_RESERVE.terminalMs + LEAN_CORRECTION_RESERVE.checkMs + LEAN_CORRECTION_RESERVE.replayMs >= caps.elapsedMs || m.physicalBytes + LEAN_CORRECTION_RESERVE.terminalBytes > LEAN_CAPS.retainedBytes || m.childRss + m.parentRss + LEAN_EXTERNAL_SCRATCH_RESERVE + LEAN_CORRECTION_RESERVE.bufferBytes > LEAN_CAPS.scratchBytes || m.physicalBytes + m.childRss + m.parentRss + LEAN_EXTERNAL_SCRATCH_RESERVE + LEAN_CORRECTION_RESERVE.bufferBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || m.freeBytes < LEAN_CAPS.totalBytes - m.physicalBytes || m.availableMemoryBytes < 1_073_741_824) return fail("CAPACITY")
   return m.childRss + m.parentRss + LEAN_CORRECTION_RESERVE.bufferBytes
+}
+/** Actual selected call chain. Inject only trusted fresh host operations, never
+ * a retained observation or a substitute guard implementation. */
+export const assertLeanCorrectionCheckpointV15 = (allocation: AnyLeanAllocation, ops: Omit<LeanCheckpointOperationsV15, "prefix" | "correction" | "diskGuard">, additionalBytes = 0): number => {
+  const policy = leanResourcePolicyForAllocationV15(allocation)
+  if (!policy) return fail("RESOURCE_POLICY")
+  return checkpointLeanObservationV15({ ...ops,
+    prefix: m => assessLeanBaselineObservedPrefixCapacityV15(m, allocation) + policy.externalReserveBytes + policy.guardBytes,
+    correction: m => assertLeanCorrectionResources(m, allocation),
+    diskGuard: m => { if (m.bufferBytes + m.scratchBytes > LEAN_CAPS.scratchBytes || m.physicalBytes + m.bufferBytes + m.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes) return fail("CAPACITY") },
+  }, additionalBytes)
+}
+export const authenticateLeanCheckpointAllocationV15 = (ledger: LeanExperimentLedger, allocation: AnyLeanAllocation): void => {
+  const admitted = openLeanLedger(ledger.directory)
+  if (!same(admitted.allocation, allocation) || !leanResourcePolicyForAllocationV15(admitted.allocation)) return fail("ALLOCATION_DRIFT")
 }
 export interface LeanCorrectionDiagnosis {
   schemaVersion: "lean-correction-diagnosis-v1"; diagnosticCheckRoot: LabRoot; originRoot: LabRoot; cause: "legacy_deadline_observed"; cleanupComplete: true; actionable: true
@@ -1540,6 +1556,20 @@ export const runLeanCorrectionChildBody = async (path: string, route: LeanCorrec
   let highWater = 0
   const checkpoint = (additionalBytes = 0) => {
     parent.assert()
+    const selectedPolicy = leanResourcePolicyForAllocationV15(allocation)
+    if (selectedPolicy) {
+      highWater = Math.max(highWater, assertLeanCorrectionCheckpointV15(allocation, {
+        assertParent: () => { parent.assert(); if (process.ppid !== entry.parentPid || !process.connected) return fail("PARENT_LOST") },
+        authenticateAllocation: () => authenticateLeanCheckpointAllocationV15(ledger, allocation),
+        childRss: () => ({ current: process.memoryUsage().rss, maximum: process.resourceUsage().maxRSS * 1024 }),
+        parentRss: () => Number(execFileSync("ps", ["-o", "rss=", "-p", String(entry.parentPid)], { encoding: "utf8", timeout: 1000, maxBuffer: 128 }).trim()) * 1024,
+        freeBytes: () => { const fs = statfsSync(ledger.directory, { bigint: true }), bytes = fs.bavail * fs.bsize; if (bytes > BigInt(Number.MAX_SAFE_INTEGER) || bytes < 0n) return fail("CAPACITY"); return Number(bytes) },
+        elapsedMs: () => currentLeanElapsedMs(ledger), physicalBytes: () => cumulativeLeanPhysicalBytes(ledger),
+        charged: () => readLeanLedger(ledger).charged, availableMemoryBytes: observeLeagueAvailableMemoryBytes,
+        disk: () => observeLeanResourceWindowDiskV15(ledger),
+      }, additionalBytes))
+      return
+    }
     const prefixRss = assertLeanBaselinePrefixCapacity(ledger, entry.parentPid), policy = leanResourcePolicyForAllocationV15(allocation)
     highWater = Math.max(highWater, policy ? prefixRss + policy.externalReserveBytes + policy.guardBytes : prefixRss)
     const free = statfsSync(ledger.directory, { bigint: true }); const freeBytes = free.bavail * free.bsize
