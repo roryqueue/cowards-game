@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer"
 import { readFileSync } from "node:fs"
 export { superviseLeanStartupV5 } from "./v1-38-lean-startup-supervisor.mjs"
+export { superviseLeanStartupV8 } from "./v1-38-lean-startup-supervisor-v8.mjs"
 import { LEAN_STARTUP_POLICY_V5, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { claimLeanRuntimeAuthority, isLeanCorrectionRuntimeAuthority, type LeanRuntimeAuthority, type LeanStartupGrantV5 } from "./v1-38-lean-experiment-authority.js"
@@ -250,7 +251,7 @@ export type LeanPrivateCorrectionOrigin = LeanCorrectionOriginMetadata | LeanSta
 /** v6 retains the sealed control program; only logical wire identity differs. */
 export const buildLeanContainerBrokerSourceV6 = (): string => buildLeanContainerBrokerSourceV5().replaceAll("v1.38-lean-startup-origin-v5", "v1.38-lean-startup-origin-v6").replaceAll("v1.38-lean-startup-v5:", "v1.38-lean-startup-v6:")
 export const buildLeanContainerBrokerSourceV7 = (): string => buildLeanContainerBrokerSourceV5().replaceAll("v1.38-lean-startup-origin-v5", "v1.38-lean-startup-origin-v7").replaceAll("v1.38-lean-startup-v5:", "v1.38-lean-startup-v7:")
-export const validateLeanPrivateCorrectionOrigin = (value: unknown): LeanPrivateCorrectionOrigin => (value as { schemaVersion?: unknown } | null)?.schemaVersion === "v1.38-lean-startup-origin-v7" ? validateLeanStartupOriginV7(value) : (value as { schemaVersion?: unknown } | null)?.schemaVersion === "v1.38-lean-startup-origin-v6" ? validateLeanStartupOriginV6(value) : (value as { schemaVersion?: unknown } | null)?.schemaVersion === "v1.38-lean-startup-origin-v5" ? validateLeanStartupOriginV5(value) : validateLeanCorrectionOriginMetadata(value)
+export const validateLeanPrivateCorrectionOrigin = (value: unknown): LeanPrivateCorrectionOrigin | LeanStartupOriginV8 => (value as { schemaVersion?: unknown } | null)?.schemaVersion === "v1.38-lean-startup-origin-v8" ? validateLeanStartupOriginV8(value) : (value as { schemaVersion?: unknown } | null)?.schemaVersion === "v1.38-lean-startup-origin-v7" ? validateLeanStartupOriginV7(value) : (value as { schemaVersion?: unknown } | null)?.schemaVersion === "v1.38-lean-startup-origin-v6" ? validateLeanStartupOriginV6(value) : (value as { schemaVersion?: unknown } | null)?.schemaVersion === "v1.38-lean-startup-origin-v5" ? validateLeanStartupOriginV5(value) : validateLeanCorrectionOriginMetadata(value)
 export const validateLeanStartupOriginV5 = (value: unknown, expected?: LeanStartupBindingV5): LeanStartupOriginV5 => {
   const keys = ["allocationRoot", "chargeRoot", "seat", "policyRoot", "harnessRoot", "requestOrdinal", "requestRoot", "method", "inputRoot", "sourceRoot", "executableRoot", "schemaVersion", "stage", "branch", "ready", "go", "wait", "termination", "unknown"]
   if (!value || typeof value !== "object" || Array.isArray(value) || !exactKeys(value as Record<string, unknown>, keys) || Buffer.byteLength(JSON.stringify(value)) > 4096) throw new TypeError("LEAN_STARTUP_ORIGIN_V5")
@@ -296,6 +297,49 @@ return {status:result.ok?0:70,signal:null,out:result.ok?Buffer.from(JSON.stringi
   if (!before.startsWith("const runLegacy=") || !before.length) throw new TypeError("LEAN_STARTUP_BROKER_SEAM_V5")
   source = source.replace(before, run).replace('exact(q,["requestId","mode","payloadBase64","timeoutMilliseconds","stdoutByteLimit","stderrByteLimit"])', 'exact(q,["requestId","mode","payloadBase64","timeoutMilliseconds","stdoutByteLimit","stderrByteLimit","startup"])').replace('!(q.mode in harnesses)', 'q.mode!=="legacy"||q.timeoutMilliseconds!==1000||!q.startup||!exact(q.startup,["hostBudgetMs","binding"])||!Number.isFinite(q.startup.hostBudgetMs)||q.startup.hostBudgetMs<=0||q.startup.hostBudgetMs>5000||!q.startup.binding||q.startup.binding.requestOrdinal!==q.requestId||q.startup.binding.policyRoot!=='+JSON.stringify(LEAN_STARTUP_POLICY_V5.root)).replace('stderrBase64:result.err.toString("base64")}', 'stderrBase64:result.err.toString("base64"),startupOrigin:result.startupOrigin}')
   return source
+}
+
+export type LeanStartupDurationBucketV8 = "0_9ms" | "10_49ms" | "50_99ms" | "100_249ms" | "250_499ms" | "500_999ms" | "1000_2499ms" | "2500_plus" | "unknown"
+export interface LeanStartupOriginV8 extends Omit<LeanStartupOriginV5, "schemaVersion"> {
+  schemaVersion: "v1.38-lean-startup-origin-v8";
+  constructorDurationBucket: LeanStartupDurationBucketV8; prefixMilestone: "not_entered" | "entered" | "ready_published" | "unknown";
+  readyPublicationDurationBucket: LeanStartupDurationBucketV8; finalAtomicState: "state_0" | "state_1" | "state_2" | "state_3" | "unavailable" | "unknown";
+  lifecycleBeforeTermination: "neither_seen" | "error_seen" | "exit_seen" | "both_seen" | "unknown";
+  deadlineOutcome: "ready_before_deadline" | "startup_deadline" | "late_or_boundary" | "construction_failure" | "unknown";
+}
+export interface LeanStartupSupervisorHostV8 extends Omit<LeanStartupSupervisorHostV5, "wait"> {
+  waitAsync(state: number, ms: number): Promise<string>; lifecycleFailure(): Promise<void>;
+  lifecycle(): LeanStartupOriginV8["lifecycleBeforeTermination"];
+  attribution(): { prefixMilestone: LeanStartupOriginV8["prefixMilestone"]; readyPublicationMs: number | undefined };
+}
+export const buildLeanStartupWorkerHarnessV8 = (): string => buildLeanStartupWorkerHarnessV5()
+  .replace("trustedControlV5.length!==1", "trustedControlV5.length!==4")
+  .replace("const trustedPublishReadyV5=()=>{", 'trustedStoreV5(trustedControlV5,1,1);\nconst trustedPublishReadyV5=()=>{const published=Math.floor(Number(trustedNowV5()-BigInt(rawWorkerData.startupEnteredNs))/1000000);if(!Number.isSafeInteger(published)||published<0||published>5000)throw new Error("STARTUP_CLOCK_V8");trustedStoreV5(trustedControlV5,2,published);trustedStoreV5(trustedControlV5,1,2);')
+export const validateLeanStartupOriginV8 = (value: unknown, expected?: LeanStartupBindingV5): LeanStartupOriginV8 => {
+  const extra = ["constructorDurationBucket", "prefixMilestone", "readyPublicationDurationBucket", "finalAtomicState", "lifecycleBeforeTermination", "deadlineOutcome"] as const
+  if (!value || typeof value !== "object" || Array.isArray(value) || Buffer.byteLength(JSON.stringify(value)) > 4096) throw new TypeError("LEAN_STARTUP_ORIGIN_V8")
+  const v = value as LeanStartupOriginV8, core = { ...v } as Record<string, unknown>
+  for (const k of extra) delete core[k]
+  if (v.schemaVersion !== "v1.38-lean-startup-origin-v8" || v.harnessRoot !== leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())) || expected && Object.keys(expected).some(k => v[k as keyof LeanStartupBindingV5] !== expected[k as keyof LeanStartupBindingV5])) throw new TypeError("LEAN_STARTUP_ORIGIN_V8")
+  validateLeanStartupOriginV5({ ...core, schemaVersion: "v1.38-lean-startup-origin-v5", harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())) })
+  const durations = ["0_9ms", "10_49ms", "50_99ms", "100_249ms", "250_499ms", "500_999ms", "1000_2499ms", "2500_plus", "unknown"]
+  if (!extra.every(k => Object.hasOwn(v, k)) || !durations.includes(v.constructorDurationBucket) || !durations.includes(v.readyPublicationDurationBucket) || !["not_entered", "entered", "ready_published", "unknown"].includes(v.prefixMilestone) || !["state_0", "state_1", "state_2", "state_3", "unavailable", "unknown"].includes(v.finalAtomicState) || !["neither_seen", "error_seen", "exit_seen", "both_seen", "unknown"].includes(v.lifecycleBeforeTermination) || !["ready_before_deadline", "startup_deadline", "late_or_boundary", "construction_failure", "unknown"].includes(v.deadlineOutcome) || v.prefixMilestone === "ready_published" && v.readyPublicationDurationBucket === "unknown" || ["not_entered", "entered"].includes(v.prefixMilestone) && v.readyPublicationDurationBucket !== "unknown" || v.ready && (v.prefixMilestone !== "ready_published" || v.deadlineOutcome !== "ready_before_deadline") || v.deadlineOutcome === "ready_before_deadline" && (!v.ready || v.readyPublicationDurationBucket === "2500_plus" || v.readyPublicationDurationBucket === "unknown") || v.deadlineOutcome === "late_or_boundary" && v.ready || v.deadlineOutcome === "construction_failure" && v.branch !== "construction_failure") throw new TypeError("LEAN_STARTUP_ORIGIN_V8")
+  return Object.freeze({ ...v })
+}
+const LEAN_STARTUP_SUPERVISOR_SOURCE_V8 = readFileSync(new URL("./v1-38-lean-startup-supervisor-v8.mjs", import.meta.url), "utf8")
+/** Separate dormant source selector. No route/grant alone selects these bytes. */
+export const buildLeanContainerBrokerSourceV8 = (): string => {
+  const replace = (s: string, before: string, after: string) => { if (!s.includes(before) || s.indexOf(before) !== s.lastIndexOf(before)) throw new TypeError("LEAN_STARTUP_BROKER_SEAM_V8"); return s.replace(before, after) }
+  let source = buildLeanContainerBrokerSourceV5()
+  source = replace(source, LEAN_STARTUP_SUPERVISOR_SOURCE_V5, LEAN_STARTUP_SUPERVISOR_SOURCE_V8)
+  source = source.replaceAll(JSON.stringify(buildLeanStartupWorkerHarnessV5()), JSON.stringify(buildLeanStartupWorkerHarnessV8())).replaceAll(JSON.stringify(leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5()))), JSON.stringify(leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8()))))
+  source = replace(source, "const binding=q.startup.binding;const entered=now();let worker,port,signal,reconcile;", "const binding=q.startup.binding;const entered=now();let worker,port,signal,reconcile,errorSeen=false,exitSeen=false,failLifecycle;const lifecyclePromise=new Promise(resolve=>{failLifecycle=resolve});")
+  source = replace(source, "superviseLeanStartupV5(binding,q.startup.hostBudgetMs,{", "superviseLeanStartupV8(binding,q.startup.hostBudgetMs-Number(now()-entered)/1000000,{")
+  source = replace(source, "new SharedArrayBuffer(4)", "new SharedArrayBuffer(16)")
+  source = replace(source, "signalBuffer,policyRoot:binding.policyRoot", "signalBuffer,startupEnteredNs:entered.toString(),policyRoot:binding.policyRoot")
+  source = replace(source, "reconcile=supervise(q,worker,port,entered+", 'worker.on("error",()=>{errorSeen=true;failLifecycle()});worker.on("exit",()=>{exitSeen=true;failLifecycle()});reconcile=supervise(q,worker,port,entered+')
+  source = replace(source, "wait:(state,ms)=>Atomics.wait(signal,0,state,ms)", 'waitAsync:typeof Atomics.waitAsync!=="function"?undefined:async(state,ms)=>await Atomics.waitAsync(signal,0,state,ms).value,lifecycleFailure:()=>lifecyclePromise,lifecycle:()=>errorSeen&&exitSeen?"both_seen":errorSeen?"error_seen":exitSeen?"exit_seen":"neither_seen",attribution:()=>({prefixMilestone:Atomics.load(signal,1)===2?"ready_published":Atomics.load(signal,1)===1?"entered":"not_entered",readyPublicationMs:Atomics.load(signal,1)===2?Atomics.load(signal,2):undefined})')
+  return source.replaceAll("v1.38-lean-startup-v5:", "v1.38-lean-startup-v8:")
 }
 
 const STREAM_WORKER_SOURCE = `
