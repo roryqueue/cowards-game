@@ -270,7 +270,7 @@ export const leanCorrectionSourceManifest = (supervisor: LeanSupervisorMode = fa
     if (!isLeanPostV13FivePairExtensionV14(extension)) return fail("SUPERVISOR_REQUEST")
     assertLeanRetryExtensionDocumentsV8(extension, supervisor)
     const closure = new Map(leanCorrectionSourceManifest("v13-1", LEAN_PREPARATION_CONTINUATION_V13_EXTENSION).entries.map(entry => [entry.path, entry]))
-    for (const path of LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS) if (/265-16-POST-V13-FIVE-PAIR-(?:SOURCE-REVIEW|REVIEW-FIX|VALIDATION|SOURCE-VERIFICATION|SOURCE-SUMMARY)/u.test(path)) closure.delete(path)
+    for (const path of LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS) if (/265-16-POST-V13-FIVE-PAIR-(?:SOURCE-REVIEW|REVIEW-FIX|VALIDATION|SOURCE-VERIFICATION|SOURCE-SUMMARY)/u.test(path) || path.endsWith("-REPAIR-ATTESTATION-v1.json")) closure.delete(path)
     for (const path of ["scripts/lib/v1-38-lean-post-v13-five-pair.ts", "scripts/lib/v1-38-lean-post-v13-five-pair.test.ts", "scripts/lib/v1-38-lean-post-v13-five-pair-custody.test.ts", "scripts/run-v1-38-lean-post-v13-five-pair.test.ts", "scripts/lib/v1-38-lean-owned-reuse-host-fixture.ts", "scripts/lib/v1-38-lean-precharge-owned-reuse.test.ts", ...["ADAPTER-PLAN", "PLAN-CHECK"].map(name => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-FIVE-PAIR-${name}-v1.md`), `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-BOUNDED-CONTINUATION-DECISION-v1.md`, `${LEAN_REMAINING_V9_PHASE}265-16-POST-V13-BOUNDED-CONTINUATION-APPROVAL-20261008.md`]) closure.set(path, { path, root: leanBytesRoot(readFileSync(resolve(path))) })
     const entries = [...closure.values()].sort((a,b) => a.path.localeCompare(b.path))
     return { entries, root: labRoot("lean-post-v13-five-pair-reviewed-source-v14", { entries, extension, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())), brokerRoot: leanBytesRoot(Buffer.from(buildLeanContainerBrokerSourceV7())) }) }
@@ -1743,17 +1743,41 @@ export const createLeanPostV13ContinuationV14 = (mode: LeanPostV13FivePairMode, 
   const body = { schemaVersion: leanPreparationProtocolSchema(mode, "continuation"), timeboxExtension: LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION, attemptOrdinal: leanRetryOrdinal(mode), ...input }
   return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
 }
-const validateLeanPostV13ContinuationV14 = (value: Record<string, unknown>, request: LeanCorrectionRequest, route: LeanCorrectionRoute, mode: LeanPostV13FivePairMode, history: { carryRoot: LabRoot; cumulativeCharged: number }) => {
+/** Cycle-free intent: only downstream review/authorization/continuation hashes
+ * are omitted. All source, helper, execution, identity and setup inputs remain. */
+export const leanPostV13RequestIntentRootV14 = (request: LeanCorrectionRequest): LabRoot => labRoot("lean-five-pair-request-intent-v14", Object.fromEntries(Object.entries(request).filter(([key]) => !["continuationRoot", "authorizationRoot", "dataReviewRoot", "helperReviewRoot"].includes(key))))
+export const LEAN_POST_V13_REPAIR_EVIDENCE_V14 = Object.freeze({
+  path: `${LEAN_REMAINING_V9_PHASE}265-16-PRECHARGE-REDUNDANCY-REPAIR-SOURCE-VERIFICATION-v1.md`,
+  bytesRoot: "sha256:30a946b9a2439357603b37df3dab8a2b5f8efbc71bce24272cd36df12731438f" as LabRoot,
+  commit: "90a8d5638b0282d6d58260fed1fc0564011ac999",
+  unchangedPaths: ["scripts/lib/v1-38-lean-baseline-reuse.ts", "scripts/lib/v1-38-lean-baseline-source.ts", "scripts/lib/v1-38-lean-baseline-pipeline.ts"],
+})
+/** A dedicated independent approval, NOT generic clean review or byte drift.
+ * Only the concretely tested immutable-graph repair is supported. New repair
+ * classes need source review; there is no safe diagnostic comparator here. */
+export const authenticateLeanPostV13RepairAttestationV14 = (request: LeanCorrectionRequest, route: LeanCorrectionRoute, mode: LeanPostV13FivePairMode, history: { root: LabRoot; carryRoot: LabRoot; holdRoot: LabRoot }, diagnosticAttestationRoot: LabRoot | null) => {
+  const path = leanFivePairDocumentsV14(route, mode).distinctionReview, bytes = readFileSync(path)
+  if (bytes.length > 262144) return fail("DIAGNOSTIC_CUSTODY")
+  const v = JSON.parse(bytes.toString("utf8")) as Record<string, unknown>, { root: claimed, ...body } = v, evidence = LEAN_POST_V13_REPAIR_EVIDENCE_V14
+  if (!exactLabKeys(v, ["schemaVersion", "status", "kind", "repairKind", "repairVerified", "identityOnly", "repairSummary", "priorClosureRoot", "priorHoldRoot", "priorCustodyRoot", "sourceRoot", "sourceCommit", "requestIntentRoot", "repairCommit", "repairEvidenceRoot", "diagnosticAttestationRoot", "route", "attemptOrdinal", "authorAgent", "reviewerAgent", "independentlyReviewed", "root"]) || v.schemaVersion !== "lean-five-pair-repair-attestation-v14" || v.status !== "actionable_repair_verified" || v.kind !== "reviewed_actionable_repair" || v.repairKind !== "immutable_graph_single_admission_seven_publications" || v.repairVerified !== true || v.identityOnly !== false || typeof v.repairSummary !== "string" || v.repairSummary.trim().length < 40 || v.priorClosureRoot !== history.carryRoot || v.priorHoldRoot !== history.holdRoot || v.priorCustodyRoot !== history.root || v.sourceRoot !== request.sourceRoot || v.requestIntentRoot !== leanPostV13RequestIntentRootV14(request) || v.repairCommit !== evidence.commit || v.repairEvidenceRoot !== evidence.bytesRoot || v.diagnosticAttestationRoot !== diagnosticAttestationRoot || v.route !== route || v.attemptOrdinal !== leanRetryOrdinal(mode) || v.authorAgent !== "/root" || !admitsLeanSupervisorReviewAgents(v.authorAgent, v.reviewerAgent) || v.independentlyReviewed !== true || typeof v.sourceCommit !== "string" || !/^[a-f0-9]{40}$/u.test(v.sourceCommit) || claimed !== labRoot(String(v.schemaVersion), body) || !bytes.equals(Buffer.from(leanCanonicalBytes(v))) || leanBytesRoot(readFileSync(evidence.path)) !== evidence.bytesRoot) return fail("DIAGNOSTIC_CUSTODY")
+  try {
+    execFileSync("git", ["diff", "--exit-code", evidence.commit, "--", ...evidence.unchangedPaths], { stdio: "pipe", maxBuffer: 1024 })
+    execFileSync("git", ["diff", "--exit-code", v.sourceCommit, "--", ...leanCorrectionSourceManifest(mode, LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION).entries.map(entry => entry.path)], { stdio: "pipe", maxBuffer: 1024 })
+  } catch { return fail("DIAGNOSTIC_CUSTODY") }
+  return { value: v, bytesRoot: leanBytesRoot(bytes) }
+}
+export const validateLeanPostV13ContinuationV14 = (value: Record<string, unknown>, request: LeanCorrectionRequest, route: LeanCorrectionRoute, mode: LeanPostV13FivePairMode, history: { root: LabRoot; carryRoot: LabRoot; holdRoot: LabRoot; cumulativeCharged: number }) => {
+  // No additional verified repair class/comparator is implemented. Reusing the
+  // same one-off immutable-graph repair for another failed pair is not fresh
+  // justification, even after comment/path/ordinal/source-root changes.
+  if (mode !== "v14-1") return fail("DIAGNOSTIC_CUSTODY")
   const diagnostic = route === "diagnostic" ? request : readLeanCorrectionJson(leanCorrectionRoutePaths("diagnostic", mode).request) as LeanCorrectionRequest
   const distinction = value.distinction as { kind: "reviewed_actionable_repair" | "prospective_diagnostic_distinction"; evidenceRoot: LabRoot; reviewRoot: LabRoot }
   const expected = createLeanPostV13ContinuationV14(mode, { priorClosureRoot: history.carryRoot, sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, cumulativeCharged: history.cumulativeCharged, cumulativeElapsedMs: Number(value.cumulativeElapsedMs), allocatedDiskBytes: Number(value.allocatedDiskBytes), distinction })
-  if (!same(value, expected) || distinction.reviewRoot !== request.reviewRoot || (distinction.kind === "reviewed_actionable_repair" ? distinction.evidenceRoot !== request.sourceRoot : distinction.evidenceRoot !== diagnostic.helperBytesRoot)) return fail("DIAGNOSTIC_CUSTODY")
-  if (mode !== "v14-1") {
-    const previousMode = `v14-${leanRetryOrdinal(mode) - 1}` as LeanPostV13FivePairMode, previous = readLeanCorrectionJson(leanCorrectionRoutePaths("diagnostic", previousMode).request) as LeanCorrectionRequest
-    if (distinction.kind === "reviewed_actionable_repair" ? previous.sourceRoot === request.sourceRoot : previous.helperBytesRoot === diagnostic.helperBytesRoot) return fail("DIAGNOSTIC_CUSTODY")
-    const prior = readLeanCorrectionJson(leanFivePairDocumentsV14("diagnostic", previousMode).continuation) as { distinction: unknown }
-    if (same(prior.distinction, distinction)) return fail("DIAGNOSTIC_CUSTODY")
-  }
+  if (!same(value, expected) || distinction.kind !== "reviewed_actionable_repair" || distinction.evidenceRoot !== LEAN_POST_V13_REPAIR_EVIDENCE_V14.bytesRoot) return fail("DIAGNOSTIC_CUSTODY")
+  const approval = authenticateLeanPostV13RepairAttestationV14(diagnostic, "diagnostic", mode, history, null)
+  if (distinction.reviewRoot !== approval.bytesRoot || diagnostic.sourceRoot !== request.sourceRoot || diagnostic.priorClosureRoot !== request.priorClosureRoot) return fail("DIAGNOSTIC_CUSTODY")
+  if (route === "baseline") authenticateLeanPostV13RepairAttestationV14(request, route, mode, history, approval.bytesRoot)
 }
 export const inspectLeanPostV13PredecessorV14 = (route: LeanCorrectionRoute, atMs: number, mode: LeanPostV13FivePairMode, purpose?: unknown, acceptedJoin?: ReturnType<typeof authenticateLeanPostV13FivePairAcceptedJoinV14>): LeanCorrectionPredecessor => {
   const witness = readLeanPostV13SetupV14(mode), history = readLeanPostV13PriorPairV14(mode), docs = leanFivePairDocumentsV14(route, mode), current = leanCorrectionRoutePaths(route, mode)
@@ -1863,7 +1887,7 @@ const readLeanPreparationContinuationRequestWithPurposeV13 = (path: string, rout
   validateLeanPreparationContinuationAuthorizationV13(readLeanCorrectionJson(docs.authorization), request, route)
   const historical = isLeanPostV13FivePairMode(mode) ? readLeanPostV13PriorPairV14(mode) : authenticateLeanPreparationContinuationHistoricalCustodyV13(), continuation = readLeanCorrectionJson(docs.continuation) as Record<string, unknown>, { root: cr, ...cb } = continuation
   if (request.priorClosureRoot !== historical.carryRoot || !exactLabKeys(continuation, ["schemaVersion", "timeboxExtension", "attemptOrdinal", "priorClosureRoot", "sourceRoot", "reviewRoot", "cumulativeCharged", "cumulativeElapsedMs", "allocatedDiskBytes", ...(isLeanPostV13FivePairMode(mode) ? ["distinction"] : []), "root"]) || continuation.schemaVersion !== leanPreparationProtocolSchema(mode, "continuation") || !same(continuation.timeboxExtension, b) || continuation.attemptOrdinal !== leanRetryOrdinal(mode) || continuation.priorClosureRoot !== historical.carryRoot || request.continuationRoot !== cr || continuation.sourceRoot !== request.sourceRoot || continuation.reviewRoot !== request.reviewRoot || continuation.cumulativeCharged !== historical.cumulativeCharged || !Number.isSafeInteger(continuation.cumulativeElapsedMs) || Number(continuation.cumulativeElapsedMs) < historical.predecessor.elapsedUpperBoundMs || !Number.isSafeInteger(continuation.allocatedDiskBytes) || Number(continuation.allocatedDiskBytes) < historical.predecessor.allocatedDiskBytes || Number(continuation.allocatedDiskBytes) > LEAN_CAPS.retainedBytes || cr !== labRoot(String(continuation.schemaVersion), cb)) return fail("DIAGNOSTIC_CUSTODY")
-  if (isLeanPostV13FivePairMode(mode)) validateLeanPostV13ContinuationV14(continuation, request, route, mode, historical)
+  if (isLeanPostV13FivePairMode(mode)) validateLeanPostV13ContinuationV14(continuation, request, route, mode, historical as ReturnType<typeof readLeanPostV13PriorPairV14>)
   const acceptedJoin = route === "baseline" ? isLeanPostV13FivePairMode(mode) ? authenticateLeanPostV13FivePairAcceptedJoinV14(mode) : authenticateLeanPreparationContinuationAcceptedJoinV13(mode) : undefined
   if (route === "diagnostic" ? request.acceptedCheckRoot !== null || request.acceptedReaderCloseRoot !== null : request.acceptedCheckRoot !== acceptedJoin!.accepted.root || request.acceptedReaderCloseRoot !== acceptedJoin!.closure.root || acceptedJoin!.accepted.sourceRoot !== request.sourceRoot) return fail("ACCEPTED_CHECK")
   if (acceptedJoin) {
@@ -1881,6 +1905,13 @@ const readLeanPreparationContinuationRequestWithPurposeV13 = (path: string, rout
   authenticateLeanPreparationContinuationSourceReviewV13(request, route, mode)
   readReview(docs.dataReview, request.dataReviewRoot, request.sourceRoot, null, leanCorrectionRequestDataRoot(request), mode, b)
   readReview(docs.helperReview, request.helperReviewRoot!, request.sourceRoot, null, leanCorrectionRequestDataRoot(request), mode, b)
+  if (isLeanPostV13FivePairMode(mode)) {
+    const attestationRoot = leanBytesRoot(readFileSync(leanFivePairDocumentsV14(route, mode).distinctionReview))
+    for (const path of [docs.dataReview, docs.helperReview]) {
+      const front = readFileSync(path, "utf8").split("\n---", 2)[0]!
+      if (front.match(/^continuation_distinction_root: (sha256:[a-f0-9]{64})$/mu)?.[1] !== attestationRoot) return fail("DIAGNOSTIC_CUSTODY")
+    }
+  }
   return { request, reuse }
 }
 /** Closed previous pair is custody/accounting only; no previous acceptance gate. */

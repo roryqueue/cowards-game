@@ -35,7 +35,7 @@ it("pins five distinct routes and unchanged continuous budget without relabellin
     for (const route of ["diagnostic", "baseline"] as const) {
       const p = experiment.leanCorrectionRoutePaths(route, mode)
       paths.push(p.store, p.request, p.temp, p.allocation)
-      expect(leanFivePairDocumentsV14(route, mode).review).toContain("POST-V13-FIVE-PAIR-SOURCE-REVIEW-v1.md")
+      expect(leanFivePairDocumentsV14(route, mode).review).toContain("POST-V13-FIVE-PAIR-SOURCE-REVIEW-v2.md")
     }
   }
   expect(new Set(paths).size).toBe(40)

@@ -28,6 +28,32 @@ const allocation = (route: "diagnostic" | "baseline", reuse?: ReturnType<typeof 
 }
 afterEach(() => { vi.restoreAllMocks(); host.child = null; host.failSample = false; host.samples = 0 })
 
+it("selected continuation consumer rejects comment/path/ordinal-only edits under both allowed labels", () => {
+  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "v14-distinction-refusal-host-")))
+  const history = { root: r(90), carryRoot: r(91), holdRoot: r(92), cumulativeCharged: 35 }
+  try {
+    process.chdir(directory)
+    for (const n of [1, 2] as const) for (const edit of ["// comment only", "fresh/path-v14-2", "ordinal-2"]) for (const kind of ["reviewed_actionable_repair", "prospective_diagnostic_distinction"] as const) {
+      const mode = `v14-${n}` as const, docs = correction.createLeanPostV13RequestDraftV14(mode, "diagnostic", { sourceRoot: r(93), reviewRoot: r(94), dataReviewRoot: r(95), helperReviewRoot: r(96), helperPath: `.strategy-lab/lean-five-pair-diagnostic-${mode}-helper.mts`, helperBytesRoot: lean.leanBytesRoot(Buffer.from(edit)), setupAccountingRoot: r(97), reuseGrantRoot: r(98), authorizationRoot: r(99), priorClosureRoot: history.carryRoot, continuationRoot: r(100), acceptedCheckRoot: null, acceptedReaderCloseRoot: null })
+      const continuation = correction.createLeanPostV13ContinuationV14(mode, { priorClosureRoot: history.carryRoot, sourceRoot: docs.sourceRoot, reviewRoot: docs.reviewRoot, cumulativeCharged: 35, cumulativeElapsedMs: 148694388, allocatedDiskBytes: 22777856, distinction: { kind, evidenceRoot: kind === "reviewed_actionable_repair" ? docs.sourceRoot : docs.helperBytesRoot!, reviewRoot: docs.reviewRoot } })
+      // This is the real selected validator, not a pure-state kind rejection.
+      expect(() => correction.validateLeanPostV13ContinuationV14(continuation, docs, "diagnostic", mode, history)).toThrow("DIAGNOSTIC_CUSTODY")
+      const { schemaVersion: _schema, timeboxExtension: _binding, attemptOrdinal: _ordinal, root: _root, ...input } = continuation
+      const withPinnedEvidence = correction.createLeanPostV13ContinuationV14(mode, { ...input, distinction: { kind, evidenceRoot: correction.LEAN_POST_V13_REPAIR_EVIDENCE_V14.bytesRoot, reviewRoot: r(101) } })
+      expect(() => correction.validateLeanPostV13ContinuationV14(withPinnedEvidence, docs, "diagnostic", mode, history)).toThrow()
+      expect(() => correction.readLeanPostV13RequestV14(lean.leanCorrectionRoutePaths("diagnostic", mode).request, "diagnostic", mode)).toThrow()
+    }
+    expect(readdirSync(directory)).toEqual([])
+  } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
+})
+
+it("request intent binds execution/helper/custody while omitting only downstream cyclic hashes", () => {
+  const request = correction.createLeanPostV13RequestDraftV14("v14-1", "diagnostic", { sourceRoot: r(110), reviewRoot: r(111), dataReviewRoot: r(112), helperReviewRoot: r(113), helperPath: ".strategy-lab/lean-five-pair-diagnostic-v14-1-helper.mts", helperBytesRoot: r(114), setupAccountingRoot: r(115), reuseGrantRoot: r(116), authorizationRoot: r(117), priorClosureRoot: r(118), continuationRoot: r(119), acceptedCheckRoot: null, acceptedReaderCloseRoot: null })
+  const intent = correction.leanPostV13RequestIntentRootV14(request)
+  for (const key of ["sourceRoot", "reviewRoot", "helperBytesRoot", "coldRoot", "seed", "priorClosureRoot", "setupAccountingRoot"]) expect(correction.leanPostV13RequestIntentRootV14({ ...request, [key]: r(120) })).not.toBe(intent)
+  expect(correction.leanPostV13RequestIntentRootV14({ ...request, continuationRoot: r(121), authorizationRoot: r(122), dataReviewRoot: r(123), helperReviewRoot: r(124) })).toBe(intent)
+})
+
 it("parses all five CLI/child identities and real dispatch refuses absent custody without a reservation", async () => {
   const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "v14-cli-refusal-host-")))
   try {
