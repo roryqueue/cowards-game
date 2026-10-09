@@ -16,6 +16,24 @@ import * as runtimeModule from "./v1-38-factory-supervised-runtime.js"
 import * as authorityModule from "./v1-38-lean-experiment-authority.js"
 import * as lifetimeModule from "./v1-38-league-prospective-lifetime.js"
 import { LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js"
+import { createHash } from "node:crypto"
+import { encodeSubprocessIpcRequest } from "../../packages/runtime-js/src/subprocess-ipc.js"
+import { buildLeanStartupWorkerHarnessV8 } from "./v1-38-lean-container-match-session.js"
+
+it("[startup-origin-v8] uses the exact V8 request prefix and refuses cross-invocation/source/seat joins", () => {
+  const root = (n: number) => labRoot("NON_AUTHORIZING-v8-join", n)
+  const request = { methodName: "selectActivations" as const, source: "INERT_NOT_EXECUTED", input: {}, requestOrdinal: 1 }
+  const transport = leanCorrectionInvocationTransportBinding(request, "v8" as any)
+  const payload = encodeSubprocessIpcRequest({ source: request.source, methodName: request.methodName, input: request.input, outputByteLimit: undefined })
+  expect(transport.requestRoot).toBe(`sha256:${createHash("sha256").update("v1.38-lean-startup-v8:1:").update(payload).digest("hex")}`)
+  expect(transport.requestRoot).not.toBe(leanCorrectionInvocationTransportBinding(request, "v7").requestRoot)
+  const evidence = { identity: { sourceRoot: root(1), executableRoot: transport.executableRoot, budgetRoot: root(2), attemptRoot: root(3), harnessRoot: lean.leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())) }, requestId: "inert", method: request.methodName, inputRoot: transport.inputRoot, ordinal: 0, invocationRoot: root(4), result: { ok: false, systemFailure: { code: "SUBPROCESS_SIGNAL", retryable: false } } } as any
+  const diagnostic = { stage: "executor", reason: "unknown", ...evidence } as any
+  const origin = { schemaVersion: "v1.38-lean-startup-origin-v8", allocationRoot: root(2), chargeRoot: root(3), seat: "bottom", policyRoot: lean.LEAN_STARTUP_POLICY_V5.root, harnessRoot: evidence.identity.harnessRoot, requestOrdinal: 1, requestRoot: transport.requestRoot, method: request.methodName, inputRoot: transport.inputRoot, sourceRoot: root(1), executableRoot: transport.executableRoot, stage: "startup", branch: "lifecycle_failure", ready: false, go: false, wait: "changed", termination: "completed", unknown: true, constructorDurationBucket: "0_9ms", prefixMilestone: "not_entered", readyPublicationDurationBucket: "unknown", finalAtomicState: "state_0", lifecycleBeforeTermination: "exit_seen", deadlineOutcome: "unknown" } as any
+  expect(bindLeanCorrectionInvocation(origin, transport, evidence, diagnostic, "bottom").schemaVersion).toBe("v1.38-lean-correction-invocation-binding-v8")
+  for (const field of ["sourceRoot", "allocationRoot", "chargeRoot", "harnessRoot", "inputRoot", "executableRoot"]) expect(() => bindLeanCorrectionInvocation({ ...origin, [field]: root(9) }, transport, evidence, diagnostic, "bottom")).toThrow()
+  expect(() => bindLeanCorrectionInvocation(origin, transport, evidence, diagnostic, "top")).toThrow()
+})
 
 const observedBridgeOptions = vi.hoisted(() => vi.fn())
 vi.mock("../../packages/strategy-lab/src/runtime-bridge.js", async importOriginal => {
