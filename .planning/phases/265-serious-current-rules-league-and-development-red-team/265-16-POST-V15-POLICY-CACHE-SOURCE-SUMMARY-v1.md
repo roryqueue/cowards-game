@@ -39,7 +39,7 @@ key-decisions:
   - Failed v15-3 history returns only38-charge cost custody and unknown historical peaks.
   - One inert publication integration test uses15000ms by explicit ROOT direction; operational limits remain unchanged.
 metrics:
-  duration: approximately30minutes-source-work-through-summary
+  duration: approximately36minutes-source-work-through-final-correction
   completed: 2026-10-09
 ---
 
@@ -99,6 +99,8 @@ Later T3 commands used perl -e 'alarm 60; exec @ARGV' before node for a hard com
 | 60041 | Exact inert-retention publication NOTPASS at5000 | 1 | 1timeout/41skipped/42total,13.47s |
 | 16797 | Exact publication with explicit test-only15000 | 0 | 1passed/41skipped/42total,13.66s (test8.17s) |
 | 82672 | Final T3 named set GREEN | 0 | 19passed/23skipped/42total,22.22s |
+| 30728 | Relocated connected checkpoint selection NOTPASS | 1 | 2passed/1timeout/42skipped/45total,15.78s; tamper5316ms |
+| 24355 | Split relocated connected checkpoint selection GREEN | 0 | 3passed/42skipped/45total,14.89s; all5000ms |
 
 Earlier test-seam attempts remain NOTPASS, not erased or reclassified: T1 session48357 exit1 (baseline fixture request-root count corrected to36);66834 exit1/no tests (isolated dependency import failure; ROOT supplied existing links);31005 exit1 (3passed/1timeout/13skipped,14.84s, connected guard6677ms);65390 exit1 (4passed/1timeout/13skipped,14.65s, guard5538ms). ROOT directed bounded splitting under unchanged5000ms, leading to86840. T2 sessions19745 exit1 (8failed/14skipped/22total,4.82s),86144 exit1 (10failed/14skipped/24total,5.31s frozen-kernel spy seam),45600 exit1 (8failed/11skipped/19total,1.32s module seam) remain NOTPASS; inert module kernel/provider leaves corrected the test seams before87413 RED and9116 GREEN.
 
@@ -114,6 +116,20 @@ Configured package type check:
 NODE_OPTIONS=--max-old-space-size=768 perl -e 'alarm 60; exec @ARGV' node_modules/.bin/tsc -p packages/strategy-lab/tsconfig.json --noEmit --composite false --incremental false
 Session31064 CLOSED exit2 NOTPASS. Missing isolated referenced spec/engine/runtime-js declaration outputs cause TS6305; imported scripts also cause TS6059 rootDir and dependent cascades. Output was large/truncated; this is NOT a six-error-only finding or a new type PASS. No generated output/build/install was performed. The inherited six strict errors and earlier private-fixture ENOENT/serious-monitor NOTPASS/unknown historical command exits remain unresolved and uncredited. ROOT owns any later bounded strict host-graph audit/fix.
 
+### Precise post-task package-boundary and registration repair
+
+After the initial summary commit d87f4f4f, ROOT identified NEW TS6059 caused by the package resource test's static script import. Explicit ROOT ownership direction approved only a controlled post-task overlap: move that exact script import and connected checkpoint/host-guard tests from the already-owned package test to the already-owned script test, and precisely type the new cache registration in lean-experiment.ts. No additional source file,13-file review path, operational allowance, immutable input, old receipt or old map changed. Pure package cache tests remain package-local; no dynamic untyped import or ts-ignore was used.
+
+ROOT supplied read-only existing MAIN spec/engine/runtime-js dist declaration directory symlinks, without build/install/emitted files. The exact configured no-emit command then closed session27798 exit2 NOTPASS with one actual NEW TS2345 at lean-experiment1194: generic leanRetryExtensionCaps returned a broader union than the new private V15 cache accepts. The precise repair selects the selected mode's canonical V15 CAPS in ONLY the new registration. Full reconstruction/equality, strict caps comparison and old immutableRetryData/admittedRetryCaps registration remain unchanged. No cast, old-map edit, caller cache or admission shortcut was introduced.
+
+Relocated connected selection30728 remained NOTPASS (tamper5316ms at5000); ROOT directed splitting redundant valid-before-tamper work. Positive test still asserts all THREE fresh admissions and every existing live callback; independent tamper-refusal test also observes three fresh admissions. All same RAM/time/available-memory assertions remain. Exact relocated command:
+NODE_OPTIONS=--max-old-space-size=768 perl -e 'alarm 60; exec @ARGV' node node_modules/vitest/vitest.mjs run scripts/run-v1-38-lean-resource-window-v15.test.ts -t 'policy cache actual checkpoint|policy cache fresh RAM' --testTimeout 5000
+Session24355 CLOSED exit0,3passed/42skipped/45total,14.89s. No timeout exception was added to these tests. Prior Task3 GREEN82672 is retained; no full-suite or empirical repeat followed this test relocation.
+
+Configured package no-emit session98537 CLOSED exit0 with no diagnostics, after the above exact source/type repair and read-only dependency declarations. This is a scoped configured PACKAGE type PASS, not strict host-script graph/type coverage or resolution of the inherited six strict host-graph errors. Prior31064/27798 NOTPASS outputs remain reported. Per-command elapsed duration was not separately printed by tsc; the hard60s alarm bounded it.
+
+Repair commit6996d3e7 contains only the three owned source/test files. ROOT owns subsequent independent review/validation, strict host graph and empirical gates. Shell syntax/diff checks CLOSED0; no deleted/generated files, no installs/builds/pushes. This generated source-summary exclusion alone was updated for the correction.
+
 git diff --check and /bin/sh -n scripts/run-v1-38-lean-correction.sh CLOSED0 before Task3 commit; no deleted files, no untracked/generated outputs, checkout clean after source commits. Stub scan of modified production files found no TODO/FIXME/placeholder/coming-soon matches (rg exit1 means no matches, not a test PASS). Intended null success metadata/absent legacy fields and inert empty fixture leaves are not production stubs. No new unplanned network endpoint/auth path/writable sidecar/threat surface was introduced; planned private metadata trust boundaries remain gated.
 
 ## TDD gate compliance and handoff
@@ -124,4 +140,4 @@ No planning progression or requirement completion was recorded by this source ex
 
 ## Self-Check: PASSED
 
-Scheduled summary exists; all six RED/GREEN commits resolve; diff whitespace and shell syntax checks CLOSED0. Source implementation/checkpoint outcomes and NOTPASS limitations above are scoped claims, not empirical or type completion.
+Scheduled summary exists; all six RED/GREEN commits plus precise repair6996d3e7 resolve; diff whitespace and shell syntax checks CLOSED0. Source implementation/checkpoint outcomes, scoped package type PASS and historical NOTPASS limitations above are scoped claims, not empirical or strict host-graph completion.
