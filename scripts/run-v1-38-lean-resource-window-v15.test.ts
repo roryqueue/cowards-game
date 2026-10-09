@@ -1,19 +1,27 @@
 /** Portable NON-AUTHORIZING host fixtures. Never Strategy/Match/provider work. */
-import { expect, it } from "vitest"
-import { mkdtempSync, realpathSync, readdirSync, rmSync, readFileSync } from "node:fs"
+import { expect, it, vi } from "vitest"
+import { mkdtempSync, mkdirSync, realpathSync, readdirSync, rmSync, readFileSync, writeFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import * as correction from "./run-v1-38-lean-correction.js"
 import { assessLeanPrefixCapacity } from "./run-v1-38-lean-experiment.js"
-import { leanResourceWindowDocumentsV15 } from "./lib/v1-38-lean-resource-window-v15.js"
+import { leanResourceWindowDocumentsV15, authenticateLeanResourceWindowPriorPairV15, authenticateLeanResourceWindowAcceptedJoinV15 } from "./lib/v1-38-lean-resource-window-v15.js"
+import { auditLeanCorrectionRetained, assertLeanResourceWindowReaderV15 } from "./lib/v1-38-lean-correction-retained.js"
 
 const r = (n: number) => labRoot("NON_AUTHORIZING_v15_HOST", n)
 const allocation = () => {
   const b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY, p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 36, elapsedUpperBoundMs: 208771903, allocatedDiskBytes: 24780800, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: r(1), survivors: Array.from({ length: 854 }, (_, n) => ({ identity: `.strategy-lab/NON_AUTHORIZING-history-${n}`, allocatedBytes: 0 })) }
   return lean.createLeanSupervisorCorrectionAllocation({ sourceRoot: r(2), reviewRoot: r(3), coldRoot: r(4), planRoot: b.planRoot, candidateRoots: [r(5), r(6)], requestRoots: [r(7)], seed: "non-authorizing-host", route: "diagnostic", reuseGrantRoot: r(8), supervisorDecisionRoot: b.approvalRoot, acceptedCheckRoot: null, requestBytesRoot: r(9), dataReviewRoot: r(10), setupAccountingRoot: r(11), predecessor: { ...p, root: labRoot(p.schemaVersion, p) }, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, timeboxExtension: b, attemptOrdinal: 2, priorClosureRoot: r(12), continuationRoot: r(13), acceptedReaderCloseRoot: null }, 8)
 }
+it("finite documents and missing or forged predecessor/own FINAL never authorize", () => {
+  expect(leanResourceWindowDocumentsV15("diagnostic", "v15-2").helper).toBe(".strategy-lab/lean-resource-window-diagnostic-v15-2-helper.mts")
+  expect(leanResourceWindowDocumentsV15("baseline", "v15-2").dataReview).toContain("RESOURCE-WINDOW-baseline-v15-2-DATA-REVIEW-v1.md")
+  expect(() => authenticateLeanResourceWindowPriorPairV15(new Map())).toThrow()
+  expect(() => authenticateLeanResourceWindowAcceptedJoinV15("v15-2", {}, {} as never)).toThrow()
+})
 
 it("ROOT authority frontier: finite selected dispatcher refuses absent authentic custody without writes", async () => {
   const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "lean-v15-inert-")))
@@ -46,4 +54,76 @@ it("finite documents remain route-specific with no caller-chosen helper or repor
   const shell = readFileSync("scripts/run-v1-38-lean-correction.sh", "utf8")
   expect(shell).toContain("prepare-supervisor-diagnostic-v15-[2-5]")
   expect(shell).toContain("lean-correction-supervisor-baseline-20261009-v${1##*-v}-tmp")
+})
+it("executes only the finite shell selectors with an inert loader and unchanged pre-loader controls", () => {
+  const wrapper = resolve("scripts/run-v1-38-lean-correction.sh"), directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-v15-shell-")))
+  try {
+    mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, "bin"), { mode: 0o700 })
+    writeFileSync(join(directory, "bin/node"), '#!/bin/sh\nprintf "%s\\n" "$TMPDIR" "${NODE_OPTIONS-unset}" "$TSX_DISABLE_CACHE" "$NODE_DISABLE_COMPILE_CACHE" "$@"\n', { mode: 0o700 })
+    const env = { ...process.env, PATH: `${join(directory, "bin")}:/usr/bin:/bin`, NODE_OPTIONS: "NON_AUTHORIZING-hostile-options" }
+    for (const n of [2, 3, 4, 5]) for (const route of ["diagnostic", "baseline"]) for (const action of ["prepare", "run", "verify", "verify-terminal"]) {
+      const command = `${action}-supervisor-${route}-v15-${n}`, lines = execFileSync("/bin/sh", [wrapper, command], { cwd: directory, env, encoding: "utf8" }).trim().split("\n")
+      expect(lines).toEqual([join(directory, `.strategy-lab/lean-correction-supervisor-${route}-20261009-v15-${n}-tmp`), "unset", "1", "1", "--max-old-space-size=768", "--import", "tsx", "scripts/run-v1-38-lean-correction.ts", command])
+    }
+    const before = readdirSync(join(directory, ".strategy-lab"))
+    for (const command of ["run-supervisor-diagnostic-v15-1", "run-supervisor-baseline-v15-6", "run-supervisor-diagnostic-v15-20", "run-supervisor-diagnostic-v15-2-extra"]) expect(() => execFileSync("/bin/sh", [wrapper, command], { cwd: directory, env, stdio: "pipe" })).toThrow()
+    expect(readdirSync(join(directory, ".strategy-lab"))).toEqual(before)
+  } finally { rmSync(directory, { recursive: true, force: true }) }
+})
+it("uses the same strict policy for the actual child guard without charging RSS to disk", () => {
+  const a = allocation(), m = { elapsedMs: 208771903, charged: 36, physicalBytes: 24780800, parentRss: 1000000000, childRss: 1152455680, freeBytes: 15000000000, availableMemoryBytes: 2000000000 }
+  expect(correction.assertLeanCorrectionResources(m, a)).toBe(3000000000)
+  expect(() => correction.assertLeanCorrectionResources({ ...m, childRss: m.childRss + 1 }, a)).toThrow("MEMORY_CAP")
+  expect(() => correction.assertLeanCorrectionResources(m)).toThrow("CAPACITY")
+  expect(() => correction.assertLeanCorrectionResources({ ...m, charged: 35 }, a)).toThrow("CAPACITY")
+  expect(() => correction.assertLeanCorrectionResources({ ...m, physicalBytes: 12000000001 }, a)).toThrow("CAPACITY")
+  expect(() => correction.assertLeanCorrectionResources({ ...m, elapsedMs: 223171903 - 1860000 - 600000 }, a)).toThrow("CAPACITY")
+  expect(() => correction.assertLeanCorrectionResources(m, { ...a, caps: { ...a.caps, scratchBytes: 3000000000 } } as unknown as typeof a)).toThrow()
+})
+it("requires the selected full-audit callback rather than accepting an omitted guard", () => {
+  // Shape-only rejection fixture: no fabricated accepted result or FINAL.
+  const snapshot = { schemaVersion: "lean-correction-supervisor-retained-snapshot-v8", allocation: allocation(), request: {}, entry: {}, terminal: {}, evidence: {}, time: {}, result: {}, reuse: {}, pairs: [], observations: [], sources: [], artifacts: {}, origin: null, journalBytes: new Uint8Array(), supervisorReasonBytes: new Uint8Array() }
+  expect(() => auditLeanCorrectionRetained(snapshot)).toThrow("RESOURCE_GUARD")
+  expect(() => auditLeanCorrectionRetained(snapshot, () => { throw new Error("NON_AUTHORIZING_CALLBACK_OBSERVED") })).toThrow("NON_AUTHORIZING_CALLBACK_OBSERVED")
+})
+it("measures an independent retained-reader process and real temp disk under the same envelope", () => {
+  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-v15-reader-"))), usage = process.memoryUsage(), spy = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...usage, rss: 2152455680, arrayBuffers: 4096 })
+  try {
+    process.chdir(directory); mkdirSync(".strategy-lab", { mode: 0o700 })
+    const a = allocation(), paths = lean.leanCorrectionRoutePaths("diagnostic", "v15-2")
+    mkdirSync(paths.temp, { mode: 0o700 })
+    const ledger = lean.createLeanLedger(paths.store, a), observed = assertLeanResourceWindowReaderV15(ledger)
+    expect(observed.memoryBytes).toBe(3000000000)
+    expect(observed.scratchBytes).toBe(4096 + lean.measureLeanPhysicalBytes(paths.temp))
+    expect(observed.scratchBytes).toBeLessThan(2000000000)
+    expect(() => assertLeanResourceWindowReaderV15(ledger, 1)).toThrow("MEMORY_CAP")
+    spy.mockReturnValue({ ...usage, rss: 2100000000, arrayBuffers: 2000000001 })
+    expect(() => assertLeanResourceWindowReaderV15(ledger)).toThrow("HOLD_OR_CAPACITY")
+  } finally { spy.mockRestore(); process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
+})
+it("roots setup and continuation in the original continuous window and leaves later paths dormant", () => {
+  const b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY, setup = correction.createLeanResourceWindowSetupV15("v15-2", b.actualResumeMs)
+  expect(setup).toMatchObject({ startedAtMs: 1791455941097, priorElapsedMs: 108000000, memoryApprovalRoot: b.memoryApprovalRoot, attemptOrdinal: 2 })
+  expect(() => correction.createLeanResourceWindowSetupV15("v15-1" as never, b.actualResumeMs)).toThrow()
+  expect(() => correction.createLeanResourceWindowSetupV15("v15-2", b.absoluteDeadlineMs - b.reserveMs - 600000)).toThrow()
+  const input = { priorClosureRoot: r(1), sourceRoot: r(2), reviewRoot: r(3), cumulativeCharged: 36, cumulativeElapsedMs: 208771903, allocatedDiskBytes: 24780800, distinction: { kind: "approved_prospective_memory_policy" as const, evidenceRoot: b.memoryApprovalRoot, reviewRoot: r(4) } }
+  expect(correction.createLeanResourceWindowContinuationV15("v15-2", input)).toMatchObject({ attemptOrdinal: 2, timeboxExtension: b })
+  expect(() => correction.createLeanResourceWindowContinuationV15("v15-2", { ...input, cumulativeCharged: 35 })).toThrow()
+  expect(() => correction.createLeanResourceWindowContinuationV15("v15-2", { ...input, distinction: { ...input.distinction, evidenceRoot: r(99) } })).toThrow()
+  for (const mode of ["v15-3", "v15-4", "v15-5"] as const) expect(() => correction.validateLeanResourceWindowContinuationV15({}, {} as never, "diagnostic", mode, {} as never)).toThrow("DIAGNOSTIC_CUSTODY")
+  expect(() => correction.validateLeanPostV13ContinuationV14({}, {} as never, "diagnostic", "v14-2", {} as never)).toThrow("DIAGNOSTIC_CUSTODY")
+})
+it("accepts only source-bound ROOT and distinct-reviewer authorization shape, never source-executor roles", () => {
+  const b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY, docs = leanResourceWindowDocumentsV15("diagnostic", "v15-2")
+  const draft = correction.createLeanResourceWindowRequestDraftV15("v15-2", "diagnostic", { sourceRoot: r(1), reviewRoot: r(2), dataReviewRoot: r(3), setupAccountingRoot: r(4), reuseGrantRoot: r(5), authorizationRoot: r(6), priorClosureRoot: r(7), continuationRoot: r(8), acceptedCheckRoot: null, acceptedReaderCloseRoot: null, helperReviewRoot: r(9), helperPath: docs.helper, helperBytesRoot: r(10) })
+  const base = { schemaVersion: "lean-resource-window-execution-authorization-v15", timeboxExtension: b, approved: true, executionAuthorized: true, route: "diagnostic", attemptOrdinal: 2, sourceRoot: draft.sourceRoot, approvalRoot: b.approvalRoot, planRoot: b.planRoot, policyRoot: b.root, requestDataRoot: correction.leanCorrectionRequestDataRoot(draft), helperPath: draft.helperPath, helperBytesRoot: draft.helperBytesRoot, helperReviewRoot: draft.helperReviewRoot, authorAgent: "/root", reviewerAgent: "/root/non_authorizing_fixture_reviewer" }
+  const bind = (body: typeof base) => { const authorization = { ...body, root: labRoot(body.schemaVersion, body) }; return { authorization, request: { ...draft, authorizationRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(authorization)) } } }
+  // In-memory actor contract only; no actual gate, accepted diagnostic, helper,
+  // immutable allocation or execution authority is published by this fixture.
+  const valid = bind(base)
+  expect(() => correction.validateLeanPreparationContinuationAuthorizationV13(valid.authorization, valid.request, "diagnostic")).not.toThrow()
+  for (const fields of [{ authorAgent: "/root/source_executor" }, { reviewerAgent: "/root" }, { policyRoot: r(99) }, { helperBytesRoot: r(99) }, { attemptOrdinal: 3 }, { approved: false }, { timeboxExtension: { ...b, memoryBytes: 9000000000 } }]) {
+    const fixture = bind({ ...base, ...fields } as typeof base)
+    expect(() => correction.validateLeanPreparationContinuationAuthorizationV13(fixture.authorization, fixture.request, "diagnostic")).toThrow()
+  }
 })

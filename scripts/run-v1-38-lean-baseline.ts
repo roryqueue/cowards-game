@@ -11,6 +11,7 @@ import { createLeanCurrentBaselineAllocation, createLeanLedger, openLeanLedger, 
 import { observeLeagueAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
 import { factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
 import { assessLeanPrefixCapacity, createLeanParentObservationGuard, admitLeanChildRelease, assertLeanEntryBinding, readLeanSafeFile } from "./run-v1-38-lean-experiment.js"
+import { leanMemoryLimitForAllocation } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { executeLeanCurrentPipeline, leanColdProcedureRoot, compactLeanBaselineCell } from "./lib/v1-38-lean-baseline-pipeline.js"
 import { publishLeanBaselineSource } from "./lib/v1-38-lean-baseline-source.js"
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
@@ -395,7 +396,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     await waitLeanBoundedChildReady(child)
     if (!child.pid) return fail("CHILD_PID")
     childRssObservedBytes = rssOf(child.pid)
-    if (process.memoryUsage().rss + childRssObservedBytes + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes) return fail("PREFIX_CAPACITY")
+    if (process.memoryUsage().rss + childRssObservedBytes + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > leanMemoryLimitForAllocation(allocation)) return fail("PREFIX_CAPACITY")
     const fs = statfsSync(STORE, { bigint: true }), free = fs.bavail * fs.bsize
     if (free > BigInt(Number.MAX_SAFE_INTEGER) || free < BigInt(LEAN_CAPS.totalBytes - cumulativeLeanPhysicalBytes(ledger))) return fail("PREFIX_CAPACITY")
     options.beforeRelease?.()
@@ -408,7 +409,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
       try {
         const rss = sample("child_rss", () => rssOf(child.pid!))
         childRssObservedBytes = Math.max(childRssObservedBytes ?? 0, rss)
-        if (sample("parent_rss", () => process.memoryUsage().rss) + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > LEAN_CAPS.scratchBytes || sample("time_budget", () => leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).elapsedMs >= leanCapsForAllocation(allocation).elapsedMs)) { uncertain = true; observe("resource_threshold"); sample("threshold_kill", () => child.kill("SIGKILL")) }
+        if (sample("parent_rss", () => process.memoryUsage().rss) + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > leanMemoryLimitForAllocation(allocation) || sample("time_budget", () => leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).elapsedMs >= leanCapsForAllocation(allocation).elapsedMs)) { uncertain = true; observe("resource_threshold"); sample("threshold_kill", () => child.kill("SIGKILL")) }
       } catch {
         if (!firstSamplingException) firstSamplingException = { resourceSamplingOperation: samplingOperation, resourceSamplingSequence: Math.max(1, samplingSequence), resourceSamplingExitObserved: exitEventObserved }
         uncertain = true; observe("resource_sampling_exception"); child.kill("SIGKILL")

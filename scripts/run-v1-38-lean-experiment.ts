@@ -3,6 +3,7 @@ import { constants, openSync, writeSync, fsyncSync, closeSync, readFileSync, lst
 import { resolve, join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { leanCapsForAllocation, type AnyLeanAllocation } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { leanResourcePolicyForAllocationV15 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { execFileSync, fork } from "node:child_process"
 import { randomBytes } from "node:crypto"
 import { performance } from "node:perf_hooks"
@@ -111,7 +112,10 @@ export const assertLeanPrefixCapacity = (ledger: LeanExperimentLedger, parentPid
 }
 export const assessLeanPrefixCapacity = (m: { childRss: number; parentRss: number; freeBytes: number; allocatedBytes: number; elapsedMs: number }, reserveBytes = 320 * 1024 * 1024, allocation?: AnyLeanAllocation): number => {
   const caps = allocation === undefined ? LEAN_CAPS : leanCapsForAllocation(allocation)
-  if (!exactLabKeys(m, ["childRss", "parentRss", "freeBytes", "allocatedBytes", "elapsedMs"]) || !Object.values(m).every(n => Number.isSafeInteger(n) && n >= 0) || !Number.isSafeInteger(reserveBytes) || reserveBytes < 0 || m.childRss + m.parentRss + LEAN_EXTERNAL_SCRATCH_RESERVE + reserveBytes > LEAN_CAPS.scratchBytes || m.elapsedMs >= caps.elapsedMs || m.allocatedBytes > LEAN_CAPS.totalBytes || m.freeBytes < LEAN_CAPS.totalBytes - m.allocatedBytes) return fail("PREFIX_CAPACITY")
+  const policy = allocation === undefined ? null : leanResourcePolicyForAllocationV15(allocation)
+  if (policy && reserveBytes !== policy.guardBytes) return fail("PREFIX_CAPACITY")
+  if (policy && (m.elapsedMs < policy.priorElapsedMs + policy.actualResumeMs - policy.startedAtMs || m.elapsedMs + policy.reserveMs + LEAN_CAPS.matchMs >= caps.elapsedMs || m.allocatedBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.retainedBytes)) return fail("PREFIX_CAPACITY")
+  if (!exactLabKeys(m, ["childRss", "parentRss", "freeBytes", "allocatedBytes", "elapsedMs"]) || !Object.values(m).every(n => Number.isSafeInteger(n) && n >= 0) || !Number.isSafeInteger(reserveBytes) || reserveBytes < 0 || m.childRss + m.parentRss + LEAN_EXTERNAL_SCRATCH_RESERVE + reserveBytes > (policy?.memoryBytes ?? LEAN_CAPS.scratchBytes) || m.elapsedMs >= caps.elapsedMs || m.allocatedBytes > LEAN_CAPS.totalBytes || m.freeBytes < LEAN_CAPS.totalBytes - m.allocatedBytes) return fail("PREFIX_CAPACITY")
   return m.childRss + m.parentRss
 }
 export const admitLeanChildRelease = (entry: LeanChildEntryV2, token: string, pid: number, parentPid: number): void => {

@@ -1,5 +1,6 @@
 /** Private trusted-coordinator evidence. Never imported by the rules engine. */
 import { createHash } from "node:crypto"
+import { existsSync } from "node:fs"
 import { constants, openSync, closeSync, writeSync, fsyncSync, readFileSync, mkdirSync, lstatSync, realpathSync, readdirSync, statSync, statfsSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { gzipSync, gunzipSync } from "node:zlib"
@@ -957,6 +958,19 @@ export const LEAN_TWENTY_SIX_V10_REPORT_PATHS = Object.freeze([
 /** Additional physical custody after the immutable prepared snapshot. Never
  * refund old blocks when an inventory publication becomes smaller. */
 export const leanTwentySixReportDeltaBytes = (allocation: AnyLeanAllocation): number => {
+  if ("timeboxExtension" in allocation && isLeanResourceWindowExtensionV15(allocation.timeboxExtension) && "route" in allocation) {
+    if (!leanResourcePolicyForAllocationV15(allocation)) return fail("RESOURCE_POLICY")
+    return LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS.reduce((bytes, path) => {
+      if (path === leanRetrySetupPath(leanSupervisorAllocationMode(allocation) as LeanResourceWindowModeV15)) return bytes
+      const prior = allocation.predecessor.survivors.find(row => row.identity === path)?.allocatedBytes ?? 0
+      if (!existsSync(path)) { if (prior !== 0) return fail("PREDECESSOR_DRIFT"); return bytes }
+      const stat = lstatSync(resolve(path))
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== process.getuid?.() || stat.size > 4194304 || realpathSync(resolve(path)) !== resolve(path)) return fail("PREDECESSOR_INVENTORY")
+      const observed = stat.blocks * 512
+      if (observed < prior) return fail("PREDECESSOR_DRIFT")
+      return bytes + observed - prior
+    }, 0)
+  }
   if ("timeboxExtension" in allocation && (isLeanPostV13FivePairExtensionV14(allocation.timeboxExtension) || isLeanPreparationContinuationExtensionV13(allocation.timeboxExtension) || isLeanTwoPairExtensionV11(allocation.timeboxExtension) || isLeanSupervisorRetestExtensionV12(allocation.timeboxExtension)) && "route" in allocation) return (isLeanPostV13FivePairExtensionV14(allocation.timeboxExtension) ? LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS : isLeanPreparationContinuationExtensionV13(allocation.timeboxExtension) ? LEAN_PREPARATION_CONTINUATION_V13_REPORT_PATHS : isLeanSupervisorRetestExtensionV12(allocation.timeboxExtension) ? LEAN_SUPERVISOR_RETEST_V12_REPORT_PATHS : LEAN_TWO_PAIR_V11_REPORT_PATHS).reduce((bytes, path) => {
     const prior = allocation.predecessor.survivors.find(row => row.identity === path)?.allocatedBytes ?? 0
     let stat: ReturnType<typeof lstatSync>
@@ -1203,7 +1217,17 @@ export const leanSchedule = (tier: "full" | "reduced") => {
 export interface LeanReplayContainer { schemaVersion: "lean-sampled-replay-gzip-v1"; privacy: "private_offline"; codec: "gzip-node-v1"; compressedRoot: LabRoot; uncompressedRoot: LabRoot; compressedBytes: number; uncompressedBytes: number; frames: number; root: LabRoot }
 const REPLAY_MAX = 256_000_000
 export const LEAN_EXTERNAL_SCRATCH_RESERVE = 512_000_000
-const assertTransient = (additionalBytes = 0) => { if (Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024) + LEAN_EXTERNAL_SCRATCH_RESERVE + additionalBytes > LEAN_CAPS.scratchBytes) return fail("BUFFER_CAP") }
+const assertTransient = (additionalBytes = 0, allocation?: AnyLeanAllocation, guard?: (additionalBytes?: number) => void) => {
+  const policy = allocation === undefined ? null : leanResourcePolicyForAllocationV15(allocation)
+  if (policy) {
+    if (typeof guard !== "function") return fail("RESOURCE_GUARD")
+    guard(additionalBytes)
+    // Native RSS is guarded independently; this is the measured live backing
+    // store plus conservative additional serialization allocation, not RSS.
+    if (!natural(additionalBytes) || process.memoryUsage().arrayBuffers + additionalBytes > LEAN_CAPS.scratchBytes) return fail("BUFFER_CAP")
+    assertLeanProcessMemoryV15(Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024) + additionalBytes, policy)
+  } else if (Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024) + LEAN_EXTERNAL_SCRATCH_RESERVE + additionalBytes > LEAN_CAPS.scratchBytes) return fail("BUFFER_CAP")
+}
 /** Conservative JSON-size traversal refuses large frames before JSON/string/buffer allocation. */
 const boundedFrameEstimate = (value: unknown, remaining: number): number => {
   let bytes = 1
@@ -1218,19 +1242,19 @@ const boundedFrameEstimate = (value: unknown, remaining: number): number => {
   visit(value, 0); return bytes
 }
 export const boundLeanReplayFrame = (value: unknown) => { const upper = boundedFrameEstimate(value, REPLAY_MAX); assertTransient(upper * 3) }
-export const encodeLeanReplay = (frames: Iterable<unknown>, maximumBytes = REPLAY_MAX): { container: LeanReplayContainer; bytes: Uint8Array } => {
+export const encodeLeanReplay = (frames: Iterable<unknown>, maximumBytes = REPLAY_MAX, allocation?: AnyLeanAllocation, guard?: (additionalBytes?: number) => void): { container: LeanReplayContainer; bytes: Uint8Array } => {
   const limit = Math.min(maximumBytes, REPLAY_MAX), chunks: Buffer[] = []
   let length = 0, count = 0
   for (const frame of frames) {
     const upper = boundedFrameEstimate(frame, limit - length)
-    assertTransient(length + upper * 3)
+    assertTransient(length + upper * 3, allocation, guard)
     const encoded = leanCanonicalBytes(frame)
     if (length + encoded.length + 1 > limit) return fail("REPLAY_LIMIT")
     chunks.push(Buffer.concat([encoded, Buffer.from("\n")])); length += encoded.length + 1; count++
   }
-  assertTransient(length * 3 + 1_000_000)
+  assertTransient(length * 3 + 1_000_000, allocation, guard)
   const plain = Buffer.concat(chunks), bytes = gzipSync(plain, { level: 6 })
-  assertTransient()
+  assertTransient(0, allocation, guard)
   const body = { schemaVersion: "lean-sampled-replay-gzip-v1" as const, privacy: "private_offline" as const, codec: "gzip-node-v1" as const, compressedRoot: leanBytesRoot(bytes), uncompressedRoot: leanBytesRoot(plain), compressedBytes: bytes.length, uncompressedBytes: plain.length, frames: count }
   return { container: { ...body, root: labRoot("lean-sampled-replay-gzip-v1", body) }, bytes }
 }
@@ -1248,12 +1272,12 @@ export const decodeLeanReplay = (container: LeanReplayContainer, bytes: Uint8Arr
 }
 /** Validate all frames without retaining decoded text, line or frame collections.
  * Inflate remains synchronous and fully buffered under the original 4× guard. */
-export const validateLeanReplay = (container: LeanReplayContainer, bytes: Uint8Array, maximumBytes = REPLAY_MAX): void => {
+export const validateLeanReplay = (container: LeanReplayContainer, bytes: Uint8Array, maximumBytes = REPLAY_MAX, allocation?: AnyLeanAllocation, guard?: (additionalBytes?: number) => void): void => {
   if (!exactLabKeys(container, ["schemaVersion", "privacy", "codec", "compressedRoot", "uncompressedRoot", "compressedBytes", "uncompressedBytes", "frames", "root"]) || container.schemaVersion !== "lean-sampled-replay-gzip-v1" || container.privacy !== "private_offline" || container.codec !== "gzip-node-v1" || ![container.compressedRoot, container.uncompressedRoot, container.root].every(root) || ![container.compressedBytes, container.uncompressedBytes, container.frames].every(natural) || container.uncompressedBytes > Math.min(maximumBytes, REPLAY_MAX) || container.compressedBytes !== bytes.length || leanBytesRoot(bytes) !== container.compressedRoot) return fail("REPLAY")
   const { root: claimed, ...body } = container
   if (claimed !== labRoot("lean-sampled-replay-gzip-v1", body)) return fail("REPLAY")
   let plain: Buffer
-  assertTransient(container.uncompressedBytes * 4)
+  assertTransient(container.uncompressedBytes * 4, allocation, guard)
   try { plain = gunzipSync(bytes, { maxOutputLength: Math.max(1, Math.min(maximumBytes, REPLAY_MAX)) }) } catch { return fail("REPLAY_LIMIT") }
   if (plain.length !== container.uncompressedBytes || leanBytesRoot(plain) !== container.uncompressedRoot) return fail("REPLAY")
   let count = 0
@@ -1268,7 +1292,7 @@ export const validateLeanReplay = (container: LeanReplayContainer, bytes: Uint8A
 }
 export interface LeanCompactMatchRecord { classification: "success" | "player_violation" | "system_failure"; code: "OK" | "PLAYER_VIOLATION" | "SUPERVISOR_FAILURE" | "CAPACITY" | "CLEANUP"; outcome: "bottom" | "top" | "DRAW" | null; elapsedMs: number; cleanupComplete: boolean; invocationCount: number; accountingRoot: LabRoot; executionRoot: LabRoot; telemetry: { transitions: number; events: number } }
 export interface LeanCharge { schemaVersion: "lean-slot-charge-v1"; allocationRoot: LabRoot; slotRoot: LabRoot; ordinal: number; root: LabRoot }
-type Event = { kind: "charge"; charge: LeanCharge } | { kind: "terminal"; chargeRoot: LabRoot; record: LeanCompactMatchRecord; replay: LeanReplayContainer | null } | { kind: "resource"; elapsedMs: number; physicalBytes: number; bufferBytes: number; scratchBytes: number } | { kind: "stop"; reason: string }
+type Event = { kind: "charge"; charge: LeanCharge } | { kind: "terminal"; chargeRoot: LabRoot; record: LeanCompactMatchRecord; replay: LeanReplayContainer | null } | { kind: "resource"; elapsedMs: number; physicalBytes: number; bufferBytes: number; scratchBytes: number } | { kind: "resource-v15"; elapsedMs: number; physicalBytes: number; bufferBytes: number; scratchBytes: number; memoryPolicyRoot: LabRoot; memoryHighWaterBytes: number } | { kind: "stop"; reason: string }
 export interface LeanExperimentLedger { directory: string; allocation: Readonly<AnyLeanAllocation> }
 const safeDirectory = (directory: string): string => { const p = resolve(directory), s = lstatSync(p); if (!s.isDirectory() || s.isSymbolicLink() || realpathSync(p) !== p || (s.mode & 0o777) !== 0o700) return fail("STORE"); return p }
 /** Exact old files and independent report are required on every v2 reopening.
@@ -1654,7 +1678,7 @@ export const readLeanLedger = (ledger: LeanExperimentLedger) => {
   const events = text ? text.slice(0, -1).split("\n").map(line => parse(Buffer.from(line)) as Event) : []
   const charges = new Map<LabRoot, LeanCharge>(), terminals = new Map<LabRoot, Extract<Event, { kind: "terminal" }>>()
   const previous = leanProspective(ledger.allocation) ? ledger.allocation.predecessor : null
-  let elapsedMs = previous?.elapsedUpperBoundMs ?? 0, physicalHighWaterBytes = previous?.allocatedDiskBytes ?? 0, scratchHighWaterBytes = 0, stopped = false
+  let elapsedMs = previous?.elapsedUpperBoundMs ?? 0, physicalHighWaterBytes = previous?.allocatedDiskBytes ?? 0, scratchHighWaterBytes = 0, memoryHighWaterBytes = 0, stopped = false
   for (const e of events) {
     if (e.kind === "charge") {
       if (!exactLabKeys(e, ["kind", "charge"]) || stopped) return fail("LEDGER")
@@ -1664,14 +1688,20 @@ export const readLeanLedger = (ledger: LeanExperimentLedger) => {
     } else if (e.kind === "terminal") {
       if (!exactLabKeys(e, ["kind", "chargeRoot", "record", "replay"]) || ![...charges.values()].some(c => c.root === e.chargeRoot) || terminals.has(e.chargeRoot)) return fail("TERMINAL")
       admitCompactRecord(e.record); terminals.set(e.chargeRoot, e)
-    } else if (e.kind === "resource") {
-      if (!exactLabKeys(e, ["kind", "elapsedMs", "physicalBytes", "bufferBytes", "scratchBytes"]) || ![e.elapsedMs, e.physicalBytes, e.bufferBytes, e.scratchBytes].every(natural) || e.elapsedMs < elapsedMs || e.elapsedMs > leanCapsForAllocation(ledger.allocation).elapsedMs || e.physicalBytes + (previous?.allocatedDiskBytes ?? 0) > LEAN_CAPS.retainedBytes || e.scratchBytes + e.bufferBytes > LEAN_CAPS.scratchBytes || e.physicalBytes + (previous?.allocatedDiskBytes ?? 0) + e.bufferBytes + e.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes) return fail("RESOURCE")
+    } else if (e.kind === "resource" || e.kind === "resource-v15") {
+      const prospective = leanResourcePolicyForAllocationV15(ledger.allocation)
+      if (prospective ? e.kind !== "resource-v15" : e.kind !== "resource") return fail("RESOURCE_POLICY")
+      if (e.kind === "resource-v15") {
+        if (!prospective || e.memoryPolicyRoot !== prospective.root || !natural(e.memoryHighWaterBytes) || e.memoryHighWaterBytes < prospective.externalReserveBytes + prospective.guardBytes || e.memoryHighWaterBytes > prospective.memoryBytes || !exactLabKeys(e, ["kind", "elapsedMs", "physicalBytes", "bufferBytes", "scratchBytes", "memoryPolicyRoot", "memoryHighWaterBytes"])) return fail("RESOURCE_POLICY")
+        memoryHighWaterBytes = Math.max(memoryHighWaterBytes, e.memoryHighWaterBytes)
+      }
+      if (e.kind === "resource" && !exactLabKeys(e, ["kind", "elapsedMs", "physicalBytes", "bufferBytes", "scratchBytes"]) || ![e.elapsedMs, e.physicalBytes, e.bufferBytes, e.scratchBytes].every(natural) || e.elapsedMs < elapsedMs || e.elapsedMs > leanCapsForAllocation(ledger.allocation).elapsedMs || e.physicalBytes + (previous?.allocatedDiskBytes ?? 0) > LEAN_CAPS.retainedBytes || e.scratchBytes + e.bufferBytes > LEAN_CAPS.scratchBytes || e.physicalBytes + (previous?.allocatedDiskBytes ?? 0) + e.bufferBytes + e.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes) return fail("RESOURCE")
       elapsedMs = e.elapsedMs; physicalHighWaterBytes = Math.max(physicalHighWaterBytes, (previous?.allocatedDiskBytes ?? 0) + e.physicalBytes + e.bufferBytes + e.scratchBytes); scratchHighWaterBytes = Math.max(scratchHighWaterBytes, e.bufferBytes + e.scratchBytes)
     } else if (e.kind === "stop") { if (!exactLabKeys(e, ["kind", "reason"]) || !["complete", "failure", "capacity", "integrity"].includes(e.reason) || stopped) return fail("STOP"); stopped = true }
     else return fail("LEDGER")
   }
   if (charges.size + (previous?.chargedMatches ?? 0) > LEAN_CAPS.matches) return fail("RESOURCE")
-  return { events, charges, terminals, charged: charges.size + (previous?.chargedMatches ?? 0), elapsedMs, physicalHighWaterBytes, scratchHighWaterBytes, stopped }
+  return { events, charges, terminals, charged: charges.size + (previous?.chargedMatches ?? 0), elapsedMs, physicalHighWaterBytes, scratchHighWaterBytes, memoryHighWaterBytes, stopped }
 }
 /** Reader for all later arms/review: a missing or torn parent terminal is an
  * open interval, never a recoverable elapsed sample. */
@@ -1702,7 +1732,9 @@ const admitCompactRecord = (r: LeanCompactMatchRecord): void => {
 export const assertLeanPublicationCapacity = (ledger: LeanExperimentLedger, bytes: number, currentPhysicalBytes = leanProspectiveOwnedBytes(ledger)) => {
   if (!natural(bytes) || !natural(currentPhysicalBytes) || currentPhysicalBytes + leanPriorBytes(ledger.allocation) + Math.ceil(bytes / 4096) * 4096 + 65536 > LEAN_CAPS.retainedBytes) return fail("RESOURCE")
 }
-export const retainLeanMatch = (ledger: LeanExperimentLedger, charge: LeanCharge, record: LeanCompactMatchRecord, replayFrames: Iterable<unknown>, hostFailure?: (stage: "compact_replay_retention_publication" | "terminal_result_publication", caught: unknown) => never) => {
+export const retainLeanMatch = (ledger: LeanExperimentLedger, charge: LeanCharge, record: LeanCompactMatchRecord, replayFrames: Iterable<unknown>, hostFailure?: (stage: "compact_replay_retention_publication" | "terminal_result_publication", caught: unknown) => never, resourceGuard?: (additionalBytes?: number) => void) => {
+  if (leanResourcePolicyForAllocationV15(ledger.allocation) && typeof resourceGuard !== "function") return fail("RESOURCE_GUARD")
+  resourceGuard?.()
   let replay: ReturnType<typeof encodeLeanReplay> | null
   try {
   admitCompactRecord(record)
@@ -1710,23 +1742,29 @@ export const retainLeanMatch = (ledger: LeanExperimentLedger, charge: LeanCharge
   if (s.charges.get(charge.slotRoot)?.root !== charge.root || s.terminals.has(charge.root)) return fail("TERMINAL")
   const selected = ledger.allocation.sampleSlotRoots.includes(charge.slotRoot) || record.classification !== "success" || !record.cleanupComplete
   const remaining = LEAN_CAPS.retainedBytes - cumulativeLeanPhysicalBytes(ledger) - 131072
-  replay = selected ? encodeLeanReplay(replayFrames, remaining) : null
+  replay = selected ? encodeLeanReplay(replayFrames, remaining, ledger.allocation, resourceGuard) : null
   if (replay) { assertLeanPublicationCapacity(ledger, replay.bytes.length); writeExclusive(join(safeDirectory(ledger.directory), `${charge.root.slice(7)}.gz`), replay.bytes) }
   } catch (error) { if (hostFailure) hostFailure("compact_replay_retention_publication", error); throw error }
   try { append(ledger, { kind: "terminal", chargeRoot: charge.root, record, replay: replay?.container ?? null }) }
   catch (error) { if (hostFailure) hostFailure("terminal_result_publication", error); throw error }
 }
-export const checkpointLeanResources = (ledger: LeanExperimentLedger, elapsedMs: number, bufferBytes: number, scratchBytes = 0) => {
-  const e = { kind: "resource" as const, elapsedMs, physicalBytes: leanProspectiveOwnedBytes(ledger), bufferBytes, scratchBytes }
+export const checkpointLeanResources = (ledger: LeanExperimentLedger, elapsedMs: number, bufferBytes: number, scratchBytes = 0, memoryHighWaterBytes?: number) => {
+  if (![elapsedMs, bufferBytes, scratchBytes].every(natural)) return fail("RESOURCE")
+  const policy = leanResourcePolicyForAllocationV15(ledger.allocation)
+  if (policy && (!natural(memoryHighWaterBytes) || memoryHighWaterBytes < policy.externalReserveBytes + policy.guardBytes || memoryHighWaterBytes > policy.memoryBytes)) return fail("RESOURCE_POLICY")
+  const e: Event = policy ? { kind: "resource-v15", elapsedMs, physicalBytes: leanProspectiveOwnedBytes(ledger), bufferBytes, scratchBytes, memoryPolicyRoot: policy.root, memoryHighWaterBytes: memoryHighWaterBytes! } : { kind: "resource", elapsedMs, physicalBytes: leanProspectiveOwnedBytes(ledger), bufferBytes, scratchBytes }
   const cumulative = cumulativeLeanPhysicalBytes(ledger)
   if (cumulative > LEAN_CAPS.retainedBytes || bufferBytes + scratchBytes > LEAN_CAPS.scratchBytes || cumulative + bufferBytes + scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || elapsedMs > leanCapsForAllocation(ledger.allocation).elapsedMs) return fail("RESOURCE")
   append(ledger, e); readLeanLedger(ledger)
 }
 export const stopLeanLedger = (ledger: LeanExperimentLedger, reason: "complete" | "failure" | "capacity" | "integrity") => { readLeanLedger(ledger); append(ledger, { kind: "stop", reason }) }
-export const verifyLeanEvidence = (ledger: LeanExperimentLedger) => {
+export const verifyLeanEvidence = (ledger: LeanExperimentLedger, resourceGuard?: (additionalBytes?: number) => void) => {
+  if (leanResourcePolicyForAllocationV15(ledger.allocation) && typeof resourceGuard !== "function") return fail("RESOURCE_GUARD")
+  resourceGuard?.()
   const state = readLeanLedger(ledger)
   const validationOnly = isLeanRetryMode(leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation))) || (ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v7" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v7") && leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v7" || ((ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v6" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v6") && (leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v6" || leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v7")) || (ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v5" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v5") && leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v5"
   const records = ledger.allocation.slots.map(slot => {
+    resourceGuard?.()
     const c = state.charges.get(slot.root), terminal = c && state.terminals.get(c.root)
     if (c && !terminal) return fail("TERMINAL_MISSING")
     if (terminal) {
@@ -1734,13 +1772,13 @@ export const verifyLeanEvidence = (ledger: LeanExperimentLedger) => {
       if (selected !== (terminal.replay !== null)) return fail("REPLAY_MISSING")
       if (terminal.replay) {
         const bytes = readSafe(join(ledger.directory, `${c!.root.slice(7)}.gz`))
-        if (validationOnly) validateLeanReplay(terminal.replay, bytes)
+        if (validationOnly) validateLeanReplay(terminal.replay, bytes, REPLAY_MAX, ledger.allocation, resourceGuard)
         else decodeLeanReplay(terminal.replay, bytes)
       }
     }
     return { slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: c?.root ?? null, terminal: terminal ?? null, status: c ? terminal!.record.classification : "unused" }
   })
-  return { schemaVersion: "lean-pilot-verification-v1" as const, issued: false as const, evidenceClass: "feasibility_only" as const, records, charged: state.charged, elapsedMs: state.elapsedMs, physicalHighWaterBytes: state.physicalHighWaterBytes, scratchHighWaterBytes: state.scratchHighWaterBytes, root: labRoot("lean-evidence-v1", { allocationRoot: ledger.allocation.root, events: state.events, records }) }
+  return { schemaVersion: "lean-pilot-verification-v1" as const, issued: false as const, evidenceClass: "feasibility_only" as const, records, charged: state.charged, elapsedMs: state.elapsedMs, physicalHighWaterBytes: state.physicalHighWaterBytes, scratchHighWaterBytes: state.scratchHighWaterBytes, ...(leanResourcePolicyForAllocationV15(ledger.allocation) ? { memoryPolicyRoot: LEAN_RESOURCE_WINDOW_V15_POLICY.root, memoryHighWaterBytes: state.memoryHighWaterBytes } : {}), root: labRoot("lean-evidence-v1", { allocationRoot: ledger.allocation.root, events: state.events, records }) }
 }
 export interface LeanPilotMeasurement { pilotCells: number; maximumCellMs: number; maximumCellPhysicalBytes: number; elapsedMs: number; physicalHighWaterBytes: number; scratchHighWaterBytes: number }
 export const chooseLeanTier = (m: LeanPilotMeasurement): "full" | "reduced" | "feasibility_not_established" => {
@@ -1895,11 +1933,32 @@ export const assertLeanAggregateMemoryV15 = (observed: { parentRssBytes: number;
   if (!natural(aggregate) || aggregate > LEAN_RESOURCE_WINDOW_V15_POLICY.memoryBytes) return fail("MEMORY_CAP")
   return aggregate
 }
+/** A standalone reader observes its own process, not a fabricated child/PID. */
+export const assertLeanProcessMemoryV15 = (rssBytes: number, policy: unknown): number => {
+  if (admitLeanRetryTimeboxExtension(policy) !== LEAN_RESOURCE_WINDOW_V15_POLICY || !natural(rssBytes)) return fail("MEMORY_POLICY")
+  const aggregate = rssBytes + LEAN_RESOURCE_WINDOW_V15_POLICY.externalReserveBytes + LEAN_RESOURCE_WINDOW_V15_POLICY.guardBytes
+  if (!natural(aggregate) || aggregate > LEAN_RESOURCE_WINDOW_V15_POLICY.memoryBytes) return fail("MEMORY_CAP")
+  return aggregate
+}
 /** Strict reconstruction before selecting limits; mutable caller objects are
  * never policy cache keys. Admission binds request/review/continuation roots. */
 export const leanResourcePolicyForAllocationV15 = (value: unknown) => {
   const allocation = admitLeanAllocation(value)
   return isLeanResourceWindowModeV15(leanSupervisorAllocationMode(allocation)) ? LEAN_RESOURCE_WINDOW_V15_POLICY : null
+}
+export const leanMemoryLimitForAllocation = (value: unknown): number => leanResourcePolicyForAllocationV15(value)?.memoryBytes ?? LEAN_CAPS.scratchBytes
+export const validateLeanResourceWindowPredecessorV15 = (p: LeanCorrectionPredecessor): void => {
+  const b = LEAN_RESOURCE_WINDOW_V15_POLICY, { root: claimed, ...body } = p
+  if (!exactLabKeys(p, ["schemaVersion", "chargedMatches", "elapsedUpperBoundMs", "allocatedDiskBytes", "historicalPeakDiskBytes", "historicalPeakRssBytes", "historyRoot", "survivors", "root"]) || p.schemaVersion !== "lean-correction-predecessor-v1" || claimed !== labRoot(p.schemaVersion, body) || !natural(p.chargedMatches) || p.chargedMatches < b.charged || p.chargedMatches > LEAN_CAPS.matches || !natural(p.elapsedUpperBoundMs) || p.elapsedUpperBoundMs < b.actualResumeMs - b.startedAtMs + b.priorElapsedMs || !natural(p.allocatedDiskBytes) || p.allocatedDiskBytes < b.physicalFloorBytes || p.allocatedDiskBytes > LEAN_CAPS.retainedBytes || p.historicalPeakDiskBytes !== "unknown" || p.historicalPeakRssBytes !== "unknown" || !root(p.historyRoot) || !Array.isArray(p.survivors) || p.survivors.length < 854 || new Set(p.survivors.map(row => row.identity)).size !== p.survivors.length || p.survivors.some(row => !exactLabKeys(row, ["identity", "allocatedBytes"]) || typeof row.identity !== "string" || row.identity.startsWith("/") || row.identity.includes("..") || !natural(row.allocatedBytes)) || p.survivors.reduce((sum, row) => sum + row.allocatedBytes, 0) > p.allocatedDiskBytes) return fail("RETRY_PREDECESSOR")
+}
+/** Independent real observations: backing-store bytes are not RSS, and private
+ * temporary disk is measured with the same allocated-block inventory reader. */
+export const observeLeanResourceWindowDiskV15 = (ledger: LeanExperimentLedger) => {
+  if (!leanResourcePolicyForAllocationV15(ledger.allocation) || !("route" in ledger.allocation)) return fail("MEMORY_POLICY")
+  const paths = leanCorrectionRoutePaths(ledger.allocation.route, leanSupervisorAllocationMode(ledger.allocation))
+  const bufferBytes = process.memoryUsage().arrayBuffers, scratchBytes = measureLeanPhysicalBytes(paths.temp)
+  if (!natural(bufferBytes) || !natural(scratchBytes)) return fail("RESOURCE")
+  return { bufferBytes, scratchBytes }
 }
 export const LEAN_RESOURCE_WINDOW_V15_ROUTES = freezeLabValue(Object.fromEntries(([2, 3, 4, 5] as const).map(n => [`v15-${n}`, Object.fromEntries((["diagnostic", "baseline"] as const).map(route => [route, { store: `.strategy-lab/lean-correction-supervisor-${route}-20261009-v15-${n}`, request: `.strategy-lab/lean-correction-supervisor-${route}-request-20261009-v15-${n}.json`, allocation: `.planning/artifacts/v1.38-lean-correction-supervisor-${route}-allocation-v15-${n}.json`, check: `correction-supervisor-${route}-check-v15-${n}.json`, temp: `.strategy-lab/lean-correction-supervisor-${route}-20261009-v15-${n}-tmp`, result: "result.json", owner: "entry.json", reason: "parent-supervisor-reasons.json" }]))]))) as Readonly<Record<LeanResourceWindowModeV15, typeof LEAN_STARTUP_V5_ROUTES>>
 export const LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS = freezeLabValue([

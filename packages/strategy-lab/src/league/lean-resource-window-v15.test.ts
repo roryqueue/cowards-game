@@ -1,8 +1,10 @@
 /** Portable NON-AUTHORIZING resource contracts; no routes, provider or Match. */
-import { expect, it } from "vitest"
+import { expect, it, vi } from "vitest"
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { labRoot } from "../contracts.js"
 import * as lean from "./lean-experiment.js"
-import { leanResourceWindowDocumentsV15, authenticateLeanResourceWindowPriorPairV15, authenticateLeanResourceWindowAcceptedJoinV15 } from "../../../../scripts/lib/v1-38-lean-resource-window-v15.js"
 
 const r = (n: number) => labRoot("NON_AUTHORIZING_v15_contract", n)
 const input = () => {
@@ -22,13 +24,6 @@ it("reconstructs allocation policy without caching mutable caller values or wide
   mutable.caps.totalBytes++
   expect(() => lean.leanResourcePolicyForAllocationV15(mutable)).toThrow()
   expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...input(), attemptOrdinal: 1 }, 8)).toThrow()
-})
-
-it("finite documents and missing or forged predecessor/own FINAL never authorize", () => {
-  expect(leanResourceWindowDocumentsV15("diagnostic", "v15-2").helper).toBe(".strategy-lab/lean-resource-window-diagnostic-v15-2-helper.mts")
-  expect(leanResourceWindowDocumentsV15("baseline", "v15-2").dataReview).toContain("RESOURCE-WINDOW-baseline-v15-2-DATA-REVIEW-v1.md")
-  expect(() => authenticateLeanResourceWindowPriorPairV15(new Map())).toThrow()
-  expect(() => authenticateLeanResourceWindowAcceptedJoinV15("v15-2", {}, {} as never)).toThrow()
 })
 
 it("enumerates only four unused global resource-window ordinals", () => {
@@ -65,4 +60,40 @@ it("selects exact dated finite v15 paths without altering consumed v14", () => {
     expect(lean.leanRetryOrdinal(mode)).toBe(n)
   }
   expect(lean.leanCorrectionRoutePaths("diagnostic", "v14-1").store).toBe(".strategy-lab/lean-correction-supervisor-diagnostic-20261008-v14-1")
+})
+it("requires the projected child replay callback while RAM does not masquerade as disk", () => {
+  const a = lean.createLeanSupervisorCorrectionAllocation(input(), 8), p = lean.LEAN_RESOURCE_WINDOW_V15_POLICY
+  const usage = process.memoryUsage(), spy = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...usage, rss: 2100000000, arrayBuffers: 4096 })
+  try {
+    expect(() => lean.encodeLeanReplay([], 1048576, a)).toThrow("RESOURCE_GUARD")
+    const projected: number[] = []
+    const replay = lean.encodeLeanReplay([], 1048576, a, (additional = 0) => { projected.push(additional); lean.assertLeanProcessMemoryV15(2100000000 + additional, p) })
+    expect(projected.some(value => value > 0)).toBe(true)
+    expect(replay.bytes.length).toBeGreaterThan(0)
+    expect(() => lean.encodeLeanReplay([], 1048576)).toThrow("BUFFER_CAP")
+    spy.mockReturnValue({ ...usage, rss: 2152455681, arrayBuffers: 4096 })
+    expect(() => lean.encodeLeanReplay([], 1048576, a, () => lean.assertLeanProcessMemoryV15(2152455681, p))).toThrow("MEMORY_CAP")
+  } finally { spy.mockRestore() }
+})
+it("journals independent v15 memory and measured-disk fields, rejecting overflow before publication", () => {
+  // Synthetic store in an owned OS temporary directory: no gate, entry,
+  // charge, Match, provider or accepted diagnostic is created by this fixture.
+  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-v15-ledger-")))
+  try {
+    process.chdir(directory); mkdirSync(".strategy-lab", { mode: 0o700 })
+    const a = lean.createLeanSupervisorCorrectionAllocation(input(), 8), paths = lean.leanCorrectionRoutePaths("diagnostic", "v15-2")
+    mkdirSync(paths.temp, { mode: 0o700 })
+    const ledger = lean.createLeanLedger(paths.store, a)
+    lean.checkpointLeanResources(ledger, 208771903, 1000000000, 1000000000, 3000000000)
+    const bytes = readFileSync(join(paths.store, "ledger.ndjson")), event = JSON.parse(bytes.toString("utf8"))
+    expect(event).toMatchObject({ kind: "resource-v15", memoryPolicyRoot: lean.LEAN_RESOURCE_WINDOW_V15_POLICY.root, memoryHighWaterBytes: 3000000000, bufferBytes: 1000000000, scratchBytes: 1000000000 })
+    expect(lean.readLeanLedger(ledger)).toMatchObject({ memoryHighWaterBytes: 3000000000, scratchHighWaterBytes: 2000000000, charged: 36 })
+    for (const [buffer, scratch, memory] of [[1000000001, 1000000000, 3000000000], [0, 0, 3000000001], [-1, 0, 3000000000]]) expect(() => lean.checkpointLeanResources(ledger, 208771903, buffer!, scratch!, memory!)).toThrow()
+    expect(readFileSync(join(paths.store, "ledger.ndjson"))).toEqual(bytes)
+    expect(() => lean.verifyLeanEvidence(ledger)).toThrow("RESOURCE_GUARD")
+    for (const mutation of [{ memoryPolicyRoot: r(99) }, { kind: "resource" }, { extra: true }, { memoryHighWaterBytes: 3000000001 }]) {
+      writeFileSync(join(paths.store, "ledger.ndjson"), `${lean.leanCanonicalBytes({ ...event, ...mutation })}\n`, { mode: 0o600 })
+      expect(() => lean.readLeanLedger(ledger)).toThrow()
+    }
+  } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
 })
