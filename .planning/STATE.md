@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Replacement four-hour window approved and anchored; prospective source research and checked Plan16 supplement next
+stopped_at: Prospective resource-window research and independent plan check closed; serial source-only execution next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Resume14:38:33UTC anchors deadline18:38:33UTC; all208771903ms prior cost charged; prospective3GB memory source gates pending
+last_activity_desc: Checked existing Plan16 supplement; exact18:38:33UTC deadline and all prior costs preserved; source-only implementation then independent gates
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — RESOURCE-WINDOW SOURCE PLAN CHECKED (2026-10-09).
+
+Distinct research/planner/checker ACTUALLY CLOSED; RESOURCE-WINDOW-RESEARCH/PLAN/PLAN-CHECK-v1 preserve inherited NOTPASS and grant no empirical authority. Existing Plan16 supplement has serial source tasks1/2, followed independent review/fix/ROOT validation/distinct verification before ROOT-only task3. No active entry/helper/verifier/hold, no new allocation or Match. Exact replacement deadline18:38:33UTC/cumulative223171903ms/allwall/FULL108M/31reserve/fourunusedordinals2..5/RAM3GB and unchanged disk/runtime/history/privacy bounds remain authoritative. Source executor must not execute task3, alter consumed evidence, or declare Phase265 complete. All36 charges carry; league/freeze/formation/holdout/public/counting/production remain unadmitted. Earlier checkpoints are history.
 
 CURRENT CHECKPOINT — REPLACEMENT WINDOW APPROVED / SOURCE GATES NEXT (2026-10-09).
 
