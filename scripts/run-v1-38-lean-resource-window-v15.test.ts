@@ -85,7 +85,9 @@ it("policy cache actual retained cell gate joins finite attribution before next 
   const a = policyCacheAllocation(lean.leanBytesRoot(lean.leanCanonicalBytes(request))), slot = a.slots[0]!, chargeRoot = r(87), compact = policyCacheCompact()
   const entry = { allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot!, head: "a".repeat(40), parentPid: 101, childPid: 102 }, entryBytesRoot = lean.leanBytesRoot(lean.leanCanonicalBytes(entry))
   const terminal = { ...entry, entryBytesRoot, exitCode: 0, signal: null, status: "child_exited" }
-  const reason = baseline.deriveLeanParentSupervisorReason(a, { ...entry, schemaVersion: "lean-parent-supervisor-reasons-v1", entryBytesRoot, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } } as baseline.LeanSupervisorReasonEnvelope)
+  const reasonBody: Omit<baseline.LeanSupervisorReasonEnvelope, "root"> = { ...entry, schemaVersion: "lean-parent-supervisor-reasons-v1", entryBytesRoot, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
+  const reasonEnvelope: baseline.LeanSupervisorReasonEnvelope = { ...reasonBody, root: labRoot(reasonBody.schemaVersion, reasonBody) }
+  const reason = baseline.deriveLeanParentSupervisorReason(a, reasonEnvelope)
   const resource = { kind: "resource-v15", elapsedMs: a.predecessor.elapsedUpperBoundMs, physicalBytes: 0, bufferBytes: 0, scratchBytes: 0, memoryPolicyRoot: a.timeboxExtension!.root, memoryHighWaterBytes: 1000000000 }
   const events = [{ kind: "charge", charge: { root: chargeRoot, slotRoot: slot.root } }, { kind: "terminal", chargeRoot, record: compact }, resource, { kind: "stop", reason: "NON_AUTHORIZING" }], journalBytes = Buffer.from(events.map(row => JSON.stringify(row)).join("\n") + "\n")
   const pairBody = { schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: lean.leanBytesRoot(new Uint8Array()), priorLedgerByteLength: 0, priorCharged: 38, bottomRole: "tactical-0", bottomSourceRoot: r(85), bottomSnapshotRoot: r(88), topRole: "cold-opponent", topSourceRoot: r(86), topSnapshotRoot: r(89) }, pair = { ...pairBody, root: labRoot(pairBody.schemaVersion, pairBody) }
@@ -122,9 +124,19 @@ const policyCacheReviewFixture = () => {
 }
 const policyCacheAllocation = (requestBytesRoot?: ReturnType<typeof r>) => {
   const old = allocation(), b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY, history = custody.authenticateLeanResourceWindowArchivedPrefixV15_3(policyCacheBytes())
+  if (old.acceptedCheckRoot === undefined || old.requestBytesRoot === undefined || old.dataReviewRoot === undefined || old.setupAccountingRoot === undefined) throw new Error("NON_AUTHORIZING_INCOMPLETE_ALLOCATION_FIXTURE")
   const { root: _root, ...prior } = history.predecessor, body = { ...prior, survivors: Array.from({ length: 970 }, (_, n) => ({ identity: `.strategy-lab/NON_AUTHORIZING-policy-cache-history-${n}`, allocatedBytes: 0 })) }, predecessor = { ...body, root: labRoot(body.schemaVersion, body) }
-  const input = Object.fromEntries(["sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "route", "reuseGrantRoot", "supervisorDecisionRoot", "acceptedCheckRoot", "requestBytesRoot", "dataReviewRoot", "setupAccountingRoot", "predecessor", "startupPolicyRoot", "attemptOrdinal", "priorClosureRoot", "continuationRoot", "acceptedReaderCloseRoot", "timeboxExtension"].map(key => [key, old[key as keyof typeof old]]))
-  return lean.createLeanSupervisorCorrectionAllocation({ ...input, requestBytesRoot: requestBytesRoot ?? old.requestBytesRoot, timeboxExtension: b, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, attemptOrdinal: 4, predecessor, priorClosureRoot: history.carryRoot } as Parameters<typeof lean.createLeanSupervisorCorrectionAllocation>[0], 8)
+  const input: Parameters<typeof lean.createLeanSupervisorCorrectionAllocation>[0] = {
+    sourceRoot: old.sourceRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot,
+    candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, seed: old.seed,
+    route: old.route, reuseGrantRoot: old.reuseGrantRoot, acceptedCheckRoot: old.acceptedCheckRoot,
+    requestBytesRoot: requestBytesRoot ?? old.requestBytesRoot, dataReviewRoot: old.dataReviewRoot,
+    setupAccountingRoot: old.setupAccountingRoot, startupPolicyRoot: old.startupPolicyRoot,
+    continuationRoot: old.continuationRoot, acceptedReaderCloseRoot: old.acceptedReaderCloseRoot,
+    timeboxExtension: b, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot,
+    attemptOrdinal: 4, predecessor, priorClosureRoot: history.carryRoot,
+  }
+  return lean.createLeanSupervisorCorrectionAllocation(input, 8)
 }
 it("policy cache actual source review and continuation consume exact thirteen-file v5 and root-issued distinction", () => {
   const f = policyCacheReviewFixture()
