@@ -228,6 +228,7 @@ it("requires the selected full-audit callback rather than accepting an omitted g
 })
 it("measures an independent retained-reader process and real temp disk under the same envelope", () => {
   const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-v15-reader-"))), usage = process.memoryUsage(), spy = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...usage, rss: 2152455680, arrayBuffers: 4096 })
+  const clock = vi.spyOn(Date, "now").mockReturnValue(lean.LEAN_RESOURCE_WINDOW_V15_POLICY.actualResumeMs)
   try {
     process.chdir(directory); mkdirSync(".strategy-lab", { mode: 0o700 })
     const a = allocation(), paths = lean.leanCorrectionRoutePaths("diagnostic", "v15-2")
@@ -237,9 +238,12 @@ it("measures an independent retained-reader process and real temp disk under the
     expect(observed.scratchBytes).toBe(4096 + lean.measureLeanPhysicalBytes(paths.temp))
     expect(observed.scratchBytes).toBeLessThan(2000000000)
     expect(() => assertLeanResourceWindowReaderV15(ledger, 1)).toThrow("MEMORY_CAP")
+    clock.mockReturnValue(lean.LEAN_RESOURCE_WINDOW_V15_POLICY.absoluteDeadlineMs)
+    expect(() => assertLeanResourceWindowReaderV15(ledger)).toThrow("HOLD_OR_CAPACITY")
+    clock.mockReturnValue(lean.LEAN_RESOURCE_WINDOW_V15_POLICY.actualResumeMs)
     spy.mockReturnValue({ ...usage, rss: 2100000000, arrayBuffers: 2000000001 })
     expect(() => assertLeanResourceWindowReaderV15(ledger)).toThrow("HOLD_OR_CAPACITY")
-  } finally { spy.mockRestore(); process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
+  } finally { clock.mockRestore(); spy.mockRestore(); process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
 })
 it("roots setup and continuation in the original continuous window and leaves later paths dormant", () => {
   const b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY, setup = correction.createLeanResourceWindowSetupV15("v15-2", b.actualResumeMs)

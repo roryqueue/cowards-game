@@ -9,7 +9,7 @@ import { validateLeanPreparationHistoryV13, LEAN_PREPARATION_V13_HISTORY_PATHS }
 import { isLeanPostV13FivePairMode, isLeanPostV13FivePairExtensionV14, LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION, LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS, type LeanPostV13FivePairOrdinal, type LeanPostV13FivePairMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { isLeanResourceWindowModeV15, isLeanResourceWindowExtensionV15, LEAN_RESOURCE_WINDOW_V15_POLICY, LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS, leanMemoryLimitForAllocation, leanResourcePolicyForAllocationV15, assertLeanAggregateMemoryV15, observeLeanResourceWindowDiskV15, type LeanResourceWindowModeV15 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { assertLeanProcessMemoryV15 } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { leanResourceWindowDocumentsV15, LEAN_RESOURCE_WINDOW_V15_HISTORY_PINS, authenticateLeanResourceWindowPriorPairV15 as authenticateResourceWindowPriorMetadataV15, authenticateLeanResourceWindowAcceptedJoinV15 as validateResourceWindowAcceptedJoinV15 } from "./lib/v1-38-lean-resource-window-v15.js"
+import { leanResourceWindowDocumentsV15, LEAN_RESOURCE_WINDOW_V15_HISTORY_PINS, LEAN_RESOURCE_WINDOW_ARCHIVED_V15_2_PINS, authenticateLeanResourceWindowArchivedPrefixV15_2, authenticateLeanResourceWindowPriorPairV15 as authenticateResourceWindowPriorMetadataV15, authenticateLeanResourceWindowAcceptedJoinV15 as validateResourceWindowAcceptedJoinV15 } from "./lib/v1-38-lean-resource-window-v15.js"
 import { leanFivePairDocumentsV14, validateLeanPostV13HistoryV14, LEAN_FIVE_PAIR_V14_HISTORY_PINS } from "./lib/v1-38-lean-post-v13-five-pair.js"
 import { isLeanTwoPairMode, isLeanTwoPairExtensionV11, LEAN_TWO_PAIR_V11_EXTENSION, LEAN_TWO_PAIR_V11_REPORT_PATHS, validateLeanTwoPairPredecessorV11, type LeanTwoPairMode } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { authenticateLeanTwoPairHistoricalCustodyV11, authenticateLeanTwoPairClosedOutcomeV11, authenticateLeanTwoPairTerminalCarryV11 } from "./lib/v1-38-lean-correction-retained.js"
@@ -1960,8 +1960,10 @@ export const authenticateLeanPreparationFamilyAcceptedJoin = (mode: LeanPreparat
 /** Pinned v14 metadata is the only historical reader here. Every prospective
  * predecessor is re-derived from its real verification/carry/hold before the
  * pure finite-prefix validator sees it. Rooted caller JSON is never custody. */
-export const readLeanResourceWindowPriorPairV15 = (mode: LeanResourceWindowModeV15) => {
+export const readLeanResourceWindowPriorPairV15 = (mode: LeanResourceWindowModeV15, readBytes: (path: string, maximumBytes: number) => Uint8Array = readLeanCorrectionPrivateBytes) => {
   if (!isLeanResourceWindowModeV15(mode)) return fail("DIAGNOSTIC_CUSTODY")
+  if (mode === "v15-3") return authenticateLeanResourceWindowArchivedPrefixV15_2(new Map(LEAN_RESOURCE_WINDOW_ARCHIVED_V15_2_PINS.map(pin => [pin.path, readBytes(pin.path, pin.bytes)])))
+  if (mode !== "v15-2") return fail("DIAGNOSTIC_CUSTODY")
   const bytes = new Map<string, Uint8Array>(LEAN_RESOURCE_WINDOW_V15_HISTORY_PINS.map(pin => [pin.path, readLeanCorrectionPrivateBytes(pin.path, 4194304)]))
   for (let n = 2; n < leanRetryOrdinal(mode); n++) {
     const previous = `v15-${n}` as LeanResourceWindowModeV15
