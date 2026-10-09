@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Baselinev14-1 closed resource-guard failure; unique terminal verification closed; bounded source diagnosis next
+stopped_at: Baselinev14-1 closed; source diagnosis assessed; prospective memory/time decision pending
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Baselinev14-1 failed before first charge; terminal custody verified; 36 cumulative charges preserved
+last_activity_desc: Diagnostic accepted; baseline memory guard inferred; new 3GB aggregate-memory/four-hour prospective proposal unapplied
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT HUMAN-ONLY RESOURCE CHECKPOINT — POSTv14 DECISION PENDING (2026-10-09).
+
+Bounded GSD diagnosis and independent scoped assessment ACTUALLYCLOSED; no active entry/helper/verifier/hold. Actual v8 allocation+positive-reserve time-function invariant makes returned elapsed>=cap branch unreachable; saved resource_threshold/no-sampling-exception supports aggregateRSSguard control-flow inference, NOT simultaneous operands or initiating allocation cause. Finite saved postexit RSS/reserves sum2012058816B versus2000000000B, non-simultaneous/not causal proof. Repeated parent/child full admission audits are a plausible pressure path; no narrow checked resource-neutral repair established, and full audits must not be bypassed. New proposal265-16-POST-V14-MEMORY-AND-TIME-DECISION-v1.md recommends prospective aggregate-memory3000000000B separately from unchanged2GB disk scratch/15GBtotal, and exactly4h additivecontinuous time (cap180000000/deadline06:39:01.097Z, no reset, same31reserve), only FOUR unused approved pairs. This is NOT approved/applied; standing route approval does not change resources. No new prepare/allocation/Match or unchanged failing rerun. Currentapprovedcap165600000/deadline02:39:01.097Z remains authoritative. All consumed records immutable; currentbaseline0/cumulative36; accepteddiagnosticpreserved/no baselinecredit. Phase265/LEAG/freeze/formation/holdout/public/counting/production incomplete. Alternative human choice is closepilotinconclusive, not manufacture completion. Earlier checkpoints below are history.
 
 CURRENT CHECKPOINT — BASELINEv14-1 CLOSED / HOLD RELEASED (2026-10-09).
 
