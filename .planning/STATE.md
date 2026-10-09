@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: v15-2 diagnostic and unique ordinary reader closed refused; source-only diagnosis next
+stopped_at: Source-only checkpoint repair checked; execute existing Plan16 supplement next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: ROOT73583 closed0; one system_failure606926ms/139invocations; ordinary58084 refused; cumulative37; all evidence immutable
+last_activity_desc: Diagnosis closed unknown cause/confirmed duplicate observations; plan checker v2 PASS corrects v1 mistaken finding; no new empirical route
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — SOURCE-ONLY CHECKPOINT REPAIR PLAN CHECKED (2026-10-09).
+
+GSD diagnosis-only ACTUALLYCLOSED: genericbridge swallows initiatingcause;606926ms is ceiling-consistent not proof. Calledcheckpoint repeats physical/RSS/statfs/time observations within each synchronouscall; native timing/overheadcontribution unmeasured. ExistingPlan16 POST-V15-CHECKPOINT-REPAIR-PLAN-v1 has two serial source-only tasks: fresh invocation-local observation composition preserves every guard/admission/no-refund/mutationboundary/legacy behavior, then exactfreshv3review/finitephysicaldebit. Distinct PLAN-CHECK-v2 PASS explicitlycorrects mistakenv1 file-ownershipfinding; both preserved, ROOT schedules exactv2inventory beforeexecution. No newnumberedplan, attributionclaim/resourceincrease/actualroute authority. v15-3..5 remainfailclosed pending separatelychecked honest37-chargehistoricalcost-only contract and meaningfulrepair distinction; this dependency is not automaticallyhuman-only. Allfailed records incloperatorhold-refusal immutable. Same18:38:33UTC/allwall223171903/31reserve/RAM3GB/unchangeddisk/runtime/privacy bounds; no Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earliercheckpointshistory.
 
 CURRENT CHECKPOINT — DIAGNOSTICv15-2 REFUSED / SOURCE-ONLY DIAGNOSIS (2026-10-09).
 
