@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Five-pair re-review clean and MAIN scoped validation closed; independent source verification next
+stopped_at: Initialv14-1 source gates closed; fresh ROOT data and independent request reviews next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
 last_activity_desc: CR-01/WR-01 fixes committed6abed48f; portable focused tests pass, re-review pending
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — independent source verification CLOSED (2026-10-09).
+
+Distinct verifier NEW SOURCE-VERIFICATION-v1 verified_source_only6/6 at6abed48f/root6d986074/941, own4selectedHOSTPASS/3deliberatelyunselected and actualreviewconsumerPASS. CR01/WR01 resolved; scoped MAIN validation remains partial with inherited seriousmonitor/strict/legacy limitations and empirical gaps explicit. No current route/helper/allocation/entry/verifier/hold. ROOT now authors distinctfreshv14-1 data/helper/setup/request against actualfinitefailedv13carry, followed actual independent repairattestation/DATAHELPER checks, newcommittedallocation/empty0700/SAMEPROCESScapacity/uniqueentry/uniqueappropriatecheck. Only verified initial concrete repair supported; laterpairs and optionaldistinctions failclosed. Deadline2026-10-09T02:39:01.097Z/allwall/35charges/resources unchanged; no empirical/wholephase/league/freeze/formation/holdout/public/counting/production credit.
 
 CURRENT CHECKPOINT — source re-review and MAIN scoped validation CLOSED (2026-10-09).
 
