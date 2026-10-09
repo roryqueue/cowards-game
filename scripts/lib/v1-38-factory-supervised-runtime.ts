@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { claimLeanRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, leanStartupAuthorityDescriptorV8 } from "./v1-38-lean-experiment-authority.js"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
@@ -91,7 +91,7 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
   }
   const prospectiveRuntimeBinding = options.prospectiveLifetimeAuthority === undefined ? undefined : prospectiveLeagueRuntimeBinding(admission, { ...options.prospectiveLifetimeAuthority.runtime, revisionId: revision.id, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, image: options.image ?? LAB_ADMITTED_ROOTS.image })
   const leanRuntimeBinding = options.leanExperimentAuthority === undefined ? undefined : prospectiveLeagueRuntimeBinding(admission, { ...options.leanExperimentAuthority.runtime, revisionId: revision.id, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, image: options.image ?? LAB_ADMITTED_ROOTS.image })
-  const factoryLifetimeMs = options.leanExperimentAuthority === undefined ? admitFactorySupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }) : claimLeanRuntimeAuthority(options.leanExperimentAuthority, { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: leanRuntimeBinding! }, "factory").lifetimeMs
+  const factoryLifetimeMs = options.leanExperimentAuthority === undefined ? admitFactorySupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }) : (leanStartupAuthorityDescriptorV8(options.leanExperimentAuthority) ? claimLeanStartupAuthorityV8 : claimLeanRuntimeAuthority)(options.leanExperimentAuthority, { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: leanRuntimeBinding! }, "factory").lifetimeMs
   if (options.leanExperimentAuthority && options.factoryLifetimeMs !== 600000) return fail("LEAN_LIFETIME")
   if (options.prospectiveHostReceiptAuthority) claimProspectiveLeagueHostReceiptAuthority(options.prospectiveHostReceiptAuthority, { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: prospectiveRuntimeBinding!, seat: options.prospectiveLifetimeAuthority!.seat }, "factory")
   const began = performance.now()

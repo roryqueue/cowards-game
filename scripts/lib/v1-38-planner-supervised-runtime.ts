@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { leanStartupAuthorityDescriptorV5, claimLeanRuntimeAuthority, type LeanRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { leanStartupAuthorityDescriptorV5, leanStartupAuthorityDescriptorV8, claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, type LeanRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
 import { claimProspectiveLeagueLifetimeAuthority, isProspectiveLeagueLifetimeFixture, type ProspectiveLeagueLifetimeAuthority, type ProspectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { performance } from "node:perf_hooks"
 import { claimProspectiveLeagueHostReceiptAuthority, isProspectiveLeagueHostReceiptFixture } from "./v1-38-league-host-receipt.js"
@@ -8,7 +8,7 @@ import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { createSelectedCurrentRuntimeFromRevisionV119 } from "../../packages/runtime-js/src/executor.js"
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
-import { buildLeanStartupWorkerHarnessV5 } from "./v1-38-lean-container-match-session.js"
+import { buildLeanStartupWorkerHarnessV5, buildLeanStartupWorkerHarnessV8 } from "./v1-38-lean-container-match-session.js"
 import { SubprocessSystemFailure, SUBPROCESS_SYSTEM_FAILURE_CODES } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import type { DiagnosticPilotLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
@@ -97,8 +97,8 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   const rebuilt = buildStrategyRevision({ source: revision.source, runtime: revision.runtime, ...(revision.strategyId === undefined ? {} : { strategyId: revision.strategyId }) })
   const artifact = revision.metadata.sourceArtifact
   if (!rebuilt.validation.valid || rebuilt.id !== revision.id || rebuilt.sourceHash !== revision.sourceHash || rebuilt.sourceBytes !== revision.sourceBytes || !artifact || labRoot("artifact", artifact) !== labRoot("artifact", rebuilt.metadata.sourceArtifact)) throw new TypeError("LAB_SOURCE_ADMISSION")
-  const startup = options.leanExperimentAuthority && leanStartupAuthorityDescriptorV5(options.leanExperimentAuthority)
-  const harness = startup ? buildLeanStartupWorkerHarnessV5() : observerHarness?.source ?? WORKER_HARNESS_SOURCE
+  const startup = options.leanExperimentAuthority && (leanStartupAuthorityDescriptorV8(options.leanExperimentAuthority) ?? leanStartupAuthorityDescriptorV5(options.leanExperimentAuthority))
+  const harness = startup ? startup.version === 8 ? buildLeanStartupWorkerHarnessV8() : buildLeanStartupWorkerHarnessV5() : observerHarness?.source ?? WORKER_HARNESS_SOURCE
   const harnessRoot = rawRoot(startup ? harness : buildLeanAuthenticatedHarnessSource(harness))
   if (startup && startup.harnessRoot !== harnessRoot) throw new TypeError("LAB_STARTUP_HARNESS_V5")
   if (observerHarness && (harnessRoot !== observerHarness.expectedRoot || !/^sha256:[a-f0-9]{64}$/.test(observerHarness.machineRoot))) throw new TypeError("LAB_HARNESS_IDENTITY")
@@ -116,7 +116,7 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   const prospectiveRuntimeBinding = options.prospectiveLifetimeAuthority === undefined ? undefined : { ...options.prospectiveLifetimeAuthority.runtime, sourceRoot: identity.sourceRoot, revisionId: identity.revisionId, executableRoot: identity.executableRoot, tupleId: identity.tupleId, tupleRoot: identity.tupleRoot, runtimeLimitsRoot: identity.runtimeLimitsRoot, image: identity.image }
   const leanRuntimeBinding = options.leanExperimentAuthority === undefined ? undefined : { ...options.leanExperimentAuthority.runtime, sourceRoot: identity.sourceRoot, revisionId: identity.revisionId, executableRoot: identity.executableRoot, tupleId: identity.tupleId, tupleRoot: identity.tupleRoot, runtimeLimitsRoot: identity.runtimeLimitsRoot, image: identity.image }
   const leanExperimentBinding = options.leanExperimentAuthority === undefined ? undefined : { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: leanRuntimeBinding!, seat: options.leanExperimentAuthority.seat }
-  const lifetime = options.leanExperimentAuthority === undefined ? admitPlannerSupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }, limit) : claimLeanRuntimeAuthority(options.leanExperimentAuthority, leanExperimentBinding!, "planner").lifetimeMs
+  const lifetime = options.leanExperimentAuthority === undefined ? admitPlannerSupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }, limit) : (startup?.version === 8 ? claimLeanStartupAuthorityV8(options.leanExperimentAuthority, leanExperimentBinding!, "planner") : claimLeanRuntimeAuthority(options.leanExperimentAuthority, leanExperimentBinding!, "planner")).lifetimeMs
   const prospectiveHostReceiptBinding = options.prospectiveHostReceiptAuthority === undefined ? undefined : { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: prospectiveRuntimeBinding!, seat: options.prospectiveLifetimeAuthority!.seat }
   if (options.prospectiveHostReceiptAuthority) claimProspectiveLeagueHostReceiptAuthority(options.prospectiveHostReceiptAuthority, prospectiveHostReceiptBinding!, "planner")
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 24800 || options.signal?.aborted) throw new TypeError("LAB_RUNTIME_ALLOCATION")
