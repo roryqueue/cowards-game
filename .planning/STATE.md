@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh v15-2 diagnostic prepared; commit immutable allocation before unique ROOT entry
+stopped_at: v15-2 diagnostic and unique ordinary reader closed refused; source-only diagnosis next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: ROOT draft/join/finalize and independent actual policy/data/helper review closed; prepare84554 zero charges/allocationf54f21be
+last_activity_desc: ROOT73583 closed0; one system_failure606926ms/139invocations; ordinary58084 refused; cumulative37; all evidence immutable
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — DIAGNOSTICv15-2 REFUSED / SOURCE-ONLY DIAGNOSIS (2026-10-09).
+
+UniqueROOT73583 ACTUALLYCLOSED0/child_exited/768430ms; actualparent13895/child13946 absent. ONEappropriateordinary58084 CLOSED1/detailswithheld; actualrecord system_failure/SUPERVISOR_FAILURE/606926ms/139invocations/cleanupComplete true, not success. Refusal27a31e47/closurec3e2e8e0/refused/finalReaderClosefalse/checkabsent/current1/cumulative37; no conditionalbaselineauthority. Actual carry9cc30f4f/hold3ec534b3/pairclosure already published during originalreader. ROOT mistakenly attemptedduplicatecarrypublication7008 without firstcheckingpresence; refused, no replacement/deletion, retainedhold-refusal7f443817. Preserve every record including this operator-error refusal, no retrocredit or prefixreinterpretation. HeldHEAD790f5fe2/source2d499dc0/allocationf54f21be/raw7f837b88/request82efa622 stayedfixedthroughactualclosure/uniquecheck; sourceANDHEADhold now RELEASED. Safe GSD diagnosis-only debug/v15-diagnostic-system-failure.md next; exact originalthrowcauseUNKNOWN. No retry/secondreader/newMatch/unchangedfailingrun; v15-3..5 remain dormant pending concrete independently checked prospective distinction and honest completeprefixcustody. Same18:38:33UTC/ALLwall223171903/31reserve/RAM3GB/unchangeddiskruntimeprivacy bounds; no Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earliercheckpoints history.
 
 CURRENT CHECKPOINT — FRESH DIAGNOSTICv15-2 PREPARED (2026-10-09).
 
