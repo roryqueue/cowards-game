@@ -5,6 +5,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { labRoot } from "../contracts.js"
 import * as lean from "./lean-experiment.js"
+import { assertLeanCorrectionCheckpointV15, authenticateLeanCheckpointAllocationV15 } from "../../../../scripts/run-v1-38-lean-correction.js"
 
 const r = (n: number) => labRoot("NON_AUTHORIZING_v15_contract", n)
 const input = () => {
@@ -23,7 +24,7 @@ const policyCacheInput = (route: "diagnostic" | "baseline" = "diagnostic", count
   const old = successorInput(), b = lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY
   const { root: _root, ...prior } = old.predecessor
   const body = { ...prior, chargedMatches: route === "baseline" ? 39 : 38, elapsedUpperBoundMs: 228267940, allocatedDiskBytes: 27303936, survivors: Array.from({ length: count }, (_, n) => ({ identity: `.strategy-lab/non-authorizing-cache-${n}`, allocatedBytes: 0 })) }
-  return { ...old, route, attemptOrdinal: 4 as const, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, timeboxExtension: b, acceptedCheckRoot: route === "baseline" ? r(40) : null, acceptedReaderCloseRoot: route === "baseline" ? r(41) : null, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
+  return { ...old, route, requestRoots: Array.from({ length: route === "baseline" ? 36 : 1 }, (_, n) => r(100 + n)), attemptOrdinal: 4 as const, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, timeboxExtension: b, acceptedCheckRoot: route === "baseline" ? r(40) : null, acceptedReaderCloseRoot: route === "baseline" ? r(41) : null, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } }
 }
 it("policy cache hits the exact host-returned authentic-size diagnostic and 36-slot baseline, never caller clones", () => {
   expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY).toBeDefined()
@@ -42,6 +43,46 @@ it("policy cache hits the exact host-returned authentic-size diagnostic and 36-s
     clone.caps.totalBytes++
     expect(() => lean.leanResourcePolicyForAllocationV15(clone)).toThrow()
   }
+})
+it("policy cache descriptor overflow stays miss-only and caller proxy/accessor/root spoofs never become keys", () => {
+  const a = lean.admitLeanAllocation(lean.createLeanSupervisorCorrectionAllocation(policyCacheInput("diagnostic", 1400), 8))
+  const before = lean.readLeanPolicyCacheCountersV15()
+  lean.leanResourcePolicyForAllocationV15(a); lean.leanResourcePolicyForAllocationV15(a)
+  expect(lean.readLeanPolicyCacheCountersV15().hits).toBe(before.hits)
+  const valid = lean.admitLeanAllocation(lean.createLeanSupervisorCorrectionAllocation(policyCacheInput(), 8))
+  for (const caller of [Object.freeze({ ...valid }), new Proxy(valid, {})]) {
+    const miss = lean.readLeanPolicyCacheCountersV15().misses
+    try { lean.leanResourcePolicyForAllocationV15(caller) } catch { /* Full admission may refuse hostile caller. */ }
+    expect(lean.readLeanPolicyCacheCountersV15().misses).toBe(miss + 1)
+  }
+  expect(() => lean.leanResourcePolicyForAllocationV15({ ...valid, root: r(999) })).toThrow()
+})
+it.each([false, true])("policy cache actual checkpoint retains three fresh admissions and every live guard after hits; tamper=%s", tamper => {
+  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "non-authorizing-cache-guards-")))
+  try {
+    process.chdir(directory); mkdirSync(".strategy-lab", { mode: 0o700 })
+    const a = lean.admitLeanAllocation(lean.createLeanSupervisorCorrectionAllocation(policyCacheInput(), 8)), paths = lean.leanCorrectionRoutePaths("diagnostic", "v15-4")
+    const ledger = lean.createLeanLedger(paths.store, a)
+    let admissions = 0
+    const ops = { assertParent: vi.fn(), authenticateAllocation: vi.fn(() => { admissions++; authenticateLeanCheckpointAllocationV15(ledger, a) }), childRss: vi.fn(() => ({ current: 100, maximum: 200 })), parentRss: vi.fn(() => 300), freeBytes: vi.fn(() => 15000000000), elapsedMs: vi.fn(() => 228267940), physicalBytes: vi.fn(() => 27303936), charged: vi.fn(() => { admissions++; return lean.readLeanLedger(ledger).charged }), availableMemoryBytes: vi.fn(() => 2000000000), disk: vi.fn(() => ({ bufferBytes: 400, scratchBytes: 500 })) }
+    lean.leanResourcePolicyForAllocationV15(a); expect(() => assertLeanCorrectionCheckpointV15(a, ops)).not.toThrow()
+    expect(admissions).toBe(3)
+    expect(ops.assertParent).toHaveBeenCalledTimes(3)
+    for (const key of ["childRss", "parentRss", "freeBytes", "elapsedMs", "physicalBytes", "charged", "availableMemoryBytes", "disk"] as const) expect(ops[key]).toHaveBeenCalledTimes(1)
+    if (tamper) {
+      ops.disk.mockImplementation(() => { writeFileSync(join(ledger.directory, "allocation.json"), lean.leanCanonicalBytes({ ...a, sourceRoot: r(999) })); return { bufferBytes: 400, scratchBytes: 500 } })
+      expect(() => assertLeanCorrectionCheckpointV15(a, ops)).toThrow()
+    }
+  } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
+})
+it("policy cache fresh RAM, time equality and available-memory guards still refuse", () => {
+  const a = lean.admitLeanAllocation(lean.createLeanSupervisorCorrectionAllocation(policyCacheInput(), 8))
+  const ops = { assertParent: vi.fn(), authenticateAllocation: vi.fn(), childRss: vi.fn(() => ({ current: 100, maximum: 200 })), parentRss: vi.fn(() => 300), freeBytes: vi.fn(() => 15000000000), elapsedMs: vi.fn(() => 250530903 - 1860000 - 600000), physicalBytes: vi.fn(() => 27303936), charged: vi.fn(() => 38), availableMemoryBytes: vi.fn(() => 2000000000), disk: vi.fn(() => ({ bufferBytes: 400, scratchBytes: 500 })) }
+  expect(() => assertLeanCorrectionCheckpointV15(a, ops)).toThrow()
+  ops.elapsedMs.mockReturnValue(228267940); ops.availableMemoryBytes.mockReturnValue(0)
+  expect(() => assertLeanCorrectionCheckpointV15(a, ops)).toThrow()
+  ops.availableMemoryBytes.mockReturnValue(2000000000); ops.parentRss.mockReturnValue(3000000000)
+  expect(() => assertLeanCorrectionCheckpointV15(a, ops)).toThrow()
 })
 it("policy cache strict ordinal4 keeps old roots, identical bounds, five dormant and exact ten physical paths", () => {
   expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY).toBeDefined()
@@ -72,7 +113,7 @@ it("successor envelope preserves consumed bytes and selects only approved mode3 
   const { root: br, ...body } = b
   expect(br).toBe(labRoot(b.schemaVersion, body))
   expect(lean.admitLeanRetryTimeboxExtension(b)).toBe(b)
-  for (const mode of ["v15-4", "v15-5"] as const) expect(() => lean.leanResourceWindowPolicyForModeV15(mode)).toThrow()
+  expect(() => lean.leanResourceWindowPolicyForModeV15("v15-5")).toThrow()
   for (const patch of [{ priorElapsedMs: 221730903 }, { startedAtMs: b.actualResumeMs }, { elapsedMs: old.elapsedMs + 28800000 }, { memoryBytes: 3000000001 }]) {
     const wrong = { ...body, ...patch }
     expect(() => lean.admitLeanRetryTimeboxExtension({ ...wrong, root: labRoot(b.schemaVersion, wrong) })).toThrow()

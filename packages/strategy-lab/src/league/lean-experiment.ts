@@ -147,7 +147,7 @@ export const leanProspectiveBudgetBinding = (mode: LeanSupervisorMode) => isLean
 export const isLeanRemainingBudgetExtensionV9 = (value: LeanRetryTimeboxExtension | undefined): value is typeof LEAN_REMAINING_V9_EXTENSION => value?.schemaVersion === "lean-remaining-budget-envelope-v9"
 export const isLeanBookkeepingContinuationV8 = (value: LeanRetryTimeboxExtension | undefined): value is typeof LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION => value?.schemaVersion === "lean-retry-bookkeeping-continuation-v8-v1"
 export const admitLeanRetryTimeboxExtension = (value: unknown): LeanRetryTimeboxExtension => {
-  for (const expected of [LEAN_RETRY_V8_TIMEBOX_EXTENSION, LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION, LEAN_REMAINING_V9_EXTENSION, LEAN_TWENTY_SIX_V10_EXTENSION, LEAN_TWO_PAIR_V11_EXTENSION, LEAN_SUPERVISOR_RETEST_V12_EXTENSION, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION, LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION, LEAN_RESOURCE_WINDOW_V15_POLICY, LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY]) {
+  for (const expected of [LEAN_RETRY_V8_TIMEBOX_EXTENSION, LEAN_RETRY_V8_BOOKKEEPING_CONTINUATION, LEAN_REMAINING_V9_EXTENSION, LEAN_TWENTY_SIX_V10_EXTENSION, LEAN_TWO_PAIR_V11_EXTENSION, LEAN_SUPERVISOR_RETEST_V12_EXTENSION, LEAN_PREPARATION_CONTINUATION_V13_EXTENSION, LEAN_POST_V13_FIVE_PAIR_V14_EXTENSION, LEAN_RESOURCE_WINDOW_V15_POLICY, LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY, LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY]) {
     if (exactLabKeys(value, Object.keys(expected)) && labRoot("lean-retry-timebox-admission-v8", value) === labRoot("lean-retry-timebox-admission-v8", expected)) return expected
   }
   return fail("RETRY_TIMEBOX")
@@ -174,7 +174,7 @@ export const LEAN_TWO_PAIR_V11_CAPS = Object.freeze({ ...LEAN_CAPS, elapsedMs: 1
 export const LEAN_SUPERVISOR_RETEST_V12_CAPS = Object.freeze({ ...LEAN_CAPS, elapsedMs: 136_800_000 })
 export const LEAN_PREPARATION_CONTINUATION_V13_CAPS = Object.freeze({ ...LEAN_CAPS, elapsedMs: 165_600_000 })
 export const LEAN_POST_V13_FIVE_PAIR_V14_CAPS = Object.freeze({ ...LEAN_CAPS, elapsedMs: 165_600_000 })
-const leanRetryExtensionCaps = (extension: LeanRetryTimeboxExtension) => isLeanResourceWindowExtensionV15(admitLeanRetryTimeboxExtension(extension)) ? (extension.schemaVersion === "lean-resource-window-successor-envelope-v15-3-v1" ? LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS : LEAN_RESOURCE_WINDOW_V15_CAPS) : isLeanPostV13FivePairExtensionV14(admitLeanRetryTimeboxExtension(extension)) ? LEAN_POST_V13_FIVE_PAIR_V14_CAPS : isLeanPreparationContinuationExtensionV13(admitLeanRetryTimeboxExtension(extension)) ? LEAN_PREPARATION_CONTINUATION_V13_CAPS : isLeanSupervisorRetestExtensionV12(admitLeanRetryTimeboxExtension(extension)) ? LEAN_SUPERVISOR_RETEST_V12_CAPS : isLeanTwoPairExtensionV11(admitLeanRetryTimeboxExtension(extension)) ? LEAN_TWO_PAIR_V11_CAPS : isLeanTwentySixExtensionV10(admitLeanRetryTimeboxExtension(extension)) ? LEAN_TWENTY_SIX_V10_CAPS : LEAN_RETRY_V8_TIMEBOX_CAPS
+const leanRetryExtensionCaps = (extension: LeanRetryTimeboxExtension) => isLeanResourceWindowExtensionV15(admitLeanRetryTimeboxExtension(extension)) ? (extension.schemaVersion === "lean-resource-window-policy-cache-envelope-v15-4-v1" ? LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_CAPS : extension.schemaVersion === "lean-resource-window-successor-envelope-v15-3-v1" ? LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS : LEAN_RESOURCE_WINDOW_V15_CAPS) : isLeanPostV13FivePairExtensionV14(admitLeanRetryTimeboxExtension(extension)) ? LEAN_POST_V13_FIVE_PAIR_V14_CAPS : isLeanPreparationContinuationExtensionV13(admitLeanRetryTimeboxExtension(extension)) ? LEAN_PREPARATION_CONTINUATION_V13_CAPS : isLeanSupervisorRetestExtensionV12(admitLeanRetryTimeboxExtension(extension)) ? LEAN_SUPERVISOR_RETEST_V12_CAPS : isLeanTwoPairExtensionV11(admitLeanRetryTimeboxExtension(extension)) ? LEAN_TWO_PAIR_V11_CAPS : isLeanTwentySixExtensionV10(admitLeanRetryTimeboxExtension(extension)) ? LEAN_TWENTY_SIX_V10_CAPS : LEAN_RETRY_V8_TIMEBOX_CAPS
 export const leanRetrySetupPath = (mode: LeanRetryMode)  => isLeanResourceWindowModeV15(mode) ? `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-diagnostic-${mode}-SETUP-v1.json` : isLeanPostV13FivePairMode(mode) ? `.strategy-lab/lean-five-pair-setup-${mode}.json` : isLeanPreparationContinuationMode(mode) ? ".strategy-lab/lean-preparation-envelope-setup-20261008-v13-1.json" : isLeanSupervisorRetestMode(mode) ? ".strategy-lab/lean-retest-envelope-setup-20261008-v12-1.json" : `.strategy-lab/lean-retry-envelope-setup-${isLeanProspectiveBudgetMode(mode) ? "20261007" : "20261006"}-${mode}.json`
 const retryPaths = Object.freeze(Object.fromEntries(([1, 2, 3] as const).map(n => {
   const routes = Object.fromEntries((["diagnostic", "baseline"] as const).map(route => [route, Object.freeze({ store: `.strategy-lab/lean-correction-supervisor-${route}-20261006-v8-${n}`, request: `.strategy-lab/lean-correction-supervisor-${route}-request-20261006-v8-${n}.json`, allocation: `.planning/artifacts/v1.38-lean-correction-supervisor-${route}-allocation-v8-${n}.json`, check: `correction-supervisor-${route}-check-v8-${n}.json`, temp: `.strategy-lab/lean-correction-supervisor-${route}-20261006-v8-${n}-tmp`, result: "result.json", owner: "entry.json", reason: "parent-supervisor-reasons.json" })]))
@@ -1134,6 +1134,52 @@ const immutableRetryData = (value: unknown): boolean => {
 // Only safe reconstructed v8 objects returned by successful full admission are
 // registered; caller objects, frozen clones and root strings acquire no authority.
 const admittedRetryCaps = new WeakMap<object, typeof LEAN_REPLAY_V7_CAPS | typeof LEAN_RETRY_V8_TIMEBOX_CAPS | typeof LEAN_TWENTY_SIX_V10_CAPS | typeof LEAN_TWO_PAIR_V11_CAPS | typeof LEAN_SUPERVISOR_RETEST_V12_CAPS | typeof LEAN_PREPARATION_CONTINUATION_V13_CAPS | typeof LEAN_RESOURCE_WINDOW_V15_CAPS | typeof LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS>()
+// Separate eligibility preserves the historical double-counted retry budget.
+// Each DATA descriptor is counted once; dense element checks have their own cap.
+const immutableHostIssuedPolicyDataV15 = (value: unknown): boolean => {
+  const pending = [{ value, depth: 0 }], seen = new WeakSet<object>()
+  let nodes = 0, descriptors = 0, elements = 0
+  while (pending.length) {
+    const current = pending.pop()!
+    if (current.depth > 32) return false
+    if (current.value === null || typeof current.value !== "object") {
+      if (!["string", "number", "boolean"].includes(typeof current.value) && current.value !== null || typeof current.value === "number" && !Number.isFinite(current.value)) return false
+      continue
+    }
+    const object = current.value
+    if (++nodes > 4096 || nodeTypes.isProxy(object) || seen.has(object)) return false
+    seen.add(object)
+    const array = Array.isArray(object), prototype = Object.getPrototypeOf(object)
+    if ((array ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null) || !Object.isFrozen(object)) return false
+    const keys = Reflect.ownKeys(object)
+    if (descriptors + keys.length > 4096 || keys.some(key => typeof key !== "string")) return false
+    descriptors += keys.length
+    if (array) {
+      const length = Object.getOwnPropertyDescriptor(object, "length")
+      if (!length || !("value" in length) || !natural(length.value) || length.value > 4096 - elements || keys.length !== length.value + 1) return false
+      elements += length.value
+      for (let i = 0; i < length.value; i++) {
+        const index = Object.getOwnPropertyDescriptor(object, String(i))
+        if (!index || !("value" in index)) return false
+      }
+    }
+    for (const key of keys) {
+      const descriptor = Object.getOwnPropertyDescriptor(object, key)
+      if (!descriptor || !("value" in descriptor)) return false
+      pending.push({ value: descriptor.value, depth: current.depth + 1 })
+    }
+  }
+  return true
+}
+const admittedHostPoliciesV15 = new WeakMap<object, Readonly<{ policy: LeanResourceWindowPolicyV15; caps: typeof LEAN_RESOURCE_WINDOW_V15_CAPS | typeof LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS }>>()
+let policyCacheHitsV15 = 0, policyCacheMissesV15 = 0, policyCacheRegistrationsV15 = 0
+export const readLeanPolicyCacheCountersV15 = () => Object.freeze({ hits: policyCacheHitsV15, misses: policyCacheMissesV15, registrations: policyCacheRegistrationsV15 })
+const hostPolicyForIdentityV15 = (value: unknown) => {
+  const cached = typeof value === "object" && value !== null ? admittedHostPoliciesV15.get(value) : undefined
+  if (cached) policyCacheHitsV15++
+  else policyCacheMissesV15++
+  return cached
+}
 export const admitLeanAllocation = (value: unknown): Readonly<AnyLeanAllocation> => {
   if (typeof value === "object" && value !== null && ["lean-correction-supervisor-diagnostic-allocation-v8", "lean-correction-supervisor-baseline-allocation-v8"].includes((value as { schemaVersion: string }).schemaVersion)) {
     const a = value as LeanCorrectionAllocation
@@ -1143,6 +1189,11 @@ export const admitLeanAllocation = (value: unknown): Readonly<AnyLeanAllocation>
     const expected = createLeanRetryAllocationV8(input as Parameters<typeof createLeanSupervisorCorrectionAllocation>[0])
     if (labRoot("lean-retry-admission-v8", a) !== labRoot("lean-retry-admission-v8", expected)) return fail("RETRY_ALLOCATION")
     if (immutableRetryData(expected)) admittedRetryCaps.set(expected, expected.timeboxExtension ? leanRetryExtensionCaps(expected.timeboxExtension) : LEAN_REPLAY_V7_CAPS)
+    if (isLeanResourceWindowExtensionV15(expected.timeboxExtension) && immutableHostIssuedPolicyDataV15(expected)) {
+      const policy = leanResourceWindowPolicyForModeV15(leanSupervisorAllocationMode(expected) as LeanResourceWindowModeV15)
+      admittedHostPoliciesV15.set(expected, Object.freeze({ policy, caps: leanRetryExtensionCaps(policy) }))
+      policyCacheRegistrationsV15++
+    }
     return expected
   }
   if (typeof value === "object" && value !== null && leanSupervisorAllocationMode(value as AnyLeanAllocation)) {
@@ -1793,6 +1844,8 @@ export const leanReplayV7CapsForAllocation = (value: unknown): typeof LEAN_REPLA
   return LEAN_REPLAY_V7_CAPS
 }
 export const leanCapsForAllocation = (value: unknown): typeof LEAN_CAPS | typeof LEAN_SUPERVISOR_V5_CAPS | typeof LEAN_REPLAY_V7_CAPS | typeof LEAN_RETRY_V8_TIMEBOX_CAPS | typeof LEAN_TWENTY_SIX_V10_CAPS | typeof LEAN_TWO_PAIR_V11_CAPS | typeof LEAN_SUPERVISOR_RETEST_V12_CAPS | typeof LEAN_PREPARATION_CONTINUATION_V13_CAPS | typeof LEAN_RESOURCE_WINDOW_V15_CAPS | typeof LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS => {
+  const hostPolicy = hostPolicyForIdentityV15(value)
+  if (hostPolicy) return hostPolicy.caps
   const cached = typeof value === "object" && value !== null ? admittedRetryCaps.get(value) : undefined
   if (cached) return cached
   const admitted = admitLeanAllocation(value)
@@ -1937,9 +1990,17 @@ const resourceWindowSuccessorBodyV15 = {
 } as const
 export const LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY = freezeLabValue({ ...resourceWindowSuccessorBodyV15, root: labRoot(resourceWindowSuccessorBodyV15.schemaVersion, resourceWindowSuccessorBodyV15) })
 export const LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS = Object.freeze({ ...LEAN_CAPS, elapsedMs: 250_530_903 })
-export type LeanResourceWindowPolicyV15 = typeof LEAN_RESOURCE_WINDOW_V15_POLICY | typeof LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY
-export const leanResourceWindowPolicyForModeV15 = (mode: LeanResourceWindowModeV15): LeanResourceWindowPolicyV15 => mode === "v15-2" ? LEAN_RESOURCE_WINDOW_V15_POLICY : mode === "v15-3" ? LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY : fail("RESOURCE_POLICY")
-export const isLeanResourceWindowExtensionV15 = (value: LeanRetryTimeboxExtension | undefined): value is LeanResourceWindowPolicyV15 => value?.schemaVersion === "lean-resource-window-envelope-v15" || value?.schemaVersion === "lean-resource-window-successor-envelope-v15-3-v1"
+const resourceWindowPolicyCacheBodyV15 = {
+  ...resourceWindowSuccessorBodyV15, schemaVersion: "lean-resource-window-policy-cache-envelope-v15-4-v1",
+  predecessorExtensionRoot: LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY.root,
+  charged: 38, attemptOrdinals: [4] as const,
+  planRoot: "sha256:bc54e7c5b530fe355395f566d12bad2eb0e4f3ad6f315d50ab435f90b1f09e2a" as LabRoot,
+} as const
+export const LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY = freezeLabValue({ ...resourceWindowPolicyCacheBodyV15, root: labRoot(resourceWindowPolicyCacheBodyV15.schemaVersion, resourceWindowPolicyCacheBodyV15) })
+export const LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_CAPS = Object.freeze({ ...LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS })
+export type LeanResourceWindowPolicyV15 = typeof LEAN_RESOURCE_WINDOW_V15_POLICY | typeof LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY | typeof LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY
+export const leanResourceWindowPolicyForModeV15 = (mode: LeanResourceWindowModeV15): LeanResourceWindowPolicyV15 => mode === "v15-2" ? LEAN_RESOURCE_WINDOW_V15_POLICY : mode === "v15-3" ? LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY : mode === "v15-4" ? LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY : fail("RESOURCE_POLICY")
+export const isLeanResourceWindowExtensionV15 = (value: LeanRetryTimeboxExtension | undefined): value is LeanResourceWindowPolicyV15 => value?.schemaVersion === "lean-resource-window-envelope-v15" || value?.schemaVersion === "lean-resource-window-successor-envelope-v15-3-v1" || value?.schemaVersion === "lean-resource-window-policy-cache-envelope-v15-4-v1"
 export const assertLeanAggregateMemoryV15 = (observed: { parentRssBytes: number; childRssBytes: number }, policy: unknown): number => {
   const b = admitLeanRetryTimeboxExtension(policy)
   if (!isLeanResourceWindowExtensionV15(b) || !exactLabKeys(observed, ["parentRssBytes", "childRssBytes"]) || !natural(observed.parentRssBytes) || !natural(observed.childRssBytes)) return fail("MEMORY_POLICY")
@@ -1958,6 +2019,8 @@ export const assertLeanProcessMemoryV15 = (rssBytes: number, policy: unknown): n
 /** Strict reconstruction before selecting limits; mutable caller objects are
  * never policy cache keys. Admission binds request/review/continuation roots. */
 export const leanResourcePolicyForAllocationV15 = (value: unknown) => {
+  const hostPolicy = hostPolicyForIdentityV15(value)
+  if (hostPolicy) return hostPolicy.policy
   const allocation = admitLeanAllocation(value)
   const mode = leanSupervisorAllocationMode(allocation)
   return isLeanResourceWindowModeV15(mode) ? leanResourceWindowPolicyForModeV15(mode) : null
@@ -1989,6 +2052,12 @@ export const LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS = freezeLabValu
   `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v4.md`,
 ])
 export const LEAN_RESOURCE_WINDOW_V15_ARCHIVED_AMENDMENT_PATHS = freezeLabValue([...LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_INPUTS.slice(0, 7), ...LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS, ...LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_INPUTS.slice(7)])
+export const LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_INPUTS = freezeLabValue(["RESEARCH-v1", "PLAN-v1", "PLAN-CHECK-v1", "PIN-INVENTORY-v1"].map(role => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-POLICY-CACHE-${role}.md`))
+export const LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_EXCLUSIONS = freezeLabValue([
+  ...["SOURCE-SUMMARY-v1", "SOURCE-REVIEW-v1", "REVIEW-FIX-v1", "VALIDATION-v1", "SOURCE-VERIFICATION-v1"].map(role => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-POLICY-CACHE-${role}.md`),
+  `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v5.md`,
+])
+export const LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_AMENDMENT_PATHS = freezeLabValue([...LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_INPUTS, ...LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_SOURCE_EXCLUSIONS])
 export const LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS = freezeLabValue([
   ...LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS,
   ...["RESEARCH", "PLAN", "PLAN-CHECK", "SOURCE-SUMMARY", "SOURCE-REVIEW", "VALIDATION", "SOURCE-VERIFICATION"].map(role => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-${role}-v1.md`),
@@ -1998,6 +2067,7 @@ export const LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS = freezeLabValue([
   ...["MEMORY-AND-TIME-DECISION-v1", "MEMORY-AND-TIME-APPROVAL-20261009", "REPLACEMENT-WINDOW-APPROVAL-20261009"].map(role => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-${role}.md`),
   ...[2, 3, 4, 5].flatMap(n => ["diagnostic", "baseline"].flatMap(route => ["DATA-REVIEW", "HELPER-REVIEW", "PREPARATION", "TERMINAL-VERIFICATION", "POLICY-ATTESTATION", "SETUP", "CONTINUATION", "AUTHORIZATION", "PAIR-CLOSURE"].map(role => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-${route}-v15-${n}-${role}-v1.${["POLICY-ATTESTATION", "SETUP", "CONTINUATION", "AUTHORIZATION", "PAIR-CLOSURE"].includes(role) ? "json" : "md"}`))),
   ...LEAN_RESOURCE_WINDOW_V15_ARCHIVED_AMENDMENT_PATHS,
+  ...LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_AMENDMENT_PATHS,
 ])
 const createLeanResourceWindowAllocationV15 = (input: Parameters<typeof createLeanSupervisorCorrectionAllocation>[0]): Readonly<LeanCorrectionAllocation> => {
   const b = admitLeanRetryTimeboxExtension(input.timeboxExtension), n = input.attemptOrdinal, p = input.predecessor
