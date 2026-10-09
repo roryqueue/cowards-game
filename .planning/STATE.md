@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh-entry and source-work reserve gates closed; checked successor plan saved; human timing choice pending
+stopped_at: Eight-hour continuation approved at actual resume; checked prospective timing source joins next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Archived-prefix plan v2 independently checked PASS; ROOT verified all11 finite metadata pins; no source implementation or new empirical entry; timing choice pending
+last_activity_desc: Human approved eight hours; all prior221730903ms carried; newcap250530903/deadline02:14:32UTC; old consumed policy unchanged
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED CHECKPOINT — EIGHT-HOUR CONTINUATION / SOURCE JOINS NEXT (2026-10-09).
+
+Human direct `yes, approved` selects additional8h in POST-V15-TIMING-DECISION-v1; new approval recordPOST-V15-TIMING-APPROVAL-20261009. ActualROOTresume18:14:32UTC/ms1791569672000 carries FULL108M+ALLwall since1791455941097 =221730903ms prior; add28800000 => cap250530903/deadline2026-10-10T02:14:32UTC (10:14:32p.m.Eastern Oct9). Same31reserve/RAM3GB/15GBtotal/2GBscratch/300Matches/runtime/privacy and onlyunusedordinals3..5; all37charges/oldrefusals immutable. Oldconsumedv15policy must NOTchange; checked separately named prospective successor selectedonlyfreshapplicablemode. Archived-prefix PLAN-v2/checkv2 PASS and11RAWpins remain source-only; timing addendum/source implementation/reviewfix/validate/verify before anyactualroute. Actualagents closed/oldparent13895+child13946 absent; no active entry/verifier/sourceHEADhold/newallocation. No repeatliteral/materialproductdecision is needed under this adopted scope. No LEAG/Phase265/baseline/freeze/formation/holdout/public/counting/production credit; earlier pending timingfrontiers are history.
 
 CURRENT HUMAN-ONLY CHECKPOINT — APPROVED WINDOW CANNOT ADMIT FURTHER WORK (2026-10-09).
 
