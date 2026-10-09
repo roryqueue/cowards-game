@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Five-pair adapter source review found two fixable issues; no empirical route active
+stopped_at: Five-pair source fixes closed; independent re-review and source gates next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
-last_activity_desc: Independent source review closed with CR-01 and WR-01; bounded source fix next under existing approval
+last_activity_desc: CR-01/WR-01 fixes committed6abed48f; portable focused tests pass, re-review pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — bounded source fix CLOSED (2026-10-09).
+
+Isolated fixer fast-forwarded main to6abed48f after CR79232adf and WR6abed48f; its own worktree/branch/sentinel removed, old evidence unchanged. Dedicated exact independently reviewed actionable-repair attestation is now required for initialv14-1; identity-only drift, optional diagnostic distinction and later ordinals fail CLOSED until a genuinely new checked repair contract exists. Portable nonauthorizing fixture5/5 and focused12/12 pass without operator history. Configured types/shell/diff/factory scan pass. Six inherited strict diagnostics, four legacy operator-file ENOENT failures and five serious-boundary unresolved loaders are NOTPASS; MAIN must assess applicable boundaries. NEW REVIEW-FIX-v1 records exact interface/proof limits. Independent SOURCE-REVIEW-v2 then MAIN validation and distinct source verification next; no new route/Match/hold. Deadline/resources/accounting and35charges unchanged; no empirical/whole-phase credit.
 
 CURRENT CHECKPOINT — five-pair source review CLOSED with fixable findings (2026-10-09).
 
