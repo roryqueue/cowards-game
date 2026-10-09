@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Resource-window source review, validation and independent source verification closed; ROOT empirical task3 next
+stopped_at: Fresh v15-2 diagnostic prepared; commit immutable allocation before unique ROOT entry
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Source7250223f/root2d499dc0/950;22 focusedPASS; clean independent review and 8/8 source-only verification; no empirical admission
+last_activity_desc: ROOT draft/join/finalize and independent actual policy/data/helper review closed; prepare84554 zero charges/allocationf54f21be
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — FRESH DIAGNOSTICv15-2 PREPARED (2026-10-09).
+
+ROOTdraft95585/join17239/finalize10479 ACTUALLYCLOSED0; distinct actual policyattestationrawc4f70d36/DATA95a04fa3/HELPERaea3f54b clean bind currentsource2d499dc0/950/requestData6fcd52ef/helper ec1ff8be. ExactlyONEprepare84554 CLOSED0/preparation_only/oneplanned/zerocharges/allocationf54f21be; all36 priorcharges and survivingfiles carry. Commit immutableallocation/reviews/setup/continuation/authorization BEFORE uniqueMAINentry; freshrealowned0700 store with allocation/emptyledger/closedpreparetime, SAMEPROCESScapacity BEFORE charge/provider. Hold SOURCEANDHEAD through actual terminal and exactlyONE appropriate unique independent check; no competingheavywork. Ownactualaccepteddiagnostic+FINAL required for conditional36baseline, no fit/curepromise. Same deadline18:38:33UTC/ALLwall/cap223171903/31reserve/RAM3GB separateunchangeddisk/runtime/privacy bounds. Laterordinals dormant; oldevidence immutable; no Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earliercheckpoints history.
 
 CURRENT CHECKPOINT — RESOURCE-WINDOW SOURCE GATES CLOSED / ROOT TASK3 NEXT (2026-10-09).
 
