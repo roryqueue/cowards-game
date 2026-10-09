@@ -5,7 +5,6 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { labRoot } from "../contracts.js"
 import * as lean from "./lean-experiment.js"
-import { assertLeanCorrectionCheckpointV15, authenticateLeanCheckpointAllocationV15 } from "../../../../scripts/run-v1-38-lean-correction.js"
 
 const r = (n: number) => labRoot("NON_AUTHORIZING_v15_contract", n)
 const input = () => {
@@ -56,33 +55,6 @@ it("policy cache descriptor overflow stays miss-only and caller proxy/accessor/r
     expect(lean.readLeanPolicyCacheCountersV15().misses).toBe(miss + 1)
   }
   expect(() => lean.leanResourcePolicyForAllocationV15({ ...valid, root: r(999) })).toThrow()
-})
-it.each([false, true])("policy cache actual checkpoint retains three fresh admissions and every live guard after hits; tamper=%s", tamper => {
-  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "non-authorizing-cache-guards-")))
-  try {
-    process.chdir(directory); mkdirSync(".strategy-lab", { mode: 0o700 })
-    const a = lean.admitLeanAllocation(lean.createLeanSupervisorCorrectionAllocation(policyCacheInput(), 8)), paths = lean.leanCorrectionRoutePaths("diagnostic", "v15-4")
-    const ledger = lean.createLeanLedger(paths.store, a)
-    let admissions = 0
-    const ops = { assertParent: vi.fn(), authenticateAllocation: vi.fn(() => { admissions++; authenticateLeanCheckpointAllocationV15(ledger, a) }), childRss: vi.fn(() => ({ current: 100, maximum: 200 })), parentRss: vi.fn(() => 300), freeBytes: vi.fn(() => 15000000000), elapsedMs: vi.fn(() => 228267940), physicalBytes: vi.fn(() => 27303936), charged: vi.fn(() => { admissions++; return lean.readLeanLedger(ledger).charged }), availableMemoryBytes: vi.fn(() => 2000000000), disk: vi.fn(() => ({ bufferBytes: 400, scratchBytes: 500 })) }
-    lean.leanResourcePolicyForAllocationV15(a); expect(() => assertLeanCorrectionCheckpointV15(a, ops)).not.toThrow()
-    expect(admissions).toBe(3)
-    expect(ops.assertParent).toHaveBeenCalledTimes(3)
-    for (const key of ["childRss", "parentRss", "freeBytes", "elapsedMs", "physicalBytes", "charged", "availableMemoryBytes", "disk"] as const) expect(ops[key]).toHaveBeenCalledTimes(1)
-    if (tamper) {
-      ops.disk.mockImplementation(() => { writeFileSync(join(ledger.directory, "allocation.json"), lean.leanCanonicalBytes({ ...a, sourceRoot: r(999) })); return { bufferBytes: 400, scratchBytes: 500 } })
-      expect(() => assertLeanCorrectionCheckpointV15(a, ops)).toThrow()
-    }
-  } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
-})
-it("policy cache fresh RAM, time equality and available-memory guards still refuse", () => {
-  const a = lean.admitLeanAllocation(lean.createLeanSupervisorCorrectionAllocation(policyCacheInput(), 8))
-  const ops = { assertParent: vi.fn(), authenticateAllocation: vi.fn(), childRss: vi.fn(() => ({ current: 100, maximum: 200 })), parentRss: vi.fn(() => 300), freeBytes: vi.fn(() => 15000000000), elapsedMs: vi.fn(() => 250530903 - 1860000 - 600000), physicalBytes: vi.fn(() => 27303936), charged: vi.fn(() => 38), availableMemoryBytes: vi.fn(() => 2000000000), disk: vi.fn(() => ({ bufferBytes: 400, scratchBytes: 500 })) }
-  expect(() => assertLeanCorrectionCheckpointV15(a, ops)).toThrow()
-  ops.elapsedMs.mockReturnValue(228267940); ops.availableMemoryBytes.mockReturnValue(0)
-  expect(() => assertLeanCorrectionCheckpointV15(a, ops)).toThrow()
-  ops.availableMemoryBytes.mockReturnValue(2000000000); ops.parentRss.mockReturnValue(3000000000)
-  expect(() => assertLeanCorrectionCheckpointV15(a, ops)).toThrow()
 })
 it("policy cache strict ordinal4 keeps old roots, identical bounds, five dormant and exact ten physical paths", () => {
   expect(lean.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_POLICY).toBeDefined()

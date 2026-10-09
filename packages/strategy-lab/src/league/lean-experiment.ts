@@ -1191,7 +1191,8 @@ export const admitLeanAllocation = (value: unknown): Readonly<AnyLeanAllocation>
     if (immutableRetryData(expected)) admittedRetryCaps.set(expected, expected.timeboxExtension ? leanRetryExtensionCaps(expected.timeboxExtension) : LEAN_REPLAY_V7_CAPS)
     if (isLeanResourceWindowExtensionV15(expected.timeboxExtension) && immutableHostIssuedPolicyDataV15(expected)) {
       const policy = leanResourceWindowPolicyForModeV15(leanSupervisorAllocationMode(expected) as LeanResourceWindowModeV15)
-      admittedHostPoliciesV15.set(expected, Object.freeze({ policy, caps: leanRetryExtensionCaps(policy) }))
+      const caps = policy === LEAN_RESOURCE_WINDOW_V15_POLICY ? LEAN_RESOURCE_WINDOW_V15_CAPS : policy === LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY ? LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS : LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_CAPS
+      admittedHostPoliciesV15.set(expected, Object.freeze({ policy, caps }))
       policyCacheRegistrationsV15++
     }
     return expected

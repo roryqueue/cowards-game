@@ -9,6 +9,7 @@ import * as custody from "./lib/v1-38-lean-resource-window-v15.js"
 import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import * as correction from "./run-v1-38-lean-correction.js"
+import { assertLeanCorrectionCheckpointV15, authenticateLeanCheckpointAllocationV15 } from "./run-v1-38-lean-correction.js"
 import { assessLeanPrefixCapacity, compactExecution } from "./run-v1-38-lean-experiment.js"
 import { leanResourceWindowDocumentsV15, authenticateLeanResourceWindowPriorPairV15, authenticateLeanResourceWindowAcceptedJoinV15 } from "./lib/v1-38-lean-resource-window-v15.js"
 import { auditLeanCorrectionRetained, assertLeanResourceWindowReaderV15, validateLeanSupervisorRetestReasonJoinV12 } from "./lib/v1-38-lean-correction-retained.js"
@@ -17,6 +18,43 @@ import * as retained from "./lib/v1-38-lean-correction-retained.js"
 import * as reuseModule from "./lib/v1-38-lean-baseline-reuse.js"
 
 const r = (n: number) => labRoot("NON_AUTHORIZING_v15_HOST", n)
+it("policy cache actual checkpoint rejects fresh allocation tamper even after cache hits", () => {
+  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "non-authorizing-cache-guards-")))
+  try {
+    process.chdir(directory); mkdirSync(".strategy-lab", { mode: 0o700 })
+    const a = lean.admitLeanAllocation(policyCacheAllocation()), paths = lean.leanCorrectionRoutePaths("diagnostic", "v15-4")
+    const ledger = lean.createLeanLedger(paths.store, a)
+    let admissions = 0
+    const ops = { assertParent: vi.fn(), authenticateAllocation: vi.fn(() => { admissions++; authenticateLeanCheckpointAllocationV15(ledger, a) }), childRss: vi.fn(() => ({ current: 100, maximum: 200 })), parentRss: vi.fn(() => 300), freeBytes: vi.fn(() => 15000000000), elapsedMs: vi.fn(() => 228267940), physicalBytes: vi.fn(() => 27303936), charged: vi.fn(() => { admissions++; return lean.readLeanLedger(ledger).charged }), availableMemoryBytes: vi.fn(() => 2000000000), disk: vi.fn(() => ({ bufferBytes: 400, scratchBytes: 500 })) }
+    lean.leanResourcePolicyForAllocationV15(a)
+    ops.disk.mockImplementation(() => { writeFileSync(join(ledger.directory, "allocation.json"), lean.leanCanonicalBytes({ ...a, sourceRoot: r(999) })); return { bufferBytes: 400, scratchBytes: 500 } })
+    expect(() => assertLeanCorrectionCheckpointV15(a, ops)).toThrow()
+    expect(admissions).toBe(3)
+  } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
+})
+it("policy cache actual checkpoint retains three fresh admissions and every live guard after hits", () => {
+  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "non-authorizing-cache-guards-")))
+  try {
+    process.chdir(directory); mkdirSync(".strategy-lab", { mode: 0o700 })
+    const a = lean.admitLeanAllocation(policyCacheAllocation()), paths = lean.leanCorrectionRoutePaths("diagnostic", "v15-4")
+    const ledger = lean.createLeanLedger(paths.store, a)
+    let admissions = 0
+    const ops = { assertParent: vi.fn(), authenticateAllocation: vi.fn(() => { admissions++; authenticateLeanCheckpointAllocationV15(ledger, a) }), childRss: vi.fn(() => ({ current: 100, maximum: 200 })), parentRss: vi.fn(() => 300), freeBytes: vi.fn(() => 15000000000), elapsedMs: vi.fn(() => 228267940), physicalBytes: vi.fn(() => 27303936), charged: vi.fn(() => { admissions++; return lean.readLeanLedger(ledger).charged }), availableMemoryBytes: vi.fn(() => 2000000000), disk: vi.fn(() => ({ bufferBytes: 400, scratchBytes: 500 })) }
+    lean.leanResourcePolicyForAllocationV15(a); expect(() => assertLeanCorrectionCheckpointV15(a, ops)).not.toThrow()
+    expect(admissions).toBe(3)
+    expect(ops.assertParent).toHaveBeenCalledTimes(3)
+    for (const key of ["childRss", "parentRss", "freeBytes", "elapsedMs", "physicalBytes", "charged", "availableMemoryBytes", "disk"] as const) expect(ops[key]).toHaveBeenCalledTimes(1)
+  } finally { process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
+})
+it("policy cache fresh RAM, time equality and available-memory guards still refuse", () => {
+  const a = lean.admitLeanAllocation(policyCacheAllocation())
+  const ops = { assertParent: vi.fn(), authenticateAllocation: vi.fn(), childRss: vi.fn(() => ({ current: 100, maximum: 200 })), parentRss: vi.fn(() => 300), freeBytes: vi.fn(() => 15000000000), elapsedMs: vi.fn(() => 250530903 - 1860000 - 600000), physicalBytes: vi.fn(() => 27303936), charged: vi.fn(() => 38), availableMemoryBytes: vi.fn(() => 2000000000), disk: vi.fn(() => ({ bufferBytes: 400, scratchBytes: 500 })) }
+  expect(() => assertLeanCorrectionCheckpointV15(a, ops)).toThrow()
+  ops.elapsedMs.mockReturnValue(228267940); ops.availableMemoryBytes.mockReturnValue(0)
+  expect(() => assertLeanCorrectionCheckpointV15(a, ops)).toThrow()
+  ops.availableMemoryBytes.mockReturnValue(2000000000); ops.parentRss.mockReturnValue(3000000000)
+  expect(() => assertLeanCorrectionCheckpointV15(a, ops)).toThrow()
+})
 const policyCachePrivateFailure = (a: ReturnType<typeof policyCacheAllocation>, chargeRoot: ReturnType<typeof r>) => ({ schemaVersion: "lean-private-host-failure-v15-4-v1", allocationRoot: a.root, chargeRoot, slotRoot: a.slots[0]!.root, phase: "kernel_step", code: "HOST_THROW", phaseTotalsMs: { machine_construction: 1, provider_binding: 1, kernel_step: 2, provider_invoke: 0, evidence_verification: 0, result_projection: 0, cleanup: 1 } })
 const policyCacheCompact = () => ({ classification: "system_failure" as const, code: "SUPERVISOR_FAILURE" as const, outcome: null, elapsedMs: 5, cleanupComplete: true, invocationCount: 0, accountingRoot: r(81), executionRoot: r(82), telemetry: { transitions: 0, events: 0 } })
 it("policy cache actual charged publication persists finite bound private attribution inside rooted cell", () => {
