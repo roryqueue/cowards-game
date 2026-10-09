@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Initialv14-1 source gates closed; fresh ROOT data and independent request reviews next
+stopped_at: Fresh diagnosticv14-1 prepared zerocharge; allocation commit before unique root entry next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
 last_activity_desc: CR-01/WR-01 fixes committed6abed48f; portable focused tests pass, re-review pending
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — DIAGNOSTICv14-1 PREPARED (2026-10-09).
+
+ROOTintent60514/join51716/finalize84691 ACTUALLYCLOSED0. Actual independent per-route repairattestation raw22070347 and DATA8e5fbf27/HELPERc3e43007 clean, bind currentrequestData00b3e006/current6d986074941; helper mode-only0600 correction independently checked, bytes3e6d4a08 unchanged. ExactlyONEprepare30933 CLOSED0/preparation_only/oneplanned/zerocharge, allocation8d2e0a4/rawb3b58d78/request2f74dc73. Realowned0700store onlyallocation/emptyledger/closedpreparationtime;35priorcharges/799survivorrows/23101440B/159737432ms. Newallocation and actualgates commit BEFORE uniqueMAINentry/freshpassing SAMEPROCESScapacity BEFORE charge/provider. HoldsourceANDHEAD through actualterminal+exactlyONEappropriateactualverification; no competingheavywork. Onlyownactualaccepteddiagnostic+FINAL enables conditional36baseline, fullfitNOTpromised. Alloldroutesimmutable, same deadline02:39:01.097Z/FULL108M+ALLwall/15GB300/2GBscratch/31reserve/allbounds; no Phase265/LEAG/freeze/formation/holdout/public/counting/production credit.
 
 CURRENT CHECKPOINT — independent source verification CLOSED (2026-10-09).
 
