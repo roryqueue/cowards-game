@@ -553,6 +553,38 @@ export interface LeanResourceWindowReviewObservationsV15 {
   readBytes(path: string, maximumBytes: number): Uint8Array
   currentIdentity(): { manifest: LeanCorrectionSourceManifest; assertCommit(commit: string): void }
 }
+/** Exact reviewed-commit source membership, not a history scan. Two bounded
+ * Git reads authenticate regular blobs and their current raw manifest roots.
+ * This data check cannot issue an authority or substitute for actual review. */
+export const assertLeanStartupReviewedTreeV8 = (reviewed: string, manifest: LeanCorrectionSourceManifest, repositoryRoot = process.cwd()): void => {
+  try {
+    if (!/^[a-f0-9]{40}$/u.test(reviewed) || !Array.isArray(manifest.entries) || manifest.entries.length < 1 || manifest.entries.length > 2048) return fail("REVIEW_SOURCE")
+    const paths = manifest.entries.map(entry => entry.path)
+    if (new Set(paths).size !== paths.length || manifest.entries.some(entry => typeof entry.path !== "string" || Buffer.byteLength(entry.path) > 4096 || /[\0\r\n\t]/u.test(entry.path) || entry.path.startsWith("/") || entry.path.split("/").some(part => part === "" || part === "." || part === "..") || !root(entry.root))) return fail("REVIEW_SOURCE")
+    const tree = execFileSync("git", ["--literal-pathspecs", "ls-tree", "-r", "-z", reviewed, "--", ...paths], { cwd: repositoryRoot, maxBuffer: 16 * 1024 * 1024 })
+    const objects = new Map<string, string>()
+    for (const row of tree.toString("utf8").split("\0").filter(Boolean)) {
+      const match = /^(100644|100755) blob ([a-f0-9]{40}|[a-f0-9]{64})\t(.+)$/u.exec(row)
+      if (!match || objects.has(match[3]!)) return fail("REVIEW_SOURCE")
+      objects.set(match[3]!, match[2]!)
+    }
+    if (objects.size !== paths.length || paths.some(path => !objects.has(path))) return fail("REVIEW_SOURCE")
+    const ids = paths.map(path => objects.get(path)!)
+    const blobs = execFileSync("git", ["cat-file", "--batch"], { cwd: repositoryRoot, input: `${ids.join("\n")}\n`, maxBuffer: 64 * 1024 * 1024 })
+    let offset = 0
+    for (let ordinal = 0; ordinal < ids.length; ordinal++) {
+      const end = blobs.indexOf(10, offset)
+      if (end < offset || end - offset > 128) return fail("REVIEW_SOURCE")
+      const header = /^([a-f0-9]{40}|[a-f0-9]{64}) blob ([0-9]+)$/u.exec(blobs.subarray(offset, end).toString("ascii"))
+      const size = Number(header?.[2])
+      if (!header || header[1] !== ids[ordinal] || !Number.isSafeInteger(size) || size < 0 || size > blobs.length - end - 2) return fail("REVIEW_SOURCE")
+      offset = end + 1
+      if (leanBytesRoot(blobs.subarray(offset, offset + size)) !== manifest.entries[ordinal]!.root || blobs[offset + size] !== 10) return fail("REVIEW_SOURCE")
+      offset += size + 1
+    }
+    if (offset !== blobs.length) return fail("REVIEW_SOURCE")
+  } catch { return fail("REVIEW_SOURCE") }
+}
 export const authenticateLeanCorrectionReview = (path: string, expected: LabRoot, source: LabRoot, diagnosisRoot: LabRoot | null, dataRequestRoot?: LabRoot, supervisor: LeanSupervisorMode = false, timeboxExtension?: LeanRetryTimeboxExtension, observations?: LeanResourceWindowReviewObservationsV15) => {
   if (supervisor === "v15-5" && dataRequestRoot === undefined && path !== leanResourceWindowDocumentsV15("diagnostic", supervisor).review) return fail("REVIEW_SOURCE")
   if (supervisor === "v15-4" && dataRequestRoot === undefined && path !== leanResourceWindowDocumentsV15("diagnostic", supervisor).review) return fail("REVIEW_SOURCE")
@@ -571,6 +603,7 @@ export const authenticateLeanCorrectionReview = (path: string, expected: LabRoot
       manifest: leanCorrectionSourceManifest(supervisor, b),
       assertCommit: (reviewed: string) => {
         execFileSync("git", ["merge-base", "--is-ancestor", reviewed, "HEAD"], { stdio: "pipe", maxBuffer: 1024 })
+        assertLeanStartupReviewedTreeV8(reviewed, leanCorrectionSourceManifest(supervisor, b))
         execFileSync("git", ["diff", "--exit-code", reviewed, "--", ...leanCorrectionSourceManifest(supervisor, b).entries.map(entry => entry.path)], { stdio: "pipe", maxBuffer: 1024 })
       },
     }
