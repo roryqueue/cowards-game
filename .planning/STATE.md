@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: fresh private diagnostic v15-4 prepared; unique main entry next
+stopped_at: diagnostic v15-4 refused and custody closed; bounded evidence-check diagnosis next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Fresh v15-4 reviewed finalized and prepared with zero current charges; allocation commit before unique entry
+last_activity_desc: Unique v15-4 entry and ordinary verifier closed; failed result preserved with 39 cumulative charges
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — DIAGNOSTIC v15-4 REFUSED / SOURCE HOLD RELEASED (2026-10-09).
+
+Unique MAIN entry32250 CLOSED0; actual parent78564/child78631 absent, real child-terminal child_exited/0/null/369909ms. Fixed HEADbe3509cb/source158012ab/974/f4c63242/allocation1a910d3f/raw86014a21 unchanged through ONE independent ordinary verifier7161 CLOSED1/refused. Result2b250288/rawed33b26e is diagnostic_only/issuedfalse/system_failure/SUPERVISOR_FAILURE/cleanuptrue/null outcome; one new charge, cumulative39. Actual retained finite host metadata validates evidence_verification/HOST_REFUSAL, but initiating cause remains UNKNOWN; different timing scopes do not establish lifetime failure. Automatic unique verifier published refused closure0e2ae633/refusal6c70e9f3/carry80aa3950/holddeb8809b/pairdbd33c04; accepted check absent, finalReaderClosefalse, baselineCarrynull, endsEnvelopefalse. Carry237585642ms/28520448B/1023survivors; pair28663808B/1025survivors; subsequent ALL-wall and file growth remain charged. Distinct scheduled TERMINAL-VERIFICATION-v1 gaps_found/3 of 4/raw959fd369 read in full. All intervals closed, actual custody joins verified and source/HEAD hold RELEASED; no reader retry/fallback/manual publisher or old-byte change. No conditional baseline or ordinal5 activation. Next bounded source-only GSD diagnosis of the evidence-check refusal; no unchanged known-failure run. Same original anchor/FULL108M/cap250530903/deadline02:14:32UTC/31-minute reserve/RAM3GB/disk15GB/300Matches/guest1000ms/host5000ms/Match600000ms and all privacy/gameplay bounds. No Phase265/LEAG/baseline/freeze/formation/holdout/public/counting/production credit. Earlier checkpoints are history.
 
 CURRENT CHECKPOINT — FRESH DIAGNOSTICv15-4 PREPARED / UNIQUE MAIN ENTRY NEXT (2026-10-09).
 
