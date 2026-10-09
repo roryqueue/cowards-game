@@ -15,6 +15,10 @@ import { claimLeanRuntimeAuthority, issueLeanBaselineRuntimeAuthority, issueLean
 import * as reuseIO from "./v1-38-lean-baseline-reuse.js"
 import type { LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
+import * as authorityIO from "./v1-38-lean-experiment-authority.js"
+import * as leanIO from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import * as sourceIO from "./v1-38-lean-baseline-source.js"
+import { buildLeanStartupWorkerHarnessV8 } from "./v1-38-lean-container-match-session.js"
 
 const retained = vi.hoisted(() => ({ state: {} as unknown }))
 vi.mock("../../packages/strategy-lab/src/league/lean-experiment.js", async importOriginal => ({ ...await importOriginal<object>(), readLeanLedger: () => retained.state }))
@@ -46,6 +50,37 @@ const fixture = () => {
   return { ledger, charge, source, pair, pairPath, journal, binding }
 }
 describe("distinct baseline runtime authority", () => {
+  it("[startup-origin-v8] host-issued ordinal5 descriptor is nonserializable and single-use; forged/default claims fail", () => {
+    const f = fixture(), grantRoot = labRoot("NON_AUTHORIZING-startup-grant", f.charge.root)
+    const reuse = { grant: { root: grantRoot }, sources: [f.source] } as unknown as LeanColdReuse
+    const validation = vi.spyOn(reuseIO, "validateLeanColdReuse").mockReturnValue(reuse)
+    const a = f.ledger.allocation as any
+    Object.assign(a, { schemaVersion: "lean-correction-supervisor-diagnostic-allocation-v8", attemptOrdinal: 5, reuseGrantRoot: grantRoot, startupPolicyRoot: leanIO.LEAN_STARTUP_POLICY_V5.root, timeboxExtension: (leanIO as any).LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY })
+    const mode = vi.spyOn(leanIO, "leanSupervisorAllocationMode").mockReturnValue("v15-5")
+    const caps = vi.spyOn(leanIO, "leanCapsForAllocation").mockReturnValue(leanIO.LEAN_RESOURCE_WINDOW_V15_POLICY_CACHE_CAPS)
+    const admission = vi.spyOn(leanIO, "admitLeanAllocation").mockReturnValue(a)
+    const entry = vi.spyOn(leanIO, "readLeanChildEntry").mockReturnValue({ head: "a".repeat(40) } as any)
+    const source = vi.spyOn(sourceIO, "readLeanBaselineSource").mockReturnValue(f.source)
+    try {
+      const auth = issueLeanCorrectionRuntimeAuthority(f.ledger, f.charge, f.source, f.binding, reuse)
+      const descriptor = (authorityIO as any).leanStartupAuthorityDescriptorV8(auth)
+      expect(descriptor).toMatchObject({ version: 8, allocationRoot: a.root, chargeRoot: f.charge.root, seat: "bottom", harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())) })
+      expect(() => JSON.stringify(auth)).toThrow()
+      expect((authorityIO as any).leanStartupAuthorityDescriptorV8({ ...auth })).toBeUndefined()
+      expect(() => claimLeanRuntimeAuthority({ ...auth }, f.binding, "factory")).toThrow()
+      expect(() => issueLeanCorrectionRuntimeAuthority(f.ledger, f.charge, f.source, f.binding, reuse)).toThrow()
+      expect(() => (authorityIO as any).claimLeanStartupAuthorityV8(auth, { ...f.binding, attemptRoot: labRoot("wrong", 1) }, "factory")).toThrow()
+      expect((authorityIO as any).claimLeanStartupAuthorityV8(auth, f.binding, "factory").startup).toBe(descriptor)
+      expect(() => (authorityIO as any).claimLeanStartupAuthorityV8(auth, f.binding, "factory")).toThrow()
+      expect(() => claimLeanRuntimeAuthority(auth, f.binding, "planner")).toThrow()
+    } finally { validation.mockRestore(); mode.mockRestore(); caps.mockRestore(); admission.mockRestore(); entry.mockRestore(); source.mockRestore() }
+  })
+  it("[startup-origin-v8] never upgrades a default authority or caller JSON to V8", () => {
+    const f = fixture(), auth = issueLeanBaselineRuntimeAuthority(f.ledger, f.charge, f.source, f.binding)
+    expect((authorityIO as any).leanStartupAuthorityDescriptorV8(auth)).toBeUndefined()
+    expect(() => (authorityIO as any).claimLeanStartupAuthorityV8(auth, f.binding, "factory")).toThrow()
+    expect(() => (authorityIO as any).claimLeanStartupAuthorityV8(JSON.parse('{"version":8,"attemptOrdinal":5}'), f.binding, "factory")).toThrow()
+  })
   it.each(["lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-diagnostic-allocation-v4", "lean-correction-supervisor-baseline-allocation-v4"])("joins the real %s issuer to exact mock pair/source/charge custody", schemaVersion => {
     const f = fixture(), grantRoot = labRoot("mock-reuse-grant", f.charge.root)
     const reuse = { grant: { root: grantRoot }, sources: [f.source] } as unknown as LeanColdReuse
