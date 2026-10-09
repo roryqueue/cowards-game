@@ -13,6 +13,7 @@ import { assessLeanPrefixCapacity, compactExecution } from "./run-v1-38-lean-exp
 import { leanResourceWindowDocumentsV15, authenticateLeanResourceWindowPriorPairV15, authenticateLeanResourceWindowAcceptedJoinV15 } from "./lib/v1-38-lean-resource-window-v15.js"
 import { auditLeanCorrectionRetained, assertLeanResourceWindowReaderV15, validateLeanSupervisorRetestReasonJoinV12 } from "./lib/v1-38-lean-correction-retained.js"
 import * as baseline from "./run-v1-38-lean-baseline.js"
+import * as retained from "./lib/v1-38-lean-correction-retained.js"
 
 const r = (n: number) => labRoot("NON_AUTHORIZING_v15_HOST", n)
 // Exact metadata-only archived bytes, boundedly rechecked against the eleven
@@ -91,6 +92,32 @@ const allocation = (chargedReport?: { identity: string; allocatedBytes: number }
   if (chargedReport) p.survivors[0] = chargedReport
   return lean.createLeanSupervisorCorrectionAllocation({ sourceRoot: r(2), reviewRoot: r(3), coldRoot: r(4), planRoot: b.planRoot, candidateRoots: [r(5), r(6)], requestRoots: [r(7)], seed: "non-authorizing-host", route: "diagnostic", reuseGrantRoot: r(8), supervisorDecisionRoot: b.approvalRoot, acceptedCheckRoot: null, requestBytesRoot: r(9), dataReviewRoot: r(10), setupAccountingRoot: r(11), predecessor: { ...p, root: labRoot(p.schemaVersion, p) }, startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, timeboxExtension: b, attemptOrdinal: 2, priorClosureRoot: r(12), continuationRoot: r(13), acceptedReaderCloseRoot: null }, 8)
 }
+it("successor retained publication and called pair exhaustion use selected deadline and refuse reserve equality", () => {
+  expect(typeof retained.assertLeanPreparationContinuationPublicationCapacityV15).toBe("function")
+  expect(typeof retained.deriveLeanPostV13ClosedPairV14).toBe("function")
+  const before = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "NON_AUTHORIZING-successor-retained-"))), b = lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY
+  const old = allocation(), { root: _root, ...p } = old.predecessor, predecessor = { ...p, chargedMatches: 37, elapsedUpperBoundMs: 221730903 }
+  const { root: _allocationRoot, ...a } = old
+  const actual = lean.createLeanSupervisorCorrectionAllocation({ ...a, timeboxExtension: b, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, attemptOrdinal: 3, predecessor: { ...predecessor, root: labRoot(p.schemaVersion, predecessor) } } as Parameters<typeof lean.createLeanSupervisorCorrectionAllocation>[0], 8)
+  const clock = vi.spyOn(Date, "now").mockReturnValue(1791571113000 + 1), usage = process.memoryUsage(), memory = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...usage, rss: 1000000000, arrayBuffers: 4096 })
+  const manifest = vi.spyOn(correction, "leanCorrectionSourceManifest").mockReturnValue({ root: actual.sourceRoot, entries: [] })
+  const inventory = vi.spyOn(correction, "inventoryLeanTwoPairNoRefundV11").mockReturnValue({ allocatedDiskBytes: predecessor.allocatedDiskBytes, survivors: predecessor.survivors })
+  try {
+    process.chdir(directory); mkdirSync(".strategy-lab", { mode: 0o700 })
+    const paths = lean.leanCorrectionRoutePaths("diagnostic", "v15-3")
+    mkdirSync(paths.temp, { mode: 0o700 }); lean.createLeanLedger(paths.store, actual)
+    expect(() => retained.assertLeanPreparationContinuationPublicationCapacityV15("v15-3", "diagnostic", 4096)).not.toThrow()
+    clock.mockReturnValue(b.absoluteDeadlineMs - b.reserveMs)
+    expect(() => retained.assertLeanPreparationContinuationPublicationCapacityV15("v15-3", "diagnostic", 4096)).toThrow("HOLD_OR_CAPACITY")
+    for (const mode of ["v15-4", "v15-5"] as const) expect(() => retained.assertLeanPreparationContinuationPublicationCapacityV15(mode, "diagnostic", 0)).toThrow()
+    const diagnostic = { outcome: "failed_result", currentCharges: 1, cumulativeCharged: 38, cumulativeElapsedMs: 223171904, allocatedDiskBytes: predecessor.allocatedDiskBytes, survivors: predecessor.survivors, root: r(41), sourceRoot: actual.sourceRoot, closedAtMs: 1791571113001 }
+    const observations = { diagnostic, baseline: null, baselineDestinationExists: false, hold: { value: { root: r(42) }, bytesRoot: r(43) }, request: { priorClosureRoot: r(44) }, inventory: { allocatedDiskBytes: predecessor.allocatedDiskBytes, survivors: predecessor.survivors }, historicalCharged: 37 }
+    expect(retained.deriveLeanPostV13ClosedPairV14("v15-3", observations)).toMatchObject({ timeboxExtension: b, historicalCharged: 37, cumulativeCharged: 38, endsEnvelope: false, endReason: null })
+    for (const changed of [{ closedAtMs: b.absoluteDeadlineMs - b.reserveMs }, { cumulativeElapsedMs: b.elapsedMs - b.reserveMs }]) expect(retained.deriveLeanPostV13ClosedPairV14("v15-3", { ...observations, diagnostic: { ...diagnostic, ...changed } })).toMatchObject({ endsEnvelope: true, endReason: "budget_exhausted" })
+    expect(retained.deriveLeanPostV13ClosedPairV14("v15-2", { ...observations, historicalCharged: 36 })).toMatchObject({ endsEnvelope: true, endReason: "budget_exhausted" })
+    expect(() => retained.deriveLeanPostV13ClosedPairV14("v15-3", { ...observations, baselineDestinationExists: true })).toThrow("CUSTODY")
+  } finally { inventory.mockRestore(); manifest.mockRestore(); memory.mockRestore(); clock.mockRestore(); process.chdir(before); rmSync(directory, { recursive: true, force: true }) }
+})
 it("actual compaction forwards live projected guards, permits v15 RAM, and preserves independent disk and legacy refusal", () => {
   const a = allocation(), policy = lean.LEAN_RESOURCE_WINDOW_V15_POLICY
   const execution = { kind: "failure", failure: { code: "NON_AUTHORIZING" }, unchangedState: {}, transitions: [], accounting: [] } as unknown as Parameters<typeof compactExecution>[0]
