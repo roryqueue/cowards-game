@@ -52,7 +52,13 @@ describe("startup-origin-v8 inert control", () => {
     const { superviseLeanStartupV8 } = await import("./v1-38-lean-startup-supervisor-v8.mjs")
     const construct = vi.fn(), notify = vi.fn()
     const result = await superviseLeanStartupV8(binding, 5000, { now: () => 0, construct, close() {}, notify } as any)
-    expect(result.ok).toBe(false); expect(result.origin.ready).toBe(false); expect(construct).not.toHaveBeenCalled(); expect(notify).not.toHaveBeenCalled()
+    expect(result.ok).toBe(false); expect(result.origin.ready).toBe(false); expect(result.origin.constructorDurationBucket).toBe("unknown"); expect(construct).not.toHaveBeenCalled(); expect(notify).not.toHaveBeenCalled()
+  })
+  it("[startup-origin-v8] buckets a thrown construction only from its actual start", async () => {
+    const { superviseLeanStartupV8 } = await import("./v1-38-lean-startup-supervisor-v8.mjs")
+    let now = 2499
+    const result = await superviseLeanStartupV8(binding, 5000, { startedAtMs: 0, now: () => now, construct() { now++; throw Error("INERT_CONSTRUCTION") }, waitAsync: async () => "timed-out", lifecycleFailure: () => new Promise(() => {}), terminate: async () => {}, close() {} } as any)
+    expect(result.origin).toMatchObject({ branch: "construction_failure", constructorDurationBucket: "0_9ms", ready: false, go: false })
   })
   it("[startup-origin-v8] fixes deadlines before construction and rejects exact-boundary READY", async () => {
     const { superviseLeanStartupV8 } = await import("./v1-38-lean-startup-supervisor-v8.mjs")
