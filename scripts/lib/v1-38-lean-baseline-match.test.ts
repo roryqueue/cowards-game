@@ -17,11 +17,12 @@ import * as authorityModule from "./v1-38-lean-experiment-authority.js"
 import * as lifetimeModule from "./v1-38-league-prospective-lifetime.js"
 import { LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js"
 
+const observedBridgeOptions = vi.hoisted(() => vi.fn())
 vi.mock("../../packages/strategy-lab/src/runtime-bridge.js", async importOriginal => {
   const actual = await importOriginal<typeof import("../../packages/strategy-lab/src/runtime-bridge.js")>()
   // Fault at construction input before any machine/state or Match can exist;
   // use the actual bridge catch and actual host-issued reader, not a fake brand.
-  return { ...actual, runCanonicalLabMatch: (options: Parameters<typeof actual.runCanonicalLabMatch>[0]) => actual.runCanonicalLabMatch({ ...options, match: new Proxy(options.match, { get() { throw null }, ownKeys() { throw null } }) }) }
+  return { ...actual, runCanonicalLabMatch: (options: Parameters<typeof actual.runCanonicalLabMatch>[0]) => { observedBridgeOptions(options); return actual.runCanonicalLabMatch({ ...options, match: new Proxy(options.match, { get() { throw null }, ownKeys() { throw null } }) }) } }
 })
 
 it.each(["v15-3", "v15-4"] as const)("policy cache host attribution actual wrapper opts in only admitted %s", async mode => {
@@ -40,11 +41,20 @@ it.each(["v15-3", "v15-4"] as const)("policy cache host attribution actual wrapp
     vi.spyOn(runtimeModule, "createFactorySupervisedRuntime").mockReturnValue({ identity: { revisionId: "inert-revision", tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image }, close: () => ({ cleanupComplete: true, orphanedChild: false }), invoke: () => { throw Error("inert-no-invoke") }, verify: () => false } as any),
   ]
   try {
+    observedBridgeOptions.mockClear()
     const charge = { root: r(20) } as any, slot = allocation.slots[0]!
     const result = await runLeanBaselineMatch({ ledger: { allocation } as any, charge, slot, seed: "non-authorizing-wrapper", bottom, top, correction: { reuse: {} as any }, checkpoint: vi.fn(), register: vi.fn(), unregister: vi.fn() })
     expect(result.compact.classification).toBe("system_failure")
-    if (mode === "v15-4") expect(result).toHaveProperty("hostFailureV15", expect.objectContaining({ phase: "machine_construction", code: "HOST_THROW", allocationRoot: allocation.root, chargeRoot: charge.root, slotRoot: slot.root }))
-    else expect(result).not.toHaveProperty("hostFailureV15")
+    const bridgeOptions = observedBridgeOptions.mock.calls[0]?.[0] as Parameters<typeof import("../../packages/strategy-lab/src/runtime-bridge.js").runCanonicalLabMatch>[0]
+    if (mode === "v15-4") {
+      expect(result).toHaveProperty("hostFailureV15", expect.objectContaining({ phase: "machine_construction", code: "HOST_THROW", allocationRoot: allocation.root, chargeRoot: charge.root, slotRoot: slot.root }))
+      expect(typeof bridgeOptions.hostClockV15).toBe("function")
+      expect(Number.isFinite(bridgeOptions.hostClockV15?.())).toBe(true)
+    } else {
+      expect(result).not.toHaveProperty("hostFailureV15")
+      expect(bridgeOptions).not.toHaveProperty("hostBindingV15")
+      expect(bridgeOptions).not.toHaveProperty("hostClockV15")
+    }
   } finally { for (const mock of mocks) mock.mockRestore() }
 })
 

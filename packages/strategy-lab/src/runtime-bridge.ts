@@ -1,6 +1,5 @@
 import { MATCH_KERNEL, type RuntimeResult, type GameState, type TransitionResult } from "@cowards/engine"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "./contracts.js"
-import { performance } from "node:perf_hooks"
 
 export type LabKernelRequest = Extract<ReturnType<typeof MATCH_KERNEL.stepMatch>, { kind: "effect" }>["request"]
 type Transition = Extract<ReturnType<typeof MATCH_KERNEL.stepMatch>, { kind: "transition" }>["record"]
@@ -48,6 +47,7 @@ export const runCanonicalLabMatch = async (options: {
   match: Parameters<typeof MATCH_KERNEL.createMachineV119>[0];
   providers: Readonly<Record<string, LabSupervisedProvider>>;
   hostBindingV15?: LabHostBindingV15;
+  hostClockV15?: () => number;
 }): Promise<LabMatchExecution> => {
   let initial: GameState | null = null
   const accounting: LabRuntimeEvidence[] = []
@@ -56,16 +56,26 @@ export const runCanonicalLabMatch = async (options: {
   const suppliedBinding = options.hostBindingV15
   const binding = suppliedBinding && [suppliedBinding.allocationRoot, suppliedBinding.chargeRoot, suppliedBinding.slotRoot].every(hostRootV15) ? Object.freeze({ allocationRoot: suppliedBinding.allocationRoot, chargeRoot: suppliedBinding.chargeRoot, slotRoot: suppliedBinding.slotRoot }) : undefined
   const totals = zeroHostTotalsV15()
-  let phase: LabHostPhaseV15 = "unknown", phaseStart = 0, timingValid = true
+  let phase: LabHostPhaseV15 = "unknown", phaseStart = 0, timingValid = typeof options.hostClockV15 === "function"
   let firstFailure: { phase: LabHostPhaseV15; code: LabHostCodeV15 } | undefined
-  const now = () => { try { const n = performance.now(); if (!Number.isFinite(n) || n < 0) { timingValid = false; return 0 }; return n } catch { timingValid = false; return 0 } }
+  const now = () => {
+    try {
+      const n = options.hostClockV15?.()
+      if (typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > Number.MAX_SAFE_INTEGER) { timingValid = false; return 0 }
+      return n
+    } catch { timingValid = false; return 0 }
+  }
   const enter = (next: LabHostPhaseV15) => {
     if (!binding) return
     const end = now(), duration = end - phaseStart
-    if (phase !== "unknown") {
+    if (duration < 0) timingValid = false
+    if (timingValid && phase !== "unknown") {
       const total = totals[phase] + duration
       if (!Number.isSafeInteger(Math.ceil(total)) || duration < 0 || total < 0) timingValid = false
-      else totals[phase] = total
+      else {
+        totals[phase] = total
+        if (!Number.isSafeInteger(LAB_HOST_PHASES_V15.reduce((sum, key) => sum + Math.ceil(totals[key]), 0))) timingValid = false
+      }
     }
     phase = next; phaseStart = end
   }
@@ -130,6 +140,6 @@ export const runCanonicalLabMatch = async (options: {
   }
   enter("unknown")
   const returned = clean ? execution : failure("LAB_CLEANUP_INCOMPLETE")
-  if (binding && returned.kind === "failure") hostFailuresV15.set(returned, timingValid ? freezeLabValue({ schemaVersion: "lean-private-host-failure-v15-4-v1", ...binding, phase: firstFailure?.phase ?? "unknown", code: firstFailure?.code ?? "UNKNOWN", phaseTotalsMs: Object.fromEntries(LAB_HOST_PHASES_V15.map(key => [key, Math.ceil(totals[key])])) as LabHostFailureV15["phaseTotalsMs"] }) : unknownHostFailureV15(binding))
+  if (binding && returned.kind === "failure") hostFailuresV15.set(returned, freezeLabValue({ schemaVersion: "lean-private-host-failure-v15-4-v1", ...binding, phase: firstFailure?.phase ?? "unknown", code: firstFailure?.code ?? "UNKNOWN", phaseTotalsMs: timingValid ? Object.fromEntries(LAB_HOST_PHASES_V15.map(key => [key, Math.ceil(totals[key])])) as LabHostFailureV15["phaseTotalsMs"] : zeroHostTotalsV15() }))
   return returned
 }

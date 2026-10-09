@@ -30,6 +30,59 @@ describe("policy cache host attribution inert host leaves", () => {
   const machine = { initialState: {}, semanticTuple: { tupleId: MATCH_KERNEL.tupleId }, state: {} } as any
   const complete = () => ({ kind: "completed", machine, record: { events: [] } } as any)
   const effect = () => ({ kind: "effect", machine, request: { requestId: "inert-request", kind: "selectActivations", input: {}, coordinates: { actingPlayerId: "bottom" } } } as any)
+  it.each(["missing", "throwing", "backward", "nonfinite", "negative", "unsafe", "unsafe_sum"] as const)("policy cache host attribution %s clock zeroes totals without erasing first failure or cleanup binding", async fault => {
+    let inspections = 0, tick = 0
+    const hostile = new Proxy({}, { get() { inspections++; throw null }, ownKeys() { inspections++; throw null } })
+    const hostClockV15 = vi.fn(() => {
+      tick++
+      if (fault === "throwing") throw hostile
+      if (fault === "nonfinite") return Infinity
+      if (fault === "negative") return -1
+      if (fault === "unsafe") return Number.MAX_SAFE_INTEGER + 1
+      if (fault === "unsafe_sum") return [0, 0.25, 0.5, Number.MAX_SAFE_INTEGER - 1, Number.MAX_SAFE_INTEGER][tick - 1]!
+      return 10 - tick
+    })
+    const create = vi.spyOn(MATCH_KERNEL, "createMachineV119").mockImplementation(() => machine)
+    const step = vi.spyOn(MATCH_KERNEL, "stepMatch").mockImplementation(() => { throw hostile })
+    const bottom = synthetic("bottom"), top = synthetic("top")
+    bottom.close = vi.fn(() => { throw hostile }); top.close = vi.fn(() => ({ cleanupComplete: true, orphanedChild: false }))
+    try {
+      const execution = await runCanonicalLabMatch({ match, providers: { bottom, top }, hostBindingV15: binding, ...(fault === "missing" ? {} : { hostClockV15 }) })
+      const issued = bridge.readLabHostFailureV15(execution, binding)
+      expect(execution).toMatchObject({ kind: "failure", failure: { code: "LAB_CLEANUP_INCOMPLETE" } })
+      expect(issued).toMatchObject({ ...binding, phase: "kernel_step", code: "HOST_THROW" })
+      expect(issued.phaseTotalsMs).toEqual(Object.fromEntries(bridge.LAB_HOST_PHASES_V15.map(key => [key, 0])))
+      expect(bottom.close).toHaveBeenCalledOnce(); expect(top.close).toHaveBeenCalledOnce()
+      expect(bridge.readLabHostFailureV15({ ...execution }, binding).phase).toBe("unknown")
+      expect(bridge.readLabHostFailureV15(execution, { ...binding, chargeRoot: root }).phase).toBe("unknown")
+      expect(inspections).toBe(0)
+    } finally { create.mockRestore(); step.mockRestore() }
+  })
+  it("policy cache host attribution missing clock preserves host refusal", async () => {
+    const create = vi.spyOn(MATCH_KERNEL, "createMachineV119").mockImplementation(() => machine)
+    const bottom = synthetic("bottom"); bottom.identity.revisionId = "inert-wrong-revision"
+    try {
+      const execution = await runCanonicalLabMatch({ match, providers: { bottom, top: synthetic("top") }, hostBindingV15: binding })
+      expect(bridge.readLabHostFailureV15(execution, binding)).toMatchObject({ phase: "provider_binding", code: "HOST_REFUSAL" })
+    } finally { create.mockRestore() }
+  })
+  it("policy cache host attribution finite supplied clock records safe positive totals and legacy never calls clock", async () => {
+    let tick = 0
+    const hostClockV15 = vi.fn(() => tick++)
+    const create = vi.spyOn(MATCH_KERNEL, "createMachineV119").mockImplementation(() => machine)
+    const step = vi.spyOn(MATCH_KERNEL, "stepMatch").mockImplementation(() => { throw null })
+    try {
+      const providers = { bottom: synthetic("bottom"), top: synthetic("top") }
+      const execution = await runCanonicalLabMatch({ match, providers, hostBindingV15: binding, hostClockV15 })
+      const totals = bridge.readLabHostFailureV15(execution, binding).phaseTotalsMs
+      expect(totals).toEqual({ machine_construction: 1, provider_binding: 1, kernel_step: 1, provider_invoke: 0, evidence_verification: 0, result_projection: 0, cleanup: 1 })
+      expect(hostClockV15).toHaveBeenCalledTimes(5)
+      hostClockV15.mockClear()
+      const legacy = await runCanonicalLabMatch({ match, providers, hostClockV15 })
+      expect(hostClockV15).not.toHaveBeenCalled()
+      expect(bridge.readLabHostFailureV15(legacy, binding).phase).toBe("unknown")
+    } finally { create.mockRestore(); step.mockRestore() }
+  })
   it.each(["machine_construction", "provider_binding", "kernel_step", "provider_invoke", "evidence_verification", "result_projection", "cleanup"] as const)("policy cache host attribution records %s without inspecting thrown payload", async phase => {
     expect(typeof bridge.readLabHostFailureV15).toBe("function")
     let inspections = 0
