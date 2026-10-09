@@ -89,7 +89,7 @@ it("successor producers and actual child/prefix guards agree on mode3 roots caps
 })
 const successorReviewFixture = () => {
   const mode = "v15-3" as const, b = lean.LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_POLICY, docs = custody.leanResourceWindowDocumentsV15("diagnostic", mode)
-  const history = correction.readLeanResourceWindowPriorPairV15(mode, path => archivedBytes().get(path)!), sourceRoot = r(61), commit = "1111111111111111111111111111111111111111"
+  const pinned = archivedBytes(), history = correction.readLeanResourceWindowPriorPairV15(mode, path => pinned.get(path)!), sourceRoot = r(61), commit = "1111111111111111111111111111111111111111"
   const files = ["scripts/run-v1-38-lean-correction.ts", "scripts/run-v1-38-lean-baseline.ts", "scripts/lib/v1-38-lean-checkpoint-observation-v15.ts", "scripts/run-v1-38-lean-checkpoint-observation-v15.test.ts", "packages/strategy-lab/src/league/lean-experiment.ts", "scripts/lib/v1-38-lean-resource-window-v15.ts", "scripts/run-v1-38-lean-resource-window-v15.test.ts", "packages/strategy-lab/src/league/lean-resource-window-v15.test.ts", "scripts/lib/v1-38-lean-correction-retained.ts"]
   const receipt = Buffer.from(`---\nsource_commit: ${commit}\nsource_root: ${sourceRoot}\nsource_entries: 9\ndiff_base: 7250223f67620ccc274a3a2fc80d099718ea58ea\nauthor_agent: /root/execute_265_archived_prefix\nreviewer_agent: /root/review_265_archived_prefix\nindependently_reviewed: true\nfiles_reviewed: 9\nfiles_reviewed_list:\n${files.map(path => `  - ${path}`).join("\n")}\nfindings_open: 0\nstatus: clean\ndistinction: fresh_synchronous_checkpoint_observation_v15\nidentity_only: false\n---\nNON_AUTHORIZING inert receipt. Not a real independent review.\n`)
   const reviewRoot = lean.leanBytesRoot(receipt), setup = correction.createLeanResourceWindowSetupV15(mode, b.actualResumeMs)
@@ -122,12 +122,12 @@ it("successor distinction actual consumers reject stale receipt identity actors 
     expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13(request, "diagnostic", f.mode, f.observations)).toThrow()
   }
   f.map.set(f.docs.review, f.receipt)
-  for (const patch of [{ reviewPath: f.docs.review.replace("v4", "v3") }, { timeboxExtension: lean.LEAN_RESOURCE_WINDOW_V15_POLICY }, { attemptOrdinal: 4 }, { sourceRoot: r(71) }, { reviewRoot: r(72) }]) expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13({ ...f.request, ...patch }, "diagnostic", f.mode, f.observations)).toThrow()
+  for (const patch of [{ reviewPath: f.docs.review.replace("v4", "v3") }, { timeboxExtension: lean.LEAN_RESOURCE_WINDOW_V15_POLICY }, { attemptOrdinal: 4 }, { sourceRoot: r(71) }, { reviewRoot: r(72) }] as const) expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13({ ...f.request, ...patch }, "diagnostic", f.mode, f.observations)).toThrow()
   for (const patch of [{ kind: "source_identity_drift" }, { evidenceRoot: f.b.memoryApprovalRoot }, { reviewRoot: r(73) }]) {
     const { root: _root, ...body } = f.continuation, changed = { ...body, distinction: { ...body.distinction, ...patch } }
     expect(() => correction.validateLeanResourceWindowContinuationV15({ ...changed, root: labRoot(changed.schemaVersion, changed) }, f.request, "diagnostic", f.mode, f.history, f.observations)).toThrow()
   }
-  for (const patch of [{ cumulativeCharged: 36 }, { authorizing: true }, { accepted: true }]) expect(() => correction.validateLeanResourceWindowContinuationV15(f.continuation, f.request, "diagnostic", f.mode, { ...f.history, ...patch }, f.observations)).toThrow()
+  for (const patch of [{ cumulativeCharged: 36 }, { authorizing: true }, { accepted: true }]) expect(() => correction.validateLeanResourceWindowContinuationV15(f.continuation, f.request, "diagnostic", f.mode, { ...f.history, ...patch } as unknown as typeof f.history, f.observations)).toThrow()
   for (const patch of [{ identityOnly: true }, { repairBaseCommit: "47425b37ee8d4a9ebdf0851667689d6d5ec0713e" }, { policyRoot: lean.LEAN_RESOURCE_WINDOW_V15_POLICY.root }, { kind: "source_identity_drift" }]) {
     const body = { ...f.attestationBody, ...patch }
     f.map.set(f.docs.distinctionReview, lean.leanCanonicalBytes({ ...body, root: labRoot(body.schemaVersion, body) }))
@@ -162,7 +162,7 @@ it("successor retained publication and called pair exhaustion use selected deadl
   const actual = lean.createLeanSupervisorCorrectionAllocation({ ...a, timeboxExtension: b, planRoot: b.planRoot, supervisorDecisionRoot: b.approvalRoot, attemptOrdinal: 3, predecessor: { ...predecessor, root: labRoot(p.schemaVersion, predecessor) } } as Parameters<typeof lean.createLeanSupervisorCorrectionAllocation>[0], 8)
   const clock = vi.spyOn(Date, "now").mockReturnValue(1791571113000 + 1), usage = process.memoryUsage(), memory = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...usage, rss: 1000000000, arrayBuffers: 4096 })
   const manifest = vi.spyOn(correction, "leanCorrectionSourceManifest").mockReturnValue({ root: actual.sourceRoot, entries: [] })
-  const inventory = vi.spyOn(correction, "inventoryLeanTwoPairNoRefundV11").mockReturnValue({ allocatedDiskBytes: predecessor.allocatedDiskBytes, survivors: predecessor.survivors })
+  const inventory = vi.spyOn(correction, "inventoryLeanTwoPairNoRefundV11").mockReturnValue({ allocatedDiskBytes: predecessor.allocatedDiskBytes, survivors: [...predecessor.survivors] })
   try {
     process.chdir(directory); mkdirSync(".strategy-lab", { mode: 0o700 })
     const paths = lean.leanCorrectionRoutePaths("diagnostic", "v15-3")
@@ -171,7 +171,7 @@ it("successor retained publication and called pair exhaustion use selected deadl
     clock.mockReturnValue(b.absoluteDeadlineMs - b.reserveMs)
     expect(() => retained.assertLeanPreparationContinuationPublicationCapacityV15("v15-3", "diagnostic", 4096)).toThrow("HOLD_OR_CAPACITY")
     for (const mode of ["v15-4", "v15-5"] as const) expect(() => retained.assertLeanPreparationContinuationPublicationCapacityV15(mode, "diagnostic", 0)).toThrow()
-    const diagnostic = { outcome: "failed_result", currentCharges: 1, cumulativeCharged: 38, cumulativeElapsedMs: 223171904, allocatedDiskBytes: predecessor.allocatedDiskBytes, survivors: predecessor.survivors, root: r(41), sourceRoot: actual.sourceRoot, closedAtMs: 1791571113001 }
+    const diagnostic = { outcome: "failed_result" as const, currentCharges: 1, cumulativeCharged: 38, cumulativeElapsedMs: 223171904, allocatedDiskBytes: predecessor.allocatedDiskBytes, survivors: predecessor.survivors, root: r(41), sourceRoot: actual.sourceRoot, closedAtMs: 1791571113001 }
     const observations = { diagnostic, baseline: null, baselineDestinationExists: false, hold: { value: { root: r(42) }, bytesRoot: r(43) }, request: { priorClosureRoot: r(44) }, inventory: { allocatedDiskBytes: predecessor.allocatedDiskBytes, survivors: predecessor.survivors }, historicalCharged: 37 }
     expect(retained.deriveLeanPostV13ClosedPairV14("v15-3", observations)).toMatchObject({ timeboxExtension: b, historicalCharged: 37, cumulativeCharged: 38, endsEnvelope: false, endReason: null })
     for (const changed of [{ closedAtMs: b.absoluteDeadlineMs - b.reserveMs }, { cumulativeElapsedMs: b.elapsedMs - b.reserveMs }]) expect(retained.deriveLeanPostV13ClosedPairV14("v15-3", { ...observations, diagnostic: { ...diagnostic, ...changed } })).toMatchObject({ endsEnvelope: true, endReason: "budget_exhausted" })
@@ -224,11 +224,11 @@ it("finite documents and missing or forged predecessor/own FINAL never authorize
   expect(() => authenticateLeanResourceWindowPriorPairV15(new Map())).toThrow()
   expect(() => authenticateLeanResourceWindowAcceptedJoinV15("v15-2", {}, {} as never)).toThrow()
 })
-it("selects only the exact fresh v3 source review without accepting immutable v1/v2", () => {
+it("keeps the consumed v3 review for mode2, selects exact v4 for mode3 and leaves later reviews dormant", () => {
   const phase = ".planning/phases/265-serious-current-rules-league-and-development-red-team/"
-  for (const n of [2, 3, 4, 5] as const) for (const route of ["diagnostic", "baseline"] as const) {
+  for (const n of [2, 3] as const) for (const route of ["diagnostic", "baseline"] as const) {
     const docs = leanResourceWindowDocumentsV15(route, `v15-${n}`)
-    expect(docs.review).toBe(`${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v3.md`)
+    expect(docs.review).toBe(`${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v${n === 2 ? 3 : 4}.md`)
     expect(correction.leanPreparationProtocolDocuments(route, `v15-${n}`).review).toBe(docs.review)
     const request = { reviewPath: `${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v1.md` } as Parameters<typeof correction.authenticateLeanPreparationContinuationSourceReviewV13>[0]
     expect(() => correction.authenticateLeanPreparationContinuationSourceReviewV13(request, route, `v15-${n}`)).toThrow("SUPERVISOR_REQUEST")
@@ -298,7 +298,8 @@ it("actual prefix guard accepts approved RAM independently, preserves old ceilin
 })
 
 it("finite documents remain route-specific with no caller-chosen helper or report wildcard", () => {
-  expect(leanResourceWindowDocumentsV15("baseline", "v15-5").authorization).toContain("RESOURCE-WINDOW-baseline-v15-5-AUTHORIZATION-v1.json")
+  expect(leanResourceWindowDocumentsV15("baseline", "v15-3").authorization).toContain("RESOURCE-WINDOW-baseline-v15-3-AUTHORIZATION-v1.json")
+  expect(() => leanResourceWindowDocumentsV15("baseline", "v15-5")).toThrow("RESOURCE_POLICY")
   const shell = readFileSync("scripts/run-v1-38-lean-correction.sh", "utf8")
   expect(shell).toContain("prepare-supervisor-diagnostic-v15-[2-5]")
   expect(shell).toContain("lean-correction-supervisor-baseline-20261009-v${1##*-v}-tmp")

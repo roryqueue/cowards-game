@@ -1978,6 +1978,17 @@ export const observeLeanResourceWindowDiskV15 = (ledger: LeanExperimentLedger) =
   return { bufferBytes, scratchBytes }
 }
 export const LEAN_RESOURCE_WINDOW_V15_ROUTES = freezeLabValue(Object.fromEntries(([2, 3, 4, 5] as const).map(n => [`v15-${n}`, Object.fromEntries((["diagnostic", "baseline"] as const).map(route => [route, { store: `.strategy-lab/lean-correction-supervisor-${route}-20261009-v15-${n}`, request: `.strategy-lab/lean-correction-supervisor-${route}-request-20261009-v15-${n}.json`, allocation: `.planning/artifacts/v1.38-lean-correction-supervisor-${route}-allocation-v15-${n}.json`, check: `correction-supervisor-${route}-check-v15-${n}.json`, temp: `.strategy-lab/lean-correction-supervisor-${route}-20261009-v15-${n}-tmp`, result: "result.json", owner: "entry.json", reason: "parent-supervisor-reasons.json" }]))]))) as Readonly<Record<LeanResourceWindowModeV15, typeof LEAN_STARTUP_V5_ROUTES>>
+export const LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_INPUTS = freezeLabValue([
+  ...["PLAN-v1", "PLAN-v2", "PLAN-CHECK-v1", "PLAN-CHECK-v2", "RESEARCH-v1", "PIN-INVENTORY-v1"].map(role => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-ARCHIVED-PREFIX-${role}.md`),
+  `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-TIMING-DECISION-v1.md`,
+  ...["RESEARCH-v2", "PLAN-v3", "PLAN-CHECK-v3"].map(role => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-ARCHIVED-PREFIX-${role}.md`),
+  `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-TIMING-APPROVAL-20261009.md`,
+])
+export const LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS = freezeLabValue([
+  ...["SOURCE-SUMMARY-v1", "REVIEW-FIX-v1", "SOURCE-REVIEW-v1", "VALIDATION-v1", "SOURCE-VERIFICATION-v1"].map(role => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V15-ARCHIVED-PREFIX-${role}.md`),
+  `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v4.md`,
+])
+export const LEAN_RESOURCE_WINDOW_V15_ARCHIVED_AMENDMENT_PATHS = freezeLabValue([...LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_INPUTS.slice(0, 7), ...LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_EXCLUSIONS, ...LEAN_RESOURCE_WINDOW_V15_ARCHIVED_SOURCE_INPUTS.slice(7)])
 export const LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS = freezeLabValue([
   ...LEAN_POST_V13_FIVE_PAIR_V14_REPORT_PATHS,
   ...["RESEARCH", "PLAN", "PLAN-CHECK", "SOURCE-SUMMARY", "SOURCE-REVIEW", "VALIDATION", "SOURCE-VERIFICATION"].map(role => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-${role}-v1.md`),
@@ -1986,6 +1997,7 @@ export const LEAN_RESOURCE_WINDOW_V15_REPORT_PATHS = freezeLabValue([
   `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-PLAN-CHECK-v2.md`,
   ...["MEMORY-AND-TIME-DECISION-v1", "MEMORY-AND-TIME-APPROVAL-20261009", "REPLACEMENT-WINDOW-APPROVAL-20261009"].map(role => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-${role}.md`),
   ...[2, 3, 4, 5].flatMap(n => ["diagnostic", "baseline"].flatMap(route => ["DATA-REVIEW", "HELPER-REVIEW", "PREPARATION", "TERMINAL-VERIFICATION", "POLICY-ATTESTATION", "SETUP", "CONTINUATION", "AUTHORIZATION", "PAIR-CLOSURE"].map(role => `${LEAN_REMAINING_V9_PHASE}265-16-POST-V14-RESOURCE-WINDOW-${route}-v15-${n}-${role}-v1.${["POLICY-ATTESTATION", "SETUP", "CONTINUATION", "AUTHORIZATION", "PAIR-CLOSURE"].includes(role) ? "json" : "md"}`))),
+  ...LEAN_RESOURCE_WINDOW_V15_ARCHIVED_AMENDMENT_PATHS,
 ])
 const createLeanResourceWindowAllocationV15 = (input: Parameters<typeof createLeanSupervisorCorrectionAllocation>[0]): Readonly<LeanCorrectionAllocation> => {
   const b = admitLeanRetryTimeboxExtension(input.timeboxExtension), n = input.attemptOrdinal, p = input.predecessor

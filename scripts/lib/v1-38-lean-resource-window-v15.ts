@@ -1,7 +1,7 @@
 /** Finite private metadata custody. No ordinary historical reader, provider,
  * allocation writer or entry is invoked by importing this module. */
 import { freezeLabValue, labRoot, exactLabKeys, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
-import { leanBytesRoot, leanCanonicalBytes, isLeanResourceWindowModeV15, LEAN_RESOURCE_WINDOW_V15_POLICY as policy, leanCorrectionRoutePaths, type LeanResourceWindowModeV15, type LeanCorrectionPredecessor } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { leanBytesRoot, leanCanonicalBytes, isLeanResourceWindowModeV15, leanResourceWindowPolicyForModeV15, LEAN_RESOURCE_WINDOW_V15_POLICY as policy, leanCorrectionRoutePaths, type LeanResourceWindowModeV15, type LeanCorrectionPredecessor } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 
 const phase = ".planning/phases/265-serious-current-rules-league-and-development-red-team/"
 const fail = (): never => { throw new TypeError("LEAN_RESOURCE_WINDOW_V15_CUSTODY") }
@@ -11,11 +11,12 @@ const exactKeys = (value: unknown, keys: readonly string[]): boolean => exactLab
 type Route = "diagnostic" | "baseline"
 export const leanResourceWindowDocumentsV15 = (route: Route, mode: LeanResourceWindowModeV15) => {
   if (!isLeanResourceWindowModeV15(mode) || route !== "diagnostic" && route !== "baseline") return fail()
+  leanResourceWindowPolicyForModeV15(mode)
   const path = (role: string, ext = "json") => `${phase}265-16-POST-V14-RESOURCE-WINDOW-${route}-${mode}-${role}-v1.${ext}`, paths = leanCorrectionRoutePaths(route, mode)
   // Diagnostic and conditional baseline share one pair continuation/setup/close;
   // actual authorizations, helpers and review gates stay distinct per route.
   const pairPath = (role: string) => `${phase}265-16-POST-V14-RESOURCE-WINDOW-diagnostic-${mode}-${role}-v1.json`
-  return Object.freeze({ review: `${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v3.md`, distinctionReview: path("POLICY-ATTESTATION"), dataReview: path("DATA-REVIEW", "md"), helperReview: path("HELPER-REVIEW", "md"), helper: `.strategy-lab/lean-resource-window-${route}-${mode}-helper.mts`, authorization: path("AUTHORIZATION"), setup: pairPath("SETUP"), continuation: pairPath("CONTINUATION"), pairClosure: pairPath("PAIR-CLOSURE"), carry: `${paths.temp}/terminal-carry-v15.json`, hold: `${paths.temp}/terminal-hold-complete-v15.json` })
+  return Object.freeze({ review: `${phase}265-16-POST-V14-RESOURCE-WINDOW-SOURCE-REVIEW-v${mode === "v15-3" ? 4 : 3}.md`, distinctionReview: path("POLICY-ATTESTATION"), dataReview: path("DATA-REVIEW", "md"), helperReview: path("HELPER-REVIEW", "md"), helper: `.strategy-lab/lean-resource-window-${route}-${mode}-helper.mts`, authorization: path("AUTHORIZATION"), setup: pairPath("SETUP"), continuation: pairPath("CONTINUATION"), pairClosure: pairPath("PAIR-CLOSURE"), carry: `${paths.temp}/terminal-carry-v15.json`, hold: `${paths.temp}/terminal-hold-complete-v15.json` })
 }
 
 /** Full raw digests from the actual saved closed v14-1 metadata. This authority
@@ -459,6 +460,7 @@ export const authenticateLeanResourceWindowPriorPairV15 = (bytes: ReadonlyMap<st
  * rooted JSON fixture alone is not accepted authority; callers must supply
  * the actual audit-returned allocation/check and actual FINAL closure. */
 export const authenticateLeanResourceWindowAcceptedJoinV15 = (mode: LeanResourceWindowModeV15, closure: Record<string, any>, accepted: { root: LabRoot; bytesRoot: LabRoot; allocationRoot: LabRoot; sourceRoot: LabRoot; head: string; attemptOrdinal: number; readerCloseMs: number; cumulativeCharged: number }) => {
-  if (!isLeanResourceWindowModeV15(mode) || !exactKeys(accepted, ["root", "bytesRoot", "allocationRoot", "sourceRoot", "head", "attemptOrdinal", "readerCloseMs", "cumulativeCharged"]) || ![accepted.root, accepted.bytesRoot, accepted.allocationRoot, accepted.sourceRoot].every(rooted) || closure.finalReaderClose !== true || closure.closureClass !== "accepted" || closure.acceptedCheckAbsent !== false || closure.resultAbsent !== false || closure.currentCharges !== 1 || closure.attemptOrdinal !== Number(mode.slice(-1)) || accepted.attemptOrdinal !== closure.attemptOrdinal || closure.checkRoot !== accepted.root || closure.checkBytesRoot !== accepted.bytesRoot || closure.allocationRoot !== accepted.allocationRoot || closure.sourceRoot !== accepted.sourceRoot || closure.head !== accepted.head || closure.readerCloseMs !== accepted.readerCloseMs || closure.cumulativeCharged !== accepted.cumulativeCharged || accepted.cumulativeCharged < 37 || !natural(accepted.readerCloseMs) || accepted.readerCloseMs < policy.actualResumeMs || !/^[a-f0-9]{40}$/u.test(accepted.head)) return fail()
+  const selected = leanResourceWindowPolicyForModeV15(mode)
+  if (!isLeanResourceWindowModeV15(mode) || !exactKeys(accepted, ["root", "bytesRoot", "allocationRoot", "sourceRoot", "head", "attemptOrdinal", "readerCloseMs", "cumulativeCharged"]) || ![accepted.root, accepted.bytesRoot, accepted.allocationRoot, accepted.sourceRoot].every(rooted) || closure.finalReaderClose !== true || closure.closureClass !== "accepted" || closure.acceptedCheckAbsent !== false || closure.resultAbsent !== false || closure.currentCharges !== 1 || closure.attemptOrdinal !== Number(mode.slice(-1)) || accepted.attemptOrdinal !== closure.attemptOrdinal || closure.checkRoot !== accepted.root || closure.checkBytesRoot !== accepted.bytesRoot || closure.allocationRoot !== accepted.allocationRoot || closure.sourceRoot !== accepted.sourceRoot || closure.head !== accepted.head || closure.readerCloseMs !== accepted.readerCloseMs || closure.cumulativeCharged !== accepted.cumulativeCharged || accepted.cumulativeCharged < selected.charged + 1 || mode === "v15-3" && (accepted.cumulativeCharged !== 38 || labRoot("lean-resource-window-policy-join-v15", closure.timeboxExtension) !== labRoot("lean-resource-window-policy-join-v15", selected)) || !natural(accepted.readerCloseMs) || accepted.readerCloseMs < selected.actualResumeMs || !/^[a-f0-9]{40}$/u.test(accepted.head)) return fail()
   return Object.freeze({ closure, accepted: Object.freeze({ ...accepted }) })
 }

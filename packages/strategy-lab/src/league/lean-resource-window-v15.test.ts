@@ -54,7 +54,7 @@ it("successor envelope reconstructs actual allocation caps and memory and refuse
   expect(lean.assertLeanProcessMemoryV15(2152455680, b)).toBe(3000000000)
   expect(() => lean.assertLeanProcessMemoryV15(2152455681, b)).toThrow("MEMORY_CAP")
   for (const patch of [{ attemptOrdinal: 2 }, { attemptOrdinal: 4 }, { timeboxExtension: lean.LEAN_RESOURCE_WINDOW_V15_POLICY }, { caps: lean.LEAN_RESOURCE_WINDOW_V15_CAPS }]) expect(() => lean.admitLeanAllocation({ ...a, ...patch })).toThrow()
-  for (const patch of [{ attemptOrdinal: 4 }, { attemptOrdinal: 5 }, { timeboxExtension: lean.LEAN_RESOURCE_WINDOW_V15_POLICY }]) expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...successorInput(), ...patch }, 8)).toThrow()
+  for (const patch of [{ attemptOrdinal: 4 }, { attemptOrdinal: 5 }, { timeboxExtension: lean.LEAN_RESOURCE_WINDOW_V15_POLICY }] as const) expect(() => lean.createLeanSupervisorCorrectionAllocation({ ...successorInput(), ...patch }, 8)).toThrow()
   const { root: _root, ...p } = a.predecessor
   expect(() => lean.validateLeanResourceWindowPredecessorV15(a.predecessor, b)).not.toThrow()
   const below = { ...p, chargedMatches: 36 }
