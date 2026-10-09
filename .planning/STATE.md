@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Conditional baselinev14-1 prepared zerocharge; unique root entry next after allocation commit
-last_updated: "2026-10-08"
-last_activity: 2026-10-08
-last_activity_desc: CR-01/WR-01 fixes committed6abed48f; portable focused tests pass, re-review pending
+stopped_at: Baselinev14-1 closed resource-guard failure; unique terminal verification closed; bounded source diagnosis next
+last_updated: "2026-10-09"
+last_activity: 2026-10-09
+last_activity_desc: Baselinev14-1 failed before first charge; terminal custody verified; 36 cumulative charges preserved
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — BASELINEv14-1 CLOSED / HOLD RELEASED (2026-10-09).
+
+UniqueMAIN29771 ACTUALLYCLOSED1; actualparent89652/child89822 absent. Child_failed/exitnull/SIGKILL/104176ms; reason-v2 resource_threshold/uncertaintrue, initiating cause and historical peak RSS/disk UNKNOWN. ExactlyONE independent ENTRY-terminal-only38074 CLOSED0; actual result-absent terminal/carry/closed-pair authenticators CLOSED0. Terminal verification065f3b43/raw9116153f, carryed75f395, closedpair3d657319; current0/cumulative36/no baseline FINAL/result/check absent/cleanupcomplete. HeldHEAD7430c047/source6d986074941/allocation2c824541/raw1436700c/requestda7f052e unchanged through closure. ROOT independently confirmed actual parent/child absent and heldHEAD; sourceANDHEADhold RELEASED. Accepted diagnostic remains valid, not baseline/Phase265/LEAG/freeze credit. Consumed route and all evidence remain immutable; unused approved pairs are NOT permission for an unchanged known-failing run. Bounded source-only diagnosis next; a genuinely actionable independently reviewed repair and fresh gates precede any distinct successor. Same deadline2026-10-09T02:39:01.097Z/FULL108M+ALLwall/165600000ms/15GB300/2GBscratch/31reserve/all runtime and privacy bounds. Formation/freeze/holdout/public/counting/production remain unadmitted. Earlier checkpoints below are history.
 
 CURRENT CHECKPOINT — CONDITIONALBASELINEv14-1 PREPARED (2026-10-09).
 
