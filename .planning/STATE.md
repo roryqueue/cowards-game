@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Five-pair source fixes closed; independent re-review and source gates next
+stopped_at: Five-pair re-review clean and MAIN scoped validation closed; independent source verification next
 last_updated: "2026-10-08"
 last_activity: 2026-10-08
 last_activity_desc: CR-01/WR-01 fixes committed6abed48f; portable focused tests pass, re-review pending
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — source re-review and MAIN scoped validation CLOSED (2026-10-09).
+
+Independent SOURCE-REVIEW-v2 clean0/raw760ac80d closesCR01/WR01 at source6abed48f/root6d986074/941. MAIN17/17 zeroSkip (12/13.51s and5/39.22s), configuredtypes/shell/diff/factory1429PASS; actual selected source-review consumerPASS. Serious-league monitor remains NOTPASS five origins due independently traced inherited node:util allowlist mismatch, not new hostile/public reachability; strictsixerrors/isolatedlegacy4ENOENT remain disclosed. NEW scopedVALIDATION-v1 partial/nyquistfalse preserves positive custody/publication/disconnect/native/full36 gaps. Distinct source verification next; no actual route/helper/allocation/entry/reader/hold. Only initialv14-1 concrete repair enabled subject fresh actual independent attestation/data/helper custody; laterpairs/optionaldistinction failclosed. Every deadline/resource/35-charge/no-refund/privacy bound unchanged, no empirical/whole-phase credit.
 
 CURRENT CHECKPOINT — bounded source fix CLOSED (2026-10-09).
 
