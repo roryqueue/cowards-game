@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: source validation found boundary and fixture gaps; bounded correction checked
+stopped_at: bounded source repair independently verified; fresh private route gates next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Policy-cache validation gaps retained; exact two-task boundary correction and v6 inventory independently checked, no empirical route
+last_activity_desc: Policy-cache boundary repair reviewed validated and source-verified; fresh v15-4 gates next, no empirical credit
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — POLICY-CACHE BOUNDARY SOURCE VERIFIED / FRESH ROOT GATES NEXT (2026-10-09).
+
+Checked isolated repair412bb86d/84bc052a/158012ab/summary78a73242 integrated; only own temporary checkout and merged branch removed, committed history retained. Independent SOURCE-REVIEW-v2 clean0/exact13; ROOT REVIEW-FIX-v2 closes current B01/T01/C01 source findings. Exact original4/6/10 arrays preserved; separate boundary2/6/8 actual manifest+physical debits; host-wrapper clock removes denied bridge import without scanner expansion and preserves failure truth without timing; new typed fixtures repaired. Actual source158012ab/f4c6324252682707ab59f93eb63170bdeeb962dd13dd7d008514a183d18591ed/974, selectedv6 actualreviewer/root/review_265_policy_cache/author/root/fix_265_policy_cache/private0600/12171B/raw5820f7b6659b5da6d8e3c91f38bbd45cd288459d15ad0826580ec9da434c4978. ROOT default82730 CLOSED0; scoped VALIDATION-v2 configured57008/scanner74168 1434zero/shell+source-diff/26namedtests1695+4340 CLOSED0. Strict27571 CLOSED2 exactly11 inherited/noNEW, grouped94808 and all old NOTPASS retained. ONE pureprobe12669 CLOSED0: actualsameobject old195.016606/180.519143ms versus new0.103187/0.013599ms/twohits; separate970/971survivor1/36slot inertfixturesfourhits each. Measured pure overhead only, NOT causal cure or runtime recovery. Distinct /root/verify_265_policy_cache_source unique SOURCE-VERIFICATION-v2 CLOSED verified_source_only, actualsaveddefaultconsumer/pins10raw10canonical7embedded3absent/14oldbytecomparisons; ONE discoveredconnectedguardtest PASS1/46skipped8.60s. Tooling127/invalidflag1 remainNOTPASS; no testdiscovery onthose. Artifact-table inherited phrase behavior-outstanding is superseded by its explicit later passed connected test/outcome, not wholephase credit. ROOT read fullreport; no sourcechangeafterreview. Current2/3/4policybytes/bounds/history unchanged; all38charges costonly/4unusednotauthority/5dormant. Fresh ROOT-only actor/helper/request/DATA/HELPER/distinction/setup/authorization/allocation committed BEFOREuniqueentry/empty0700/SAMEPROCESS passingcapacity gates NEXT, no oldreader/publisher/evidence reuse. No active empirical entry/verifier/HEADhold. Same02:14:32UTC/cap250530903/originalanchor/FULL108M/ALLwall/31reserve/RAM3GBdisk15GB300Matches/runtimeprivacy bounds. No Phase265/LEAG/baseline/freeze/formation/holdout/public/counting/production credit. Earliercheckpoints history.
 
 CURRENT CHECKPOINT — SOURCE VALIDATION GAPS / BOUNDED CORRECTION CHECKED (2026-10-09).
 
