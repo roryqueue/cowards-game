@@ -15,8 +15,8 @@ import { constants, openSync, closeSync, readFileSync, lstatSync, realpathSync, 
 import { resolve } from "node:path"
 import { leanCanonicalBytes, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
-import { leanCapsForAllocation, leanSupervisorAllocationMode, LEAN_STARTUP_POLICY_V5, type LeanCorrectionAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { buildLeanStartupWorkerHarnessV5 } from "./v1-38-lean-container-match-session.js"
+import { leanCapsForAllocation, leanSupervisorAllocationMode, LEAN_STARTUP_POLICY_V5, LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY, type LeanCorrectionAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { buildLeanStartupWorkerHarnessV5, buildLeanStartupWorkerHarnessV8 } from "./v1-38-lean-container-match-session.js"
 
 export interface LeanRuntimeAuthority { readonly schemaVersion: "lean-runtime-authority-v1"; readonly runtime: ProspectiveLeagueLifetimeProviderBinding["runtime"]; readonly seat: "bottom" | "top"; toJSON(): never }
 const correctionAuthorities = new WeakSet<object>()
@@ -29,8 +29,10 @@ export interface LeanBaselinePair {
 }
 type Layer = "factory" | "planner" | "session"
 export interface LeanStartupGrantV5 { readonly version?: 6 | 7; readonly allocationRoot: LabRoot; readonly chargeRoot: LabRoot; readonly seat: "bottom" | "top"; readonly policyRoot: LabRoot; readonly harnessRoot: LabRoot }
-const issued = new WeakMap<object, { binding: ProspectiveLeagueLifetimeProviderBinding; claims: Set<Layer>; startup?: Readonly<LeanStartupGrantV5> }>()
+export interface LeanStartupGrantV8 extends Omit<LeanStartupGrantV5, "version"> { readonly version: 8; toJSON(): never }
+const issued = new WeakMap<object, { binding: ProspectiveLeagueLifetimeProviderBinding; claims: Set<Layer>; startup?: Readonly<LeanStartupGrantV5>; startupV8?: Readonly<LeanStartupGrantV8> }>()
 export const leanStartupAuthorityDescriptorV5 = (authority: LeanRuntimeAuthority): Readonly<LeanStartupGrantV5> | undefined => issued.get(authority)?.startup
+export const leanStartupAuthorityDescriptorV8 = (authority: LeanRuntimeAuthority): Readonly<LeanStartupGrantV8> | undefined => issued.get(authority)?.startupV8
 const used = new Set<string>()
 const fail = (): never => { throw new TypeError("LEAN_RUNTIME_AUTHORITY") }
 export const deriveLeanCandidateRuntime = (input: FactoryCandidateClosure) => {
@@ -59,8 +61,15 @@ export const issueLeanRuntimeAuthority = (ledger: LeanExperimentLedger, charge: 
 }
 export const claimLeanRuntimeAuthority = (authority: LeanRuntimeAuthority, binding: Omit<ProspectiveLeagueLifetimeProviderBinding, "seat"> & { seat?: "bottom" | "top" }, layer: Layer): { lifetimeMs: 600000; receiptMs: 5000; startup?: Readonly<LeanStartupGrantV5> } => {
   const state = authority && issued.get(authority)
-  if (!state || authority.schemaVersion !== "lean-runtime-authority-v1" || !["factory", "planner", "session"].includes(layer) || state.claims.has(layer) || layer === "planner" && !state.claims.has("factory") || layer === "session" && !state.claims.has("planner") || labRoot("lean-runtime-binding-v1", { ...binding, seat: authority.seat }) !== labRoot("lean-runtime-binding-v1", state.binding)) return fail()
+  if (!state || state.startupV8 || authority.schemaVersion !== "lean-runtime-authority-v1" || !["factory", "planner", "session"].includes(layer) || state.claims.has(layer) || layer === "planner" && !state.claims.has("factory") || layer === "session" && !state.claims.has("planner") || labRoot("lean-runtime-binding-v1", { ...binding, seat: authority.seat }) !== labRoot("lean-runtime-binding-v1", state.binding)) return fail()
   state.claims.add(layer); return { lifetimeMs: 600000, receiptMs: 5000, ...(state.startup === undefined ? {} : { startup: state.startup }) }
+}
+/** Distinct claim path: no legacy caller can dispatch V8 between units. */
+export const claimLeanStartupAuthorityV8 = (authority: LeanRuntimeAuthority, binding: Omit<ProspectiveLeagueLifetimeProviderBinding, "seat"> & { seat?: "bottom" | "top" }, layer: Layer): { lifetimeMs: 600000; receiptMs: 5000; startup: Readonly<LeanStartupGrantV8> } => {
+  const state = authority && issued.get(authority)
+  if (!state?.startupV8 || authority.schemaVersion !== "lean-runtime-authority-v1" || !["factory", "planner", "session"].includes(layer) || state.claims.has(layer) || layer === "planner" && !state.claims.has("factory") || layer === "session" && !state.claims.has("planner") || labRoot("lean-runtime-binding-v1", { ...binding, seat: authority.seat }) !== labRoot("lean-runtime-binding-v1", state.binding)) return fail()
+  state.claims.add(layer)
+  return { lifetimeMs: 600000, receiptMs: 5000, startup: state.startupV8 }
 }
 
 /** Distinct current-baseline route. The old pilot issuer and its two-source
@@ -127,9 +136,13 @@ const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge
   const key = `${ledger.allocation.root}:${charge.root}:${binding.seat}`
   if (used.has(key)) return fail()
   const authority: LeanRuntimeAuthority = Object.freeze({ schemaVersion: "lean-runtime-authority-v1", runtime: freezeLabValue(structuredClone(runtime)), seat: binding.seat, toJSON: fail })
-  const startup = (leanSupervisorAllocationMode(ledger.allocation) === "v5" || (leanSupervisorAllocationMode(ledger.allocation) === "v6" || (leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation))))) ? Object.freeze({ ...((leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation))) ? { version: 7 as const } : leanSupervisorAllocationMode(ledger.allocation) === "v6" ? { version: 6 as const } : {}), allocationRoot: ledger.allocation.root, chargeRoot: retainedCharge.root, seat: binding.seat, policyRoot: (ledger.allocation as LeanCorrectionAllocation).startupPolicyRoot!, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())) }) : undefined
+  const mode = leanSupervisorAllocationMode(ledger.allocation), v8 = mode === "v15-5"
+  const correction = ledger.allocation as LeanCorrectionAllocation
+  if (v8 && (correction.attemptOrdinal !== 5 || correction.timeboxExtension?.root !== LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY.root || correction.startupPolicyRoot !== LEAN_STARTUP_POLICY_V5.root)) return fail()
+  const startupV8: Readonly<LeanStartupGrantV8> | undefined = v8 ? Object.freeze({ version: 8 as const, allocationRoot: ledger.allocation.root, chargeRoot: retainedCharge.root, seat: binding.seat, policyRoot: correction.startupPolicyRoot!, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())), toJSON: fail }) : undefined
+  const startup = !v8 && (leanSupervisorAllocationMode(ledger.allocation) === "v5" || (leanSupervisorAllocationMode(ledger.allocation) === "v6" || (leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation))))) ? Object.freeze({ ...((leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation))) ? { version: 7 as const } : leanSupervisorAllocationMode(ledger.allocation) === "v6" ? { version: 6 as const } : {}), allocationRoot: ledger.allocation.root, chargeRoot: retainedCharge.root, seat: binding.seat, policyRoot: (ledger.allocation as LeanCorrectionAllocation).startupPolicyRoot!, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())) }) : undefined
   if (startup && startup.policyRoot !== LEAN_STARTUP_POLICY_V5.root) return fail()
-  issued.set(authority, { binding: freezeLabValue(structuredClone(binding)), claims: new Set(), ...(startup === undefined ? {} : { startup }) }); used.add(key)
+  issued.set(authority, { binding: freezeLabValue(structuredClone(binding)), claims: new Set(), ...(startup === undefined ? {} : { startup }), ...(startupV8 === undefined ? {} : { startupV8 }) }); used.add(key)
   if (reuse) correctionAuthorities.add(authority)
   return authority
 }
