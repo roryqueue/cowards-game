@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: diagnostic v15-4 refused and custody closed; bounded evidence-check diagnosis next
+stopped_at: v15-4 scoped cause diagnosed; checked startup-attribution supplement next
 last_updated: "2026-10-09"
 last_activity: 2026-10-09
-last_activity_desc: Unique v15-4 entry and ordinary verifier closed; failed result preserved with 39 cumulative charges
+last_activity_desc: Retained failure and two source investigations closed; startup initiating cause unknown, finite attribution blind spot identified
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — STARTUP ATTRIBUTION RESEARCH / NO NEW EMPIRICAL AUTHORITY (2026-10-09).
+
+GSD diagnosis-only session v15-4-evidence-check CLOSED after two investigations, only that new debug document changed. ONE pure authenticated finite retained inspection32192 CLOSED0/RSS361545728B establishes top soldierBrain ordinal29 executor/SUBPROCESS_EXIT with request30 startup_expired; producer control flow leaves completed:false before bridge !e.completed refusal. Completion is source-derived, not a retained raw accounting field. The physical startup cause remains UNKNOWN. Read-only second trace finds blocking startup wait does not observe worker error/exit callbacks, and deadline branch retains neither final control state nor ready-publication time; ready:false means not host-accepted, not proof never published. Simple lost-notify and pre-ready Strategy evaluation contradicted. Repeated constant harness URL encoding is avoidable but unmeasured/not causal. Next one small checked existing Plan16 source supplement for finite startup attribution and any demonstrably safe local overhead correction; preserve old versions, isolation, predicates and all limits. Research/plan/check precede implementation/review/fix/validate/verify; no changed-resource decision or dormant5 activation inferred. All39 charges/consumed bytes/custody unchanged and cost-only; no accepted4 FINAL or conditional baseline. Original02:14:32UTC stop/01:43:32 source frontier/01:33:32 fresh-entry cutoff/FULL108M/ALLwall/31reserve/RAM3GB/disk15GB/300Matches/runtime/privacy remain binding. No Phase265/LEAG/freeze/formation/holdout/public/counting/production credit. Earlier checkpoints history.
 
 CURRENT CHECKPOINT — DIAGNOSTIC v15-4 REFUSED / SOURCE HOLD RELEASED (2026-10-09).
 
