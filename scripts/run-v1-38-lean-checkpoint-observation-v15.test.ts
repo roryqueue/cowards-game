@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest"
-import { checkpointLeanObservationV15 } from "./lib/v1-38-lean-checkpoint-observation-v15.js"
+import { checkpointLeanObservationV15, type LeanCheckpointOperationsV15 } from "./lib/v1-38-lean-checkpoint-observation-v15.js"
 import * as correction from "./run-v1-38-lean-correction.js"
 import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
@@ -19,7 +19,9 @@ const fixture = () => {
     childRss: vi.fn(() => ({ current: 100, maximum: 200 })), parentRss: vi.fn(() => 300),
     freeBytes: vi.fn(() => 15000000000), elapsedMs: vi.fn(() => 210000000), physicalBytes: vi.fn(() => 25000000),
     charged: vi.fn(() => 37), availableMemoryBytes: vi.fn(() => 2000000000), disk: vi.fn(() => ({ bufferBytes: 400, scratchBytes: 500 })),
-    prefix: vi.fn(() => 500), correction: vi.fn(() => 600), diskGuard: vi.fn(),
+    prefix: vi.fn((_m: Parameters<LeanCheckpointOperationsV15["prefix"]>[0]) => 500),
+    correction: vi.fn((_m: Parameters<LeanCheckpointOperationsV15["correction"]>[0]) => 600),
+    diskGuard: vi.fn((_m: Parameters<LeanCheckpointOperationsV15["diskGuard"]>[0]) => {}),
   }
   return ops
 }
