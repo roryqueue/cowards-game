@@ -17,6 +17,71 @@ import { defaultRuntimeMetadata, RUNTIME_INVOCATION_V1_17_TEST_KEY_ID, createSel
 import { encodeCandidateHostEnvelopeV117 } from "../../packages/runtime-js/src/candidate-host-envelope.js"
 import { registerCandidateEvidenceFixture } from "../../packages/runtime-js/src/candidate-evidence-fixture.js"
 const LEAN_CONTAINER_IMAGE = LAB_ADMITTED_ROOTS.image
+describe("startup-origin-v8 inert control", () => {
+  const root = `sha256:${"a".repeat(64)}`
+  const binding = { allocationRoot: root, chargeRoot: root, seat: "bottom" as const, policyRoot: root, harnessRoot: root, requestOrdinal: 1, requestRoot: root, method: "selectActivations" as const, inputRoot: root, sourceRoot: root, executableRoot: root }
+  it.each(["error", "exit"])("[startup-origin-v8] observes early pre-GO %s before deadline and termination", async kind => {
+    const { superviseLeanStartupV8 } = await import("./v1-38-lean-startup-supervisor-v8.mjs")
+    const { Worker: NativeWorker } = await vi.importActual<typeof import("node:worker_threads")>("node:worker_threads")
+    const signal = new Int32Array(new SharedArrayBuffer(16))
+    let worker: import("node:worker_threads").Worker, error = false, exit = false, forced = false, observedAt = Infinity
+    let resolveLifecycle!: () => void
+    const failure = new Promise<void>(resolve => { resolveLifecycle = resolve })
+    const started = performance.now()
+    const result = await superviseLeanStartupV8(binding, 5000, {
+      now: () => performance.now() - started,
+      construct() { worker = new NativeWorker(new URL(`data:text/javascript,${encodeURIComponent(kind === "error" ? 'throw new Error("inert")' : 'process.exit(0)')}`)); worker.on("error", () => { error = true; observedAt = performance.now() - started; resolveLifecycle() }); worker.on("exit", () => { exit = true; observedAt = Math.min(observedAt, performance.now() - started); resolveLifecycle() }) },
+      load: () => Atomics.load(signal, 0), compareExchange: (a, b) => Atomics.compareExchange(signal, 0, a, b), notify: () => { throw Error("GO forbidden") },
+      waitAsync: async (state, ms) => { const wait = Atomics.waitAsync(signal, 0, state, ms); return await wait.value },
+      lifecycleFailure: () => failure, lifecycle: () => error && exit ? "both_seen" : error ? "error_seen" : exit ? "exit_seen" : "neither_seen",
+      attribution: () => ({ prefixMilestone: "not_entered", readyPublicationMs: undefined }),
+      reconcile: async () => { throw Error("guest forbidden") }, terminate: async () => { expect(observedAt).toBeLessThan(2500); expect(forced).toBe(false); forced = true; await worker.terminate() }, close() {},
+    })
+    expect(result.ok).toBe(false); expect(result.origin).toMatchObject({ branch: "lifecycle_failure", ready: false, go: false, finalAtomicState: "state_0", prefixMilestone: "not_entered" })
+    expect(result.origin.lifecycleBeforeTermination).toBe(kind === "error" ? "error_seen" : "exit_seen")
+    expect(performance.now() - started).toBeLessThan(2500); expect(forced).toBe(true)
+  })
+  it("[startup-origin-v8] refuses missing async primitive and never constructs or grants READY", async () => {
+    const { superviseLeanStartupV8 } = await import("./v1-38-lean-startup-supervisor-v8.mjs")
+    const construct = vi.fn(), notify = vi.fn()
+    const result = await superviseLeanStartupV8(binding, 5000, { now: () => 0, construct, close() {}, notify } as any)
+    expect(result.ok).toBe(false); expect(result.origin.ready).toBe(false); expect(construct).not.toHaveBeenCalled(); expect(notify).not.toHaveBeenCalled()
+  })
+  it("[startup-origin-v8] fixes deadlines before construction and rejects exact-boundary READY", async () => {
+    const { superviseLeanStartupV8 } = await import("./v1-38-lean-startup-supervisor-v8.mjs")
+    let now = 0, state = 0
+    const result = await superviseLeanStartupV8(binding, 5000, { now: () => now, construct() { now = 2500; state = 1 }, load: () => state, compareExchange: () => { throw Error("GO forbidden") }, notify() {}, waitAsync: async () => "ok", lifecycleFailure: () => new Promise(() => {}), lifecycle: () => "neither_seen", attribution: () => ({ prefixMilestone: "ready_published", readyPublicationMs: 2500 }), reconcile: async () => ({}), terminate: async () => {}, close() {} })
+    expect(result.origin).toMatchObject({ branch: "startup_expired", ready: false, go: false, deadlineOutcome: "late_or_boundary", constructorDurationBucket: "2500_plus", finalAtomicState: "state_1" })
+  })
+  it("[startup-origin-v8] accepts atomic READY only and preserves guest and cleanup budgets", async () => {
+    const { superviseLeanStartupV8 } = await import("./v1-38-lean-startup-supervisor-v8.mjs")
+    let now = 0, state = 0, notified = false
+    const waits: number[] = []
+    const result = await superviseLeanStartupV8(binding, 5000, { now: () => now, construct() { now = 8 }, load: () => state, compareExchange: (a, b) => { expect(state).toBe(a); const old = state; state = b; return old }, notify() { notified = true }, waitAsync: async (_s, ms) => { waits.push(ms); now += 1; if (state === 0) state = 1; else { expect(notified).toBe(true); state = 3 }; return "ok" }, lifecycleFailure: () => new Promise(() => {}), lifecycle: () => "neither_seen", attribution: () => ({ prefixMilestone: "ready_published", readyPublicationMs: 9 }), reconcile: async () => ({ inert: true }), terminate: async () => { throw Error("unnecessary termination") }, close() {} })
+    expect(result.ok).toBe(true); expect(result.origin).toMatchObject({ ready: true, go: true, branch: "complete", deadlineOutcome: "ready_before_deadline", constructorDurationBucket: "0_9ms", readyPublicationDurationBucket: "0_9ms", finalAtomicState: "state_3", lifecycleBeforeTermination: "neither_seen" })
+    expect(waits).toEqual([2492, 1000])
+  })
+  it("[startup-origin-v8] validates exact finite private fields and request identity", async () => {
+    const s = await import("./v1-38-lean-container-match-session.js") as any
+    const { LEAN_STARTUP_POLICY_V5, leanBytesRoot } = await import("../../packages/strategy-lab/src/league/lean-experiment.js")
+    const b = { ...binding, policyRoot: LEAN_STARTUP_POLICY_V5.root, harnessRoot: leanBytesRoot(Buffer.from(s.buildLeanStartupWorkerHarnessV8())) }
+    const value = { ...b, schemaVersion: "v1.38-lean-startup-origin-v8", stage: "startup", branch: "lifecycle_failure", ready: false, go: false, wait: "changed", termination: "completed", unknown: true, constructorDurationBucket: "0_9ms", prefixMilestone: "not_entered", readyPublicationDurationBucket: "unknown", finalAtomicState: "state_0", lifecycleBeforeTermination: "error_seen", deadlineOutcome: "unknown" }
+    expect(s.validateLeanStartupOriginV8(value, b)).toEqual(value)
+    for (const bad of [{ ...value, rawError: "private" }, { ...value, finalAtomicState: 0 }, { ...value, constructorDurationBucket: "-1ms" }, { ...value, requestOrdinal: 2 }, { ...value, prefixMilestone: "ready_published", readyPublicationDurationBucket: "unknown" }, { ...value, go: true }]) expect(() => s.validateLeanStartupOriginV8(bad, b)).toThrow()
+    expect(() => s.validateLeanStartupOriginV7(value)).toThrow()
+    expect(JSON.stringify(s.validateLeanPrivateCorrectionOrigin(value))).not.toContain("private")
+  })
+  it("[startup-origin-v8] embeds checked control bytes with a feature gate and trusted GO prefix", async () => {
+    const s = await import("./v1-38-lean-container-match-session.js") as any
+    const source = s.buildLeanContainerBrokerSourceV8()
+    expect(source).toContain("Atomics.waitAsync"); expect(source).toContain("lifecycleFailure"); expect(source).not.toContain("superviseLeanStartupV5(")
+    const parsed = ts.createSourceFile("v8.mjs", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
+    expect((parsed as any).parseDiagnostics).toHaveLength(0)
+    const harness = s.buildLeanStartupWorkerHarnessV8()
+    expect(harness.indexOf("trustedWaitGoV5();")).toBeLessThan(harness.indexOf("const workerData=Object.freeze"))
+    expect(s.buildLeanContainerBrokerSourceV7()).not.toContain("waitAsync")
+  })
+})
 import { issueProspectiveLeagueHostReceiptAuthority, claimProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
 import { createLeagueProspectiveAmendmentV3, createProspectiveLeagueExecutionAllocationV3 } from "../../packages/strategy-lab/src/league/allocation.js"
 import { prospectiveLifetimeFixture } from "../../packages/strategy-lab/src/league/allocation.test.js"
