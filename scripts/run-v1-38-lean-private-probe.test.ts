@@ -8,12 +8,15 @@ import { leanBytesRoot, leanCanonicalBytes } from "../packages/strategy-lab/src/
 const mocked = vi.hoisted(() => ({ source: undefined as any, invoke: undefined as any, carry: undefined as any, cleanup: true, calls: 0, issues: 0 }))
 vi.mock("./lib/v1-38-lean-baseline-source.js", () => ({ readLeanBaselineSource: () => mocked.source }))
 vi.mock("../packages/strategy-lab/src/factory/admission.js", () => ({ admitFactory: () => ({}), authorizeFactorySupervision: () => ({}) }))
-vi.mock("./lib/v1-38-lean-experiment-authority.js", () => ({
+vi.mock("./lib/v1-38-lean-experiment-authority.js", async importOriginal => ({
+  ...await importOriginal<typeof import("./lib/v1-38-lean-experiment-authority.js")>(),
   LEAN_PRIVATE_PROBE_COST_ROOT: "sha256:6e271d344297f332e858882c9071f0fc47629e72fda3c0371540e3d607306381",
   authenticateLeanPrivateProbeCostV1: () => ({}),
   authenticateLeanPrivateProbeV1CarryV2: () => mocked.carry,
   observeLeanPrivateProbeResourcesV1: () => ({}),
   observeLeanPrivateProbeCapacityV1: () => ({}),
+  observeLeanPrivateProbeResourcesV2: () => ({}),
+  observeLeanPrivateProbeCapacityV2: () => ({}),
   openLeanPrivateProbeAdmissionV1: () => ({}),
   recordAndIssueLeanPrivateProbeRuntimeAuthorityV1: (_admission: unknown, descriptor: any) => { mocked.issues += 1; return { binding: { executionOwnerId: `probe-owner-${descriptor.ordinal}` } } },
 }))
@@ -95,6 +98,12 @@ describe("lean private probe schedule", () => {
     const resultBody = { schemaVersion: "lean-private-probe-result-v1" as const, allocationRoot: allocation.root, sourceHead: allocation.sourceHead, matchCount: 0 as const, attemptedOrdinals: [0], outcomes: [{ ordinal: 0, status: "system_failure" as const, cleanupComplete: false, inputRoot: allocation.cases[0]!.inputRoot, requestRoot: allocation.cases[0]!.requestRoot }] }
     const result = { ...resultBody, root: labRoot("lean-private-probe-result-v1", resultBody) }
     expect(verifyLeanPrivateProbeResultV2(allocation, result)).toBe(true)
+    const { windowRoot: _windowRoot, ...withoutWindow } = allocation
+    expect(verifyLeanPrivateProbeResultV2(withoutWindow, result)).toBe(false)
+    const changedWindowBody = { ...withoutWindow, windowRoot: root("unapproved-window") }
+    const changedWindow = { ...changedWindowBody, root: labRoot("lean-private-probe-allocation-v2", (({ root: _root, ...body }) => body)(changedWindowBody)) }
+    const changedResultBody = { ...resultBody, allocationRoot: changedWindow.root }
+    expect(verifyLeanPrivateProbeResultV2(changedWindow, { ...changedResultBody, root: labRoot("lean-private-probe-result-v1", changedResultBody) })).toBe(false)
     expect(verifyLeanPrivateProbeResultV2(allocation, { ...result, outcomes: [] })).toBe(false)
     const emptyResultBody = { ...resultBody, attemptedOrdinals: [] as number[], outcomes: [] as typeof resultBody.outcomes }
     const emptyResult = { ...emptyResultBody, root: labRoot("lean-private-probe-result-v1", emptyResultBody) }

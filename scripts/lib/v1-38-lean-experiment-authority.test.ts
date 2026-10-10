@@ -5,7 +5,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { leanCanonicalBytes } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { createLeanPrivateProbeScheduleV1, createLeanPrivateProbeScheduleV2, verifyLeanPrivateProbeV2RetainedJoins } from "../run-v1-38-lean-private-probe.js"
+import { createLeanPrivateProbeScheduleV1, createLeanPrivateProbeScheduleV2, verifyLeanPrivateProbeV2RetainedJoins, verifyLeanPrivateProbeResourcesV2 } from "../run-v1-38-lean-private-probe.js"
 const gitFixture = vi.hoisted(() => ({ repository: "" }))
 vi.mock("node:child_process", async importOriginal => {
   const actual = await importOriginal<typeof import("node:child_process")>()
@@ -59,7 +59,7 @@ describe("actual inert Git/filesystem debit authority", () => {
   })
   it("authenticates v1 carry and issues one v2 ordinal-0 debit through the real ordered grant claims", () => {
     const repository = realpathSync(mkdtempSync(join(tmpdir(), "probe-authority-v2-git-")))
-    const fixtureClock = vi.spyOn(Date, "now").mockReturnValue(1791640699000)
+    const fixtureClock = vi.spyOn(Date, "now").mockReturnValue(1791667800000)
     const git = childProcess.execFileSync.bind(childProcess)
     const runGit = (...args: string[]) => String(git("git", ["-C", repository, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })).trim()
     try {
@@ -77,9 +77,31 @@ describe("actual inert Git/filesystem debit authority", () => {
       writeFileSync(join(store, "request.json"), "{}", { mode: 0o600 })
       gitFixture.repository = repository
       try {
-        const admission = authority.openLeanPrivateProbeAdmissionV1({ storePath: store, allocationCommit, allocationPath, capacity: authority.observeLeanPrivateProbeCapacityV1(store, allocation.priorV1Carry.retainedAllocatedBytes) })
+        const resources = authority.observeLeanPrivateProbeResourcesV2(store, allocation)
+        expect(resources).toMatchObject({ windowRoot: authority.LEAN_PRIVATE_PROBE_WINDOW_V2.root, cumulativeElapsedMs: 319858903, sourceAllocatedBytes: 1183744, priorRetainedBytes: 32768 })
+        expect(resources.retainedBytesUpperBound).toBe(29970432 + 32768 + 1183744 + resources.newAllocatedBytes + 131072)
+        expect(verifyLeanPrivateProbeResourcesV2(allocation, resources)).toBe(true)
+        expect(verifyLeanPrivateProbeResourcesV2(allocation, { ...resources, sourceAllocatedBytes: 0 })).toBe(false)
+        expect(verifyLeanPrivateProbeResourcesV2(allocation, { ...resources, retainedBytesUpperBound: resources.retainedBytesUpperBound - 1183744 })).toBe(false)
+        expect(() => authority.observeLeanPrivateProbeResourcesV1(store)).toThrow()
+        const otherAllocation = createLeanPrivateProbeScheduleV2({ sourceHead, sourceRoot: root("other-source"), executableRoot: root("executable"), costSnapshotRoot: authority.LEAN_PRIVATE_PROBE_COST_ROOT })
+        expect(() => authority.openLeanPrivateProbeAdmissionV1({ storePath: store, allocationCommit, allocationPath, capacity: authority.observeLeanPrivateProbeCapacityV2(store, otherAllocation) })).toThrow()
+        fixtureClock.mockReturnValue(1791640699000)
+        const legacyCapacity = authority.observeLeanPrivateProbeCapacityV1(store, allocation.priorV1Carry.retainedAllocatedBytes)
+        fixtureClock.mockReturnValue(1791667800000)
+        expect(() => authority.openLeanPrivateProbeAdmissionV1({ storePath: store, allocationCommit, allocationPath, capacity: legacyCapacity })).toThrow()
+        const forged = { ...allocation, windowRoot: labRoot("forged-window", 0) }
+        expect(() => authority.observeLeanPrivateProbeResourcesV2(store, forged)).toThrow()
+        fixtureClock.mockReturnValue(1791667800000 + 1740001)
+        expect(() => authority.observeLeanPrivateProbeResourcesV2(store, allocation)).toThrow()
+        fixtureClock.mockReturnValue(1791667800000 - 1)
+        expect(() => authority.observeLeanPrivateProbeResourcesV2(store, allocation)).toThrow()
+        fixtureClock.mockReturnValue(1791671400001)
+        expect(verifyLeanPrivateProbeResourcesV2(allocation, resources)).toBe(false)
+        fixtureClock.mockReturnValue(1791667800000)
+        const admission = authority.openLeanPrivateProbeAdmissionV1({ storePath: store, allocationCommit, allocationPath, capacity: authority.observeLeanPrivateProbeCapacityV2(store, allocation) })
         writeFileSync(join(store, "entry.json"), "{}", { mode: 0o600 })
-        const issued = authority.recordAndIssueLeanPrivateProbeRuntimeAuthorityV1(admission, allocation.cases[0]!, authority.observeLeanPrivateProbeCapacityV1(store, allocation.priorV1Carry.retainedAllocatedBytes))
+        const issued = authority.recordAndIssueLeanPrivateProbeRuntimeAuthorityV1(admission, allocation.cases[0]!, authority.observeLeanPrivateProbeCapacityV2(store, allocation))
         expect(issued.binding).toMatchObject({ ordinal: 0, method: "selectActivations", executionOwnerId: `probe-${allocation.root.slice(7, 19)}-0`, debitOffset: 0 })
         const factory = authority.claimLeanPrivateProbeRuntimeAuthority(issued, issued.binding, "factory")
         const planner = authority.claimLeanPrivateProbeRuntimeAuthority(issued, issued.binding, "planner")

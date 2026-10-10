@@ -60,19 +60,21 @@ export interface LeanPrivateProbeV1CarryV2 {
 }
 export interface LeanPrivateProbeAllocationV2 extends Omit<LeanPrivateProbeAllocationV1, "schemaVersion" | "cases" | "root"> {
   readonly schemaVersion: "lean-private-probe-allocation-v2"; readonly cases: readonly [LeanPrivateProbeInvocationV1]
-  readonly priorV1Carry: LeanPrivateProbeV1CarryV2; readonly root: LabRoot
+  readonly priorV1Carry: LeanPrivateProbeV1CarryV2; readonly windowRoot: LabRoot; readonly root: LabRoot
 }
 export interface LeanPrivateProbeCapacityReceiptV1 { readonly schemaVersion: "lean-private-probe-capacity-v1"; toJSON(): never }
 export interface LeanPrivateProbeAdmissionV1 { readonly schemaVersion: "lean-private-probe-admission-v1"; toJSON(): never }
 type PrivateProbeAdmissionState = { allocation: LeanPrivateProbeAllocationV1 | LeanPrivateProbeAllocationV2; allocationBytes: Buffer; allocationCommit: string; allocationPath: string; storePath: string; priorRetainedBytes: number; nextOrdinal: number; used: boolean }
 type PrivateProbeCapabilityState = { binding: LeanPrivateProbeBindingV1; claims: Set<Layer>; startupGrant: LeanPrivateProbeStartupGrantV1 }
 const privateProbeAdmissions = new WeakMap<object, PrivateProbeAdmissionState>()
-const privateProbeCapacities = new WeakMap<object, { startedAt: number; storePath: string; priorRetainedBytes: number }>()
+const privateProbeCapacities = new WeakMap<object, { startedAt: number; storePath: string; priorRetainedBytes: number; allocationRoot?: LabRoot; windowRoot?: LabRoot }>()
 const privateProbeAuthorities = new WeakMap<object, PrivateProbeCapabilityState>()
 const privateProbeStartupGrants = new WeakMap<object, { binding: LeanPrivateProbeBindingV1; claims: Set<Layer> }>()
 const opaque = (): never => { throw new TypeError("LEAN_PRIVATE_PROBE_AUTHORITY") }
 const privateProbeFail = (): never => { throw new TypeError("LEAN_PRIVATE_PROBE_AUTHORITY") }
 export const LEAN_PRIVATE_PROBE_COST_ROOT = "sha256:6e271d344297f332e858882c9071f0fc47629e72fda3c0371540e3d607306381" as LabRoot
+const privateProbeWindowV2Body = { schemaVersion: "lean-private-probe-window-v2", anchorMs: 1791667800000, carryMs: 319858903, capMs: 323458903, deadlineMs: 1791671400000, reserveMs: 1860000, sourceAllocatedBytes: 1183744 }
+export const LEAN_PRIVATE_PROBE_WINDOW_V2 = freezeLabValue({ ...privateProbeWindowV2Body, root: labRoot("lean-private-probe-window-v2", privateProbeWindowV2Body) })
 const privateProbeV1CarryStore = ".strategy-lab/lean-private-probe-v1/17ea1073af11097956b919cbe4e5fc06faef624d815a093413bb222505ea7dd7"
 const privateProbeV1Artifact = ".planning/artifacts/v1.38-phase-265-private-probe-allocation-v1.json"
 const privateProbeV1Commit = "dd67460e6628aebff6bc35c253adaa2cdfea284e"
@@ -143,6 +145,30 @@ export const observeLeanPrivateProbeResourcesV1 = (storePath: string, priorRetai
   if (!Number.isSafeInteger(retainedBytesUpperBound) || retainedBytesUpperBound > 12000000000 || retainedBytesUpperBound + 2000000000 > 15000000000 || !Number.isSafeInteger(availableDiskBytes) || availableDiskBytes < 2000000000 || process.memoryUsage().arrayBuffers > 2000000000) return privateProbeFail()
   return Object.freeze({ costSnapshotRoot: LEAN_PRIVATE_PROBE_COST_ROOT, historicalCharged: 40, historicalAllocatedBytes: snapshot.allocatedDiskBytes, wallAtMs, cumulativeElapsedMs, newAllocatedBytes, retainedBytesUpperBound, parentRssBytes, containerMemoryUpperBound, aggregateMemoryUpperBound, availableDiskBytes })
 }
+export const observeLeanPrivateProbeResourcesV2 = (storePath: string, value: unknown) => {
+  const allocation = validatePrivateProbeAllocation(value)
+  if (allocation.schemaVersion !== "lean-private-probe-allocation-v2" || allocation.windowRoot !== LEAN_PRIVATE_PROBE_WINDOW_V2.root) return privateProbeFail()
+  const priorRetainedBytes = allocation.priorV1Carry.retainedAllocatedBytes, window = LEAN_PRIVATE_PROBE_WINDOW_V2
+  const snapshot = authenticateLeanPrivateProbeCostV1(), wallAtMs = Date.now(), cumulativeElapsedMs = window.carryMs + wallAtMs - window.anchorMs
+  if (!Number.isSafeInteger(priorRetainedBytes) || priorRetainedBytes < 0 || !Number.isSafeInteger(cumulativeElapsedMs) || cumulativeElapsedMs < window.carryMs || cumulativeElapsedMs + window.reserveMs > window.capMs || wallAtMs + window.reserveMs > window.deadlineMs) return privateProbeFail()
+  let path = resolve(storePath), fresh = false
+  try { lstatSync(path) } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; path = dirname(path); fresh = true }
+  const directory = lstatSync(path)
+  if (!directory.isDirectory() || directory.isSymbolicLink()) return privateProbeFail()
+  const names = fresh ? [] : readdirSync(path)
+  if (names.length > 10) return privateProbeFail()
+  let newAllocatedBytes = fresh ? 4096 : directory.blocks * 512
+  for (const name of names) { const file = lstatSync(resolve(path, name)); if (!file.isFile() || file.isSymbolicLink() || file.size > 65536) return privateProbeFail(); newAllocatedBytes += file.blocks * 512 }
+  // Reserve all remaining bounded writes and the enforced 256MiB container
+  // ceiling. This is an upper bound, not a claimed sampled guest RSS/peak.
+  const retainedBytesUpperBound = snapshot.allocatedDiskBytes + window.sourceAllocatedBytes + priorRetainedBytes + newAllocatedBytes + 131072
+  const parentRssBytes = Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024)
+  const containerMemoryUpperBound = 268435456
+  const aggregateMemoryUpperBound = assertLeanAggregateMemoryV15({ parentRssBytes, childRssBytes: containerMemoryUpperBound }, snapshot.timeboxExtension)
+  const disk = statfsSync(path), availableDiskBytes = disk.bavail * disk.bsize
+  if (!Number.isSafeInteger(retainedBytesUpperBound) || retainedBytesUpperBound > 12000000000 || retainedBytesUpperBound + 2000000000 > 15000000000 || !Number.isSafeInteger(availableDiskBytes) || availableDiskBytes < 2000000000 || process.memoryUsage().arrayBuffers > 2000000000) return privateProbeFail()
+  return Object.freeze({ windowRoot: window.root, sourceAllocatedBytes: window.sourceAllocatedBytes, priorRetainedBytes, costSnapshotRoot: LEAN_PRIVATE_PROBE_COST_ROOT, historicalCharged: 40, historicalAllocatedBytes: snapshot.allocatedDiskBytes, wallAtMs, cumulativeElapsedMs, newAllocatedBytes, retainedBytesUpperBound, parentRssBytes, containerMemoryUpperBound, aggregateMemoryUpperBound, availableDiskBytes })
+}
 const canonicalPrivateProbe = (value: unknown): Buffer => Buffer.from(leanCanonicalBytes(value))
 const privateProbeFile = (path: string, maxBytes: number, expectedMode: number): Buffer => {
   const before = lstatSync(path)
@@ -160,7 +186,8 @@ const validatePrivateProbeAllocation = (value: unknown): LeanPrivateProbeAllocat
   if (!value || typeof value !== "object" || Array.isArray(value)) return privateProbeFail()
   const allocation = value as LeanPrivateProbeAllocationV1 | LeanPrivateProbeAllocationV2
   const v2 = allocation.schemaVersion === "lean-private-probe-allocation-v2"
-  const allocationKeys = ["schemaVersion", "sourceHead", "matchCount", "cases", "root", "sourceRoot", "executableRoot", "image", "tupleId", "tupleRoot", "runtimeLimitsRoot", "costSnapshotRoot", "ceilings", ...(v2 ? ["priorV1Carry"] : [])]
+  const allocationKeys = ["schemaVersion", "sourceHead", "matchCount", "cases", "root", "sourceRoot", "executableRoot", "image", "tupleId", "tupleRoot", "runtimeLimitsRoot", "costSnapshotRoot", "ceilings", ...(v2 ? ["priorV1Carry", "windowRoot"] : [])]
+  if (v2 && allocation.windowRoot !== LEAN_PRIVATE_PROBE_WINDOW_V2.root) return privateProbeFail()
   const keys = ["schemaVersion", "sourceHead", "matchCount", "cases", "root", "sourceRoot", "executableRoot", "image", "tupleId", "tupleRoot", "runtimeLimitsRoot", "costSnapshotRoot", "ceilings"]
   const validCase = (candidate: unknown, ordinal: number): boolean => {
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate) || !exactLabKeys(candidate, ["ordinal", "caseId", "method", "sourceRoot", "executableRoot", "requestRoot", "inputRoot", "image", "tupleId", "tupleRoot", "runtimeLimitsRoot"])) return false
@@ -183,6 +210,14 @@ export const observeLeanPrivateProbeCapacityV1 = (storePath: string, priorRetain
   privateProbeCapacities.set(receipt, { startedAt: performance.now(), storePath: path, priorRetainedBytes })
   return receipt
 }
+export const observeLeanPrivateProbeCapacityV2 = (storePath: string, value: unknown): LeanPrivateProbeCapacityReceiptV1 => {
+  const allocation = validatePrivateProbeAllocation(value)
+  if (allocation.schemaVersion !== "lean-private-probe-allocation-v2") return privateProbeFail()
+  observeLeanPrivateProbeResourcesV2(storePath, allocation)
+  const receipt = Object.freeze({ schemaVersion: "lean-private-probe-capacity-v1" as const, toJSON: opaque })
+  privateProbeCapacities.set(receipt, { startedAt: performance.now(), storePath: resolve(storePath), priorRetainedBytes: allocation.priorV1Carry.retainedAllocatedBytes, allocationRoot: allocation.root, windowRoot: allocation.windowRoot })
+  return receipt
+}
 
 /** Authenticate the committed allocation and fresh private store before issuing an admission handle. */
 export const openLeanPrivateProbeAdmissionV1 = (input: { readonly storePath: string; readonly allocationCommit: string; readonly allocationPath: string; readonly capacity: LeanPrivateProbeCapacityReceiptV1 }): LeanPrivateProbeAdmissionV1 => {
@@ -197,6 +232,8 @@ export const openLeanPrivateProbeAdmissionV1 = (input: { readonly storePath: str
   const allocationBytes = privateProbeFile(resolve(storePath, "allocation.json"), 65_536, 0o600)
   const parsed = JSON.parse(allocationBytes.toString("utf8")) as unknown
   const allocation = validatePrivateProbeAllocation(parsed)
+  if (allocation.schemaVersion === "lean-private-probe-allocation-v2" ? capacity.allocationRoot !== allocation.root || capacity.windowRoot !== allocation.windowRoot : capacity.allocationRoot !== undefined || capacity.windowRoot !== undefined) return privateProbeFail()
+  if (allocation.schemaVersion === "lean-private-probe-allocation-v2") observeLeanPrivateProbeResourcesV2(storePath, allocation)
   if ((allocation.schemaVersion === "lean-private-probe-allocation-v2") !== input.allocationPath.endsWith("allocation-v2.json")) return privateProbeFail()
   const priorRetainedBytes = allocation.schemaVersion === "lean-private-probe-allocation-v2" ? allocation.priorV1Carry.retainedAllocatedBytes : 0
   if (capacity.priorRetainedBytes !== priorRetainedBytes) return privateProbeFail()
@@ -218,7 +255,13 @@ export const recordAndIssueLeanPrivateProbeRuntimeAuthorityV1 = (admission: Lean
   if (state && !state.used) state.used = true
   else return privateProbeFail()
   if (!receipt || receipt.storePath !== state.storePath || receipt.priorRetainedBytes !== state.priorRetainedBytes || performance.now() - receipt.startedAt > 30_000) return privateProbeFail()
-  observeLeanPrivateProbeResourcesV1(state.storePath, state.priorRetainedBytes)
+  if (state.allocation.schemaVersion === "lean-private-probe-allocation-v2") {
+    if (receipt.allocationRoot !== state.allocation.root || receipt.windowRoot !== state.allocation.windowRoot) return privateProbeFail()
+    observeLeanPrivateProbeResourcesV2(state.storePath, state.allocation)
+  } else {
+    if (receipt.allocationRoot !== undefined || receipt.windowRoot !== undefined) return privateProbeFail()
+    observeLeanPrivateProbeResourcesV1(state.storePath, state.priorRetainedBytes)
+  }
   privateProbeCapacities.delete(capacity)
   const expected = state.allocation.cases[state.nextOrdinal]
   if (!expected || canonicalPrivateProbe(expected).compare(canonicalPrivateProbe(invocation)) !== 0) return privateProbeFail()
