@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: First probe failed; narrowed unchecked correction handoff awaits prospective source-work time allocation
+stopped_at: Approved 60-minute source-only startup correction; no probe or Match authority
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: Confirmed startup-path contract mismatch; no repair or correction run admitted, failed evidence immutable
+last_activity_desc: Source repair and inert checks authorized until 20:56:41 UTC; runtime admission remains closed
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED CHECKPOINT — SIXTY-MINUTE SOURCE-ONLY STARTUP REPAIR (2026-10-10).
+
+Human `yes, approved` explicitly approves the immediately preceding request for a fresh 60-minute code-fix-and-checks window, NO probes or Matches and no other limit changes. Actual ROOT anchor19:56:41UTC1791662201000, hardstop20:56:41UTC1791665801000. All source work, waiting, checks and closure count within this hour. Continuous time carry is314259903ms =292757903+(1791662201000−1791640699000), source-only cumulative ceiling317859903ms; no historical refund/reset. The prior runtime window remains expired, and these source-only numbers MUST NOT reopen runtime admission or rewrite old authority bytes. Existing Plan16 startup supplement may be updated and independently checked for the minimal non-Match startup-path fix, then source execution/review-fix/inert validation/source verification. No prepare, allocation, entry, provider/container/Strategy invocation, runtime probe, Match or empirical reader; no new runtime cost snapshot or successful empirical claim. All forty historical Match charges, one failed non-Match probe, surviving files and unknown historical peaks carry unchanged. Guest1000/startup2500/host5000/Match600000/RAM3GB/scratch2GB/retained12GB/total15GB and all gameplay/privacy bounds unchanged. Root owns tracking and safe commit/push; scoped source agents must not overlap. All LEAG/Plan16/Phase265/baseline/freeze remain incomplete; no formation/holdout/public/counting/production or milestone-completion authority. Earlier checkpoints are history.
 
 CURRENT CHECKPOINT — STARTUP CORRECTION NOT ADMITTED / REFINED HANDOFF CLOSED (2026-10-10).
 
