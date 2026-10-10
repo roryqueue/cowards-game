@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Two-Match source gates and actual metadata closed; fresh allocation and unique ROOT entry next
+stopped_at: Approved two-Match route closed after one supervisor failure; diagnosis closed; fresh diagnostic route authority needed
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
 last_activity_desc: Human approved at most two private Matches and verification, no more standalone probes
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION — TWO-MATCH ROUTE CLOSED / FEASIBILITY NOT ESTABLISHED (ROOT2026-10-10T23:04:19UTC). Exact allocation85d39582/root72badb26/sourceHeada0a70ca5; unique ROOTentry97941 closedexit0/result2bd0e8ba, ONE charged ordinal0 system_failure/SUPERVISOR_FAILURE/20513ms/165calls/cleanuptrue/no outcome or board. Second ordinal NOTstarted; cumulative41Matches. ONE independent actual retained reader closedexit0/verifiedtrue/feasibilityfalse; all eightfiles/allocation/HEADunchanged. Sourcehold released afteractualentry+reader closure, noactive matching process; all agents/gates closed. GSDdiagnosis-only CLOSED: final charged incomplete soldierBrain82 caused bridge genericfailure/transitiondiscard; initiatingnative/sessioncauseUNKNOWN. Existing finite diagnostic is omitted by compactschema; no speculativefix/limitincrease. CLEANUP_STOP code preserved; actual cleanuptrue not reinterpreted asfailure. Reports TWO-MATCH-SUMMARY/RETAINED-VERIFICATION/FAILURE-DIAGNOSIS-v1. Actualsurviving currentroute~360KB includingcanonical; conservative retained31948800B, historicalpeaksunknown, oldprobehashesunchanged. Currentelapsed3463000/cumulative325517903 versuscap329254903 atobservation; laterclosure/waitcounts, hardstop00:06:36UTC unchanged. This singleuseroute and unusedslot are closed/immutable, no retry/refund/reuse/newexecution. Ordinary source-only diagnostic repair needs no newproductdecision, but a DISTINCT fresh one-Match diagnostic route (existing finitefailurecapture, allotherboundsunchanged) needs prospective authority; extra time also needsapproval if existingwindow cannotfitgates+runtime+31minreserve. No repeatliteral/frameworkrequested. AllLEAG/fullbaseline/fullChronicle/Phase265/freeze/formation/holdout/public/counting/production/milestonecredit remainpending. Earlier checkpointshistory.
 
 CURRENT CONTINUATION — TWO-MATCH SOURCE VERIFIED / METADATA FROZEN (2026-10-10T22:57:13UTC). Distinct SOURCE-VERIFICATION-v1 closed PASS_WITH_WARNINGS/zero blockers at source50cd6aa9; all agents/gates closed. ROOT actual metadata command40680 exited0, no compiler/provider/Strategy/Match: tactical-0 raw5ac15a0c/sourcef2de9f70/snapshot254ba7c9/10790sourceB; cold-opponent raw1086a242/source3a49f15d/snapshot0de930f3/9257sourceB, exact reviewed store. Full roots will bind canonical fresh allocation. All source gates complete within paired frontier; next one fresh preparation/direct-child committed allocation/unique ROOT entry/same-process capacity, then one distinct actual retained verifier. No new Match yet; no probes/retries/third. Keep source and HEAD fixed from preparation through terminal+unique verification; no competing heavy work. No original LEAG/fullChronicle/baseline/freeze/Phase265 credit; all other bounds/history/privacy/formation and holdout restrictions unchanged.
 
