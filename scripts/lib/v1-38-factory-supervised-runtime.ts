@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
-import { claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, leanStartupAuthorityDescriptorV8 } from "./v1-38-lean-experiment-authority.js"
-import { defaultRuntimeMetadata } from "@cowards/spec"
+import { claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, leanStartupAuthorityDescriptorV8, claimLeanPrivateProbeRuntimeAuthority, type LeanPrivateProbeBindingV1, type LeanPrivateProbeRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { defaultRuntimeMetadata, StrategyInputV119Schema, SoldierBrainInputV119Schema } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { claimProspectiveLeagueHostReceiptAuthority, isProspectiveLeagueHostReceiptFixture } from "./v1-38-league-host-receipt.js"
@@ -37,6 +37,8 @@ export interface FactorySupervisedRuntimeOptions extends Omit<PlannerSupervisedR
   readonly oneCellLifetimeGrant?: DiagnosticOneCellLifetimeGrant
   readonly retryV4LifetimeGrant?: DiagnosticRetryV4LifetimeGrant
   readonly createRuntime?: (options: PlannerSupervisedRuntimeOptions) => PlannerSupervisedRuntime
+  readonly privateProbeAuthority?: LeanPrivateProbeRuntimeAuthority
+  readonly privateProbeBinding?: LeanPrivateProbeBindingV1
 }
 
 /** Pure lifetime admission shared by real construction and injected tests. */
@@ -61,9 +63,15 @@ export const admitFactorySupervisorLifetime = (options: Pick<FactorySupervisedRu
  * confused with the runtime adapter id.
  */
 export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntimeOptions): FactorySupervisionProvider => {
+  const supplied = options as unknown as Record<string, unknown>
+  const hasRuntimeOverride = Reflect.has(supplied, "createRuntime")
+  const hasProbeAuthority = Reflect.has(supplied, "privateProbeAuthority"), hasProbeBinding = Reflect.has(supplied, "privateProbeBinding")
+  if (hasProbeAuthority || hasProbeBinding) {
+    if (!hasProbeAuthority || !hasProbeBinding || !options.privateProbeAuthority || !options.privateProbeBinding || hasRuntimeOverride || ["leanExperimentAuthority", "prospectiveLifetimeAuthority", "prospectiveLifetimeMs", "prospectiveHostReceiptAuthority", "retryV4LifetimeGrant", "retryV4RuntimeBinding", "observerHarness", "privateObserver", "transport", "streamFactory", "benchmarkLifetimeMs", "startupOriginObserver", "correctionOriginObserver"].some(key => Reflect.has(supplied, key))) return fail("PRIVATE_PROBE_MODE")
+    if (options.privateProbeBinding.executionOwnerId !== options.matchId || options.privateProbeBinding.image !== LAB_ADMITTED_ROOTS.image || options.image !== undefined && options.image !== LAB_ADMITTED_ROOTS.image) return fail("PRIVATE_PROBE_IDENTITY")
+  }
   rejectRetiredDiagnosticLifetimeOptions(options)
   if (["startup", "startupPolicy", "startupGrant", "startupMs"].some(key => key in options)) return fail("STARTUP_OPTION_V5")
-  const supplied = options as unknown as Record<string, unknown>
   if (options.leanExperimentAuthority && ["createRuntime", "prospectiveLifetimeAuthority", "prospectiveLifetimeMs", "prospectiveHostReceiptAuthority", "retryV4LifetimeGrant", "observerHarness", "transport", "streamFactory"].some(key => key in supplied)) return fail("LEAN_MODE")
   if ("hostResponseReceiptMilliseconds" in supplied || "prospectiveHostReceiptBinding" in supplied) return fail("HOST_RECEIPT_OPTION")
   if ("prospectiveHostReceiptAuthority" in supplied && (!options.prospectiveHostReceiptAuthority || !options.prospectiveLifetimeAuthority || options.prospectiveLifetimeMs !== 600000 || "createRuntime" in supplied && !isProspectiveLeagueHostReceiptFixture(options.prospectiveHostReceiptAuthority) || ["retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "benchmarkLifetimeMs", "observerHarness", "privateObserver", "transport", "streamFactory"].some((key) => key in supplied))) return fail("HOST_RECEIPT_MODE")
@@ -81,6 +89,8 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
   const runtimeMetadata = { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" as const } }
   const revision = buildStrategyRevision({ source, runtime: runtimeMetadata })
   if (!revision.validation.valid || revision.sourceHash !== admission.sourceRoot.slice(7) || revision.sourceBytes !== options.sourceBytes.byteLength || revision.runtime.language.id !== "typescript" || revision.runtime.abiVersion !== admission.nativeLane.runtimeAbi || revision.runtime.adapter.id !== "runtime-js-container-subprocess") return fail("REVISION_BINDING")
+  const probeBinding = options.privateProbeBinding
+  if (options.privateProbeAuthority && probeBinding && (probeBinding.sourceRoot !== admission.sourceRoot || probeBinding.executableRoot !== `sha256:${revision.metadata.sourceArtifact!.hash}` || probeBinding.tupleId !== MATCH_KERNEL.tupleId || probeBinding.tupleRoot !== LAB_ADMITTED_ROOTS.tupleRoot || probeBinding.runtimeLimitsRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot || probeBinding.image !== (options.image ?? LAB_ADMITTED_ROOTS.image) || !["selectActivations", "soldierBrain"].includes(probeBinding.method))) return fail("PRIVATE_PROBE_SOURCE_BINDING")
   const createRuntime = options.createRuntime ?? createPlannerSupervisedRuntime
   const retryV4RuntimeBinding: DiagnosticRetryV4RuntimeBinding | undefined = options.retryV4LifetimeGrant === undefined ? undefined : {
     ...options.retryV4LifetimeGrant.runtime, factoryAuthorizationRoot: admission.authorizationRoot, factoryPacketRoot: admission.packetRoot,
@@ -91,15 +101,17 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
   }
   const prospectiveRuntimeBinding = options.prospectiveLifetimeAuthority === undefined ? undefined : prospectiveLeagueRuntimeBinding(admission, { ...options.prospectiveLifetimeAuthority.runtime, revisionId: revision.id, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, image: options.image ?? LAB_ADMITTED_ROOTS.image })
   const leanRuntimeBinding = options.leanExperimentAuthority === undefined ? undefined : prospectiveLeagueRuntimeBinding(admission, { ...options.leanExperimentAuthority.runtime, revisionId: revision.id, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, image: options.image ?? LAB_ADMITTED_ROOTS.image })
-  const factoryLifetimeMs = options.leanExperimentAuthority === undefined ? admitFactorySupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }) : (leanStartupAuthorityDescriptorV8(options.leanExperimentAuthority) ? claimLeanStartupAuthorityV8 : claimLeanRuntimeAuthority)(options.leanExperimentAuthority, { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: leanRuntimeBinding! }, "factory").lifetimeMs
+  if (options.privateProbeAuthority && probeBinding) claimLeanPrivateProbeRuntimeAuthority(options.privateProbeAuthority, probeBinding, "factory")
+  const factoryLifetimeMs = options.privateProbeAuthority ? 5000 : options.leanExperimentAuthority === undefined ? admitFactorySupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }) : (leanStartupAuthorityDescriptorV8(options.leanExperimentAuthority) ? claimLeanStartupAuthorityV8 : claimLeanRuntimeAuthority)(options.leanExperimentAuthority, { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: leanRuntimeBinding! }, "factory").lifetimeMs
   if (options.leanExperimentAuthority && options.factoryLifetimeMs !== 600000) return fail("LEAN_LIFETIME")
   if (options.prospectiveHostReceiptAuthority) claimProspectiveLeagueHostReceiptAuthority(options.prospectiveHostReceiptAuthority, { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: prospectiveRuntimeBinding!, seat: options.prospectiveLifetimeAuthority!.seat }, "factory")
   const began = performance.now()
   const { admission: _admission, sourceBytes: _sourceBytes, createRuntime: _createRuntime, factoryLifetimeMs: _factoryLifetimeMs, ...runtimeOptions } = options
-  const selected = createRuntime({ ...runtimeOptions, ...(options.retryV4LifetimeGrant === undefined ? {} : { retryV4LifetimeMs: factoryLifetimeMs, retryV4RuntimeBinding: retryV4RuntimeBinding! }), revision, image: options.image ?? LAB_ADMITTED_ROOTS.image })
+  const probeOptions = probeBinding === undefined ? {} : { matchId: probeBinding.executionOwnerId, budgetRoot: probeBinding.allocationRoot, attemptRoot: probeBinding.debitDigest, containerName: `probe-${probeBinding.allocationRoot.slice(7, 19)}-${probeBinding.ordinal}`, ownershipLabel: `probe-${probeBinding.allocationRoot.slice(7, 19)}` }
+  const selected = createRuntime({ ...runtimeOptions, ...probeOptions, ...(options.retryV4LifetimeGrant === undefined ? {} : { retryV4LifetimeMs: factoryLifetimeMs, retryV4RuntimeBinding: retryV4RuntimeBinding! }), revision, image: options.image ?? LAB_ADMITTED_ROOTS.image })
   let identity: FactorySupervisionProvider["identity"]
   try {
-    if (selected.identity.sourceRoot !== admission.sourceRoot || selected.identity.runtimeLimitsRoot !== admission.nativeLane.runtimeProfileRoot || selected.identity.attemptRoot !== options.attemptRoot || selected.identity.budgetRoot !== options.budgetRoot || selected.identity.image !== (options.image ?? LAB_ADMITTED_ROOTS.image)) return fail("SELECTED_IDENTITY")
+    if (selected.identity.sourceRoot !== admission.sourceRoot || selected.identity.runtimeLimitsRoot !== admission.nativeLane.runtimeProfileRoot || selected.identity.attemptRoot !== (probeBinding?.debitDigest ?? options.attemptRoot) || selected.identity.budgetRoot !== (probeBinding?.allocationRoot ?? options.budgetRoot) || selected.identity.image !== (options.image ?? LAB_ADMITTED_ROOTS.image)) return fail("SELECTED_IDENTITY")
     identity = freezeLabValue({ ...selected.identity, nativeLane: admission.nativeLane, factoryPacketRoot: admission.packetRoot, factoryProposalRoot: admission.proposalRoot, factoryValidationRoot: admission.validationRoot })
   } catch (error) {
     selected.close()
@@ -107,9 +119,19 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
   }
   const issued = new WeakMap<object, LabRuntimeEvidence>()
   const diagnostics = new WeakMap<object, PlannerPrivateDiagnostic>()
+  let privateProbeConsumed = false
   const provider: FactorySupervisionProvider = {
     identity,
     invoke(request, admittedIdentity) {
+      if (probeBinding) {
+        if (privateProbeConsumed) { selected.close(); return fail("PRIVATE_PROBE_REUSED") }
+        privateProbeConsumed = true
+        const inputRoot = labRoot("runtime-input", request.input)
+        const requestRoot = labRoot("lean-private-probe-request-v1", { method: request.kind, inputRoot, tupleId: request.semanticTupleId })
+        if (!same(admittedIdentity, identity) || identity.sourceRoot !== probeBinding.sourceRoot || identity.executableRoot !== probeBinding.executableRoot || request.kind !== probeBinding.method || inputRoot !== probeBinding.inputRoot || requestRoot !== probeBinding.requestRoot) { selected.close(); return fail("PRIVATE_PROBE_REQUEST_BINDING") }
+        const parsed = request.kind === "selectActivations" ? StrategyInputV119Schema.safeParse(request.input) : SoldierBrainInputV119Schema.safeParse(request.input)
+        if (!parsed.success) { selected.close(); return fail("PRIVATE_PROBE_SCHEMA") }
+      }
       if (performance.now() - began >= factoryLifetimeMs) { selected.close(); return fail("LIFETIME_EXHAUSTED") }
       if (!same(admittedIdentity, identity)) { selected.close(); return fail("REQUEST_IDENTITY") }
       const evidence = selected.invoke(request, selected.identity)

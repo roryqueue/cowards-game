@@ -68,6 +68,26 @@ describe("startup-origin-v8 factory opt-in", () => {
     expect(legacy).not.toHaveBeenCalled(); expect(planner.mock.calls[0]![0].leanExperimentAuthority).toBe(authority)
   })
 })
+describe("private probe factory authority", () => {
+  const probeFixture = () => {
+    const { admission } = admitted(), defaults = defaultRuntimeMetadata("typescript")
+    const revision = buildStrategyRevision({ source: new TextDecoder().decode(sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
+    const binding = { ordinal: 0, caseId: "probe-00", method: "selectActivations" as const, sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}` as LabRoot, requestRoot: root("c"), inputRoot: root("d"), image: LAB_ADMITTED_ROOTS.image, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, allocationRoot: root("e"), allocationDigest: root("f"), debitDigest: root("1"), debitOffset: 0, executionOwnerId: "probe-owner" }
+    return { admission, binding, authority: { schemaVersion: "lean-private-probe-runtime-authority-v1", binding, toJSON() { throw new TypeError("opaque") } } as never }
+  }
+  it("rejects createRuntime property presence without evaluating an accessor", () => {
+    const { admission, binding, authority } = probeFixture(), options: Record<string, unknown> = { admission, sourceBytes, privateProbeAuthority: authority, privateProbeBinding: binding, matchId: binding.executionOwnerId, budgetRoot: root("a"), attemptRoot: root("b"), containerName: "probe", ownershipLabel: "probe" }
+    Object.defineProperty(options, "createRuntime", { get() { throw new Error("accessor must not run") } })
+    expect(() => createFactorySupervisedRuntime(options as never)).toThrow("FACTORY_RUNTIME_PRIVATE_PROBE_MODE")
+  })
+  it("forwards only the opaque capability through the default constructor seam", () => {
+    const { admission, binding, authority } = probeFixture(), claim = vi.spyOn(startupAuthority, "claimLeanPrivateProbeRuntimeAuthority").mockReturnValue(binding)
+    const planner = vi.mocked(createPlannerSupervisedRuntime); planner.mockClear()
+    expect(() => createFactorySupervisedRuntime({ admission, sourceBytes, privateProbeAuthority: authority, privateProbeBinding: binding, matchId: binding.executionOwnerId, budgetRoot: root("a"), attemptRoot: root("b"), containerName: "probe", ownershipLabel: "probe", factoryLifetimeMs: 5000 })).toThrow("unit container construction forbidden")
+    expect(claim).toHaveBeenCalledOnce(); expect(claim.mock.calls[0]![2]).toBe("factory")
+    expect(planner).toHaveBeenCalledOnce(); expect(planner.mock.calls[0]![0].privateProbeAuthority).toBe(authority); expect(planner.mock.calls[0]![0].privateProbeBinding).toBe(binding)
+  })
+})
 describe("private IPC diagnostics injected factory", () => {
   // This unit checks private failure plumbing, not the mission corpus. Keep
   // its valid snapshot local so the strict script gate has no new planner seam.

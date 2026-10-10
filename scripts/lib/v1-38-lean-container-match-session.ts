@@ -3,8 +3,9 @@ import { readFileSync } from "node:fs"
 export { superviseLeanStartupV5 } from "./v1-38-lean-startup-supervisor.mjs"
 export { superviseLeanStartupV8 } from "./v1-38-lean-startup-supervisor-v8.mjs"
 import { LEAN_STARTUP_POLICY_V5, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
-import { claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, leanStartupAuthorityDescriptorV8, isLeanCorrectionRuntimeAuthority, type LeanRuntimeAuthority, type LeanStartupGrantV5, type LeanStartupGrantV8 } from "./v1-38-lean-experiment-authority.js"
+import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
+import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
+import { claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, leanStartupAuthorityDescriptorV8, isLeanCorrectionRuntimeAuthority, claimLeanPrivateProbeRuntimeAuthority, type LeanRuntimeAuthority, type LeanStartupGrantV5, type LeanStartupGrantV8, type LeanPrivateProbeBindingV1, type LeanPrivateProbeRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import { Worker } from "node:worker_threads"
@@ -34,6 +35,8 @@ export type LeanContainerPersistentStreamFactory = (command: string, args: reado
 export interface LeanContainerMatchSessionOptions {
   readonly leanExperimentAuthority?: LeanRuntimeAuthority
   readonly leanExperimentBinding?: ProspectiveLeagueLifetimeProviderBinding
+  readonly privateProbeAuthority?: LeanPrivateProbeRuntimeAuthority
+  readonly privateProbeBinding?: LeanPrivateProbeBindingV1
   readonly prospectiveHostReceiptAuthority?: ProspectiveLeagueHostReceiptAuthority
   readonly prospectiveHostReceiptBinding?: ProspectiveLeagueLifetimeProviderBinding
   /** Private trusted coordinator only. Omitted by every historical caller. */
@@ -422,6 +425,12 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   if (options.correctionOriginObserver !== undefined && (options.infrastructureProfile !== "closeout" || options.prospectiveHostReceiptAuthority !== undefined || options.prospectiveHostReceiptBinding !== undefined || (options.leanExperimentAuthority !== undefined || options.leanExperimentBinding !== undefined) && !isLeanCorrectionRuntimeAuthority(options.leanExperimentAuthority))) throw new TypeError("LEAN_CORRECTION_ORIGIN_PROFILE")
   let hostResponseReceiptMilliseconds: 5000 | undefined
   let startup: Readonly<LeanStartupGrantV5 | LeanStartupGrantV8> | undefined
+  const hasProbeAuthority = Reflect.has(options, "privateProbeAuthority"), hasProbeBinding = Reflect.has(options, "privateProbeBinding")
+  if (hasProbeAuthority || hasProbeBinding) {
+    const binding = options.privateProbeBinding
+    if (!hasProbeAuthority || !hasProbeBinding || !options.privateProbeAuthority || !binding || Reflect.has(options, "leanExperimentAuthority") || Reflect.has(options, "leanExperimentBinding") || Reflect.has(options, "prospectiveHostReceiptAuthority") || Reflect.has(options, "prospectiveHostReceiptBinding") || Reflect.has(options, "transport") || Reflect.has(options, "streamFactory") || Reflect.has(options, "privateObserver") || Reflect.has(options, "correctionOriginObserver") || Reflect.has(options, "startupOriginObserver") || options.infrastructureProfile !== "closeout" || options.matchId !== binding.executionOwnerId || options.containerName !== `probe-${binding.allocationRoot.slice(7, 19)}-${binding.ordinal}` || options.ownershipLabel !== `probe-${binding.allocationRoot.slice(7, 19)}` || options.image !== binding.image || binding.image !== LAB_ADMITTED_ROOTS.image || binding.tupleRoot !== LAB_ADMITTED_ROOTS.tupleRoot || binding.runtimeLimitsRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot || binding.tupleId !== MATCH_KERNEL.tupleId) throw new TypeError("LEAN_PRIVATE_PROBE_SESSION_BINDING")
+    claimLeanPrivateProbeRuntimeAuthority(options.privateProbeAuthority, binding, "session")
+  }
   if (["startup", "startupPolicy", "startupGrant", "startupMs"].some(key => key in options)) throw new TypeError("LEAN_STARTUP_OPTION_V5")
   if ("hostResponseReceiptMilliseconds" in options) throw new TypeError("LEAN_HOST_RECEIPT_SCALAR")
   if ("leanExperimentAuthority" in options || "leanExperimentBinding" in options) {

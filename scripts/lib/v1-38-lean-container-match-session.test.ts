@@ -18,6 +18,11 @@ import { defaultRuntimeMetadata, RUNTIME_INVOCATION_V1_17_TEST_KEY_ID, createSel
 import { encodeCandidateHostEnvelopeV117 } from "../../packages/runtime-js/src/candidate-host-envelope.js"
 import { registerCandidateEvidenceFixture } from "../../packages/runtime-js/src/candidate-evidence-fixture.js"
 const LEAN_CONTAINER_IMAGE = LAB_ADMITTED_ROOTS.image
+it("private probe session rejects injected transport before consuming a claim", () => {
+  const binding = { allocationRoot: "sha256:" + "a".repeat(64), debitDigest: "sha256:" + "b".repeat(64), executionOwnerId: "probe-owner", ordinal: 0, caseId: "probe-00", method: "selectActivations", sourceRoot: "sha256:" + "c".repeat(64), executableRoot: "sha256:" + "d".repeat(64), requestRoot: "sha256:" + "e".repeat(64), inputRoot: "sha256:" + "f".repeat(64), image: LEAN_CONTAINER_IMAGE, tupleId: "tuple", tupleRoot: "sha256:" + "1".repeat(64), runtimeLimitsRoot: "sha256:" + "2".repeat(64), allocationDigest: "sha256:" + "3".repeat(64), debitOffset: 0 }
+  const fake = { schemaVersion: "lean-private-probe-runtime-authority-v1", binding }
+  expect(() => createLeanContainerMatchSession({ privateProbeAuthority: fake, privateProbeBinding: binding, transport: undefined } as never)).toThrow("LEAN_PRIVATE_PROBE_SESSION_BINDING")
+})
 describe("startup-origin-v8 inert control", () => {
   it("[startup-origin-v8] selects session protocol only through the host-issued V8 claim", () => {
     const source = readFileSync(new URL("./v1-38-lean-container-match-session.ts", import.meta.url), "utf8")

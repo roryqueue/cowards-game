@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { leanStartupAuthorityDescriptorV5, leanStartupAuthorityDescriptorV8, claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, type LeanRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { leanStartupAuthorityDescriptorV5, leanStartupAuthorityDescriptorV8, claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, claimLeanPrivateProbeRuntimeAuthority, type LeanRuntimeAuthority, type LeanPrivateProbeBindingV1, type LeanPrivateProbeRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
 import { claimProspectiveLeagueLifetimeAuthority, isProspectiveLeagueLifetimeFixture, type ProspectiveLeagueLifetimeAuthority, type ProspectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { performance } from "node:perf_hooks"
 import { claimProspectiveLeagueHostReceiptAuthority, isProspectiveLeagueHostReceiptFixture } from "./v1-38-league-host-receipt.js"
@@ -40,6 +40,8 @@ export interface PlannerSupervisedRuntime extends LabSupervisedProvider {
 }
 export interface PlannerSupervisedRuntimeOptions extends Omit<LeanContainerMatchSessionOptions, "infrastructureProfile" | "privateObserver"> {
   leanExperimentAuthority?: LeanRuntimeAuthority
+  privateProbeAuthority?: LeanPrivateProbeRuntimeAuthority
+  privateProbeBinding?: LeanPrivateProbeBindingV1
   revision: StrategyRevision; attemptRoot: LabRoot; budgetRoot: LabRoot;
   /** Source produced by the reviewed observer builder; expectedRoot hashes the
    * actual buildLeanAuthenticatedHarnessSource(source) worker bytes. */
@@ -83,6 +85,11 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   rejectRetiredDiagnosticLifetimeOptions(options)
   if (["startup", "startupPolicy", "startupGrant", "startupMs"].some(key => key in options)) throw new TypeError("LAB_STARTUP_OPTION_V5")
   if (options.leanExperimentAuthority && ["prospectiveLifetimeAuthority", "prospectiveLifetimeMs", "prospectiveHostReceiptAuthority", "retryV4LifetimeGrant", "benchmarkLifetimeMs", "observerHarness", "privateObserver", "transport", "streamFactory"].some(key => key in options)) throw new TypeError("LAB_RUNTIME_LEAN_MODE")
+  const hasProbeAuthority = Reflect.has(options, "privateProbeAuthority"), hasProbeBinding = Reflect.has(options, "privateProbeBinding")
+  if (hasProbeAuthority || hasProbeBinding) {
+    const binding = options.privateProbeBinding
+    if (!hasProbeAuthority || !hasProbeBinding || !options.privateProbeAuthority || !binding || ["leanExperimentAuthority", "prospectiveLifetimeAuthority", "prospectiveLifetimeMs", "prospectiveHostReceiptAuthority", "prospectiveHostReceiptBinding", "retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "observerHarness", "privateObserver", "transport", "streamFactory", "benchmarkLifetimeMs", "startupOriginObserver", "correctionOriginObserver"].some(key => Reflect.has(options, key)) || options.matchId !== binding.executionOwnerId || options.budgetRoot !== binding.allocationRoot || options.attemptRoot !== binding.debitDigest || options.containerName !== `probe-${binding.allocationRoot.slice(7, 19)}-${binding.ordinal}` || options.ownershipLabel !== `probe-${binding.allocationRoot.slice(7, 19)}`) throw new TypeError("LAB_RUNTIME_PRIVATE_PROBE_MODE")
+  }
   if ("hostResponseReceiptMilliseconds" in options || "prospectiveHostReceiptBinding" in options) throw new TypeError("LAB_RUNTIME_HOST_RECEIPT_OPTION")
   if ("prospectiveHostReceiptAuthority" in options && (!options.prospectiveHostReceiptAuthority || !options.prospectiveLifetimeAuthority || options.prospectiveLifetimeMs !== 600000 || ["retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "benchmarkLifetimeMs", "observerHarness", "privateObserver"].some((key) => key in options) || (options.transport !== undefined || options.streamFactory !== undefined) && !isProspectiveLeagueHostReceiptFixture(options.prospectiveHostReceiptAuthority))) throw new TypeError("LAB_RUNTIME_HOST_RECEIPT_MODE")
   if (options.prospectiveHostReceiptAuthority && isProspectiveLeagueHostReceiptFixture(options.prospectiveHostReceiptAuthority) && typeof options.transport !== "function") throw new TypeError("LAB_RUNTIME_HOST_RECEIPT_FIXTURE_CONTROL")
@@ -97,6 +104,8 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   const rebuilt = buildStrategyRevision({ source: revision.source, runtime: revision.runtime, ...(revision.strategyId === undefined ? {} : { strategyId: revision.strategyId }) })
   const artifact = revision.metadata.sourceArtifact
   if (!rebuilt.validation.valid || rebuilt.id !== revision.id || rebuilt.sourceHash !== revision.sourceHash || rebuilt.sourceBytes !== revision.sourceBytes || !artifact || labRoot("artifact", artifact) !== labRoot("artifact", rebuilt.metadata.sourceArtifact)) throw new TypeError("LAB_SOURCE_ADMISSION")
+  const probeBinding = options.privateProbeBinding
+  if (options.privateProbeAuthority && probeBinding && (rawRoot(revision.source) !== probeBinding.sourceRoot || `sha256:${artifact.hash}` !== probeBinding.executableRoot || revision.runtime.abiVersion !== "strategy-runtime-abi-v1.19" || revision.runtime.package.mode !== "none" || options.image !== probeBinding.image || probeBinding.tupleId !== MATCH_KERNEL.tupleId || probeBinding.tupleRoot !== LAB_ADMITTED_ROOTS.tupleRoot || probeBinding.runtimeLimitsRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot)) throw new TypeError("LAB_RUNTIME_PRIVATE_PROBE_BINDING")
   const startup = options.leanExperimentAuthority && (leanStartupAuthorityDescriptorV8(options.leanExperimentAuthority) ?? leanStartupAuthorityDescriptorV5(options.leanExperimentAuthority))
   const harness = startup ? startup.version === 8 ? buildLeanStartupWorkerHarnessV8() : buildLeanStartupWorkerHarnessV5() : observerHarness?.source ?? WORKER_HARNESS_SOURCE
   const harnessRoot = rawRoot(startup ? harness : buildLeanAuthenticatedHarnessSource(harness))
@@ -116,7 +125,8 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   const prospectiveRuntimeBinding = options.prospectiveLifetimeAuthority === undefined ? undefined : { ...options.prospectiveLifetimeAuthority.runtime, sourceRoot: identity.sourceRoot, revisionId: identity.revisionId, executableRoot: identity.executableRoot, tupleId: identity.tupleId, tupleRoot: identity.tupleRoot, runtimeLimitsRoot: identity.runtimeLimitsRoot, image: identity.image }
   const leanRuntimeBinding = options.leanExperimentAuthority === undefined ? undefined : { ...options.leanExperimentAuthority.runtime, sourceRoot: identity.sourceRoot, revisionId: identity.revisionId, executableRoot: identity.executableRoot, tupleId: identity.tupleId, tupleRoot: identity.tupleRoot, runtimeLimitsRoot: identity.runtimeLimitsRoot, image: identity.image }
   const leanExperimentBinding = options.leanExperimentAuthority === undefined ? undefined : { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: leanRuntimeBinding!, seat: options.leanExperimentAuthority.seat }
-  const lifetime = options.leanExperimentAuthority === undefined ? admitPlannerSupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }, limit) : (startup?.version === 8 ? claimLeanStartupAuthorityV8(options.leanExperimentAuthority, leanExperimentBinding!, "planner") : claimLeanRuntimeAuthority(options.leanExperimentAuthority, leanExperimentBinding!, "planner")).lifetimeMs
+  if (options.privateProbeAuthority && probeBinding) claimLeanPrivateProbeRuntimeAuthority(options.privateProbeAuthority, probeBinding, "planner")
+  const lifetime = options.privateProbeAuthority ? 5000 : options.leanExperimentAuthority === undefined ? admitPlannerSupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }, limit) : (startup?.version === 8 ? claimLeanStartupAuthorityV8(options.leanExperimentAuthority, leanExperimentBinding!, "planner") : claimLeanRuntimeAuthority(options.leanExperimentAuthority, leanExperimentBinding!, "planner")).lifetimeMs
   const prospectiveHostReceiptBinding = options.prospectiveHostReceiptAuthority === undefined ? undefined : { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: prospectiveRuntimeBinding!, seat: options.prospectiveLifetimeAuthority!.seat }
   if (options.prospectiveHostReceiptAuthority) claimProspectiveLeagueHostReceiptAuthority(options.prospectiveHostReceiptAuthority, prospectiveHostReceiptBinding!, "planner")
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 24800 || options.signal?.aborted) throw new TypeError("LAB_RUNTIME_ALLOCATION")
@@ -136,14 +146,17 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
     identity, get accounting() { return [...accounting] }, close,
     verify(e) { return issued.has(e) }, timing(e) { return timings.get(e) }, verifyTiming(e) { return issuedTiming.has(e) },
     invoke(request, admitted) {
-      if (stopped || session.state !== "active" || options.signal?.aborted || performance.now() - began >= lifetime || accounting.length >= limit) { close(); throw new TypeError("LAB_RUNTIME_STOPPED") }
+      if (stopped || session.state !== "active" || options.signal?.aborted || performance.now() - began >= lifetime || accounting.length >= limit || probeBinding !== undefined && accounting.length !== 0) { close(); throw new TypeError("LAB_RUNTIME_STOPPED") }
       if (labRoot("identity", admitted) !== labRoot("identity", identity) || request.semanticTupleId !== identity.tupleId || seen.has(request.requestId)) { close(); throw new TypeError("LAB_REQUEST_BINDING") }
       const parsed = (request.kind === "selectActivations" ? StrategyInputV119Schema : SoldierBrainInputV119Schema).safeParse(request.input)
       if (!parsed.success) { close(); throw new TypeError("LAB_INPUT_INVALID") }
       const input = parsed.data
       if (labRoot("runtime-input", input) !== labRoot("runtime-input", request.input)) { close(); throw new TypeError("LAB_INPUT_BINDING") }
-      const ordinal = accounting.length
-      const invocationRoot = labRoot("supervised-invocation", { identity, requestId: request.requestId, method: request.kind, inputRoot: labRoot("runtime-input", input), ordinal })
+      const inputRoot = labRoot("runtime-input", input)
+      const probeRequestRoot = labRoot("lean-private-probe-request-v1", { method: request.kind, inputRoot, tupleId: request.semanticTupleId })
+      if (probeBinding && (request.kind !== probeBinding.method || inputRoot !== probeBinding.inputRoot || probeRequestRoot !== probeBinding.requestRoot)) { close(); throw new TypeError("LAB_PRIVATE_PROBE_REQUEST_BINDING") }
+      const ordinal = probeBinding?.ordinal ?? accounting.length
+      const invocationRoot = labRoot("supervised-invocation", { identity, requestId: request.requestId, method: request.kind, inputRoot, ordinal })
       seen.add(request.requestId)
       pending = { invocationRoot, sourceRoot: identity.sourceRoot, executableRoot: identity.executableRoot, inputRoot: labRoot("runtime-input", input), method: request.kind, tupleId: identity.tupleId, harnessRoot: identity.harnessRoot, profileRoot: identity.runtimeLimitsRoot }
       observed = undefined
