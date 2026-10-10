@@ -63,4 +63,4 @@ The source code does not itself provide the independent outside-store report or 
 
 ## Self-Check: PASSED
 
-All three listed commits exist on the isolated replacement worktree. No STATE, ROADMAP, REQUIREMENTS, allocation artifact, or parent-owned note was modified.
+All four listed source commits exist on the isolated replacement worktree. This summary is the fifth task commit. No STATE, ROADMAP, REQUIREMENTS, allocation artifact, or parent-owned note was modified.
