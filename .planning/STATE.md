@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: awaiting_human_resource_decision
-stopped_at: Single-case diagnostic and unique retained verification passed; fresh Match-enabled time allowance needed
+status: in_progress
+stopped_at: Fresh two-hour private two-Match feasibility allowance approved; bounded research and checked supplement next
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: One private non-Match call succeeded with cleanup and independent verification; no Matches authorized by this hour
+last_activity_desc: Human approved at most two private Matches and verification, no more standalone probes
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED CONTINUATION — TWO-MATCH FEASIBILITY (2026-10-10T22:06:36UTC). Human `yes, approved` adopts fresh two-hour total work window, at most2private current-rules Matches plus verification, no further standalone probes, all other limits unchanged. ROOTanchor1791669996000; hardstop1791677196000/2026-10-11T00:06:36UTC; continuouscarry322054903/cap329254903;31-minute reserve and paired20-minute runtime reserve yield latestpairedentry23:15:36UTC. Approval TWO-MATCH-APPROVAL-v1. Actual initialprocess inventory has no active entry/reader/provider job; tracked clean/main7a45ff65 matches origin. Exactly one fresh route, no retry/thirdMatch; research/checked existingPlan16 supplement/source review/fix/validate/verify then fresh committed allocation and same-process capacity. Old routes/evidence/costs/windows remain immutable. Prior one-case probe success confirms only that call. LEAG/baseline/freeze/Phase265/formation/holdout/public/counting/production remain pending. Earlier checkpoints history.
 
 CLOSEOUT ACCOUNTING OBSERVATION — ROOT2026-10-10T21:51:10UTC: this hour elapsed1270000ms, continuous cumulative321128903ms versus cap323458903ms; later closeout/communication also counts, no refund/reset. After result/reader notes committed and pushed0b6f6daf,32changed tracked survivors1257472allocatedB plus current private store28672B produce102400B growth beyond sourcecarry1183744B, within131072B reserve with28672B remaining. Conservative retained debit31289344B includes protected snapshot29970432B, old-v1 carry32768B and measured current prefix/store; overlaps are deliberately not refunded. This is surviving-file accounting, not a historical peak claim. Checkout tracked clean and origin/main matched. No active entry/reader; no further runtime authority.
 
