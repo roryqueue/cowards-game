@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Smaller replacement plan checked; isolated source implementation next, no runtime admission
+stopped_at: Smaller source corrections reviewed; admission frontier expired before any run, new bounded time allowance required
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: Smaller four-probe zero-Match supplement independently checked after bounded corrections; source implementation next
+last_activity_desc: Smaller source gate PASS_WITH_WARNINGS; verification gaps_found and no empirical run before fixed cutoff
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,18 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT HUMAN RESOURCE CHECKPOINT — SMALLER SOURCE CLOSED / NO RUN BEFORE ADMISSION CUTOFF (2026-10-10).
+
+Actual source author/fixer, independent re-review and independent source/closure verifier are CLOSED. Final functional HEAD6a4b747c: source PASS_WITH_WARNINGS/zero blockers/WR01 incomplete integration-tamper coverage; full replacement verification gaps_found/empirical_feasibility_not_established. ROOT final focused41532 CLOSED0/14PASS; boundary83766 CLOSED0/1439/zero after two retained NOTPASS loader-monitor outcomes. ROOT broader60319 CLOSED1/268PASS1 inherited cleanup-throws failure, configured76650 CLOSED0, strict21622 and final71064 CLOSED2/same11 existing diagnostics/no new scoped diagnostic; earlier author13 versus ROOT11 discrepancy remains disclosed, no global green/exact baseline equality claim. No new allocation v1/v2 or private-probe store exists (bounded independent existence checks); no prepare, entry, provider/container/Strategy/probe/Match or ordinary retained reader invoked. Four planned probes NOT performed. Forty historical Match charges and consumed evidence remain immutable/cost-only. The fixed13:27:52UTC admission/source frontier arrived BEFORE the separate source-verification/admission chain closed; no allocation was rushed or cutoff moved.13:58:52 hardstop/31-minute reserve remain binding for terminal closure. NEXT HUMAN-ONLY decision is a newly bounded prospective time allowance if actual four-probe diagnostic is still desired; no repeat exact route literal, external custody or changed game rule is required. Blanket same-scope routes do not extend this explicit expired window. Do not start another turn/entry/gate/verifier or rewrite dates/budgets while unchanged. Plan16/Phase265/allLEAG pending; no baseline/freeze/formation/holdout/public/counting/production/archive/tag credit. New RESULT/RETAINED-VERIFICATION explicitly record non-execution; source fixes and safe notes ready for commit/push. No active empirical entry/verifier/source hold. Earlier checkpoints history.
+
+CURRENT CHECKPOINT — SMALLER SOURCE REVIEW NOTPASS / BOUNDED CORRECTION ACTIVE (2026-10-10).
+
+Distinct review CLOSED at00111ffa with six blockers/one warning: unauthenticated historical costs/time/disk, missing approved host receipt allowance, corruptible debit prefix/reusable failed admission, incomplete terminalization, permissive retained verifier, executable/cleanup override gaps. No empirical allocation or entry permitted. Actual isolated /root/fix_265_small_replacement owns the same ten source/test files and existing SUMMARY; first CR02/03/06 corrections committed3ac6cb29, remaining budget/terminal/result corrections still active. Source gates remain NOTPASS until independent re-review, ROOT validation and separate source verification actually close. Do not treat fixture success or a correction commit as runtime recovery. Same fixed time/resource/probe limits; allLEAG pending and old consumed bytes immutable. ROOT tracking only; no related code/tests while source owner active.
+
+CURRENT CHECKPOINT — SMALLER SOURCE HANDOFF INTEGRATED / INDEPENDENT REVIEW ACTIVE (2026-10-10).
+
+Isolated executor CLOSED at00111ffa and exact ten source/test paths plus its partial SUMMARY integrated fast-forward. Actual focused runner/authority tests8/8 PASS; five-file suite260/261 retains the exact cleanup-throws planner failure independently reproduced on unchanged base. Configured project types PASS; strict scoped ten-file command retains13 inherited diagnostics/no new diagnostics, NOT global green. No prepare, allocation, entry, provider/container/Strategy/Match or retained reader was invoked. Distinct /root/review_265_small_replacement now owns only SOURCE-REVIEW-v1; ROOT must wait for closure before related source inspection/tests, then fix findings, validate and independently verify before any empirical allocation. Historical cost-snapshot authentication/current continuous-time carry remain explicit source gates, not caller assertions. Same13:27:52UTC source frontier/13:58:52 hard stop/31-minute reserve, four probes/ZERO Matches/one correction and every approved resource/runtime/privacy bound. AllLEAG pending; no league/baseline/freeze/formation/holdout/public/counting/production or phase-completion credit. Old consumed bytes immutable; no active runtime/verifier or source/HEAD empirical hold.
 
 CURRENT CHECKPOINT — SMALLER REPLACEMENT PLAN CHECKED / SOURCE ONLY (2026-10-10).
 
