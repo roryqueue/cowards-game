@@ -39,3 +39,14 @@ The authority regression adds temporary synthetic Git repositories and mode-rest
 - The one unfiltered four-suite regression run completed 266/267 tests. The remaining failure is the existing planner cleanup-throws assertion `does not issue diagnostics from pre-issuance accounting when cleanup throws`; status remains NOT PASS and it is not waived.
 - Final scoped strict TypeScript command — 10 diagnostics remain. The prior review-fix test's `SourceFile.parseDiagnostics` typing error was corrected; no clean typecheck is claimed, and no identity-level comparison to the earlier baseline is claimed.
 - `git diff --check` — PASS before source commit `4715a3b1`.
+
+## Retained-verifier review v2 follow-up
+
+Commit `c4b01bc5` closes reviewer blocker CR-01. V2 retained results now require `attemptedOrdinals` to be exactly `[0]` and exactly one outcome; the retained request/result/debit join requires exactly one ordinal-0 debit. The regression recomputes a valid result root over empty attempted/outcome arrays and confirms both the result verifier and the retained join reject it, including an empty debit list. The valid finite `system_failure` result remains accepted only when it records that one attempt and its debit; this is not success credit.
+
+- `./node_modules/.bin/vitest run scripts/run-v1-38-lean-private-probe.test.ts` — PASS, all 8 tests.
+- `./node_modules/.bin/vitest run scripts/run-v1-38-lean-private-probe.test.ts -t 'joins the one corrected v2 descriptor'` — PASS, 1 test; 7 skipped by filter.
+- The scoped strict TypeScript check was run again and still reports 10 diagnostics. No clean typecheck or diagnostic-identity comparison is claimed.
+- `git diff --check` — PASS before source commit `c4b01bc5`.
+
+Review v2 warning WR-01 remains open: the V1.19 encoder and generated V8 validator predicates are covered by inert assertions, but the generated broker validation branch is not executed. Safely extracting/serializing that validation into a new pure seam would expand this bounded correction, so no such production seam was introduced. No worker/provider/Strategy or runtime invocation was used.
