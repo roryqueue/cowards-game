@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Smaller source corrections reviewed; admission frontier expired before any run, new bounded time allowance required
+stopped_at: Approved additional one-hour window; narrow prospective time update active before four non-Match probes
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: Smaller source gate PASS_WITH_WARNINGS; verification gaps_found and no empirical run before fixed cutoff
+last_activity_desc: Additional hour approved; carried costs unchanged and source-only amendment in progress
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED CHECKPOINT — ADDITIONAL ONE-HOUR FOUR-PROBE WINDOW (2026-10-10).
+
+Human explicitly approved one additional hour for four private non-Match probes and their verification, every other bound unchanged. Actual ROOT13:58:19UTC anchor1791640699000; hardstop14:58:19UTC1791644299000; unchanged31minute reserve/frontier14:27:19UTC. Continuous carry292757903ms/cap296357903ms, old40Matchcharges/29970432allocatedbytes/1077survivors/unknown historical peaks preserved. Narrow typed executor /root/execute_265_probe_hour owns only prospective numeric constants/necessary fixture joins and newSUMMARY-v2; ROOT tracking only. Independent scoped review/validation/source verification still precede actual prepare/allocation/unique ROOTentry. No actual new allocation/store/probe/Match yet; no empirical source/HEAD hold. Prior expired-window reports remain history. Zero new Matches; allLEAG/Plan16/Phase265 pending, current-rules league/freeze BEFOREformation, unopenedholdout/no public/counting/production. No repeat route literal or external custody needed; extra resources/rules not approved.
 
 CURRENT HUMAN RESOURCE CHECKPOINT — SMALLER SOURCE CLOSED / NO RUN BEFORE ADMISSION CUTOFF (2026-10-10).
 
