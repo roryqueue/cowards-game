@@ -7,7 +7,19 @@ import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strate
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, leanStartupAuthorityDescriptorV8, isLeanCorrectionRuntimeAuthority, claimLeanPrivateProbeRuntimeAuthority, type LeanRuntimeAuthority, type LeanStartupGrantV5, type LeanStartupGrantV8, type LeanPrivateProbeBindingV1, type LeanPrivateProbeRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
 import { createHash } from "node:crypto"
-import { spawnSync } from "node:child_process"
+import { spawnSync, execFileSync } from "node:child_process"
+
+/** Bounded metadata only, through the existing reviewed host-process owner. */
+export const readLeanPrivateProbeGitV1 = (args: readonly string[]): Buffer => {
+  const commit = /^[a-f0-9]{40,64}$/u
+  const paths = [".planning/artifacts/v1.38-phase-265-private-probe-allocation-v1.json", ".planning/artifacts/v1.38-phase-265-private-probe-allocation-v2.json"]
+  const head = args.length === 2 && args[0] === "rev-parse" && args[1] === "HEAD"
+  const parents = args.length === 5 && args[0] === "rev-list" && args[1] === "--parents" && args[2] === "-n" && args[3] === "1" && commit.test(args[4]!)
+  const selected = args[1]?.split(":")
+  const allocation = args.length === 2 && args[0] === "show" && selected?.length === 2 && commit.test(selected[0]!) && paths.includes(selected[1]!)
+  if (!head && !parents && !allocation) throw new TypeError("LEAN_PRIVATE_PROBE_GIT_METADATA")
+  return execFileSync("git", [...args], { stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: allocation ? 65_537 : 4096 })
+}
 import { Worker } from "node:worker_threads"
 import { claimProspectiveLeagueHostReceiptAuthority, isProspectiveLeagueHostReceiptFixture, type ProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
 import type { ProspectiveLeagueLifetimeProviderBinding } from "./v1-38-league-prospective-lifetime.js"

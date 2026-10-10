@@ -13,13 +13,12 @@ import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { constants, openSync, closeSync, readFileSync, lstatSync, realpathSync, fstatSync, statfsSync, writeSync, fsyncSync, readdirSync } from "node:fs"
 import { dirname, resolve } from "node:path"
-import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { assertLeanAggregateMemoryV15 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanCanonicalBytes, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { leanCapsForAllocation, leanSupervisorAllocationMode, LEAN_STARTUP_POLICY_V5, LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY, type LeanCorrectionAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { buildLeanStartupWorkerHarnessV5, buildLeanStartupWorkerHarnessV8 } from "./v1-38-lean-container-match-session.js"
+import { buildLeanStartupWorkerHarnessV5, buildLeanStartupWorkerHarnessV8, readLeanPrivateProbeGitV1 } from "./v1-38-lean-container-match-session.js"
 
 export interface LeanRuntimeAuthority { readonly schemaVersion: "lean-runtime-authority-v1"; readonly runtime: ProspectiveLeagueLifetimeProviderBinding["runtime"]; readonly seat: "bottom" | "top"; toJSON(): never }
 const correctionAuthorities = new WeakSet<object>()
@@ -149,10 +148,10 @@ export const openLeanPrivateProbeAdmissionV1 = (input: { readonly storePath: str
   const allocation = validatePrivateProbeAllocation(parsed)
   if (allocation.costSnapshotRoot !== LEAN_PRIVATE_PROBE_COST_ROOT) return privateProbeFail()
   if (!allocationBytes.equals(canonicalPrivateProbe(allocation))) return privateProbeFail()
-  const output = execFileSync("git", ["rev-list", "--parents", "-n", "1", input.allocationCommit], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 4096 }).trim().split(/\s+/u)
+  const output = readLeanPrivateProbeGitV1(["rev-list", "--parents", "-n", "1", input.allocationCommit]).toString("utf8").trim().split(/\s+/u)
   if (output.length !== 2 || output[1] !== allocation.sourceHead) return privateProbeFail()
-  const committed = execFileSync("git", ["show", `${input.allocationCommit}:${input.allocationPath}`], { encoding: "buffer", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 65_537 })
-  if (!Buffer.from(committed).equals(allocationBytes) || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 4096 }).trim() !== input.allocationCommit) return privateProbeFail()
+  const committed = readLeanPrivateProbeGitV1(["show", `${input.allocationCommit}:${input.allocationPath}`])
+  if (!Buffer.from(committed).equals(allocationBytes) || readLeanPrivateProbeGitV1(["rev-parse", "HEAD"]).toString("utf8").trim() !== input.allocationCommit) return privateProbeFail()
   const admission: LeanPrivateProbeAdmissionV1 = Object.freeze({ schemaVersion: "lean-private-probe-admission-v1", toJSON: opaque })
   privateProbeAdmissions.set(admission, { allocation, allocationBytes, allocationCommit: input.allocationCommit, allocationPath: input.allocationPath, storePath, nextOrdinal: 0, used: false })
   return admission
@@ -172,9 +171,9 @@ export const recordAndIssueLeanPrivateProbeRuntimeAuthorityV1 = (admission: Lean
   const expectedInventory = ["allocation.json", "entry.json", "request.json", ...(state.nextOrdinal > 0 ? ["ledger.ndjson"] : []), ...Array.from({ length: state.nextOrdinal }, (_, ordinal) => `probe-${String(ordinal).padStart(2, "0")}.json`)].sort()
   const currentInventory = readdirSync(state.storePath).sort()
   if (currentInventory.length !== expectedInventory.length || currentInventory.some((name, index) => name !== expectedInventory[index])) return privateProbeFail()
-  if (execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 4096 }).trim() !== state.allocationCommit) return privateProbeFail()
+  if (readLeanPrivateProbeGitV1(["rev-parse", "HEAD"]).toString("utf8").trim() !== state.allocationCommit) return privateProbeFail()
   const allocationBefore = privateProbeFile(resolve(state.storePath, "allocation.json"), 65_536, 0o600)
-  const committedBefore = execFileSync("git", ["show", `${state.allocationCommit}:${state.allocationPath}`], { encoding: "buffer", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 65_537 })
+  const committedBefore = readLeanPrivateProbeGitV1(["show", `${state.allocationCommit}:${state.allocationPath}`])
   if (!allocationBefore.equals(state.allocationBytes) || !Buffer.from(committedBefore).equals(state.allocationBytes)) return privateProbeFail()
   const ledgerPath = resolve(state.storePath, "ledger.ndjson")
   let prior: Buffer<ArrayBufferLike> = Buffer.alloc(0)
