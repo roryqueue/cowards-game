@@ -11,7 +11,7 @@ import { defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
-import { constants, openSync, closeSync, readFileSync, lstatSync, realpathSync, fstatSync, statfsSync, writeSync, fsyncSync } from "node:fs"
+import { constants, openSync, closeSync, readFileSync, lstatSync, realpathSync, fstatSync, statfsSync, writeSync, fsyncSync, readdirSync } from "node:fs"
 import { resolve } from "node:path"
 import { execFileSync } from "node:child_process"
 import { performance } from "node:perf_hooks"
@@ -103,6 +103,8 @@ export const openLeanPrivateProbeAdmissionV1 = (input: { readonly storePath: str
   privateProbeCapacities.delete(input.capacity)
   const directory = lstatSync(storePath)
   if (!directory.isDirectory() || directory.isSymbolicLink() || directory.uid !== (typeof process.getuid === "function" ? process.getuid() : directory.uid) || (directory.mode & 0o777) !== 0o700 || realpathSync(storePath) !== storePath) return privateProbeFail()
+  const initialInventory = readdirSync(storePath).sort()
+  if (initialInventory.length !== 2 || initialInventory[0] !== "allocation.json" || initialInventory[1] !== "request.json") return privateProbeFail()
   const allocationBytes = privateProbeFile(resolve(storePath, "allocation.json"), 65_536, 0o600)
   const parsed = JSON.parse(allocationBytes.toString("utf8")) as unknown
   const allocation = validatePrivateProbeAllocation(parsed)
@@ -123,6 +125,10 @@ export const recordAndIssueLeanPrivateProbeRuntimeAuthorityV1 = (admission: Lean
   privateProbeCapacities.delete(capacity)
   const expected = state.allocation.cases[state.nextOrdinal]
   if (!expected || canonicalPrivateProbe(expected).compare(canonicalPrivateProbe(invocation)) !== 0) return privateProbeFail()
+  const expectedInventory = ["allocation.json", "entry.json", "request.json", ...(state.nextOrdinal > 0 ? ["ledger.ndjson"] : []), ...Array.from({ length: state.nextOrdinal }, (_, ordinal) => `probe-${String(ordinal).padStart(2, "0")}.json`)].sort()
+  const currentInventory = readdirSync(state.storePath).sort()
+  if (currentInventory.length !== expectedInventory.length || currentInventory.some((name, index) => name !== expectedInventory[index])) return privateProbeFail()
+  if (execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 4096 }).trim() !== state.allocationCommit) return privateProbeFail()
   const allocationBefore = privateProbeFile(resolve(state.storePath, "allocation.json"), 65_536, 0o600)
   const committedBefore = execFileSync("git", ["show", `${state.allocationCommit}:${state.allocationPath}`], { encoding: "buffer", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 65_537 })
   if (!allocationBefore.equals(state.allocationBytes) || !Buffer.from(committedBefore).equals(state.allocationBytes)) return privateProbeFail()
@@ -146,6 +152,8 @@ export const recordAndIssueLeanPrivateProbeRuntimeAuthorityV1 = (admission: Lean
     }
     fsyncSync(fd)
   } finally { closeSync(fd) }
+  const directoryFd = openSync(state.storePath, constants.O_RDONLY)
+  try { fsyncSync(directoryFd) } finally { closeSync(directoryFd) }
   const reopened = privateProbeFile(ledgerPath, 65_536, 0o600)
   if (!reopened.subarray(0, offset).equals(prior) || !reopened.subarray(offset).equals(rowBytes)) return privateProbeFail()
   const finalAllocation = privateProbeFile(resolve(state.storePath, "allocation.json"), 65_536, 0o600)
