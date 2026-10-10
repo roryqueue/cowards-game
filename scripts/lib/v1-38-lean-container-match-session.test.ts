@@ -9,14 +9,16 @@ vi.mock("node:worker_threads", async (original) => {
   return { ...actual, Worker: vi.fn(function (...args: any[]) { if (nativeStreamMock.worker) { Atomics.store(new Int32Array(args[1].workerData.start), 0, 1); return nativeStreamMock.worker }; throw Error("unexpected native Worker construction") }) }
 })
 afterEach(() => { nativeStreamMock.worker = undefined; vi.restoreAllMocks() })
-import { buildLeanAuthenticatedHarnessSource, buildLeanCorrectionOriginBrokerSource, buildLeanObserverBrokerSource, createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, validateLeanCorrectionOriginMetadata, validateLeanTimingObservation, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult, type LeanTimingBinding } from "./v1-38-lean-container-match-session.js"
+import { buildLeanAuthenticatedHarnessSource, buildLeanContainerBrokerSourceV8, buildLeanCorrectionOriginBrokerSource, buildLeanObserverBrokerSource, buildLeanStartupWorkerHarnessV8, createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, validateLeanCorrectionOriginMetadata, validateLeanPrivateProbeStartupOriginV8, validateLeanTimingObservation, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult, type LeanTimingBinding } from "./v1-38-lean-container-match-session.js"
 import { LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js"
 import { WORKER_HARNESS_SOURCE, WORKER_HARNESS_V117_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { buildAdvancedStrategyRevision, findAdvancedStrategy } from "../../packages/persistence/src/advanced-strategies.js"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { defaultRuntimeMetadata, RUNTIME_INVOCATION_V1_17_TEST_KEY_ID, createSelectedRuntimeInvocationRequestV117, createRuntimeAbiV117ExecutionLedger, createRuntimeInvocationBudgetV117, serializeRuntimeInvocationRequestV117, verifyRuntimeInvocationResponseV117 } from "@cowards/spec"
 import { encodeCandidateHostEnvelopeV117 } from "../../packages/runtime-js/src/candidate-host-envelope.js"
+import { encodeSubprocessIpcRequest } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { registerCandidateEvidenceFixture } from "../../packages/runtime-js/src/candidate-evidence-fixture.js"
+import { leanBytesRoot, LEAN_STARTUP_POLICY_V5 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 const LEAN_CONTAINER_IMAGE = LAB_ADMITTED_ROOTS.image
 it("private probe session rejects injected transport before consuming a claim", () => {
   for (const key of ["dockerPath", "cleanupTimeoutMilliseconds"]) {
@@ -131,6 +133,26 @@ describe("startup-origin-v8 inert control", () => {
     expect(source).not.toContain('"seat","policyRoot","harnessRoot","requestOrdinal","requestRoot","method","inputRoot","sourceRoot","executableRoot"]||')
     const parsed = ts.createSourceFile("probe-v8.mjs", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
     expect((parsed as any).parseDiagnostics).toHaveLength(0)
+  })
+  it("[startup-origin-v8] accepts the actual encoded V1.19 output cap and binds v1 ordinals 1-3", () => {
+    const source = buildLeanContainerBrokerSourceV8()
+    const encoded = encodeSubprocessIpcRequest({ source: "export const strategy = 1", methodName: "selectActivations", input: {}, outputByteLimit: 262144 })
+    const request = JSON.parse(encoded) as Record<string, unknown>
+    expect(request).toEqual({ source: "export const strategy = 1", methodName: "selectActivations", input: {}, outputByteLimit: 262144 })
+    expect(source).toContain('!exact(request,["source","methodName","input","outputByteLimit"])')
+    expect(source).toContain("request.outputByteLimit!==262144")
+    expect(source).toContain('"probe-"+binding.allocationRoot.slice(7,19)+"-"+binding.caseOrdinal')
+    expect(source).toContain("binding.caseOrdinal>3")
+    expect(readFileSync(new URL("./v1-38-lean-container-match-session.ts", import.meta.url), "utf8")).toContain("caseOrdinal: options.privateProbeBinding.ordinal")
+    const root = `sha256:${"a".repeat(64)}` as const
+    const policyRoot = LEAN_STARTUP_POLICY_V5.root, harnessRoot = leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8()))
+    for (const ordinal of [0, 1, 2, 3]) {
+      const binding = { schemaVersion: "lean-private-probe-startup-binding-v1", allocationRoot: root, allocationDigest: root, debitDigest: root, debitOffset: ordinal * 436, executionOwnerId: `probe-${root.slice(7, 19)}-${ordinal}`, caseOrdinal: ordinal, requestOrdinal: 1, probeRequestRoot: root, requestRoot: root, method: "selectActivations", inputRoot: root, sourceRoot: root, executableRoot: root, policyRoot, harnessRoot }
+      const { schemaVersion: _bindingSchema, ...originBinding } = binding
+      const value = { ...originBinding, schemaVersion: "v1.38-lean-startup-origin-v8", stage: "startup", branch: "lifecycle_failure", ready: false, go: false, wait: "changed", termination: "completed", unknown: true, constructorDurationBucket: "0_9ms", prefixMilestone: "not_entered", readyPublicationDurationBucket: "unknown", finalAtomicState: "state_0", lifecycleBeforeTermination: "error_seen", deadlineOutcome: "unknown" }
+      expect(validateLeanPrivateProbeStartupOriginV8(value, binding).caseOrdinal).toBe(ordinal)
+      expect(() => validateLeanPrivateProbeStartupOriginV8({ ...value, executionOwnerId: `probe-${root.slice(7, 19)}-${(ordinal + 1) % 4}` }, binding)).toThrow()
+    }
   })
 })
 import { issueProspectiveLeagueHostReceiptAuthority, claimProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
@@ -389,8 +411,8 @@ describe("finite correction-only host origin metadata", () => {
   })
   it("builds syntactically valid correction broker source with or without the timing observer", () => {
     for (const source of [buildLeanCorrectionOriginBrokerSource(), buildLeanCorrectionOriginBrokerSource(WORKER_HARNESS_SOURCE)]) {
-      const parsed = ts.createSourceFile("correction-broker.mjs", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
-      expect(parsed.parseDiagnostics).toEqual([])
+      const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.Latest }, reportDiagnostics: true })
+      expect(compiled.diagnostics ?? []).toEqual([])
       expect(source).toContain("broker_synthetic_sigkill")
       expect(source).toContain("workerLifecycle:\"unknown\"")
     }

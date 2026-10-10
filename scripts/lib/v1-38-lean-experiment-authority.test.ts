@@ -1,15 +1,18 @@
 import { describe, expect, it, vi } from "vitest"
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import * as childProcess from "node:child_process"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { leanCanonicalBytes } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { createLeanPrivateProbeScheduleV1 } from "../run-v1-38-lean-private-probe.js"
+import { createLeanPrivateProbeScheduleV1, createLeanPrivateProbeScheduleV2, verifyLeanPrivateProbeV2RetainedJoins } from "../run-v1-38-lean-private-probe.js"
 const gitFixture = vi.hoisted(() => ({ repository: "" }))
 vi.mock("node:child_process", async importOriginal => {
   const actual = await importOriginal<typeof import("node:child_process")>()
-  return { ...actual, execFileSync: ((command: string, args: string[], options: object) => actual.execFileSync(command, command === "git" && gitFixture.repository ? ["-C", gitFixture.repository, ...args] : args, options)) as typeof actual.execFileSync }
+  return { ...actual, execFileSync: ((command: string, args: string[], options: object) => {
+    const historicalCarryRead = args.some(arg => arg.includes("dd67460e6628aebff6bc35c253adaa2cdfea284e") || arg.includes("8bed800f753235deaea1956d1166080973c9bba0"))
+    return actual.execFileSync(command, command === "git" && gitFixture.repository && !historicalCarryRead ? ["-C", gitFixture.repository, ...args] : args, options)
+  }) as typeof actual.execFileSync }
 })
 import * as authority from "./v1-38-lean-experiment-authority.js"
 
@@ -27,6 +30,75 @@ describe("private probe authority surface", () => {
 })
 
 describe("actual inert Git/filesystem debit authority", () => {
+  it("issues and claims a genuine v1 ordinal-1 binding", () => {
+    const repository = realpathSync(mkdtempSync(join(tmpdir(), "probe-authority-v1-ordinal-"))), fixtureClock = vi.spyOn(Date, "now").mockReturnValue(1791640699000)
+    const git = childProcess.execFileSync.bind(childProcess), runGit = (...args: string[]) => String(git("git", ["-C", repository, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })).trim()
+    try {
+      runGit("init", "-q"); runGit("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--allow-empty", "-qm", "source")
+      const sourceHead = runGit("rev-parse", "HEAD"), root = (name: string) => labRoot("fixture-v1-ordinal", name)
+      const allocation = createLeanPrivateProbeScheduleV1({ sourceHead, sourceRoot: root("source"), executableRoot: root("executable"), costSnapshotRoot: authority.LEAN_PRIVATE_PROBE_COST_ROOT })
+      const allocationPath = ".planning/artifacts/v1.38-phase-265-private-probe-allocation-v1.json"
+      mkdirSync(join(repository, ".planning/artifacts"), { recursive: true }); writeFileSync(join(repository, allocationPath), leanCanonicalBytes(allocation)); runGit("add", allocationPath); runGit("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "allocation")
+      const allocationCommit = runGit("rev-parse", "HEAD"), store = join(repository, "inert-store")
+      mkdirSync(store, { mode: 0o700 }); chmodSync(store, 0o700); writeFileSync(join(store, "allocation.json"), leanCanonicalBytes(allocation), { mode: 0o600 }); writeFileSync(join(store, "request.json"), "{}", { mode: 0o600 })
+      gitFixture.repository = repository
+      try {
+        const admission = authority.openLeanPrivateProbeAdmissionV1({ storePath: store, allocationCommit, allocationPath, capacity: authority.observeLeanPrivateProbeCapacityV1(store) })
+        writeFileSync(join(store, "entry.json"), "{}", { mode: 0o600 })
+        const ordinal0 = authority.recordAndIssueLeanPrivateProbeRuntimeAuthorityV1(admission, allocation.cases[0]!, authority.observeLeanPrivateProbeCapacityV1(store))
+        writeFileSync(join(store, "probe-00.json"), "{}", { mode: 0o600 })
+        const ordinal1 = authority.recordAndIssueLeanPrivateProbeRuntimeAuthorityV1(admission, allocation.cases[1]!, authority.observeLeanPrivateProbeCapacityV1(store))
+        expect(ordinal0.binding.ordinal).toBe(0)
+        expect(ordinal1.binding).toMatchObject({ ordinal: 1, executionOwnerId: `probe-${allocation.root.slice(7, 19)}-1`, caseId: allocation.cases[1]!.caseId })
+        const factory = authority.claimLeanPrivateProbeRuntimeAuthority(ordinal1, ordinal1.binding, "factory")
+        const planner = authority.claimLeanPrivateProbeRuntimeAuthority(ordinal1, ordinal1.binding, "planner")
+        const session = authority.claimLeanPrivateProbeRuntimeAuthority(ordinal1, ordinal1.binding, "session")
+        expect(factory.startupGrant).toBe(planner.startupGrant); expect(planner.startupGrant).toBe(session.startupGrant)
+      } finally { gitFixture.repository = "" }
+    } finally { fixtureClock.mockRestore(); rmSync(repository, { recursive: true, force: true }) }
+  })
+  it("authenticates v1 carry and issues one v2 ordinal-0 debit through the real ordered grant claims", () => {
+    const repository = realpathSync(mkdtempSync(join(tmpdir(), "probe-authority-v2-git-")))
+    const fixtureClock = vi.spyOn(Date, "now").mockReturnValue(1791640699000)
+    const git = childProcess.execFileSync.bind(childProcess)
+    const runGit = (...args: string[]) => String(git("git", ["-C", repository, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })).trim()
+    try {
+      runGit("init", "-q"); runGit("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--allow-empty", "-qm", "source")
+      const sourceHead = runGit("rev-parse", "HEAD"), root = (name: string) => labRoot("fixture-v2", name)
+      const allocation = createLeanPrivateProbeScheduleV2({ sourceHead, sourceRoot: root("source"), executableRoot: root("executable"), costSnapshotRoot: authority.LEAN_PRIVATE_PROBE_COST_ROOT })
+      expect(allocation.priorV1Carry).toEqual(authority.authenticateLeanPrivateProbeV1CarryV2())
+      expect(allocation.cases).toHaveLength(1); expect(allocation.cases[0]).toMatchObject({ ordinal: 0, method: "selectActivations" })
+      const allocationPath = ".planning/artifacts/v1.38-phase-265-private-probe-allocation-v2.json"
+      mkdirSync(join(repository, ".planning/artifacts"), { recursive: true }); writeFileSync(join(repository, allocationPath), leanCanonicalBytes(allocation))
+      runGit("add", allocationPath); runGit("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "allocation")
+      const allocationCommit = runGit("rev-parse", "HEAD"), store = join(repository, "inert-store")
+      mkdirSync(store, { mode: 0o700 }); chmodSync(store, 0o700)
+      writeFileSync(join(store, "allocation.json"), leanCanonicalBytes(allocation), { mode: 0o600 })
+      writeFileSync(join(store, "request.json"), "{}", { mode: 0o600 })
+      gitFixture.repository = repository
+      try {
+        const admission = authority.openLeanPrivateProbeAdmissionV1({ storePath: store, allocationCommit, allocationPath, capacity: authority.observeLeanPrivateProbeCapacityV1(store, allocation.priorV1Carry.retainedAllocatedBytes) })
+        writeFileSync(join(store, "entry.json"), "{}", { mode: 0o600 })
+        const issued = authority.recordAndIssueLeanPrivateProbeRuntimeAuthorityV1(admission, allocation.cases[0]!, authority.observeLeanPrivateProbeCapacityV1(store, allocation.priorV1Carry.retainedAllocatedBytes))
+        expect(issued.binding).toMatchObject({ ordinal: 0, method: "selectActivations", executionOwnerId: `probe-${allocation.root.slice(7, 19)}-0`, debitOffset: 0 })
+        const factory = authority.claimLeanPrivateProbeRuntimeAuthority(issued, issued.binding, "factory")
+        const planner = authority.claimLeanPrivateProbeRuntimeAuthority(issued, issued.binding, "planner")
+        const session = authority.claimLeanPrivateProbeRuntimeAuthority(issued, issued.binding, "session")
+        expect(factory.startupGrant).toBe(planner.startupGrant); expect(planner.startupGrant).toBe(session.startupGrant)
+        const ledger = readFileSync(join(store, "ledger.ndjson"), "utf8")
+        expect(ledger.split("\n").filter(Boolean)).toHaveLength(1)
+        const debit = JSON.parse(ledger) as Record<string, unknown>
+        expect(debit).toMatchObject({ ordinal: 0, caseId: "case-0", allocationRoot: allocation.root, inputRoot: allocation.cases[0]!.inputRoot, requestRoot: allocation.cases[0]!.requestRoot })
+        const requestBody = { schemaVersion: "lean-private-probe-request-v2", sourceRoot: allocation.sourceRoot, executableRoot: allocation.executableRoot, tupleRoot: allocation.tupleRoot, runtimeLimitsRoot: allocation.runtimeLimitsRoot, caseRoots: allocation.cases.map(item => ({ ordinal: item.ordinal, method: item.method, inputRoot: item.inputRoot, requestRoot: item.requestRoot })) }
+        const request = { ...requestBody, root: labRoot("lean-private-probe-request-v2", requestBody) }
+        const resultBody = { schemaVersion: "lean-private-probe-result-v1", allocationRoot: allocation.root, sourceHead: allocation.sourceHead, matchCount: 0, attemptedOrdinals: [0], outcomes: [{ ordinal: 0, status: "system_failure", cleanupComplete: false, inputRoot: allocation.cases[0]!.inputRoot, requestRoot: allocation.cases[0]!.requestRoot }] }
+        const result = { ...resultBody, root: labRoot("lean-private-probe-result-v1", resultBody) }
+        expect(verifyLeanPrivateProbeV2RetainedJoins({ allocation, request, result, debitRows: [debit] })).toBe(true)
+        expect(verifyLeanPrivateProbeV2RetainedJoins({ allocation, request, result, debitRows: [] })).toBe(false)
+        expect(readdirSync(store).sort()).toEqual(["allocation.json", "entry.json", "ledger.ndjson", "request.json"])
+      } finally { gitFixture.repository = "" }
+    } finally { fixtureClock.mockRestore(); rmSync(repository, { recursive: true, force: true }) }
+  })
   it.each(["requestRoot", "inputRoot", "caseId", "extra", "delimiter"])("permanently rejects changed prior %s after actual ordered claims", key => {
     const repository = realpathSync(mkdtempSync(join(tmpdir(), "probe-authority-git-")))
     const fixtureClock = vi.spyOn(Date, "now").mockReturnValue(1791640699000)
