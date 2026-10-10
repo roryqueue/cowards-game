@@ -91,11 +91,11 @@ describe("private probe factory authority", () => {
     expect(() => createFactorySupervisedRuntime(options as never)).toThrow("FACTORY_RUNTIME_PRIVATE_PROBE_MODE")
   })
   it("forwards only the opaque capability through the default constructor seam", () => {
-    const { admission, binding, authority } = probeFixture(), claim = vi.spyOn(startupAuthority, "claimLeanPrivateProbeRuntimeAuthority").mockReturnValue(binding)
+    const { admission, binding, authority } = probeFixture(), startupGrant = { schemaVersion: "lean-private-probe-startup-grant-v1" } as any, claim = vi.spyOn(startupAuthority, "claimLeanPrivateProbeRuntimeAuthority").mockReturnValue({ binding, startupGrant })
     const planner = vi.mocked(createPlannerSupervisedRuntime); planner.mockClear()
     expect(() => createFactorySupervisedRuntime({ admission, sourceBytes, privateProbeAuthority: authority, privateProbeBinding: binding, matchId: binding.executionOwnerId, budgetRoot: root("a"), attemptRoot: root("b"), containerName: "probe", ownershipLabel: "probe", factoryLifetimeMs: 5000 })).toThrow("unit container construction forbidden")
     expect(claim).toHaveBeenCalledOnce(); expect(claim.mock.calls[0]![2]).toBe("factory")
-    expect(planner).toHaveBeenCalledOnce(); expect(planner.mock.calls[0]![0].privateProbeAuthority).toBe(authority); expect(planner.mock.calls[0]![0].privateProbeBinding).toBe(binding)
+    expect(planner).toHaveBeenCalledOnce(); expect(planner.mock.calls[0]![0].privateProbeAuthority).toBe(authority); expect(planner.mock.calls[0]![0].privateProbeBinding).toBe(binding); expect(planner.mock.calls[0]![0].privateProbeStartupGrant).toBe(startupGrant)
   })
 })
 describe("private IPC diagnostics injected factory", () => {

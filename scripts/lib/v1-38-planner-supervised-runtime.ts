@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { leanStartupAuthorityDescriptorV5, leanStartupAuthorityDescriptorV8, claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, claimLeanPrivateProbeRuntimeAuthority, type LeanRuntimeAuthority, type LeanPrivateProbeBindingV1, type LeanPrivateProbeRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { leanStartupAuthorityDescriptorV5, leanStartupAuthorityDescriptorV8, claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, claimLeanPrivateProbeRuntimeAuthority, type LeanRuntimeAuthority, type LeanPrivateProbeBindingV1, type LeanPrivateProbeRuntimeAuthority, type LeanPrivateProbeStartupGrantV1 } from "./v1-38-lean-experiment-authority.js"
 import { claimProspectiveLeagueLifetimeAuthority, isProspectiveLeagueLifetimeFixture, type ProspectiveLeagueLifetimeAuthority, type ProspectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { performance } from "node:perf_hooks"
 import { claimProspectiveLeagueHostReceiptAuthority, isProspectiveLeagueHostReceiptFixture } from "./v1-38-league-host-receipt.js"
@@ -42,6 +42,7 @@ export interface PlannerSupervisedRuntimeOptions extends Omit<LeanContainerMatch
   leanExperimentAuthority?: LeanRuntimeAuthority
   privateProbeAuthority?: LeanPrivateProbeRuntimeAuthority
   privateProbeBinding?: LeanPrivateProbeBindingV1
+  privateProbeStartupGrant?: LeanPrivateProbeStartupGrantV1
   revision: StrategyRevision; attemptRoot: LabRoot; budgetRoot: LabRoot;
   /** Source produced by the reviewed observer builder; expectedRoot hashes the
    * actual buildLeanAuthenticatedHarnessSource(source) worker bytes. */
@@ -126,7 +127,8 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   const prospectiveRuntimeBinding = options.prospectiveLifetimeAuthority === undefined ? undefined : { ...options.prospectiveLifetimeAuthority.runtime, sourceRoot: identity.sourceRoot, revisionId: identity.revisionId, executableRoot: identity.executableRoot, tupleId: identity.tupleId, tupleRoot: identity.tupleRoot, runtimeLimitsRoot: identity.runtimeLimitsRoot, image: identity.image }
   const leanRuntimeBinding = options.leanExperimentAuthority === undefined ? undefined : { ...options.leanExperimentAuthority.runtime, sourceRoot: identity.sourceRoot, revisionId: identity.revisionId, executableRoot: identity.executableRoot, tupleId: identity.tupleId, tupleRoot: identity.tupleRoot, runtimeLimitsRoot: identity.runtimeLimitsRoot, image: identity.image }
   const leanExperimentBinding = options.leanExperimentAuthority === undefined ? undefined : { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: leanRuntimeBinding!, seat: options.leanExperimentAuthority.seat }
-  if (options.privateProbeAuthority && probeBinding) claimLeanPrivateProbeRuntimeAuthority(options.privateProbeAuthority, probeBinding, "planner")
+  const probeClaim = options.privateProbeAuthority && probeBinding ? claimLeanPrivateProbeRuntimeAuthority(options.privateProbeAuthority, probeBinding, "planner") : undefined
+  if (probeClaim && options.privateProbeStartupGrant !== probeClaim.startupGrant) throw new TypeError("LAB_RUNTIME_PRIVATE_PROBE_GRANT")
   const lifetime = options.privateProbeAuthority ? 5000 : options.leanExperimentAuthority === undefined ? admitPlannerSupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }, limit) : (startup?.version === 8 ? claimLeanStartupAuthorityV8(options.leanExperimentAuthority, leanExperimentBinding!, "planner") : claimLeanRuntimeAuthority(options.leanExperimentAuthority, leanExperimentBinding!, "planner")).lifetimeMs
   const prospectiveHostReceiptBinding = options.prospectiveHostReceiptAuthority === undefined ? undefined : { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: prospectiveRuntimeBinding!, seat: options.prospectiveLifetimeAuthority!.seat }
   if (options.prospectiveHostReceiptAuthority) claimProspectiveLeagueHostReceiptAuthority(options.prospectiveHostReceiptAuthority, prospectiveHostReceiptBinding!, "planner")

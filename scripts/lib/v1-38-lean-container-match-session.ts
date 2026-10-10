@@ -5,7 +5,7 @@ export { superviseLeanStartupV8 } from "./v1-38-lean-startup-supervisor-v8.mjs"
 import { LEAN_STARTUP_POLICY_V5, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
-import { claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, leanStartupAuthorityDescriptorV8, isLeanCorrectionRuntimeAuthority, claimLeanPrivateProbeRuntimeAuthority, type LeanRuntimeAuthority, type LeanStartupGrantV5, type LeanStartupGrantV8, type LeanPrivateProbeBindingV1, type LeanPrivateProbeRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, leanStartupAuthorityDescriptorV8, isLeanCorrectionRuntimeAuthority, claimLeanPrivateProbeRuntimeAuthority, type LeanRuntimeAuthority, type LeanStartupGrantV5, type LeanStartupGrantV8, type LeanPrivateProbeBindingV1, type LeanPrivateProbeRuntimeAuthority, type LeanPrivateProbeStartupGrantV1 } from "./v1-38-lean-experiment-authority.js"
 import { createHash } from "node:crypto"
 import { spawnSync, execFileSync } from "node:child_process"
 
@@ -49,6 +49,7 @@ export interface LeanContainerMatchSessionOptions {
   readonly leanExperimentBinding?: ProspectiveLeagueLifetimeProviderBinding
   readonly privateProbeAuthority?: LeanPrivateProbeRuntimeAuthority
   readonly privateProbeBinding?: LeanPrivateProbeBindingV1
+  readonly privateProbeStartupGrant?: LeanPrivateProbeStartupGrantV1
   readonly prospectiveHostReceiptAuthority?: ProspectiveLeagueHostReceiptAuthority
   readonly prospectiveHostReceiptBinding?: ProspectiveLeagueLifetimeProviderBinding
   /** Private trusted coordinator only. Omitted by every historical caller. */
@@ -342,6 +343,17 @@ export const validateLeanStartupOriginV8 = (value: unknown, expected?: LeanStart
   if (!extra.every(k => Object.hasOwn(v, k)) || !durations.includes(v.constructorDurationBucket) || !durations.includes(v.readyPublicationDurationBucket) || !["not_entered", "entered", "ready_published", "unknown"].includes(v.prefixMilestone) || !["state_0", "state_1", "state_2", "state_3", "unavailable", "unknown"].includes(v.finalAtomicState) || !["neither_seen", "error_seen", "exit_seen", "both_seen", "unknown"].includes(v.lifecycleBeforeTermination) || !["ready_before_deadline", "startup_deadline", "late_or_boundary", "construction_failure", "unknown"].includes(v.deadlineOutcome) || v.prefixMilestone === "ready_published" && v.readyPublicationDurationBucket === "unknown" || ["not_entered", "entered"].includes(v.prefixMilestone) && v.readyPublicationDurationBucket !== "unknown" || v.ready && (v.prefixMilestone !== "ready_published" || v.deadlineOutcome !== "ready_before_deadline") || v.deadlineOutcome === "ready_before_deadline" && (!v.ready || v.readyPublicationDurationBucket === "2500_plus" || v.readyPublicationDurationBucket === "unknown") || v.deadlineOutcome === "late_or_boundary" && v.ready || v.deadlineOutcome === "construction_failure" && v.branch !== "construction_failure") throw new TypeError("LEAN_STARTUP_ORIGIN_V8")
   return Object.freeze({ ...v })
 }
+const validateLeanPrivateProbeStartupOriginV8 = (value: unknown, expected: Record<string, unknown>): Readonly<Record<string, unknown>> => {
+  const bindingKeys = ["schemaVersion", "allocationRoot", "allocationDigest", "debitDigest", "debitOffset", "executionOwnerId", "caseOrdinal", "requestOrdinal", "probeRequestRoot", "requestRoot", "method", "inputRoot", "sourceRoot", "executableRoot", "policyRoot", "harnessRoot"]
+  const originKeys = [...bindingKeys.filter(key => key !== "schemaVersion"), "schemaVersion", "stage", "branch", "ready", "go", "wait", "termination", "unknown", "constructorDurationBucket", "prefixMilestone", "readyPublicationDurationBucket", "finalAtomicState", "lifecycleBeforeTermination", "deadlineOutcome"]
+  if (!value || typeof value !== "object" || Array.isArray(value) || !exactKeys(value as Record<string, unknown>, originKeys) || Object.keys(expected).some(key => key !== "schemaVersion" && (value as Record<string, unknown>)[key] !== expected[key])) throw new TypeError("LEAN_PRIVATE_PROBE_STARTUP_ORIGIN_V8")
+  const v = value as Record<string, unknown>
+  if (v.schemaVersion !== "v1.38-lean-startup-origin-v8" || !Number.isSafeInteger(v.debitOffset) || Number(v.debitOffset) < 0 || v.caseOrdinal !== 0 || !Number.isSafeInteger(v.requestOrdinal) || Number(v.requestOrdinal) < 1 || !["allocationRoot", "allocationDigest", "debitDigest", "probeRequestRoot", "requestRoot", "inputRoot", "sourceRoot", "executableRoot", "policyRoot", "harnessRoot"].every(key => typeof v[key] === "string" && /^sha256:[a-f0-9]{64}$/u.test(v[key] as string)) || !["selectActivations", "soldierBrain"].includes(String(v.method))) throw new TypeError("LEAN_PRIVATE_PROBE_STARTUP_ORIGIN_V8")
+  const compatBinding = { allocationRoot: v.allocationRoot, chargeRoot: v.debitDigest, seat: "bottom", policyRoot: v.policyRoot, harnessRoot: v.harnessRoot, requestOrdinal: v.requestOrdinal, requestRoot: v.requestRoot, method: v.method, inputRoot: v.inputRoot, sourceRoot: v.sourceRoot, executableRoot: v.executableRoot }
+  const compatOrigin = { ...compatBinding, schemaVersion: "v1.38-lean-startup-origin-v8", stage: v.stage, branch: v.branch, ready: v.ready, go: v.go, wait: v.wait, termination: v.termination, unknown: v.unknown, constructorDurationBucket: v.constructorDurationBucket, prefixMilestone: v.prefixMilestone, readyPublicationDurationBucket: v.readyPublicationDurationBucket, finalAtomicState: v.finalAtomicState, lifecycleBeforeTermination: v.lifecycleBeforeTermination, deadlineOutcome: v.deadlineOutcome }
+  validateLeanStartupOriginV8(compatOrigin, compatBinding as LeanStartupBindingV5)
+  return Object.freeze({ ...v })
+}
 const LEAN_STARTUP_SUPERVISOR_SOURCE_V8 = readFileSync(new URL("./v1-38-lean-startup-supervisor-v8.mjs", import.meta.url), "utf8")
 /** Separate dormant source selector. No route/grant alone selects these bytes. */
 export const buildLeanContainerBrokerSourceV8 = (): string => {
@@ -355,6 +367,15 @@ export const buildLeanContainerBrokerSourceV8 = (): string => {
   source = replace(source, "signalBuffer,policyRoot:binding.policyRoot", "signalBuffer,startupEnteredNs:entered.toString(),policyRoot:binding.policyRoot")
   source = replace(source, "reconcile=supervise(q,worker,port,entered+", 'worker.on("error",()=>{errorSeen=true;failLifecycle()});worker.on("exit",()=>{exitSeen=true;failLifecycle()});reconcile=supervise(q,worker,port,entered+')
   source = replace(source, "wait:(state,ms)=>Atomics.wait(signal,0,state,ms)", 'waitAsync:typeof Atomics.waitAsync!=="function"?undefined:async(state,ms)=>await Atomics.waitAsync(signal,0,state,ms).value,waitReadyPublication:async(ms)=>await Atomics.waitAsync(signal,3,0,ms).value,lifecycleFailure:()=>lifecyclePromise,lifecycle:()=>errorSeen&&exitSeen?"both_seen":errorSeen?"error_seen":exitSeen?"exit_seen":"neither_seen",attribution:()=>({prefixMilestone:Atomics.load(signal,3)===1?"ready_published":Atomics.load(signal,1)!==0?"entered":"not_entered",readyPublicationMs:Atomics.load(signal,3)===1?Atomics.load(signal,2):undefined})')
+  const validationStart = source.indexOf('if((!exact(request,["source","methodName","input"])')
+  const validationEnd = source.indexOf("const result=await superviseLeanStartupV8", validationStart)
+  if (validationStart < 0 || validationEnd < 0) throw new TypeError("LEAN_PRIVATE_PROBE_V8_SEAM")
+  const legacyValidation = source.slice(validationStart, validationEnd)
+  const probeValidation = `if(binding.schemaVersion==="lean-private-probe-startup-binding-v1"){
+if(!exact(binding,["schemaVersion","allocationRoot","allocationDigest","debitDigest","debitOffset","executionOwnerId","caseOrdinal","requestOrdinal","probeRequestRoot","requestRoot","method","inputRoot","sourceRoot","executableRoot","policyRoot","harnessRoot"])||![binding.allocationRoot,binding.allocationDigest,binding.debitDigest,binding.probeRequestRoot,binding.requestRoot,binding.inputRoot,binding.sourceRoot,binding.executableRoot,binding.policyRoot,binding.harnessRoot].every(v=>typeof v==="string"&&/^sha256:[a-f0-9]{64}$/.test(v))||!Number.isSafeInteger(binding.debitOffset)||binding.debitOffset<0||binding.executionOwnerId!=="probe-"+binding.allocationRoot.slice(7,19)+"-0"||binding.caseOrdinal!==0||binding.requestOrdinal!==q.requestId||!Number.isSafeInteger(q.requestId)||q.requestId<1||binding.method!==request.methodName||!exact(request,["source","methodName","input"])||typeof request.source!=="string"||! ["selectActivations","soldierBrain"].includes(request.methodName)||request.outputByteLimit!==undefined||binding.policyRoot!==${JSON.stringify(LEAN_STARTUP_POLICY_V5.root)}||binding.harnessRoot!==${JSON.stringify(leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())))}||binding.requestRoot!=="sha256:"+startupHashV5("sha256").update("v1.38-lean-startup-v8:"+q.requestId+":").update(Buffer.from(q.payloadBase64,"base64")).digest("hex")||binding.executableRoot!=="sha256:"+startupHashV5("sha256").update(request.source).digest("hex"))throw new Error("PRIVATE_PROBE_STARTUP_BINDING_V8");
+}else{${legacyValidation}}
+`
+  source = source.slice(0, validationStart) + probeValidation + source.slice(validationEnd)
   return source.replaceAll("v1.38-lean-startup-v5:", "v1.38-lean-startup-v8:")
 }
 
@@ -437,12 +458,15 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   if (options.correctionOriginObserver !== undefined && (options.infrastructureProfile !== "closeout" || options.prospectiveHostReceiptAuthority !== undefined || options.prospectiveHostReceiptBinding !== undefined || (options.leanExperimentAuthority !== undefined || options.leanExperimentBinding !== undefined) && !isLeanCorrectionRuntimeAuthority(options.leanExperimentAuthority))) throw new TypeError("LEAN_CORRECTION_ORIGIN_PROFILE")
   let hostResponseReceiptMilliseconds: 5000 | undefined
   let startup: Readonly<LeanStartupGrantV5 | LeanStartupGrantV8> | undefined
+  let probeStartup: LeanPrivateProbeStartupGrantV1 | undefined
   const hasProbeAuthority = Reflect.has(options, "privateProbeAuthority"), hasProbeBinding = Reflect.has(options, "privateProbeBinding")
   if (hasProbeAuthority || hasProbeBinding) {
     const binding = options.privateProbeBinding
     if (["dockerPath", "cleanupTimeoutMilliseconds"].some(key => Reflect.has(options, key))) throw new TypeError("LEAN_PRIVATE_PROBE_SESSION_BINDING")
     if (!hasProbeAuthority || !hasProbeBinding || !options.privateProbeAuthority || !binding || Reflect.has(options, "leanExperimentAuthority") || Reflect.has(options, "leanExperimentBinding") || Reflect.has(options, "prospectiveHostReceiptAuthority") || Reflect.has(options, "prospectiveHostReceiptBinding") || Reflect.has(options, "transport") || Reflect.has(options, "streamFactory") || Reflect.has(options, "privateObserver") || Reflect.has(options, "correctionOriginObserver") || Reflect.has(options, "startupOriginObserver") || options.infrastructureProfile !== "closeout" || options.matchId !== binding.executionOwnerId || options.containerName !== `probe-${binding.allocationRoot.slice(7, 19)}-${binding.ordinal}` || options.ownershipLabel !== `probe-${binding.allocationRoot.slice(7, 19)}` || options.image !== binding.image || binding.image !== LAB_ADMITTED_ROOTS.image || binding.tupleRoot !== LAB_ADMITTED_ROOTS.tupleRoot || binding.runtimeLimitsRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot || binding.tupleId !== MATCH_KERNEL.tupleId) throw new TypeError("LEAN_PRIVATE_PROBE_SESSION_BINDING")
-    claimLeanPrivateProbeRuntimeAuthority(options.privateProbeAuthority, binding, "session")
+    const claim = claimLeanPrivateProbeRuntimeAuthority(options.privateProbeAuthority, binding, "session")
+    if (!options.privateProbeStartupGrant || options.privateProbeStartupGrant !== claim.startupGrant) throw new TypeError("LEAN_PRIVATE_PROBE_SESSION_GRANT")
+    probeStartup = claim.startupGrant
     hostResponseReceiptMilliseconds = 5000
   }
   if (["startup", "startupPolicy", "startupGrant", "startupMs"].some(key => key in options)) throw new TypeError("LEAN_STARTUP_OPTION_V5")
@@ -461,7 +485,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
     hostResponseReceiptMilliseconds = claimProspectiveLeagueHostReceiptAuthority(authority, binding, "session")
   }
   assertLeanInfrastructureProfile(options.infrastructureProfile)
-  if (options.startupOriginObserver && !startup || startup && (options.correctionOriginObserver || options.privateObserver)) throw new TypeError("LEAN_STARTUP_OBSERVER_V5")
+  if (options.startupOriginObserver && !startup || (startup || probeStartup) && (options.correctionOriginObserver || options.privateObserver)) throw new TypeError("LEAN_STARTUP_OBSERVER_V5")
   assertSafeIdentity("MATCH_ID", options.matchId); assertSafeIdentity("CONTAINER_NAME", options.containerName); assertSafeIdentity("OWNERSHIP_LABEL", options.ownershipLabel); assertSafeIdentity("IMAGE", options.image)
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$/u.test(options.containerName)) throw new TypeError("LEAN_CONTAINER_SESSION_CONTAINER_NAME_INVALID")
   const dockerPath = options.dockerPath ?? "docker"; const transport = options.transport ?? defaultTransport; const streamFactory = options.streamFactory ?? defaultStreamFactory; const cleanupTimeout = options.cleanupTimeoutMilliseconds ?? DEFAULT_CLEANUP_TIMEOUT_MS
@@ -496,7 +520,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const poison = (): void => { state = "poisoned"; remove() }
   try {
     const started = transport(dockerPath, ["start", containerId], { timeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: CONTROL_BUFFER_BYTES }); assertCleanControlResult(started, "LEAN_CONTAINER_SESSION_START_FAILED")
-    const brokerSource = startup ? startup.version === 8 ? buildLeanContainerBrokerSourceV8() : startup.version === 7 ? buildLeanContainerBrokerSourceV7() : startup.version === 6 ? buildLeanContainerBrokerSourceV6() : buildLeanContainerBrokerSourceV5() : options.correctionOriginObserver !== undefined ? buildLeanCorrectionOriginBrokerSource(options.privateObserver?.harnessSource) : options.privateObserver === undefined ? LEAN_CONTAINER_BROKER_SOURCE : buildLeanObserverBrokerSource(options.privateObserver.harnessSource)
+    const brokerSource = probeStartup ? buildLeanContainerBrokerSourceV8() : startup ? startup.version === 8 ? buildLeanContainerBrokerSourceV8() : startup.version === 7 ? buildLeanContainerBrokerSourceV7() : startup.version === 6 ? buildLeanContainerBrokerSourceV6() : buildLeanContainerBrokerSourceV5() : options.correctionOriginObserver !== undefined ? buildLeanCorrectionOriginBrokerSource(options.privateObserver?.harnessSource) : options.privateObserver === undefined ? LEAN_CONTAINER_BROKER_SOURCE : buildLeanObserverBrokerSource(options.privateObserver.harnessSource)
     stream = streamFactory(dockerPath, ["exec", "-i", containerId, "node", "--input-type=module", "--eval", brokerSource], { startupTimeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: STREAM_FRAME_LIMIT_BYTES })
   } catch { poison(); throw new TypeError("LEAN_CONTAINER_SESSION_START_FAILED") }
   const assertActive = (): void => { if (state === "poisoned") throw new TypeError("LEAN_CONTAINER_SESSION_POISONED"); if (state === "closed") throw new TypeError("LEAN_CONTAINER_SESSION_CLOSED") }
@@ -509,16 +533,17 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
     const timingBinding = observer?.binding(request)
     if (observer && (mode !== "legacy" || timeoutMilliseconds !== 1000 || options.infrastructureProfile !== "closeout" || !timingBinding || timingBinding.method !== request.methodName)) { poison(); throw new TypeError("LEAN_OBSERVER_PROFILE") }
     const payload = Buffer.from(input)
-    const startupBinding: LeanStartupBindingV5 | undefined = startup ? { allocationRoot: startup.allocationRoot, chargeRoot: startup.chargeRoot, seat: startup.seat, policyRoot: startup.policyRoot, harnessRoot: startup.harnessRoot, requestOrdinal: requestId, requestRoot: `sha256:${createHash("sha256").update(`v1.38-lean-startup-v${startup.version === 8 ? 8 : startup.version === 7 ? 7 : startup.version === 6 ? 6 : 5}:${requestId}:`).update(payload).digest("hex")}`, method: request.methodName as LeanStartupBindingV5["method"], inputRoot: labRoot("runtime-input", request.input), sourceRoot: options.leanExperimentAuthority!.runtime.sourceRoot, executableRoot: options.leanExperimentAuthority!.runtime.executableRoot } : undefined
+    const probeStartupBinding = probeStartup && options.privateProbeBinding ? { schemaVersion: "lean-private-probe-startup-binding-v1", allocationRoot: options.privateProbeBinding.allocationRoot, allocationDigest: options.privateProbeBinding.allocationDigest, debitDigest: options.privateProbeBinding.debitDigest, debitOffset: options.privateProbeBinding.debitOffset, executionOwnerId: options.privateProbeBinding.executionOwnerId, caseOrdinal: 0, requestOrdinal: requestId, probeRequestRoot: options.privateProbeBinding.requestRoot, requestRoot: `sha256:${createHash("sha256").update(`v1.38-lean-startup-v8:${requestId}:`).update(payload).digest("hex")}`, method: request.methodName as LeanStartupBindingV5["method"], inputRoot: labRoot("runtime-input", request.input), sourceRoot: options.privateProbeBinding.sourceRoot, executableRoot: options.privateProbeBinding.executableRoot, policyRoot: probeStartup.policyRoot, harnessRoot: probeStartup.harnessRoot } : undefined
+    const startupBinding: LeanStartupBindingV5 | Readonly<Record<string, unknown>> | undefined = probeStartupBinding ?? (startup ? { allocationRoot: startup.allocationRoot, chargeRoot: startup.chargeRoot, seat: startup.seat, policyRoot: startup.policyRoot, harnessRoot: startup.harnessRoot, requestOrdinal: requestId, requestRoot: `sha256:${createHash("sha256").update(`v1.38-lean-startup-v${startup.version === 8 ? 8 : startup.version === 7 ? 7 : startup.version === 6 ? 6 : 5}:${requestId}:`).update(payload).digest("hex")}`, method: request.methodName as LeanStartupBindingV5["method"], inputRoot: labRoot("runtime-input", request.input), sourceRoot: options.leanExperimentAuthority!.runtime.sourceRoot, executableRoot: options.leanExperimentAuthority!.runtime.executableRoot } : undefined)
     const hostRemaining = () => hostDeadline === undefined ? 5000 : Math.max(0, Math.floor(Number(hostDeadline - process.hrtime.bigint()) / 1e6))
     const correctionBinding = options.correctionOriginObserver === undefined ? undefined : { requestOrdinal: requestId, requestRoot: `sha256:${createHash("sha256").update(`v1.38-lean-correction-origin:${requestId}:`).update(payload).digest("hex")}` }
     const frame = `${JSON.stringify({ requestId, mode, payloadBase64: payload.toString("base64"), timeoutMilliseconds, stdoutByteLimit: stdoutLimit, stderrByteLimit: stderrLimit, ...(timingBinding === undefined ? {} : { timingBinding }), ...(correctionBinding === undefined ? {} : { correctionOrigin: correctionBinding }), ...(startupBinding === undefined ? {} : { startup: { binding: startupBinding, hostBudgetMs: hostRemaining() } }) })}\n`
     if (Buffer.byteLength(frame) > STREAM_FRAME_LIMIT_BYTES) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded frame cap") }
     try {
-      if (startup && hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
+      if ((startup || probeStartup) && hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
       const transportStart = observer ? process.hrtime.bigint() : undefined
       let raw: Buffer
-      try { raw = stream!.exchange(frame, { timeoutMilliseconds: startup ? hostRemaining() : hostResponseReceiptMilliseconds ?? timeoutMilliseconds, maxBufferBytes: Math.min(STREAM_FRAME_LIMIT_BYTES, Math.max(stdoutLimit, stderrLimit) * 2 + CONTROL_BUFFER_BYTES) }) }
+      try { raw = stream!.exchange(frame, { timeoutMilliseconds: startup || probeStartup ? hostRemaining() : hostResponseReceiptMilliseconds ?? timeoutMilliseconds, maxBufferBytes: Math.min(STREAM_FRAME_LIMIT_BYTES, Math.max(stdoutLimit, stderrLimit) * 2 + CONTROL_BUFFER_BYTES) }) }
       catch (error) { throw observeFailure(origins, error, objectKey(error) ? streamOrigins.get(stream!)?.get(error) ?? { stage: "stream_exchange", reason: "unknown" } : { stage: "stream_exchange", reason: "unknown" }) }
       const transportMs = transportStart === undefined ? 0 : Number(process.hrtime.bigint() - transportStart) / 1e6
       if (raw.byteLength > STREAM_FRAME_LIMIT_BYTES) throw observeFailure(origins, new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was not one frame"), { stage: "outer_frame", reason: "frame_cap_exceeded" })
@@ -528,7 +553,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
       const value = parsed as Record<string, unknown>
       if (startupBinding) {
         if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64", "startupOrigin"])) throw new TypeError("LEAN_STARTUP_FRAME_V5")
-        const metadata = startup?.version === 8 ? validateLeanStartupOriginV8(value.startupOrigin, startupBinding) : startup?.version === 7 ? validateLeanStartupOriginV7(value.startupOrigin, startupBinding) : startup?.version === 6 ? validateLeanStartupOriginV6(value.startupOrigin, startupBinding) : validateLeanStartupOriginV5(value.startupOrigin, startupBinding)
+        const metadata = probeStartup ? validateLeanPrivateProbeStartupOriginV8(value.startupOrigin, probeStartupBinding!) : startup?.version === 8 ? validateLeanStartupOriginV8(value.startupOrigin, startupBinding as LeanStartupBindingV5) : startup?.version === 7 ? validateLeanStartupOriginV7(value.startupOrigin, startupBinding as LeanStartupBindingV5) : startup?.version === 6 ? validateLeanStartupOriginV6(value.startupOrigin, startupBinding as LeanStartupBindingV5) : validateLeanStartupOriginV5(value.startupOrigin, startupBinding as LeanStartupBindingV5)
         if (hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
         if (metadata.branch !== "complete") {
           if (metadata.termination !== "completed") startupCleanupUncertain = true
@@ -540,7 +565,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
       const correctionOrigin = value.correctionOrigin !== undefined && options.correctionOriginObserver !== undefined && correctionBinding !== undefined ? validateLeanCorrectionOriginMetadata(value.correctionOrigin, correctionBinding) : undefined
       if (correctionOrigin !== undefined) options.correctionOriginObserver!.observe(correctionOrigin)
       const stdout = Buffer.from(value.stdoutBase64, "base64"); const stderr = Buffer.from(value.stderrBase64, "base64")
-      if (startup && hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
+      if ((startup || probeStartup) && hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
       if (stdout.byteLength > stdoutLimit || stderr.byteLength > stderrLimit || stderr.byteLength !== 0) throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Persistent response exceeded cap or emitted stderr")
       if (value.signal !== null) {
         const error = new SubprocessSystemFailure("SUBPROCESS_SIGNAL", "Container method was signalled")
@@ -564,7 +589,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const adapter: StrategyExecutionAdapterV117 = {
     metadata: containerSubprocessStrategyExecutionAdapterMetadata,
     execute(request) {
-      const hostDeadline = startup ? process.hrtime.bigint() + 5_000_000_000n : undefined
+      const hostDeadline = startup || probeStartup ? process.hrtime.bigint() + 5_000_000_000n : undefined
       const stdoutLimit = request.outputByteLimit ?? SUBPROCESS_STDOUT_BYTES, encoded = encodeSubprocessIpcRequest({ source: request.source, methodName: request.methodName, input: request.input, outputByteLimit: request.outputByteLimit })
       const response = runMethod(request, "legacy", request.timeoutMs ?? RUNTIME_TIMEOUT_MS, stdoutLimit, SUBPROCESS_STDERR_BYTES, encoded, hostDeadline)
       try { const result = strictJsonResponse(response.stdout, stdoutLimit, origins); if (hostDeadline !== undefined && process.hrtime.bigint() >= hostDeadline) { poison(); throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted") }; return result }

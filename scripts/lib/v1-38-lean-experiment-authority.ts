@@ -42,6 +42,9 @@ export interface LeanPrivateProbeBindingV1 extends LeanPrivateProbeInvocationV1 
   readonly allocationRoot: LabRoot; readonly allocationDigest: LabRoot; readonly debitDigest: LabRoot; readonly debitOffset: number
   readonly executionOwnerId: string
 }
+export interface LeanPrivateProbeStartupGrantV1 {
+  readonly schemaVersion: "lean-private-probe-startup-grant-v1"; readonly policyRoot: LabRoot; readonly harnessRoot: LabRoot; toJSON(): never
+}
 export interface LeanPrivateProbeAllocationV1 {
   readonly schemaVersion: "lean-private-probe-allocation-v1"; readonly sourceHead: string; readonly matchCount: 0
   readonly cases: readonly LeanPrivateProbeInvocationV1[]; readonly root: LabRoot
@@ -52,10 +55,11 @@ export interface LeanPrivateProbeAllocationV1 {
 export interface LeanPrivateProbeCapacityReceiptV1 { readonly schemaVersion: "lean-private-probe-capacity-v1"; toJSON(): never }
 export interface LeanPrivateProbeAdmissionV1 { readonly schemaVersion: "lean-private-probe-admission-v1"; toJSON(): never }
 type PrivateProbeAdmissionState = { allocation: LeanPrivateProbeAllocationV1; allocationBytes: Buffer; allocationCommit: string; allocationPath: string; storePath: string; nextOrdinal: number; used: boolean }
-type PrivateProbeCapabilityState = { binding: LeanPrivateProbeBindingV1; claims: Set<Layer> }
+type PrivateProbeCapabilityState = { binding: LeanPrivateProbeBindingV1; claims: Set<Layer>; startupGrant: LeanPrivateProbeStartupGrantV1 }
 const privateProbeAdmissions = new WeakMap<object, PrivateProbeAdmissionState>()
 const privateProbeCapacities = new WeakMap<object, { startedAt: number; storePath: string }>()
 const privateProbeAuthorities = new WeakMap<object, PrivateProbeCapabilityState>()
+const privateProbeStartupGrants = new WeakMap<object, { binding: LeanPrivateProbeBindingV1; claims: Set<Layer> }>()
 const opaque = (): never => { throw new TypeError("LEAN_PRIVATE_PROBE_AUTHORITY") }
 const privateProbeFail = (): never => { throw new TypeError("LEAN_PRIVATE_PROBE_AUTHORITY") }
 export const LEAN_PRIVATE_PROBE_COST_ROOT = "sha256:6e271d344297f332e858882c9071f0fc47629e72fda3c0371540e3d607306381" as LabRoot
@@ -205,17 +209,22 @@ export const recordAndIssueLeanPrivateProbeRuntimeAuthorityV1 = (admission: Lean
   if (verifiedRows.length !== state.nextOrdinal + 1 || verifiedRows.some((item, ordinal) => item.ordinal !== ordinal || item.allocationRoot !== state.allocation.root || item.allocationDigest !== leanBytesRoot(state.allocationBytes))) return privateProbeFail()
   const binding: LeanPrivateProbeBindingV1 = freezeLabValue({ ...invocation, allocationRoot: state.allocation.root, allocationDigest: leanBytesRoot(state.allocationBytes), debitDigest: leanBytesRoot(rowBytes), debitOffset: offset, executionOwnerId: `probe-${state.allocation.root.slice(7, 19)}-${invocation.ordinal}` })
   const capability: LeanPrivateProbeRuntimeAuthority = Object.freeze({ schemaVersion: "lean-private-probe-runtime-authority-v1", binding, toJSON: opaque })
-  privateProbeAuthorities.set(capability, { binding, claims: new Set() })
+  const startupGrant: LeanPrivateProbeStartupGrantV1 = Object.freeze({ schemaVersion: "lean-private-probe-startup-grant-v1", policyRoot: LEAN_STARTUP_POLICY_V5.root, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())), toJSON: opaque })
+  privateProbeStartupGrants.set(startupGrant, { binding, claims: new Set() })
+  privateProbeAuthorities.set(capability, { binding, claims: new Set(), startupGrant })
   state.nextOrdinal += 1
   state.used = state.nextOrdinal === state.allocation.cases.length
   return capability
 }
 
-export const claimLeanPrivateProbeRuntimeAuthority = (authority: LeanPrivateProbeRuntimeAuthority, binding: LeanPrivateProbeBindingV1, layer: Layer): LeanPrivateProbeBindingV1 => {
+export const claimLeanPrivateProbeRuntimeAuthority = (authority: LeanPrivateProbeRuntimeAuthority, binding: LeanPrivateProbeBindingV1, layer: Layer): Readonly<{ binding: LeanPrivateProbeBindingV1; startupGrant: LeanPrivateProbeStartupGrantV1 }> => {
   const state = authority && privateProbeAuthorities.get(authority)
   if (!state || authority.schemaVersion !== "lean-private-probe-runtime-authority-v1" || !["factory", "planner", "session"].includes(layer) || state.claims.has(layer) || layer === "planner" && !state.claims.has("factory") || layer === "session" && !state.claims.has("planner") || labRoot("lean-private-probe-binding-v1", binding) !== labRoot("lean-private-probe-binding-v1", state.binding)) return privateProbeFail()
+  const grantState = privateProbeStartupGrants.get(state.startupGrant)
+  if (!grantState || grantState.binding !== state.binding || state.startupGrant.schemaVersion !== "lean-private-probe-startup-grant-v1" || state.startupGrant.policyRoot !== LEAN_STARTUP_POLICY_V5.root || state.startupGrant.harnessRoot !== leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())) || grantState.claims.has(layer) || layer === "planner" && !grantState.claims.has("factory") || layer === "session" && !grantState.claims.has("planner")) return privateProbeFail()
   state.claims.add(layer)
-  return state.binding
+  grantState.claims.add(layer)
+  return Object.freeze({ binding: state.binding, startupGrant: state.startupGrant })
 }
 export interface LeanStartupGrantV5 { readonly version?: 6 | 7; readonly allocationRoot: LabRoot; readonly chargeRoot: LabRoot; readonly seat: "bottom" | "top"; readonly policyRoot: LabRoot; readonly harnessRoot: LabRoot }
 export interface LeanStartupGrantV8 extends Omit<LeanStartupGrantV5, "version"> { readonly version: 8; toJSON(): never }

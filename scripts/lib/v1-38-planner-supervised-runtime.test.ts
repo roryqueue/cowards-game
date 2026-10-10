@@ -35,6 +35,16 @@ it("private probe planner rejects mixed authority and injected transport before 
   expect(() => createPlannerSupervisedRuntime({ privateProbeAuthority: fake, privateProbeBinding: binding, transport: undefined } as never)).toThrow("LAB_RUNTIME_PRIVATE_PROBE_MODE")
   expect(() => createPlannerSupervisedRuntime({ privateProbeAuthority: fake, privateProbeBinding: binding, leanExperimentAuthority: {} } as never)).toThrow("LAB_RUNTIME_PRIVATE_PROBE_MODE")
 })
+it("private probe planner requires the exact grant returned by its ordered claim and passes it to the session", () => {
+  const rev = revision(), binding = { allocationRoot: labRoot("probe", "allocation"), debitDigest: labRoot("probe", "debit"), executionOwnerId: "probe-owner", ordinal: 0, caseId: "probe-00", method: "selectActivations", sourceRoot: `sha256:${createHash("sha256").update(rev.source).digest("hex")}`, executableRoot: `sha256:${rev.metadata.sourceArtifact!.hash}`, requestRoot: labRoot("probe", "request"), inputRoot: labRoot("probe", "input"), image: LAB_ADMITTED_ROOTS.image, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, allocationDigest: labRoot("probe", "digest"), debitOffset: 0 }
+  const authority = { schemaVersion: "lean-private-probe-runtime-authority-v1", binding } as any, startupGrant = { schemaVersion: "lean-private-probe-startup-grant-v1" } as any
+  const claim = vi.spyOn(startupAuthority, "claimLeanPrivateProbeRuntimeAuthority").mockReturnValue({ binding, startupGrant })
+  const session = vi.spyOn(startupSession, "createLeanContainerMatchSession").mockImplementation(() => { throw Error("INERT_PROBE_SESSION") })
+  const options = { revision: rev, privateProbeAuthority: authority, privateProbeBinding: binding, privateProbeStartupGrant: startupGrant, attemptRoot: binding.debitDigest, budgetRoot: binding.allocationRoot, matchId: binding.executionOwnerId, containerName: "probe-" + binding.allocationRoot.slice(7, 19) + "-0", ownershipLabel: "probe-" + binding.allocationRoot.slice(7, 19), image: binding.image }
+  expect(() => createPlannerSupervisedRuntime(options as never)).toThrow("INERT_PROBE_SESSION")
+  expect(claim).toHaveBeenCalledOnce(); expect(claim.mock.calls[0]![2]).toBe("planner")
+  expect(session.mock.calls[0]![0].privateProbeStartupGrant).toBe(startupGrant)
+})
 import type { LeanContainerMatchTransport, LeanContainerPersistentStreamFactory } from "./v1-38-lean-container-match-session.js"
 import { buildLeanAuthenticatedHarnessSource } from "./v1-38-lean-container-match-session.js"
 import { prospectiveLifetimeFixture } from "../../packages/strategy-lab/src/league/allocation.test.js"

@@ -34,7 +34,7 @@ describe("startup-origin-v8 inert control", () => {
     const source = readFileSync(new URL("./v1-38-lean-container-match-session.ts", import.meta.url), "utf8")
     expect(source).toContain('leanStartupAuthorityDescriptorV8(authority) ? claimLeanStartupAuthorityV8(authority, binding, "session")')
     expect(source).toContain('startup.version === 8 ? buildLeanContainerBrokerSourceV8()')
-    expect(source).toContain('startup?.version === 8 ? validateLeanStartupOriginV8(value.startupOrigin, startupBinding)')
+    expect(source).toContain('probeStartup ? validateLeanPrivateProbeStartupOriginV8(value.startupOrigin, probeStartupBinding!)')
   })
   const root: `sha256:${string}` = `sha256:${"a".repeat(64)}`
   const binding = { allocationRoot: root, chargeRoot: root, seat: "bottom" as const, policyRoot: root, harnessRoot: root, requestOrdinal: 1, requestRoot: root, method: "selectActivations" as const, inputRoot: root, sourceRoot: root, executableRoot: root }
@@ -120,6 +120,17 @@ describe("startup-origin-v8 inert control", () => {
     expect(harness).toContain("trustedStoreV5(trustedControlV5,3,1)")
     expect(harness.indexOf("trustedWaitGoV5();")).toBeLessThan(harness.indexOf("const workerData=Object.freeze"))
     expect(s.buildLeanContainerBrokerSourceV7()).not.toContain("waitAsync")
+  })
+  it("[startup-origin-v8] emits one exact non-Match probe branch with fixed limits and no seat/charge keys", async () => {
+    const s = await import("./v1-38-lean-container-match-session.js") as any
+    const source = s.buildLeanContainerBrokerSourceV8()
+    expect(source).toContain('binding.schemaVersion==="lean-private-probe-startup-binding-v1"')
+    expect(source).toContain('"allocationDigest","debitDigest","debitOffset","executionOwnerId","caseOrdinal","requestOrdinal","probeRequestRoot"')
+    expect(source).toContain('"v1.38-lean-startup-v8:"+q.requestId+":"')
+    expect(source).toContain("binding.method!==request.methodName")
+    expect(source).not.toContain('"seat","policyRoot","harnessRoot","requestOrdinal","requestRoot","method","inputRoot","sourceRoot","executableRoot"]||')
+    const parsed = ts.createSourceFile("probe-v8.mjs", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
+    expect((parsed as any).parseDiagnostics).toHaveLength(0)
   })
 })
 import { issueProspectiveLeagueHostReceiptAuthority, claimProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
