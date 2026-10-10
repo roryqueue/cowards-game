@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Fresh single-case source gates closed; unique v2 preparation and ROOT entry next
+status: awaiting_human_resource_decision
+stopped_at: Single-case diagnostic and unique retained verification passed; fresh Match-enabled time allowance needed
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: Independent source review and verification closed with explicit warnings; ROOT checks passed within scope
+last_activity_desc: One private non-Match call succeeded with cleanup and independent verification; no Matches authorized by this hour
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION — ONE-CASE DIAGNOSTIC SUCCESS / MATCH TIME DECISION (2026-10-10 21:50UTC). Actual unique v2 prepare closed; canonical allocation c98a6d3f/source827b4341/roota3e6546b. ROOT entry71106 closedexit0, one ordinal0success/evidenceVerifiedtrue/cleanupComplete true, ZERO Matches. One independent retained reader closedexit0/verifiedtrue/resultd6cdd088; safe HOUR-RETAINED-VERIFICATION-v2 and ROOT HOUR-RESULT-v2. Case3072ms; seven private files28672B plus canonical4096B. All agents/commands closed and source/HEAD hold released after unique verification. Old v1 hashes match; old artifacts/charges/window immutable, no retry/refund/retrocredit. Source gaps remain unwaived and old physical failure cause unknown. This establishes only one non-Match call, not full-Match or league feasibility. Current60-minute scope explicitly grants ZERO Matches/no third allocation; sole route now ended. Original optional2Match allowance expired13:58:52UTC. NEXT genuinely human-only choice: fresh two-hour Match-enabled total allowance for at most2private current-rules feasibility Matches and verification, no further standalone probes, all other limits/accounting unchanged. Proposal only, NOT approved. Standing distinct-route approval removes repeated literals but cannot extend an expired allowance or turn this hour into Match authority. Do not launch another probe/Match or repeat unchanged heavy checks while pending. LEAG/Plan16/Phase265/baseline/freeze/formation/holdout/public/counting/production/milestone remain incomplete. Earlier checkpoints are history.
 
 CURRENT CONTINUATION — FRESH HOUR SOURCE GATES CLOSED (2026-10-10 21:45UTC). Functional source e63e2f6d/current summary HEAD6fb25879; independent SOURCE-REVIEW-v2 and SOURCE-VERIFICATION-v2 closed PASS_WITH_WARNINGS, zero source blockers. ROOT focused17/17, actual runtime-js project types and factory1439files/zero violations passed; exact scoped strict8 unchanged diagnostics are NOT clean, inherited cleanup failure and generated-broker/producer-reader coverage gaps remain unwaived. No actual v2 allocation/entry/reader yet. Next exactly one fresh v2 preparation, direct-child allocation commit, unique ROOT entry and appropriate unique independent retained verification. Hold source/HEAD through actual entry and reader closure. Approved21:30..22:30UTC, carry319858903/cap323458903,31-minute reserve/frontier21:59UTC unchanged. ZERO Matches; old v1 immutable/expired; no third allocation or retry. LEAG, baseline, freeze, formation, holdout, counted/public/production and milestone completion remain pending. Earlier checkpoints are history.
 
