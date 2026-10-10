@@ -428,8 +428,10 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const hasProbeAuthority = Reflect.has(options, "privateProbeAuthority"), hasProbeBinding = Reflect.has(options, "privateProbeBinding")
   if (hasProbeAuthority || hasProbeBinding) {
     const binding = options.privateProbeBinding
+    if (["dockerPath", "cleanupTimeoutMilliseconds"].some(key => Reflect.has(options, key))) throw new TypeError("LEAN_PRIVATE_PROBE_SESSION_BINDING")
     if (!hasProbeAuthority || !hasProbeBinding || !options.privateProbeAuthority || !binding || Reflect.has(options, "leanExperimentAuthority") || Reflect.has(options, "leanExperimentBinding") || Reflect.has(options, "prospectiveHostReceiptAuthority") || Reflect.has(options, "prospectiveHostReceiptBinding") || Reflect.has(options, "transport") || Reflect.has(options, "streamFactory") || Reflect.has(options, "privateObserver") || Reflect.has(options, "correctionOriginObserver") || Reflect.has(options, "startupOriginObserver") || options.infrastructureProfile !== "closeout" || options.matchId !== binding.executionOwnerId || options.containerName !== `probe-${binding.allocationRoot.slice(7, 19)}-${binding.ordinal}` || options.ownershipLabel !== `probe-${binding.allocationRoot.slice(7, 19)}` || options.image !== binding.image || binding.image !== LAB_ADMITTED_ROOTS.image || binding.tupleRoot !== LAB_ADMITTED_ROOTS.tupleRoot || binding.runtimeLimitsRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot || binding.tupleId !== MATCH_KERNEL.tupleId) throw new TypeError("LEAN_PRIVATE_PROBE_SESSION_BINDING")
     claimLeanPrivateProbeRuntimeAuthority(options.privateProbeAuthority, binding, "session")
+    hostResponseReceiptMilliseconds = 5000
   }
   if (["startup", "startupPolicy", "startupGrant", "startupMs"].some(key => key in options)) throw new TypeError("LEAN_STARTUP_OPTION_V5")
   if ("hostResponseReceiptMilliseconds" in options) throw new TypeError("LEAN_HOST_RECEIPT_SCALAR")
@@ -488,7 +490,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const assertActive = (): void => { if (state === "poisoned") throw new TypeError("LEAN_CONTAINER_SESSION_POISONED"); if (state === "closed") throw new TypeError("LEAN_CONTAINER_SESSION_CLOSED") }
   const runMethod = (request: StrategyExecutionRequest, mode: "legacy" | "v117", timeoutMilliseconds: number, stdoutLimit: number, stderrLimit: number, input: string | Uint8Array, hostDeadline?: bigint): LeanContainerTransportResult => {
     assertActive(); const requestId = nextRequestId++; const inputBytes = typeof input === "string" ? Buffer.byteLength(input) : input.byteLength
-    if (hostResponseReceiptMilliseconds !== undefined && (`sha256:${createHash("sha256").update(request.source).digest("hex")}` !== (options.leanExperimentAuthority ?? options.prospectiveHostReceiptAuthority)!.runtime.executableRoot || mode === "legacy" && timeoutMilliseconds !== 1000)) { poison(); throw new TypeError("LEAN_HOST_RECEIPT_REQUEST_BINDING") }
+    if (hostResponseReceiptMilliseconds !== undefined && (`sha256:${createHash("sha256").update(request.source).digest("hex")}` !== (options.privateProbeBinding?.executableRoot ?? (options.leanExperimentAuthority ?? options.prospectiveHostReceiptAuthority)!.runtime.executableRoot) || mode === "legacy" && timeoutMilliseconds !== 1000)) { poison(); throw new TypeError("LEAN_HOST_RECEIPT_REQUEST_BINDING") }
     if (inputBytes > STREAM_FRAME_LIMIT_BYTES / 2) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded payload cap") }
     const observer = options.privateObserver
     if (options.correctionOriginObserver !== undefined && (mode !== "legacy" || timeoutMilliseconds !== 1000)) { poison(); throw new TypeError("LEAN_CORRECTION_ORIGIN_REQUEST_PROFILE") }

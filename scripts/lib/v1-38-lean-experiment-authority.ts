@@ -121,7 +121,10 @@ export const openLeanPrivateProbeAdmissionV1 = (input: { readonly storePath: str
 /** Append/fsync/reopen the exact next debit before minting a one-invocation handle. */
 export const recordAndIssueLeanPrivateProbeRuntimeAuthorityV1 = (admission: LeanPrivateProbeAdmissionV1, invocation: LeanPrivateProbeInvocationV1, capacity: LeanPrivateProbeCapacityReceiptV1): LeanPrivateProbeRuntimeAuthority => {
   const state = privateProbeAdmissions.get(admission), receipt = privateProbeCapacities.get(capacity)
-  if (!state || state.used || !receipt || receipt.storePath !== state.storePath || performance.now() - receipt.startedAt > 30_000) return privateProbeFail()
+  // Uncertain issuance is terminal, even if the caller restores the files.
+  if (state && !state.used) state.used = true
+  else return privateProbeFail()
+  if (!receipt || receipt.storePath !== state.storePath || performance.now() - receipt.startedAt > 30_000) return privateProbeFail()
   privateProbeCapacities.delete(capacity)
   const expected = state.allocation.cases[state.nextOrdinal]
   if (!expected || canonicalPrivateProbe(expected).compare(canonicalPrivateProbe(invocation)) !== 0) return privateProbeFail()
@@ -135,8 +138,8 @@ export const recordAndIssueLeanPrivateProbeRuntimeAuthorityV1 = (admission: Lean
   const ledgerPath = resolve(state.storePath, "ledger.ndjson")
   let prior: Buffer<ArrayBufferLike> = Buffer.alloc(0)
   try { prior = privateProbeFile(ledgerPath, 65_536, 0o600) } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") return privateProbeFail() }
-  const rows = prior.length ? prior.toString("utf8").trimEnd().split("\n").map(line => JSON.parse(line) as Record<string, unknown>) : []
-  if (prior.length && prior.at(-1) !== 10 || rows.length !== state.nextOrdinal || rows.some((row, ordinal) => row.ordinal !== ordinal || row.allocationRoot !== state.allocation.root)) return privateProbeFail()
+  const expectedPrior = Buffer.concat(state.allocation.cases.slice(0, state.nextOrdinal).map(item => Buffer.concat([canonicalPrivateProbe({ schemaVersion: "lean-private-probe-debit-v1", allocationRoot: state.allocation.root, allocationDigest: leanBytesRoot(state.allocationBytes), ordinal: item.ordinal, caseId: item.caseId, requestRoot: item.requestRoot, inputRoot: item.inputRoot }), Buffer.from("\n")])))
+  if (!prior.equals(expectedPrior)) return privateProbeFail()
   const offset = prior.length
   const row = { schemaVersion: "lean-private-probe-debit-v1", allocationRoot: state.allocation.root, allocationDigest: leanBytesRoot(state.allocationBytes), ordinal: invocation.ordinal, caseId: invocation.caseId, requestRoot: invocation.requestRoot, inputRoot: invocation.inputRoot }
   const rowBytes = Buffer.concat([canonicalPrivateProbe(row), Buffer.from("\n")])
@@ -164,7 +167,7 @@ export const recordAndIssueLeanPrivateProbeRuntimeAuthorityV1 = (admission: Lean
   const capability: LeanPrivateProbeRuntimeAuthority = Object.freeze({ schemaVersion: "lean-private-probe-runtime-authority-v1", binding, toJSON: opaque })
   privateProbeAuthorities.set(capability, { binding, claims: new Set() })
   state.nextOrdinal += 1
-  if (state.nextOrdinal === state.allocation.cases.length) state.used = true
+  state.used = state.nextOrdinal === state.allocation.cases.length
   return capability
 }
 

@@ -67,6 +67,7 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
   const hasRuntimeOverride = Reflect.has(supplied, "createRuntime")
   const hasProbeAuthority = Reflect.has(supplied, "privateProbeAuthority"), hasProbeBinding = Reflect.has(supplied, "privateProbeBinding")
   if (hasProbeAuthority || hasProbeBinding) {
+    if (["dockerPath", "cleanupTimeoutMilliseconds"].some(key => Reflect.has(supplied, key))) return fail("PRIVATE_PROBE_MODE")
     if (!hasProbeAuthority || !hasProbeBinding || !options.privateProbeAuthority || !options.privateProbeBinding || hasRuntimeOverride || ["leanExperimentAuthority", "prospectiveLifetimeAuthority", "prospectiveLifetimeMs", "prospectiveHostReceiptAuthority", "retryV4LifetimeGrant", "retryV4RuntimeBinding", "observerHarness", "privateObserver", "transport", "streamFactory", "benchmarkLifetimeMs", "startupOriginObserver", "correctionOriginObserver"].some(key => Reflect.has(supplied, key))) return fail("PRIVATE_PROBE_MODE")
     if (options.privateProbeBinding.executionOwnerId !== options.matchId || options.privateProbeBinding.image !== LAB_ADMITTED_ROOTS.image || options.image !== undefined && options.image !== LAB_ADMITTED_ROOTS.image) return fail("PRIVATE_PROBE_IDENTITY")
   }
