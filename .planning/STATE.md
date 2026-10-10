@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh ordinal5 diagnostic prepared; unique ROOT entry next
+stopped_at: Diagnostic5 failed; envelope closed; bounded source-only diagnosis next
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: Fresh diagnostic5 request/helper independently clean reviewed and finalized; one immutable allocation prepared with zero current charges
+last_activity_desc: Unique diagnostic5 and ordinary verifier closed; failed-result custody authenticated; source and HEAD hold released without baseline credit
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — DIAGNOSTIC v15-5 FAILED / FOUR-PAIR ENVELOPE CLOSED / SOURCE HOLD RELEASED (2026-10-10).
+
+Unique MAIN entry18160 CLOSED0; actual parent96363/child96453 absent, child-terminal exit0/signalnull/197281ms. ONE independent ordinary verifier18947 CLOSED1; compact result a307cd1a/raw11a40327 is diagnostic_only/system_failure/SUPERVISOR_FAILURE/null outcome/cleanuptrue, 14 invocations/67058ms/zero retained telemetry. Origin-v8 and finite parent reason arrays are empty; initiating physical cause UNKNOWN, zero telemetry is not proof of no gameplay/transient work. Actual refusal9a803390/carry0037ffe7/holde4249d8f are PRESENT in the correct request -tmp directory; wrapper closure null pointers do not prove absence. Corrected unique TERMINAL-VERIFICATION-v1 raw70be3e18 FULL read: gaps_found2/3, no accepted check or FINAL. ROOT actual default closed-pair authenticator15312 CLOSED0 confirms pair6e271d34/rawefe0acbd with current1/cumulative40, 244943850ms/29970432B/1077survivors, baselineCarryRootnull, endsEnvelopetrue/four_spent_pairs. Five time intervals closed. Held HEADd3af5099/sourceaee251db/b4f0e115/985 unchanged through actual closure and unique verification. ROOT explicitly RELEASES source AND HEAD hold after those authenticated joins; no second reader, fallback, manual publisher, refund or old-byte change. Every consumed artifact remains immutable/cost-only/non-authorizing. No conditional baseline or automatic ordinal6 authority. Next ONE bounded GSD diagnosis-only trace of missing finite failure attribution; no Match/provider/runtime execution or repeated historical scan. Same original02:14:32UTC stop/01:43:32sourcefrontier/01:33:32entrycutoff/FULL108M/ALLwall/31reserve/RAM3GB/disk15GB/300Matches/guest1000/host5000/startup2500/Match600000/privacy/gameplay bounds. Phase265/LEAG/baseline/freeze/formation/holdout/public/counting/production/archive/tag remain incomplete/unadmitted. Earlier checkpoints history.
 
 CURRENT CHECKPOINT — FRESH DIAGNOSTIC v15-5 PREPARED / UNIQUE MAIN ENTRY NEXT (2026-10-10).
 
