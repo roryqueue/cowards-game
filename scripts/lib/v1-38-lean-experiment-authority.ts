@@ -11,8 +11,10 @@ import { defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
-import { constants, openSync, closeSync, readFileSync, lstatSync, realpathSync, fstatSync } from "node:fs"
+import { constants, openSync, closeSync, readFileSync, lstatSync, realpathSync, fstatSync, statfsSync, writeSync, fsyncSync } from "node:fs"
 import { resolve } from "node:path"
+import { execFileSync } from "node:child_process"
+import { performance } from "node:perf_hooks"
 import { leanCanonicalBytes, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { leanCapsForAllocation, leanSupervisorAllocationMode, LEAN_STARTUP_POLICY_V5, LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY, type LeanCorrectionAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
@@ -28,6 +30,137 @@ export interface LeanBaselinePair {
   readonly topRole: string; readonly topSourceRoot: LabRoot; readonly topSnapshotRoot: LabRoot; readonly root: LabRoot
 }
 type Layer = "factory" | "planner" | "session"
+
+/** No-Match probe capability. It is deliberately disjoint from LeanRuntimeAuthority. */
+export interface LeanPrivateProbeRuntimeAuthority { readonly schemaVersion: "lean-private-probe-runtime-authority-v1"; readonly binding: LeanPrivateProbeBindingV1; toJSON(): never }
+export interface LeanPrivateProbeInvocationV1 {
+  readonly ordinal: number; readonly caseId: string; readonly method: "selectActivations" | "soldierBrain"
+  readonly sourceRoot: LabRoot; readonly executableRoot: LabRoot; readonly requestRoot: LabRoot; readonly inputRoot: LabRoot
+  readonly image: string; readonly tupleId: string; readonly tupleRoot: LabRoot; readonly runtimeLimitsRoot: LabRoot
+}
+export interface LeanPrivateProbeBindingV1 extends LeanPrivateProbeInvocationV1 {
+  readonly allocationRoot: LabRoot; readonly allocationDigest: LabRoot; readonly debitDigest: LabRoot; readonly debitOffset: number
+  readonly executionOwnerId: string
+}
+export interface LeanPrivateProbeAllocationV1 {
+  readonly schemaVersion: "lean-private-probe-allocation-v1"; readonly sourceHead: string; readonly matchCount: 0
+  readonly cases: readonly LeanPrivateProbeInvocationV1[]; readonly root: LabRoot
+  readonly sourceRoot: LabRoot; readonly executableRoot: LabRoot; readonly image: string; readonly tupleId: string
+  readonly tupleRoot: LabRoot; readonly runtimeLimitsRoot: LabRoot; readonly costSnapshotRoot: LabRoot
+  readonly ceilings: Readonly<{ guestMs: 1000; hostMs: 5000; startupMs: 2500; matchMs: 600000 }>
+}
+export interface LeanPrivateProbeCapacityReceiptV1 { readonly schemaVersion: "lean-private-probe-capacity-v1"; toJSON(): never }
+export interface LeanPrivateProbeAdmissionV1 { readonly schemaVersion: "lean-private-probe-admission-v1"; toJSON(): never }
+type PrivateProbeAdmissionState = { allocation: LeanPrivateProbeAllocationV1; allocationBytes: Buffer; allocationCommit: string; allocationPath: string; storePath: string; nextOrdinal: number; used: boolean }
+type PrivateProbeCapabilityState = { binding: LeanPrivateProbeBindingV1; claims: Set<Layer> }
+const privateProbeAdmissions = new WeakMap<object, PrivateProbeAdmissionState>()
+const privateProbeCapacities = new WeakMap<object, { startedAt: number; storePath: string }>()
+const privateProbeAuthorities = new WeakMap<object, PrivateProbeCapabilityState>()
+const opaque = (): never => { throw new TypeError("LEAN_PRIVATE_PROBE_AUTHORITY") }
+const privateProbeFail = (): never => { throw new TypeError("LEAN_PRIVATE_PROBE_AUTHORITY") }
+const canonicalPrivateProbe = (value: unknown): Buffer => Buffer.from(leanCanonicalBytes(value))
+const privateProbeFile = (path: string, maxBytes: number, expectedMode: number): Buffer => {
+  const before = lstatSync(path)
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.uid !== (typeof process.getuid === "function" ? process.getuid() : before.uid) || (before.mode & 0o777) !== expectedMode || before.size > maxBytes || realpathSync(path) !== path) return privateProbeFail()
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
+  try {
+    const opened = fstatSync(fd)
+    if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino || opened.nlink !== 1 || opened.size !== before.size || (opened.mode & 0o777) !== expectedMode) return privateProbeFail()
+    const bytes = readFileSync(fd)
+    if (bytes.byteLength !== opened.size || bytes.byteLength > maxBytes) return privateProbeFail()
+    return bytes
+  } finally { closeSync(fd) }
+}
+const validatePrivateProbeAllocation = (value: unknown): LeanPrivateProbeAllocationV1 => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return privateProbeFail()
+  const allocation = value as LeanPrivateProbeAllocationV1
+  const keys = ["schemaVersion", "sourceHead", "matchCount", "cases", "root", "sourceRoot", "executableRoot", "image", "tupleId", "tupleRoot", "runtimeLimitsRoot", "costSnapshotRoot", "ceilings"]
+  if (!exactLabKeys(allocation, keys) || allocation.schemaVersion !== "lean-private-probe-allocation-v1" || !/^[a-f0-9]{40,64}$/.test(allocation.sourceHead) || allocation.matchCount !== 0 || !Array.isArray(allocation.cases) || allocation.cases.length !== 4 || allocation.cases.some((item, ordinal) => !item || item.ordinal !== ordinal || !["selectActivations", "soldierBrain"].includes(item.method) || typeof item.caseId !== "string" || !/^sha256:[a-f0-9]{64}$/.test(item.sourceRoot) || !/^sha256:[a-f0-9]{64}$/.test(item.executableRoot) || !/^sha256:[a-f0-9]{64}$/.test(item.requestRoot) || !/^sha256:[a-f0-9]{64}$/.test(item.inputRoot)) || !/^sha256:[a-f0-9]{64}$/.test(allocation.sourceRoot) || !/^sha256:[a-f0-9]{64}$/.test(allocation.executableRoot) || typeof allocation.image !== "string" || allocation.tupleId !== MATCH_KERNEL.tupleId || allocation.tupleRoot !== LAB_ADMITTED_ROOTS.tupleRoot || allocation.runtimeLimitsRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot || !/^sha256:[a-f0-9]{64}$/.test(allocation.costSnapshotRoot) || allocation.ceilings?.guestMs !== 1000 || allocation.ceilings.hostMs !== 5000 || allocation.ceilings.startupMs !== 2500 || allocation.ceilings.matchMs !== 600000) return privateProbeFail()
+  const { root, ...body } = allocation
+  if (root !== labRoot("lean-private-probe-allocation-v1", body) || allocation.cases.some(item => item.sourceRoot !== allocation.sourceRoot || item.executableRoot !== allocation.executableRoot || item.image !== allocation.image || item.tupleId !== allocation.tupleId || item.tupleRoot !== allocation.tupleRoot || item.runtimeLimitsRoot !== allocation.runtimeLimitsRoot)) return privateProbeFail()
+  return freezeLabValue(structuredClone(allocation))
+}
+
+/** Sample process capacity in this process; receipts cannot be caller-constructed. */
+export const observeLeanPrivateProbeCapacityV1 = (storePath: string): LeanPrivateProbeCapacityReceiptV1 => {
+  const path = resolve(storePath), stat = statfsSync(path), memory = process.memoryUsage()
+  if (memory.rss > 3_000_000_000 || stat.bavail * stat.bsize < 2_000_000_000) return privateProbeFail()
+  const receipt = Object.freeze({ schemaVersion: "lean-private-probe-capacity-v1" as const, toJSON: opaque })
+  privateProbeCapacities.set(receipt, { startedAt: performance.now(), storePath: path })
+  return receipt
+}
+
+/** Authenticate the committed allocation and fresh private store before issuing an admission handle. */
+export const openLeanPrivateProbeAdmissionV1 = (input: { readonly storePath: string; readonly allocationCommit: string; readonly allocationPath: string; readonly capacity: LeanPrivateProbeCapacityReceiptV1 }): LeanPrivateProbeAdmissionV1 => {
+  const capacity = privateProbeCapacities.get(input.capacity)
+  const storePath = resolve(input.storePath), allocationPath = resolve(input.allocationPath)
+  if (!capacity || capacity.storePath !== storePath || performance.now() - capacity.startedAt > 30_000 || !/^[a-f0-9]{40,64}$/.test(input.allocationCommit) || ![".planning/artifacts/v1.38-phase-265-private-probe-allocation-v1.json", ".planning/artifacts/v1.38-phase-265-private-probe-allocation-v2.json"].includes(input.allocationPath)) return privateProbeFail()
+  privateProbeCapacities.delete(input.capacity)
+  const directory = lstatSync(storePath)
+  if (!directory.isDirectory() || directory.isSymbolicLink() || directory.uid !== (typeof process.getuid === "function" ? process.getuid() : directory.uid) || (directory.mode & 0o777) !== 0o700 || realpathSync(storePath) !== storePath) return privateProbeFail()
+  const allocationBytes = privateProbeFile(resolve(storePath, "allocation.json"), 65_536, 0o600)
+  const parsed = JSON.parse(allocationBytes.toString("utf8")) as unknown
+  const allocation = validatePrivateProbeAllocation(parsed)
+  if (!allocationBytes.equals(canonicalPrivateProbe(allocation))) return privateProbeFail()
+  const output = execFileSync("git", ["rev-list", "--parents", "-n", "1", input.allocationCommit], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 4096 }).trim().split(/\s+/u)
+  if (output.length !== 2 || output[1] !== allocation.sourceHead) return privateProbeFail()
+  const committed = execFileSync("git", ["show", `${input.allocationCommit}:${input.allocationPath}`], { encoding: "buffer", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 65_537 })
+  if (!Buffer.from(committed).equals(allocationBytes) || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 4096 }).trim() !== input.allocationCommit) return privateProbeFail()
+  const admission: LeanPrivateProbeAdmissionV1 = Object.freeze({ schemaVersion: "lean-private-probe-admission-v1", toJSON: opaque })
+  privateProbeAdmissions.set(admission, { allocation, allocationBytes, allocationCommit: input.allocationCommit, allocationPath: input.allocationPath, storePath, nextOrdinal: 0, used: false })
+  return admission
+}
+
+/** Append/fsync/reopen the exact next debit before minting a one-invocation handle. */
+export const recordAndIssueLeanPrivateProbeRuntimeAuthorityV1 = (admission: LeanPrivateProbeAdmissionV1, invocation: LeanPrivateProbeInvocationV1, capacity: LeanPrivateProbeCapacityReceiptV1): LeanPrivateProbeRuntimeAuthority => {
+  const state = privateProbeAdmissions.get(admission), receipt = privateProbeCapacities.get(capacity)
+  if (!state || state.used || !receipt || receipt.storePath !== state.storePath || performance.now() - receipt.startedAt > 30_000) return privateProbeFail()
+  privateProbeCapacities.delete(capacity)
+  const expected = state.allocation.cases[state.nextOrdinal]
+  if (!expected || canonicalPrivateProbe(expected).compare(canonicalPrivateProbe(invocation)) !== 0) return privateProbeFail()
+  const allocationBefore = privateProbeFile(resolve(state.storePath, "allocation.json"), 65_536, 0o600)
+  const committedBefore = execFileSync("git", ["show", `${state.allocationCommit}:${state.allocationPath}`], { encoding: "buffer", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 65_537 })
+  if (!allocationBefore.equals(state.allocationBytes) || !Buffer.from(committedBefore).equals(state.allocationBytes)) return privateProbeFail()
+  const ledgerPath = resolve(state.storePath, "ledger.ndjson")
+  let prior: Buffer<ArrayBufferLike> = Buffer.alloc(0)
+  try { prior = privateProbeFile(ledgerPath, 65_536, 0o600) } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") return privateProbeFail() }
+  const rows = prior.length ? prior.toString("utf8").trimEnd().split("\n").map(line => JSON.parse(line) as Record<string, unknown>) : []
+  if (prior.length && prior.at(-1) !== 10 || rows.length !== state.nextOrdinal || rows.some((row, ordinal) => row.ordinal !== ordinal || row.allocationRoot !== state.allocation.root)) return privateProbeFail()
+  const offset = prior.length
+  const row = { schemaVersion: "lean-private-probe-debit-v1", allocationRoot: state.allocation.root, allocationDigest: leanBytesRoot(state.allocationBytes), ordinal: invocation.ordinal, caseId: invocation.caseId, requestRoot: invocation.requestRoot, inputRoot: invocation.inputRoot }
+  const rowBytes = Buffer.concat([canonicalPrivateProbe(row), Buffer.from("\n")])
+  const fd = openSync(ledgerPath, constants.O_WRONLY | constants.O_APPEND | constants.O_CREAT | constants.O_NOFOLLOW, 0o600)
+  try {
+    const opened = fstatSync(fd)
+    if (!opened.isFile() || opened.nlink !== 1 || opened.uid !== (typeof process.getuid === "function" ? process.getuid() : opened.uid) || (opened.mode & 0o777) !== 0o600 || opened.size !== offset) return privateProbeFail()
+    let written = 0
+    while (written < rowBytes.length) {
+      const count = writeSync(fd, rowBytes, written, rowBytes.length - written)
+      if (count <= 0) return privateProbeFail()
+      written += count
+    }
+    fsyncSync(fd)
+  } finally { closeSync(fd) }
+  const reopened = privateProbeFile(ledgerPath, 65_536, 0o600)
+  if (!reopened.subarray(0, offset).equals(prior) || !reopened.subarray(offset).equals(rowBytes)) return privateProbeFail()
+  const finalAllocation = privateProbeFile(resolve(state.storePath, "allocation.json"), 65_536, 0o600)
+  if (!finalAllocation.equals(state.allocationBytes)) return privateProbeFail()
+  const verifiedRows = reopened.toString("utf8").trimEnd().split("\n").map(line => JSON.parse(line) as Record<string, unknown>)
+  if (verifiedRows.length !== state.nextOrdinal + 1 || verifiedRows.some((item, ordinal) => item.ordinal !== ordinal || item.allocationRoot !== state.allocation.root || item.allocationDigest !== leanBytesRoot(state.allocationBytes))) return privateProbeFail()
+  const binding: LeanPrivateProbeBindingV1 = freezeLabValue({ ...invocation, allocationRoot: state.allocation.root, allocationDigest: leanBytesRoot(state.allocationBytes), debitDigest: leanBytesRoot(rowBytes), debitOffset: offset, executionOwnerId: `probe-${state.allocation.root.slice(7, 19)}-${invocation.ordinal}` })
+  const capability: LeanPrivateProbeRuntimeAuthority = Object.freeze({ schemaVersion: "lean-private-probe-runtime-authority-v1", binding, toJSON: opaque })
+  privateProbeAuthorities.set(capability, { binding, claims: new Set() })
+  state.nextOrdinal += 1
+  if (state.nextOrdinal === state.allocation.cases.length) state.used = true
+  return capability
+}
+
+export const claimLeanPrivateProbeRuntimeAuthority = (authority: LeanPrivateProbeRuntimeAuthority, binding: LeanPrivateProbeBindingV1, layer: Layer): LeanPrivateProbeBindingV1 => {
+  const state = authority && privateProbeAuthorities.get(authority)
+  if (!state || authority.schemaVersion !== "lean-private-probe-runtime-authority-v1" || !["factory", "planner", "session"].includes(layer) || state.claims.has(layer) || layer === "planner" && !state.claims.has("factory") || layer === "session" && !state.claims.has("planner") || labRoot("lean-private-probe-binding-v1", binding) !== labRoot("lean-private-probe-binding-v1", state.binding)) return privateProbeFail()
+  state.claims.add(layer)
+  return state.binding
+}
 export interface LeanStartupGrantV5 { readonly version?: 6 | 7; readonly allocationRoot: LabRoot; readonly chargeRoot: LabRoot; readonly seat: "bottom" | "top"; readonly policyRoot: LabRoot; readonly harnessRoot: LabRoot }
 export interface LeanStartupGrantV8 extends Omit<LeanStartupGrantV5, "version"> { readonly version: 8; toJSON(): never }
 const issued = new WeakMap<object, { binding: ProspectiveLeagueLifetimeProviderBinding; claims: Set<Layer>; startup?: Readonly<LeanStartupGrantV5>; startupV8?: Readonly<LeanStartupGrantV8> }>()
