@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Startup-attribution master v3 checked; isolated source execution A then B next
-last_updated: "2026-10-09"
-last_activity: 2026-10-09
-last_activity_desc: Independent master-v3 and serial-unit check passed; source-only implementation ready, no empirical admission
+stopped_at: Startup-attribution source verified; fresh ROOT ordinal5 route gates next
+last_updated: "2026-10-10"
+last_activity: 2026-10-10
+last_activity_desc: Exact21 source repair integrated, independently clean reviewed, ROOT validated and separately source verified; no new empirical admission
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — STARTUP ATTRIBUTION SOURCE VERIFIED / FRESH ROOT GATES NEXT (2026-10-10).
+
+Actual source author CLOSED serialA+B at aee251db; sole SUMMARYd91aa174 integrated fast-forward into main, exact21+summary/noextra source. Production no-seam source b4f0e115836a3d534d53bcc8bc33bd6041925d7720ebf4cfb067917d849c4e83/985 (old974 failedbaseonly), independent /root/review_265_startup_attribution actualclean0 SOURCE-REVIEW-v1 raw0548c3fe and selectedv7 raw75b74f9b; five genuine early findings fixed, priorNOTPASS retained. ROOT FULL read/default677bc4 CLOSED0 actualsavedprivatev7/noobservations/committedregularblobrawjoin; malformed earliercommand2NOTPASS retained. ROOT serialsix namedcommands PASS11/3/2/2/6/8 (B3threeown+fiveimported), configuredtscb/importstrict0ownership0reportonly19/public/factory1436zero PASS. Independent ROOT strict51439 CLOSED0 exactidentity/span/location baseline23/current23/new0/removed0; globalNOTPASS23 unwaived, selectorprecheckNOTPASS retained. REVIEW-FIX-v1 raw8a00e709/VALIDATION-v1 raw2f9af6a6; distinct /root/verify_265_startup_attribution_source CLOSED verified_source_only8/8/raw1e398b8c, actualno-seam985/tree/defaultwiring/legacy11declarations+old6arrays/tenpins7roots3absences/privatechecks and ONE existinginertearly-error PASS1/122skip; ROOT FULL read. Sixexactproofoutputs physicallydebited separately, noextra version or semanticcycle. Allcommands/agentsclosed; no liveentry/hold/grant/allocation. Fresh actual ROOT mode5 helper/setup/request plus designatedactualdiagnostic/baseline independentreviews/DATA/HELPER/newimmutablecommittedallocation/emptyreal0700store/SAMEPROCESScapacity still required; ownaccepted5diagnostic+actualFINAL onlyconditional36baseline. LocalNode24.15.0 andauthorNode26 inertproof NOTpinnedDocker/physicalhistoricalcure; causeUNKNOWN. All39priorcharges/consumedbytes immutablecostonly, no refund/recredit/reset. Same original02:14:32UTCstop/01:43:32sourcefrontier/01:33:32entrycutoff/FULL108M/ALLwall/31reserve/RAM3GB/disk15GB/300Matches/runtime/privacy bounds. No Phase265/LEAG/baseline/freeze/formation/holdout/public/counting/production/archive/tag credit. Earlier checkpoints history.
 
 CURRENT CHECKPOINT — STARTUP ATTRIBUTION SOURCE PLAN CHECKED / ISOLATED EXECUTION NEXT (2026-10-09).
 
