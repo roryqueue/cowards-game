@@ -372,7 +372,7 @@ export const verifyLeanPrivateProbeResultV2 = (allocationValue: unknown, resultV
     if (!allocationValue || typeof allocationValue !== "object" || !resultValue || typeof resultValue !== "object") return false
     const allocation = allocationValue as LeanPrivateProbeScheduleV2
     const result = resultValue as LeanPrivateProbeResultV1
-    if (!exactKeys(allocation, ["schemaVersion", "sourceHead", "matchCount", "cases", "root", "sourceRoot", "executableRoot", "image", "tupleId", "tupleRoot", "runtimeLimitsRoot", "costSnapshotRoot", "ceilings", "priorV1Carry"]) || !exactKeys(result, ["schemaVersion", "allocationRoot", "sourceHead", "matchCount", "attemptedOrdinals", "outcomes", "root"]) || allocation.schemaVersion !== "lean-private-probe-allocation-v2" || allocation.matchCount !== 0 || !Array.isArray(allocation.cases) || allocation.cases.length !== 1 || allocation.cases[0]?.ordinal !== 0 || !isRoot(allocation.root) || !isRoot(result.allocationRoot) || result.schemaVersion !== "lean-private-probe-result-v1" || result.matchCount !== 0 || result.sourceHead !== allocation.sourceHead || result.allocationRoot !== allocation.root || !Array.isArray(result.attemptedOrdinals) || !Array.isArray(result.outcomes) || result.outcomes.length !== result.attemptedOrdinals.length || result.outcomes.length > 1) return false
+    if (!exactKeys(allocation, ["schemaVersion", "sourceHead", "matchCount", "cases", "root", "sourceRoot", "executableRoot", "image", "tupleId", "tupleRoot", "runtimeLimitsRoot", "costSnapshotRoot", "ceilings", "priorV1Carry"]) || !exactKeys(result, ["schemaVersion", "allocationRoot", "sourceHead", "matchCount", "attemptedOrdinals", "outcomes", "root"]) || allocation.schemaVersion !== "lean-private-probe-allocation-v2" || allocation.matchCount !== 0 || !Array.isArray(allocation.cases) || allocation.cases.length !== 1 || allocation.cases[0]?.ordinal !== 0 || !isRoot(allocation.root) || !isRoot(result.allocationRoot) || result.schemaVersion !== "lean-private-probe-result-v1" || result.matchCount !== 0 || result.sourceHead !== allocation.sourceHead || result.allocationRoot !== allocation.root || !Array.isArray(result.attemptedOrdinals) || result.attemptedOrdinals.length !== 1 || result.attemptedOrdinals[0] !== 0 || !Array.isArray(result.outcomes) || result.outcomes.length !== 1) return false
     const { root, ...body } = allocation
     if (root !== labRoot("lean-private-probe-allocation-v2", body)) return false
     const rebuilt = createLeanPrivateProbeScheduleV2(allocation)
@@ -382,7 +382,6 @@ export const verifyLeanPrivateProbeResultV2 = (allocationValue: unknown, resultV
       if (terminal || !exactKeys(outcome, ["ordinal", "status", "cleanupComplete", "inputRoot", "requestRoot"]) || outcome.ordinal !== 0 || result.attemptedOrdinals[0] !== 0 || outcome.inputRoot !== allocation.cases[0]!.inputRoot || outcome.requestRoot !== allocation.cases[0]!.requestRoot || !["success", "strategy_timeout", "system_failure", "unknown"].includes(String(outcome.status)) || typeof outcome.cleanupComplete !== "boolean") return false
       terminal = outcome.status !== "success" || !outcome.cleanupComplete
     }
-    if (result.attemptedOrdinals.length === 1 && result.attemptedOrdinals[0] !== 0) return false
     const { root: resultRoot, ...resultBody } = result
     return isRoot(resultRoot) && resultRoot === labRoot("lean-private-probe-result-v1", resultBody)
   } catch { return false }
@@ -404,7 +403,7 @@ export const verifyLeanPrivateProbeV2RetainedJoins = (input: {
     const { root: requestRoot, ...requestBody } = request
     if (requestRoot !== labRoot("lean-private-probe-request-v2", requestBody) || !Buffer.from(leanCanonicalBytes(request)).equals(leanCanonicalBytes(probeRequest(allocation)))) return false
     const allocationBytes = leanCanonicalBytes(allocation), result = input.result as LeanPrivateProbeResultV1
-    if (input.debitRows.length !== result.attemptedOrdinals.length || input.debitRows.some((value, index) => {
+    if (input.debitRows.length !== 1 || input.debitRows.length !== result.attemptedOrdinals.length || input.debitRows.some((value, index) => {
       const row = value as Record<string, unknown>
       return !exactKeys(row, ["schemaVersion", "allocationRoot", "allocationDigest", "ordinal", "caseId", "requestRoot", "inputRoot"]) || row.schemaVersion !== "lean-private-probe-debit-v1" || row.allocationRoot !== allocation.root || row.allocationDigest !== leanBytesRoot(allocationBytes) || row.ordinal !== index || row.caseId !== descriptor.caseId || row.requestRoot !== descriptor.requestRoot || row.inputRoot !== descriptor.inputRoot
     })) return false

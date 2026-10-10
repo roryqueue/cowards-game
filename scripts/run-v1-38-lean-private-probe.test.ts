@@ -96,11 +96,15 @@ describe("lean private probe schedule", () => {
     const result = { ...resultBody, root: labRoot("lean-private-probe-result-v1", resultBody) }
     expect(verifyLeanPrivateProbeResultV2(allocation, result)).toBe(true)
     expect(verifyLeanPrivateProbeResultV2(allocation, { ...result, outcomes: [] })).toBe(false)
+    const emptyResultBody = { ...resultBody, attemptedOrdinals: [] as number[], outcomes: [] as typeof resultBody.outcomes }
+    const emptyResult = { ...emptyResultBody, root: labRoot("lean-private-probe-result-v1", emptyResultBody) }
+    expect(verifyLeanPrivateProbeResultV2(allocation, emptyResult)).toBe(false)
     const requestBody = { schemaVersion: "lean-private-probe-request-v2", sourceRoot: allocation.sourceRoot, executableRoot: allocation.executableRoot, tupleRoot: allocation.tupleRoot, runtimeLimitsRoot: allocation.runtimeLimitsRoot, caseRoots: allocation.cases.map(item => ({ ordinal: item.ordinal, method: item.method, inputRoot: item.inputRoot, requestRoot: item.requestRoot })) }
     const request = { ...requestBody, root: labRoot("lean-private-probe-request-v2", requestBody) }
     const debit = { schemaVersion: "lean-private-probe-debit-v1", allocationRoot: allocation.root, allocationDigest: leanBytesRoot(leanCanonicalBytes(allocation)), ordinal: 0, caseId: "case-0", requestRoot: allocation.cases[0]!.requestRoot, inputRoot: allocation.cases[0]!.inputRoot }
     expect(verifyLeanPrivateProbeV2RetainedJoins({ allocation, request, result, debitRows: [debit] })).toBe(true)
     expect(verifyLeanPrivateProbeV2RetainedJoins({ allocation, request, result, debitRows: [] })).toBe(false)
+    expect(verifyLeanPrivateProbeV2RetainedJoins({ allocation, request, result: emptyResult, debitRows: [] })).toBe(false)
     expect(() => createLeanPrivateProbeScheduleV2({ sourceHead: prior.sourceHead, sourceRoot: root("source"), executableRoot: root("executable"), costSnapshotRoot: "sha256:6e271d344297f332e858882c9071f0fc47629e72fda3c0371540e3d607306381" })).toThrow()
   })
 
