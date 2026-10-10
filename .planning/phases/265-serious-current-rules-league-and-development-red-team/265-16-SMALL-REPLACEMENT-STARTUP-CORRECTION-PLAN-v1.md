@@ -66,6 +66,12 @@ The source trace resolves wire compatibility. `superviseLeanStartupV8` only read
 
 ## Threat model
 
+### Review-driven source clarifications (2026-10-10)
+
+The binding description's literal `caseOrdinal: 0` applies to prospective v2 only. For unchanged v1 compatibility, the session/broker carry the authenticated ordinal0–3 and validate the matching owner suffix; this grants no authority to attempt consumed v1 cases. The exact V1.19 request includes fixed `outputByteLimit: 262144`. V2 retained result/join verification requires exactly one ordinal0 attempt, outcome, and debit; an empty allocation cannot be verified as a completed probe.
+
+“No allocation/store/ledger” excludes canonical or empirical route creation, not owned synthetic unit fixtures. The inert connected tests create and clean temporary synthetic Git allocations/stores/debits using a fixed test clock; they do not dispatch a provider, worker, Strategy, or Match or touch canonical evidence. This clarification does not reopen actual expired runtime admission. The generated broker predicate is source/syntax checked, not executed: retain that coverage warning and do not infer physical feasibility. Broader cleanup-test and strict-script diagnostics remain unresolved; this supplement's source closure cannot make the entire phase or its empirical gates pass.
+
 | Boundary / threat | Severity | Disposition and mitigation |
 |---|---:|---|
 | v2 allocation/debit → probe authority forgery or replay | high | Mitigate: exact committed bytes, fresh root, durable one-use debit, request/source/image/limits binding, ordered claims. |
