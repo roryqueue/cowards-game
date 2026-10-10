@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Four-pair allowance exhausted; source diagnosis inconclusive; human experiment-scope choice required
+stopped_at: Smaller replacement approved; bounded research and checked Plan16 supplement next
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: Bounded diagnosis closed without proven repair; failed diagnostic and cost custody pushed; no baseline or formation authority
+last_activity_desc: Human approved smaller replacement; two-hour diagnostic-first scope chosen prospectively; old failed family remains immutable
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED CHECKPOINT — SMALLER PRIVATE REPLACEMENT / RESEARCH FIRST (2026-10-10).
+
+Human direct `approve smaller replacement` selects prospective diagnostic-first replacement, not inconclusive closure. NEW265-16-SMALL-REPLACEMENT-APPROVAL-20261010 records ROOT conservative2h total allowance from actual11:58:52UTC observation to13:58:52UTC, ALLwork/wait/cleanup charged/31minreserve, max32 explicit non-Match probes and max2 new separately charged current-only Matches/one correction cycle. Same3GBRAM/15GBdisk/cumulative300/guest1000/host5000/startup2500/Match600000 and rules/privacy bounds; all40oldcharges/FULL108M+continuousoldwall/survivors carry with no reset/refund. Old four-pair family remains exhausted/failed/non-authorizing, no ordinal6 revival. Research→small existingPlan16 supplement→distinctcheck→execute/reviewfix/validate/verify before any new actualallocation/entry. No repeat literal within adopted scope; no empiricalreadyclaim. Source/HEAD hold released, no active entry/verifier; ROOT keeps newsource fixed through actual terminal and one unique result check. Smallerdiagnostic cannot satisfy LEAG/baseline/freeze/formation/holdout/public/counting/production or wholephase completion. Earlier checkpoints history.
 
 CURRENT HUMAN-ONLY CHECKPOINT — BOUNDED DIAGNOSIS INCONCLUSIVE / EXPERIMENT ALLOWANCE ENDED (2026-10-10).
 
