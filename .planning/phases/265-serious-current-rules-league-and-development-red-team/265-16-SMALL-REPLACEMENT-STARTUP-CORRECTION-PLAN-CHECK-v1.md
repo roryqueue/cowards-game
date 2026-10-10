@@ -1,0 +1,11 @@
+## ISSUES FOUND
+
+The plan covers the one-case v2 allocation, keeps the consumed v1 evidence immutable, preserves the stated guest/startup/host and resource ceilings, and makes runtime entry conditional on separate gates. Three blockers remain:
+
+1. **[BLOCKER] Runtime-entry feasibility is not established within the remaining frontier.** At review time, only about 7 minutes 39 seconds remained before the plan’s 14:27:19Z source frontier. The plan requires a multi-file correction, focused tests, independent review, source verification, validation, fixed-HEAD and capacity checks before allocation. Its own stop rule says not to enter if those gates cannot close in time. Keep runtime entry closed and record `feasibility_not_established`/`gaps_found`; do not rush or bypass gates. See plan lines 51–54.
+
+2. **[BLOCKER] The probe-only V8 startup contract is not sufficiently specified against the current call chain.** The existing private-probe session path sets the 5000 ms host receipt but leaves startup unset; V8 selection and binding currently come through the old Match authority path. The plan calls for a module-issued probe startup grant, but does not specify the new factory/planner/session claim interfaces or how the session builds and validates the V8 request binding—without a Match authority or caller-supplied scalar. Specify those contract joins and tests before implementation. See lines 29–37; current behavior conflicts with the diagnosis in `.planning/debug/private-probe-v1-failure.md`.
+
+3. **[BLOCKER] Lifecycle and cleanup attribution lacks an executable receipt contract.** The plan asks for finite lifecycle reasons and per-predicate cleanup statuses, but does not define the exact fields/enums, trusted session-to-runner handoff, or verifier joins. The current session exposes aggregate cleanup booleans, while probe records retain `guestStartup: "unknown"`. Specify the private receipt schema and exact joins, keeping unknowns unknown and payloads excluded. See lines 39–47 and 58–60.
+
+**Recommendation:** Do not admit a runtime attempt under the current frontier. Revise the startup and attribution contracts only if a safe remaining window exists; otherwise close with the plan’s honest non-success outcome.

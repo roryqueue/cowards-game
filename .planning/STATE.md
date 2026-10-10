@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: First real private probe failed; unique retained verifier closed, bounded source-only diagnosis active
+stopped_at: First probe failed; narrowed unchecked correction handoff awaits prospective source-work time allocation
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: One non-Match probe charged and failed; no other probes or new Matches, old bytes immutable
+last_activity_desc: Confirmed startup-path contract mismatch; no repair or correction run admitted, failed evidence immutable
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — STARTUP CORRECTION NOT ADMITTED / REFINED HANDOFF CLOSED (2026-10-10).
+
+Refinement is now CLOSED, not active: the existing Plan16 supplement defines the proposed probe-only ordered grant claims, removes optional lifecycle/cleanup telemetry, and carries the failed v1 probe and retained-file costs. It remains UNCHECKED after refinement, with an explicit non-Match V8 wire-compatibility gap; no implementation or new runtime admission. The prior three-blocker plan check is preserved and is NOT a pass of the revised handoff. The time allowance has NOT yet elapsed at this checkpoint; runtime admission is closed prospectively because all repair gates cannot fit before its source frontier. A useful next human choice is reallocating the unused run reserve to source-only repair/checks within the same hard stop, without any new probe or Match. This choice is not adopted. All source agents, actual entries and unique verifiers are CLOSED; no helper is active. Do not repeat a gate, scan or known-failing run while this decision is unchanged.
+
+The first private probe and its unique retained verification are closed and failed. Source-only diagnosis is closed: the private-probe path advertises a separate 2500 ms startup allowance but selects the legacy broker, whose 1000 ms deadline includes startup. This is a confirmed source-contract defect, NOT proof of the actual initiating failure or cleanup subcause; both remain unknown. No source repair has been applied. The independent correction-plan check found three blockers: insufficient remaining source window for implementation and all gates, an unspecified probe-only V8 grant/binding path, and unspecified optional lifecycle/cleanup receipt joins. The unconsumed existing-Plan-16 supplement is being refined only; no new allocation, entry, probe, provider, container, Match or reader is admitted. The first failed allocation/store/result/verifier and all prior cost evidence remain immutable. ROOT's light actual process/container checks at 14:22:24 UTC found no matching active probe/container; present absence does not upgrade historical cleanup=false. Source/HEAD hold is released, not an execution admission. Same 14:27:19 source frontier, 14:58:19 hard stop, 31-minute reserve, continuous carry292757903ms/cap296357903ms and every other bound. Source implementation plus independent review/validation/verification cannot safely fit the remaining source window; any subsequent source-work time allocation requires an explicit prospective resource decision, not another exact route literal. All LEAG requirements, Plan16, Phase265, baseline and freeze remain incomplete; formation and holdout stay unstarted, with no public/counting/production or milestone-completion credit. Earlier checkpoints are history.
 
 CURRENT CHECKPOINT — FIRST PRIVATE PROBE FAILED / UNIQUE VERIFIER CLOSED (2026-10-10).
 
