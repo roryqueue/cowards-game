@@ -16,6 +16,13 @@ vi.mock("node:child_process", async importOriginal => {
 })
 import * as authority from "./v1-38-lean-experiment-authority.js"
 
+describe("prospective two-Match authority, without execution", () => {
+  it("has dedicated opaque gates and fixed prospective reserves", () => {
+    for (const name of ["observeLeanPrivateMatchCapacityV1", "openLeanPrivateMatchAdmissionV1", "recordLeanPrivateMatchDebitV1", "issueLeanPrivateMatchRuntimeAuthorityV1"]) expect((authority as unknown as Record<string, unknown>)[name]).toBeTypeOf("function")
+    expect((authority as unknown as Record<string, unknown>).LEAN_PRIVATE_MATCH_WINDOW_V1).toMatchObject({ anchorMs: 1791669996000, deadlineMs: 1791677196000, carryMs: 322054903, capMs: 329254903, reserveMs: 1860000 })
+  })
+})
+
 describe("private probe authority surface", () => {
   it("exports a distinct admission opener, debit issuer, and ordered claim", () => {
     expect(authority.openLeanPrivateProbeAdmissionV1).toBeTypeOf("function")
