@@ -12,7 +12,7 @@ import { defaultRuntimeMetadata, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/
 import { createInitialGameState, createStrategyInputV119, createSoldierBrainInputV119 } from "../../packages/engine/src/index.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
-import { labRoot, LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js"
+import { labRoot, LAB_ADMITTED_ROOTS, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { SubprocessSystemFailure } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { admitPlannerSupervisorLifetime, createPlannerSupervisedRuntime, closePlannerRuntime } from "./v1-38-planner-supervised-runtime.js"
@@ -36,7 +36,7 @@ it("private probe planner rejects mixed authority and injected transport before 
   expect(() => createPlannerSupervisedRuntime({ privateProbeAuthority: fake, privateProbeBinding: binding, leanExperimentAuthority: {} } as never)).toThrow("LAB_RUNTIME_PRIVATE_PROBE_MODE")
 })
 it("private probe planner requires the exact grant returned by its ordered claim and passes it to the session", () => {
-  const rev = revision(), binding = { allocationRoot: labRoot("probe", "allocation"), debitDigest: labRoot("probe", "debit"), executionOwnerId: "probe-owner", ordinal: 0, caseId: "probe-00", method: "selectActivations", sourceRoot: `sha256:${createHash("sha256").update(rev.source).digest("hex")}`, executableRoot: `sha256:${rev.metadata.sourceArtifact!.hash}`, requestRoot: labRoot("probe", "request"), inputRoot: labRoot("probe", "input"), image: LAB_ADMITTED_ROOTS.image, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, allocationDigest: labRoot("probe", "digest"), debitOffset: 0 }
+  const rev = revision(), binding = { allocationRoot: labRoot("probe", "allocation"), debitDigest: labRoot("probe", "debit"), executionOwnerId: "probe-owner", ordinal: 0, caseId: "probe-00", method: "selectActivations" as const, sourceRoot: `sha256:${createHash("sha256").update(rev.source).digest("hex")}` as LabRoot, executableRoot: `sha256:${rev.metadata.sourceArtifact!.hash}` as LabRoot, requestRoot: labRoot("probe", "request"), inputRoot: labRoot("probe", "input"), image: LAB_ADMITTED_ROOTS.image, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, allocationDigest: labRoot("probe", "digest"), debitOffset: 0 }
   const authority = { schemaVersion: "lean-private-probe-runtime-authority-v1", binding } as any, startupGrant = { schemaVersion: "lean-private-probe-startup-grant-v1" } as any
   const claim = vi.spyOn(startupAuthority, "claimLeanPrivateProbeRuntimeAuthority").mockReturnValue({ binding, startupGrant })
   const session = vi.spyOn(startupSession, "createLeanContainerMatchSession").mockImplementation(() => { throw Error("INERT_PROBE_SESSION") })

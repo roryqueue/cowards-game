@@ -553,11 +553,12 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
       const value = parsed as Record<string, unknown>
       if (startupBinding) {
         if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64", "startupOrigin"])) throw new TypeError("LEAN_STARTUP_FRAME_V5")
-        const metadata = probeStartup ? validateLeanPrivateProbeStartupOriginV8(value.startupOrigin, probeStartupBinding!) : startup?.version === 8 ? validateLeanStartupOriginV8(value.startupOrigin, startupBinding as LeanStartupBindingV5) : startup?.version === 7 ? validateLeanStartupOriginV7(value.startupOrigin, startupBinding as LeanStartupBindingV5) : startup?.version === 6 ? validateLeanStartupOriginV6(value.startupOrigin, startupBinding as LeanStartupBindingV5) : validateLeanStartupOriginV5(value.startupOrigin, startupBinding as LeanStartupBindingV5)
+        const normalMetadata = !probeStartup ? startup?.version === 8 ? validateLeanStartupOriginV8(value.startupOrigin, startupBinding as LeanStartupBindingV5) : startup?.version === 7 ? validateLeanStartupOriginV7(value.startupOrigin, startupBinding as LeanStartupBindingV5) : startup?.version === 6 ? validateLeanStartupOriginV6(value.startupOrigin, startupBinding as LeanStartupBindingV5) : validateLeanStartupOriginV5(value.startupOrigin, startupBinding as LeanStartupBindingV5) : undefined
+        const metadata = probeStartup ? validateLeanPrivateProbeStartupOriginV8(value.startupOrigin, probeStartupBinding!) : normalMetadata!
         if (hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
         if (metadata.branch !== "complete") {
           if (metadata.termination !== "completed") startupCleanupUncertain = true
-          options.startupOriginObserver?.observe(metadata)
+          if (normalMetadata) options.startupOriginObserver?.observe(normalMetadata)
         } else if (value.status !== 0 || value.signal !== null) throw new TypeError("LEAN_STARTUP_COMPLETION_V5")
         delete value.startupOrigin
       } else if (value.startupOrigin !== undefined) throw new TypeError("LEAN_STARTUP_FRAME_V5")

@@ -6,7 +6,7 @@ import { defaultRuntimeMetadata } from "@cowards/spec"
 import { admitFactory, authorizeFactorySupervision } from "../packages/strategy-lab/src/factory/admission.js"
 import { readLeanBaselineSource } from "./lib/v1-38-lean-baseline-source.js"
 import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-runtime.js"
-import { LEAN_PRIVATE_PROBE_COST_ROOT, authenticateLeanPrivateProbeCostV1, observeLeanPrivateProbeResourcesV1, observeLeanPrivateProbeCapacityV1, openLeanPrivateProbeAdmissionV1, recordAndIssueLeanPrivateProbeRuntimeAuthorityV1, type LeanPrivateProbeAllocationV1 } from "./lib/v1-38-lean-experiment-authority.js"
+import { LEAN_PRIVATE_PROBE_COST_ROOT, authenticateLeanPrivateProbeCostV1, authenticateLeanPrivateProbeV1CarryV2, observeLeanPrivateProbeResourcesV1, observeLeanPrivateProbeCapacityV1, openLeanPrivateProbeAdmissionV1, recordAndIssueLeanPrivateProbeRuntimeAuthorityV1, type LeanPrivateProbeAllocationV1, type LeanPrivateProbeAllocationV2, type LeanPrivateProbeV1CarryV2 } from "./lib/v1-38-lean-experiment-authority.js"
 import { closeSync, constants, fsyncSync, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, statfsSync, writeSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { dirname, join, resolve } from "node:path"
@@ -43,6 +43,10 @@ export interface LeanPrivateProbeScheduleV1 {
   readonly ceilings: Readonly<{ guestMs: 1000; hostMs: 5000; startupMs: 2500; matchMs: 600000 }>
   readonly root: LabRoot
 }
+export interface LeanPrivateProbeScheduleV2 extends Omit<LeanPrivateProbeScheduleV1, "schemaVersion" | "cases" | "root"> {
+  readonly schemaVersion: "lean-private-probe-allocation-v2"; readonly cases: readonly [LeanPrivateProbeCaseV1]
+  readonly priorV1Carry: LeanPrivateProbeV1CarryV2; readonly root: LabRoot
+}
 export interface LeanPrivateProbeResultV1 {
   readonly schemaVersion: "lean-private-probe-result-v1"
   readonly allocationRoot: LabRoot
@@ -53,7 +57,7 @@ export interface LeanPrivateProbeResultV1 {
   readonly root: LabRoot
 }
 export type LeanPrivateProbeCommandV1 =
-  | Readonly<{ command: "prepare"; sourceStore: string; sourceRoot: LabRoot; store: string; sourceHead: string; costSnapshotRoot: LabRoot }>
+  | Readonly<{ command: "prepare"; sourceStore: string; sourceRoot: LabRoot; store: string; sourceHead: string; costSnapshotRoot: LabRoot; allocationVersion?: 2 }>
   | Readonly<{ command: "entry"; sourceStore: string; sourceRoot: LabRoot; store: string; allocationCommit: string; allocationPath: string }>
   | Readonly<{ command: "verify"; sourceRoot: LabRoot; store: string; allocationCommit: string; allocationPath: string }>
 
@@ -79,15 +83,17 @@ export const parseLeanPrivateProbeArgsV1 = (argv: readonly string[]): LeanPrivat
     if (!key.startsWith("--") || key.length < 3 || !value || flags.has(key)) return fail("LEAN_PRIVATE_PROBE_ARGS")
     flags.set(key, value)
   }
-  const allowed = command === "prepare" ? ["--source-store", "--source-root", "--store", "--source-head", "--cost-snapshot-root"] : command === "entry" ? ["--source-store", "--source-root", "--store", "--allocation-commit", "--allocation-path"] : ["--source-root", "--store", "--allocation-commit", "--allocation-path"]
-  if (flags.size !== allowed.length || [...flags.keys()].some(key => !allowed.includes(key))) return fail("LEAN_PRIVATE_PROBE_ARGS")
+  const allowed = command === "prepare" ? ["--source-store", "--source-root", "--store", "--source-head", "--cost-snapshot-root", "--allocation-version"] : command === "entry" ? ["--source-store", "--source-root", "--store", "--allocation-commit", "--allocation-path"] : ["--source-root", "--store", "--allocation-commit", "--allocation-path"]
+  const minimumFlags = command === "prepare" ? 5 : allowed.length
+  if (flags.size < minimumFlags || flags.size > allowed.length || [...flags.keys()].some(key => !allowed.includes(key))) return fail("LEAN_PRIVATE_PROBE_ARGS")
   const get = (name: string) => flags.get(`--${name}`)!
   const sourceRoot = get("source-root"), store = get("store"), allocationCommit = get("allocation-commit"), allocationPath = get("allocation-path")
   if (!isRoot(sourceRoot) || !store || command !== "prepare" && (!/^[a-f0-9]{40,64}$/u.test(allocationCommit) || ![".planning/artifacts/v1.38-phase-265-private-probe-allocation-v1.json", ".planning/artifacts/v1.38-phase-265-private-probe-allocation-v2.json"].includes(allocationPath))) return fail("LEAN_PRIVATE_PROBE_ARGS")
   if (command === "prepare") {
     const sourceHead = get("source-head"), costSnapshotRoot = get("cost-snapshot-root"), sourceStore = get("source-store")
-    if (!sourceStore || !/^[a-f0-9]{40,64}$/u.test(sourceHead) || !isRoot(costSnapshotRoot) || sourceStore === store) return fail("LEAN_PRIVATE_PROBE_ARGS")
-    return Object.freeze({ command, sourceStore, sourceRoot, store, sourceHead, costSnapshotRoot })
+    const allocationVersion = flags.get("--allocation-version")
+    if (!sourceStore || !/^[a-f0-9]{40,64}$/u.test(sourceHead) || !isRoot(costSnapshotRoot) || sourceStore === store || allocationVersion !== undefined && allocationVersion !== "2") return fail("LEAN_PRIVATE_PROBE_ARGS")
+    return Object.freeze({ command, sourceStore, sourceRoot, store, sourceHead, costSnapshotRoot, ...(allocationVersion === "2" ? { allocationVersion: 2 as const } : {}) })
   }
   const sourceStore = command === "entry" ? get("source-store") : undefined
   if (command === "entry" && (!sourceStore || sourceStore === store)) return fail("LEAN_PRIVATE_PROBE_ARGS")
@@ -113,8 +119,8 @@ const readPrivateFile = (path: string, maxBytes = 65_536): Buffer => {
 const writeJson = (path: string, value: unknown): void => { writeFileExclusive(path, leanCanonicalBytes(value), 0o600); directorySync(dirname(path)) }
 const readJson = (path: string): unknown => JSON.parse(readPrivateFile(path).toString("utf8")) as unknown
 const directorySync = (path: string): void => { const fd = openSync(path, constants.O_RDONLY); try { fsyncSync(fd) } finally { closeSync(fd) } }
-const capacityCheck = (path: string, began: number): Readonly<{ rssBytes: number; availableDiskBytes: number; elapsedMs: number }> => {
-  observeLeanPrivateProbeResourcesV1(path)
+const capacityCheck = (path: string, began: number, priorRetainedBytes = 0): Readonly<{ rssBytes: number; availableDiskBytes: number; elapsedMs: number }> => {
+  observeLeanPrivateProbeResourcesV1(path, priorRetainedBytes)
   const rssBytes = process.memoryUsage().rss, disk = statfsSync(path), availableDiskBytes = disk.bavail * disk.bsize, elapsedMs = Math.ceil(performance.now() - began)
   if (!Number.isSafeInteger(availableDiskBytes) || rssBytes > 3_000_000_000 || availableDiskBytes < 2_000_000_000 || elapsedMs > 600_000) return fail("LEAN_PRIVATE_PROBE_CAPACITY")
   return Object.freeze({ rssBytes, availableDiskBytes, elapsedMs })
@@ -122,13 +128,14 @@ const capacityCheck = (path: string, began: number): Readonly<{ rssBytes: number
 const allocationPathAllowed = (path: string): boolean => [".planning/artifacts/v1.38-phase-265-private-probe-allocation-v1.json", ".planning/artifacts/v1.38-phase-265-private-probe-allocation-v2.json"].includes(path)
 const exactKeys = (value: unknown, keys: readonly string[]): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value) && Object.keys(value).sort().join("\0") === [...keys].sort().join("\0")
 const nonnegative = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0
-const probeRequest = (schedule: LeanPrivateProbeScheduleV1) => {
-  const body = { schemaVersion: "lean-private-probe-request-v1", sourceRoot: schedule.sourceRoot, executableRoot: schedule.executableRoot, tupleRoot: schedule.tupleRoot, runtimeLimitsRoot: schedule.runtimeLimitsRoot, caseRoots: schedule.cases.map(item => ({ ordinal: item.ordinal, method: item.method, inputRoot: item.inputRoot, requestRoot: item.requestRoot })) }
-  return { ...body, root: labRoot("lean-private-probe-request-v1", body) }
+const probeRequest = (schedule: LeanPrivateProbeScheduleV1 | LeanPrivateProbeScheduleV2) => {
+  const version2 = schedule.schemaVersion === "lean-private-probe-allocation-v2"
+  const body = { schemaVersion: version2 ? "lean-private-probe-request-v2" : "lean-private-probe-request-v1", sourceRoot: schedule.sourceRoot, executableRoot: schedule.executableRoot, tupleRoot: schedule.tupleRoot, runtimeLimitsRoot: schedule.runtimeLimitsRoot, caseRoots: schedule.cases.map(item => ({ ordinal: item.ordinal, method: item.method, inputRoot: item.inputRoot, requestRoot: item.requestRoot })) }
+  return { ...body, root: labRoot(version2 ? "lean-private-probe-request-v2" : "lean-private-probe-request-v1", body) }
 }
 const validProbeRecord = (record: Record<string, unknown>, descriptor: LeanPrivateProbeCaseV1): boolean => exactKeys(record, ["schemaVersion", "ordinal", "caseId", "method", "sourceRoot", "executableRoot", "inputRoot", "requestRoot", "status", "charged", "evidenceVerified", "cleanupComplete", "elapsedMs", "factoryConstructionMs", "guestStartup", "rssBytes", "availableDiskBytes", "outputBytes", "root"]) && record.schemaVersion === "lean-private-probe-case-result-v1" && ["ordinal", "caseId", "method", "sourceRoot", "executableRoot", "inputRoot", "requestRoot"].every(key => record[key] === descriptor[key as keyof LeanPrivateProbeCaseV1]) && ["success", "strategy_timeout", "system_failure", "unknown"].includes(String(record.status)) && record.charged === true && typeof record.evidenceVerified === "boolean" && typeof record.cleanupComplete === "boolean" && (record.status !== "success" || record.evidenceVerified === true && record.cleanupComplete === true) && record.guestStartup === "unknown" && ["elapsedMs", "factoryConstructionMs", "rssBytes", "availableDiskBytes", "outputBytes"].every(key => nonnegative(record[key])) && Number(record.outputBytes) <= 262144
 
-const preparePrivateProbe = (input: Extract<LeanPrivateProbeCommandV1, { command: "prepare" }>): LeanPrivateProbeScheduleV1 => {
+const preparePrivateProbe = (input: Extract<LeanPrivateProbeCommandV1, { command: "prepare" }>): LeanPrivateProbeScheduleV1 | LeanPrivateProbeScheduleV2 => {
   const source = readLeanBaselineSource(input.sourceStore, "probe")
   if (source.sourceRoot !== input.sourceRoot) return fail("LEAN_PRIVATE_PROBE_SOURCE_ROOT")
   const metadata = { ...defaultRuntimeMetadata("typescript"), adapter: { ...defaultRuntimeMetadata("typescript").adapter, id: "runtime-js-container-subprocess" as const } }
@@ -136,8 +143,10 @@ const preparePrivateProbe = (input: Extract<LeanPrivateProbeCommandV1, { command
   const executableRoot = `sha256:${revision.metadata.sourceArtifact?.hash ?? ""}` as LabRoot
   if (!revision.validation.valid || !revision.metadata.sourceArtifact || `sha256:${revision.sourceHash}` !== source.sourceRoot) return fail("LEAN_PRIVATE_PROBE_SOURCE_ADMISSION")
   const currentHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 4096 }).trim()
-  if (currentHead !== input.sourceHead || input.store === input.sourceStore || !allocationPathAllowed(".planning/artifacts/v1.38-phase-265-private-probe-allocation-v1.json")) return fail("LEAN_PRIVATE_PROBE_SOURCE_HEAD")
-  const schedule = createLeanPrivateProbeScheduleV1({ sourceHead: input.sourceHead, sourceRoot: source.sourceRoot, executableRoot, costSnapshotRoot: input.costSnapshotRoot })
+  if (currentHead !== input.sourceHead || input.store === input.sourceStore || !allocationPathAllowed(input.allocationVersion === 2 ? ".planning/artifacts/v1.38-phase-265-private-probe-allocation-v2.json" : ".planning/artifacts/v1.38-phase-265-private-probe-allocation-v1.json")) return fail("LEAN_PRIVATE_PROBE_SOURCE_HEAD")
+  const schedule = input.allocationVersion === 2
+    ? createLeanPrivateProbeScheduleV2({ sourceHead: input.sourceHead, sourceRoot: source.sourceRoot, executableRoot, costSnapshotRoot: input.costSnapshotRoot })
+    : createLeanPrivateProbeScheduleV1({ sourceHead: input.sourceHead, sourceRoot: source.sourceRoot, executableRoot, costSnapshotRoot: input.costSnapshotRoot })
   const storePath = resolve(input.store)
   if (input.costSnapshotRoot !== LEAN_PRIVATE_PROBE_COST_ROOT) return fail("LEAN_PRIVATE_PROBE_COST_SNAPSHOT")
   observeLeanPrivateProbeResourcesV1(storePath)
@@ -146,11 +155,11 @@ const preparePrivateProbe = (input: Extract<LeanPrivateProbeCommandV1, { command
   const request = probeRequest(schedule)
   writeJson(join(storePath, "request.json"), request)
   writeJson(join(storePath, "allocation.json"), schedule)
-  const artifact = resolve(".planning/artifacts/v1.38-phase-265-private-probe-allocation-v1.json")
+  const artifact = resolve(input.allocationVersion === 2 ? ".planning/artifacts/v1.38-phase-265-private-probe-allocation-v2.json" : ".planning/artifacts/v1.38-phase-265-private-probe-allocation-v1.json")
   mkdirSync(dirname(artifact), { recursive: true })
   writeFileExclusive(artifact, leanCanonicalBytes(schedule), 0o644)
   directorySync(storePath); directorySync(dirname(artifact))
-  capacityCheck(storePath, performance.now())
+  capacityCheck(storePath, performance.now(), schedule.schemaVersion === "lean-private-probe-allocation-v2" ? schedule.priorV1Carry.retainedAllocatedBytes : 0)
   return schedule
 }
 
@@ -161,9 +170,16 @@ export const executeLeanPrivateProbeEntryV1 = async (input: Extract<LeanPrivateP
   const sourceAdmission = admitFactory({ packet: source.packet, proposal: source.proposal, sourceBytes })
   const admission = authorizeFactorySupervision({ sourceAdmission, validation: source.validation })
   const allocationBytes = readPrivateFile(join(resolve(input.store), "allocation.json"))
-  const allocation = JSON.parse(allocationBytes.toString("utf8")) as LeanPrivateProbeAllocationV1
-  if (!allocationPathAllowed(input.allocationPath) || allocation.sourceRoot !== source.sourceRoot || !allocationBytes.equals(leanCanonicalBytes(allocation))) return fail("LEAN_PRIVATE_PROBE_ALLOCATION")
-  const storePath = resolve(input.store), began = performance.now(), firstCapacity = observeLeanPrivateProbeCapacityV1(storePath)
+  const allocation = JSON.parse(allocationBytes.toString("utf8")) as LeanPrivateProbeAllocationV1 | LeanPrivateProbeAllocationV2
+  if (!allocationPathAllowed(input.allocationPath) || allocation.sourceRoot !== source.sourceRoot || !allocationBytes.equals(leanCanonicalBytes(allocation)) || (allocation.schemaVersion === "lean-private-probe-allocation-v2") !== input.allocationPath.endsWith("allocation-v2.json")) return fail("LEAN_PRIVATE_PROBE_ALLOCATION")
+  if (allocation.schemaVersion === "lean-private-probe-allocation-v2") {
+    const expected = createLeanPrivateProbeScheduleV2({ sourceHead: allocation.sourceHead, sourceRoot: allocation.sourceRoot, executableRoot: allocation.executableRoot, costSnapshotRoot: allocation.costSnapshotRoot })
+    if (!Buffer.from(leanCanonicalBytes(expected)).equals(allocationBytes)) return fail("LEAN_PRIVATE_PROBE_ALLOCATION_V2")
+  } else {
+    const expected = createLeanPrivateProbeScheduleV1({ sourceHead: allocation.sourceHead, sourceRoot: allocation.sourceRoot, executableRoot: allocation.executableRoot, costSnapshotRoot: allocation.costSnapshotRoot })
+    if (!Buffer.from(leanCanonicalBytes(expected)).equals(allocationBytes)) return fail("LEAN_PRIVATE_PROBE_ALLOCATION_V1")
+  }
+  const storePath = resolve(input.store), priorRetainedBytes = allocation.schemaVersion === "lean-private-probe-allocation-v2" ? allocation.priorV1Carry.retainedAllocatedBytes : 0, began = performance.now(), firstCapacity = observeLeanPrivateProbeCapacityV1(storePath, priorRetainedBytes)
   const authorityAdmission = openLeanPrivateProbeAdmissionV1({ storePath, allocationCommit: input.allocationCommit, allocationPath: input.allocationPath, capacity: firstCapacity })
   const entryBody = { schemaVersion: "lean-private-probe-entry-v1", sourceHead: allocation.sourceHead, allocationRoot: allocation.root, allocationCommit: input.allocationCommit, sourceRoot: source.sourceRoot, enteredAtElapsedMs: 0 }
   const inputs = privateProbeInputs(), outcomes: LeanPrivateProbeResultV1["outcomes"][number][] = [], attemptedOrdinals: number[] = []
@@ -173,8 +189,8 @@ export const executeLeanPrivateProbeEntryV1 = async (input: Extract<LeanPrivateP
   try {
   writeJson(join(storePath, "entry.json"), { ...entryBody, root: labRoot("lean-private-probe-entry-v1", entryBody) })
   for (let ordinal = 0; ordinal < allocation.cases.length; ordinal++) {
-    const descriptor = allocation.cases[ordinal]!, capacity = observeLeanPrivateProbeCapacityV1(storePath)
-    const measured = capacityCheck(storePath, began)
+    const descriptor = allocation.cases[ordinal]!, capacity = observeLeanPrivateProbeCapacityV1(storePath, priorRetainedBytes)
+    const measured = capacityCheck(storePath, began, priorRetainedBytes)
     peakRssBytes = Math.max(peakRssBytes, measured.rssBytes); minimumAvailableDiskBytes = Math.min(minimumAvailableDiskBytes, measured.availableDiskBytes)
     attemptedOrdinals.push(ordinal)
     const authority = recordAndIssueLeanPrivateProbeRuntimeAuthorityV1(authorityAdmission, descriptor, capacity)
@@ -208,11 +224,11 @@ export const executeLeanPrivateProbeEntryV1 = async (input: Extract<LeanPrivateP
     if (!validProbeRecord(record, descriptor)) return fail("LEAN_PRIVATE_PROBE_RECORD_SCHEMA")
     outcomes.push({ ordinal, status, cleanupComplete, inputRoot: descriptor.inputRoot, requestRoot: descriptor.requestRoot })
     writeJson(join(storePath, `probe-${String(ordinal).padStart(2, "0")}.json`), record)
-    const now = capacityCheck(storePath, began)
+    const now = capacityCheck(storePath, began, priorRetainedBytes)
     peakRssBytes = Math.max(peakRssBytes, now.rssBytes); minimumAvailableDiskBytes = Math.min(minimumAvailableDiskBytes, now.availableDiskBytes)
     if (status !== "success" || !cleanupComplete || measured.elapsedMs > 600_000 || now.elapsedMs > 600_000) break
   }
-  terminalCapacity = capacityCheck(storePath, began)
+  terminalCapacity = capacityCheck(storePath, began, priorRetainedBytes)
   } catch {
     failureCode = "resource_or_io_failure"
     terminalCapacity = { elapsedMs: Math.max(0, Math.ceil(performance.now() - began)), rssBytes: process.memoryUsage().rss, availableDiskBytes: 0 }
@@ -222,7 +238,7 @@ export const executeLeanPrivateProbeEntryV1 = async (input: Extract<LeanPrivateP
   const resultBody = { schemaVersion: "lean-private-probe-result-v1" as const, allocationRoot: allocation.root, sourceHead: allocation.sourceHead, matchCount: 0 as const, attemptedOrdinals, outcomes }
   const result = freezeLabValue({ ...resultBody, root: labRoot("lean-private-probe-result-v1", resultBody) })
   let resources: ReturnType<typeof observeLeanPrivateProbeResourcesV1> | null = null
-  if (!failureCode) { try { resources = observeLeanPrivateProbeResourcesV1(storePath) } catch { failureCode = "resource_or_io_failure" } }
+  if (!failureCode) { try { resources = observeLeanPrivateProbeResourcesV1(storePath, priorRetainedBytes) } catch { failureCode = "resource_or_io_failure" } }
   const terminalBody = { schemaVersion: "lean-private-probe-terminal-v1", allocationRoot: allocation.root, attemptedCount: attemptedOrdinals.length, matchCount: 0, elapsedMs: terminalCapacity.elapsedMs, peakRssBytes, availableDiskBytes: minimumAvailableDiskBytes, cleanupComplete: outcomes.every(item => item.cleanupComplete), failureCode, resources, resultRoot: result.root }
   let persistenceFailed = false
   try { writeJson(join(storePath, "terminal.json"), { ...terminalBody, root: labRoot("lean-private-probe-terminal-v1", terminalBody) }) } catch { persistenceFailed = true }
@@ -232,16 +248,19 @@ export const executeLeanPrivateProbeEntryV1 = async (input: Extract<LeanPrivateP
 }
 
 export const verifyPrivateProbeStore = (input: Extract<LeanPrivateProbeCommandV1, { command: "verify" }>): Readonly<{ verified: true; resultRoot: LabRoot }> => {
-  const storePath = resolve(input.store), allocationBytes = readPrivateFile(join(storePath, "allocation.json")), allocation = JSON.parse(allocationBytes.toString("utf8")) as LeanPrivateProbeScheduleV1
-  if (!allocationPathAllowed(input.allocationPath) || allocation.sourceRoot !== input.sourceRoot || !allocationBytes.equals(leanCanonicalBytes(allocation))) return fail("LEAN_PRIVATE_PROBE_VERIFY_ALLOCATION")
-  const expected = createLeanPrivateProbeScheduleV1({ sourceHead: allocation.sourceHead, sourceRoot: allocation.sourceRoot, executableRoot: allocation.executableRoot, costSnapshotRoot: allocation.costSnapshotRoot })
+  const storePath = resolve(input.store), allocationBytes = readPrivateFile(join(storePath, "allocation.json")), allocation = JSON.parse(allocationBytes.toString("utf8")) as LeanPrivateProbeScheduleV1 | LeanPrivateProbeScheduleV2
+  if (!allocationPathAllowed(input.allocationPath) || allocation.sourceRoot !== input.sourceRoot || !allocationBytes.equals(leanCanonicalBytes(allocation)) || (allocation.schemaVersion === "lean-private-probe-allocation-v2") !== input.allocationPath.endsWith("allocation-v2.json")) return fail("LEAN_PRIVATE_PROBE_VERIFY_ALLOCATION")
+  const expected = allocation.schemaVersion === "lean-private-probe-allocation-v2"
+    ? createLeanPrivateProbeScheduleV2({ sourceHead: allocation.sourceHead, sourceRoot: allocation.sourceRoot, executableRoot: allocation.executableRoot, costSnapshotRoot: allocation.costSnapshotRoot })
+    : createLeanPrivateProbeScheduleV1({ sourceHead: allocation.sourceHead, sourceRoot: allocation.sourceRoot, executableRoot: allocation.executableRoot, costSnapshotRoot: allocation.costSnapshotRoot })
   authenticateLeanPrivateProbeCostV1()
-  if (expected.root !== allocation.root || expected.root !== labRoot("lean-private-probe-allocation-v1", (({ root: _root, ...body }) => body)(allocation))) return fail("LEAN_PRIVATE_PROBE_VERIFY_SCHEDULE")
+  if (expected.root !== allocation.root || expected.root !== labRoot(allocation.schemaVersion, (({ root: _root, ...body }) => body)(allocation))) return fail("LEAN_PRIVATE_PROBE_VERIFY_SCHEDULE")
   const request = readJson(join(storePath, "request.json")) as Record<string, unknown>
   if (!readPrivateFile(join(storePath, "request.json")).equals(leanCanonicalBytes(probeRequest(expected)))) return fail("LEAN_PRIVATE_PROBE_VERIFY_REQUEST")
-  if (!exactKeys(request, ["schemaVersion", "sourceRoot", "executableRoot", "tupleRoot", "runtimeLimitsRoot", "caseRoots", "root"]) || request.schemaVersion !== "lean-private-probe-request-v1" || request.sourceRoot !== allocation.sourceRoot || request.executableRoot !== allocation.executableRoot || !Array.isArray(request.caseRoots) || request.caseRoots.length !== 4) return fail("LEAN_PRIVATE_PROBE_VERIFY_REQUEST")
+  const isV2 = allocation.schemaVersion === "lean-private-probe-allocation-v2"
+  if (!exactKeys(request, ["schemaVersion", "sourceRoot", "executableRoot", "tupleRoot", "runtimeLimitsRoot", "caseRoots", "root"]) || request.schemaVersion !== (isV2 ? "lean-private-probe-request-v2" : "lean-private-probe-request-v1") || request.sourceRoot !== allocation.sourceRoot || request.executableRoot !== allocation.executableRoot || !Array.isArray(request.caseRoots) || request.caseRoots.length !== allocation.cases.length) return fail("LEAN_PRIVATE_PROBE_VERIFY_REQUEST")
   const { root: requestRoot, ...requestBody } = request
-  if (requestRoot !== labRoot("lean-private-probe-request-v1", requestBody)) return fail("LEAN_PRIVATE_PROBE_VERIFY_REQUEST_ROOT")
+  if (requestRoot !== labRoot(isV2 ? "lean-private-probe-request-v2" : "lean-private-probe-request-v1", requestBody)) return fail("LEAN_PRIVATE_PROBE_VERIFY_REQUEST_ROOT")
   const entry = readJson(join(storePath, "entry.json")) as Record<string, unknown>
   if (!nonnegative(entry.enteredAtElapsedMs)) return fail("LEAN_PRIVATE_PROBE_VERIFY_ENTRY")
   if (!exactKeys(entry, ["schemaVersion", "sourceHead", "allocationRoot", "allocationCommit", "sourceRoot", "enteredAtElapsedMs", "root"]) || entry.schemaVersion !== "lean-private-probe-entry-v1" || entry.allocationRoot !== allocation.root || entry.sourceRoot !== allocation.sourceRoot || entry.sourceHead !== allocation.sourceHead || entry.allocationCommit !== input.allocationCommit) return fail("LEAN_PRIVATE_PROBE_VERIFY_ENTRY")
@@ -251,21 +270,23 @@ export const verifyPrivateProbeStore = (input: Extract<LeanPrivateProbeCommandV1
   const committedAllocation = execFileSync("git", ["show", `${input.allocationCommit}:${input.allocationPath}`], { encoding: "buffer", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 65_537 })
   if (commitParents.length !== 2 || commitParents[1] !== allocation.sourceHead || !Buffer.from(committedAllocation).equals(allocationBytes) || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 4096 }).trim() !== input.allocationCommit) return fail("LEAN_PRIVATE_PROBE_VERIFY_HEAD")
   const result = readJson(join(storePath, "result.json")) as LeanPrivateProbeResultV1
-  if (!verifyLeanPrivateProbeResultV1(allocation, result)) return fail("LEAN_PRIVATE_PROBE_VERIFY_RESULT")
+  if (!(isV2 ? verifyLeanPrivateProbeResultV2(allocation, result) : verifyLeanPrivateProbeResultV1(allocation, result))) return fail("LEAN_PRIVATE_PROBE_VERIFY_RESULT")
   const ledgerBytes = readPrivateFile(join(storePath, "ledger.ndjson"), 65_536), ledgerText = ledgerBytes.toString("utf8")
   if (ledgerText && !ledgerText.endsWith("\n")) return fail("LEAN_PRIVATE_PROBE_VERIFY_LEDGER")
   const rows = ledgerText ? ledgerText.trimEnd().split("\n").map(line => JSON.parse(line) as Record<string, unknown>) : []
-  if (rows.length !== result.attemptedOrdinals.length || rows.some((row, ordinal) => !exactKeys(row, ["schemaVersion", "allocationRoot", "allocationDigest", "ordinal", "caseId", "requestRoot", "inputRoot"]) || row.schemaVersion !== "lean-private-probe-debit-v1" || row.ordinal !== ordinal || row.caseId !== allocation.cases[ordinal]!.caseId || row.allocationRoot !== allocation.root || row.allocationDigest !== leanBytesRoot(allocationBytes) || row.inputRoot !== allocation.cases[ordinal]!.inputRoot || row.requestRoot !== allocation.cases[ordinal]!.requestRoot)) return fail("LEAN_PRIVATE_PROBE_VERIFY_DEBITS")
+  if (rows.length !== result.attemptedOrdinals.length || rows.some((row, index) => !exactKeys(row, ["schemaVersion", "allocationRoot", "allocationDigest", "ordinal", "caseId", "requestRoot", "inputRoot"]) || row.schemaVersion !== "lean-private-probe-debit-v1" || row.ordinal !== index || row.caseId !== allocation.cases[index]!.caseId || row.allocationRoot !== allocation.root || row.allocationDigest !== leanBytesRoot(allocationBytes) || row.inputRoot !== allocation.cases[index]!.inputRoot || row.requestRoot !== allocation.cases[index]!.requestRoot)) return fail("LEAN_PRIVATE_PROBE_VERIFY_DEBITS")
+  if (isV2 && !verifyLeanPrivateProbeV2RetainedJoins({ allocation, request, result, debitRows: rows })) return fail("LEAN_PRIVATE_PROBE_VERIFY_V2_JOINS")
   for (const outcome of result.outcomes) {
     const record = readJson(join(storePath, `probe-${String(outcome.ordinal).padStart(2, "0")}.json`)) as Record<string, unknown>
-    if (!validProbeRecord(record, allocation.cases[outcome.ordinal]!) || record.status !== outcome.status || record.cleanupComplete !== true || outcome.cleanupComplete !== true || Number(record.elapsedMs) > allocation.ceilings.hostMs || Number(record.rssBytes) > 3_000_000_000 || Number(record.availableDiskBytes) < 2_000_000_000) return fail("LEAN_PRIVATE_PROBE_VERIFY_CASE")
+    if (!validProbeRecord(record, allocation.cases[outcome.ordinal]!) || record.status !== outcome.status || record.cleanupComplete !== outcome.cleanupComplete || !isV2 && (record.cleanupComplete !== true || outcome.cleanupComplete !== true) || Number(record.elapsedMs) > allocation.ceilings.hostMs || Number(record.rssBytes) > 3_000_000_000 || Number(record.availableDiskBytes) < 2_000_000_000) return fail("LEAN_PRIVATE_PROBE_VERIFY_CASE")
     const { root: recordRoot, ...recordBody } = record
     if (recordRoot !== labRoot("lean-private-probe-case-result-v1", recordBody)) return fail("LEAN_PRIVATE_PROBE_VERIFY_CASE_ROOT")
   }
   const terminalFull = readJson(join(storePath, "terminal.json")) as Record<string, unknown>
   const { resources, ...terminal } = terminalFull
-  if (!exactKeys(resources, ["costSnapshotRoot", "historicalCharged", "historicalAllocatedBytes", "wallAtMs", "cumulativeElapsedMs", "newAllocatedBytes", "retainedBytesUpperBound", "parentRssBytes", "containerMemoryUpperBound", "aggregateMemoryUpperBound", "availableDiskBytes"]) || resources.costSnapshotRoot !== LEAN_PRIVATE_PROBE_COST_ROOT || resources.historicalCharged !== 40 || resources.historicalAllocatedBytes !== 29970432 || !Object.entries(resources).filter(([key]) => key !== "costSnapshotRoot").every(([, value]) => nonnegative(value)) || resources.cumulativeElapsedMs !== 292757903 + Number(resources.wallAtMs) - 1791640699000 || Number(resources.cumulativeElapsedMs) < 292757903 || Number(resources.cumulativeElapsedMs) + 1860000 > 296357903 || Number(resources.wallAtMs) + 1860000 > 1791644299000 || resources.retainedBytesUpperBound !== 29970432 + Number(resources.newAllocatedBytes) + 131072 || Number(resources.retainedBytesUpperBound) > 12000000000 || resources.containerMemoryUpperBound !== 268435456 || resources.aggregateMemoryUpperBound !== Number(resources.parentRssBytes) + 268435456 + 512000000 + 335544320 || Number(resources.aggregateMemoryUpperBound) > 3000000000 || Number(resources.availableDiskBytes) < 2000000000) return fail("LEAN_PRIVATE_PROBE_VERIFY_RESOURCES")
-  if (!exactKeys(terminal, ["schemaVersion", "allocationRoot", "attemptedCount", "matchCount", "elapsedMs", "peakRssBytes", "availableDiskBytes", "cleanupComplete", "failureCode", "resultRoot", "root"]) || terminal.failureCode !== null || terminal.schemaVersion !== "lean-private-probe-terminal-v1" || terminal.allocationRoot !== allocation.root || terminal.attemptedCount !== result.attemptedOrdinals.length || terminal.matchCount !== 0 || terminal.resultRoot !== result.root || !nonnegative(terminal.elapsedMs) || terminal.elapsedMs > 600_000 || !nonnegative(terminal.peakRssBytes) || terminal.peakRssBytes > 3_000_000_000 || !nonnegative(terminal.availableDiskBytes) || terminal.availableDiskBytes < 2_000_000_000 || terminal.cleanupComplete !== true) return fail("LEAN_PRIVATE_PROBE_VERIFY_TERMINAL")
+  const priorRetainedBytes = isV2 ? allocation.priorV1Carry.retainedAllocatedBytes : 0
+  if (!exactKeys(resources, ["costSnapshotRoot", "historicalCharged", "historicalAllocatedBytes", "wallAtMs", "cumulativeElapsedMs", "newAllocatedBytes", "retainedBytesUpperBound", "parentRssBytes", "containerMemoryUpperBound", "aggregateMemoryUpperBound", "availableDiskBytes"]) || resources.costSnapshotRoot !== LEAN_PRIVATE_PROBE_COST_ROOT || resources.historicalCharged !== 40 || resources.historicalAllocatedBytes !== 29970432 || !Object.entries(resources).filter(([key]) => key !== "costSnapshotRoot").every(([, value]) => nonnegative(value)) || resources.cumulativeElapsedMs !== 292757903 + Number(resources.wallAtMs) - 1791640699000 || Number(resources.cumulativeElapsedMs) < 292757903 || Number(resources.cumulativeElapsedMs) + 1860000 > 296357903 || Number(resources.wallAtMs) + 1860000 > 1791644299000 || resources.retainedBytesUpperBound !== 29970432 + priorRetainedBytes + Number(resources.newAllocatedBytes) + 131072 || Number(resources.retainedBytesUpperBound) > 12000000000 || Number(resources.retainedBytesUpperBound) + 2000000000 > 15000000000 || resources.containerMemoryUpperBound !== 268435456 || resources.aggregateMemoryUpperBound !== Number(resources.parentRssBytes) + 268435456 + 512000000 + 335544320 || Number(resources.aggregateMemoryUpperBound) > 3000000000 || Number(resources.availableDiskBytes) < 2000000000) return fail("LEAN_PRIVATE_PROBE_VERIFY_RESOURCES")
+  if (!exactKeys(terminal, ["schemaVersion", "allocationRoot", "attemptedCount", "matchCount", "elapsedMs", "peakRssBytes", "availableDiskBytes", "cleanupComplete", "failureCode", "resultRoot", "root"]) || terminal.failureCode !== null || terminal.schemaVersion !== "lean-private-probe-terminal-v1" || terminal.allocationRoot !== allocation.root || terminal.attemptedCount !== result.attemptedOrdinals.length || terminal.matchCount !== 0 || terminal.resultRoot !== result.root || !nonnegative(terminal.elapsedMs) || terminal.elapsedMs > 600_000 || !nonnegative(terminal.peakRssBytes) || terminal.peakRssBytes > 3_000_000_000 || !nonnegative(terminal.availableDiskBytes) || terminal.availableDiskBytes < 2_000_000_000 || terminal.cleanupComplete !== result.outcomes.every(item => item.cleanupComplete)) return fail("LEAN_PRIVATE_PROBE_VERIFY_TERMINAL")
   const { root: terminalRoot, ...terminalBody } = terminal
   if (terminalRoot !== labRoot("lean-private-probe-terminal-v1", { ...terminalBody, resources })) return fail("LEAN_PRIVATE_PROBE_VERIFY_TERMINAL_ROOT")
   const storeStat = lstatSync(storePath)
@@ -306,6 +327,18 @@ export const createLeanPrivateProbeScheduleV1 = (input: {
   return freezeLabValue({ ...body, root: labRoot("lean-private-probe-allocation-v1", body) })
 }
 
+/** One-case prospective replacement joined to the authenticated failed v1 cost/debit. */
+export const createLeanPrivateProbeScheduleV2 = (input: {
+  readonly sourceHead: string; readonly sourceRoot: LabRoot; readonly executableRoot: LabRoot; readonly costSnapshotRoot: LabRoot
+}): LeanPrivateProbeScheduleV2 => {
+  const carry = authenticateLeanPrivateProbeV1CarryV2()
+  if (!/^[a-f0-9]{40,64}$/u.test(input.sourceHead) || input.sourceHead === carry.sourceHead || !isRoot(input.sourceRoot) || !isRoot(input.executableRoot) || input.costSnapshotRoot !== LEAN_PRIVATE_PROBE_COST_ROOT) return fail("LEAN_PRIVATE_PROBE_SCHEDULE_V2_INPUT")
+  const first = createLeanPrivateProbeScheduleV1(input).cases[0]!
+  if (first.ordinal !== carry.ordinal || first.caseId !== carry.caseId || first.method !== carry.method || first.inputRoot !== carry.inputRoot || first.requestRoot !== carry.requestRoot) return fail("LEAN_PRIVATE_PROBE_SCHEDULE_V2_PRIOR_CASE")
+  const body = { schemaVersion: "lean-private-probe-allocation-v2" as const, sourceHead: input.sourceHead, matchCount: 0 as const, cases: [first] as const, sourceRoot: input.sourceRoot, executableRoot: input.executableRoot, image: LAB_ADMITTED_ROOTS.image, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, costSnapshotRoot: input.costSnapshotRoot, ceilings, priorV1Carry: carry }
+  return freezeLabValue({ ...body, root: labRoot("lean-private-probe-allocation-v2", body) })
+}
+
 /**
  * Read-only result verifier. The host-side verifier additionally authenticates
  * files, allocation commit, source/HEAD and resource receipts; this function
@@ -330,6 +363,52 @@ export const verifyLeanPrivateProbeResultV1 = (allocationValue: unknown, resultV
     }
     const { root: resultRoot, ...resultBody } = result
     return isRoot(resultRoot) && resultRoot === labRoot("lean-private-probe-result-v1", resultBody)
+  } catch { return false }
+}
+
+/** Validate the one-case v2 retained join without touching the store or running a provider. */
+export const verifyLeanPrivateProbeResultV2 = (allocationValue: unknown, resultValue: unknown): boolean => {
+  try {
+    if (!allocationValue || typeof allocationValue !== "object" || !resultValue || typeof resultValue !== "object") return false
+    const allocation = allocationValue as LeanPrivateProbeScheduleV2
+    const result = resultValue as LeanPrivateProbeResultV1
+    if (!exactKeys(allocation, ["schemaVersion", "sourceHead", "matchCount", "cases", "root", "sourceRoot", "executableRoot", "image", "tupleId", "tupleRoot", "runtimeLimitsRoot", "costSnapshotRoot", "ceilings", "priorV1Carry"]) || !exactKeys(result, ["schemaVersion", "allocationRoot", "sourceHead", "matchCount", "attemptedOrdinals", "outcomes", "root"]) || allocation.schemaVersion !== "lean-private-probe-allocation-v2" || allocation.matchCount !== 0 || !Array.isArray(allocation.cases) || allocation.cases.length !== 1 || allocation.cases[0]?.ordinal !== 0 || !isRoot(allocation.root) || !isRoot(result.allocationRoot) || result.schemaVersion !== "lean-private-probe-result-v1" || result.matchCount !== 0 || result.sourceHead !== allocation.sourceHead || result.allocationRoot !== allocation.root || !Array.isArray(result.attemptedOrdinals) || !Array.isArray(result.outcomes) || result.outcomes.length !== result.attemptedOrdinals.length || result.outcomes.length > 1) return false
+    const { root, ...body } = allocation
+    if (root !== labRoot("lean-private-probe-allocation-v2", body)) return false
+    const rebuilt = createLeanPrivateProbeScheduleV2(allocation)
+    if (!Buffer.from(leanCanonicalBytes(allocation)).equals(leanCanonicalBytes(rebuilt))) return false
+    let terminal = false
+    for (const outcome of result.outcomes) {
+      if (terminal || !exactKeys(outcome, ["ordinal", "status", "cleanupComplete", "inputRoot", "requestRoot"]) || outcome.ordinal !== 0 || result.attemptedOrdinals[0] !== 0 || outcome.inputRoot !== allocation.cases[0]!.inputRoot || outcome.requestRoot !== allocation.cases[0]!.requestRoot || !["success", "strategy_timeout", "system_failure", "unknown"].includes(String(outcome.status)) || typeof outcome.cleanupComplete !== "boolean") return false
+      terminal = outcome.status !== "success" || !outcome.cleanupComplete
+    }
+    if (result.attemptedOrdinals.length === 1 && result.attemptedOrdinals[0] !== 0) return false
+    const { root: resultRoot, ...resultBody } = result
+    return isRoot(resultRoot) && resultRoot === labRoot("lean-private-probe-result-v1", resultBody)
+  } catch { return false }
+}
+
+/** Exact request/debit/result join consumed by the read-only host verifier. */
+export const verifyLeanPrivateProbeV2RetainedJoins = (input: {
+  readonly allocation: unknown
+  readonly request: unknown
+  readonly result: unknown
+  readonly debitRows: readonly unknown[]
+}): boolean => {
+  try {
+    const allocation = input.allocation as LeanPrivateProbeScheduleV2
+    const descriptor = allocation?.cases?.[0]
+    if (!descriptor || !verifyLeanPrivateProbeResultV2(allocation, input.result)) return false
+    const request = input.request as Record<string, unknown>
+    if (!exactKeys(request, ["schemaVersion", "sourceRoot", "executableRoot", "tupleRoot", "runtimeLimitsRoot", "caseRoots", "root"]) || request.schemaVersion !== "lean-private-probe-request-v2" || request.sourceRoot !== allocation.sourceRoot || request.executableRoot !== allocation.executableRoot || !Array.isArray(request.caseRoots) || request.caseRoots.length !== 1) return false
+    const { root: requestRoot, ...requestBody } = request
+    if (requestRoot !== labRoot("lean-private-probe-request-v2", requestBody) || !Buffer.from(leanCanonicalBytes(request)).equals(leanCanonicalBytes(probeRequest(allocation)))) return false
+    const allocationBytes = leanCanonicalBytes(allocation), result = input.result as LeanPrivateProbeResultV1
+    if (input.debitRows.length !== result.attemptedOrdinals.length || input.debitRows.some((value, index) => {
+      const row = value as Record<string, unknown>
+      return !exactKeys(row, ["schemaVersion", "allocationRoot", "allocationDigest", "ordinal", "caseId", "requestRoot", "inputRoot"]) || row.schemaVersion !== "lean-private-probe-debit-v1" || row.allocationRoot !== allocation.root || row.allocationDigest !== leanBytesRoot(allocationBytes) || row.ordinal !== index || row.caseId !== descriptor.caseId || row.requestRoot !== descriptor.requestRoot || row.inputRoot !== descriptor.inputRoot
+    })) return false
+    return true
   } catch { return false }
 }
 
