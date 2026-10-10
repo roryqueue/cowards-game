@@ -1,0 +1,11 @@
+## ISSUES FOUND
+
+**Bounded scope:** Reviewed the source-only revision against the authority, factory, planner, session, V8 broker/supervisor, and private-probe runner contracts. The runtime remains explicitly closed; this review does not request or authorize a probe, Match, allocation, store, entry, provider, Strategy, or empirical reader. The revised Task 1 now specifies an opaque module-issued probe startup grant, ordered claims, an exact probe-only binding branch in the existing V8 broker/session path, independent fixed ceilings, no Match authority/fields, and unchanged legacy/Match behavior. The source-only 60-minute approval and carried cap are represented in the plan.
+
+### Blocker
+
+1. **[BLOCKER] Task 2 leaves the one-case v2 path as detached fixtures, so no production issuer can reach it.** The plan says to “Add source-only v2 validator/schedule fixtures” and test only inert fixtures. In the current implementation, `validatePrivateProbeAllocation` accepts only `lean-private-probe-allocation-v1` with exactly four cases; `recordAndIssueLeanPrivateProbeRuntimeAuthorityV1` issues for the next case in that allocation; the runner schedule/preparation and read-only result verifier also enforce four cases. Therefore fixture-only v2 validation does not connect the corrected case to the module-issued startup grant or the existing runner/admission/debit/verification chain. This fails the stated goal of a future exact ordinal-0 authority using the existing V8 path.
+
+**Minimal correction (within the already-authorized ten source/test paths):** Make Task 2 explicitly add a production v2 branch in the existing runner and authority modules (and their tests): exact one-case v2 validation/scheduling, admission and durable debit issuance, entry-path binding, and read-only verification, while preserving the v1 four-case path byte/behavior semantics. Test those production branches through inert in-memory/pure seams only. Do not call the prepare/entry CLI, persist or commit an allocation, create/write a private store or ledger, invoke a provider/Strategy/Match/reader, or open runtime admission. No new files, helper/report family, plan number, or approval scope is needed.
+
+**Recommendation:** Revise Task 2 with that source-wiring requirement before implementation. Keep runtime/empirical admission closed.
