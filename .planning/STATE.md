@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Smaller replacement approved; bounded research and checked Plan16 supplement next
+stopped_at: Smaller replacement plan checked; isolated source implementation next, no runtime admission
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: Human approved smaller replacement; two-hour diagnostic-first scope chosen prospectively; old failed family remains immutable
+last_activity_desc: Smaller four-probe zero-Match supplement independently checked after bounded corrections; source implementation next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — SMALLER REPLACEMENT PLAN CHECKED / SOURCE ONLY (2026-10-10).
+
+Research and the three-iteration independent check are CLOSED. Final SMALL-REPLACEMENT-PLAN-CHECK-v3 reports VERIFICATION PASSED after correcting the no-Match authority path, durable committed-allocation/debit joins, constructor override denial, genuinely read-only retained verification, exact ownership, and script-inclusive type checks. Existing Plan16 supplement has three serial tasks/ten source-test paths, four invocation probes, ZERO Matches, and at most one fresh correction of the first failed case. All LEAG-01–09 remain pending. Next isolated source implementation, then distinct review/fix, validation and source verification BEFORE any allocation/entry. Same two-hour stop13:58:52UTC/source frontier13:27:52/31-minute reserve, carried historical time/files/40 charges, 3GBRAM/15GBdisk and unchanged rules/runtime/privacy. No empirical readiness, baseline, freeze, formation, holdout/public/counting/production or whole-phase credit. Old failed family/artifacts remain immutable; no active runtime or verifier. ROOT owns tracking and actual prospective entry; monitors must not duplicate active agents.
 
 CURRENT APPROVED CHECKPOINT — SMALLER PRIVATE REPLACEMENT / RESEARCH FIRST (2026-10-10).
 
