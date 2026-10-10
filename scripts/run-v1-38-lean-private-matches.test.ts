@@ -11,6 +11,9 @@ import type { LabMatchExecution } from "../packages/strategy-lab/src/runtime-bri
 import type { LeanPrivateMatchAllocationV1 } from "./lib/v1-38-lean-experiment-authority.js"
 import { readLeanPrivateMatchGitV1 } from "./lib/v1-38-lean-container-match-session.js"
 import { LEAN_PRIVATE_MATCH_WINDOW_V1 } from "./lib/v1-38-lean-experiment-authority.js"
+import * as authority from "./lib/v1-38-lean-experiment-authority.js"
+import * as composer from "./lib/v1-38-lean-baseline-match.js"
+import * as source from "./lib/v1-38-lean-baseline-source.js"
 const gitCalls = vi.hoisted(() => ({ calls: [] as Array<{ program: string; args: string[]; options: Record<string, unknown> }>, responses: [] as Buffer[] }))
 vi.mock("node:child_process", async importOriginal => {
   const actual = await importOriginal<typeof import("node:child_process")>()
@@ -36,6 +39,64 @@ const fixture = () => {
 }
 
 describe("dedicated private two-Match HOST route", () => {
+  it.each(["composer", "guard", "cap", "terminal-observer", "second-capacity"])("retains charged/partial evidence after inert %s refusal", async fault => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "inert-two-match-stop-"))), f = fixture()
+    const resources = { windowRoot: LEAN_PRIVATE_MATCH_WINDOW_V1.root, allocationRoot: f.allocation.root, wallAtMs: 1791669996000, cumulativeElapsedMs: 322054903, remainingSlots: 2, historicalCharged: 40, historicalAllocatedBytes: 29970432, priorProbeBytes: 65536, sourceAllocatedBytes: 4096, newAllocatedBytes: 4096, retainedBytesUpperBound: 29970432 + 65536 + 4096 + 4096 + 2 * (67108864 + 16777216) + 262144, parentRssBytes: 100000000, aggregateMemoryUpperBound: 100000000 + 2 * 268435456 + 512000000 + 335544320, availableDiskBytes: 2000000000 }
+    const write = (name: string, value: unknown) => writeFileSync(join(directory, name), leanCanonicalBytes(value), { mode: 0o600 })
+    write("allocation.json", f.allocation)
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1791669996000)
+    const open = vi.spyOn(authority, "openLeanPrivateMatchAdmissionV1").mockImplementation(() => {
+      write("entry.json", { resources }); writeFileSync(join(directory, "ledger.ndjson"), "", { mode: 0o600 }); return {} as ReturnType<typeof authority.openLeanPrivateMatchAdmissionV1>
+    })
+    let capacities = 0, debits = 0
+    const capacity = vi.spyOn(authority, "observeLeanPrivateMatchCapacityV1").mockImplementation(() => {
+      if (++capacities === 3 && fault === "second-capacity") throw new Error("PRIVATE_SENTINEL")
+      return {} as ReturnType<typeof authority.observeLeanPrivateMatchCapacityV1>
+    })
+    const debit = vi.spyOn(authority, "recordLeanPrivateMatchDebitV1").mockImplementation(() => {
+      debits++; const row = { ordinal: 0, root: f.binding.debitRoot, resources }
+      write("debit-0.json", row); write("pair-0.json", {}); writeFileSync(join(directory, "ledger.ndjson"), Buffer.concat([Buffer.from(leanCanonicalBytes(row)), Buffer.from("\n")]), { mode: 0o600 })
+      return {} as ReturnType<typeof authority.recordLeanPrivateMatchDebitV1>
+    })
+    const context = vi.spyOn(authority, "readLeanPrivateMatchContextV1").mockReturnValue({ allocation: f.allocation, slot: f.allocation.slots[0], debitRoot: f.binding.debitRoot, storePath: directory })
+    const sourceRead = vi.spyOn(source, "readLeanBaselineSource").mockReturnValue({} as ReturnType<typeof source.readLeanBaselineSource>)
+    const run = vi.spyOn(composer, "runLeanPrivateFeasibilityMatch").mockImplementation(async () => {
+      if (fault === "composer") throw new Error("PRIVATE_SENTINEL")
+      const actual = fault === "cap" ? { ...f.actual, transitions: Array.from({ length: 65537 }, () => f.actual.transitions[0]!) } : f.actual
+      const compact = fault === "cap" ? { ...f.compact, telemetry: { transitions: 65537, events: 0 } } : f.compact
+      return { compact, privateActual: actual, privateProviderIdentities: f.binding.providerIdentities, semanticRoot: r(41) } as unknown as Awaited<ReturnType<typeof composer.runLeanPrivateFeasibilityMatch>>
+    })
+    let checkpoints = 0
+    const checkpoint = vi.spyOn(authority, "checkpointLeanPrivateMatchV1").mockImplementation(() => { if (fault === "guard" && ++checkpoints === 2) throw new Error("PRIVATE_SENTINEL") })
+    const observe = vi.spyOn(authority, "observeLeanPrivateMatchResourcesV1").mockImplementation(() => {
+      if (fault === "terminal-observer") throw new Error("PRIVATE_SENTINEL")
+      return { ...resources, remainingSlots: 1, historicalCharged: 40, priorProbeBytes: 65536 }
+    })
+    const close = vi.spyOn(authority, "closeLeanPrivateMatchDebitV1").mockReturnValue(true)
+    try {
+      const result = await route.enterLeanPrivateMatchesV1({ command: "entry", store: directory, allocationCommit: "b".repeat(40), allocationPath: authority.LEAN_PRIVATE_MATCH_ARTIFACT_V1 })
+      expect(result.attemptedCount).toBe(1); expect(debits).toBe(1); expect(run).toHaveBeenCalledTimes(1)
+      const terminal = JSON.parse(readFileSync(join(directory, "terminal-0.json"), "utf8")), aggregate = JSON.parse(readFileSync(join(directory, "result.json"), "utf8"))
+      expect(aggregate.cumulativeCharged).toBe(41); expect(aggregate.unattemptedOrdinals).toEqual([1])
+      expect(aggregate.stopCode).toBe(fault === "second-capacity" ? "ADMISSION_STOP" : "CHARGED_ATTEMPT_STOP")
+      expect(JSON.stringify(terminal)).not.toContain("PRIVATE_SENTINEL")
+      if (fault !== "second-capacity") {
+        expect(terminal.evidence).toMatchObject({ classification: "system_failure", boardEvidenceAvailable: false, rowCount: 0 })
+        expect(terminal.evidence.cleanupComplete).toBe(fault === "composer" ? null : true)
+        expect(terminal.providerIdentities).toHaveLength(fault === "composer" ? 0 : 2)
+        if (fault === "guard") { expect(terminal.evidence.observed.executionRoot).toBe(f.compact.executionRoot); expect(terminal.evidence.partialStream.bytes).toBeGreaterThan(0) }
+      } else expect(terminal.evidence.classification).toBe("success")
+      expect(route.verifyLeanPrivateMatchTerminalV1({ binding: { ...f.binding, providerIdentities: terminal.providerIdentities }, terminal, resultAnchor: aggregate.terminals[0], streamPath: join(directory, "replay-0.ndjson") }).verified).toBe(true)
+      if (fault === "guard") {
+        const before = readFileSync(join(directory, "replay-0.ndjson")); writeFileSync(join(directory, "replay-0.ndjson"), Buffer.concat([before, Buffer.from("x")]))
+        expect(() => route.verifyLeanPrivateMatchTerminalV1({ binding: f.binding, terminal, resultAnchor: aggregate.terminals[0], streamPath: join(directory, "replay-0.ndjson") })).toThrow()
+      }
+      expect(close).toHaveBeenCalledTimes(fault === "second-capacity" ? 1 : 0)
+    } finally {
+      for (const mock of [clock, open, capacity, debit, context, sourceRead, run, checkpoint, observe, close]) mock.mockRestore()
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
   it("uses only finite Git metadata commands with safe argv/timeout/output caps", () => {
     const commit = "a".repeat(40)
     gitCalls.calls.length = 0

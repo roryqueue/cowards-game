@@ -1,7 +1,7 @@
 /** Explicit private HOST two-Match feasibility route. Compact board evidence is
  * NOT a Chronicle, replay reconstruction or engine-semantic certificate. */
 import { createHash } from "node:crypto"
-import { constants, openSync, closeSync, readSync, writeSync, fsyncSync, fstatSync, lstatSync, readdirSync, realpathSync, mkdirSync } from "node:fs"
+import { constants, openSync, closeSync, readSync, writeSync, fsyncSync, fstatSync, lstatSync, readdirSync, realpathSync, mkdirSync, statfsSync } from "node:fs"
 import { resolve, dirname, join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { CANONICAL_ARENA_CATALOG_V1_37, FullBoardSnapshotSchema, BOTTOM_STARTING_POSITIONS, TOP_STARTING_POSITIONS, defaultRuntimeMetadata } from "@cowards/spec"
@@ -161,6 +161,73 @@ export const produceLeanPrivateMatchEvidenceV1 = (input: { binding: EvidenceBind
   if (canonical(evidence).length > 16777216) return fail(); return evidence
 }
 const evidenceKeys = ["boardEvidenceAvailable", "fullChronicleVerified", "streamRawRoot", "streamBytes", "rowCount", "transitionCount", "startBoardRoot", "finalBoardRoot", "lastFrameRoot", "accountingRows", "accountingRoot", "executionRoot", "semanticRoot", "classification", "code", "outcome", "cleanupComplete", "invocationCount", "telemetry"]
+/** A raw retained prefix is not a completed board chain. No parsing or copying
+ * private/error payloads is needed to commit its actual bytes. */
+const retainedStream = (path: string) => {
+  try { lstatSync(path) } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error }
+  const stat = lstatSync(path)
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600 || stat.size > 67108864 || realpathSync(path) !== resolve(path) || stat.uid !== process.getuid?.()) return fail()
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW), hash = createHash("sha256"), buffer = Buffer.alloc(8192)
+  let bytes = 0
+  try {
+    const opened = fstatSync(fd); if (opened.ino !== stat.ino || opened.dev !== stat.dev || opened.size !== stat.size) return fail()
+    for (;;) { const count = readSync(fd, buffer, 0, buffer.length, null); if (!count) break; hash.update(buffer.subarray(0, count)); bytes += count; if (bytes > 67108864) return fail() }
+    const after = fstatSync(fd); if (bytes !== stat.size || after.size !== stat.size || after.ctimeMs !== stat.ctimeMs || after.mtimeMs !== stat.mtimeMs) return fail()
+  } finally { closeSync(fd) }
+  return { rawRoot: `sha256:${hash.digest("hex")}` as LabRoot, bytes }
+}
+export const createLeanPrivateMatchFailureV1 = (input: { binding: EvidenceBinding; streamPath: string; result?: Awaited<ReturnType<typeof runLeanPrivateFeasibilityMatch>>; cleanupComplete: boolean | null }) => {
+  const result = input.result
+  let observed: Record<string, unknown> | null = null
+  if (result?.privateActual && result.privateProviderIdentities) {
+    if (!root(result.compact.accountingRoot) || !root(result.compact.executionRoot) || !integer(result.compact.invocationCount, 49600) || result.semanticRoot !== null && !root(result.semanticRoot)) return fail()
+    let accountingRows: Record<string, unknown>[] | null = null
+    try {
+      if (result.privateActual.accounting.length > 49600) return fail()
+      const rows = result.privateActual.accounting.map(a => ({ identity: projectIdentity(a.identity), invocationRoot: a.invocationRoot, requestId: a.requestId, method: a.method, inputRoot: a.inputRoot, ordinal: a.ordinal, charged: a.charged, completed: a.completed, outputBytes: a.outputBytes, classification: a.result.ok ? "success" : "systemFailure" in a.result ? "system_failure" : "player_violation" }))
+      checkAccounting(rows, input.binding, false)
+      if (labRoot("lean-accounting-v1", deriveFactoryOrderedRecordDescriptor("lean-accounting", rows)) !== result.compact.accountingRoot || result.compact.invocationCount !== rows.length) return fail()
+      if (canonical(rows).length <= 16000000) accountingRows = rows
+    } catch { /* Retain actual opaque commitments; row qualification unavailable. */ }
+    observed = { accountingRows, accountingRoot: result.compact.accountingRoot, executionRoot: result.compact.executionRoot, semanticRoot: result.semanticRoot, invocationCount: result.compact.invocationCount, telemetry: { transitions: result.compact.telemetry.transitions, events: result.compact.telemetry.events } }
+  }
+  const partialStream = retainedStream(input.streamPath)
+  return { schemaVersion: "lean-private-match-failure-v1", boardEvidenceAvailable: false, fullChronicleVerified: false, classification: "system_failure", code: "CHARGED_ATTEMPT_STOP", outcome: null, cleanupComplete: input.cleanupComplete, observed, partialStream, streamRawRoot: partialStream?.rawRoot ?? null, streamBytes: partialStream?.bytes ?? 0, rowCount: 0 }
+}
+const verifyFailure = (binding: EvidenceBinding, e: Record<string, any>, streamPath: string) => {
+  if (!exactLabKeys(e, ["schemaVersion", "boardEvidenceAvailable", "fullChronicleVerified", "classification", "code", "outcome", "cleanupComplete", "observed", "partialStream", "streamRawRoot", "streamBytes", "rowCount"]) || e.schemaVersion !== "lean-private-match-failure-v1" || e.boardEvidenceAvailable !== false || e.fullChronicleVerified !== false || e.classification !== "system_failure" || e.code !== "CHARGED_ATTEMPT_STOP" || e.outcome !== null || ![null, true, false].includes(e.cleanupComplete) || e.rowCount !== 0 || !equal(e.partialStream, retainedStream(streamPath)) || e.streamRawRoot !== (e.partialStream?.rawRoot ?? null) || e.streamBytes !== (e.partialStream?.bytes ?? 0)) return fail()
+  if (e.observed !== null) {
+    const o = e.observed
+    if (!exactLabKeys(o, ["accountingRows", "accountingRoot", "executionRoot", "semanticRoot", "invocationCount", "telemetry"]) || !root(o.executionRoot) || o.semanticRoot !== null && !root(o.semanticRoot) || !integer(o.invocationCount, 49600) || !exactLabKeys(o.telemetry, ["transitions", "events"]) || !integer(o.telemetry.transitions) || !integer(o.telemetry.events)) return fail()
+    if (!root(o.accountingRoot)) return fail()
+    if (o.accountingRows !== null) {
+      checkAccounting(o.accountingRows, binding, false)
+      if (o.invocationCount !== o.accountingRows.length || o.accountingRoot !== labRoot("lean-accounting-v1", deriveFactoryOrderedRecordDescriptor("lean-accounting", o.accountingRows))) return fail()
+    }
+  }
+  for (const identity of binding.providerIdentities) checkIdentity(identity, binding)
+  return { verified: true as const, fullChronicleVerified: false as const, finalBoardRoot: null }
+}
+/** Stop admission, but keep the already reserved closure budget. This does not
+ * reuse the exhausted per-Match/success guard or reserve another Match. */
+const finalizeResources = (store: string, a: LeanPrivateMatchAllocationV1, debitResources: Record<string, any>) => {
+  const wallAtMs = Date.now(), w = LEAN_PRIVATE_MATCH_WINDOW_V1
+  let newAllocatedBytes = lstatSync(store).blocks * 512
+  for (const name of readdirSync(store)) {
+    if (!/^(?:allocation\.json|entry\.json|ledger\.ndjson|result\.json|(?:pair|debit|terminal)-[01]\.json|replay-[01]\.ndjson)$/u.test(name)) return fail()
+    const s = lstatSync(join(store, name)); if (!s.isFile() || s.isSymbolicLink() || s.nlink !== 1 || (s.mode & 0o777) !== 0o600 || s.size > (name.startsWith("replay-") ? 67108864 : name.startsWith("terminal-") ? 16777216 : 65536)) return fail()
+    newAllocatedBytes += s.blocks * 512
+  }
+  const parentRssBytes = Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024), disk = statfsSync(store)
+  const resources = { ...debitResources, wallAtMs, cumulativeElapsedMs: w.carryMs + wallAtMs - w.anchorMs, remainingSlots: 0, newAllocatedBytes, retainedBytesUpperBound: 29970432 + 65536 + a.sourcePrefix.allocatedBytes + newAllocatedBytes + 2 * (67108864 + 16777216) + 262144, parentRssBytes, aggregateMemoryUpperBound: parentRssBytes + 2 * 268435456 + 512000000 + 335544320, availableDiskBytes: disk.bavail * disk.bsize }
+  if (resources.aggregateMemoryUpperBound + 16777216 > 3000000000 || process.memoryUsage().arrayBuffers + 16777216 > 2000000000 || !verifyLeanPrivateMatchResourcesV1(a, resources, 0)) return fail()
+  return { schemaVersion: "lean-private-match-finalization-v1", priorResourcesRoot: labRoot("lean-private-match-prior-resources-v1", debitResources), observation: resources }
+}
+const terminalResources = (terminal: Record<string, any>) => {
+  if (terminal.evidence?.schemaVersion !== "lean-private-match-failure-v1") return terminal.resources
+  if (!exactLabKeys(terminal.resources, ["schemaVersion", "priorResourcesRoot", "observation"]) || terminal.resources.schemaVersion !== "lean-private-match-finalization-v1" || !root(terminal.resources.priorResourcesRoot)) return fail()
+  return terminal.resources.observation
+}
 const checkBoardBinding = (board: LeanPrivateBoardV1, binding: EvidenceBinding, start: boolean): void => {
   const a = binding.allocation, arena = smoke(), bottom = player(a, binding.ordinal, "bottom"), top = player(a, binding.ordinal, "top"), bounds = arena.initialBounds
   if (board.matchId !== `lean-${binding.debitRoot.slice(7, 31)}` || ![bottom, top].includes(board.initiativePlayerId) || board.bounds.minX < bounds.minX || board.bounds.maxX > bounds.maxX || board.bounds.minY < bounds.minY || board.bounds.maxY > bounds.maxY || board.bounds.minX > board.bounds.maxX || board.bounds.minY > board.bounds.maxY) return fail()
@@ -208,7 +275,9 @@ export const verifyLeanPrivateMatchEvidenceV1 = (input: { binding: EvidenceBindi
 export const verifyLeanPrivateMatchTerminalV1 = (input: { binding: EvidenceBinding; terminal: Record<string, any>; resultAnchor: Record<string, any>; streamPath: string }) => {
   const { binding, terminal: t, resultAnchor: anchor } = input
   checkRoot(t, "lean-private-match-terminal-v1")
-  if (!exactLabKeys(t, ["schemaVersion", "allocationRoot", "debitRoot", "slotRoot", "ordinal", "elapsedMs", "resources", "providerIdentities", "evidence", "root"]) || t.schemaVersion !== "lean-private-match-terminal-v1" || t.allocationRoot !== binding.allocation.root || t.debitRoot !== binding.debitRoot || t.slotRoot !== binding.allocation.slots[binding.ordinal].root || t.ordinal !== binding.ordinal || !integer(t.elapsedMs, 600000) || !equal(t.providerIdentities, binding.providerIdentities) || !exactLabKeys(anchor, ["ordinal", "root", "rawRoot", "streamRawRoot", "rowCount", "streamBytes"]) || anchor.ordinal !== binding.ordinal || anchor.root !== t.root || anchor.rawRoot !== leanBytesRoot(canonical(t)) || anchor.streamRawRoot !== t.evidence?.streamRawRoot || anchor.rowCount !== t.evidence?.rowCount || anchor.streamBytes !== t.evidence?.streamBytes || !verifyLeanPrivateMatchResourcesV1(binding.allocation, t.resources, 1 - binding.ordinal)) return fail()
+  const failure = t.evidence?.schemaVersion === "lean-private-match-failure-v1"
+  if (!exactLabKeys(t, ["schemaVersion", "allocationRoot", "debitRoot", "slotRoot", "ordinal", "elapsedMs", "resources", "providerIdentities", "evidence", "root"]) || t.schemaVersion !== "lean-private-match-terminal-v1" || t.allocationRoot !== binding.allocation.root || t.debitRoot !== binding.debitRoot || t.slotRoot !== binding.allocation.slots[binding.ordinal].root || t.ordinal !== binding.ordinal || !integer(t.elapsedMs, failure ? 7200000 : 600000) || !equal(t.providerIdentities, binding.providerIdentities) || !exactLabKeys(anchor, ["ordinal", "root", "rawRoot", "streamRawRoot", "rowCount", "streamBytes"]) || anchor.ordinal !== binding.ordinal || anchor.root !== t.root || anchor.rawRoot !== leanBytesRoot(canonical(t)) || anchor.streamRawRoot !== t.evidence?.streamRawRoot || anchor.rowCount !== t.evidence?.rowCount || anchor.streamBytes !== t.evidence?.streamBytes || !verifyLeanPrivateMatchResourcesV1(binding.allocation, terminalResources(t), failure ? 0 : 1 - binding.ordinal)) return fail()
+  if (failure) return verifyFailure(binding, t.evidence, input.streamPath)
   return verifyLeanPrivateMatchEvidenceV1({ binding, evidence: t.evidence, streamPath: input.streamPath })
 }
 
@@ -216,23 +285,60 @@ export const enterLeanPrivateMatchesV1 = async (command: Extract<LeanPrivateMatc
   if (command.command !== "entry") return fail()
   const store = resolve(command.store), a = validateLeanPrivateMatchAllocationV1(json(join(store, "allocation.json")))
   const admission = openLeanPrivateMatchAdmissionV1({ storePath: store, allocationCommit: command.allocationCommit, allocationPath: command.allocationPath, capacity: observeLeanPrivateMatchCapacityV1(store, a, 2) })
-  const terminals: Array<Record<string, any>> = [], providers = new Set<{ close(): { cleanupComplete: boolean; orphanedChild: boolean } }>()
+  const terminals: Array<Record<string, any>> = [], providers = new Set<{ identity?: LabRuntimeIdentity; close(): { cleanupComplete: boolean; orphanedChild: boolean } }>()
+  let stopCode: null | "ADMISSION_STOP" | "CHARGED_ATTEMPT_STOP" | "CLEANUP_STOP" = null
   for (const ordinal of [0, 1] as const) {
-    const debit = recordLeanPrivateMatchDebitV1(admission, ordinal, observeLeanPrivateMatchCapacityV1(store, a, 2 - ordinal)), context = readLeanPrivateMatchContextV1(admission, debit), slot = a.slots[ordinal]
     const began = performance.now()
+    let debit: ReturnType<typeof recordLeanPrivateMatchDebitV1>
+    try { debit = recordLeanPrivateMatchDebitV1(admission, ordinal, observeLeanPrivateMatchCapacityV1(store, a, 2 - ordinal)) }
+    catch {
+      stopCode = "ADMISSION_STOP"
+      // A durable append can precede an authority's post-write refusal. Count
+      // that actual debit, without inventing a handle or issuing either seat.
+      const rows = readLeanPrivateMatchFileV1(join(store, "ledger.ndjson")).toString("utf8").split("\n").filter(Boolean).map(line => JSON.parse(line) as Record<string, any>), charged = rows.at(-1)
+      if (charged?.ordinal === ordinal) {
+        checkRoot(charged, "lean-private-match-debit-v1")
+        if (charged.allocationRoot !== a.root || charged.slotRoot !== a.slots[ordinal].root || !equal(charged, json(join(store, `debit-${ordinal}.json`)))) return fail()
+        stopCode = "CHARGED_ATTEMPT_STOP"
+        const binding = { allocation: a, ordinal, debitRoot: charged.root as LabRoot, providerIdentities: [] }
+        const evidence = createLeanPrivateMatchFailureV1({ binding, streamPath: join(store, `replay-${ordinal}.ndjson`), cleanupComplete: null })
+        const terminal = rooted({ schemaVersion: "lean-private-match-terminal-v1", allocationRoot: a.root, debitRoot: charged.root, slotRoot: a.slots[ordinal].root, ordinal, elapsedMs: Math.ceil(performance.now() - began), resources: finalizeResources(store, a, charged.resources), providerIdentities: [], evidence })
+        writeLeanPrivateMatchFileV1(join(store, `terminal-${ordinal}.json`), canonical(terminal), 16777216); terminals.push(terminal)
+      }
+      break
+    }
+    const context = readLeanPrivateMatchContextV1(admission, debit), slot = a.slots[ordinal]
     const guard = (bytes = 0) => { if (performance.now() - began >= 600000) return fail(); checkpointLeanPrivateMatchV1(admission, debit, bytes) }
-    let result: Awaited<ReturnType<typeof runLeanPrivateFeasibilityMatch>>
-    try { result = await runLeanPrivateFeasibilityMatch({ admission, debit, bottom: readLeanBaselineSource(LEAN_PRIVATE_MATCH_SOURCE_STORE_V1, slot.bottomRole), top: readLeanBaselineSource(LEAN_PRIVATE_MATCH_SOURCE_STORE_V1, slot.topRole), register: provider => { providers.add(provider) }, unregister: provider => { providers.delete(provider) } }) }
-    finally { for (const provider of providers) { try { provider.close() } catch { /* no unknown cleanup can become success */ } }; providers.clear() }
-    if (!result.privateActual || !result.privateProviderIdentities) return fail()
-    const binding = { allocation: a, ordinal, debitRoot: context.debitRoot, providerIdentities: result.privateProviderIdentities }
-    const evidence = produceLeanPrivateMatchEvidenceV1({ binding, actual: result.privateActual, compact: result.compact, semanticRoot: result.semanticRoot, streamPath: join(store, `replay-${ordinal}.ndjson`), guard })
-    verifyLeanPrivateMatchEvidenceV1({ binding, evidence, streamPath: join(store, `replay-${ordinal}.ndjson`) })
-    const terminal = rooted({ schemaVersion: "lean-private-match-terminal-v1", allocationRoot: a.root, debitRoot: context.debitRoot, slotRoot: slot.root, ordinal, elapsedMs: Math.ceil(performance.now() - began), resources: observeLeanPrivateMatchResourcesV1(store, a, 1 - ordinal), providerIdentities: binding.providerIdentities.map(projectIdentity), evidence })
-    writeLeanPrivateMatchFileV1(join(store, `terminal-${ordinal}.json`), canonical(terminal), 16777216); terminals.push(terminal)
-    if (!closeLeanPrivateMatchDebitV1(admission, debit)) break
+    let result: Awaited<ReturnType<typeof runLeanPrivateFeasibilityMatch>> | undefined
+    const issuedIdentities: LabRuntimeIdentity[] = [], streamPath = join(store, `replay-${ordinal}.ndjson`)
+    let cleanupComplete: boolean | null = null, stopped = false
+    try {
+      try { result = await runLeanPrivateFeasibilityMatch({ admission, debit, bottom: readLeanBaselineSource(LEAN_PRIVATE_MATCH_SOURCE_STORE_V1, slot.bottomRole), top: readLeanBaselineSource(LEAN_PRIVATE_MATCH_SOURCE_STORE_V1, slot.topRole), register: provider => { providers.add(provider); const identity = (provider as { identity?: LabRuntimeIdentity }).identity; if (identity) issuedIdentities.push(identity) }, unregister: provider => { providers.delete(provider) } }) }
+      finally { for (const provider of providers) { try { const closed = provider.close(); if (!closed.cleanupComplete || closed.orphanedChild) cleanupComplete = false } catch { cleanupComplete = false } }; providers.clear() }
+      if (!result.privateActual || !result.privateProviderIdentities) return fail()
+      cleanupComplete = cleanupComplete === false ? false : result.compact.cleanupComplete
+      if (!cleanupComplete) return fail()
+      const binding = { allocation: a, ordinal, debitRoot: context.debitRoot, providerIdentities: result.privateProviderIdentities }
+      const evidence = produceLeanPrivateMatchEvidenceV1({ binding, actual: result.privateActual, compact: result.compact, semanticRoot: result.semanticRoot, streamPath, guard })
+      verifyLeanPrivateMatchEvidenceV1({ binding, evidence, streamPath })
+      guard()
+      const terminal = rooted({ schemaVersion: "lean-private-match-terminal-v1", allocationRoot: a.root, debitRoot: context.debitRoot, slotRoot: slot.root, ordinal, elapsedMs: Math.ceil(performance.now() - began), resources: observeLeanPrivateMatchResourcesV1(store, a, 1 - ordinal), providerIdentities: binding.providerIdentities.map(projectIdentity), evidence })
+      writeLeanPrivateMatchFileV1(join(store, `terminal-${ordinal}.json`), canonical(terminal), 16777216); terminals.push(terminal)
+    } catch {
+      stopped = true; stopCode = "CHARGED_ATTEMPT_STOP"
+      const binding = { allocation: a, ordinal, debitRoot: context.debitRoot, providerIdentities: result?.privateProviderIdentities ?? issuedIdentities }
+      const evidence = createLeanPrivateMatchFailureV1({ binding, streamPath, ...(result ? { result } : {}), cleanupComplete })
+      const terminal = rooted({ schemaVersion: "lean-private-match-terminal-v1", allocationRoot: a.root, debitRoot: context.debitRoot, slotRoot: slot.root, ordinal, elapsedMs: Math.ceil(performance.now() - began), resources: finalizeResources(store, a, json(join(store, `debit-${ordinal}.json`)).resources), providerIdentities: binding.providerIdentities.map(projectIdentity), evidence })
+      writeLeanPrivateMatchFileV1(join(store, `terminal-${ordinal}.json`), canonical(terminal), 16777216); terminals.push(terminal)
+    }
+    if (stopped) break
+    try { if (!closeLeanPrivateMatchDebitV1(admission, debit)) { stopCode = "CLEANUP_STOP"; break } }
+    catch { stopCode = "CLEANUP_STOP"; break }
   }
-  const result = rooted({ schemaVersion: "lean-private-match-result-v1", allocationRoot: a.root, sourceHead: a.sourceHead, allocationCommit: command.allocationCommit, matchCount: 2, attemptedOrdinals: terminals.map(t => t.ordinal), unattemptedOrdinals: [0, 1].filter(n => !terminals.some(t => t.ordinal === n)), cumulativeCharged: 40 + terminals.length, terminals: terminals.map(t => ({ ordinal: t.ordinal, root: t.root, rawRoot: leanBytesRoot(canonical(t)), streamRawRoot: t.evidence.streamRawRoot, rowCount: t.evidence.rowCount, streamBytes: t.evidence.streamBytes })), fullChronicleVerified: false })
+  const ledger = readLeanPrivateMatchFileV1(join(store, "ledger.ndjson")), debits = ledger.toString("utf8").split("\n").filter(Boolean).map(line => JSON.parse(line) as Record<string, any>)
+  if (debits.length !== terminals.length || !equal(debits.map(d => d.ordinal), terminals.map(t => t.ordinal))) return fail()
+  const result = rooted({ schemaVersion: "lean-private-match-result-v1", allocationRoot: a.root, sourceHead: a.sourceHead, allocationCommit: command.allocationCommit, matchCount: 2, attemptedOrdinals: debits.map(d => d.ordinal), unattemptedOrdinals: [0, 1].filter(n => !debits.some(d => d.ordinal === n)), cumulativeCharged: 40 + debits.length, terminals: terminals.map(t => ({ ordinal: t.ordinal, root: t.root, rawRoot: leanBytesRoot(canonical(t)), streamRawRoot: t.evidence.streamRawRoot, rowCount: t.evidence.rowCount, streamBytes: t.evidence.streamBytes })), stopCode, fullChronicleVerified: false })
+  finalizeResources(store, a, debits.at(-1)?.resources ?? json(join(store, "entry.json")).resources)
   writeLeanPrivateMatchFileV1(join(store, "result.json"), canonical(result)); return { resultRoot: result.root, attemptedCount: terminals.length, fullChronicleVerified: false }
 }
 export const verifyLeanPrivateMatchesStoreV1 = (command: Extract<LeanPrivateMatchesCommandV1, { command: "entry" | "verify" }>) => {
@@ -248,20 +354,23 @@ export const verifyLeanPrivateMatchesStoreV1 = (command: Extract<LeanPrivateMatc
   const entry = json(join(store, "entry.json")), result = json(join(store, "result.json")), ledger = readLeanPrivateMatchFileV1(join(store, "ledger.ndjson")), rows = ledger.toString("utf8").split("\n").filter(Boolean).map(line => JSON.parse(line) as Record<string, any>)
   checkRoot(entry, "lean-private-match-entry-v1"); checkRoot(result, "lean-private-match-result-v1")
   if (!verifyLeanPrivateMatchResourcesV1(a, entry.resources, 2) || Date.now() > LEAN_PRIVATE_MATCH_WINDOW_V1.deadlineMs) return fail()
-  if (!exactLabKeys(entry, ["schemaVersion", "allocationRoot", "allocationDigest", "allocationCommit", "sourceHead", "resources", "root"]) || entry.allocationRoot !== a.root || entry.allocationCommit !== command.allocationCommit || entry.sourceHead !== a.sourceHead || entry.allocationDigest !== leanBytesRoot(canonical(a)) || !exactLabKeys(result, ["schemaVersion", "allocationRoot", "sourceHead", "allocationCommit", "matchCount", "attemptedOrdinals", "unattemptedOrdinals", "cumulativeCharged", "terminals", "fullChronicleVerified", "root"]) || result.allocationRoot !== a.root || result.sourceHead !== a.sourceHead || result.allocationCommit !== command.allocationCommit || result.matchCount !== 2 || result.fullChronicleVerified !== false || rows.length < 1 || rows.length > 2 || !equal(result.attemptedOrdinals, rows.map((_, n) => n)) || !equal(result.unattemptedOrdinals, [0, 1].filter(n => n >= rows.length)) || result.cumulativeCharged !== 40 + rows.length || !Array.isArray(result.terminals) || result.terminals.length !== rows.length || !ledger.equals(Buffer.concat(rows.map(r => Buffer.concat([canonical(r), Buffer.from("\n")]))))) return fail()
+  if (!exactLabKeys(entry, ["schemaVersion", "allocationRoot", "allocationDigest", "allocationCommit", "sourceHead", "resources", "root"]) || entry.allocationRoot !== a.root || entry.allocationCommit !== command.allocationCommit || entry.sourceHead !== a.sourceHead || entry.allocationDigest !== leanBytesRoot(canonical(a)) || !exactLabKeys(result, ["schemaVersion", "allocationRoot", "sourceHead", "allocationCommit", "matchCount", "attemptedOrdinals", "unattemptedOrdinals", "cumulativeCharged", "terminals", "stopCode", "fullChronicleVerified", "root"]) || result.allocationRoot !== a.root || result.sourceHead !== a.sourceHead || result.allocationCommit !== command.allocationCommit || result.matchCount !== 2 || result.fullChronicleVerified !== false || !([null, "ADMISSION_STOP", "CHARGED_ATTEMPT_STOP", "CLEANUP_STOP"] as unknown[]).includes(result.stopCode) || rows.length > 2 || !equal(result.attemptedOrdinals, rows.map((_, n) => n)) || !equal(result.unattemptedOrdinals, [0, 1].filter(n => n >= rows.length)) || result.cumulativeCharged !== 40 + rows.length || !Array.isArray(result.terminals) || result.terminals.length !== rows.length || !ledger.equals(Buffer.concat(rows.map(r => Buffer.concat([canonical(r), Buffer.from("\n")]))))) return fail()
   let prefix = Buffer.alloc(0), priorSuccess = true
   for (const [ordinal, row] of rows.entries()) {
     const slot = a.slots[ordinal]!, pair = json(join(store, `pair-${ordinal}.json`)), debit = json(join(store, `debit-${ordinal}.json`)), terminal = json(join(store, `terminal-${ordinal}.json`), 16777216), anchor = result.terminals[ordinal]
     checkRoot(pair, "lean-private-match-pair-v1"); checkRoot(debit, "lean-private-match-debit-v1"); checkRoot(terminal, "lean-private-match-terminal-v1")
-    if (!verifyLeanPrivateMatchResourcesV1(a, debit.resources, 2 - ordinal) || !verifyLeanPrivateMatchResourcesV1(a, terminal.resources, 1 - ordinal) || terminal.resources.wallAtMs < debit.resources.wallAtMs || debit.resources.wallAtMs < entry.resources.wallAtMs) return fail()
-    if (!priorSuccess || !equal(row, debit) || !exactLabKeys(pair, ["schemaVersion", "allocationRoot", "slotRoot", "ordinal", "requestRoot", "sources", "priorLedgerBytesRoot", "priorLedgerByteLength", "root"]) || pair.allocationRoot !== a.root || pair.slotRoot !== slot.root || pair.ordinal !== ordinal || pair.requestRoot !== slot.requestRoot || !equal(pair.sources, a.sources) || pair.priorLedgerBytesRoot !== leanBytesRoot(prefix) || pair.priorLedgerByteLength !== prefix.length || !exactLabKeys(debit, ["schemaVersion", "allocationRoot", "slotRoot", "ordinal", "requestRoot", "pairRoot", "cumulativeCharged", "priorLedgerBytesRoot", "priorLedgerByteLength", "resources", "root"]) || debit.allocationRoot !== a.root || debit.slotRoot !== slot.root || debit.ordinal !== ordinal || debit.requestRoot !== slot.requestRoot || debit.pairRoot !== pair.root || debit.cumulativeCharged !== 41 + ordinal || debit.priorLedgerBytesRoot !== leanBytesRoot(prefix) || debit.priorLedgerByteLength !== prefix.length || !exactLabKeys(terminal, ["schemaVersion", "allocationRoot", "debitRoot", "slotRoot", "ordinal", "elapsedMs", "resources", "providerIdentities", "evidence", "root"]) || terminal.allocationRoot !== a.root || terminal.debitRoot !== debit.root || terminal.slotRoot !== slot.root || terminal.ordinal !== ordinal || !integer(terminal.elapsedMs, 600000) || !Array.isArray(terminal.providerIdentities) || terminal.providerIdentities.length !== 2 || !exactLabKeys(anchor, ["ordinal", "root", "rawRoot", "streamRawRoot", "rowCount", "streamBytes"]) || anchor.ordinal !== ordinal || anchor.root !== terminal.root || anchor.rawRoot !== leanBytesRoot(canonical(terminal)) || anchor.streamRawRoot !== terminal.evidence.streamRawRoot || anchor.rowCount !== terminal.evidence.rowCount || anchor.streamBytes !== terminal.evidence.streamBytes) return fail()
+    const failed = terminal.evidence?.schemaVersion === "lean-private-match-failure-v1"
+    const observedResources = terminalResources(terminal)
+    if (!verifyLeanPrivateMatchResourcesV1(a, debit.resources, 2 - ordinal) || !verifyLeanPrivateMatchResourcesV1(a, observedResources, failed ? 0 : 1 - ordinal) || observedResources.wallAtMs < debit.resources.wallAtMs || debit.resources.wallAtMs < entry.resources.wallAtMs || failed && terminal.resources.priorResourcesRoot !== labRoot("lean-private-match-prior-resources-v1", debit.resources)) return fail()
+    if (!priorSuccess || !equal(row, debit) || !exactLabKeys(pair, ["schemaVersion", "allocationRoot", "slotRoot", "ordinal", "requestRoot", "sources", "priorLedgerBytesRoot", "priorLedgerByteLength", "root"]) || pair.allocationRoot !== a.root || pair.slotRoot !== slot.root || pair.ordinal !== ordinal || pair.requestRoot !== slot.requestRoot || !equal(pair.sources, a.sources) || pair.priorLedgerBytesRoot !== leanBytesRoot(prefix) || pair.priorLedgerByteLength !== prefix.length || !exactLabKeys(debit, ["schemaVersion", "allocationRoot", "slotRoot", "ordinal", "requestRoot", "pairRoot", "cumulativeCharged", "priorLedgerBytesRoot", "priorLedgerByteLength", "resources", "root"]) || debit.allocationRoot !== a.root || debit.slotRoot !== slot.root || debit.ordinal !== ordinal || debit.requestRoot !== slot.requestRoot || debit.pairRoot !== pair.root || debit.cumulativeCharged !== 41 + ordinal || debit.priorLedgerBytesRoot !== leanBytesRoot(prefix) || debit.priorLedgerByteLength !== prefix.length || !exactLabKeys(terminal, ["schemaVersion", "allocationRoot", "debitRoot", "slotRoot", "ordinal", "elapsedMs", "resources", "providerIdentities", "evidence", "root"]) || terminal.allocationRoot !== a.root || terminal.debitRoot !== debit.root || terminal.slotRoot !== slot.root || terminal.ordinal !== ordinal || !integer(terminal.elapsedMs, failed ? 7200000 : 600000) || !Array.isArray(terminal.providerIdentities) || (failed ? terminal.providerIdentities.length > 2 : terminal.providerIdentities.length !== 2) || !exactLabKeys(anchor, ["ordinal", "root", "rawRoot", "streamRawRoot", "rowCount", "streamBytes"]) || anchor.ordinal !== ordinal || anchor.root !== terminal.root || anchor.rawRoot !== leanBytesRoot(canonical(terminal)) || anchor.streamRawRoot !== terminal.evidence.streamRawRoot || anchor.rowCount !== terminal.evidence.rowCount || anchor.streamBytes !== terminal.evidence.streamBytes) return fail()
     verifyLeanPrivateMatchTerminalV1({ binding: { allocation: a, ordinal: ordinal as 0 | 1, debitRoot: debit.root, providerIdentities: terminal.providerIdentities }, terminal, resultAnchor: anchor, streamPath: join(store, `replay-${ordinal}.ndjson`) })
     priorSuccess = terminal.evidence.classification === "success" && terminal.evidence.cleanupComplete === true
     prefix = Buffer.concat([prefix, canonical(row), Buffer.from("\n")])
   }
-  const wanted = ["allocation.json", "entry.json", "ledger.ndjson", "result.json", ...rows.flatMap((_, n) => [`pair-${n}.json`, `debit-${n}.json`, `terminal-${n}.json`, `replay-${n}.ndjson`])].sort()
+  const wanted = ["allocation.json", "entry.json", "ledger.ndjson", "result.json", ...rows.flatMap((_, n) => [`pair-${n}.json`, `debit-${n}.json`, `terminal-${n}.json`, ...(json(join(store, `terminal-${n}.json`), 16777216).evidence.streamRawRoot === null ? [] : [`replay-${n}.ndjson`])])].sort()
   if (!equal(readdirSync(store).sort(), wanted)) return fail()
-  return { verified: true, resultRoot: result.root as LabRoot, attemptedCount: rows.length, fullChronicleVerified: false, feasibilityEstablished: rows.length === 2 && priorSuccess }
+  if (result.stopCode === null && (rows.length !== 2 || !priorSuccess) || result.stopCode === "CHARGED_ATTEMPT_STOP" && priorSuccess) return fail()
+  return { verified: true, resultRoot: result.root as LabRoot, attemptedCount: rows.length, stopCode: result.stopCode, fullChronicleVerified: false, feasibilityEstablished: rows.length === 2 && priorSuccess && result.stopCode === null }
 }
 const main = async () => {
   const command = parseLeanPrivateMatchesArgsV1(process.argv.slice(2))
