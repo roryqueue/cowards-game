@@ -1,0 +1,13 @@
+# Actual first private probe — failed
+
+ROOT pure metadata derivation first rejected a mistyped short sourceHead (no writes/runtime); corrected derivation passed. A presumed input store path did not exist; bounded source-file discovery found three byte-identity-equivalent probe snapshots. Actual input-only source came from lean-correction-supervisor-baseline-20261006-v6, sourceRoot1ac048cc/ snapshot4235945c; no source payload copied to new output store.
+
+Actual prepare77296 CLOSED exit0, root17ea1073af11097956b919cbe4e5fc06faef624d815a093413bb222505ea7dd7. Fresh real0700store initially contained only600allocation/request, byte-identical canonical allocation4008bytes/raw70cfd1476ab3ead999c126235b8b2e7518193e887d75477e1e4132f918f3b565. Immutable canonical allocation committeddd67460e6628aebff6bc35c253adaa2cdfea284e, direct child of fixedsourceHead8bed800f753235deaea1956d1166080973c9bba0 BEFORE unique ROOTentry61471.
+
+Actual entry61471 CLOSED exit0. One separately charged NON-Match ordinal0 selectActivations: system_failure, evidenceVerifiedtrue, cleanupCompletefalse, factoryConstruction1119ms, elapsed2997ms. Ordinals1–3 NOT attempted. New Match countZERO; old40charges remain cost-only. Resultroot90b01860ac40b716854ebf082586793150abf59f8dc7fea161b44f9636353ab4. Exit0 means the failed result was retained, NOT empirical success. Initiating physical cause UNKNOWN; no Strategy output/raw error retained or published.
+
+ONE independent retained verifier /root/verify_265_probe_v1_retained CLOSED/refusedexit1, recorded exact unchanged store hashes and HEAD. Its report correctly preserves failed cleanup and incomplete probes; its demand for a new authorization is not an adopted contract amendment. Existing approved bounded correction is still conditional on an independently demonstrated/reviewed repair and available unchanged budget, not authority to rerun the failure.
+
+ROOT subsequent targeted read-only dockerps-a exactnameprobe-17ea1073af11-0 CLOSED exit0/empty; filtered process inventory showed no active runtime-node or docker-exec probe entry. This is current absence only, NOT retroactive cleanup success or proof of all transient work. Actual entry and unique verifier are closed with no current container/entry; ROOT releases functional source/HEAD hold for SOURCE-ONLY diagnosis/repair. Historical allocation, all private records and refusal remain immutable and failed. No second reader, refund, success reinterpretation or resumption.
+
+Bounded source-only /root/diagnose_265_probe_failure next; no unchanged runtime retry. Same hour/frontier/reserve/carry/resources/rules. AllLEAG/Phase265/baseline/freeze/formation/holdout/public/counting/production remain pending/unadmitted.

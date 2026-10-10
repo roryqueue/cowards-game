@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Approved additional one-hour window; narrow prospective time update active before four non-Match probes
+stopped_at: First real private probe failed; unique retained verifier closed, bounded source-only diagnosis active
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: Additional hour approved; carried costs unchanged and source-only amendment in progress
+last_activity_desc: One non-Match probe charged and failed; no other probes or new Matches, old bytes immutable
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — FIRST PRIVATE PROBE FAILED / UNIQUE VERIFIER CLOSED (2026-10-10).
+
+Hour amendmentbd9b976e source-reviewv2 PASS_WITH_WARNINGS/zero newblockers, ROOT14tests/configuredtypes/boundary1439zeroPASS; distinctsource-verifierv2 CLOSEDreadywithwarnings. Actualprepare77296 CLOSED0/17ea1073; canonicalallocation4008B/raw70cfd147 directchildcommitdd67460e beforeuniqueROOTentry61471 CLOSED0. OnechargedNON-Matchordinal0 selectActivations system_failure/evidenceVerifiedtrue/cleanupfalse/1119msfactory/2997mscall; otherthreeNOTattempted/ZEROnewMatches. Result90b01860/raw52755f19. ONEindependentretainedverifier CLOSEDrefusedexit1/storehashes+HEADunchanged. FailedcauseUNKNOWN, no empiricalpass. ROOTtargetedreadonlydockerps exactname emptyexit0 and filteredprocesses noactiveprobe; currentabsence NOTretrocleanupsuccess. ROOTreleasesfunctionalSOURCE/HEADhold afteractualterminal+uniquecheck/currentabsence forsource-onlydiagnosis; independentreport's newapprovalrequirement is notnewadoptedpolicy. /root/diagnose_265_probe_failure boundedsource-onlyactive; no sourceedit/runtime/provider/Match/reader/unchangedrerun. V1allocation/result/evidenceimmutablefailed, noresume/refund/recredit. ExistingonefreshcorrectionONLYifdemonstratedreviewedrepair andunchangedremaininghour:14:27:19frontier14:58:19stop31reserve/carry292757903cap296357903/allotherbounds. AllLEAG/Plan16/Phase265 pending; nofreeze/formation/holdout/public/counting/production.
 
 CURRENT APPROVED CHECKPOINT — ADDITIONAL ONE-HOUR FOUR-PROBE WINDOW (2026-10-10).
 
