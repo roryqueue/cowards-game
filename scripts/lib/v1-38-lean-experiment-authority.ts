@@ -14,7 +14,6 @@ import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-ba
 import { constants, openSync, closeSync, readFileSync, lstatSync, realpathSync, fstatSync, statfsSync, writeSync, fsyncSync, readdirSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { execFileSync } from "node:child_process"
-import { performance } from "node:perf_hooks"
 import { createHash } from "node:crypto"
 import { assertLeanAggregateMemoryV15 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanCanonicalBytes, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
