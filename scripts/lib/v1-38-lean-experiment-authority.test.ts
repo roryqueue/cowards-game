@@ -29,7 +29,7 @@ describe("private probe authority surface", () => {
 describe("actual inert Git/filesystem debit authority", () => {
   it.each(["requestRoot", "inputRoot", "caseId", "extra", "delimiter"])("permanently rejects changed prior %s after actual ordered claims", key => {
     const repository = realpathSync(mkdtempSync(join(tmpdir(), "probe-authority-git-")))
-    const fixtureClock = vi.spyOn(Date, "now").mockReturnValue(1791633532000)
+    const fixtureClock = vi.spyOn(Date, "now").mockReturnValue(1791640699000)
     const git = childProcess.execFileSync.bind(childProcess)
     const runGit = (...args: string[]) => String(git("git", ["-C", repository, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })).trim()
     try {

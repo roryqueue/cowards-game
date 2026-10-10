@@ -75,8 +75,8 @@ export const authenticateLeanPrivateProbeCostV1 = () => {
   return privateProbeSnapshot
 }
 export const observeLeanPrivateProbeResourcesV1 = (storePath: string) => {
-  const snapshot = authenticateLeanPrivateProbeCostV1(), wallAtMs = Date.now(), cumulativeElapsedMs = 285590903 + wallAtMs - 1791633532000
-  if (!Number.isSafeInteger(cumulativeElapsedMs) || cumulativeElapsedMs < 285590903 || cumulativeElapsedMs + 1860000 > 292790903 || wallAtMs + 1860000 > 1791640732000) return privateProbeFail()
+  const snapshot = authenticateLeanPrivateProbeCostV1(), wallAtMs = Date.now(), cumulativeElapsedMs = 292757903 + wallAtMs - 1791640699000
+  if (!Number.isSafeInteger(cumulativeElapsedMs) || cumulativeElapsedMs < 292757903 || cumulativeElapsedMs + 1860000 > 296357903 || wallAtMs + 1860000 > 1791644299000) return privateProbeFail()
   let path = resolve(storePath), fresh = false
   try { lstatSync(path) } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; path = dirname(path); fresh = true }
   const directory = lstatSync(path)
