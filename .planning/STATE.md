@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: blocked
-stopped_at: Source-only startup correction closed with gaps; fresh runtime window not authorized
+status: in_progress
+stopped_at: Fresh single-case diagnostic hour approved; prospective v2 timing joins and gates next
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: Source verification closed with gaps; no empirical execution, prospective runtime-time decision remains human-only
+last_activity_desc: Human approved one private non-Match diagnostic and verification through22:30UTC, no other bound changes
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED CONTINUATION — FRESH ONE-HOUR SINGLE-CASE PRIVATE DIAGNOSTIC (2026-10-10). Human `yes, approved` adopts the preceding60-minute diagnostic/verification request, not a new Match/rules/resource scope. Actual ROOT21:30:00UTC1791667800000; hardstop22:30:00UTC1791671400000; continuous carry319858903ms/cap323458903ms and unchanged31-minute reserve/admission frontier21:59UTC. Full approval in SMALL-REPLACEMENT-HOUR-APPROVAL-v2. Protected history29970432B/40Matches, failed-v1 carry32768B and measured24source/check survivors1183744B charged; unknown peaks remain unknown. No active actual probe/entry/verifier found; all previous source agents closed, tracked checkout clean7b837731. Prospective v2-only timing/root/cost joins need scoped source execution/review/validation/verification before exactly one prepare/committed allocation/unique ROOT entry/same-process capacity. Old v1/window/evidence remain immutable and expired. No third allocation, retries, Matches, LEAG/baseline/freeze/formation/holdout/public/counting/production authority. Earlier checkpoints below are history.
 
 CURRENT APPROVED CHECKPOINT — SIXTY-MINUTE SOURCE-ONLY STARTUP REPAIR (2026-10-10).
 
