@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Diagnostic5 failed; envelope closed; bounded source-only diagnosis next
+stopped_at: Four-pair allowance exhausted; source diagnosis inconclusive; human experiment-scope choice required
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: Unique diagnostic5 and ordinary verifier closed; failed-result custody authenticated; source and HEAD hold released without baseline credit
+last_activity_desc: Bounded diagnosis closed without proven repair; failed diagnostic and cost custody pushed; no baseline or formation authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT HUMAN-ONLY CHECKPOINT — BOUNDED DIAGNOSIS INCONCLUSIVE / EXPERIMENT ALLOWANCE ENDED (2026-10-10).
+
+Actual /root/diagnose_265_v15_5_missing and its one static child CLOSED after two source investigations, no fix/test/runtime/provider/Match/reader/publisher/history scan. NEW debug/v15-5-missing-attribution.md records INCONCLUSIVE: hostFailureV15 is deliberately constructed/validated only for mode4; mode5 uses its separate V8 startup-origin observer, which records only non-complete branches from valid startup response frames. Empty origins cannot locate this particular failure or establish physical cause; no demonstrated wrong-field defect or actionable repair. No source change, no claim of recovery. Actual diagnostic5 and unique ordinary verifier remain failed/closed, all40 cumulative charges cost-only, no accepted FINAL, no conditional baseline. ROOT closed-pair authentication established endsEnvelopetrue/four_spent_pairs and released source/HEAD hold. Safe terminal docs pushed9b8ee53e; new diagnosis integration next. Standing same-scope route approval does NOT reset the explicit four-pair maximum or grant an automatic ordinal6. Human-only next choice: adopt a newly bounded diagnostic-first experiment plan/allowance, or accept this attempt as inconclusive; neither is adopted here. Do not start another unchanged known-failing run or silently extend/reset limits. Original02:14:32UTC stop/01:43:32sourcefrontier/ALLwall/31reserve/3GBRAM/15GBdisk/300Matches and every runtime/rules/privacy bound remain binding until explicitly revised. No active empirical entry/verifier/source worker/hold. While unchanged, stay quiet and do not repeat scans. Phase265 remains incomplete; no league/freeze/formation/holdout/public/counting/production/archive/tag credit. Earlier checkpoints history.
 
 CURRENT CHECKPOINT — DIAGNOSTIC v15-5 FAILED / FOUR-PAIR ENVELOPE CLOSED / SOURCE HOLD RELEASED (2026-10-10).
 
