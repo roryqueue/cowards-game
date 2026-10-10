@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Startup-attribution source verified; fresh ROOT ordinal5 route gates next
+stopped_at: Fresh ordinal5 diagnostic prepared; unique ROOT entry next
 last_updated: "2026-10-10"
 last_activity: 2026-10-10
-last_activity_desc: Exact21 source repair integrated, independently clean reviewed, ROOT validated and separately source verified; no new empirical admission
+last_activity_desc: Fresh diagnostic5 request/helper independently clean reviewed and finalized; one immutable allocation prepared with zero current charges
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CHECKPOINT — FRESH DIAGNOSTIC v15-5 PREPARED / UNIQUE MAIN ENTRY NEXT (2026-10-10).
+
+ROOT helperfee31b33 draft60991 CLOSED0; initial join42257 CLOSED1/NOTPASS due solely to new attestation trailing newline, no continuation/draft/allocation/entry publication. Bounded readonly diagnosis79093 CLOSED0 established exact semantic joins but canonicalbytesfalse; earlier wrong-export diagnostic57750 CLOSED1 remains NOTPASS. Actual reviewer corrected only unconsumed new attestation format to production canonical bytes/no newline/rawdabac4cf/body08fe0c2b; no historical bytes changed. Corrected metadatajoin96330 CLOSED0/data076a39b4/intentdd1f2742/continuation615d25de. Actual /root/review_265_v15_5_diagnostic independently reconstructed exact current metadata/called helper boundaries, corrected unconsumed report identity typo before consumption, published DATArawd9261382/HELPERrawd2a5b8f9 clean0/private600/singlelink. Deliberate partial-publication/no-resume refusal is a non-finding contract limitation, not permission to retry authority. ROOT FULL read final reports; actual finalize11205 CLOSED0/requestrawe5b9fc40/authorizationraw5fe4fbae. Exactly ONE prepare65343 CLOSED0/preparation_only/oneplanned/zero currentcharges; allocationacb447444fcf541c7d2b3845c27ae16108bd9bbca922d5c9c0d804558999ae9b/raw9852a2632374ad03bf2173fccad163c9c9affc6f416e5fb78a87221eb7044db5/142890B. Prior39charges/1048survivors/29061120B/244649109ms carry cost-only. ROOT actual private file/store inspectionfb7e18 CLOSED0: regular600singlelinkallocation, realowned700store onlyallocation/emptyledger/closedpreparetime; entry/result absent. Commit exact allocation and gates BEFORE unique MAIN entry; fresh passing SAMEPROCESS capacity BEFORE charge/provider. Reviewed sourceaee251db/b4f0e115/985 remains unchanged, selectedactualv7 unchanged. Source AND HEAD fixed through live terminal and ONE appropriate actual independent verifier, no competing heavy work. Own accepted5diagnostic plus actualFINAL only permits its fresh conditional36baseline;5 is final approved ordinal, no automatic sixth route. Same original02:14:32UTCstop/01:43:32sourcefrontier/01:33:32entrycutoff/FULL108M/ALLwall/31reserve/RAM3GB/disk15GB/300Matches/guest1000/host5000/startup2500/Match600000/privacy/gameplay bounds. No empirical cure or Phase265/LEAG/baseline/freeze/formation/holdout/public/counting/production/archive/tag credit. Earlier checkpoints history.
 
 CURRENT CHECKPOINT — STARTUP ATTRIBUTION SOURCE VERIFIED / FRESH ROOT GATES NEXT (2026-10-10).
 
