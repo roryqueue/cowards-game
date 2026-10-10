@@ -19,6 +19,15 @@ import { LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js
 import { createHash } from "node:crypto"
 import { encodeSubprocessIpcRequest } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { buildLeanStartupWorkerHarnessV8 } from "./v1-38-lean-container-match-session.js"
+import { runLeanPrivateFeasibilityMatch } from "./v1-38-lean-baseline-match.js"
+
+it("private two-Match composer rejects structural admission/debit before source validation or provider creation", async () => {
+  const validate = vi.spyOn(sourceModule, "validateLeanBaselineSource"), create = vi.spyOn(runtimeModule, "createFactorySupervisedRuntime")
+  try {
+    await expect(runLeanPrivateFeasibilityMatch({ admission: { schemaVersion: "lean-private-match-admission-v1" }, debit: { schemaVersion: "lean-private-match-debit-handle-v1" }, bottom: {}, top: {}, register() {}, unregister() {} } as never)).rejects.toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
+    expect(validate).not.toHaveBeenCalled(); expect(create).not.toHaveBeenCalled()
+  } finally { validate.mockRestore(); create.mockRestore() }
+})
 
 it("[startup-origin-v8] uses the exact V8 request prefix and refuses cross-invocation/source/seat joins", () => {
   const root = (n: number) => labRoot("NON_AUTHORIZING-v8-join", n)

@@ -12,7 +12,7 @@ import { admitLeanAllocation, isLeanRetryMode, leanSupervisorAllocationMode, LEA
 import { compactExecution, deriveLeanSupervisorDiagnostic } from "../run-v1-38-lean-experiment.js"
 import { createFactorySupervisedRuntime, getFactoryPrivateDiagnostic } from "./v1-38-factory-supervised-runtime.js"
 import { prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
-import { issueLeanBaselineRuntimeAuthority, issueLeanCorrectionRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { issueLeanBaselineRuntimeAuthority, issueLeanCorrectionRuntimeAuthority, issueLeanPrivateMatchRuntimeAuthorityV1, readLeanPrivateMatchContextV1, checkpointLeanPrivateMatchV1, LEAN_PRIVATE_MATCH_SEED_V1, type LeanPrivateMatchAdmissionV1, type LeanPrivateMatchDebitV1 } from "./v1-38-lean-experiment-authority.js"
 import { type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { type LeanPrivateCorrectionOrigin, validateLeanPrivateCorrectionOrigin } from "./v1-38-lean-container-match-session.js"
 import { validateLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
@@ -100,50 +100,67 @@ const validateTransportBinding = (value: unknown): LeanCorrectionInvocationTrans
   return Object.freeze({ ...r })
 }
 
-export const runLeanBaselineMatch = async (input: {
+type LegacyMatchInput = {
   ledger: LeanExperimentLedger; charge: LeanCharge; slot: LeanSlot; seed: string
   bottom: LeanBaselineSource; top: LeanBaselineSource; observedRole?: string
   correction?: { reuse: LeanColdReuse; observe?: (metadata: LeanPrivateCorrectionOrigin, sourceRoot: LabRoot, seat: "bottom" | "top", binding: LeanCorrectionInvocationTransportBinding) => void }
   checkpoint: (additionalBytes?: number) => void
   register: (provider: Pick<FactorySupervisionProvider, "close">) => void
   unregister: (provider: Pick<FactorySupervisionProvider, "close">) => void
-}) => {
-  const hostBinding: LeanHostFailureBindingV7 | undefined = (input.ledger.allocation.schemaVersion.endsWith("-v7") || input.ledger.allocation.schemaVersion.endsWith("-v8")) && "route" in input.ledger.allocation ? { route: input.ledger.allocation.route, allocationRoot: input.ledger.allocation.root, chargeRoot: input.charge.root, slotRoot: input.slot.root } : undefined
-  const hostBindingV15: LabHostBindingV15 | undefined = leanSupervisorAllocationMode(input.ledger.allocation) === "v15-4" && leanSupervisorAllocationMode(admitLeanAllocation(input.ledger.allocation)) === "v15-4" ? { allocationRoot: input.ledger.allocation.root, chargeRoot: input.charge.root, slotRoot: input.slot.root } : undefined
+}
+type PrivateMatchInput = Pick<LegacyMatchInput, "bottom" | "top" | "register" | "unregister"> & { admission: LeanPrivateMatchAdmissionV1; debit: LeanPrivateMatchDebitV1 }
+export const runLeanBaselineMatch = (input: LegacyMatchInput) => composeLeanNativeMatch(input)
+/** Only opaque admitted/debited context enters the new lane; no callable
+ * issuer, scalar capacity, arbitrary scenario or fabricated ledger seam. */
+export const runLeanPrivateFeasibilityMatch = (input: PrivateMatchInput) => composeLeanNativeMatch(input)
+const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInput) => {
+  const legacy = "ledger" in input ? input : undefined
+  const privateInput = "admission" in input ? input : undefined
+  const context = privateInput ? readLeanPrivateMatchContextV1(privateInput.admission, privateInput.debit) : undefined
+  const allocationRoot = context?.allocation.root ?? legacy!.ledger.allocation.root, chargeRoot = context?.debitRoot ?? legacy!.charge.root
+  const checkpoint = context ? (additionalBytes = 0) => checkpointLeanPrivateMatchV1(privateInput!.admission, privateInput!.debit, additionalBytes) : legacy!.checkpoint
+  const hostBinding: LeanHostFailureBindingV7 | undefined = legacy && (legacy.ledger.allocation.schemaVersion.endsWith("-v7") || legacy.ledger.allocation.schemaVersion.endsWith("-v8")) && "route" in legacy.ledger.allocation ? { route: legacy.ledger.allocation.route, allocationRoot, chargeRoot, slotRoot: legacy.slot.root } : undefined
+  const hostBindingV15: LabHostBindingV15 | undefined = legacy && leanSupervisorAllocationMode(legacy.ledger.allocation) === "v15-4" && leanSupervisorAllocationMode(admitLeanAllocation(legacy.ledger.allocation)) === "v15-4" ? { allocationRoot, chargeRoot, slotRoot: legacy.slot.root } : undefined
   let bottomSource: LeanBaselineSource, topSource: LeanBaselineSource, scenario: ReturnType<typeof leanBaselineScenario>
   try {
     bottomSource = validateLeanBaselineSource(input.bottom); topSource = validateLeanBaselineSource(input.top)
-    scenario = leanBaselineScenario({ seed: input.seed, slot: input.slot, bottom: bottomSource, top: topSource })
+    if (context) {
+      const a = context.allocation, slot = context.slot
+      if (a.seed !== LEAN_PRIVATE_MATCH_SEED_V1 || bottomSource.role !== slot.bottomRole || topSource.role !== slot.topRole || !a.sources.some(s => s.snapshotRoot === bottomSource.root && s.sourceRoot === bottomSource.sourceRoot) || !a.sources.some(s => s.snapshotRoot === topSource.root && s.sourceRoot === topSource.sourceRoot)) return fail()
+      const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(a => a.id === "arena:smoke:v1" && a.status === "active" && a.semanticGeometryHash === context.allocation.arenaHash) ?? fail()
+      const bottomPlayerId = `lean-source-${bottomSource.sourceRoot.slice(7)}`, topPlayerId = `lean-source-${topSource.sourceRoot.slice(7)}`
+      scenario = { arena, bottomPlayerId, topPlayerId, initialInitiativePlayerId: bottomPlayerId, seed: a.seed }
+    } else scenario = leanBaselineScenario({ seed: legacy!.seed, slot: legacy!.slot, bottom: bottomSource, top: topSource })
   } catch (error) { if (hostBinding) throw captureLeanHostFailureV7("match_preparation", hostBinding, error); throw error }
   const began = performance.now(), opened: FactorySupervisionProvider[] = []
   const brainInputs: SoldierBrainInputV119[] = [], strategyInputs: StrategyInputV119[] = []
   const decisionRows: Array<{ method: string; inputRoot: LabRoot; outputRoot: LabRoot }> = []
   let cleanupComplete = true
   const create = (snapshot: LeanBaselineSource, seat: "bottom" | "top"): FactorySupervisionProvider => {
-    input.checkpoint()
+    checkpoint()
     const sourceBytes = new TextEncoder().encode(snapshot.source)
     const admission = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet: snapshot.packet, proposal: snapshot.proposal, sourceBytes }), validation: snapshot.validation })
     const defaults = defaultRuntimeMetadata("typescript")
     const revision = buildStrategyRevision({ source: snapshot.source, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
     if (!revision.validation.valid || !revision.metadata.sourceArtifact) return fail()
     const executableSource = Buffer.from(revision.metadata.sourceArtifact.bytesBase64 ?? fail(), "base64").toString("utf8")
-    const matchId = `lean-${input.charge.root.slice(7, 31)}`, containerName = `lean-${input.charge.root.slice(7, 25)}-${seat}`, ownershipLabel = `lean-${input.ledger.allocation.root.slice(7, 25)}`
+    const matchId = `lean-${chargeRoot.slice(7, 31)}`, containerName = `lean-${chargeRoot.slice(7, 25)}-${seat}`, ownershipLabel = `lean-${allocationRoot.slice(7, 25)}`
     const runtime = prospectiveLeagueRuntimeBinding(admission, { revisionId: revision.id, sourceRoot: snapshot.sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image })
-    const binding = { budgetRoot: input.ledger.allocation.root, attemptRoot: input.charge.root, matchId, containerName, ownershipLabel, seat, runtime }
-    const authority = input.correction ? issueLeanCorrectionRuntimeAuthority(input.ledger, input.charge, snapshot, binding, input.correction.reuse) : issueLeanBaselineRuntimeAuthority(input.ledger, input.charge, snapshot, binding)
+    const binding = { budgetRoot: allocationRoot, attemptRoot: chargeRoot, matchId, containerName, ownershipLabel, seat, runtime }
+    const authority = privateInput ? issueLeanPrivateMatchRuntimeAuthorityV1(privateInput.admission, privateInput.debit, snapshot, binding) : legacy!.correction ? issueLeanCorrectionRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, legacy!.correction.reuse) : issueLeanBaselineRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding)
     let activeTransportBinding: LeanCorrectionInvocationTransportBinding | undefined
     let requestOrdinal = 0
     const retainedTransportBindings = new Map<number, { origin: LeanPrivateCorrectionOrigin; transport: LeanCorrectionInvocationTransportBinding }>()
-    const native = createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, matchId, containerName, ownershipLabel, attemptRoot: input.charge.root, budgetRoot: input.ledger.allocation.root, image: LAB_ADMITTED_ROOTS.image, invocationLimit: 24800, factoryLifetimeMs: 600000, ...(input.correction?.observe ? { [(leanSupervisorAllocationMode(input.ledger.allocation) === "v5" || (leanSupervisorAllocationMode(input.ledger.allocation) === "v6" || (leanSupervisorAllocationMode(input.ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(input.ledger.allocation))))) ? "startupOriginObserver" : "correctionOriginObserver"]: { observe: (metadata: LeanPrivateCorrectionOrigin) => { if (!activeTransportBinding) return fail(); retainedTransportBindings.set(activeTransportBinding.requestOrdinal, { origin: validateLeanPrivateCorrectionOrigin(metadata), transport: activeTransportBinding }); input.correction!.observe!(metadata, snapshot.sourceRoot, seat, activeTransportBinding) } } } : {}) })
+    const native = createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, matchId, containerName, ownershipLabel, attemptRoot: chargeRoot, budgetRoot: allocationRoot, image: LAB_ADMITTED_ROOTS.image, invocationLimit: 24800, factoryLifetimeMs: 600000, ...(legacy?.correction?.observe ? { [(leanSupervisorAllocationMode(legacy.ledger.allocation) === "v5" || (leanSupervisorAllocationMode(legacy.ledger.allocation) === "v6" || (leanSupervisorAllocationMode(legacy.ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(legacy.ledger.allocation))))) ? "startupOriginObserver" : "correctionOriginObserver"]: { observe: (metadata: LeanPrivateCorrectionOrigin) => { if (!activeTransportBinding) return fail(); retainedTransportBindings.set(activeTransportBinding.requestOrdinal, { origin: validateLeanPrivateCorrectionOrigin(metadata), transport: activeTransportBinding }); legacy.correction!.observe!(metadata, snapshot.sourceRoot, seat, activeTransportBinding) } } } : {}) })
     let closed: ReturnType<FactorySupervisionProvider["close"]> | undefined
-    const observed = snapshot.role === input.observedRole
+    const observed = snapshot.role === legacy?.observedRole
     const provider: FactorySupervisionProvider = {
       identity: native.identity,
       async invoke(request, identity) {
         if (performance.now() - began >= LEAN_CAPS.matchMs) { provider.close(); return fail() }
-        input.checkpoint()
+        checkpoint()
         requestOrdinal += 1
-        if (input.correction?.observe) activeTransportBinding = leanCorrectionInvocationTransportBinding({ methodName: request.kind, source: executableSource, input: request.input, outputByteLimit: CORRECTION_RUNTIME_OUTPUT_BYTES, requestOrdinal }, leanSupervisorAllocationMode(input.ledger.allocation) === "v15-5" ? "v8" : (leanSupervisorAllocationMode(input.ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(input.ledger.allocation))) ? "v7" : leanSupervisorAllocationMode(input.ledger.allocation) === "v6" ? "v6" : leanSupervisorAllocationMode(input.ledger.allocation) === "v5")
+        if (legacy?.correction?.observe) activeTransportBinding = leanCorrectionInvocationTransportBinding({ methodName: request.kind, source: executableSource, input: request.input, outputByteLimit: CORRECTION_RUNTIME_OUTPUT_BYTES, requestOrdinal }, leanSupervisorAllocationMode(legacy.ledger.allocation) === "v15-5" ? "v8" : (leanSupervisorAllocationMode(legacy.ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(legacy.ledger.allocation))) ? "v7" : leanSupervisorAllocationMode(legacy.ledger.allocation) === "v6" ? "v6" : leanSupervisorAllocationMode(legacy.ledger.allocation) === "v5")
         const evidence = await native.invoke(request, identity)
         activeTransportBinding = undefined
         if (observed && native.verify(evidence) && evidence.result.ok) {
@@ -151,7 +168,7 @@ export const runLeanBaselineMatch = async (input: {
           if (request.kind === "selectActivations" && strategyInputs.length < 16) strategyInputs.push(structuredClone(request.input as StrategyInputV119))
           if (decisionRows.length < 128) decisionRows.push({ method: request.kind, inputRoot: evidence.inputRoot, outputRoot: labRoot("lean-runtime-decision-output-v1", evidence.result.value) })
         }
-        input.checkpoint()
+        checkpoint()
         return evidence
       },
       verify: evidence => native.verify(evidence),
@@ -168,7 +185,7 @@ export const runLeanBaselineMatch = async (input: {
     let bottom: FactorySupervisionProvider, top: FactorySupervisionProvider
     try { bottom = create(bottomSource, "bottom"); top = create(topSource, "top") }
     catch (error) { if (hostBinding) throw captureLeanHostFailureV7("match_preparation", hostBinding, error); throw error }
-    actual = await runCanonicalLabMatch({ match: { matchId: `lean-${input.charge.root.slice(7, 31)}`, seed: scenario.seed, arenaVariant: scenario.arena, bottomPlayerId: scenario.bottomPlayerId, topPlayerId: scenario.topPlayerId, initialInitiativePlayerId: scenario.initialInitiativePlayerId, bottomStrategyRevisionId: bottom.identity.revisionId, topStrategyRevisionId: top.identity.revisionId }, providers: { [scenario.bottomPlayerId]: bottom, [scenario.topPlayerId]: top }, ...(hostBindingV15 ? { hostBindingV15, hostClockV15: () => performance.now() } : {}) })
+    actual = await runCanonicalLabMatch({ match: { matchId: `lean-${chargeRoot.slice(7, 31)}`, seed: scenario.seed, arenaVariant: scenario.arena, bottomPlayerId: scenario.bottomPlayerId, topPlayerId: scenario.topPlayerId, initialInitiativePlayerId: scenario.initialInitiativePlayerId, bottomStrategyRevisionId: bottom.identity.revisionId, topStrategyRevisionId: top.identity.revisionId }, providers: { [scenario.bottomPlayerId]: bottom, [scenario.topPlayerId]: top }, ...(hostBindingV15 ? { hostBindingV15, hostClockV15: () => performance.now() } : {}) })
   } catch (error) { if (hostBinding) throw captureLeanHostFailureV7("match_composition_postprocessing", hostBinding, error); actual = { kind: "failure", privacy: "private_offline", unchangedState: null, transitions: [], accounting: [], failure: { classification: "system_failure", code: "LEAN_BASELINE_SUPERVISOR_FAILURE" } } }
   finally {
     let cleanupFailure: unknown
@@ -180,14 +197,14 @@ export const runLeanBaselineMatch = async (input: {
     }
     if (cleanupFailure) throw cleanupFailure
   }
-  input.checkpoint()
-  const elapsedMs = Math.ceil(performance.now() - began), compact = compactExecution(actual, elapsedMs, cleanupComplete, scenario.bottomPlayerId, input.ledger.allocation, input.checkpoint)
-  const observedSeat = input.observedRole === bottomSource.role ? "bottom" : input.observedRole === topSource.role ? "top" : null
+  checkpoint()
+  const elapsedMs = Math.ceil(performance.now() - began), compact = compactExecution(actual, elapsedMs, cleanupComplete, scenario.bottomPlayerId, legacy?.ledger.allocation, checkpoint)
+  const observedSeat = legacy?.observedRole === bottomSource.role ? "bottom" : legacy?.observedRole === topSource.role ? "top" : null
   const { trainingHalfPoints, semanticRoot, metrics } = leanBaselineMatchEvidence(actual, compact, observedSeat)
   function* replayFrames() {
     if (actual.kind === "completed") {
       yield redact({ kind: "final-state", value: actual.result.state })
-      for (const transition of actual.transitions) { input.checkpoint(); yield redact({ kind: "transition", value: transition }) }
+      for (const transition of actual.transitions) { checkpoint(); yield redact({ kind: "transition", value: transition }) }
     } else yield { kind: "failure", code: compact.code }
   }
   const failedEvidence = actual.accounting.find(e => !e.result.ok && "systemFailure" in e.result)
@@ -195,9 +212,10 @@ export const runLeanBaselineMatch = async (input: {
   const origin = provider && failedEvidence ? diagnosticProviders.get(provider)?.(failedEvidence) : undefined
   const retainedOrigin = provider && failedEvidence ? diagnosticTransportBindings.get(provider)?.get(failedEvidence.ordinal + 1) : undefined
   const invocationBinding = origin && retainedOrigin && failedEvidence && provider ? bindLeanCorrectionInvocation(retainedOrigin.origin, retainedOrigin.transport, failedEvidence, origin, provider.identity.sourceRoot === bottomSource.sourceRoot ? "bottom" : "top") : undefined
-  const baseDiagnostic = compact.classification !== "success" ? deriveLeanSupervisorDiagnostic(input.charge.root, actual, origin ? { stage: "native_response", reason: ["stream_exchange", "outer_frame", "inner_response", "executor"].includes(origin.stage) ? origin.stage as "stream_exchange" | "outer_frame" | "inner_response" | "executor" : "system_failure", method: failedEvidence!.method, ordinal: failedEvidence!.ordinal, code: !failedEvidence!.result.ok && "systemFailure" in failedEvidence!.result ? failedEvidence!.result.systemFailure.code : undefined } : undefined) : null
+  if (context && actual.accounting.some(evidence => !opened.some(provider => provider.identity.sourceRoot === evidence.identity.sourceRoot && provider.verify(evidence)))) return fail()
+  const baseDiagnostic = compact.classification !== "success" ? deriveLeanSupervisorDiagnostic(chargeRoot, actual, origin ? { stage: "native_response", reason: ["stream_exchange", "outer_frame", "inner_response", "executor"].includes(origin.stage) ? origin.stage as "stream_exchange" | "outer_frame" | "inner_response" | "executor" : "system_failure", method: failedEvidence!.method, ordinal: failedEvidence!.ordinal, code: !failedEvidence!.result.ok && "systemFailure" in failedEvidence!.result ? failedEvidence!.result.systemFailure.code : undefined } : undefined) : null
   const diagnostic = baseDiagnostic && invocationBinding ? { ...baseDiagnostic, invocationBinding } : baseDiagnostic
-  return { compact, replayFrames: replayFrames(), brainInputs, strategyInputs, trainingHalfPoints, semanticRoot, metrics, decisionRoot: labRoot("lean-baseline-observed-decisions-v1", decisionRows), diagnostic, ...(hostBindingV15 ? { hostFailureV15: compact.classification === "success" ? null : readLabHostFailureV15(actual, hostBindingV15) } : {}) }
+  return { compact, replayFrames: replayFrames(), brainInputs, strategyInputs, trainingHalfPoints, semanticRoot, metrics, decisionRoot: labRoot("lean-baseline-observed-decisions-v1", decisionRows), diagnostic, ...(context ? { privateActual: actual, privateProviderIdentities: opened.map(provider => provider.identity) } : {}), ...(hostBindingV15 ? { hostFailureV15: compact.classification === "success" ? null : readLabHostFailureV15(actual, hostBindingV15) } : {}) }
 }
 const diagnosticProviders = new WeakMap<object, (evidence: Parameters<typeof getFactoryPrivateDiagnostic>[1]) => ReturnType<typeof getFactoryPrivateDiagnostic>>()
 const diagnosticTransportBindings = new WeakMap<object, Map<number, { origin: LeanPrivateCorrectionOrigin; transport: LeanCorrectionInvocationTransportBinding }>>()

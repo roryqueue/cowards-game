@@ -20,6 +20,24 @@ export const readLeanPrivateProbeGitV1 = (args: readonly string[]): Buffer => {
   if (!head && !parents && !allocation) throw new TypeError("LEAN_PRIVATE_PROBE_GIT_METADATA")
   return execFileSync("git", [...args], { stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: allocation ? 65_537 : 4096 })
 }
+/** Dedicated two-Match metadata only. The old zero-Match Git API above is
+ * unchanged. No arbitrary argv, subprocess program or shell is accepted. */
+export const readLeanPrivateMatchGitV1 = (args: readonly string[]): Buffer => {
+  const commit = /^[a-f0-9]{40}$/u, artifact = ".planning/artifacts/v1.38-phase-265-private-match-allocation-v1.json"
+  const sourcePaths = ["scripts/run-v1-38-lean-private-matches.ts", "scripts/lib/v1-38-lean-experiment-authority.ts", "scripts/lib/v1-38-lean-baseline-match.ts", "scripts/lib/v1-38-lean-container-match-session.ts"]
+  let maximum: number | undefined
+  if (args.length === 2 && args[0] === "rev-parse" && args[1] === "HEAD") maximum = 128
+  if (args.length === 5 && args[0] === "rev-list" && args[1] === "--parents" && args[2] === "-n" && args[3] === "1" && commit.test(args[4]!)) maximum = 256
+  if (args.length === 4 && args[0] === "diff" && args[1] === "--name-only" && args[2] === "dd67460e6628aebff6bc35c253adaa2cdfea284e" && commit.test(args[3]!)) maximum = 32768
+  if (args.length === 8 && args.slice(0, 4).join("\0") === ["diff", "--name-only", "HEAD", "--"].join("\0") && args.slice(4).every((path, n) => path === sourcePaths[n])) maximum = 4096
+  if (args.length === 2 && args[0] === "show") {
+    const selected = args[1]!.split(":")
+    const path = selected[1]
+    if (selected.length === 2 && commit.test(selected[0]!) && path && /^(?:scripts|\.planning)\/[a-zA-Z0-9_./-]{1,240}$/u.test(path) && !path.split("/").some(part => part === ".." || part === "." || !part.length)) maximum = path === artifact ? 65537 : 4194305
+  }
+  if (maximum === undefined) throw new TypeError("LEAN_PRIVATE_MATCH_GIT_METADATA")
+  return execFileSync("git", [...args], { stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: maximum })
+}
 import { Worker } from "node:worker_threads"
 import { claimProspectiveLeagueHostReceiptAuthority, isProspectiveLeagueHostReceiptFixture, type ProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
 import type { ProspectiveLeagueLifetimeProviderBinding } from "./v1-38-league-prospective-lifetime.js"
