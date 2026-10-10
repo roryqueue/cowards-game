@@ -69,6 +69,16 @@ describe("startup-origin-v8 factory opt-in", () => {
   })
 })
 describe("private probe factory authority", () => {
+  it.each(["dockerPath", "cleanupTimeoutMilliseconds"])("rejects own, inherited, undefined and accessor %s before construction", key => {
+    for (const inherited of [false, true]) {
+      const holder = Object.create(null) as Record<string, unknown>
+      Object.defineProperty(holder, key, { get() { throw new Error("accessor must not run") } })
+      const options = inherited ? Object.create(holder) as Record<string, unknown> : holder
+      options.privateProbeAuthority = {}; options.privateProbeBinding = {}
+      expect(() => createFactorySupervisedRuntime(options as never)).toThrow("FACTORY_RUNTIME_PRIVATE_PROBE_MODE")
+    }
+    expect(() => createFactorySupervisedRuntime({ privateProbeAuthority: {}, privateProbeBinding: {}, [key]: undefined } as never)).toThrow("FACTORY_RUNTIME_PRIVATE_PROBE_MODE")
+  })
   const probeFixture = () => {
     const { admission } = admitted(), defaults = defaultRuntimeMetadata("typescript")
     const revision = buildStrategyRevision({ source: new TextDecoder().decode(sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })

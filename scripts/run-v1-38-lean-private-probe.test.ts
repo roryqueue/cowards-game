@@ -9,6 +9,9 @@ const mocked = vi.hoisted(() => ({ source: undefined as any, invoke: undefined a
 vi.mock("./lib/v1-38-lean-baseline-source.js", () => ({ readLeanBaselineSource: () => mocked.source }))
 vi.mock("../packages/strategy-lab/src/factory/admission.js", () => ({ admitFactory: () => ({}), authorizeFactorySupervision: () => ({}) }))
 vi.mock("./lib/v1-38-lean-experiment-authority.js", () => ({
+  LEAN_PRIVATE_PROBE_COST_ROOT: "sha256:6e271d344297f332e858882c9071f0fc47629e72fda3c0371540e3d607306381",
+  authenticateLeanPrivateProbeCostV1: () => ({}),
+  observeLeanPrivateProbeResourcesV1: () => ({}),
   observeLeanPrivateProbeCapacityV1: () => ({}),
   openLeanPrivateProbeAdmissionV1: () => ({}),
   recordAndIssueLeanPrivateProbeRuntimeAuthorityV1: (_admission: unknown, descriptor: any) => { mocked.issues += 1; return { binding: { executionOwnerId: `probe-owner-${descriptor.ordinal}` } } },
@@ -23,7 +26,7 @@ vi.mock("./lib/v1-38-factory-supervised-runtime.js", () => ({ createFactorySuper
 import { createLeanPrivateProbeScheduleV1, executeLeanPrivateProbeEntryV1, parseLeanPrivateProbeArgsV1, verifyLeanPrivateProbeResultV1 } from "./run-v1-38-lean-private-probe.js"
 
 const root = (name: string) => labRoot("test-root", name)
-const schedule = () => createLeanPrivateProbeScheduleV1({ sourceHead: "bcb89241c836b1a04c99dd5b48799a69d58c060e", sourceRoot: root("source"), executableRoot: root("executable"), costSnapshotRoot: root("cost") })
+const schedule = () => createLeanPrivateProbeScheduleV1({ sourceHead: "bcb89241c836b1a04c99dd5b48799a69d58c060e", sourceRoot: root("source"), executableRoot: root("executable"), costSnapshotRoot: "sha256:6e271d344297f332e858882c9071f0fc47629e72fda3c0371540e3d607306381" })
 const tempStores: string[] = []
 afterEach(() => { for (const path of tempStores.splice(0)) rmSync(path, { recursive: true, force: true }); mocked.calls = 0; mocked.issues = 0; mocked.cleanup = true; mocked.invoke = undefined; mocked.source = undefined })
 
@@ -59,6 +62,18 @@ describe("lean private probe schedule", () => {
     expect(parsed).toMatchObject({ command: "entry", sourceStore: "/private/source", store: "/private/new-store", allocationPath })
     expect(() => parseLeanPrivateProbeArgsV1(["entry", "--source-store", "/private/source", "--source-root", root("source"), "--store", "/private/source", "--allocation-commit", "bcb89241c836b1a04c99dd5b48799a69d58c060e", "--allocation-path", allocationPath])).toThrow()
     expect(() => parseLeanPrivateProbeArgsV1(["verify", "--source-store", "/private/source", "--source-root", root("source"), "--store", "/private/new-store", "--allocation-commit", "bcb89241c836b1a04c99dd5b48799a69d58c060e", "--allocation-path", allocationPath])).toThrow()
+  })
+
+  it("rejects arbitrary cost, nested private case data, and continuation after cleanup failure", () => {
+    const allocation = schedule()
+    expect(() => createLeanPrivateProbeScheduleV1({ ...allocation, costSnapshotRoot: root("arbitrary-cost") })).toThrow()
+    const outcomes = allocation.cases.slice(0, 2).map(item => ({ ordinal: item.ordinal, status: "success" as const, cleanupComplete: item.ordinal !== 0, inputRoot: item.inputRoot, requestRoot: item.requestRoot }))
+    const body = { schemaVersion: "lean-private-probe-result-v1", allocationRoot: allocation.root, sourceHead: allocation.sourceHead, matchCount: 0, attemptedOrdinals: [0, 1], outcomes }
+    expect(verifyLeanPrivateProbeResultV1(allocation, { ...body, root: labRoot("lean-private-probe-result-v1", body) })).toBe(false)
+    const changed = { ...allocation, cases: allocation.cases.map(item => ({ ...item, strategyMemory: { private: "must reject" } })) }
+    const { root: _root, ...changedBody } = changed
+    const nested = { ...changedBody, root: labRoot("lean-private-probe-allocation-v1", changedBody) }
+    expect(verifyLeanPrivateProbeResultV1(nested, { ...body, allocationRoot: nested.root })).toBe(false)
   })
 
   it("uses only inert factory seams, debits once per invocation, and stops after the first failure", async () => {

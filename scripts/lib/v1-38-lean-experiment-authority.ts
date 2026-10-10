@@ -12,9 +12,11 @@ import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { constants, openSync, closeSync, readFileSync, lstatSync, realpathSync, fstatSync, statfsSync, writeSync, fsyncSync, readdirSync } from "node:fs"
-import { resolve } from "node:path"
+import { dirname, resolve } from "node:path"
 import { execFileSync } from "node:child_process"
 import { performance } from "node:perf_hooks"
+import { createHash } from "node:crypto"
+import { assertLeanAggregateMemoryV15 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { leanCanonicalBytes, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { leanCapsForAllocation, leanSupervisorAllocationMode, LEAN_STARTUP_POLICY_V5, LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY, type LeanCorrectionAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
@@ -58,6 +60,43 @@ const privateProbeCapacities = new WeakMap<object, { startedAt: number; storePat
 const privateProbeAuthorities = new WeakMap<object, PrivateProbeCapabilityState>()
 const opaque = (): never => { throw new TypeError("LEAN_PRIVATE_PROBE_AUTHORITY") }
 const privateProbeFail = (): never => { throw new TypeError("LEAN_PRIVATE_PROBE_AUTHORITY") }
+export const LEAN_PRIVATE_PROBE_COST_ROOT = "sha256:6e271d344297f332e858882c9071f0fc47629e72fda3c0371540e3d607306381" as LabRoot
+const privateProbeSnapshotPath = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-POST-V14-RESOURCE-WINDOW-diagnostic-v15-5-PAIR-CLOSURE-v1.json"
+let privateProbeSnapshot: Readonly<{ allocatedDiskBytes: number; cumulativeCharged: number; timeboxExtension: unknown }> | undefined
+export const authenticateLeanPrivateProbeCostV1 = () => {
+  if (privateProbeSnapshot) return privateProbeSnapshot
+  const path = resolve(privateProbeSnapshotPath), file = lstatSync(path)
+  if (!file.isFile() || file.isSymbolicLink() || file.size !== 144640) return privateProbeFail()
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
+  let bytes: Buffer
+  try { const opened = fstatSync(fd); if (opened.ino !== file.ino || opened.dev !== file.dev || opened.size !== 144640) return privateProbeFail(); bytes = readFileSync(fd) } finally { closeSync(fd) }
+  if (bytes.length !== 144640 || `sha256:${createHash("sha256").update(bytes).digest("hex")}` !== "sha256:efe0acbd35beb37c47877cd843e695b4ed0d94b781e66c07464238f152bc45b4") return privateProbeFail()
+  const snapshot = JSON.parse(bytes.toString("utf8")) as Record<string, unknown>, { root, ...body } = snapshot
+  if (root !== LEAN_PRIVATE_PROBE_COST_ROOT || root !== labRoot("lean-resource-window-pair-closure-v15", body) || snapshot.cumulativeCharged !== 40 || snapshot.allocatedDiskBytes !== 29970432 || !Array.isArray(snapshot.survivors) || snapshot.survivors.length !== 1077 || snapshot.survivors.reduce((sum, row) => sum + Number(row.allocatedBytes), 0) > 29970432) return privateProbeFail()
+  privateProbeSnapshot = freezeLabValue({ allocatedDiskBytes: 29970432, cumulativeCharged: 40, timeboxExtension: snapshot.timeboxExtension })
+  return privateProbeSnapshot
+}
+export const observeLeanPrivateProbeResourcesV1 = (storePath: string) => {
+  const snapshot = authenticateLeanPrivateProbeCostV1(), wallAtMs = Date.now(), cumulativeElapsedMs = 285590903 + wallAtMs - 1791633532000
+  if (!Number.isSafeInteger(cumulativeElapsedMs) || cumulativeElapsedMs < 285590903 || cumulativeElapsedMs + 1860000 > 292790903 || wallAtMs + 1860000 > 1791640732000) return privateProbeFail()
+  let path = resolve(storePath), fresh = false
+  try { lstatSync(path) } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; path = dirname(path); fresh = true }
+  const directory = lstatSync(path)
+  if (!directory.isDirectory() || directory.isSymbolicLink()) return privateProbeFail()
+  const names = fresh ? [] : readdirSync(path)
+  if (names.length > 10) return privateProbeFail()
+  let newAllocatedBytes = fresh ? 4096 : directory.blocks * 512
+  for (const name of names) { const file = lstatSync(resolve(path, name)); if (!file.isFile() || file.isSymbolicLink() || file.size > 65536) return privateProbeFail(); newAllocatedBytes += file.blocks * 512 }
+  // Reserve all remaining bounded writes and the enforced 256MiB container
+  // ceiling. This is an upper bound, not a claimed sampled guest RSS/peak.
+  const retainedBytesUpperBound = snapshot.allocatedDiskBytes + newAllocatedBytes + 131072
+  const parentRssBytes = Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024)
+  const containerMemoryUpperBound = 268435456
+  const aggregateMemoryUpperBound = assertLeanAggregateMemoryV15({ parentRssBytes, childRssBytes: containerMemoryUpperBound }, snapshot.timeboxExtension)
+  const disk = statfsSync(path), availableDiskBytes = disk.bavail * disk.bsize
+  if (!Number.isSafeInteger(retainedBytesUpperBound) || retainedBytesUpperBound > 12000000000 || retainedBytesUpperBound + 2000000000 > 15000000000 || !Number.isSafeInteger(availableDiskBytes) || availableDiskBytes < 2000000000 || process.memoryUsage().arrayBuffers > 2000000000) return privateProbeFail()
+  return Object.freeze({ costSnapshotRoot: LEAN_PRIVATE_PROBE_COST_ROOT, historicalCharged: 40, historicalAllocatedBytes: snapshot.allocatedDiskBytes, wallAtMs, cumulativeElapsedMs, newAllocatedBytes, retainedBytesUpperBound, parentRssBytes, containerMemoryUpperBound, aggregateMemoryUpperBound, availableDiskBytes })
+}
 const canonicalPrivateProbe = (value: unknown): Buffer => Buffer.from(leanCanonicalBytes(value))
 const privateProbeFile = (path: string, maxBytes: number, expectedMode: number): Buffer => {
   const before = lstatSync(path)
@@ -88,6 +127,7 @@ const validatePrivateProbeAllocation = (value: unknown): LeanPrivateProbeAllocat
 
 /** Sample process capacity in this process; receipts cannot be caller-constructed. */
 export const observeLeanPrivateProbeCapacityV1 = (storePath: string): LeanPrivateProbeCapacityReceiptV1 => {
+  observeLeanPrivateProbeResourcesV1(storePath)
   const path = resolve(storePath), stat = statfsSync(path), memory = process.memoryUsage()
   if (memory.rss > 3_000_000_000 || stat.bavail * stat.bsize < 2_000_000_000) return privateProbeFail()
   const receipt = Object.freeze({ schemaVersion: "lean-private-probe-capacity-v1" as const, toJSON: opaque })
@@ -108,6 +148,7 @@ export const openLeanPrivateProbeAdmissionV1 = (input: { readonly storePath: str
   const allocationBytes = privateProbeFile(resolve(storePath, "allocation.json"), 65_536, 0o600)
   const parsed = JSON.parse(allocationBytes.toString("utf8")) as unknown
   const allocation = validatePrivateProbeAllocation(parsed)
+  if (allocation.costSnapshotRoot !== LEAN_PRIVATE_PROBE_COST_ROOT) return privateProbeFail()
   if (!allocationBytes.equals(canonicalPrivateProbe(allocation))) return privateProbeFail()
   const output = execFileSync("git", ["rev-list", "--parents", "-n", "1", input.allocationCommit], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 4096 }).trim().split(/\s+/u)
   if (output.length !== 2 || output[1] !== allocation.sourceHead) return privateProbeFail()
@@ -125,6 +166,7 @@ export const recordAndIssueLeanPrivateProbeRuntimeAuthorityV1 = (admission: Lean
   if (state && !state.used) state.used = true
   else return privateProbeFail()
   if (!receipt || receipt.storePath !== state.storePath || performance.now() - receipt.startedAt > 30_000) return privateProbeFail()
+  observeLeanPrivateProbeResourcesV1(state.storePath)
   privateProbeCapacities.delete(capacity)
   const expected = state.allocation.cases[state.nextOrdinal]
   if (!expected || canonicalPrivateProbe(expected).compare(canonicalPrivateProbe(invocation)) !== 0) return privateProbeFail()

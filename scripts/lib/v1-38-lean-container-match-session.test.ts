@@ -19,6 +19,12 @@ import { encodeCandidateHostEnvelopeV117 } from "../../packages/runtime-js/src/c
 import { registerCandidateEvidenceFixture } from "../../packages/runtime-js/src/candidate-evidence-fixture.js"
 const LEAN_CONTAINER_IMAGE = LAB_ADMITTED_ROOTS.image
 it("private probe session rejects injected transport before consuming a claim", () => {
+  for (const key of ["dockerPath", "cleanupTimeoutMilliseconds"]) {
+    const inherited = Object.create({ [key]: undefined }); inherited.privateProbeAuthority = {}; inherited.privateProbeBinding = {}
+    expect(() => createLeanContainerMatchSession(inherited)).toThrow("LEAN_PRIVATE_PROBE_SESSION_BINDING")
+    Object.defineProperty(inherited, key, { get() { throw new Error("must not read override") } })
+    expect(() => createLeanContainerMatchSession(inherited)).toThrow("LEAN_PRIVATE_PROBE_SESSION_BINDING")
+  }
   const binding = { allocationRoot: "sha256:" + "a".repeat(64), debitDigest: "sha256:" + "b".repeat(64), executionOwnerId: "probe-owner", ordinal: 0, caseId: "probe-00", method: "selectActivations", sourceRoot: "sha256:" + "c".repeat(64), executableRoot: "sha256:" + "d".repeat(64), requestRoot: "sha256:" + "e".repeat(64), inputRoot: "sha256:" + "f".repeat(64), image: LEAN_CONTAINER_IMAGE, tupleId: "tuple", tupleRoot: "sha256:" + "1".repeat(64), runtimeLimitsRoot: "sha256:" + "2".repeat(64), allocationDigest: "sha256:" + "3".repeat(64), debitOffset: 0 }
   const fake = { schemaVersion: "lean-private-probe-runtime-authority-v1", binding }
   expect(() => createLeanContainerMatchSession({ privateProbeAuthority: fake, privateProbeBinding: binding, transport: undefined } as never)).toThrow("LEAN_PRIVATE_PROBE_SESSION_BINDING")

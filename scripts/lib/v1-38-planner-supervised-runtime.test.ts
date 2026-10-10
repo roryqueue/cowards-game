@@ -24,6 +24,12 @@ it("prospective lifetime rejects forged and partial authority without changing b
   for (const options of [{ prospectiveLifetimeAuthority: {}, prospectiveLifetimeMs: 600000 }, { prospectiveLifetimeMs: 600000 }, { prospectiveLifetimeAuthority: {} }]) expect(() => admitPlannerSupervisorLifetime({ ...base, ...options } as never, 24800)).toThrow()
 })
 it("private probe planner rejects mixed authority and injected transport before construction", () => {
+  for (const key of ["dockerPath", "cleanupTimeoutMilliseconds"]) {
+    const inherited = Object.create({ [key]: undefined }); inherited.privateProbeAuthority = {}; inherited.privateProbeBinding = {}
+    expect(() => createPlannerSupervisedRuntime(inherited)).toThrow("LAB_RUNTIME_PRIVATE_PROBE_MODE")
+    Object.defineProperty(inherited, key, { get() { throw new Error("must not read override") } })
+    expect(() => createPlannerSupervisedRuntime(inherited)).toThrow("LAB_RUNTIME_PRIVATE_PROBE_MODE")
+  }
   const binding = { allocationRoot: labRoot("probe", "allocation"), debitDigest: labRoot("probe", "debit"), executionOwnerId: "probe-owner", ordinal: 0, caseId: "probe-00", method: "selectActivations", sourceRoot: labRoot("probe", "source"), executableRoot: labRoot("probe", "exec"), requestRoot: labRoot("probe", "request"), inputRoot: labRoot("probe", "input"), image: LAB_ADMITTED_ROOTS.image, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, allocationDigest: labRoot("probe", "digest"), debitOffset: 0 }
   const fake = { schemaVersion: "lean-private-probe-runtime-authority-v1", binding }
   expect(() => createPlannerSupervisedRuntime({ privateProbeAuthority: fake, privateProbeBinding: binding, transport: undefined } as never)).toThrow("LAB_RUNTIME_PRIVATE_PROBE_MODE")
