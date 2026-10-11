@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: One-Match diagnostic source verified; fresh prospective work-time allowance required before game
+stopped_at: Approved fresh60-minute one-Match window; narrow timing amendment next
 last_updated: "2026-10-11"
 last_activity: 2026-10-11
 last_activity_desc: One-Match error-capture repair independently verified;52tests pass; no game started before entry cutoff
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED CONTINUATION — SIXTY-MINUTE ONE-MATCH WINDOW (ROOT2026-10-11T17:13:01UTC). Humanyesapproved adopts fresh60minutes/15GB/allotherlimits unchanged. Anchor1791738781000/deadline1791742381000(18:13:01UTC); continuouscarry390839903/cap394439903 includesALLinterveningwalltime/no reset. Same31minreserve+10minMatch yields latestentry17:32:01UTC. Prior13bea518source proof ready; amendonlyunconsumedV2numericwindow/twofixturefiles, independentnarrowreview/ROOTaffectedchecks/distinctsourceverification beforefreshmetadata/prep/directchildallocation/uniqueROOTentry/sameprocesscapacity/ONEactualreader. ExactlyONEgame/zero probes/retries/secondgame. Old41charges/allconsumedbytes/bounds/privacy unchanged; noempiricalholdornewMatch yet. ExistingPlan16supplement APPROVAL-v2, no newplan/workstream. Earliercheckpoints history.
 
 CURRENT HUMAN RESOURCE CHECKPOINT — SOURCE REPAIR VERIFIED / GAME NOT STARTED (ROOT2026-10-11T15:05:45UTC). Exactfunctional13bea518, independentSOURCE-REVIEW-v2/v3clean; distinctSOURCE-VERIFICATION-v1 CLOSED/sourceTasks1–2PASS7/7/no blockers. ROOTfinal62445 CLOSED0/52tests,57497 CLOSED2/exact13inherited/zeroNEW, configuredproject0/boundary1441zero/diff0. Real originalreview2blockers and later3testtypingerrors fixed, failedoutcomes retained. No newmetadata/prep/allocation/admission/provider/container/Strategy/probe/Match/debit/result/head/actualordinaryreader fromthiscontinuation; oldcumulative41charges immutable. Latestentry14:58:43 passed beforegatesclosed; hardstop15:39:43/carry379841903/cap385241903/31minute verificationreserve remainunchanged. Source-only gatecompletion does NOTadmitlateentry. Standing distinctfreshsame-scopeprivate routeconsent persists; only missinghumanchoice is a NEWprospective WORK-TIME allowance, not repeatliteral/custody/sourceapproval/game-rule change. Recommend60minutes for narrow numericamendment/affectedgates/onefreshgame/uniqueverification under unchanged15GB/allotherbounds; NOTapproved orapplied. Sourceownership andallcommandsreleased, no empiricalhold. Temporaryreview-fixworktree recoverablyarchived aftertransfer. Plan16Task3/Phase265/allLEAG/baseline/fullChronicle/freeze remainincomplete, formation/holdout/public/counting/production unstarted. Safe notesreadyforcommit/push; earliercheckpoints history. Do not spin unchangedruns/gates whilethisdecisionpending.
 
