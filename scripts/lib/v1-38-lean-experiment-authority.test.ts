@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 
+it("V3 owns the prospective window and rejects forged/opposite-version capabilities", () => {
+  expect(authority.LEAN_PRIVATE_MATCH_WINDOW_V3).toMatchObject({ anchorMs: 1791747362000, deadlineMs: 1791752762000, carryMs: 399420903, capMs: 404820903, reserveMs: 1860000 })
+  expect(authority.LEAN_PRIVATE_MATCH_CARRY_V3).toMatchObject({ historicalCharged: 42, retainedAllocatedBytes: 376832, historicalSourceAllocatedBytes: 1830912 })
+  expect(() => authority.readLeanPrivateMatchContextV3({} as never, {} as never)).toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
+  expect(() => authority.validateLeanPrivateMatchAllocationV3({ schemaVersion: "lean-private-match-allocation-v2" })).toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
+})
+
 it("one-Match v2 has a disjoint approved window and refuses forged route handles", () => {
   expect(authority.LEAN_PRIVATE_MATCH_WINDOW_V2).toMatchObject({ anchorMs: 1791738781000, deadlineMs: 1791742381000, carryMs: 390839903, capMs: 394439903, reserveMs: 1860000 })
   expect(() => authority.readLeanPrivateMatchContextV2({} as never, {} as never)).toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
