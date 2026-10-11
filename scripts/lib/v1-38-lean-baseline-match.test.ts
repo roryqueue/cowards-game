@@ -21,6 +21,79 @@ import { encodeSubprocessIpcRequest } from "../../packages/runtime-js/src/subpro
 import { buildLeanStartupWorkerHarnessV8 } from "./v1-38-lean-container-match-session.js"
 import { runLeanPrivateFeasibilityMatch } from "./v1-38-lean-baseline-match.js"
 import { runLeanPrivateFeasibilityMatchV2, readLeanPrivateMatchDiagnosticV2 } from "./v1-38-lean-baseline-match.js"
+import * as composerModule from "./v1-38-lean-baseline-match.js"
+import * as bridgeModule from "../../packages/strategy-lab/src/runtime-bridge.js"
+
+it.each(["available", "absent", "wrong-request", "wrong-seat", "wrong-source", "wrong-executable", "wrong-allocation", "wrong-debit", "wrong-harness", "wrong-diagnostic", "unverified", "throw", "success-then-absent", "duplicate-observation"] as const)("private startup receipt uses current inert V2 invocation: %s", async mode => {
+  const r = (n: number) => labRoot("inert-private-startup-receipt", n)
+  const executableSource = "INERT_PRIVATE_SENTINEL_NEVER_EXECUTED", requestInput = { private: "INPUT_PRIVATE_SENTINEL" }
+  const executableRoot = `sha256:${createHash("sha256").update(executableSource).digest("hex")}` as const
+  const harnessRoot = lean.leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8()))
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(a => a.id === "arena:smoke:v1")!
+  const snapshots = [0, 1].map(n => ({ role: n === 0 ? "tactical-0" : "cold-opponent", sourceRoot: r(n + 1), root: r(n + 3), source: "SOURCE_PRIVATE_SENTINEL", packet: {}, proposal: {}, validation: {} }))
+  const allocation = { root: r(5), seed: authorityModule.LEAN_PRIVATE_MATCH_SEED_V1, arenaHash: arena.semanticGeometryHash, sources: snapshots.map(s => ({ snapshotRoot: s.root, sourceRoot: s.sourceRoot })) }
+  const identities = snapshots.map(s => ({ revisionId: "inert-revision", sourceRoot: s.sourceRoot, executableRoot, budgetRoot: allocation.root, attemptRoot: r(6), harnessRoot, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image }))
+  const evidence = { identity: identities[0]!, invocationRoot: r(7), requestId: `effect:v1.19:${"a".repeat(64)}`, method: "selectActivations", inputRoot: labRoot("runtime-input", requestInput), ordinal: mode === "success-then-absent" ? 1 : 0, charged: true, completed: false, outputBytes: 0, result: { ok: false, systemFailure: { code: "SUBPROCESS_SIGNAL", retryable: false } } } as any
+  let created = 0, callback: ((metadata: any) => void) | undefined, capturedOrigin: any
+  const mocks = [
+    vi.spyOn(authorityModule, "readLeanPrivateMatchContextV2").mockReturnValue({ allocation, slot: { bottomRole: "tactical-0", topRole: "cold-opponent" }, debitRoot: r(6) } as never),
+    vi.spyOn(authorityModule, "checkpointLeanPrivateMatchV2").mockImplementation(() => {}),
+    vi.spyOn(authorityModule, "issueLeanPrivateMatchRuntimeAuthorityV2").mockReturnValue({} as never),
+    vi.spyOn(sourceModule, "validateLeanBaselineSource").mockImplementation(v => v as never),
+    vi.spyOn(admissionModule, "admitFactory").mockReturnValue({} as never),
+    vi.spyOn(admissionModule, "authorizeFactorySupervision").mockReturnValue({} as never),
+    vi.spyOn(revisionModule, "buildStrategyRevision").mockReturnValue({ id: "inert-revision", validation: { valid: true }, metadata: { sourceArtifact: { bytesBase64: Buffer.from(executableSource).toString("base64"), hash: executableRoot.slice(7) } } } as never),
+    vi.spyOn(lifetimeModule, "prospectiveLeagueRuntimeBinding").mockReturnValue({} as never),
+    vi.spyOn(runtimeModule, "createFactorySupervisedRuntime").mockImplementation(options => {
+      const index = created++, identity = identities[index]!
+      if (index === 0) callback = options.startupOriginObserver?.observe
+      let calls = 0
+      return { identity, async invoke() {
+        calls++
+        if (mode !== "absent" && !(mode === "success-then-absent" && calls === 2)) {
+          const transport = leanCorrectionInvocationTransportBinding({ methodName: "selectActivations", source: executableSource, input: requestInput, outputByteLimit: 262144, requestOrdinal: calls }, "v8")
+          capturedOrigin = { schemaVersion: "v1.38-lean-startup-origin-v8", allocationRoot: allocation.root, chargeRoot: r(6), seat: "bottom", policyRoot: lean.LEAN_STARTUP_POLICY_V5.root, harnessRoot, requestOrdinal: calls, requestRoot: transport.requestRoot, method: "selectActivations", inputRoot: transport.inputRoot, sourceRoot: identity.sourceRoot, executableRoot, stage: "startup", branch: "lifecycle_failure", ready: false, go: false, wait: "changed", termination: "completed", unknown: true, constructorDurationBucket: "0_9ms", prefixMilestone: "not_entered", readyPublicationDurationBucket: "unknown", finalAtomicState: "state_0", lifecycleBeforeTermination: "exit_seen", deadlineOutcome: "unknown" }
+          const fields = { "wrong-request": "requestRoot", "wrong-source": "sourceRoot", "wrong-executable": "executableRoot", "wrong-allocation": "allocationRoot", "wrong-debit": "chargeRoot", "wrong-harness": "harnessRoot" } as Record<string, string>
+          if (fields[mode]) capturedOrigin[fields[mode]!] = r(99)
+          if (mode === "wrong-seat") capturedOrigin.seat = "top"
+          callback?.(capturedOrigin)
+          if (mode === "duplicate-observation") callback?.(capturedOrigin)
+        }
+        if (mode === "throw") throw Error("PRIVATE_THROW_SENTINEL")
+        if (mode === "success-then-absent" && calls === 1) return { ...evidence, ordinal: 0, result: { ok: true, value: {} } }
+        return evidence
+      }, verify(e: unknown) { return mode !== "unverified" && (e === evidence || mode === "success-then-absent") }, close() { return { cleanupComplete: true, orphanedChild: false } } } as never
+    }),
+    vi.spyOn(runtimeModule, "getFactoryPrivateDiagnostic").mockImplementation((_p, e) => e === evidence ? { stage: "executor", reason: "unknown", identity: evidence.identity, invocationRoot: mode === "wrong-diagnostic" ? r(99) : evidence.invocationRoot, requestId: evidence.requestId, inputRoot: evidence.inputRoot, method: evidence.method, ordinal: evidence.ordinal } as never : undefined),
+    vi.spyOn(bridgeModule, "runCanonicalLabMatch").mockImplementation(async options => {
+      const provider = Object.values(options.providers)[0]!
+      if (mode === "success-then-absent") await provider.invoke({ kind: "selectActivations", input: requestInput } as never, {} as never)
+      await provider.invoke({ kind: "selectActivations", input: requestInput } as never, {} as never)
+      return { kind: "failure", privacy: "private_offline", transitions: [], accounting: [evidence], unchangedState: null, failure: { classification: "system_failure", code: "LAB_SUPERVISOR_FAILURE" } } as never
+    }),
+  ]
+  try {
+    const call = () => runLeanPrivateFeasibilityMatchV2({ admission: {} as never, debit: {} as never, bottom: snapshots[0] as never, top: snapshots[1] as never, register() {}, unregister() {} })
+    if (mode === "unverified" || mode === "wrong-diagnostic") { await expect(call()).rejects.toThrow(); return }
+    const result = await call()
+    const read = (composerModule as any).readLeanPrivateStartupReceiptV1
+    expect(read).toBeTypeOf("function")
+    expect(callback).toBeTypeOf("function")
+    expect(read({ ...result })).toBeUndefined(); expect(read({})).toBeUndefined()
+    const receipt = read(result)
+    expect(receipt.availability).toBe(mode === "available" ? "available" : "unavailable")
+    if (mode === "available") {
+      expect(receipt.identity).toBe(evidence.identity)
+      expect(receipt.origin).toEqual(capturedOrigin)
+      expect(receipt.invocationBinding).toMatchObject({ requestOrdinal: 1, ordinal: 0, requestId: evidence.requestId, inputRoot: evidence.inputRoot, invocationRoot: evidence.invocationRoot, seat: "bottom" })
+    } else expect(receipt).toEqual({ availability: "unavailable", identity: null, origin: null, invocationBinding: null })
+    expect(() => callback?.(capturedOrigin)).not.toThrow()
+    expect(read(result)).toEqual(receipt)
+    expect(result).not.toHaveProperty("startupReceipt")
+    expect(JSON.stringify(receipt)).not.toMatch(/PRIVATE_SENTINEL|PRIVATE_THROW/)
+    if (mode !== "throw") expect(readLeanPrivateMatchDiagnosticV2(result)).toMatchObject({ availability: "available", originAvailability: "available", stage: "executor", reason: "unknown", code: "SUBPROCESS_SIGNAL" })
+  } finally { for (const mock of mocks) mock.mockRestore() }
+})
 
 it("v2 composer refuses forged/cross-version handles before source/provider work and caller diagnostics are unissued", async () => {
   const validate = vi.spyOn(sourceModule, "validateLeanBaselineSource"), create = vi.spyOn(runtimeModule, "createFactorySupervisedRuntime")
