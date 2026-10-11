@@ -1,4 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
+
+it("one-Match v2 has a disjoint approved window and refuses forged route handles", () => {
+  expect(authority.LEAN_PRIVATE_MATCH_WINDOW_V2).toMatchObject({ anchorMs: 1791727783000, deadlineMs: 1791733183000, carryMs: 379841903, capMs: 385241903, reserveMs: 1860000 })
+  expect(() => authority.readLeanPrivateMatchContextV2({} as never, {} as never)).toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
+  expect(() => authority.validateLeanPrivateMatchAllocationV2({ schemaVersion: "lean-private-match-allocation-v1" })).toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
+})
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import * as childProcess from "node:child_process"
 import { tmpdir } from "node:os"
