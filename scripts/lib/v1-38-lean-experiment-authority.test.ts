@@ -91,6 +91,7 @@ describe("prospective two-Match authority, without execution", () => {
       writeFileSync(join(store, "terminal-0.json"), leanCanonicalBytes({ ...body, root: labRoot(body.schemaVersion, body) }), { mode: 0o600 })
       expect(version === 1 ? authority.closeLeanPrivateMatchDebitV1(admission as never, debit as never) : authority.closeLeanPrivateMatchDebitV2(admission as never, debit as never)).toBe(cleanupComplete)
       if (version === 2) { expect(() => authority.recordLeanPrivateMatchDebitV2(admission as never, 0, capacity as never)).toThrow(); expect(() => authority.readLeanPrivateMatchContextV2(admission as never, debit as never)).toThrow(); return }
+      if (admission.schemaVersion !== "lean-private-match-admission-v1") throw new Error("FIXTURE_VERSION")
       const nextCapacity = authority.observeLeanPrivateMatchCapacityV1(virtualStore, allocation, 1)
       if (cleanupComplete) { const next = authority.recordLeanPrivateMatchDebitV1(admission as never, 1, nextCapacity); expect(authority.readLeanPrivateMatchContextV1(admission as never, next).slot.condition).toBe(2) }
       else expect(() => authority.recordLeanPrivateMatchDebitV1(admission, 1, nextCapacity)).toThrow()
