@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Approved ninety-minute private receipt integration; bounded research active
+stopped_at: Prospective V3 integration plan independently checked; serial source execution next
 last_updated: "2026-10-11"
 last_activity: 2026-10-11
-last_activity_desc: New90minute integration and one private game window approved; research first; no new allocation or charge
+last_activity_desc: Research and checked existingPlan16 integration supplement closed; seven source paths; no new allocation or charge
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION — V3 INTEGRATION PLAN CHECKED (ROOT2026-10-11T19:48UTC). Research/planner/independentchecker CLOSED; PLAN-v1 amendedfrontierclarification checkedPASS/issues[]/sha256:f5072d34df6477469be4d2d48bdfe58e78541fbfb5bec45b3469d4ab5d34e1d2. ExistingPlan16 supplement owns7paths/2serialsourcetasks thenROOTactualtask; oldV1/V2windows/readers/historyunchanged. GenuineV3onefailedpreimage→full-livevalidation→finallydelete→finite receipt-v2/newreader retainedcommitmentjoins declaresrawrecomputationfalse; nocertificate/newhumanliteral. Nextone sourceowner→independentreview/fix→ROOTvalidation→distinctsourceverification beforeactualmetadata/preparation. All42charges immutable/no newallocation orcharge yet. Anchor19:36:02/latestinitialentry20:25:02/hard21:06:02/carry399420903/cap404820903/31minreserve/allbounds; onegameonly/no probes/retries. NoLEAG/phase/freeze/formation/holdout/public/counting/productioncredit. Earliercheckpoints history.
 
 CURRENT APPROVED CONTINUATION — PRIVATE STARTUP INTEGRATION (ROOT2026-10-11T19:36:02UTC). Human approves90minutes/connect capture/ONE fresh private game/verification,15GB/allotherlimits unchanged. Anchor1791747362000/hard21:06:02UTC1791752762000/latestentry20:25:02UTC1791750302000; continuouscarry399420903/cap404820903 includes priorclosureoverrun/interveningwalltime/no refund. Research role /root/research_265_startup_integration active source/docs only, target19:43; no runtime/tests/historyscan. ExistingPlan16 narrowcheckedintegration next; all42charges/V2failedroute+uniqueactualreader CLOSED/immutable/sourceholdreleased. FreshV3 prospectiveroute only after independentlycheckedplan/sourceauthor/review-fix/ROOTvalidation/distinctsourceverification; no newallocation or charge yet. Scope ONEgame/zero probes/retries; no same V2 artifact/constants/schema mutation. Allcosts/reserves/bounds/privacy/history unchanged; no LEAG/phase/freeze/formation/holdout/public/counting/production credit. Earlier checkpoints history.
 
