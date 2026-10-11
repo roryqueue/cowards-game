@@ -30,8 +30,8 @@ No source implementation was started; both checked additive tasks remain pending
 - Tasks completed: 0/2. No RED, GREEN, production or task commits.
 - Four owned source/test paths were inspected but not edited.
 - Checked plan/research/check and existing observer, transport binding, diagnostic WeakMap, runner identity/accounting and connected fixture seams were inspected.
-- Mandatory project-context and workflow reads returned truncated output. Full mandatory-read gate was not satisfied; implementation did not proceed.
-- Source-author handoff target was 17:54 UTC; all work remains subject to unchanged 18:13:01 UTC absolute hardstop. No extension or waived gate is requested.
+- Concatenated project-context and workflow reads returned truncated output. ROOT clarified that operative authority is current top STATE plus the checked supplement, not hundreds of archived STATE checkpoints. No full-history implementation gate is asserted.
+- ROOT permitted a 17:58 UTC author handoff target, reserving subsequent independent gates; all work remains subject to unchanged 18:13:01 UTC absolute hardstop. No extension or waived gate is requested.
 
 ## Verification
 
@@ -39,7 +39,7 @@ No Vitest, strict TypeScript, configured runtime types, boundary scan, native/co
 
 ## Deviations from Plan
 
-Early no-change partial handoff: required context exceeded a single read's output limits, and the author did not complete the full read gate or begin either TDD task. This is not plan completion or a source-ready result.
+Early no-change partial handoff: initial concatenated reads were truncated and consumed author preparation time. After ROOT clarified narrow operative authority, the author assessed that both complete TDD tasks, a connected observation/provenance fixture, independent trusted-current-transport validation and all enumerated tampering/privacy/size regressions were not credibly deliverable within the remaining author target. No technical missing-path blocker was demonstrated. Both tasks remain unstarted. This is not plan completion or a source-ready result.
 
 ## Known Stubs
 
