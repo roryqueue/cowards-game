@@ -17,6 +17,9 @@ import { type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { type LeanPrivateCorrectionOrigin, validateLeanPrivateCorrectionOrigin } from "./v1-38-lean-container-match-session.js"
 import { validateLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { collectLeanBaselineMetrics } from "./v1-38-lean-baseline-metrics.js"
+import { SUBPROCESS_SYSTEM_FAILURE_CODES } from "../../packages/runtime-js/src/subprocess-ipc.js"
+import { isLeanPrivateFailureOrigin } from "./v1-38-lean-container-match-session.js"
+import { readLeanPrivateMatchContextV2, checkpointLeanPrivateMatchV2, issueLeanPrivateMatchRuntimeAuthorityV2, type LeanPrivateMatchAdmissionV2, type LeanPrivateMatchDebitV2 } from "./v1-38-lean-experiment-authority.js"
 import { captureLeanHostFailureV7, type LeanHostFailureBindingV7 } from "./v1-38-lean-host-stage-v7.js"
 
 const fail = (): never => { throw new TypeError("LEAN_BASELINE_MATCH") }
@@ -109,16 +112,20 @@ type LegacyMatchInput = {
   unregister: (provider: Pick<FactorySupervisionProvider, "close">) => void
 }
 type PrivateMatchInput = Pick<LegacyMatchInput, "bottom" | "top" | "register" | "unregister"> & { admission: LeanPrivateMatchAdmissionV1; debit: LeanPrivateMatchDebitV1 }
+type PrivateMatchInputV2 = Pick<LegacyMatchInput, "bottom" | "top" | "register" | "unregister"> & { admission: LeanPrivateMatchAdmissionV2; debit: LeanPrivateMatchDebitV2 }
 export const runLeanBaselineMatch = (input: LegacyMatchInput) => composeLeanNativeMatch(input)
 /** Only opaque admitted/debited context enters the new lane; no callable
  * issuer, scalar capacity, arbitrary scenario or fabricated ledger seam. */
 export const runLeanPrivateFeasibilityMatch = (input: PrivateMatchInput) => composeLeanNativeMatch(input)
-const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInput) => {
+export const runLeanPrivateFeasibilityMatchV2 = (input: PrivateMatchInputV2) => composeLeanNativeMatch(input)
+const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInput | PrivateMatchInputV2) => {
   const legacy = "ledger" in input ? input : undefined
   const privateInput = "admission" in input ? input : undefined
-  const context = privateInput ? readLeanPrivateMatchContextV1(privateInput.admission, privateInput.debit) : undefined
+  const v2 = privateInput?.admission.schemaVersion === "lean-private-match-admission-v2" ? privateInput as PrivateMatchInputV2 : undefined
+  const v1 = privateInput && !v2 ? privateInput as PrivateMatchInput : undefined
+  const context = v2 ? readLeanPrivateMatchContextV2(v2.admission, v2.debit) : v1 ? readLeanPrivateMatchContextV1(v1.admission, v1.debit) : undefined
   const allocationRoot = context?.allocation.root ?? legacy!.ledger.allocation.root, chargeRoot = context?.debitRoot ?? legacy!.charge.root
-  const checkpoint = context ? (additionalBytes = 0) => checkpointLeanPrivateMatchV1(privateInput!.admission, privateInput!.debit, additionalBytes) : legacy!.checkpoint
+  const checkpoint = v2 ? (additionalBytes = 0) => checkpointLeanPrivateMatchV2(v2.admission, v2.debit, additionalBytes) : v1 ? (additionalBytes = 0) => checkpointLeanPrivateMatchV1(v1.admission, v1.debit, additionalBytes) : legacy!.checkpoint
   const hostBinding: LeanHostFailureBindingV7 | undefined = legacy && (legacy.ledger.allocation.schemaVersion.endsWith("-v7") || legacy.ledger.allocation.schemaVersion.endsWith("-v8")) && "route" in legacy.ledger.allocation ? { route: legacy.ledger.allocation.route, allocationRoot, chargeRoot, slotRoot: legacy.slot.root } : undefined
   const hostBindingV15: LabHostBindingV15 | undefined = legacy && leanSupervisorAllocationMode(legacy.ledger.allocation) === "v15-4" && leanSupervisorAllocationMode(admitLeanAllocation(legacy.ledger.allocation)) === "v15-4" ? { allocationRoot, chargeRoot, slotRoot: legacy.slot.root } : undefined
   let bottomSource: LeanBaselineSource, topSource: LeanBaselineSource, scenario: ReturnType<typeof leanBaselineScenario>
@@ -147,7 +154,7 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
     const matchId = `lean-${chargeRoot.slice(7, 31)}`, containerName = `lean-${chargeRoot.slice(7, 25)}-${seat}`, ownershipLabel = `lean-${allocationRoot.slice(7, 25)}`
     const runtime = prospectiveLeagueRuntimeBinding(admission, { revisionId: revision.id, sourceRoot: snapshot.sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image })
     const binding = { budgetRoot: allocationRoot, attemptRoot: chargeRoot, matchId, containerName, ownershipLabel, seat, runtime }
-    const authority = privateInput ? issueLeanPrivateMatchRuntimeAuthorityV1(privateInput.admission, privateInput.debit, snapshot, binding) : legacy!.correction ? issueLeanCorrectionRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, legacy!.correction.reuse) : issueLeanBaselineRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding)
+    const authority = v2 ? issueLeanPrivateMatchRuntimeAuthorityV2(v2.admission, v2.debit, snapshot, binding) : v1 ? issueLeanPrivateMatchRuntimeAuthorityV1(v1.admission, v1.debit, snapshot, binding) : legacy!.correction ? issueLeanCorrectionRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, legacy!.correction.reuse) : issueLeanBaselineRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding)
     let activeTransportBinding: LeanCorrectionInvocationTransportBinding | undefined
     let requestOrdinal = 0
     const retainedTransportBindings = new Map<number, { origin: LeanPrivateCorrectionOrigin; transport: LeanCorrectionInvocationTransportBinding }>()
@@ -215,7 +222,24 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
   if (context && actual.accounting.some(evidence => !opened.some(provider => provider.identity.sourceRoot === evidence.identity.sourceRoot && provider.verify(evidence)))) return fail()
   const baseDiagnostic = compact.classification !== "success" ? deriveLeanSupervisorDiagnostic(chargeRoot, actual, origin ? { stage: "native_response", reason: ["stream_exchange", "outer_frame", "inner_response", "executor"].includes(origin.stage) ? origin.stage as "stream_exchange" | "outer_frame" | "inner_response" | "executor" : "system_failure", method: failedEvidence!.method, ordinal: failedEvidence!.ordinal, code: !failedEvidence!.result.ok && "systemFailure" in failedEvidence!.result ? failedEvidence!.result.systemFailure.code : undefined } : undefined) : null
   const diagnostic = baseDiagnostic && invocationBinding ? { ...baseDiagnostic, invocationBinding } : baseDiagnostic
-  return { compact, replayFrames: replayFrames(), brainInputs, strategyInputs, trainingHalfPoints, semanticRoot, metrics, decisionRoot: labRoot("lean-baseline-observed-decisions-v1", decisionRows), diagnostic, ...(context ? { privateActual: actual, privateProviderIdentities: opened.map(provider => provider.identity) } : {}), ...(hostBindingV15 ? { hostFailureV15: compact.classification === "success" ? null : readLabHostFailureV15(actual, hostBindingV15) } : {}) }
+  const returned = { compact, replayFrames: replayFrames(), brainInputs, strategyInputs, trainingHalfPoints, semanticRoot, metrics, decisionRoot: labRoot("lean-baseline-observed-decisions-v1", decisionRows), diagnostic, ...(context ? { privateActual: actual, privateProviderIdentities: opened.map(provider => provider.identity) } : {}), ...(hostBindingV15 ? { hostFailureV15: compact.classification === "success" ? null : readLabHostFailureV15(actual, hostBindingV15) } : {}) }
+  if (v2) {
+    const failed = actual.accounting.filter(e => e.charged && !e.result.ok && "systemFailure" in e.result)
+    if (failed.length > 1) return fail()
+    const evidence = failed[0]
+    if (evidence) {
+      const owner = opened.find(p => p.identity === evidence.identity && p.verify(evidence))
+      if (!owner || evidence.result.ok || !("systemFailure" in evidence.result) || !(SUBPROCESS_SYSTEM_FAILURE_CODES as readonly string[]).includes(evidence.result.systemFailure.code)) return fail()
+      const issuedOrigin = diagnosticProviders.get(owner)?.(evidence)
+      if (issuedOrigin && (issuedOrigin.identity !== evidence.identity || issuedOrigin.invocationRoot !== evidence.invocationRoot || issuedOrigin.requestId !== evidence.requestId || issuedOrigin.inputRoot !== evidence.inputRoot || issuedOrigin.method !== evidence.method || issuedOrigin.ordinal !== evidence.ordinal || !isLeanPrivateFailureOrigin(issuedOrigin))) return fail()
+      privateDiagnosticReturnsV2.set(returned, Object.freeze({ availability: "available", originAvailability: issuedOrigin ? "available" : "unavailable", stage: issuedOrigin?.stage ?? "unknown", reason: issuedOrigin?.reason ?? "unknown", code: evidence.result.systemFailure.code, identity: evidence.identity, invocationRoot: evidence.invocationRoot, requestId: evidence.requestId, inputRoot: evidence.inputRoot, method: evidence.method, ordinal: evidence.ordinal }))
+    } else privateDiagnosticReturnsV2.set(returned, Object.freeze({ availability: "unavailable", originAvailability: "unavailable", stage: "unknown", reason: "unknown", code: "UNKNOWN", identity: null, invocationRoot: null, requestId: null, inputRoot: null, method: null, ordinal: null }))
+  }
+  return returned
 }
+type PrivateDiagnosticV2 = Readonly<{ availability: "available" | "unavailable"; originAvailability: "available" | "unavailable"; stage: string; reason: string; code: string; identity: import("../../packages/strategy-lab/src/runtime-bridge.js").LabRuntimeIdentity | null; invocationRoot: LabRoot | null; requestId: string | null; inputRoot: LabRoot | null; method: string | null; ordinal: number | null }>
+const privateDiagnosticReturnsV2 = new WeakMap<object, PrivateDiagnosticV2>()
+/** Only a real composer return is a key. No caller-supplied diagnostic exists. */
+export const readLeanPrivateMatchDiagnosticV2 = (returned: object): PrivateDiagnosticV2 | undefined => privateDiagnosticReturnsV2.get(returned)
 const diagnosticProviders = new WeakMap<object, (evidence: Parameters<typeof getFactoryPrivateDiagnostic>[1]) => ReturnType<typeof getFactoryPrivateDiagnostic>>()
 const diagnosticTransportBindings = new WeakMap<object, Map<number, { origin: LeanPrivateCorrectionOrigin; transport: LeanCorrectionInvocationTransportBinding }>>()

@@ -20,6 +20,16 @@ import { createHash } from "node:crypto"
 import { encodeSubprocessIpcRequest } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { buildLeanStartupWorkerHarnessV8 } from "./v1-38-lean-container-match-session.js"
 import { runLeanPrivateFeasibilityMatch } from "./v1-38-lean-baseline-match.js"
+import { runLeanPrivateFeasibilityMatchV2, readLeanPrivateMatchDiagnosticV2 } from "./v1-38-lean-baseline-match.js"
+
+it("v2 composer refuses forged/cross-version handles before source/provider work and caller diagnostics are unissued", async () => {
+  const validate = vi.spyOn(sourceModule, "validateLeanBaselineSource"), create = vi.spyOn(runtimeModule, "createFactorySupervisedRuntime")
+  try {
+    await expect(runLeanPrivateFeasibilityMatchV2({ admission: { schemaVersion: "lean-private-match-admission-v2" }, debit: { schemaVersion: "lean-private-match-debit-handle-v1" }, bottom: {}, top: {}, register() {}, unregister() {} } as never)).rejects.toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
+    expect(validate).not.toHaveBeenCalled(); expect(create).not.toHaveBeenCalled()
+    expect(readLeanPrivateMatchDiagnosticV2({ diagnostic: { code: "SUBPROCESS_SIGNAL" } })).toBeUndefined()
+  } finally { validate.mockRestore(); create.mockRestore() }
+})
 
 it("private two-Match composer rejects structural admission/debit before source validation or provider creation", async () => {
   const validate = vi.spyOn(sourceModule, "validateLeanBaselineSource"), create = vi.spyOn(runtimeModule, "createFactorySupervisedRuntime")

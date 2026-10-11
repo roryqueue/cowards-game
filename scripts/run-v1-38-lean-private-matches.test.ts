@@ -20,6 +20,17 @@ import { LEAN_PRIVATE_MATCH_WINDOW_V1 } from "./lib/v1-38-lean-experiment-author
 import * as authority from "./lib/v1-38-lean-experiment-authority.js"
 import * as composer from "./lib/v1-38-lean-baseline-match.js"
 import * as source from "./lib/v1-38-lean-baseline-source.js"
+import * as runtime from "./lib/v1-38-factory-supervised-runtime.js"
+import * as bridge from "../packages/strategy-lab/src/runtime-bridge.js"
+import * as admissions from "../packages/strategy-lab/src/factory/admission.js"
+import * as revisions from "../packages/runtime-js/src/revision.js"
+import * as lifetime from "./lib/v1-38-league-prospective-lifetime.js"
+import { chmodSync } from "node:fs"
+const pathFixture = vi.hoisted(() => ({ store: "" }))
+vi.mock("node:path", async importOriginal => {
+  const actual = await importOriginal<typeof import("node:path")>()
+  return { ...actual, resolve: (...parts: string[]) => pathFixture.store && parts[0] === ".strategy-lab/lean-private-matches-v2" ? pathFixture.store : actual.resolve(...parts) }
+})
 const gitCalls = vi.hoisted(() => ({ calls: [] as Array<{ program: string; args: string[]; options: Record<string, unknown> }>, responses: [] as Buffer[] }))
 vi.mock("node:child_process", async importOriginal => {
   const actual = await importOriginal<typeof import("node:child_process")>()
@@ -43,6 +54,75 @@ const fixture = () => {
   const actual = { kind: "completed", privacy: "private_offline", transitions: [{ beforeState: start, afterState: final, events: [{ payload: "PRIVATE_SENTINEL" }] }], result: { state: final, events: [] }, accounting } as unknown as LabMatchExecution
   return { allocation, binding: { allocation, ordinal: 0 as const, debitRoot, providerIdentities }, actual, compact }
 }
+
+it.each([false, true, "unavailable", "duplicate", "invalid-code", "bad-origin"] as const)("real composer return→producer→actual retained reader keeps finite diagnostics, origin=%s", async origin => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "inert-one-match-connected-"))); chmodSync(directory, 0o700)
+  const canonical = (v: unknown) => Buffer.from(leanCanonicalBytes(v)), rooted = (b: { schemaVersion: string; [key: string]: unknown }) => ({ ...b, root: labRoot(b.schemaVersion, b) })
+  const f = fixture(), prefix = { ...f.allocation.sourcePrefix, root: labRoot("lean-private-match-source-prefix-v2", f.allocation.sourcePrefix.rows) }
+  const allocation = route.createLeanPrivateMatchAllocationV2({ sourceHead: f.allocation.sourceHead, sources: f.allocation.sources, sourcePrefix: prefix, priorProbeCarry: f.allocation.priorProbeCarry, priorMatchCarry: authority.LEAN_PRIVATE_MATCH_CARRY_V2 })
+  const resources = { windowRoot: authority.LEAN_PRIVATE_MATCH_WINDOW_V2.root, allocationRoot: allocation.root, wallAtMs: 1791727783000, cumulativeElapsedMs: 379841903, remainingSlots: 1, historicalCharged: 41, historicalAllocatedBytes: 29970432, priorProbeBytes: 65536, priorMatchBytes: 360448, sourceAllocatedBytes: prefix.allocatedBytes, newAllocatedBytes: 4096, retainedBytesUpperBound: 29970432 + 65536 + 360448 + prefix.allocatedBytes + 4096 + 67108864 + 16777216 + 262144, parentRssBytes: 100000000, aggregateMemoryUpperBound: 100000000 + 2 * 268435456 + 512000000 + 335544320, availableDiskBytes: 2000000000 }
+  const allocationCommit = "b".repeat(40), emptyRoot = leanBytesRoot(Buffer.alloc(0)), slot = allocation.slots[0]
+  const pair = rooted({ schemaVersion: "lean-private-match-pair-v2", allocationRoot: allocation.root, slotRoot: slot.root, ordinal: 0, requestRoot: slot.requestRoot, sources: allocation.sources, priorLedgerBytesRoot: emptyRoot, priorLedgerByteLength: 0 })
+  const debit = rooted({ schemaVersion: "lean-private-match-debit-v2", allocationRoot: allocation.root, slotRoot: slot.root, ordinal: 0, requestRoot: slot.requestRoot, pairRoot: pair.root, cumulativeCharged: 42, priorLedgerBytesRoot: emptyRoot, priorLedgerByteLength: 0, resources })
+  const providerIdentities = f.binding.providerIdentities.map(p => ({ ...p, budgetRoot: allocation.root, attemptRoot: debit.root })), binding = { ...f.binding, allocation, debitRoot: debit.root, providerIdentities }
+  const evidence = { identity: providerIdentities[0]!, invocationRoot: r(50), requestId: `effect:v1.19:${"a".repeat(64)}`, method: "soldierBrain", inputRoot: r(51), ordinal: 0, charged: true, completed: false, outputBytes: 0, result: { ok: false, systemFailure: { code: "SUBPROCESS_SIGNAL", retryable: false }, violation: { type: "INVALID_OUTPUT", message: "PRIVATE_SENTINEL" } } }
+  if (origin === "invalid-code") evidence.result.systemFailure.code = "PRIVATE_SENTINEL"
+  const actual = { kind: "failure", privacy: "private_offline", transitions: [], accounting: origin === "unavailable" ? [] : origin === "duplicate" ? [evidence, evidence] : [evidence], unchangedState: null, failure: { classification: "system_failure", code: "LAB_SUPERVISOR_FAILURE" } } as unknown as LabMatchExecution
+  const snapshots = providerIdentities.map((p, n) => ({ role: n === 0 ? "tactical-0" : "cold-opponent", sourceRoot: p.sourceRoot, root: allocation.sources[n]!.snapshotRoot, source: "INERT_NEVER_EXECUTED", packet: {}, proposal: {}, validation: {} }))
+  let created = 0
+  const mocks = [
+    vi.spyOn(authority, "readLeanPrivateMatchContextV2").mockReturnValue({ allocation, slot: allocation.slots[0], debitRoot: binding.debitRoot, storePath: directory }),
+    vi.spyOn(authority, "checkpointLeanPrivateMatchV2").mockImplementation(() => {}),
+    vi.spyOn(authority, "issueLeanPrivateMatchRuntimeAuthorityV2").mockReturnValue({} as never),
+    vi.spyOn(source, "validateLeanBaselineSource").mockImplementation(v => v as never),
+    vi.spyOn(admissions, "admitFactory").mockReturnValue({} as never),
+    vi.spyOn(admissions, "authorizeFactorySupervision").mockReturnValue({} as never),
+    vi.spyOn(revisions, "buildStrategyRevision").mockReturnValue({ id: "inert-revision", validation: { valid: true }, metadata: { sourceArtifact: { bytesBase64: "", hash: "a".repeat(64) } } } as never),
+    vi.spyOn(lifetime, "prospectiveLeagueRuntimeBinding").mockReturnValue({} as never),
+    vi.spyOn(runtime, "createFactorySupervisedRuntime").mockImplementation(() => ({ identity: providerIdentities[created++]!, invoke() { throw new Error("NO_RUNTIME_ALLOWED") }, verify(e: unknown) { return e === evidence }, close() { return { cleanupComplete: true, orphanedChild: false } } }) as never),
+    vi.spyOn(runtime, "getFactoryPrivateDiagnostic").mockImplementation((_provider, e) => (origin === true || origin === "bad-origin") && e === evidence ? { stage: "stream_exchange", reason: "wait_timeout", identity: evidence.identity, invocationRoot: origin === "bad-origin" ? r(99) : evidence.invocationRoot, requestId: evidence.requestId, inputRoot: evidence.inputRoot, method: evidence.method, ordinal: evidence.ordinal } as never : undefined),
+    vi.spyOn(bridge, "runCanonicalLabMatch").mockResolvedValue(actual),
+    vi.spyOn(authority, "authenticateLeanPrivateMatchCommitV2").mockImplementation(() => {}),
+    vi.spyOn(authority, "authenticateLeanPrivateMatchCarryV2").mockReturnValue(allocation.priorMatchCarry),
+    vi.spyOn(authority, "authenticateLeanPrivateMatchProbeCarryV1").mockReturnValue(allocation.priorProbeCarry),
+    vi.spyOn(authority, "inspectLeanPrivateMatchPrefixV2").mockReturnValue(prefix),
+    vi.spyOn(authority, "inspectLeanPrivateMatchSourceV1").mockImplementation((_d, role) => ({ ...allocation.sources.find(s => s.role === role)!, executableRoot: null })),
+  ]
+  pathFixture.store = directory
+  const clock = vi.spyOn(Date, "now").mockReturnValue(1791727783000)
+
+  const write = (name: string, v: unknown) => writeFileSync(join(directory, name), canonical(v), { mode: 0o600 })
+  try {
+    if (origin === "duplicate" || origin === "invalid-code" || origin === "bad-origin") {
+      await expect(composer.runLeanPrivateFeasibilityMatchV2({ admission: { schemaVersion: "lean-private-match-admission-v2" } as never, debit: {} as never, bottom: snapshots[0] as never, top: snapshots[1] as never, register() {}, unregister() {} })).rejects.toThrow()
+      return
+    }
+    const result = await composer.runLeanPrivateFeasibilityMatchV2({ admission: { schemaVersion: "lean-private-match-admission-v2" } as never, debit: {} as never, bottom: snapshots[0] as never, top: snapshots[1] as never, register() {}, unregister() {} })
+    expect(created).toBe(2)
+    const streamPath = join(directory, "replay-0.ndjson"), produced = route.produceLeanPrivateMatchEvidenceV2({ binding, result, streamPath, guard() {} })
+    expect(produced.diagnostic).toMatchObject(origin === "unavailable" ? { availability: "unavailable", code: "UNKNOWN", identity: null } : { availability: "available", originAvailability: origin ? "available" : "unavailable", code: "SUBPROCESS_SIGNAL", stage: origin ? "stream_exchange" : "unknown", reason: origin ? "wait_timeout" : "unknown" })
+    const actualBinding = { ...binding, debitRoot: r(24) }
+    // Fixed inert debit must already join the issued providers and diagnostic.
+    expect(() => route.verifyLeanPrivateMatchEvidenceV2({ binding: actualBinding, evidence: produced, streamPath })).toThrow()
+    const terminal = rooted({ schemaVersion: "lean-private-match-terminal-v2", allocationRoot: allocation.root, debitRoot: binding.debitRoot, slotRoot: slot.root, ordinal: 0, elapsedMs: 1, resources: { ...resources, remainingSlots: 0 }, providerIdentities, evidence: produced })
+    const anchor = { ordinal: 0, root: terminal.root, rawRoot: leanBytesRoot(canonical(terminal)), streamRawRoot: produced.streamRawRoot, rowCount: produced.rowCount, streamBytes: produced.streamBytes }
+    expect(route.verifyLeanPrivateMatchTerminalV2({ binding, terminal, resultAnchor: anchor, streamPath }).verified).toBe(true)
+    for (const mutate of [ { code: "PRIVATE_SENTINEL" }, { ordinal: 1 }, { requestId: "wrong" }, { inputRoot: r(99) }, { invocationRoot: r(99) }, { method: "selectActivations" }, { extra: "PRIVATE_SENTINEL" }, { schemaVersion: "wrong" } ]) {
+      const modified = { ...produced, diagnostic: { ...produced.diagnostic, ...mutate } }
+      expect(() => route.verifyLeanPrivateMatchEvidenceV2({ binding, evidence: modified, streamPath })).toThrow()
+    }
+    const tampered = { ...terminal, evidence: { ...produced, diagnostic: { ...produced.diagnostic, code: "MALFORMED_IPC" } } }; delete (tampered as Partial<typeof terminal>).root
+    const rerooted = rooted(tampered)
+    expect(() => route.verifyLeanPrivateMatchTerminalV2({ binding, terminal: rerooted, resultAnchor: anchor, streamPath })).toThrow()
+    expect(JSON.stringify(produced)).not.toContain("PRIVATE_SENTINEL")
+    write("allocation.json", allocation); write("entry.json", rooted({ schemaVersion: "lean-private-match-entry-v2", allocationRoot: allocation.root, allocationDigest: leanBytesRoot(canonical(allocation)), allocationCommit, sourceHead: allocation.sourceHead, resources })); write("pair-0.json", pair); write("debit-0.json", debit)
+    writeFileSync(join(directory, "ledger.ndjson"), Buffer.concat([canonical(debit), Buffer.from("\n")]), { mode: 0o600 }); write("terminal-0.json", terminal)
+    write("result.json", rooted({ schemaVersion: "lean-private-match-result-v2", allocationRoot: allocation.root, sourceHead: allocation.sourceHead, allocationCommit, matchCount: 1, attemptedOrdinals: [0], unattemptedOrdinals: [], cumulativeCharged: 42, terminals: [anchor], stopCode: "CLEANUP_STOP", fullChronicleVerified: false }))
+    const before = readdirSync(directory).map(name => readFileSync(join(directory, name)))
+    expect(route.verifyLeanPrivateMatchesStoreV2({ command: "verify", store: directory, allocationCommit, allocationPath: authority.LEAN_PRIVATE_MATCH_ARTIFACT_V2 })).toMatchObject({ verified: true, feasibilityEstablished: false, attemptedCount: 1 })
+    expect(readdirSync(directory).map(name => readFileSync(join(directory, name)))).toEqual(before)
+  } finally { pathFixture.store = ""; clock.mockRestore(); for (const mock of mocks.reverse()) mock.mockRestore(); rmSync(directory, { recursive: true, force: true }) }
+})
 
 describe("dedicated private two-Match HOST route", () => {
   it.each(["composer", "guard", "cap", "terminal-observer", "second-capacity"])("retains charged/partial evidence after inert %s refusal", async fault => {
