@@ -442,7 +442,7 @@ const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge
  * widened. Serialized records are evidence; only WeakMap handles authorize. */
 const privateMatchFail = (): never => { throw new TypeError("LEAN_PRIVATE_MATCH_AUTHORITY") }
 const privateMatchWindow = { schemaVersion: "lean-private-match-window-v1", anchorMs: 1791669996000, deadlineMs: 1791677196000, carryMs: 322054903, capMs: 329254903, reserveMs: 1860000 }
-const oneMatchWindow = { schemaVersion: "lean-private-match-window-v2", anchorMs: 1791727783000, deadlineMs: 1791733183000, carryMs: 379841903, capMs: 385241903, reserveMs: 1860000 }
+const oneMatchWindow = { schemaVersion: "lean-private-match-window-v2", anchorMs: 1791738781000, deadlineMs: 1791742381000, carryMs: 390839903, capMs: 394439903, reserveMs: 1860000 }
 export const LEAN_PRIVATE_MATCH_WINDOW_V2 = freezeLabValue({ ...oneMatchWindow, root: labRoot(oneMatchWindow.schemaVersion, oneMatchWindow) })
 export const LEAN_PRIVATE_MATCH_ARTIFACT_V2 = ".planning/artifacts/v1.38-phase-265-private-match-allocation-v2.json"
 export const LEAN_PRIVATE_MATCH_WINDOW_V1 = freezeLabValue({ ...privateMatchWindow, root: labRoot(privateMatchWindow.schemaVersion, privateMatchWindow) })

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 it("one-Match v2 has a disjoint approved window and refuses forged route handles", () => {
-  expect(authority.LEAN_PRIVATE_MATCH_WINDOW_V2).toMatchObject({ anchorMs: 1791727783000, deadlineMs: 1791733183000, carryMs: 379841903, capMs: 385241903, reserveMs: 1860000 })
+  expect(authority.LEAN_PRIVATE_MATCH_WINDOW_V2).toMatchObject({ anchorMs: 1791738781000, deadlineMs: 1791742381000, carryMs: 390839903, capMs: 394439903, reserveMs: 1860000 })
   expect(() => authority.readLeanPrivateMatchContextV2({} as never, {} as never)).toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
   expect(() => authority.validateLeanPrivateMatchAllocationV2({ schemaVersion: "lean-private-match-allocation-v1" })).toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
 })
@@ -52,7 +52,7 @@ import * as runtimeModule from "./v1-38-factory-supervised-runtime.js"
 
 describe("prospective two-Match authority, without execution", () => {
   it.each([{ version: 1, cleanupComplete: true }, { version: 1, cleanupComplete: false }, { version: 2, cleanupComplete: true }, { version: 2, cleanupComplete: false }])("uses genuine capacity→entry→durable debit→ordered V8 seats; %s", async ({ version, cleanupComplete }) => {
-    const directory = realpathSync(mkdtempSync(join(tmpdir(), "inert-two-match-authority-"))), clock = vi.spyOn(Date, "now").mockReturnValue(version === 1 ? 1791669996000 : 1791727783000)
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "inert-two-match-authority-"))), clock = vi.spyOn(Date, "now").mockReturnValue(version === 1 ? 1791669996000 : 1791738781000)
     const sourceDirectory = join(directory, "sources"), store = join(directory, "store"), artifact = join(directory, "allocation.json"), prefix = join(directory, "inert.ts")
     try {
       mkdirSync(sourceDirectory, { mode: 0o700 }); mkdirSync(store, { mode: 0o700 }); writeFileSync(prefix, matchFixture.sourceBytes)

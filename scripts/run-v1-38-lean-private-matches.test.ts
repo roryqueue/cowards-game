@@ -60,7 +60,7 @@ it.each([false, true, "unavailable", "duplicate", "invalid-code", "bad-origin", 
   const canonical = (v: unknown) => Buffer.from(leanCanonicalBytes(v)), rooted = (b: { schemaVersion: string; [key: string]: unknown }) => ({ ...b, root: labRoot(b.schemaVersion, b) })
   const f = fixture(), prefix = { ...f.allocation.sourcePrefix, root: labRoot("lean-private-match-source-prefix-v2", f.allocation.sourcePrefix.rows) }
   const allocation = route.createLeanPrivateMatchAllocationV2({ sourceHead: f.allocation.sourceHead, sources: f.allocation.sources, sourcePrefix: prefix, priorProbeCarry: f.allocation.priorProbeCarry, priorMatchCarry: authority.LEAN_PRIVATE_MATCH_CARRY_V2 })
-  const resources = { windowRoot: authority.LEAN_PRIVATE_MATCH_WINDOW_V2.root, allocationRoot: allocation.root, wallAtMs: 1791727783000, cumulativeElapsedMs: 379841903, remainingSlots: 1, historicalCharged: 41, historicalAllocatedBytes: 29970432, priorProbeBytes: 65536, priorMatchBytes: 360448, sourceAllocatedBytes: prefix.allocatedBytes, newAllocatedBytes: 4096, retainedBytesUpperBound: 29970432 + 65536 + 360448 + prefix.allocatedBytes + 4096 + 67108864 + 16777216 + 262144, parentRssBytes: 100000000, aggregateMemoryUpperBound: 100000000 + 2 * 268435456 + 512000000 + 335544320, availableDiskBytes: 2000000000 }
+  const resources = { windowRoot: authority.LEAN_PRIVATE_MATCH_WINDOW_V2.root, allocationRoot: allocation.root, wallAtMs: 1791738781000, cumulativeElapsedMs: 390839903, remainingSlots: 1, historicalCharged: 41, historicalAllocatedBytes: 29970432, priorProbeBytes: 65536, priorMatchBytes: 360448, sourceAllocatedBytes: prefix.allocatedBytes, newAllocatedBytes: 4096, retainedBytesUpperBound: 29970432 + 65536 + 360448 + prefix.allocatedBytes + 4096 + 67108864 + 16777216 + 262144, parentRssBytes: 100000000, aggregateMemoryUpperBound: 100000000 + 2 * 268435456 + 512000000 + 335544320, availableDiskBytes: 2000000000 }
   const allocationCommit = "b".repeat(40), emptyRoot = leanBytesRoot(Buffer.alloc(0)), slot = allocation.slots[0]
   const pair = rooted({ schemaVersion: "lean-private-match-pair-v2", allocationRoot: allocation.root, slotRoot: slot.root, ordinal: 0, requestRoot: slot.requestRoot, sources: allocation.sources, priorLedgerBytesRoot: emptyRoot, priorLedgerByteLength: 0 })
   const debit = rooted({ schemaVersion: "lean-private-match-debit-v2", allocationRoot: allocation.root, slotRoot: slot.root, ordinal: 0, requestRoot: slot.requestRoot, pairRoot: pair.root, cumulativeCharged: 42, priorLedgerBytesRoot: emptyRoot, priorLedgerByteLength: 0, resources })
@@ -89,7 +89,7 @@ it.each([false, true, "unavailable", "duplicate", "invalid-code", "bad-origin", 
     vi.spyOn(authority, "inspectLeanPrivateMatchSourceV1").mockImplementation((_d, role) => ({ ...allocation.sources.find(s => s.role === role)!, executableRoot: null })),
   ]
   pathFixture.store = directory
-  const clock = vi.spyOn(Date, "now").mockReturnValue(1791727783000)
+  const clock = vi.spyOn(Date, "now").mockReturnValue(1791738781000)
 
   const write = (name: string, v: unknown) => writeFileSync(join(directory, name), canonical(v), { mode: 0o600 })
   try {
