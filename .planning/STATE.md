@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Window source gates closed; ROOT fresh metadata and allocation next
+stopped_at: One-Match V2 failed and unique verification closed; bounded source-only diagnosis next
 last_updated: "2026-10-11"
 last_activity: 2026-10-11
-last_activity_desc: One-Match error-capture repair independently verified;52tests pass; no game started before entry cutoff
+last_activity_desc: One charged Match failed with authenticated SUBPROCESS_EXIT; unique retained verification accepted integrity only; cumulative42
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION — ONE-MATCH V2 CLOSED / SOURCE-ONLY DIAGNOSIS (ROOT2026-10-11T17:29:36UTC). Fixed allocationcommit30d61b7df02f594f4fda226bffcaeb101cae64dc/sourceHead165cead9; unique ROOTentry36488 CLOSED0 at17:23:17, actualresultb7a87f9a/raw2244c3ce. ExactlyONEchargedordinal0/system_failure/27696ms/cleanuptrue; cumulative42, no unused slot or further game authority. Authenticated finite SUBPROCESS_EXIT/soldierBrain/provider-localordinal81/executor/reasonunknown, 164accountingrows and zero compact replay rows; initiating physical cause UNKNOWN. CLEANUP_STOP does not prove physical cleanup failure. ONE independent actual reader73167 CLOSED0/verifiedtrue/feasibilityfalse; all8storefiles/canonicalallocation/HEAD unchanged. Actual reader ownership and source/HEAD hold RELEASED after closure; never invoke that reader again or reuse consumed route. Store352256allocatedB plus canonical24576B=376832B, sourceprefix1830912B separately carried; historical peaks unknown and all prior costs continue. Next bounded GSD source-only diagnosis, no runtime/provider/probe/Match/native experiment or heavy historical scan. Same hard18:13:01UTC/carry390839903/cap394439903/15GB/allbounds; all elapsed diagnosis/docs/wait count. No LEAG/fullbaseline/fullChronicle/Phase265/freeze/formation/holdout/public/counting/production credit. Earlier checkpoints history.
 
 CURRENT CONTINUATION — WINDOW SOURCE GATES CLOSED (ROOT2026-10-11T17:20:32UTC). Functional7f3e6c93, WINDOW-REVIEW-v2clean/distinctWINDOW-SOURCE-VERIFICATION-v2PASS4/4/allcommandsclosed. ROOT16285 CLOSED0/52tests,99141 CLOSED2/exact13inherited/zeroNEW,diff0; unchangedoriginalimplementationproof7/7/project/factory1441zero retained. No sourcegap/globaltypegreen/empiricalcredit. Next ROOTfixedsourcecommit/push thenactualfreshmetadata/oneprepare/directchildallocation beforeuniqueentry andfreshsameprocesscapacity, ONE actualretainedreader afterterminal/actualhead. No newchargeyet. SourceandHEADwillholdfrompreparationthroughactualterminal+uniqueverification; no competingheavywork. Entryby17:32:01/hard18:13:01/old41/allbounds unchanged. Earliercheckpoints history.
 
