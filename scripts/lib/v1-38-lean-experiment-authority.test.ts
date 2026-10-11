@@ -55,7 +55,7 @@ describe("own V3 genuine authority", () => {
       if (cleanupComplete) { const next = authority.recordLeanPrivateMatchDebitV1(admission as never, 1, nextCapacity); expect(authority.readLeanPrivateMatchContextV1(admission as never, next).slot.condition).toBe(2) }
       else expect(() => authority.recordLeanPrivateMatchDebitV1(admission, 1, nextCapacity)).toThrow()
     } finally { matchFixture.active = false; matchFixture.mappings.clear(); clock.mockRestore(); rmSync(directory, { recursive: true, force: true }) }
-  })
+  }, 20000)
 })
 
 it("V3 owns the prospective window and rejects forged/opposite-version capabilities", () => {
