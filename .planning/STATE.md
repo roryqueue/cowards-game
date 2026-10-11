@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Startup receipt source verified; prospective integration work-time checkpoint
+stopped_at: Approved ninety-minute private receipt integration; bounded research active
 last_updated: "2026-10-11"
 last_activity: 2026-10-11
-last_activity_desc: Additive source repair reviewed and source verified; one game failed; no further game or time authority
+last_activity_desc: New90minute integration and one private game window approved; research first; no new allocation or charge
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED CONTINUATION — PRIVATE STARTUP INTEGRATION (ROOT2026-10-11T19:36:02UTC). Human approves90minutes/connect capture/ONE fresh private game/verification,15GB/allotherlimits unchanged. Anchor1791747362000/hard21:06:02UTC1791752762000/latestentry20:25:02UTC1791750302000; continuouscarry399420903/cap404820903 includes priorclosureoverrun/interveningwalltime/no refund. Research role /root/research_265_startup_integration active source/docs only, target19:43; no runtime/tests/historyscan. ExistingPlan16 narrowcheckedintegration next; all42charges/V2failedroute+uniqueactualreader CLOSED/immutable/sourceholdreleased. FreshV3 prospectiveroute only after independentlycheckedplan/sourceauthor/review-fix/ROOTvalidation/distinctsourceverification; no newallocation or charge yet. Scope ONEgame/zero probes/retries; no same V2 artifact/constants/schema mutation. Allcosts/reserves/bounds/privacy/history unchanged; no LEAG/phase/freeze/formation/holdout/public/counting/production credit. Earlier checkpoints history.
 
 CURRENT CONTINUATION — SOURCE REPAIR CLOSED / PROSPECTIVE WORK-TIME CHECKPOINT (ROOT2026-10-11T18:12UTC). Functional source c509ee6e/documentHEAD a00f59f3; both source reviews CLOSED/zero findings. ROOT focused80/80, configured runtime project types0, boundary1441files/zero violations and diff0; exact scoped strict13 inherited/zero NEW, NOT globally green. Distinct source verifier CLOSED/all commands released: VERIFIED_SOURCE_ONLY/5of5 truths/independent28 inert tests pass; report overall human_needed flags three judgment-tier prohibitions, not demonstrated source defects or required runtime checks. No broad historical/external-state certification is claimed. Dormant producer/validator is NOT durable integration and initiating physical game failure remains UNKNOWN. Sole new game consumed/system_failure; cumulative42, actual unique retained reader CLOSED and must not rerun; all consumed artifacts remain immutable. Existing18:13:01UTC hardstop/carry390839903/cap394439903/all elapsed costs and15GB/all other bounds remain binding. No second game or expanded time is authorized. Next task: checked prospective durable receipt integration/gates, then one distinct fresh same-scope game only with adequate new work-time allowance and fresh admission; recommend90minutes, NOT adopted. Standing same-scope route consent persists, no repeat route literal needed. Plan16/Phase265/allLEAG/baseline/freeze incomplete; formation/holdout/public/counting/production unstarted. Earlier checkpoints are history.
 
