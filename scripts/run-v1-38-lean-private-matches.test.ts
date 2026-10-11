@@ -70,7 +70,7 @@ it.each([false, true, "unavailable", "duplicate", "invalid-code", "bad-origin", 
   const actual = { kind: "failure", privacy: "private_offline", transitions: [], accounting: origin === "unavailable" ? [] : origin === "duplicate" ? [evidence, evidence] : [evidence], unchangedState: null, failure: { classification: "system_failure", code: "LAB_SUPERVISOR_FAILURE" } } as unknown as LabMatchExecution
   const snapshots = providerIdentities.map((p, n) => ({ role: n === 0 ? "tactical-0" : "cold-opponent", sourceRoot: p.sourceRoot, root: allocation.sources[n]!.snapshotRoot, source: "INERT_NEVER_EXECUTED", packet: {}, proposal: {}, validation: {} }))
   let created = 0
-  const mocks = [
+  const mocks: Array<{ mockRestore(): void }> = [
     vi.spyOn(authority, "readLeanPrivateMatchContextV2").mockReturnValue({ allocation, slot: allocation.slots[0], debitRoot: binding.debitRoot, storePath: directory }),
     vi.spyOn(authority, "checkpointLeanPrivateMatchV2").mockImplementation(() => {}),
     vi.spyOn(authority, "issueLeanPrivateMatchRuntimeAuthorityV2").mockReturnValue({} as never),
@@ -106,7 +106,7 @@ it.each([false, true, "unavailable", "duplicate", "invalid-code", "bad-origin", 
           debits++; write("pair-0.json", pair); write("debit-0.json", debit)
           writeFileSync(join(directory, "ledger.ndjson"), Buffer.concat([canonical(debit), Buffer.from("\n")]), { mode: 0o600 }); return {} as never
         }),
-        vi.spyOn(authority, "observeLeanPrivateMatchResourcesV2").mockReturnValue({ ...resources, remainingSlots: 0 }),
+        vi.spyOn(authority, "observeLeanPrivateMatchResourcesV2").mockReturnValue({ ...resources, priorProbeBytes: 65536, historicalCharged: 41, priorMatchBytes: 360448, remainingSlots: 0 }),
         vi.spyOn(authority, "closeLeanPrivateMatchDebitV2").mockImplementation(() => { terminalBeforeClose = readFileSync(join(directory, "terminal-0.json")); throw new Error("PRIVATE_SENTINEL") }),
         vi.spyOn(source, "readLeanBaselineSource").mockImplementation((_store, role) => snapshots.find(s => s.role === role) as never),
       )
