@@ -55,7 +55,7 @@ const fixture = () => {
   return { allocation, binding: { allocation, ordinal: 0 as const, debitRoot, providerIdentities }, actual, compact }
 }
 
-it.each([false, true, "unavailable", "duplicate", "invalid-code", "bad-origin"] as const)("real composer return→producer→actual retained reader keeps finite diagnostics, origin=%s", async origin => {
+it.each([false, true, "unavailable", "duplicate", "invalid-code", "bad-origin", "close-throws", "publication-throws"] as const)("real composer return→producer→actual retained reader keeps finite diagnostics, origin=%s", async origin => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "inert-one-match-connected-"))); chmodSync(directory, 0o700)
   const canonical = (v: unknown) => Buffer.from(leanCanonicalBytes(v)), rooted = (b: { schemaVersion: string; [key: string]: unknown }) => ({ ...b, root: labRoot(b.schemaVersion, b) })
   const f = fixture(), prefix = { ...f.allocation.sourcePrefix, root: labRoot("lean-private-match-source-prefix-v2", f.allocation.sourcePrefix.rows) }
@@ -93,6 +93,46 @@ it.each([false, true, "unavailable", "duplicate", "invalid-code", "bad-origin"] 
 
   const write = (name: string, v: unknown) => writeFileSync(join(directory, name), canonical(v), { mode: 0o600 })
   try {
+    if (origin === "close-throws" || origin === "publication-throws") {
+      write("allocation.json", allocation)
+      let debits = 0, terminalBeforeClose: Buffer | undefined
+      mocks.push(
+        vi.spyOn(authority, "observeLeanPrivateMatchCapacityV2").mockReturnValue({} as never),
+        vi.spyOn(authority, "openLeanPrivateMatchAdmissionV2").mockImplementation(() => {
+          write("entry.json", rooted({ schemaVersion: "lean-private-match-entry-v2", allocationRoot: allocation.root, allocationDigest: leanBytesRoot(canonical(allocation)), allocationCommit, sourceHead: allocation.sourceHead, resources }))
+          writeFileSync(join(directory, "ledger.ndjson"), "", { mode: 0o600 }); return {} as never
+        }),
+        vi.spyOn(authority, "recordLeanPrivateMatchDebitV2").mockImplementation(() => {
+          debits++; write("pair-0.json", pair); write("debit-0.json", debit)
+          writeFileSync(join(directory, "ledger.ndjson"), Buffer.concat([canonical(debit), Buffer.from("\n")]), { mode: 0o600 }); return {} as never
+        }),
+        vi.spyOn(authority, "observeLeanPrivateMatchResourcesV2").mockReturnValue({ ...resources, remainingSlots: 0 }),
+        vi.spyOn(authority, "closeLeanPrivateMatchDebitV2").mockImplementation(() => { terminalBeforeClose = readFileSync(join(directory, "terminal-0.json")); throw new Error("PRIVATE_SENTINEL") }),
+        vi.spyOn(source, "readLeanBaselineSource").mockImplementation((_store, role) => snapshots.find(s => s.role === role) as never),
+      )
+      if (origin === "publication-throws") {
+        const originalWrite = authority.writeLeanPrivateMatchFileV1
+        let terminalWrites = 0
+        mocks.push(vi.spyOn(authority, "writeLeanPrivateMatchFileV1").mockImplementation((path, bytes, maximum) => {
+          originalWrite(path, bytes, maximum)
+          if (path === join(directory, "terminal-0.json")) { terminalWrites++; terminalBeforeClose = readFileSync(path); throw new Error("INERT_UNCERTAIN_PUBLICATION") }
+        }))
+        await expect(route.enterLeanPrivateMatchesV2({ command: "entry", store: directory, allocationCommit, allocationPath: authority.LEAN_PRIVATE_MATCH_ARTIFACT_V2 })).rejects.toThrow("LEAN_PRIVATE_MATCH_ROUTE")
+        expect(terminalWrites).toBe(1); expect(debits).toBe(1); expect(created).toBe(2)
+        expect(readFileSync(join(directory, "terminal-0.json"))).toEqual(terminalBeforeClose)
+        expect(readdirSync(directory)).not.toContain("result.json")
+        expect(authority.closeLeanPrivateMatchDebitV2).not.toHaveBeenCalled()
+        return
+      }
+      await expect(route.enterLeanPrivateMatchesV2({ command: "entry", store: directory, allocationCommit, allocationPath: authority.LEAN_PRIVATE_MATCH_ARTIFACT_V2 })).resolves.toMatchObject({ attemptedCount: 1 })
+      expect(debits).toBe(1); expect(created).toBe(2); expect(bridge.runCanonicalLabMatch).toHaveBeenCalledTimes(1)
+      expect(readFileSync(join(directory, "terminal-0.json"))).toEqual(terminalBeforeClose)
+      expect(readFileSync(join(directory, "ledger.ndjson"), "utf8").trim().split("\n")).toHaveLength(1)
+      expect(readdirSync(directory).filter(n => n.startsWith("terminal-"))).toEqual(["terminal-0.json"])
+      expect(route.verifyLeanPrivateMatchesStoreV2({ command: "verify", store: directory, allocationCommit, allocationPath: authority.LEAN_PRIVATE_MATCH_ARTIFACT_V2 })).toMatchObject({ verified: true, stopCode: "CLEANUP_STOP", attemptedCount: 1, feasibilityEstablished: false })
+      expect(readFileSync(join(directory, "result.json"), "utf8")).not.toContain("PRIVATE_SENTINEL")
+      return
+    }
     if (origin === "duplicate" || origin === "invalid-code" || origin === "bad-origin") {
       await expect(composer.runLeanPrivateFeasibilityMatchV2({ admission: { schemaVersion: "lean-private-match-admission-v2" } as never, debit: {} as never, bottom: snapshots[0] as never, top: snapshots[1] as never, register() {}, unregister() {} })).rejects.toThrow()
       return

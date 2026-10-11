@@ -504,6 +504,7 @@ export const enterLeanPrivateMatchesV2 = async (command: Extract<LeanPrivateMatc
   if (charged) {
     checkRoot(charged, "lean-private-match-debit-v2")
     if (charged.ordinal !== 0 || charged.cumulativeCharged !== 42 || charged.allocationRoot !== a.root || charged.slotRoot !== a.slots[0].root || !equal(charged, json(join(store, "debit-0.json")))) return fail()
+    let terminalPublicationStarted = false
     try {
       if (!debit) return fail()
       const context = v2Authority.readLeanPrivateMatchContextV2(admission, debit), guard = (bytes = 0) => { if (performance.now() - began >= 600000) return fail(); v2Authority.checkpointLeanPrivateMatchV2(admission, debit!, bytes) }
@@ -512,14 +513,20 @@ export const enterLeanPrivateMatchesV2 = async (command: Extract<LeanPrivateMatc
       const binding = { allocation: a, ordinal: 0 as const, debitRoot: context.debitRoot, providerIdentities: result.privateProviderIdentities ?? identities }
       const evidence = produceLeanPrivateMatchEvidenceV2({ binding, result, streamPath, guard }); verifyLeanPrivateMatchEvidenceV2({ binding, evidence, streamPath }); guard()
       const terminal = rooted({ schemaVersion: "lean-private-match-terminal-v2", allocationRoot: a.root, debitRoot: charged.root, slotRoot: a.slots[0].root, ordinal: 0, elapsedMs: Math.ceil(performance.now() - began), resources: v2Authority.observeLeanPrivateMatchResourcesV2(store, a, 0), providerIdentities: binding.providerIdentities.map(projectIdentity), evidence })
+      terminalPublicationStarted = true
       writeLeanPrivateMatchFileV1(join(store, "terminal-0.json"), canonical(terminal), 16777216); terminals.push(terminal)
       if (!v2Authority.closeLeanPrivateMatchDebitV2(admission, debit)) stopCode = "CLEANUP_STOP"
     } catch {
-      stopCode = "CHARGED_ATTEMPT_STOP"
+      // Never retry exclusive terminal creation after publication began. A
+      // failed fsync/read-back is uncertain immutable evidence, not absence.
+      if (terminalPublicationStarted && terminals.length === 0) return fail()
+      stopCode = terminals.length ? "CLEANUP_STOP" : "CHARGED_ATTEMPT_STOP"
       for (const p of providers) { try { const c = p.close(); if (!c.cleanupComplete || c.orphanedChild) cleanupComplete = false } catch { cleanupComplete = false } }; providers.clear()
-      const binding = { allocation: a, ordinal: 0 as const, debitRoot: charged.root as LabRoot, providerIdentities: result?.privateProviderIdentities ?? identities }, evidence = createLeanPrivateMatchFailureV2({ binding, streamPath, ...(result ? { result } : {}), cleanupComplete })
-      const terminal = rooted({ schemaVersion: "lean-private-match-terminal-v2", allocationRoot: a.root, debitRoot: charged.root, slotRoot: a.slots[0].root, ordinal: 0, elapsedMs: Math.ceil(performance.now() - began), resources: finalizeResourcesV2(store, a, charged.resources), providerIdentities: binding.providerIdentities.map(projectIdentity), evidence })
-      writeLeanPrivateMatchFileV1(join(store, "terminal-0.json"), canonical(terminal), 16777216); terminals.push(terminal)
+      if (!terminals.length) {
+        const binding = { allocation: a, ordinal: 0 as const, debitRoot: charged.root as LabRoot, providerIdentities: result?.privateProviderIdentities ?? identities }, evidence = createLeanPrivateMatchFailureV2({ binding, streamPath, ...(result ? { result } : {}), cleanupComplete })
+        const terminal = rooted({ schemaVersion: "lean-private-match-terminal-v2", allocationRoot: a.root, debitRoot: charged.root, slotRoot: a.slots[0].root, ordinal: 0, elapsedMs: Math.ceil(performance.now() - began), resources: finalizeResourcesV2(store, a, charged.resources), providerIdentities: binding.providerIdentities.map(projectIdentity), evidence })
+        writeLeanPrivateMatchFileV1(join(store, "terminal-0.json"), canonical(terminal), 16777216); terminals.push(terminal)
+      }
     } finally { for (const p of providers) { try { p.close() } catch { /* Charged failure remains failure. */ } }; providers.clear() }
   }
   if (rows.length !== terminals.length) return fail()
