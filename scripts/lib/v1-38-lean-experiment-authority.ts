@@ -1023,7 +1023,11 @@ export const checkpointLeanPrivateMatchV3 = (admission: LeanPrivateMatchAdmissio
   const disk = statfsSync(c.storePath), rss = Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024)
   if (rss + 2 * 268435456 + 512000000 + 335544320 + additionalBytes > 3000000000 || process.memoryUsage().arrayBuffers + additionalBytes > 2000000000 || disk.bavail * disk.bsize < 2000000000 + additionalBytes) return privateMatchFail()
 }
-export const issueLeanPrivateMatchRuntimeAuthorityV3 = (admission: LeanPrivateMatchAdmissionV3, debit: LeanPrivateMatchDebitV3, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding): LeanRuntimeAuthority => issuePrivateMatchSeat(readLeanPrivateMatchContextV3(admission, debit), matchDebitsV3.get(debit)!, snapshot, binding)
+export const issueLeanPrivateMatchRuntimeAuthorityV3 = (admission: LeanPrivateMatchAdmissionV3, debit: LeanPrivateMatchDebitV3, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding): LeanRuntimeAuthority => {
+  const now = Date.now(), w = LEAN_PRIVATE_MATCH_WINDOW_V3
+  if (now < w.anchorMs || now + w.reserveMs + 600000 > w.deadlineMs) return privateMatchFail()
+  return issuePrivateMatchSeat(readLeanPrivateMatchContextV3(admission, debit), matchDebitsV3.get(debit)!, snapshot, binding)
+}
 export const closeLeanPrivateMatchDebitV3 = (admission: LeanPrivateMatchAdmissionV3, debit: LeanPrivateMatchDebitV3): boolean => {
   const c = readLeanPrivateMatchContextV3(admission, debit), d = matchDebitsV3.get(debit)!, a = d.admission
   a.active = false; a.stopped = true
