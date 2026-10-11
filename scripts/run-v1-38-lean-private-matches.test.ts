@@ -1,4 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
+it("V3 exposes separate finite live and retained receipt routes", () => {
+  expect(route.parseLeanPrivateMatchesArgsV3(["metadata-v3", "--source-store", authority.LEAN_PRIVATE_MATCH_SOURCE_STORE_V1])).toEqual({ command: "metadata", sourceStore: authority.LEAN_PRIVATE_MATCH_SOURCE_STORE_V1 })
+  expect(route.produceLeanPrivateStartupReceiptV2).toBeTypeOf("function")
+  expect(route.verifyLeanPrivateStartupReceiptRetainedV2).toBeTypeOf("function")
+})
 it("one-Match v2 exposes only explicit versioned route commands", () => {
   expect(route.parseLeanPrivateMatchesArgsV2(["metadata-v2", "--source-store", authority.LEAN_PRIVATE_MATCH_SOURCE_STORE_V1])).toEqual({ command: "metadata", sourceStore: authority.LEAN_PRIVATE_MATCH_SOURCE_STORE_V1 })
   expect(() => route.parseLeanPrivateMatchesArgsV1(["metadata-v2", "--source-store", authority.LEAN_PRIVATE_MATCH_SOURCE_STORE_V1])).toThrow()
