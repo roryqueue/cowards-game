@@ -46,9 +46,12 @@ import { defaultRuntimeMetadata } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js"
 import { prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
+import { runLeanPrivateFeasibilityMatch, runLeanPrivateFeasibilityMatchV2 } from "./v1-38-lean-baseline-match.js"
+import * as sourceModule from "./v1-38-lean-baseline-source.js"
+import * as runtimeModule from "./v1-38-factory-supervised-runtime.js"
 
 describe("prospective two-Match authority, without execution", () => {
-  it.each([{ version: 1, cleanupComplete: true }, { version: 1, cleanupComplete: false }, { version: 2, cleanupComplete: true }, { version: 2, cleanupComplete: false }])("uses genuine capacity→entry→durable debit→ordered V8 seats; %s", ({ version, cleanupComplete }) => {
+  it.each([{ version: 1, cleanupComplete: true }, { version: 1, cleanupComplete: false }, { version: 2, cleanupComplete: true }, { version: 2, cleanupComplete: false }])("uses genuine capacity→entry→durable debit→ordered V8 seats; %s", async ({ version, cleanupComplete }) => {
     const directory = realpathSync(mkdtempSync(join(tmpdir(), "inert-two-match-authority-"))), clock = vi.spyOn(Date, "now").mockReturnValue(version === 1 ? 1791669996000 : 1791727783000)
     const sourceDirectory = join(directory, "sources"), store = join(directory, "store"), artifact = join(directory, "allocation.json"), prefix = join(directory, "inert.ts")
     try {
@@ -74,6 +77,12 @@ describe("prospective two-Match authority, without execution", () => {
       expect(open).toThrow()
       const debit = version === 1 ? authority.recordLeanPrivateMatchDebitV1(admission as never, 0, authority.observeLeanPrivateMatchCapacityV1(virtualStore, allocation, 2)) : authority.recordLeanPrivateMatchDebitV2(admission as never, 0, authority.observeLeanPrivateMatchCapacityV2(virtualStore, allocation, 1))
       const context = version === 1 ? authority.readLeanPrivateMatchContextV1(admission as never, debit as never) : authority.readLeanPrivateMatchContextV2(admission as never, debit as never)
+      const validate = vi.spyOn(sourceModule, "validateLeanBaselineSource"), create = vi.spyOn(runtimeModule, "createFactorySupervisedRuntime")
+      try {
+        const opposite = version === 1 ? runLeanPrivateFeasibilityMatchV2 : runLeanPrivateFeasibilityMatch
+        await expect(opposite({ admission, debit, bottom: snapshots[0], top: snapshots[1], register() {}, unregister() {} } as never)).rejects.toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
+        expect(validate).not.toHaveBeenCalled(); expect(create).not.toHaveBeenCalled()
+      } finally { validate.mockRestore(); create.mockRestore() }
       if (version === 2) { expect(() => authority.readLeanPrivateMatchContextV1(admission as never, debit as never)).toThrow(); expect(() => authority.readLeanPrivateMatchContextV2({ ...admission } as never, debit as never)).toThrow() }
       expect(JSON.parse(readFileSync(join(store, "debit-0.json"), "utf8")).cumulativeCharged).toBe(version === 1 ? 41 : 42)
       expect(readFileSync(join(store, "ledger.ndjson"), "utf8").trim().split("\n")).toHaveLength(1)

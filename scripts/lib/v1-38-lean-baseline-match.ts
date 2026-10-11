@@ -116,14 +116,15 @@ type PrivateMatchInputV2 = Pick<LegacyMatchInput, "bottom" | "top" | "register" 
 export const runLeanBaselineMatch = (input: LegacyMatchInput) => composeLeanNativeMatch(input)
 /** Only opaque admitted/debited context enters the new lane; no callable
  * issuer, scalar capacity, arbitrary scenario or fabricated ledger seam. */
-export const runLeanPrivateFeasibilityMatch = (input: PrivateMatchInput) => composeLeanNativeMatch(input)
-export const runLeanPrivateFeasibilityMatchV2 = (input: PrivateMatchInputV2) => composeLeanNativeMatch(input)
-const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInput | PrivateMatchInputV2) => {
+export const runLeanPrivateFeasibilityMatch = async (input: PrivateMatchInput) => composeLeanNativeMatch(input, { version: 1, context: readLeanPrivateMatchContextV1(input.admission, input.debit) })
+export const runLeanPrivateFeasibilityMatchV2 = async (input: PrivateMatchInputV2) => composeLeanNativeMatch(input, { version: 2, context: readLeanPrivateMatchContextV2(input.admission, input.debit) })
+type AuthenticatedPrivateRoute = { version: 1; context: ReturnType<typeof readLeanPrivateMatchContextV1> } | { version: 2; context: ReturnType<typeof readLeanPrivateMatchContextV2> }
+const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInput | PrivateMatchInputV2, route?: AuthenticatedPrivateRoute) => {
   const legacy = "ledger" in input ? input : undefined
   const privateInput = "admission" in input ? input : undefined
-  const v2 = privateInput?.admission.schemaVersion === "lean-private-match-admission-v2" ? privateInput as PrivateMatchInputV2 : undefined
-  const v1 = privateInput && !v2 ? privateInput as PrivateMatchInput : undefined
-  const context = v2 ? readLeanPrivateMatchContextV2(v2.admission, v2.debit) : v1 ? readLeanPrivateMatchContextV1(v1.admission, v1.debit) : undefined
+  const v2 = route?.version === 2 ? privateInput as PrivateMatchInputV2 : undefined
+  const v1 = route?.version === 1 ? privateInput as PrivateMatchInput : undefined
+  const context = route?.context
   const allocationRoot = context?.allocation.root ?? legacy!.ledger.allocation.root, chargeRoot = context?.debitRoot ?? legacy!.charge.root
   const checkpoint = v2 ? (additionalBytes = 0) => checkpointLeanPrivateMatchV2(v2.admission, v2.debit, additionalBytes) : v1 ? (additionalBytes = 0) => checkpointLeanPrivateMatchV1(v1.admission, v1.debit, additionalBytes) : legacy!.checkpoint
   const hostBinding: LeanHostFailureBindingV7 | undefined = legacy && (legacy.ledger.allocation.schemaVersion.endsWith("-v7") || legacy.ledger.allocation.schemaVersion.endsWith("-v8")) && "route" in legacy.ledger.allocation ? { route: legacy.ledger.allocation.route, allocationRoot, chargeRoot, slotRoot: legacy.slot.root } : undefined
