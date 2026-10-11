@@ -12,7 +12,7 @@ import { join } from "node:path"
 import { CANONICAL_ARENA_CATALOG_V1_37, BOTTOM_STARTING_POSITIONS, TOP_STARTING_POSITIONS } from "@cowards/spec"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { deriveFactoryOrderedRecordDescriptor } from "../packages/strategy-lab/src/factory/admission.js"
-import { leanCanonicalBytes, leanBytesRoot } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { leanCanonicalBytes, leanBytesRoot, LEAN_STARTUP_POLICY_V5 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import type { LabMatchExecution } from "../packages/strategy-lab/src/runtime-bridge.js"
 import type { LeanPrivateMatchAllocationV1 } from "./lib/v1-38-lean-experiment-authority.js"
 import { readLeanPrivateMatchGitV1 } from "./lib/v1-38-lean-container-match-session.js"
@@ -26,6 +26,62 @@ import * as admissions from "../packages/strategy-lab/src/factory/admission.js"
 import * as revisions from "../packages/runtime-js/src/revision.js"
 import * as lifetime from "./lib/v1-38-league-prospective-lifetime.js"
 import { chmodSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { buildLeanStartupWorkerHarnessV8 } from "./lib/v1-38-lean-container-match-session.js"
+
+it.each([true, false] as const)("dormant startup receipt connects actual composer to finite producer, observed=%s", async observed => {
+  const f = fixture(), executableSource = "SOURCE_PRIVATE_SENTINEL_INERT", request = { methodName: "selectActivations" as const, source: executableSource, input: { secret: "INPUT_MEMORY_OBJECTIVE_PRIVATE_SENTINEL" }, outputByteLimit: 262144, requestOrdinal: 1 }
+  const executableRoot = `sha256:${createHash("sha256").update(executableSource).digest("hex")}` as const
+  const prefix = { ...f.allocation.sourcePrefix, root: labRoot("lean-private-match-source-prefix-v2", f.allocation.sourcePrefix.rows) }
+  const allocation = route.createLeanPrivateMatchAllocationV2({ sourceHead: f.allocation.sourceHead, sources: f.allocation.sources.map(s => ({ ...s, executableRoot })) as never, sourcePrefix: prefix, priorProbeCarry: f.allocation.priorProbeCarry, priorMatchCarry: authority.LEAN_PRIVATE_MATCH_CARRY_V2 })
+  const providerIdentities = f.binding.providerIdentities.map(p => ({ ...p, executableRoot, budgetRoot: allocation.root, harnessRoot: allocation.harnessRoot })), binding = { ...f.binding, allocation, providerIdentities }
+  const transport = composer.leanCorrectionInvocationTransportBinding(request, "v8")
+  const evidence = { identity: providerIdentities[0]!, invocationRoot: r(50), requestId: `effect:v1.19:${"a".repeat(64)}`, method: request.methodName, inputRoot: transport.inputRoot, ordinal: 0, charged: true, completed: false, outputBytes: 0, result: { ok: false, systemFailure: { code: "SUBPROCESS_SIGNAL", retryable: false }, violation: { type: "INVALID_OUTPUT", message: "ERROR_STDIO_PRIVATE_SENTINEL" } } } as any
+  const origin = { schemaVersion: "v1.38-lean-startup-origin-v8", allocationRoot: allocation.root, chargeRoot: binding.debitRoot, seat: "bottom", policyRoot: LEAN_STARTUP_POLICY_V5.root, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())), requestOrdinal: 1, requestRoot: transport.requestRoot, method: request.methodName, inputRoot: transport.inputRoot, sourceRoot: evidence.identity.sourceRoot, executableRoot, stage: "startup", branch: "lifecycle_failure", ready: false, go: false, wait: "changed", termination: "completed", unknown: true, constructorDurationBucket: "0_9ms", prefixMilestone: "not_entered", readyPublicationDurationBucket: "unknown", finalAtomicState: "state_0", lifecycleBeforeTermination: "exit_seen", deadlineOutcome: "unknown" } as any
+  const snapshots = allocation.sources.map(s => ({ root: s.snapshotRoot, sourceRoot: s.sourceRoot, role: s.role, source: "NEVER_EXECUTED", packet: {}, proposal: {}, validation: {} }))
+  let created = 0
+  const mocks = [
+    vi.spyOn(authority, "readLeanPrivateMatchContextV2").mockReturnValue({ allocation, slot: allocation.slots[0], debitRoot: binding.debitRoot, storePath: "INERT_NO_STORE" }),
+    vi.spyOn(authority, "checkpointLeanPrivateMatchV2").mockImplementation(() => {}),
+    vi.spyOn(authority, "issueLeanPrivateMatchRuntimeAuthorityV2").mockReturnValue({} as never),
+    vi.spyOn(source, "validateLeanBaselineSource").mockImplementation(v => v as never),
+    vi.spyOn(admissions, "admitFactory").mockReturnValue({} as never),
+    vi.spyOn(admissions, "authorizeFactorySupervision").mockReturnValue({} as never),
+    vi.spyOn(revisions, "buildStrategyRevision").mockReturnValue({ id: "inert-revision", validation: { valid: true }, metadata: { sourceArtifact: { bytesBase64: Buffer.from(executableSource).toString("base64"), hash: executableRoot.slice(7) } } } as never),
+    vi.spyOn(lifetime, "prospectiveLeagueRuntimeBinding").mockReturnValue({} as never),
+    vi.spyOn(runtime, "createFactorySupervisedRuntime").mockImplementation(options => ({ identity: providerIdentities[created++]!, async invoke() { if (observed) options.startupOriginObserver?.observe(origin); return evidence }, verify(e: unknown) { return e === evidence }, close() { return { cleanupComplete: true, orphanedChild: false } } }) as never),
+    vi.spyOn(runtime, "getFactoryPrivateDiagnostic").mockImplementation((_p, e) => e === evidence ? { stage: "executor", reason: "unknown", identity: evidence.identity, invocationRoot: evidence.invocationRoot, requestId: evidence.requestId, inputRoot: evidence.inputRoot, method: evidence.method, ordinal: evidence.ordinal } as never : undefined),
+    vi.spyOn(bridge, "runCanonicalLabMatch").mockImplementation(async options => { await Object.values(options.providers)[0]!.invoke({ kind: request.methodName, input: request.input } as never, {} as never); return { kind: "failure", privacy: "private_offline", transitions: [], accounting: [evidence], unchangedState: null, failure: { classification: "system_failure", code: "LAB_SUPERVISOR_FAILURE" } } as never }),
+  ]
+  try {
+    const result = await composer.runLeanPrivateFeasibilityMatchV2({ admission: {} as never, debit: {} as never, bottom: snapshots[0] as never, top: snapshots[1] as never, register() {}, unregister() {} })
+    const produce = (route as any).produceLeanPrivateStartupReceiptV1, verify = (route as any).verifyLeanPrivateStartupReceiptV1
+    expect(produce).toBeTypeOf("function"); expect(verify).toBeTypeOf("function")
+    const projected = produce({ result, binding, trustedRequest: request })
+    expect(projected.schemaVersion).toBe("lean-private-startup-receipt-v1")
+    expect(Object.keys(projected).sort()).toEqual(["schemaVersion", "availability", "identity", "origin", "invocationBinding"].sort())
+    expect(projected.availability).toBe(observed ? "available" : "unavailable")
+    expect(verify({ value: projected, binding, accounting: result.privateActual!.accounting, trustedRequest: request })).toEqual({ verified: true })
+    expect(() => produce({ result: { ...result }, binding, trustedRequest: request })).toThrow()
+    expect(JSON.stringify(projected)).not.toContain("PRIVATE_SENTINEL")
+    expect(Object.keys(composer.readLeanPrivateMatchDiagnosticV2(result)!).sort()).toEqual(["availability", "originAvailability", "stage", "reason", "code", "identity", "invocationRoot", "requestId", "inputRoot", "method", "ordinal"].sort())
+    if (!observed) { expect(projected).toEqual({ schemaVersion: "lean-private-startup-receipt-v1", availability: "unavailable", identity: null, origin: null, invocationBinding: null }); return }
+    const run = (value: unknown, extra: Record<string, unknown> = {}) => verify({ value, binding, accounting: result.privateActual!.accounting, trustedRequest: request, ...extra })
+    for (const key of ["sourceRoot", "executableRoot", "budgetRoot", "attemptRoot", "harnessRoot", "factoryPacketRoot", "factoryProposalRoot", "factoryValidationRoot", "tupleRoot", "runtimeLimitsRoot"]) expect(() => run({ ...projected, identity: { ...projected.identity, [key]: r(99) } })).toThrow()
+    for (const key of ["allocationRoot", "chargeRoot", "harnessRoot", "sourceRoot", "executableRoot", "inputRoot", "requestRoot", "policyRoot"]) expect(() => run({ ...projected, origin: { ...projected.origin, [key]: r(99) } })).toThrow()
+    for (const key of ["invocationRoot", "inputRoot", "sourceRoot", "executableRoot", "requestRoot", "payloadRoot"]) expect(() => run({ ...projected, invocationBinding: { ...projected.invocationBinding, [key]: r(99) } })).toThrow()
+    for (const mutation of [{ seat: "top" }, { method: "soldierBrain" }, { ordinal: 1 }, { requestOrdinal: 2 }, { requestId: "invalid" }, { schemaVersion: "wrong" }, { extra: "PRIVATE_SENTINEL" }, { ordinal: Number.NaN }, { requestOrdinal: Number.MAX_SAFE_INTEGER + 1 }]) expect(() => run({ ...projected, invocationBinding: { ...projected.invocationBinding, ...mutation } })).toThrow()
+    for (const mutation of [{ schemaVersion: "wrong" }, { extra: "PRIVATE_SENTINEL" }, { availability: "unknown" }, { identity: null }]) expect(() => run({ ...projected, ...mutation })).toThrow()
+    expect(() => run(projected, { accounting: [evidence, evidence] })).toThrow()
+    expect(() => run(projected, { binding: { ...binding, providerIdentities: [] } })).toThrow()
+    expect(() => run(projected, { trustedRequest: { ...request, input: {} } })).toThrow()
+    expect(() => run(projected, { trustedRequest: { ...request, source: "SUBSTITUTION" } })).toThrow()
+    const otherTransport = composer.leanCorrectionInvocationTransportBinding({ ...request, outputByteLimit: 1 }, "v8")
+    expect(() => run({ ...projected, origin: { ...projected.origin, requestRoot: otherTransport.requestRoot }, invocationBinding: { ...projected.invocationBinding, requestRoot: otherTransport.requestRoot, payloadRoot: otherTransport.payloadRoot } })).toThrow()
+    expect(() => run({ ...projected, identity: { ...projected.identity, image: "é".repeat(4096) } })).toThrow()
+    expect(() => run({ ...projected, origin: { ...projected.origin, constructorDurationBucket: "unknown-private-text" } })).toThrow()
+  } finally { for (const mock of mocks) mock.mockRestore() }
+})
 const pathFixture = vi.hoisted(() => ({ store: "" }))
 vi.mock("node:path", async importOriginal => {
   const actual = await importOriginal<typeof import("node:path")>()
