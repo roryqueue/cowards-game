@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V3 review fix and ROOT validation closed; distinct source verification next
+stopped_at: V3 independent source gates closed; fresh one-game preparation next
 last_updated: "2026-10-11"
 last_activity: 2026-10-11
-last_activity_desc: CR-01 fixed and independently re-reviewed; ROOT122tests pass,13inherited types zero new; no game yet
+last_activity_desc: Source verification PASS with no gaps; ROOT122tests,13inherited types zero new; fresh actual route next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION — V3 SOURCE VERIFIED (ROOT2026-10-11T20:18:27UTC). Distinct generic read-only independent source verifier11843 CLOSED0/PASS_SOURCE_ONLY/gaps[]/sevenownedtruths; explicit fallback not typedGSD. Functional676c7acf/fixedreviewHEADcc5ca19d, ROOT122tests/exact13inherited zeroNEW/runtime types/boundary1441pass; allsourcegatecommandsclosed. NextROOT metadata-v3 once→prepare-v3 once→newallocationdirectchildcommit→ONEentry-v3 withfreshsameprocesscapacity/debit43 BEFORE20:25:02initialfrontier, thenONEactualretainedverifier. No newallocation/charge/game/reader yet;42oldimmutable. Same21:06:02hardstop/31minreserve/15GB/allbounds/zero probes/retries. Retained raw request recomputation explicitly unavailable; no empirical/LEAG/phase/freeze/formation/holdout/public/counting/productioncredit. Earliercheckpoints history.
 
 CURRENT CONTINUATION — V3 CR-01 FIX / ROOT VALIDATION CLOSED (ROOT2026-10-11T20:17UTC). Source676c7acf adds private V3-only post-authentication context/frontier and per-construction-claim guards; spent seats never refunded, old versions/grants/later Activation limits unchanged. Red49734 closed1/two exposed defects, green58351 closed0/two cases. Generic independent amended-plan check and re-review CLOSED/PASS/zero findings; in-chat role dispatch refused agent thread limit, fallback explicitly not typed GSD. ROOT final22463 CLOSED0/122tests; exact strict88770 CLOSED2/same13 inherited identities/zero new; configured runtime types0,boundary10408 CLOSED0/1441files/zero violations,diff0. Distinct source verification next before actualmetadata/prep/allocation/entry. No actual game/charge/reader yet;42oldimmutable. Same approved20:25:02 initial construction frontier/21:06:02hardstop/399420903carry/404820903cap/31minreserve/ONEgame/zero probes/retries/15GB/allbounds unchanged. NoLEAG/phase/freeze/formation/holdout/public/counting/productioncredit. Earlier checkpoints history.
 
