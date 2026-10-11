@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V3 source author released; independent seven-path review next
+stopped_at: V3 review fix and ROOT validation closed; distinct source verification next
 last_updated: "2026-10-11"
 last_activity: 2026-10-11
-last_activity_desc: Source Tasks1–2 committed; author29/111tests pass and13inherited types; independent gates next; no game yet
+last_activity_desc: CR-01 fixed and independently re-reviewed; ROOT122tests pass,13inherited types zero new; no game yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION — V3 CR-01 FIX / ROOT VALIDATION CLOSED (ROOT2026-10-11T20:17UTC). Source676c7acf adds private V3-only post-authentication context/frontier and per-construction-claim guards; spent seats never refunded, old versions/grants/later Activation limits unchanged. Red49734 closed1/two exposed defects, green58351 closed0/two cases. Generic independent amended-plan check and re-review CLOSED/PASS/zero findings; in-chat role dispatch refused agent thread limit, fallback explicitly not typed GSD. ROOT final22463 CLOSED0/122tests; exact strict88770 CLOSED2/same13 inherited identities/zero new; configured runtime types0,boundary10408 CLOSED0/1441files/zero violations,diff0. Distinct source verification next before actualmetadata/prep/allocation/entry. No actual game/charge/reader yet;42oldimmutable. Same approved20:25:02 initial construction frontier/21:06:02hardstop/399420903carry/404820903cap/31minreserve/ONEgame/zero probes/retries/15GB/allbounds unchanged. NoLEAG/phase/freeze/formation/holdout/public/counting/productioncredit. Earlier checkpoints history.
 
 CURRENT CONTINUATION — V3 SOURCE AUTHOR RELEASED (ROOT2026-10-11T20:02UTC). Typedexecutor CLOSED functionalc0e6821a/summary74105b37/sevenpaths/normalatomiccommits; allauthorcommandsreleased. AuthorTask1final5285 CLOSED0/29tests40.79s; Task2final3087 CLOSED0/111tests15.83s; strict16847 CLOSED2/exact13 inherited/zeroNEW(nullable196/197→284/285 samecolumns), notglobalgreen; diff0. These are authorchecks NOTindependent sourceadmission. Nextsevenpathindependentreview/fix→ROOTfinalvalidation→distinctsourceverification, THENpossibleROOTactualTask3before20:25:02initialentry. No actualmetadata/prep/allocation/native/provider/Match/reader/newcharge;42oldimmutable. Anchor19:36:02/hard21:06:02/carry399420903/cap404820903/31minreserve/15GB/allbounds unchanged. NoLEAG/phase/freeze/formation/holdout/public/counting/productioncredit. Earliercheckpoints history.
 
