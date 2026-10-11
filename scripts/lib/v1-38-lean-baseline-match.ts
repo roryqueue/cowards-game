@@ -21,6 +21,8 @@ import { SUBPROCESS_SYSTEM_FAILURE_CODES } from "../../packages/runtime-js/src/s
 import { isLeanPrivateFailureOrigin } from "./v1-38-lean-container-match-session.js"
 import { readLeanPrivateMatchContextV2, checkpointLeanPrivateMatchV2, issueLeanPrivateMatchRuntimeAuthorityV2, type LeanPrivateMatchAdmissionV2, type LeanPrivateMatchDebitV2 } from "./v1-38-lean-experiment-authority.js"
 import { captureLeanHostFailureV7, type LeanHostFailureBindingV7 } from "./v1-38-lean-host-stage-v7.js"
+import { validateLeanStartupOriginV8, type LeanStartupOriginV8 } from "./v1-38-lean-container-match-session.js"
+import { LEAN_STARTUP_POLICY_V5 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 
 const fail = (): never => { throw new TypeError("LEAN_BASELINE_MATCH") }
 const CORRECTION_RUNTIME_OUTPUT_BYTES = 262144
@@ -141,6 +143,9 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
     } else scenario = leanBaselineScenario({ seed: legacy!.seed, slot: legacy!.slot, bottom: bottomSource, top: topSource })
   } catch (error) { if (hostBinding) throw captureLeanHostFailureV7("match_preparation", hostBinding, error); throw error }
   const began = performance.now(), opened: FactorySupervisionProvider[] = []
+  // Private V2 has separate bounded state; legacy observation/diagnostics are
+  // intentionally untouched. Only the exact verified failed evidence is a key.
+  const privateFailedReceipts = new WeakMap<object, { evidence: Parameters<typeof getFactoryPrivateDiagnostic>[1]; receipt: PrivateStartupReceiptV1 }>()
   const brainInputs: SoldierBrainInputV119[] = [], strategyInputs: StrategyInputV119[] = []
   const decisionRows: Array<{ method: string; inputRoot: LabRoot; outputRoot: LabRoot }> = []
   let cleanupComplete = true
@@ -157,9 +162,21 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
     const binding = { budgetRoot: allocationRoot, attemptRoot: chargeRoot, matchId, containerName, ownershipLabel, seat, runtime }
     const authority = v2 ? issueLeanPrivateMatchRuntimeAuthorityV2(v2.admission, v2.debit, snapshot, binding) : v1 ? issueLeanPrivateMatchRuntimeAuthorityV1(v1.admission, v1.debit, snapshot, binding) : legacy!.correction ? issueLeanCorrectionRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, legacy!.correction.reuse) : issueLeanBaselineRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding)
     let activeTransportBinding: LeanCorrectionInvocationTransportBinding | undefined
+    let activePrivateTransport: LeanCorrectionInvocationTransportBinding | undefined
+    let privateCandidate: LeanStartupOriginV8 | undefined
+    let privateObserved = false, privateObservationInvalid = false
     let requestOrdinal = 0
     const retainedTransportBindings = new Map<number, { origin: LeanPrivateCorrectionOrigin; transport: LeanCorrectionInvocationTransportBinding }>()
-    const native = createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, matchId, containerName, ownershipLabel, attemptRoot: chargeRoot, budgetRoot: allocationRoot, image: LAB_ADMITTED_ROOTS.image, invocationLimit: 24800, factoryLifetimeMs: 600000, ...(legacy?.correction?.observe ? { [(leanSupervisorAllocationMode(legacy.ledger.allocation) === "v5" || (leanSupervisorAllocationMode(legacy.ledger.allocation) === "v6" || (leanSupervisorAllocationMode(legacy.ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(legacy.ledger.allocation))))) ? "startupOriginObserver" : "correctionOriginObserver"]: { observe: (metadata: LeanPrivateCorrectionOrigin) => { if (!activeTransportBinding) return fail(); retainedTransportBindings.set(activeTransportBinding.requestOrdinal, { origin: validateLeanPrivateCorrectionOrigin(metadata), transport: activeTransportBinding }); legacy.correction!.observe!(metadata, snapshot.sourceRoot, seat, activeTransportBinding) } } } : {}) })
+    const native = createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, matchId, containerName, ownershipLabel, attemptRoot: chargeRoot, budgetRoot: allocationRoot, image: LAB_ADMITTED_ROOTS.image, invocationLimit: 24800, factoryLifetimeMs: 600000, ...(legacy?.correction?.observe ? { [(leanSupervisorAllocationMode(legacy.ledger.allocation) === "v5" || (leanSupervisorAllocationMode(legacy.ledger.allocation) === "v6" || (leanSupervisorAllocationMode(legacy.ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(legacy.ledger.allocation))))) ? "startupOriginObserver" : "correctionOriginObserver"]: { observe: (metadata: LeanPrivateCorrectionOrigin) => { if (!activeTransportBinding) return fail(); retainedTransportBindings.set(activeTransportBinding.requestOrdinal, { origin: validateLeanPrivateCorrectionOrigin(metadata), transport: activeTransportBinding }); legacy.correction!.observe!(metadata, snapshot.sourceRoot, seat, activeTransportBinding) } } } : {}), ...(v2 ? { startupOriginObserver: { observe: (metadata: LeanPrivateCorrectionOrigin) => {
+      // Late, duplicate, or malformed callbacks cannot invent a receipt or
+      // change the legacy failure result. Nothing private/raw is retained.
+      if (!activePrivateTransport) return
+      if (privateObserved) { privateCandidate = undefined; privateObservationInvalid = true; return }
+      privateObserved = true
+      try {
+        privateCandidate = validateLeanStartupOriginV8(metadata, { allocationRoot, chargeRoot, seat, policyRoot: LEAN_STARTUP_POLICY_V5.root, harnessRoot: context!.allocation.harnessRoot, requestOrdinal: activePrivateTransport.requestOrdinal, requestRoot: activePrivateTransport.requestRoot as LabRoot, method: activePrivateTransport.method, inputRoot: activePrivateTransport.inputRoot, sourceRoot: snapshot.sourceRoot, executableRoot: activePrivateTransport.executableRoot })
+      } catch { privateCandidate = undefined; privateObservationInvalid = true }
+    } } } : {}) })
     let closed: ReturnType<FactorySupervisionProvider["close"]> | undefined
     const observed = snapshot.role === legacy?.observedRole
     const provider: FactorySupervisionProvider = {
@@ -169,7 +186,23 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
         checkpoint()
         requestOrdinal += 1
         if (legacy?.correction?.observe) activeTransportBinding = leanCorrectionInvocationTransportBinding({ methodName: request.kind, source: executableSource, input: request.input, outputByteLimit: CORRECTION_RUNTIME_OUTPUT_BYTES, requestOrdinal }, leanSupervisorAllocationMode(legacy.ledger.allocation) === "v15-5" ? "v8" : (leanSupervisorAllocationMode(legacy.ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(legacy.ledger.allocation))) ? "v7" : leanSupervisorAllocationMode(legacy.ledger.allocation) === "v6" ? "v6" : leanSupervisorAllocationMode(legacy.ledger.allocation) === "v5")
-        const evidence = await native.invoke(request, identity)
+        if (v2) activePrivateTransport = leanCorrectionInvocationTransportBinding({ methodName: request.kind, source: executableSource, input: request.input, outputByteLimit: CORRECTION_RUNTIME_OUTPUT_BYTES, requestOrdinal }, "v8")
+        let evidence: Awaited<ReturnType<FactorySupervisionProvider["invoke"]>>
+        try {
+          evidence = await native.invoke(request, identity)
+          if (v2 && privateCandidate && !privateObservationInvalid && activePrivateTransport && evidence.charged && !evidence.result.ok && "systemFailure" in evidence.result && native.verify(evidence) && evidence.identity === native.identity) {
+            const diagnostic = getFactoryPrivateDiagnostic(native, evidence)
+            if (diagnostic && diagnostic.identity === evidence.identity && diagnostic.invocationRoot === evidence.invocationRoot && diagnostic.requestId === evidence.requestId && diagnostic.inputRoot === evidence.inputRoot && diagnostic.method === evidence.method && diagnostic.ordinal === evidence.ordinal && isLeanPrivateFailureOrigin(diagnostic) && evidence.identity.sourceRoot === snapshot.sourceRoot && evidence.identity.executableRoot === activePrivateTransport.executableRoot && evidence.identity.budgetRoot === allocationRoot && evidence.identity.attemptRoot === chargeRoot && evidence.identity.harnessRoot === context!.allocation.harnessRoot) {
+              try {
+                const invocationBinding = bindLeanCorrectionInvocation(privateCandidate, activePrivateTransport, evidence, diagnostic, seat)
+                if (!privateFailedReceipts.has(provider)) privateFailedReceipts.set(provider, { evidence, receipt: Object.freeze({ availability: "available", identity: evidence.identity, origin: privateCandidate, invocationBinding }) })
+              } catch { /* Failed joins preserve existing generic diagnostics. */ }
+            }
+          }
+        } finally {
+          activePrivateTransport = undefined; privateCandidate = undefined
+          privateObserved = false; privateObservationInvalid = false
+        }
         activeTransportBinding = undefined
         if (observed && native.verify(evidence) && evidence.result.ok) {
           if (request.kind === "soldierBrain" && brainInputs.length < 16) brainInputs.push(structuredClone(request.input as SoldierBrainInputV119))
@@ -234,7 +267,10 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
       const issuedOrigin = diagnosticProviders.get(owner)?.(evidence)
       if (issuedOrigin && (issuedOrigin.identity !== evidence.identity || issuedOrigin.invocationRoot !== evidence.invocationRoot || issuedOrigin.requestId !== evidence.requestId || issuedOrigin.inputRoot !== evidence.inputRoot || issuedOrigin.method !== evidence.method || issuedOrigin.ordinal !== evidence.ordinal || !isLeanPrivateFailureOrigin(issuedOrigin))) return fail()
       privateDiagnosticReturnsV2.set(returned, Object.freeze({ availability: "available", originAvailability: issuedOrigin ? "available" : "unavailable", stage: issuedOrigin?.stage ?? "unknown", reason: issuedOrigin?.reason ?? "unknown", code: evidence.result.systemFailure.code, identity: evidence.identity, invocationRoot: evidence.invocationRoot, requestId: evidence.requestId, inputRoot: evidence.inputRoot, method: evidence.method, ordinal: evidence.ordinal }))
+      const retained = privateFailedReceipts.get(owner)
+      privateStartupReceiptReturnsV1.set(returned, retained?.evidence === evidence ? retained.receipt : unavailablePrivateStartupReceiptV1())
     } else privateDiagnosticReturnsV2.set(returned, Object.freeze({ availability: "unavailable", originAvailability: "unavailable", stage: "unknown", reason: "unknown", code: "UNKNOWN", identity: null, invocationRoot: null, requestId: null, inputRoot: null, method: null, ordinal: null }))
+    if (!privateStartupReceiptReturnsV1.has(returned)) privateStartupReceiptReturnsV1.set(returned, unavailablePrivateStartupReceiptV1())
   }
   return returned
 }
@@ -242,5 +278,10 @@ type PrivateDiagnosticV2 = Readonly<{ availability: "available" | "unavailable";
 const privateDiagnosticReturnsV2 = new WeakMap<object, PrivateDiagnosticV2>()
 /** Only a real composer return is a key. No caller-supplied diagnostic exists. */
 export const readLeanPrivateMatchDiagnosticV2 = (returned: object): PrivateDiagnosticV2 | undefined => privateDiagnosticReturnsV2.get(returned)
+export type PrivateStartupReceiptV1 = Readonly<{ availability: "available"; identity: import("../../packages/strategy-lab/src/runtime-bridge.js").LabRuntimeIdentity; origin: LeanStartupOriginV8; invocationBinding: LeanCorrectionInvocationBinding }> | Readonly<{ availability: "unavailable"; identity: null; origin: null; invocationBinding: null }>
+const unavailablePrivateStartupReceiptV1 = (): PrivateStartupReceiptV1 => Object.freeze({ availability: "unavailable", identity: null, origin: null, invocationBinding: null })
+const privateStartupReceiptReturnsV1 = new WeakMap<object, PrivateStartupReceiptV1>()
+/** Separate diagnostic-only provenance. Foreign/cloned and V1 returns refuse. */
+export const readLeanPrivateStartupReceiptV1 = (returned: object): PrivateStartupReceiptV1 | undefined => privateStartupReceiptReturnsV1.get(returned)
 const diagnosticProviders = new WeakMap<object, (evidence: Parameters<typeof getFactoryPrivateDiagnostic>[1]) => ReturnType<typeof getFactoryPrivateDiagnostic>>()
 const diagnosticTransportBindings = new WeakMap<object, Map<number, { origin: LeanPrivateCorrectionOrigin; transport: LeanCorrectionInvocationTransportBinding }>>()
