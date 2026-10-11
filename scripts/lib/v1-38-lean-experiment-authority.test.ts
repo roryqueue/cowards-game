@@ -1,5 +1,63 @@
 import { describe, expect, it, vi } from "vitest"
 
+describe("own V3 genuine authority", () => {
+  it.each([{ version: 3, cleanupComplete: true }, { version: 3, cleanupComplete: false }])("uses genuine capacity→entry→durable debit→ordered V8 seats; %s", async ({ version, cleanupComplete }) => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "inert-two-match-authority-"))), clock = vi.spyOn(Date, "now").mockReturnValue(Number(version) === 1 ? 1791669996000 : 1791747362000)
+    const sourceDirectory = join(directory, "sources"), store = join(directory, "store"), artifact = join(directory, "allocation.json"), prefix = join(directory, "inert.ts")
+    try {
+      mkdirSync(sourceDirectory, { mode: 0o700 }); mkdirSync(store, { mode: 0o700 }); writeFileSync(prefix, matchFixture.sourceBytes)
+      const snapshots = (["tactical-0", "cold-opponent"] as const).map((role, n) => buildLeanBaselineSource({ role, source: emitTacticalSource() + `\n// inert seat ${n}\n`, coldRoot: labRoot("inert-cold", 1), implementationRoot: labRoot("inert-implementation", 1) }))
+      for (const snapshot of snapshots) writeFileSync(join(sourceDirectory, `source-${snapshot.role}.json`), leanCanonicalBytes(snapshot), { mode: 0o600 })
+      matchFixture.mappings.set(resolve(authority.LEAN_PRIVATE_MATCH_SOURCE_STORE_V1), sourceDirectory)
+      matchFixture.mappings.set(resolve("scripts/inert.ts"), prefix)
+      matchFixture.mappings.set(resolve(Number(version) === 1 ? authority.LEAN_PRIVATE_MATCH_ARTIFACT_V1 : authority.LEAN_PRIVATE_MATCH_ARTIFACT_V3), artifact)
+      matchFixture.active = true
+      const metadata = snapshots.map(snapshot => {
+        const m = authority.inspectLeanPrivateMatchSourceV1(authority.LEAN_PRIVATE_MATCH_SOURCE_STORE_V1, snapshot.role as "tactical-0" | "cold-opponent"), defaults = defaultRuntimeMetadata("typescript"), revision = buildStrategyRevision({ source: snapshot.source, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
+        return { ...m, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}` as const }
+      }) as unknown as import("./v1-38-lean-experiment-authority.js").LeanPrivateMatchAllocationV1["sources"]
+      const allocation = Number(version) === 1 ? createLeanPrivateMatchAllocationV1({ sourceHead: matchFixture.sourceHead, sources: metadata, sourcePrefix: authority.inspectLeanPrivateMatchPrefixV1(matchFixture.sourceHead), priorProbeCarry: authority.authenticateLeanPrivateMatchProbeCarryV1() }) : authority.createLeanPrivateMatchAllocationV3({ sourceHead: matchFixture.sourceHead, sources: metadata, sourcePrefix: authority.inspectLeanPrivateMatchPrefixV3(matchFixture.sourceHead), priorProbeCarry: authority.authenticateLeanPrivateMatchProbeCarryV1(), priorMatchCarry: authority.authenticateLeanPrivateMatchCarryV3() })
+      matchFixture.allocation = Buffer.from(leanCanonicalBytes(allocation)); writeFileSync(artifact, matchFixture.allocation)
+      writeFileSync(join(store, "allocation.json"), matchFixture.allocation, { mode: 0o600 })
+      const virtualStore = resolve(Number(version) === 1 ? ".strategy-lab/lean-private-matches-v1" : ".strategy-lab/lean-private-matches-v3", allocation.root.slice(7)); matchFixture.mappings.set(virtualStore, store)
+      const capacity = Number(version) === 1 ? authority.observeLeanPrivateMatchCapacityV1(virtualStore, allocation, 2) : authority.observeLeanPrivateMatchCapacityV3(virtualStore, allocation, 1)
+      expect(() => JSON.stringify(capacity)).toThrow()
+      const open = () => Number(version) === 1 ? authority.openLeanPrivateMatchAdmissionV1({ storePath: virtualStore, allocationCommit: matchFixture.commit, allocationPath: authority.LEAN_PRIVATE_MATCH_ARTIFACT_V1, capacity: capacity as never }) : authority.openLeanPrivateMatchAdmissionV3({ storePath: virtualStore, allocationCommit: matchFixture.commit, allocationPath: authority.LEAN_PRIVATE_MATCH_ARTIFACT_V3, capacity: capacity as never })
+      const admission = open()
+      expect(open).toThrow()
+      const debit = Number(version) === 1 ? authority.recordLeanPrivateMatchDebitV1(admission as never, 0, authority.observeLeanPrivateMatchCapacityV1(virtualStore, allocation, 2)) : authority.recordLeanPrivateMatchDebitV3(admission as never, 0, authority.observeLeanPrivateMatchCapacityV3(virtualStore, allocation, 1))
+      const context = Number(version) === 1 ? authority.readLeanPrivateMatchContextV1(admission as never, debit as never) : authority.readLeanPrivateMatchContextV3(admission as never, debit as never)
+      const validate = vi.spyOn(sourceModule, "validateLeanBaselineSource"), create = vi.spyOn(runtimeModule, "createFactorySupervisedRuntime")
+      try {
+        const opposite = Number(version) === 1 ? runLeanPrivateFeasibilityMatchV2 : runLeanPrivateFeasibilityMatch
+        await expect(opposite({ admission, debit, bottom: snapshots[0], top: snapshots[1], register() {}, unregister() {} } as never)).rejects.toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
+        expect(validate).not.toHaveBeenCalled(); expect(create).not.toHaveBeenCalled()
+      } finally { validate.mockRestore(); create.mockRestore() }
+      if (version === 3) { expect(() => authority.readLeanPrivateMatchContextV1(admission as never, debit as never)).toThrow(); expect(() => authority.readLeanPrivateMatchContextV3({ ...admission } as never, debit as never)).toThrow() }
+      expect(JSON.parse(readFileSync(join(store, "debit-0.json"), "utf8")).cumulativeCharged).toBe(Number(version) === 1 ? 41 : 43)
+      expect(readFileSync(join(store, "ledger.ndjson"), "utf8").trim().split("\n")).toHaveLength(1)
+      for (const [n, seat] of (["bottom", "top"] as const).entries()) {
+        const snapshot = snapshots[n]!, defaults = defaultRuntimeMetadata("typescript"), revision = buildStrategyRevision({ source: snapshot.source, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } }), approved = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet: snapshot.packet, proposal: snapshot.proposal, sourceBytes: Buffer.from(snapshot.source) }), validation: snapshot.validation })
+        const runtime = prospectiveLeagueRuntimeBinding(approved, { revisionId: revision.id, sourceRoot: snapshot.sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image }), binding = { seat, runtime, budgetRoot: allocation.root, attemptRoot: context.debitRoot, matchId: `lean-${context.debitRoot.slice(7, 31)}`, containerName: `lean-${context.debitRoot.slice(7, 25)}-${seat}`, ownershipLabel: `lean-${allocation.root.slice(7, 25)}` }
+        const issue = () => Number(version) === 1 ? authority.issueLeanPrivateMatchRuntimeAuthorityV1(admission as never, debit as never, snapshot, binding) : authority.issueLeanPrivateMatchRuntimeAuthorityV3(admission as never, debit as never, snapshot, binding)
+        const issued = issue()
+        expect(() => authority.claimLeanStartupAuthorityV8(issued, binding, "session")).toThrow()
+        for (const layer of ["factory", "planner", "session"] as const) expect(authority.claimLeanStartupAuthorityV8(issued, binding, layer).startup.version).toBe(8)
+        expect(() => authority.claimLeanStartupAuthorityV8(issued, binding, "session")).toThrow()
+        expect(issue).toThrow()
+      }
+      const body = { schemaVersion: `lean-private-match-terminal-v${version}`, allocationRoot: allocation.root, debitRoot: context.debitRoot, slotRoot: allocation.slots[0].root, evidence: { classification: "success", cleanupComplete, boardEvidenceAvailable: true, fullChronicleVerified: false, lastFrameRoot: labRoot("inert-frame", 1), outcome: "DRAW" } }
+      writeFileSync(join(store, "terminal-0.json"), leanCanonicalBytes({ ...body, root: labRoot(body.schemaVersion, body) }), { mode: 0o600 })
+      expect(Number(version) === 1 ? authority.closeLeanPrivateMatchDebitV1(admission as never, debit as never) : authority.closeLeanPrivateMatchDebitV3(admission as never, debit as never)).toBe(cleanupComplete)
+      if (version === 3) { expect(() => authority.recordLeanPrivateMatchDebitV3(admission as never, 0, capacity as never)).toThrow(); expect(() => authority.readLeanPrivateMatchContextV3(admission as never, debit as never)).toThrow(); return }
+      if (admission.schemaVersion !== "lean-private-match-admission-v1") throw new Error("FIXTURE_VERSION")
+      const nextCapacity = authority.observeLeanPrivateMatchCapacityV1(virtualStore, allocation, 1)
+      if (cleanupComplete) { const next = authority.recordLeanPrivateMatchDebitV1(admission as never, 1, nextCapacity); expect(authority.readLeanPrivateMatchContextV1(admission as never, next).slot.condition).toBe(2) }
+      else expect(() => authority.recordLeanPrivateMatchDebitV1(admission, 1, nextCapacity)).toThrow()
+    } finally { matchFixture.active = false; matchFixture.mappings.clear(); clock.mockRestore(); rmSync(directory, { recursive: true, force: true }) }
+  })
+})
+
 it("V3 owns the prospective window and rejects forged/opposite-version capabilities", () => {
   expect(authority.LEAN_PRIVATE_MATCH_WINDOW_V3).toMatchObject({ anchorMs: 1791747362000, deadlineMs: 1791752762000, carryMs: 399420903, capMs: 404820903, reserveMs: 1860000 })
   expect(authority.LEAN_PRIVATE_MATCH_CARRY_V3).toMatchObject({ historicalCharged: 42, retainedAllocatedBytes: 376832, historicalSourceAllocatedBytes: 1830912 })
@@ -35,7 +93,7 @@ vi.mock("node:child_process", async importOriginal => {
     if (matchFixture.active && command === "git") {
       if (args.join(" ") === "rev-parse HEAD") return Buffer.from(matchFixture.commit + "\n")
       if (args[0] === "rev-list" && args.at(-1) === matchFixture.commit) return Buffer.from(`${matchFixture.commit} ${matchFixture.sourceHead}\n`)
-      if (args[0] === "show" && [`${matchFixture.commit}:.planning/artifacts/v1.38-phase-265-private-match-allocation-v1.json`, `${matchFixture.commit}:.planning/artifacts/v1.38-phase-265-private-match-allocation-v2.json`].includes(args[1]!)) return matchFixture.allocation
+      if (args[0] === "show" && [1, 2, 3].some(v => args[1] === `${matchFixture.commit}:.planning/artifacts/v1.38-phase-265-private-match-allocation-v${v}.json`)) return matchFixture.allocation
       if (args[0] === "diff" && args[3] === matchFixture.sourceHead) return Buffer.from("scripts/inert.ts\n")
       if (args[0] === "show" && args[1] === `${matchFixture.sourceHead}:scripts/inert.ts`) return matchFixture.sourceBytes
     }

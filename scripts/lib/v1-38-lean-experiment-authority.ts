@@ -18,7 +18,7 @@ import { assertLeanAggregateMemoryV15 } from "../../packages/strategy-lab/src/le
 import { leanCanonicalBytes, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { validateLeanColdReuse, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { leanCapsForAllocation, leanSupervisorAllocationMode, LEAN_STARTUP_POLICY_V5, LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY, type LeanCorrectionAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { buildLeanStartupWorkerHarnessV5, buildLeanStartupWorkerHarnessV8, readLeanPrivateProbeGitV1, readLeanPrivateMatchGitV1, readLeanPrivateMatchGitV2 } from "./v1-38-lean-container-match-session.js"
+import { buildLeanStartupWorkerHarnessV5, buildLeanStartupWorkerHarnessV8, readLeanPrivateProbeGitV1, readLeanPrivateMatchGitV1, readLeanPrivateMatchGitV2, readLeanPrivateMatchGitV3 } from "./v1-38-lean-container-match-session.js"
 
 export interface LeanRuntimeAuthority { readonly schemaVersion: "lean-runtime-authority-v1"; readonly runtime: ProspectiveLeagueLifetimeProviderBinding["runtime"]; readonly seat: "bottom" | "top"; toJSON(): never }
 const correctionAuthorities = new WeakSet<object>()
@@ -656,13 +656,15 @@ export const recordLeanPrivateMatchDebitV1 = (admission: LeanPrivateMatchAdmissi
 export const issueLeanPrivateMatchRuntimeAuthorityV1 = (admission: LeanPrivateMatchAdmissionV1, debit: LeanPrivateMatchDebitV1, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding): LeanRuntimeAuthority => {
   return issuePrivateMatchSeat(readLeanPrivateMatchContextV1(admission, debit), matchDebits.get(debit)!, snapshot, binding)
 }
-const issuePrivateMatchSeat = (context: { allocation: LeanPrivateMatchAllocationV1 | LeanPrivateMatchAllocationV2; storePath: string }, d: MatchDebit | MatchDebitV2, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding): LeanRuntimeAuthority => {
+const issuePrivateMatchSeat = (context: { allocation: LeanPrivateMatchAllocationV1 | LeanPrivateMatchAllocationV2 | LeanPrivateMatchAllocationV3; storePath: string }, d: MatchDebit | MatchDebitV2 | MatchDebitV3, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding): LeanRuntimeAuthority => {
   const a = context.allocation
   if (!["bottom", "top"].includes(binding.seat) || d.seats.has(binding.seat)) return privateMatchFail()
-  if (a.schemaVersion === "lean-private-match-allocation-v2" && binding.seat !== (d.seats.size === 0 ? "bottom" : "top")) return privateMatchFail()
+  if ((a.schemaVersion === "lean-private-match-allocation-v2" || a.schemaVersion === "lean-private-match-allocation-v3") && binding.seat !== (d.seats.size === 0 ? "bottom" : "top")) return privateMatchFail()
   if (!readLeanPrivateMatchFileV1(resolve(context.storePath, `debit-${d.slot.ordinal}.json`)).equals(canonicalPrivateProbe(d.row)) || !readLeanPrivateMatchFileV1(resolve(context.storePath, "ledger.ndjson")).equals(d.admission.journal)) return privateMatchFail()
   if (a.schemaVersion === "lean-private-match-allocation-v1") authenticateLeanPrivateMatchCommitV1(a, canonicalPrivateProbe(a), d.admission.allocationCommit, LEAN_PRIVATE_MATCH_ARTIFACT_V1)
-  else authenticateLeanPrivateMatchCommitV2(a, canonicalPrivateProbe(a), d.admission.allocationCommit, LEAN_PRIVATE_MATCH_ARTIFACT_V2)
+  else if (a.schemaVersion === "lean-private-match-allocation-v2") authenticateLeanPrivateMatchCommitV2(a, canonicalPrivateProbe(a), d.admission.allocationCommit, LEAN_PRIVATE_MATCH_ARTIFACT_V2)
+  else if (a.schemaVersion === "lean-private-match-allocation-v3") authenticateLeanPrivateMatchCommitV3(a, canonicalPrivateProbe(a), d.admission.allocationCommit, LEAN_PRIVATE_MATCH_ARTIFACT_V3)
+  else return privateMatchFail()
   const role = binding.seat === "bottom" ? d.slot.bottomRole : d.slot.topRole, expected = a.sources.find(s => s.role === role) ?? privateMatchFail()
   const metadata = inspectLeanPrivateMatchSourceV1(LEAN_PRIVATE_MATCH_SOURCE_STORE_V1, role)
   const source = validateLeanBaselineSource(snapshot)
@@ -839,4 +841,192 @@ export const closeLeanPrivateMatchDebitV2 = (admission: LeanPrivateMatchAdmissio
   a.active = false; a.stopped = true
   const t = JSON.parse(readLeanPrivateMatchFileV1(resolve(c.storePath, "terminal-0.json"), 16777216).toString("utf8")) as Record<string, any>, { root, ...body } = t
   return t.schemaVersion === "lean-private-match-terminal-v2" && root === labRoot(t.schemaVersion, body) && t.allocationRoot === a.allocation.root && t.debitRoot === d.root && t.slotRoot === d.slot.root && d.seats.size === 2 && t.evidence?.classification === "success" && t.evidence.cleanupComplete === true && t.evidence.boardEvidenceAvailable === true && t.evidence.fullChronicleVerified === false && matchRoot(t.evidence.lastFrameRoot) && t.evidence.outcome !== null
+}
+
+
+/** Additive own-version route. Old windows, carry and opaque maps stay disjoint. */
+const privateMatchWindowV3 = { schemaVersion: "lean-private-match-window-v3", anchorMs: 1791747362000, carryMs: 399420903, capMs: 404820903, deadlineMs: 1791752762000, reserveMs: 1860000 }
+export const LEAN_PRIVATE_MATCH_WINDOW_V3 = freezeLabValue({ ...privateMatchWindowV3, root: labRoot(privateMatchWindowV3.schemaVersion, privateMatchWindowV3) })
+export const LEAN_PRIVATE_MATCH_ARTIFACT_V3 = ".planning/artifacts/v1.38-phase-265-private-match-allocation-v3.json"
+export interface LeanPrivateMatchCarryV3 {
+ readonly allocationRoot: LabRoot; readonly resultRoot: LabRoot; readonly allocationCommit: string; readonly retainedAllocatedBytes: 376832; readonly historicalCharged: 42
+ readonly readerRawRoot: LabRoot; readonly inventoryRoot: LabRoot; readonly historicalSourceAllocatedBytes: 1830912; readonly priorMatchCarryRoot: LabRoot; readonly root: LabRoot
+}
+export interface LeanPrivateMatchAllocationV3 extends Omit<LeanPrivateMatchAllocationV2, "schemaVersion" | "historicalCharged" | "priorMatchCarry"> {
+ readonly schemaVersion: "lean-private-match-allocation-v3"; readonly historicalCharged: 42; readonly priorMatchCarry: LeanPrivateMatchCarryV3
+}
+export interface LeanPrivateMatchCapacityV3 { readonly schemaVersion: "lean-private-match-capacity-v3"; toJSON(): never }
+export interface LeanPrivateMatchAdmissionV3 { readonly schemaVersion: "lean-private-match-admission-v3"; toJSON(): never }
+export interface LeanPrivateMatchDebitV3 { readonly schemaVersion: "lean-private-match-debit-handle-v3"; toJSON(): never }
+type MatchResourcesV3 = Omit<MatchResourcesV2, "historicalCharged" | "priorMatchBytes"> & { readonly historicalCharged: 42; readonly priorMatchBytes: 2568192 }
+type MatchAdmissionV3 = Omit<MatchAdmission, "allocation"> & { allocation: LeanPrivateMatchAllocationV3 }
+type MatchDebitV3 = Omit<MatchDebit, "admission"> & { admission: MatchAdmissionV3 }
+const matchCapacitiesV3 = new WeakMap<object, { path: string; at: number; allocationRoot: LabRoot; resources: MatchResourcesV3 }>()
+const matchAdmissionsV3 = new WeakMap<object, MatchAdmissionV3>()
+const matchDebitsV3 = new WeakMap<object, MatchDebitV3>()
+const spentMatchRootV3 = "sha256:8ddf0092116ac00397e500ddf897ee14f2038256e7e064f97053859c7cb47f6a" as LabRoot
+const spentMatchResultV3 = "sha256:b7a87f9a24a6b3918b45e5c424ce345fba4fafea15f502e73b81331258d67ac8" as LabRoot
+const spentMatchCommitV3 = "30d61b7df02f594f4fda226bffcaeb101cae64dc"
+const spentReaderRootV3 = "sha256:ba61aeb6128c3db230738157d70cfdd261b3d77de7dd87005a04275a7acedec0" as LabRoot
+const spentInventoryV3 = Object.freeze({
+ "allocation.json": "a67980a982c801d36e490a1305457cf7c2c5b5cb63a09c73c44dd6b3c15708db",
+ "entry.json": "b3a2a06ef68a4153ada490d2390035fe7cf345be05872314a107073c08f54769",
+ "ledger.ndjson": "1cd50a2df25633f3e88792186e35415da65ed0d006621674dc142547b3e9b8fd",
+ "pair-0.json": "ab7d8722ab998a2dd46ecc0c1826551061243938ca935bd77f2ee10190ecc7f8",
+ "debit-0.json": "06fdd8501a82ef78a692b7cf7f9efab536f1413b483e8b6a718c56bf5b27d9c4",
+ "terminal-0.json": "b161e5e670fa31f121b7ff6815fafa0edd0483cb1158ac6dc7f3e8a7dedbdb2c",
+ "replay-0.ndjson": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+ "result.json": "2244c3ce896c77c357e97e6de471df6d59ebe22a0f3b577f692e68c2eedba436"
+})
+const matchCarryV3 = (): LeanPrivateMatchCarryV3 => {
+ const body = { allocationRoot: spentMatchRootV3, resultRoot: spentMatchResultV3, allocationCommit: spentMatchCommitV3, retainedAllocatedBytes: 376832 as const, historicalCharged: 42 as const, readerRawRoot: spentReaderRootV3, inventoryRoot: labRoot("lean-private-match-spent-inventory-v3", spentInventoryV3), historicalSourceAllocatedBytes: 1830912 as const, priorMatchCarryRoot: LEAN_PRIVATE_MATCH_CARRY_V2.root }
+ return freezeLabValue({ ...body, root: labRoot("lean-private-match-carry-v3", body) })
+}
+export const LEAN_PRIVATE_MATCH_CARRY_V3 = matchCarryV3()
+export const authenticateLeanPrivateMatchCarryV3 = (): LeanPrivateMatchCarryV3 => {
+  const path = resolve(".strategy-lab/lean-private-matches-v2", spentMatchRootV3.slice(7)); matchDirectory(path)
+  if (!matchEqual(readdirSync(path).sort(), Object.keys(spentInventoryV3).sort())) return privateMatchFail()
+  let allocated = lstatSync(path).blocks * 512
+  const values = new Map<string, Buffer>()
+  for (const [name, hash] of Object.entries(spentInventoryV3)) {
+    const file = resolve(path, name), bytes = readLeanPrivateMatchFileV1(file, name === "terminal-0.json" ? 16777216 : 65536)
+    if (leanBytesRoot(bytes) !== `sha256:${hash}`) return privateMatchFail()
+    allocated += lstatSync(file).blocks * 512; values.set(name, bytes)
+  }
+  const allocation = validateLeanPrivateMatchAllocationV2(JSON.parse(values.get("allocation.json")!.toString("utf8")))
+  const parse = (name: string) => JSON.parse(values.get(name)!.toString("utf8")) as Record<string, any>
+  const result = parse("result.json"), entry = parse("entry.json"), debit = parse("debit-0.json"), terminal = parse("terminal-0.json"), pair = parse("pair-0.json")
+  for (const [value, domain] of [[result, "lean-private-match-result-v2"], [entry, "lean-private-match-entry-v2"], [debit, "lean-private-match-debit-v2"], [terminal, "lean-private-match-terminal-v2"], [pair, "lean-private-match-pair-v2"]] as const) { const { root, ...body } = value; if (root !== labRoot(domain, body) || value.allocationRoot !== spentMatchRootV3) return privateMatchFail() }
+  if (allocation.root !== spentMatchRootV3 || result.root !== spentMatchResultV3 || result.allocationCommit !== spentMatchCommitV3 || entry.allocationCommit !== spentMatchCommitV3 || result.sourceHead !== allocation.sourceHead || entry.sourceHead !== allocation.sourceHead || entry.allocationDigest !== leanBytesRoot(values.get("allocation.json")!) || result.cumulativeCharged !== 42 || !matchEqual(result.attemptedOrdinals, [0]) || !matchEqual(result.unattemptedOrdinals, []) || debit.cumulativeCharged !== 42 || debit.ordinal !== 0 || terminal.debitRoot !== debit.root || debit.pairRoot !== pair.root || terminal.slotRoot !== allocation.slots[0].root || pair.slotRoot !== terminal.slotRoot || !values.get("ledger.ndjson")!.equals(Buffer.concat([canonicalPrivateProbe(debit), Buffer.from("\n")])) || result.terminals?.[0]?.root !== terminal.root || result.terminals?.[0]?.rawRoot !== leanBytesRoot(values.get("terminal-0.json")!) || result.terminals.length !== 1) return privateMatchFail()
+  const parents = readLeanPrivateMatchGitV3(["rev-list", "--parents", "-n", "1", spentMatchCommitV3]).toString("utf8").trim().split(/\s+/u)
+  const artifact = resolve(LEAN_PRIVATE_MATCH_ARTIFACT_V2), bytes = readLeanPrivateMatchFileV1(artifact, 65536, 0o644)
+  allocated += lstatSync(artifact).blocks * 512
+  if (allocated !== 376832 || parents.length !== 2 || parents[0] !== spentMatchCommitV3 || parents[1] !== allocation.sourceHead || !bytes.equals(values.get("allocation.json")!) || !readLeanPrivateMatchGitV3(["show", `${spentMatchCommitV3}:${LEAN_PRIVATE_MATCH_ARTIFACT_V2}`]).equals(bytes)) return privateMatchFail()
+  const reader = readLeanPrivateMatchFileV1(resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-ONE-MATCH-DIAGNOSTIC-RETAINED-VERIFICATION-v2.md"), 65536, 0o644)
+  if (leanBytesRoot(reader) !== spentReaderRootV3) return privateMatchFail()
+  if (allocation.sourceHead !== "165cead9cd236452bc49b6cc45ca19fcd7b8da99" || allocation.sourcePrefix.allocatedBytes !== 1830912 || terminal.root !== "sha256:2be5fc99bd89aadabcd1060d7feb3616bc688b71d6af83ffd8ef88f695c4a8e3") return privateMatchFail()
+  for (const row of allocation.sourcePrefix.rows) {
+    const oldBytes = readLeanPrivateMatchGitV3(["show", `${allocation.sourceHead}:${row.name}`])
+    if (oldBytes.length !== row.bytes || leanBytesRoot(oldBytes) !== row.rawRoot) return privateMatchFail()
+  }
+  if (!matchEqual(allocation.priorMatchCarry, authenticateLeanPrivateMatchCarryV2())) return privateMatchFail()
+  return matchCarryV3()
+}
+export const validateLeanPrivateMatchAllocationV3 = (value: unknown): LeanPrivateMatchAllocationV3 => {
+  if (!exactLabKeys(value, ["schemaVersion", "sourceHead", "matchCount", "seed", "windowRoot", "costSnapshotRoot", "historicalCharged", "priorProbeCarry", "priorMatchCarry", "sourcePrefix", "sources", "slots", "arenaHash", "catalogRoot", "currentStartRoot", "tupleId", "tupleRoot", "runtimeLimitsRoot", "image", "startupPolicyRoot", "harnessRoot", "ceilings", "root"])) return privateMatchFail()
+  const a = value as unknown as LeanPrivateMatchAllocationV3, { root, ...body } = a
+  const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(s => s.id === "arena:smoke:v1" && s.status === "active")
+  if (a.schemaVersion !== "lean-private-match-allocation-v3" || a.matchCount !== 1 || a.historicalCharged !== 42 || a.seed !== LEAN_PRIVATE_MATCH_SEED_V1 || a.windowRoot !== LEAN_PRIVATE_MATCH_WINDOW_V3.root || !/^[a-f0-9]{40}$/u.test(a.sourceHead) || a.costSnapshotRoot !== LEAN_PRIVATE_PROBE_COST_ROOT || !matchEqual(a.priorMatchCarry, matchCarryV3()) || a.arenaHash !== smoke?.semanticGeometryHash || a.catalogRoot !== labRoot("lean-private-match-catalog-v1", CANONICAL_ARENA_CATALOG_V1_37) || a.currentStartRoot !== LAB_ADMITTED_ROOTS.currentStartRoot || a.tupleId !== MATCH_KERNEL.tupleId || a.tupleRoot !== LAB_ADMITTED_ROOTS.tupleRoot || a.runtimeLimitsRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot || a.image !== LAB_ADMITTED_ROOTS.image || a.startupPolicyRoot !== LEAN_STARTUP_POLICY_V5.root || a.harnessRoot !== leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())) || !matchEqual(a.ceilings, { guestMs: 1000, startupMs: 2500, hostMs: 5000, matchMs: 600000 }) || root !== labRoot(a.schemaVersion, body)) return privateMatchFail()
+  if (!Array.isArray(a.sources) || a.sources.length !== 2 || a.sources[0].role !== "tactical-0" || a.sources[1].role !== "cold-opponent" || a.sources[0].sourceRoot === a.sources[1].sourceRoot || a.sources[0].coldRoot !== a.sources[1].coldRoot || !Array.isArray(a.slots) || a.slots.length !== 1) return privateMatchFail()
+  for (const s of a.sources) if (!exactLabKeys(s, ["role", "rawRoot", "snapshotRoot", "sourceRoot", "sourceBytes", "fileBytes", "structureRoot", "packetRoot", "proposalRoot", "validationRoot", "coldRoot", "implementationRoot", "executableRoot"]) || ![s.rawRoot, s.snapshotRoot, s.sourceRoot, s.structureRoot, s.packetRoot, s.proposalRoot, s.validationRoot, s.coldRoot, s.implementationRoot, s.executableRoot].every(matchRoot) || !Number.isSafeInteger(s.sourceBytes) || Number(s.sourceBytes) <= 0 || Number(s.sourceBytes) > 65536 || !Number.isSafeInteger(s.fileBytes) || Number(s.fileBytes) <= 0 || Number(s.fileBytes) > 262144) return privateMatchFail()
+  const slot = a.slots[0], { root: sr, ...sb } = slot
+  if (!exactLabKeys(slot, ["ordinal", "condition", "bottomRole", "topRole", "requestRoot", "root"]) || slot.ordinal !== 0 || slot.condition !== 0 || slot.bottomRole !== "tactical-0" || slot.topRole !== "cold-opponent" || sr !== labRoot("lean-private-match-slot-v3", sb) || slot.requestRoot !== labRoot("lean-private-match-request-v3", { ordinal: 0, seed: a.seed, arenaHash: a.arenaHash, bottom: a.sources[0], top: a.sources[1] })) return privateMatchFail()
+  const p = a.sourcePrefix
+  if (!exactLabKeys(p, ["root", "allocatedBytes", "rows"]) || !Array.isArray(p.rows) || !p.rows.length || p.rows.length > 100 || !Number.isSafeInteger(p.allocatedBytes) || p.allocatedBytes <= 0 || p.allocatedBytes > 16777216 || p.root !== labRoot("lean-private-match-source-prefix-v3", p.rows) || p.rows.some(row => !exactLabKeys(row, ["name", "rawRoot", "bytes", "allocatedBytes"]) || !/^(?:scripts|\.planning)\/[a-zA-Z0-9_./-]{1,240}$/u.test(String(row.name)) || String(row.name).split("/").some(s => s === ".." || s === "." || !s) || !matchRoot(row.rawRoot) || !Number.isSafeInteger(row.bytes) || Number(row.bytes) < 0 || Number(row.bytes) > 4194304 || !Number.isSafeInteger(row.allocatedBytes) || Number(row.allocatedBytes) < 0) || new Set(p.rows.map(row => row.name)).size !== p.rows.length || !matchEqual(p.rows.map(row => row.name), p.rows.map(row => row.name).sort()) || p.rows.reduce((sum, row) => sum + row.allocatedBytes, 0) !== p.allocatedBytes || p.rows.reduce((sum, row) => sum + row.bytes, 0) > 16777216) return privateMatchFail()
+  const { root: cr, ...cb } = a.priorProbeCarry
+  if (!exactLabKeys(a.priorProbeCarry, ["failedRoot", "successRoot", "retainedBytes", "root"]) || a.priorProbeCarry.retainedBytes !== 65536 || ![a.priorProbeCarry.failedRoot, a.priorProbeCarry.successRoot].every(matchRoot) || cr !== labRoot("lean-private-match-probe-carry-v1", cb)) return privateMatchFail()
+  return freezeLabValue(structuredClone(a))
+}
+export const inspectLeanPrivateMatchPrefixV3 = (sourceHead: string): LeanPrivateMatchAllocationV3["sourcePrefix"] => {
+  if (!/^[a-f0-9]{40}$/u.test(sourceHead)) return privateMatchFail()
+  const list = readLeanPrivateMatchGitV3(["diff", "--name-only", "dd67460e6628aebff6bc35c253adaa2cdfea284e", sourceHead])
+  if (list.length > 32768) return privateMatchFail()
+  const names = list.toString("utf8").trim().split("\n").filter(Boolean).sort()
+  if (!names.length || names.length > 100 || names.some(name => !/^(?:scripts|\.planning)\/[a-zA-Z0-9_./-]{1,240}$/u.test(name) || name.split("/").some(s => s === ".." || s === "." || !s))) return privateMatchFail()
+  let total = 0, allocatedBytes = 0
+  const rows = names.map(name => { const path = resolve(name), stat = lstatSync(path), bytes = readLeanPrivateMatchFileV1(path, 4194304, stat.mode & 0o777); total += bytes.length; allocatedBytes += stat.blocks * 512; if (total > 16777216 || !bytes.equals(readLeanPrivateMatchGitV3(["show", `${sourceHead}:${name}`]))) return privateMatchFail(); return { name, rawRoot: leanBytesRoot(bytes), bytes: bytes.length, allocatedBytes: stat.blocks * 512 } })
+  return freezeLabValue({ root: labRoot("lean-private-match-source-prefix-v3", rows), allocatedBytes, rows })
+}
+export const createLeanPrivateMatchAllocationV3 = (input: { sourceHead: string; sources: LeanPrivateMatchAllocationV3["sources"]; sourcePrefix: LeanPrivateMatchAllocationV3["sourcePrefix"]; priorProbeCarry: LeanPrivateMatchAllocationV3["priorProbeCarry"]; priorMatchCarry: LeanPrivateMatchAllocationV3["priorMatchCarry"] }): LeanPrivateMatchAllocationV3 => {
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(a => a.id === "arena:smoke:v1" && a.status === "active") ?? privateMatchFail(), arenaHash = arena.semanticGeometryHash
+  const requestRoot = labRoot("lean-private-match-request-v3", { ordinal: 0, seed: LEAN_PRIVATE_MATCH_SEED_V1, arenaHash, bottom: input.sources[0], top: input.sources[1] })
+  const slotBody = { ordinal: 0 as const, condition: 0 as const, bottomRole: "tactical-0" as const, topRole: "cold-opponent" as const, requestRoot }, slot = { ...slotBody, root: labRoot("lean-private-match-slot-v3", slotBody) }
+  const body = { schemaVersion: "lean-private-match-allocation-v3", ...input, matchCount: 1, historicalCharged: 42, seed: LEAN_PRIVATE_MATCH_SEED_V1, windowRoot: LEAN_PRIVATE_MATCH_WINDOW_V3.root, costSnapshotRoot: LEAN_PRIVATE_PROBE_COST_ROOT, slots: [slot], arenaHash, catalogRoot: labRoot("lean-private-match-catalog-v1", CANONICAL_ARENA_CATALOG_V1_37), currentStartRoot: LAB_ADMITTED_ROOTS.currentStartRoot, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image, startupPolicyRoot: LEAN_STARTUP_POLICY_V5.root, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())), ceilings: { guestMs: 1000, startupMs: 2500, hostMs: 5000, matchMs: 600000 } }
+  return validateLeanPrivateMatchAllocationV3({ ...body, root: labRoot(body.schemaVersion, body) })
+}
+const authenticateMatchAllocationV3 = (a: LeanPrivateMatchAllocationV3) => {
+  if (!matchEqual(a.priorMatchCarry, authenticateLeanPrivateMatchCarryV3()) || !matchEqual(a.priorProbeCarry, authenticateLeanPrivateMatchProbeCarryV1()) || !matchEqual(a.sourcePrefix, inspectLeanPrivateMatchPrefixV3(a.sourceHead))) return privateMatchFail()
+  for (const s of a.sources) if (!matchEqual({ ...s, executableRoot: null }, inspectLeanPrivateMatchSourceV1(LEAN_PRIVATE_MATCH_SOURCE_STORE_V1, s.role))) return privateMatchFail()
+}
+export const verifyLeanPrivateMatchResourcesV3 = (a: LeanPrivateMatchAllocationV3, value: unknown, remainingSlots: number): value is MatchResourcesV3 => {
+  if (!exactLabKeys(value, ["windowRoot", "allocationRoot", "wallAtMs", "cumulativeElapsedMs", "remainingSlots", "historicalCharged", "historicalAllocatedBytes", "priorProbeBytes", "priorMatchBytes", "sourceAllocatedBytes", "newAllocatedBytes", "retainedBytesUpperBound", "parentRssBytes", "aggregateMemoryUpperBound", "availableDiskBytes"])) return false
+  const r = value as MatchResourcesV3, w = LEAN_PRIVATE_MATCH_WINDOW_V3
+  return Object.entries(r).filter(([k]) => !["windowRoot", "allocationRoot"].includes(k)).every(([, v]) => Number.isSafeInteger(v) && Number(v) >= 0) && (remainingSlots === 0 || remainingSlots === 1) && r.remainingSlots === remainingSlots && r.windowRoot === w.root && r.allocationRoot === a.root && r.wallAtMs >= w.anchorMs && r.cumulativeElapsedMs === w.carryMs + r.wallAtMs - w.anchorMs && r.wallAtMs + w.reserveMs + remainingSlots * 600000 <= w.deadlineMs && r.cumulativeElapsedMs + w.reserveMs + remainingSlots * 600000 <= w.capMs && r.historicalCharged === 42 && r.historicalAllocatedBytes === 29970432 && r.priorProbeBytes === 65536 && r.priorMatchBytes === 2568192 && r.sourceAllocatedBytes === a.sourcePrefix.allocatedBytes && r.retainedBytesUpperBound === 29970432 + 65536 + 2568192 + r.sourceAllocatedBytes + r.newAllocatedBytes + 67108864 + 16777216 + 262144 && r.retainedBytesUpperBound <= 12000000000 && r.retainedBytesUpperBound + 2000000000 <= 15000000000 && r.aggregateMemoryUpperBound === r.parentRssBytes + 2 * 268435456 + 512000000 + 335544320 && r.aggregateMemoryUpperBound <= 3000000000 && r.availableDiskBytes >= 2000000000
+}
+export const observeLeanPrivateMatchResourcesV3 = (storePath: string, value: unknown, remainingSlots: number): MatchResourcesV3 => {
+  const a = validateLeanPrivateMatchAllocationV3(value), w = LEAN_PRIVATE_MATCH_WINDOW_V3
+  authenticateMatchAllocationV3(a); authenticateLeanPrivateProbeCostV1()
+  const path = resolve(storePath); matchDirectory(path)
+  if (path !== resolve(".strategy-lab/lean-private-matches-v3", a.root.slice(7))) return privateMatchFail()
+  let newAllocatedBytes = lstatSync(path).blocks * 512
+  const names = readdirSync(path)
+  if (names.length > 8 || names.some(name => !/^(?:allocation\.json|entry\.json|ledger\.ndjson|result\.json|(?:pair|debit|terminal)-0\.json|replay-0\.ndjson)$/u.test(name))) return privateMatchFail()
+  for (const name of names) { const stat = lstatSync(resolve(path, name)); if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600 || stat.size > (name === "replay-0.ndjson" ? 67108864 : name === "terminal-0.json" ? 16777216 : 65536)) return privateMatchFail(); newAllocatedBytes += stat.blocks * 512 }
+  const wallAtMs = Date.now(), parentRssBytes = Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024), disk = statfsSync(path)
+  const resources: MatchResourcesV3 = { windowRoot: w.root, allocationRoot: a.root, wallAtMs, cumulativeElapsedMs: w.carryMs + wallAtMs - w.anchorMs, remainingSlots, historicalCharged: 42, historicalAllocatedBytes: 29970432, priorProbeBytes: 65536, priorMatchBytes: 2568192, sourceAllocatedBytes: a.sourcePrefix.allocatedBytes, newAllocatedBytes, retainedBytesUpperBound: 29970432 + 65536 + 2568192 + a.sourcePrefix.allocatedBytes + newAllocatedBytes + 67108864 + 16777216 + 262144, parentRssBytes, aggregateMemoryUpperBound: parentRssBytes + 2 * 268435456 + 512000000 + 335544320, availableDiskBytes: disk.bavail * disk.bsize }
+  if (!verifyLeanPrivateMatchResourcesV3(a, resources, remainingSlots) || process.memoryUsage().arrayBuffers > 2000000000) return privateMatchFail()
+  return Object.freeze(resources)
+}
+export const observeLeanPrivateMatchCapacityV3 = (storePath: string, a: unknown, remainingSlots: number): LeanPrivateMatchCapacityV3 => {
+  const resources = observeLeanPrivateMatchResourcesV3(storePath, a, remainingSlots), handle = Object.freeze({ schemaVersion: "lean-private-match-capacity-v3" as const, toJSON: privateMatchFail })
+  matchCapacitiesV3.set(handle, { path: resolve(storePath), at: performance.now(), allocationRoot: resources.allocationRoot, resources }); return handle
+}
+const consumeMatchCapacityV3 = (handle: LeanPrivateMatchCapacityV3, path: string, a: LeanPrivateMatchAllocationV3) => {
+  const c = matchCapacitiesV3.get(handle); matchCapacitiesV3.delete(handle)
+  if (!c || c.path !== path || c.allocationRoot !== a.root || c.resources.remainingSlots !== 1 || performance.now() - c.at > 30000) return privateMatchFail()
+  observeLeanPrivateMatchResourcesV3(path, a, 1); return c.resources
+}
+export const authenticateLeanPrivateMatchCommitV3 = (a: LeanPrivateMatchAllocationV3, bytes: Buffer, commit: string, path: string): void => {
+  if (path !== LEAN_PRIVATE_MATCH_ARTIFACT_V3 || !/^[a-f0-9]{40}$/u.test(commit)) return privateMatchFail()
+  const parents = readLeanPrivateMatchGitV3(["rev-list", "--parents", "-n", "1", commit]).toString("utf8").trim().split(/\s+/u)
+  if (parents.length !== 2 || parents[0] !== commit || parents[1] !== a.sourceHead || readLeanPrivateMatchGitV3(["rev-parse", "HEAD"]).toString("utf8").trim() !== commit || !readLeanPrivateMatchGitV3(["show", `${commit}:${path}`]).equals(bytes) || !readLeanPrivateMatchFileV1(resolve(path), 65536, 0o644).equals(bytes)) return privateMatchFail()
+}
+export const openLeanPrivateMatchAdmissionV3 = (input: { storePath: string; allocationCommit: string; allocationPath: string; capacity: LeanPrivateMatchCapacityV3 }): LeanPrivateMatchAdmissionV3 => {
+  const path = resolve(input.storePath); matchDirectory(path)
+  if (!matchEqual(readdirSync(path), ["allocation.json"])) return privateMatchFail()
+  const bytes = readLeanPrivateMatchFileV1(resolve(path, "allocation.json")), a = validateLeanPrivateMatchAllocationV3(JSON.parse(bytes.toString("utf8")))
+  if (path !== resolve(".strategy-lab/lean-private-matches-v3", a.root.slice(7)) || !bytes.equals(canonicalPrivateProbe(a))) return privateMatchFail()
+  authenticateLeanPrivateMatchCommitV3(a, bytes, input.allocationCommit, input.allocationPath)
+  const resources = consumeMatchCapacityV3(input.capacity, path, a)
+  const body = { schemaVersion: "lean-private-match-entry-v3", allocationRoot: a.root, allocationDigest: leanBytesRoot(bytes), allocationCommit: input.allocationCommit, sourceHead: a.sourceHead, resources }
+  writeLeanPrivateMatchFileV1(resolve(path, "entry.json"), canonicalPrivateProbe({ ...body, root: labRoot(body.schemaVersion, body) })); writeLeanPrivateMatchFileV1(resolve(path, "ledger.ndjson"), Buffer.alloc(0))
+  const handle = Object.freeze({ schemaVersion: "lean-private-match-admission-v3" as const, toJSON: privateMatchFail })
+  matchAdmissionsV3.set(handle, { allocation: a, storePath: path, allocationCommit: input.allocationCommit, journal: Buffer.alloc(0), nextOrdinal: 0, stopped: false, active: false }); return handle
+}
+export const readLeanPrivateMatchContextV3 = (admission: LeanPrivateMatchAdmissionV3, debit: LeanPrivateMatchDebitV3) => {
+  const a = matchAdmissionsV3.get(admission), d = matchDebitsV3.get(debit)
+  if (!a || !d || d.admission !== a || a.stopped || !a.active || a.nextOrdinal !== 1 || d.slot.ordinal !== 0) return privateMatchFail()
+  return Object.freeze({ allocation: a.allocation, slot: d.slot, debitRoot: d.root, storePath: a.storePath })
+}
+export const recordLeanPrivateMatchDebitV3 = (admission: LeanPrivateMatchAdmissionV3, ordinal: 0, capacity: LeanPrivateMatchCapacityV3): LeanPrivateMatchDebitV3 => {
+  const a = matchAdmissionsV3.get(admission)
+  if (!a || a.stopped || a.active || a.nextOrdinal !== 0 || ordinal !== 0) return privateMatchFail()
+  const resources = consumeMatchCapacityV3(capacity, a.storePath, a.allocation)
+  authenticateLeanPrivateMatchCommitV3(a.allocation, canonicalPrivateProbe(a.allocation), a.allocationCommit, LEAN_PRIVATE_MATCH_ARTIFACT_V3)
+  if (!readLeanPrivateMatchFileV1(resolve(a.storePath, "ledger.ndjson")).equals(a.journal)) { a.stopped = true; return privateMatchFail() }
+  const slot = a.allocation.slots[0], prefix = { priorLedgerBytesRoot: leanBytesRoot(a.journal), priorLedgerByteLength: 0 }
+  const pb = { schemaVersion: "lean-private-match-pair-v3", allocationRoot: a.allocation.root, slotRoot: slot.root, ordinal: 0, requestRoot: slot.requestRoot, sources: a.allocation.sources, ...prefix }, pair = { ...pb, root: labRoot(pb.schemaVersion, pb) }
+  const body = { schemaVersion: "lean-private-match-debit-v3", allocationRoot: a.allocation.root, slotRoot: slot.root, ordinal: 0, requestRoot: slot.requestRoot, pairRoot: pair.root, cumulativeCharged: 43, ...prefix, resources }, row = { ...body, root: labRoot(body.schemaVersion, body) }, bytes = Buffer.concat([canonicalPrivateProbe(row), Buffer.from("\n")])
+  a.active = true; a.nextOrdinal = 1
+  try {
+    writeLeanPrivateMatchFileV1(resolve(a.storePath, "pair-0.json"), canonicalPrivateProbe(pair)); writeLeanPrivateMatchFileV1(resolve(a.storePath, "debit-0.json"), canonicalPrivateProbe(row))
+    const fd = openSync(resolve(a.storePath, "ledger.ndjson"), constants.O_WRONLY | constants.O_APPEND | constants.O_NOFOLLOW)
+    try { const stat = fstatSync(fd); if (stat.size !== 0 || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600) return privateMatchFail(); let n = 0; while (n < bytes.length) { const written = writeSync(fd, bytes, n, bytes.length - n); if (written <= 0) return privateMatchFail(); n += written }; fsyncSync(fd) } finally { closeSync(fd) }
+    const parent = openSync(a.storePath, constants.O_RDONLY | constants.O_NOFOLLOW); try { fsyncSync(parent) } finally { closeSync(parent) }
+    a.journal = bytes; if (!readLeanPrivateMatchFileV1(resolve(a.storePath, "ledger.ndjson")).equals(bytes)) return privateMatchFail()
+  } catch { a.stopped = true; return privateMatchFail() }
+  const handle = Object.freeze({ schemaVersion: "lean-private-match-debit-handle-v3" as const, toJSON: privateMatchFail }); matchDebitsV3.set(handle, { admission: a, slot, root: row.root, row, seats: new Set() }); return handle
+}
+export const checkpointLeanPrivateMatchV3 = (admission: LeanPrivateMatchAdmissionV3, debit: LeanPrivateMatchDebitV3, additionalBytes = 0): void => {
+  const c = readLeanPrivateMatchContextV3(admission, debit), now = Date.now(), w = LEAN_PRIVATE_MATCH_WINDOW_V3
+  if (!Number.isSafeInteger(additionalBytes) || additionalBytes < 0 || additionalBytes > 2000000000 || now < w.anchorMs || now + w.reserveMs > w.deadlineMs) return privateMatchFail()
+  const disk = statfsSync(c.storePath), rss = Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024)
+  if (rss + 2 * 268435456 + 512000000 + 335544320 + additionalBytes > 3000000000 || process.memoryUsage().arrayBuffers + additionalBytes > 2000000000 || disk.bavail * disk.bsize < 2000000000 + additionalBytes) return privateMatchFail()
+}
+export const issueLeanPrivateMatchRuntimeAuthorityV3 = (admission: LeanPrivateMatchAdmissionV3, debit: LeanPrivateMatchDebitV3, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding): LeanRuntimeAuthority => issuePrivateMatchSeat(readLeanPrivateMatchContextV3(admission, debit), matchDebitsV3.get(debit)!, snapshot, binding)
+export const closeLeanPrivateMatchDebitV3 = (admission: LeanPrivateMatchAdmissionV3, debit: LeanPrivateMatchDebitV3): boolean => {
+  const c = readLeanPrivateMatchContextV3(admission, debit), d = matchDebitsV3.get(debit)!, a = d.admission
+  a.active = false; a.stopped = true
+  const t = JSON.parse(readLeanPrivateMatchFileV1(resolve(c.storePath, "terminal-0.json"), 16777216).toString("utf8")) as Record<string, any>, { root, ...body } = t
+  return t.schemaVersion === "lean-private-match-terminal-v3" && root === labRoot(t.schemaVersion, body) && t.allocationRoot === a.allocation.root && t.debitRoot === d.root && t.slotRoot === d.slot.root && d.seats.size === 2 && t.evidence?.classification === "success" && t.evidence.cleanupComplete === true && t.evidence.boardEvidenceAvailable === true && t.evidence.fullChronicleVerified === false && matchRoot(t.evidence.lastFrameRoot) && t.evidence.outcome !== null
 }
