@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Approved two-Match route closed after one supervisor failure; diagnosis closed; fresh diagnostic route authority needed
-last_updated: "2026-10-10"
-last_activity: 2026-10-10
-last_activity_desc: Human approved at most two private Matches and verification, no more standalone probes
+stopped_at: Fresh one-Match diagnostic approved, but previous work window expired; new prospective time allowance needed
+last_updated: "2026-10-11"
+last_activity: 2026-10-11
+last_activity_desc: Human approved fresh diagnostic game within remaining time; actual check found no remaining approved time
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION — ROUTE CONSENT / EXPIRED TIME WINDOW (ROOT2026-10-11T13:40:51UTC;09:40:51America/New_York). Human `yes, approved` accepts the preceding missing-error-capture/fresh-one-private-game proposal explicitly limited to remaining approved time. Actual inspection finds original hardstop2026-10-11T00:06:36UTC (2026-10-10 20:06:36America/New_York) already elapsed; this consent does NOT re-anchor or extend it. No source repair/tests/metadata/prepare/allocation/entry/probe/provider/Strategy/Match/reader started; tracked checkout clean, no matching active entry/test/reader process. Existing failed route/41 cumulative charges/evidence/verification remain immutable, no retry/refund/slot reuse. Only missing human resource decision is a new prospective work-time allowance sufficient for narrow finite error capture, checked source gates, one fresh game and31-minute verification reserve; propose90minutes with15GB and all other bounds unchanged. No repeat route literal required. Administrative checkpoint only; do not revive old time constants or claim empirical/LEAG/phase/freeze progress. Earlier checkpoints history.
 
 CURRENT CONTINUATION — TWO-MATCH ROUTE CLOSED / FEASIBILITY NOT ESTABLISHED (ROOT2026-10-10T23:04:19UTC). Exact allocation85d39582/root72badb26/sourceHeada0a70ca5; unique ROOTentry97941 closedexit0/result2bd0e8ba, ONE charged ordinal0 system_failure/SUPERVISOR_FAILURE/20513ms/165calls/cleanuptrue/no outcome or board. Second ordinal NOTstarted; cumulative41Matches. ONE independent actual retained reader closedexit0/verifiedtrue/feasibilityfalse; all eightfiles/allocation/HEADunchanged. Sourcehold released afteractualentry+reader closure, noactive matching process; all agents/gates closed. GSDdiagnosis-only CLOSED: final charged incomplete soldierBrain82 caused bridge genericfailure/transitiondiscard; initiatingnative/sessioncauseUNKNOWN. Existing finite diagnostic is omitted by compactschema; no speculativefix/limitincrease. CLEANUP_STOP code preserved; actual cleanuptrue not reinterpreted asfailure. Reports TWO-MATCH-SUMMARY/RETAINED-VERIFICATION/FAILURE-DIAGNOSIS-v1. Actualsurviving currentroute~360KB includingcanonical; conservative retained31948800B, historicalpeaksunknown, oldprobehashesunchanged. Currentelapsed3463000/cumulative325517903 versuscap329254903 atobservation; laterclosure/waitcounts, hardstop00:06:36UTC unchanged. This singleuseroute and unusedslot are closed/immutable, no retry/refund/reuse/newexecution. Ordinary source-only diagnostic repair needs no newproductdecision, but a DISTINCT fresh one-Match diagnostic route (existing finitefailurecapture, allotherboundsunchanged) needs prospective authority; extra time also needsapproval if existingwindow cannotfitgates+runtime+31minreserve. No repeatliteral/frameworkrequested. AllLEAG/fullbaseline/fullChronicle/Phase265/freeze/formation/holdout/public/counting/production/milestonecredit remainpending. Earlier checkpointshistory.
 
