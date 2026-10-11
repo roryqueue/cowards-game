@@ -356,9 +356,11 @@ export const claimLeanRuntimeAuthority = (authority: LeanRuntimeAuthority, bindi
   state.claims.add(layer); return { lifetimeMs: 600000, receiptMs: 5000, ...(state.startup === undefined ? {} : { startup: state.startup }) }
 }
 /** Distinct claim path: no legacy caller can dispatch V8 between units. */
+const privateMatchConstructionGuardsV3 = new WeakMap<object, () => void>()
 export const claimLeanStartupAuthorityV8 = (authority: LeanRuntimeAuthority, binding: Omit<ProspectiveLeagueLifetimeProviderBinding, "seat"> & { seat?: "bottom" | "top" }, layer: Layer): { lifetimeMs: 600000; receiptMs: 5000; startup: Readonly<LeanStartupGrantV8> } => {
   const state = authority && issued.get(authority)
   if (!state?.startupV8 || authority.schemaVersion !== "lean-runtime-authority-v1" || !["factory", "planner", "session"].includes(layer) || state.claims.has(layer) || layer === "planner" && !state.claims.has("factory") || layer === "session" && !state.claims.has("planner") || labRoot("lean-runtime-binding-v1", { ...binding, seat: authority.seat }) !== labRoot("lean-runtime-binding-v1", state.binding)) return fail()
+  privateMatchConstructionGuardsV3.get(authority)?.()
   state.claims.add(layer)
   return { lifetimeMs: 600000, receiptMs: 5000, startup: state.startupV8 }
 }
@@ -1024,9 +1026,17 @@ export const checkpointLeanPrivateMatchV3 = (admission: LeanPrivateMatchAdmissio
   if (rss + 2 * 268435456 + 512000000 + 335544320 + additionalBytes > 3000000000 || process.memoryUsage().arrayBuffers + additionalBytes > 2000000000 || disk.bavail * disk.bsize < 2000000000 + additionalBytes) return privateMatchFail()
 }
 export const issueLeanPrivateMatchRuntimeAuthorityV3 = (admission: LeanPrivateMatchAdmissionV3, debit: LeanPrivateMatchDebitV3, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding): LeanRuntimeAuthority => {
-  const now = Date.now(), w = LEAN_PRIVATE_MATCH_WINDOW_V3
-  if (now < w.anchorMs || now + w.reserveMs + 600000 > w.deadlineMs) return privateMatchFail()
-  return issuePrivateMatchSeat(readLeanPrivateMatchContextV3(admission, debit), matchDebitsV3.get(debit)!, snapshot, binding)
+  const guard = (): void => {
+    readLeanPrivateMatchContextV3(admission, debit)
+    const now = Date.now(), w = LEAN_PRIVATE_MATCH_WINDOW_V3
+    if (now < w.anchorMs || now + w.reserveMs + 600000 > w.deadlineMs) return privateMatchFail()
+  }
+  guard()
+  const authority = issuePrivateMatchSeat(readLeanPrivateMatchContextV3(admission, debit), matchDebitsV3.get(debit)!, snapshot, binding)
+  // Authentication/compilation can cross the frontier. Never refund a minted seat.
+  guard()
+  privateMatchConstructionGuardsV3.set(authority, guard)
+  return authority
 }
 export const closeLeanPrivateMatchDebitV3 = (admission: LeanPrivateMatchAdmissionV3, debit: LeanPrivateMatchDebitV3): boolean => {
   const c = readLeanPrivateMatchContextV3(admission, debit), d = matchDebitsV3.get(debit)!, a = d.admission
