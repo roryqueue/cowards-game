@@ -1,4 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
+it("one-Match v2 exposes only explicit versioned route commands", () => {
+  expect(route.parseLeanPrivateMatchesArgsV2(["metadata-v2", "--source-store", authority.LEAN_PRIVATE_MATCH_SOURCE_STORE_V1])).toEqual({ command: "metadata", sourceStore: authority.LEAN_PRIVATE_MATCH_SOURCE_STORE_V1 })
+  expect(() => route.parseLeanPrivateMatchesArgsV1(["metadata-v2", "--source-store", authority.LEAN_PRIVATE_MATCH_SOURCE_STORE_V1])).toThrow()
+  expect(route.produceLeanPrivateMatchEvidenceV2).toBeTypeOf("function")
+  expect(route.verifyLeanPrivateMatchesStoreV2).toBeTypeOf("function")
+})
 import * as route from "./run-v1-38-lean-private-matches.js"
 import { mkdtempSync, readFileSync, writeFileSync, readdirSync, rmSync, realpathSync } from "node:fs"
 import { tmpdir } from "node:os"
