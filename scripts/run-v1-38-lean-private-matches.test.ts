@@ -76,10 +76,40 @@ it.each([true, false] as const)("dormant startup receipt connects actual compose
     expect(() => run(projected, { binding: { ...binding, providerIdentities: [] } })).toThrow()
     expect(() => run(projected, { trustedRequest: { ...request, input: {} } })).toThrow()
     expect(() => run(projected, { trustedRequest: { ...request, source: "SUBSTITUTION" } })).toThrow()
+    expect(() => run(projected, { trustedRequest: undefined })).toThrow()
+    expect(() => run(projected, { trustedRequest: { ...request, outputByteLimit: 1 } })).toThrow()
+    expect(() => run(projected, { trustedRequest: { ...request, methodName: "soldierBrain" } })).toThrow()
+    expect(() => run(projected, { trustedRequest: { ...request, requestOrdinal: 2 } })).toThrow()
+    expect(() => run(projected, { trustedRequest: { ...request, extra: r(99) } })).toThrow()
+    expect(() => run(projected, { accounting: [] })).toThrow()
+    expect(() => run(projected, { binding: { ...binding, debitRoot: r(99) } })).toThrow()
+    expect(() => run(projected, { binding: { ...binding, providerIdentities: [providerIdentities[0], providerIdentities[0]] } })).toThrow()
+    expect(() => run({ ...projected, origin: { ...projected.origin, sourceRoot: providerIdentities[1]!.sourceRoot, seat: "top" }, invocationBinding: { ...projected.invocationBinding, sourceRoot: providerIdentities[1]!.sourceRoot, seat: "top" }, identity: providerIdentities[1] })).toThrow()
     const otherTransport = composer.leanCorrectionInvocationTransportBinding({ ...request, outputByteLimit: 1 }, "v8")
     expect(() => run({ ...projected, origin: { ...projected.origin, requestRoot: otherTransport.requestRoot }, invocationBinding: { ...projected.invocationBinding, requestRoot: otherTransport.requestRoot, payloadRoot: otherTransport.payloadRoot } })).toThrow()
+    const substituteRequest = { ...request, input: { different: "PRIVATE_SENTINEL" } }, substitute = composer.leanCorrectionInvocationTransportBinding(substituteRequest, "v8")
+    expect(() => run({ ...projected, origin: { ...projected.origin, inputRoot: substitute.inputRoot, requestRoot: substitute.requestRoot }, invocationBinding: { ...projected.invocationBinding, inputRoot: substitute.inputRoot, requestRoot: substitute.requestRoot, payloadRoot: substitute.payloadRoot } }, { trustedRequest: substituteRequest })).toThrow()
+    for (const [identityKey, originKey] of [["sourceRoot", "sourceRoot"], ["executableRoot", "executableRoot"], ["budgetRoot", "allocationRoot"], ["attemptRoot", "chargeRoot"], ["harnessRoot", "harnessRoot"]]) expect(() => run({ ...projected, identity: { ...projected.identity, [identityKey!]: r(99) }, origin: { ...projected.origin, [originKey!]: r(99) }, invocationBinding: { ...projected.invocationBinding, ...(identityKey === "sourceRoot" || identityKey === "executableRoot" ? { [identityKey]: r(99) } : {}) } })).toThrow()
     expect(() => run({ ...projected, identity: { ...projected.identity, image: "é".repeat(4096) } })).toThrow()
     expect(() => run({ ...projected, origin: { ...projected.origin, constructorDurationBucket: "unknown-private-text" } })).toThrow()
+    for (const mutation of [{ schemaVersion: "wrong" }, { requestOrdinal: Number.POSITIVE_INFINITY }, { extra: "PRIVATE_SENTINEL" }, { ready: "false" }, { seat: "top" }, { stage: "unknown" }, { branch: "unknown" }, { wait: "unknown" }, { termination: "arbitrary" }, { prefixMilestone: "arbitrary" }, { finalAtomicState: "arbitrary" }, { lifecycleBeforeTermination: "arbitrary" }, { deadlineOutcome: "arbitrary" }]) expect(() => run({ ...projected, origin: { ...projected.origin, ...mutation } })).toThrow()
+    for (const mutation of [{ revisionId: "" }, { nativeLane: { ...projected.identity.nativeLane, translation: "yes" } }, { extra: "PRIVATE_SENTINEL" }, { sourceRoot: "bad-root" }, { executableRoot: null }, { revisionId: "é".repeat(65) }]) expect(() => run({ ...projected, identity: { ...projected.identity, ...mutation } })).toThrow()
+    // Prove UTF8 sizing itself, not merely identity rejection: oversized
+    // multibyte values must refuse before allocation/identity validation,
+    // while exactly4096bytes reach the subsequent independent identity gate.
+    const base = { ...projected, identity: { ...projected.identity, image: "" } }, spare = 4096 - Buffer.byteLength(JSON.stringify(base))
+    const boundaryImage = "é".repeat(Math.floor(spare / 2)) + "a".repeat(spare % 2)
+    const boundary = { ...projected, identity: { ...projected.identity, image: boundaryImage } }
+    expect(Buffer.byteLength(JSON.stringify(boundary))).toBe(4096)
+    expect(JSON.stringify(boundary).length).toBeLessThan(4096)
+    const allocationValidation = vi.spyOn(authority, "validateLeanPrivateMatchAllocationV2")
+    try {
+      expect(() => run(boundary)).toThrow(); expect(allocationValidation).toHaveBeenCalledOnce()
+      allocationValidation.mockClear()
+      const oversized = { ...boundary, identity: { ...boundary.identity, image: boundaryImage + "é" } }
+      expect(JSON.stringify(oversized).length).toBeLessThan(4096)
+      expect(() => run(oversized)).toThrow(); expect(allocationValidation).not.toHaveBeenCalled()
+    } finally { allocationValidation.mockRestore() }
   } finally { for (const mock of mocks) mock.mockRestore() }
 })
 const pathFixture = vi.hoisted(() => ({ store: "" }))

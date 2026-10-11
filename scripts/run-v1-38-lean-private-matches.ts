@@ -16,6 +16,8 @@ import { buildStrategyRevision } from "../packages/runtime-js/src/revision.js"
 import { readLeanBaselineSource } from "./lib/v1-38-lean-baseline-source.js"
 import { runLeanPrivateFeasibilityMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { runLeanPrivateFeasibilityMatchV2, readLeanPrivateMatchDiagnosticV2 } from "./lib/v1-38-lean-baseline-match.js"
+import { readLeanPrivateStartupReceiptV1, bindLeanCorrectionInvocation, leanCorrectionInvocationTransportBinding } from "./lib/v1-38-lean-baseline-match.js"
+import { validateLeanStartupOriginV8, type LeanStartupOriginV8 } from "./lib/v1-38-lean-container-match-session.js"
 import { SUBPROCESS_SYSTEM_FAILURE_CODES } from "../packages/runtime-js/src/subprocess-ipc.js"
 import { isLeanPrivateFailureOrigin, readLeanPrivateMatchGitV2 } from "./lib/v1-38-lean-container-match-session.js"
 import * as v2Authority from "./lib/v1-38-lean-experiment-authority.js"
@@ -391,6 +393,57 @@ export const verifyLeanPrivateMatchTerminalV1 = (input: Parameters<typeof verify
   return verifyLeanPrivateMatchTerminalShared(input)
 }
 const diagnosticKeysV2 = ["schemaVersion", "availability", "originAvailability", "stage", "reason", "code", "identity", "invocationRoot", "requestId", "inputRoot", "method", "ordinal"]
+const startupReceiptKeysV1 = ["schemaVersion", "availability", "identity", "origin", "invocationBinding"]
+const startupInvocationKeysV1 = ["schemaVersion", "method", "requestOrdinal", "requestRoot", "payloadRoot", "inputRoot", "executableRoot", "sourceRoot", "seat", "requestId", "ordinal", "invocationRoot"]
+/** Transient private request material only: never serialized, retained, or
+ * accepted as an origin/root assertion. Existing transport encoding recomputes
+ * commitments which must independently join admitted source and failed rows. */
+type PrivateStartupRequestV1 = Parameters<typeof leanCorrectionInvocationTransportBinding>[0]
+type PrivateStartupValidationV1 = { binding: EvidenceBinding; accounting: LabMatchExecution["accounting"]; trustedRequest?: PrivateStartupRequestV1 }
+const unavailableStartupReceiptV1 = () => ({ schemaVersion: "lean-private-startup-receipt-v1" as const, availability: "unavailable" as const, identity: null, origin: null, invocationBinding: null })
+const projectStartupOriginV1 = (o: LeanStartupOriginV8) => ({ schemaVersion: o.schemaVersion, allocationRoot: o.allocationRoot, chargeRoot: o.chargeRoot, seat: o.seat, policyRoot: o.policyRoot, harnessRoot: o.harnessRoot, requestOrdinal: o.requestOrdinal, requestRoot: o.requestRoot, method: o.method, inputRoot: o.inputRoot, sourceRoot: o.sourceRoot, executableRoot: o.executableRoot, stage: o.stage, branch: o.branch, ready: o.ready, go: o.go, wait: o.wait, termination: o.termination, unknown: o.unknown, constructorDurationBucket: o.constructorDurationBucket, prefixMilestone: o.prefixMilestone, readyPublicationDurationBucket: o.readyPublicationDurationBucket, finalAtomicState: o.finalAtomicState, lifecycleBeforeTermination: o.lifecycleBeforeTermination, deadlineOutcome: o.deadlineOutcome })
+/** Dormant finite validator. No CLI/persistence/reader dispatch calls this API. */
+export const verifyLeanPrivateStartupReceiptV1 = (input: PrivateStartupValidationV1 & { value: unknown }): Readonly<{ verified: true }> => {
+  const { binding, accounting, value } = input
+  if (binding.allocation.schemaVersion !== "lean-private-match-allocation-v2" || binding.ordinal !== 0 || !exactLabKeys(value, startupReceiptKeysV1) || canonical(value).byteLength > 4096 || !Array.isArray(accounting)) return fail()
+  v2Authority.validateLeanPrivateMatchAllocationV2(binding.allocation)
+  if (binding.providerIdentities.length !== binding.allocation.sources.length || new Set(binding.providerIdentities.map(p => p.sourceRoot)).size !== binding.allocation.sources.length) return fail()
+  for (const identity of binding.providerIdentities) checkIdentity(identity, binding)
+  const rows = accounting.map(e => ({ identity: projectIdentity(e.identity), invocationRoot: e.invocationRoot, requestId: e.requestId, method: e.method, inputRoot: e.inputRoot, ordinal: e.ordinal, charged: e.charged, completed: e.completed, outputBytes: e.outputBytes, classification: e.result.ok ? "success" : "systemFailure" in e.result ? "system_failure" : "player_violation" }))
+  checkAccounting(rows, binding, false)
+  const v = value as Record<string, any>
+  if (v.schemaVersion !== "lean-private-startup-receipt-v1" || !["available", "unavailable"].includes(v.availability)) return fail()
+  if (v.availability === "unavailable") { if (!equal(v, unavailableStartupReceiptV1())) return fail(); return { verified: true } }
+  if (!v.identity || !v.origin || !exactLabKeys(v.invocationBinding, startupInvocationKeysV1)) return fail()
+  const failed = accounting.filter(e => e.charged && !e.result.ok && "systemFailure" in e.result)
+  if (failed.length !== 1) return fail()
+  const e = failed[0]!, b = v.invocationBinding
+  if (e.result.ok || !("systemFailure" in e.result) || !(SUBPROCESS_SYSTEM_FAILURE_CODES as readonly string[]).includes(e.result.systemFailure.code) || b.schemaVersion !== "v1.38-lean-correction-invocation-binding-v8" || !integer(b.ordinal, 24799) || !integer(b.requestOrdinal, 24800) || b.requestOrdinal !== b.ordinal + 1 || !["bottom", "top"].includes(b.seat)) return fail()
+  checkIdentity(v.identity, binding)
+  for (const key of ["identity", "invocationRoot", "requestId", "inputRoot", "method", "ordinal"]) if (!equal(key === "identity" ? v.identity : b[key], key === "identity" ? projectIdentity(e.identity) : e[key as keyof typeof e])) return fail()
+  for (const key of ["sourceRoot", "executableRoot"]) if (b[key] !== v.identity[key]) return fail()
+  const slot = binding.allocation.slots[0], seatRole = b.seat === "bottom" ? slot.bottomRole : slot.topRole
+  if (!binding.allocation.sources.some(s => s.role === seatRole && s.sourceRoot === v.identity.sourceRoot && s.executableRoot === v.identity.executableRoot)) return fail()
+  const q = input.trustedRequest
+  if (!q || !exactLabKeys(q, ["source", "methodName", "input", "outputByteLimit", "requestOrdinal"]) || typeof q.source !== "string" || q.outputByteLimit !== 262144 || q.methodName !== e.method || q.requestOrdinal !== e.ordinal + 1) return fail()
+  const transport = leanCorrectionInvocationTransportBinding(q, "v8")
+  if (transport.executableRoot !== v.identity.executableRoot || transport.inputRoot !== e.inputRoot || transport.requestRoot !== b.requestRoot || transport.payloadRoot !== b.payloadRoot) return fail()
+  const origin = validateLeanStartupOriginV8(v.origin, { allocationRoot: binding.allocation.root, chargeRoot: binding.debitRoot, seat: b.seat, policyRoot: LEAN_STARTUP_POLICY_V5.root, harnessRoot: binding.allocation.harnessRoot, requestOrdinal: transport.requestOrdinal, requestRoot: transport.requestRoot as LabRoot, method: transport.method, inputRoot: transport.inputRoot, sourceRoot: e.identity.sourceRoot, executableRoot: transport.executableRoot })
+  // Independent binding reconstruction uses trusted accounting fields, not
+  // the old generic diagnostic or caller assertions of issued provenance.
+  const diagnostic = { stage: "executor", reason: "unknown", identity: e.identity, invocationRoot: e.invocationRoot, requestId: e.requestId, inputRoot: e.inputRoot, method: e.method, ordinal: e.ordinal } as Parameters<typeof bindLeanCorrectionInvocation>[3]
+  if (!equal(bindLeanCorrectionInvocation(origin, transport, e, diagnostic, b.seat), b)) return fail()
+  return { verified: true }
+}
+/** Genuine composer return is the only provenance key; no receipt override. */
+export const produceLeanPrivateStartupReceiptV1 = (input: { binding: EvidenceBinding; result: Awaited<ReturnType<typeof runLeanPrivateFeasibilityMatchV2>>; trustedRequest?: PrivateStartupRequestV1 }) => {
+  const receipt = readLeanPrivateStartupReceiptV1(input.result)
+  if (!receipt || !input.result.privateActual || !input.result.privateProviderIdentities || !equal(input.result.privateProviderIdentities, input.binding.providerIdentities)) return fail()
+  const b = receipt.invocationBinding
+  const value = receipt.availability === "available" && b ? { schemaVersion: "lean-private-startup-receipt-v1" as const, availability: "available" as const, identity: projectIdentity(receipt.identity), origin: projectStartupOriginV1(receipt.origin), invocationBinding: { schemaVersion: b.schemaVersion, method: b.method, requestOrdinal: b.requestOrdinal, requestRoot: b.requestRoot, payloadRoot: b.payloadRoot, inputRoot: b.inputRoot, executableRoot: b.executableRoot, sourceRoot: b.sourceRoot, seat: b.seat, requestId: b.requestId, ordinal: b.ordinal, invocationRoot: b.invocationRoot } } : unavailableStartupReceiptV1()
+  verifyLeanPrivateStartupReceiptV1({ value, binding: input.binding, accounting: input.result.privateActual.accounting, ...(input.trustedRequest ? { trustedRequest: input.trustedRequest } : {}) })
+  return value
+}
 const unavailableDiagnosticV2 = () => ({ schemaVersion: "lean-private-match-diagnostic-v2", availability: "unavailable", originAvailability: "unavailable", stage: "unknown", reason: "unknown", code: "UNKNOWN", identity: null, invocationRoot: null, requestId: null, inputRoot: null, method: null, ordinal: null })
 const projectDiagnosticV2 = (returned: object | undefined) => {
   const d = returned && readLeanPrivateMatchDiagnosticV2(returned)
