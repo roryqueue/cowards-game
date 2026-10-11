@@ -36,6 +36,7 @@ describe("own V3 genuine authority", () => {
       if (version === 3) { expect(() => authority.readLeanPrivateMatchContextV1(admission as never, debit as never)).toThrow(); expect(() => authority.readLeanPrivateMatchContextV3({ ...admission } as never, debit as never)).toThrow() }
       expect(JSON.parse(readFileSync(join(store, "debit-0.json"), "utf8")).cumulativeCharged).toBe(Number(version) === 1 ? 41 : 43)
       expect(readFileSync(join(store, "ledger.ndjson"), "utf8").trim().split("\n")).toHaveLength(1)
+      let closedClaim: (() => unknown) | undefined
       for (const [n, seat] of (["bottom", "top"] as const).entries()) {
         const snapshot = snapshots[n]!, defaults = defaultRuntimeMetadata("typescript"), revision = buildStrategyRevision({ source: snapshot.source, runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } }), approved = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet: snapshot.packet, proposal: snapshot.proposal, sourceBytes: Buffer.from(snapshot.source) }), validation: snapshot.validation })
         const runtime = prospectiveLeagueRuntimeBinding(approved, { revisionId: revision.id, sourceRoot: snapshot.sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image }), binding = { seat, runtime, budgetRoot: allocation.root, attemptRoot: context.debitRoot, matchId: `lean-${context.debitRoot.slice(7, 31)}`, containerName: `lean-${context.debitRoot.slice(7, 25)}-${seat}`, ownershipLabel: `lean-${allocation.root.slice(7, 25)}` }
@@ -43,15 +44,31 @@ describe("own V3 genuine authority", () => {
         clock.mockReturnValue(1791750302001)
         expect(issue).toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
         clock.mockReturnValue(1791747362000)
+        if (!cleanupComplete && seat === "top") {
+          const original = sourceModule.validateLeanBaselineSource
+          const advance = vi.spyOn(sourceModule, "validateLeanBaselineSource").mockImplementation(value => { const result = original(value); clock.mockReturnValue(1791750302001); return result })
+          try { expect(issue).toThrow("LEAN_PRIVATE_MATCH_AUTHORITY") } finally { advance.mockRestore() }
+          clock.mockReturnValue(1791747362000)
+          expect(issue).toThrow("LEAN_PRIVATE_MATCH_AUTHORITY") // Minted seat remains spent, not refunded.
+          continue
+        }
         const issued = issue()
         expect(() => authority.claimLeanStartupAuthorityV8(issued, binding, "session")).toThrow()
-        for (const layer of ["factory", "planner", "session"] as const) expect(authority.claimLeanStartupAuthorityV8(issued, binding, layer).startup.version).toBe(8)
-        expect(() => authority.claimLeanStartupAuthorityV8(issued, binding, "session")).toThrow()
+        for (const layer of ["factory", "planner", "session"] as const) {
+          clock.mockReturnValue(1791750302001)
+          expect(() => authority.claimLeanStartupAuthorityV8(issued, binding, layer)).toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
+          clock.mockReturnValue(1791750302000) // Inclusive initial-construction frontier.
+          if (seat === "top" && layer === "session") { closedClaim = () => authority.claimLeanStartupAuthorityV8(issued, binding, layer); continue }
+          expect(authority.claimLeanStartupAuthorityV8(issued, binding, layer).startup.version).toBe(8)
+        }
+        clock.mockReturnValue(1791747362000)
+        if (seat === "bottom") expect(() => authority.claimLeanStartupAuthorityV8(issued, binding, "session")).toThrow()
         expect(issue).toThrow()
       }
       const body = { schemaVersion: `lean-private-match-terminal-v${version}`, allocationRoot: allocation.root, debitRoot: context.debitRoot, slotRoot: allocation.slots[0].root, evidence: { classification: "success", cleanupComplete, boardEvidenceAvailable: true, fullChronicleVerified: false, lastFrameRoot: labRoot("inert-frame", 1), outcome: "DRAW" } }
       writeFileSync(join(store, "terminal-0.json"), leanCanonicalBytes({ ...body, root: labRoot(body.schemaVersion, body) }), { mode: 0o600 })
       expect(Number(version) === 1 ? authority.closeLeanPrivateMatchDebitV1(admission as never, debit as never) : authority.closeLeanPrivateMatchDebitV3(admission as never, debit as never)).toBe(cleanupComplete)
+      if (closedClaim) expect(closedClaim).toThrow("LEAN_PRIVATE_MATCH_AUTHORITY")
       if (version === 3) { expect(() => authority.recordLeanPrivateMatchDebitV3(admission as never, 0, capacity as never)).toThrow(); expect(() => authority.readLeanPrivateMatchContextV3(admission as never, debit as never)).toThrow(); return }
       if (admission.schemaVersion !== "lean-private-match-admission-v1") throw new Error("FIXTURE_VERSION")
       const nextCapacity = authority.observeLeanPrivateMatchCapacityV1(virtualStore, allocation, 1)
