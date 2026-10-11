@@ -1,0 +1,13 @@
+# Fresh retrospective saved-evidence check v2
+
+Independent generic read-only local Codex owner88712 CLOSED exit0; its ONE in-memory IPC-free checking command CLOSEDexit2. Verdict: gaps_found, not a fully passing ordinary V3 reader. This new human-approved retrospective role did not retry role28308, execute the expired verify-v3 route, override the clock or renew game/budget authority. Protocol review: compatible with the approved non-authorizing scope.
+
+Inspection:2026-10-11T22:33:26.133Z→22:33:53.337Z, truthfully outside the expired21:06:02 execution window. It used `env TSX_DISABLE_CACHE=1 NODE_DISABLE_COMPILE_CACHE=1 node --import tsx --input-type=module -e` with unchanged exported validators, no writes or CLI main dispatch.
+
+Passed checks: allocation/commit/source snapshots/historical carry; canonical bytes, roots, exact schemas, secure eight-file inventory/permissions; entry/debit/pair/ledger/result joins; recorded resource predicates and timestamp order; exported terminal/provider/accounting/finite receipt/complete compact board-chain validation; inert import; scripts/packages unchanged. The current-worktree source-prefix inspection failed; the role did not establish the cause and correctly reported this gap.
+
+Actual validated game facts: success/OK/top winner/cleanupComplete=true,111348ms,449 invocations,1325 compact frames,43 cumulative charges. No failed invocation means the exact unavailable/null diagnostic and receipt are legitimate. Recorded entry20:19:53.236Z, debit20:20:01.255Z, terminal20:21:52.715Z satisfy the original frozen execution/resource predicates. FullChronicleVerified=false and requestPreimageRecomputed=false; no raw-request reconstruction or broader league/phase credit.
+
+Before/after unchanged: HEAD/allocationCommit b1eb00c3084131e529bcd713afa54d310af34454; sourceHead ef0e6641cfed6f10009a0b3b8a2291cf583dcdfc; canonical allocation and all eight private files. AllocationRootfee2386bf2d9d53e6b15c3081d9a35f224c7fc39dcb4675f6f79554fb763d566/resultRoot0de6562142822001c0f85df91d06605f6fce3f88cc87d5584d7691d618c043f6. All raw anchors equal the retained v1 table; allocation264b06924e087cdcdc4ca580a81e0b2473ec63e4a28cdcf3497b045c8f823948/result4cd7de06fc10abaecb668e6252dd2cef95e097a6d259b3b95adae879299cbbd7/terminalca88dfa3dc5cfc759081b2bb3f53dde87d01cc0dfc9be486ce594cbf314d66d3.
+
+commands_closed=true. No edits, tests, provider, Strategy, Match, admission, preparation or new allocation. No fully established overall integrity was claimed by this role because of the current-worktree prefix gap. ROOT's separate source-only post-terminal diagnosis below is a subsequent finding, not a retry or alteration of this verdict. Generic fallback is explicitly not typed GSD dispatch.
