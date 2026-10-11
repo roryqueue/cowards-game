@@ -39,6 +39,22 @@ export const readLeanPrivateMatchGitV1 = (args: readonly string[]): Buffer => {
   return execFileSync("git", [...args], { stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: maximum })
 }
 import { Worker } from "node:worker_threads"
+/** Explicit new route: old V1/probe command predicates are not widened. */
+export const readLeanPrivateMatchGitV2 = (args: readonly string[]): Buffer => {
+  const commit = /^[a-f0-9]{40}$/u
+  const owned = ["scripts/run-v1-38-lean-private-matches.ts", "scripts/run-v1-38-lean-private-matches.test.ts", "scripts/lib/v1-38-lean-experiment-authority.ts", "scripts/lib/v1-38-lean-experiment-authority.test.ts", "scripts/lib/v1-38-lean-baseline-match.ts", "scripts/lib/v1-38-lean-baseline-match.test.ts", "scripts/lib/v1-38-lean-container-match-session.ts"]
+  let maximum: number | undefined
+  if (args.length === 2 && args[0] === "rev-parse" && args[1] === "HEAD") maximum = 128
+  if (args.length === 5 && args.slice(0, 4).join("\0") === ["rev-list", "--parents", "-n", "1"].join("\0") && commit.test(args[4]!)) maximum = 256
+  if (args.length === 4 && args.slice(0, 3).join("\0") === "diff\0--name-only\0dd67460e6628aebff6bc35c253adaa2cdfea284e" && commit.test(args[3]!)) maximum = 32768
+  if (args.length === 11 && args.slice(0, 4).join("\0") === "diff\0--name-only\0HEAD\0--" && args.slice(4).every((p, n) => p === owned[n])) maximum = 4096
+  if (args.length === 2 && args[0] === "show") {
+    const [head, path, extra] = args[1]!.split(":")
+    if (head && commit.test(head) && path && extra === undefined && /^(?:scripts|\.planning)\/[a-zA-Z0-9_./-]{1,240}$/u.test(path) && !path.split("/").some(p => p === ".." || p === "." || !p)) maximum = path === ".planning/artifacts/v1.38-phase-265-private-match-allocation-v2.json" ? 65537 : 4194305
+  }
+  if (maximum === undefined) throw new TypeError("LEAN_PRIVATE_MATCH_GIT_METADATA")
+  return execFileSync("git", [...args], { stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: maximum })
+}
 import { claimProspectiveLeagueHostReceiptAuthority, isProspectiveLeagueHostReceiptFixture, type ProspectiveLeagueHostReceiptAuthority } from "./v1-38-league-host-receipt.js"
 import type { ProspectiveLeagueLifetimeProviderBinding } from "./v1-38-league-prospective-lifetime.js"
 import { assertLeanInfrastructureProfile, LEAN_CLOSEOUT_PROFILE, type LeanInfrastructureProfile } from "./v1-38-lean-infrastructure-profile.js"
