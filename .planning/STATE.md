@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Approved fresh60-minute one-Match window; narrow timing amendment next
+stopped_at: Window source gates closed; ROOT fresh metadata and allocation next
 last_updated: "2026-10-11"
 last_activity: 2026-10-11
 last_activity_desc: One-Match error-capture repair independently verified;52tests pass; no game started before entry cutoff
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION — WINDOW SOURCE GATES CLOSED (ROOT2026-10-11T17:20:32UTC). Functional7f3e6c93, WINDOW-REVIEW-v2clean/distinctWINDOW-SOURCE-VERIFICATION-v2PASS4/4/allcommandsclosed. ROOT16285 CLOSED0/52tests,99141 CLOSED2/exact13inherited/zeroNEW,diff0; unchangedoriginalimplementationproof7/7/project/factory1441zero retained. No sourcegap/globaltypegreen/empiricalcredit. Next ROOTfixedsourcecommit/push thenactualfreshmetadata/oneprepare/directchildallocation beforeuniqueentry andfreshsameprocesscapacity, ONE actualretainedreader afterterminal/actualhead. No newchargeyet. SourceandHEADwillholdfrompreparationthroughactualterminal+uniqueverification; no competingheavywork. Entryby17:32:01/hard18:13:01/old41/allbounds unchanged. Earliercheckpoints history.
+
+ACTIVE DISTINCT WINDOW SOURCE VERIFICATION — /root/verify_265_one_match_diagnostic_source over7f3e6c93 (ROOT2026-10-11T17:18:44UTC). WINDOW-REVIEW-v2 CLOSEDzero; ROOTfinal16285 CLOSED0/52tests/27.66s,99141 CLOSED2/exact13inherited/zeroNEW,diff0. Previousproject/boundaryproof unchangedproduction reused, notduplicated. VerifierownsonlyWINDOW-SOURCE-VERIFICATION-v2; noactualordinaryreader/runtime. ROOTtrackingonlyuntilclosure thenfixedsourcecommit/push/freshmetadata/prepare/directchildallocation/uniqueentry iffullreservebefore17:32:01. No newgamecharge yet;18:13:01hardstop/old41/allbounds unchanged. Earliercheckpoints history.
+
+ACTIVE NARROW WINDOW REVIEW — /root/review_265_one_match_diagnostic, authorreleased7f3e6c93 (ROOT2026-10-11T17:17UTC). Exactly4V2numericfields/2fixturefiles plus WINDOW-SUMMARY-v2, author1402 CLOSED0/44tests/diff0. IndependentreviewownsWINDOW-REVIEW-v2 only; ROOTtrackingonly untilclosure, thenfinalfocused/strict/distinctnarrowverification. Priorerrorcaptureproofunchanged; no actualmetadata/prep/allocation/runtime/Match/reader. Newanchor17:13:01/latestentry17:32:01/hardstop18:13:01/allbounds/old41charges unchanged. Earliercheckpoints history.
 
 CURRENT APPROVED CONTINUATION — SIXTY-MINUTE ONE-MATCH WINDOW (ROOT2026-10-11T17:13:01UTC). Humanyesapproved adopts fresh60minutes/15GB/allotherlimits unchanged. Anchor1791738781000/deadline1791742381000(18:13:01UTC); continuouscarry390839903/cap394439903 includesALLinterveningwalltime/no reset. Same31minreserve+10minMatch yields latestentry17:32:01UTC. Prior13bea518source proof ready; amendonlyunconsumedV2numericwindow/twofixturefiles, independentnarrowreview/ROOTaffectedchecks/distinctsourceverification beforefreshmetadata/prep/directchildallocation/uniqueROOTentry/sameprocesscapacity/ONEactualreader. ExactlyONEgame/zero probes/retries/secondgame. Old41charges/allconsumedbytes/bounds/privacy unchanged; noempiricalholdornewMatch yet. ExistingPlan16supplement APPROVAL-v2, no newplan/workstream. Earliercheckpoints history.
 
