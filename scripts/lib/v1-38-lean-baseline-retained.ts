@@ -9,6 +9,8 @@ import { LEAN_CAPS, LEAN_BASELINE_REQUEST, LEAN_BASELINE_STORE, LEAN_EXTERNAL_SC
 import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
 import { leanColdProcedureRoot, leanBaselineMetricCoverage, compactLeanBaselineCell, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
 import { LEAN_BASELINE_REQUIRED_METRICS } from "./v1-38-lean-baseline-metrics.js"
+import { LEAN_CONTINUATION_EXECUTOR_REASONS } from "./v1-38-lean-container-match-session.js"
+import type { LeanContinuationExecutorDiagnostic } from "./v1-38-lean-baseline-match.js"
 import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { inspectLeanSealMetadata } from "./v1-38-lean-seal-metadata.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
@@ -235,6 +237,15 @@ export const auditLeanCurrentBaselineRetained = (s: LeanBaselineRetainedSnapshot
   assertRequest(s); assertEntry(s)
   return auditBaselineContent(s, guard, false)
 }
+export const validateLeanContinuationExecutorDiagnostic = (value: unknown, expected: { allocationRoot: LabRoot; chargeRoot: LabRoot; accountingRoot: LabRoot; executionRoot: LabRoot; sourceRoots: readonly LabRoot[]; method: unknown; ordinal: unknown; code: unknown }): LeanContinuationExecutorDiagnostic => {
+  const keys = ["schemaVersion", "availability", "originAvailability", "allocationRoot", "chargeRoot", "accountingRoot", "executionRoot", "sourceRoot", "executableRoot", "invocationRoot", "requestIdRoot", "inputRoot", "method", "ordinal", "stage", "reason", "code", "initiatingCause", "root"]
+  if (!value || typeof value !== "object" || Array.isArray(value) || !exactLabKeys(value, keys)) return fail("CONTINUATION_EXECUTOR")
+  const d = value as unknown as LeanContinuationExecutorDiagnostic
+  if (d.schemaVersion !== "lean-continuation-executor-diagnostic-v1" || d.availability !== "available" || !["available", "unavailable"].includes(d.originAvailability) || d.initiatingCause !== "unknown" || d.code !== "SUBPROCESS_EXIT" || d.code !== expected.code || ![d.allocationRoot, d.chargeRoot, d.accountingRoot, d.executionRoot, d.sourceRoot, d.executableRoot, d.invocationRoot, d.requestIdRoot, d.inputRoot, d.root].every(rooted) || d.allocationRoot !== expected.allocationRoot || d.chargeRoot !== expected.chargeRoot || d.accountingRoot !== expected.accountingRoot || d.executionRoot !== expected.executionRoot || !expected.sourceRoots.includes(d.sourceRoot) || !["selectActivations", "soldierBrain"].includes(d.method) || d.method !== expected.method || !natural(d.ordinal) || d.ordinal >= 24800 || d.ordinal !== expected.ordinal || (d.reason === "unknown" ? d.stage !== "unknown" : d.stage !== "executor" || d.originAvailability !== "available" || !(LEAN_CONTINUATION_EXECUTOR_REASONS as readonly string[]).includes(d.reason))) return fail("CONTINUATION_EXECUTOR")
+  const { root, ...body } = d
+  if (root !== labRoot(d.schemaVersion, body)) return fail("CONTINUATION_EXECUTOR")
+  return d
+}
 const auditBaselineContent = (s: BaselineContentSnapshot, guard: () => void, continuation: boolean) => {
   guard()
   const r = s.result, a = s.allocation, pipeline = r.pipeline as Record<string, unknown>
@@ -264,6 +275,14 @@ const auditBaselineContent = (s: BaselineContentSnapshot, guard: () => void, con
         !same(cell.compact, record.terminal?.record) || !rooted(cell.decisionRoot) ||
         (cell.compact.classification === "success" ? !cell.compact.cleanupComplete || !rooted(cell.semanticRoot) || cell.diagnostic !== null : cell.semanticRoot !== null) ||
         !same((pipeline.cells as unknown[])[i], compactLeanBaselineCell(cell))) return fail("OBSERVATION")
+    if (continuation && cell.diagnostic !== null) {
+      const diagnostic = cell.diagnostic as unknown as Record<string, unknown>, extension = diagnostic.continuationExecutor
+      if (!exactLabKeys(diagnostic, ["schemaVersion", "chargeRoot", "stage", "reason", "code", "method", "ordinal", ...(extension === undefined ? [] : ["continuationExecutor"])]) || diagnostic.schemaVersion !== "lean-supervisor-diagnostic-v1" || diagnostic.chargeRoot !== record.chargeRoot) return fail("CONTINUATION_DIAGNOSTIC")
+      if (extension !== undefined) {
+        if (cell.compact.classification !== "system_failure" || cell.compact.code !== "SUPERVISOR_FAILURE" || !record.chargeRoot) return fail("CONTINUATION_EXECUTOR")
+        validateLeanContinuationExecutorDiagnostic(extension, { allocationRoot: a.root, chargeRoot: record.chargeRoot, accountingRoot: cell.compact.accountingRoot, executionRoot: cell.compact.executionRoot, sourceRoots: [pair.bottomSourceRoot, pair.topSourceRoot], method: diagnostic.method, ordinal: diagnostic.ordinal, code: diagnostic.code })
+      }
+    }
     const metric = cell.metrics
     const alwaysMissing = ["forced_evacuation", "first_contraction_unselected_reserves", "push_and_block_causes", "opening_normalized_entropy", "center_wing_convoy_turtle"] as const
     if (!exactLabKeys(metric, ["schemaVersion", "source", "executionRoot", "measurements", "missing", "formationComparison", "root"]) ||

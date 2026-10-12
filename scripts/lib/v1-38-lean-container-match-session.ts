@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer"
 import { readFileSync } from "node:fs"
 export { superviseLeanStartupV5 } from "./v1-38-lean-startup-supervisor.mjs"
 export { superviseLeanStartupV8 } from "./v1-38-lean-startup-supervisor-v8.mjs"
-import { LEAN_STARTUP_POLICY_V5, leanBytesRoot } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_STARTUP_POLICY_V5, leanBytesRoot, validateLeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, leanStartupAuthorityDescriptorV8, isLeanCorrectionRuntimeAuthority, claimLeanPrivateProbeRuntimeAuthority, type LeanRuntimeAuthority, type LeanStartupGrantV5, type LeanStartupGrantV8, type LeanPrivateProbeBindingV1, type LeanPrivateProbeRuntimeAuthority, type LeanPrivateProbeStartupGrantV1 } from "./v1-38-lean-experiment-authority.js"
@@ -191,8 +191,18 @@ export type LeanPrivateFailureOrigin =
   | { readonly stage: "stream_exchange"; readonly reason: "wait_timeout" | "non_success_state" | "unknown" }
   | { readonly stage: "outer_frame"; readonly reason: "single_frame_invalid" | "frame_cap_exceeded" | "json_invalid" | "object_invalid" | "correlation_invalid" }
   | { readonly stage: "inner_response"; readonly reason: "json_invalid" | "object_invalid" | "keys_invalid" | "schema_invalid" }
-  | { readonly stage: "executor"; readonly reason: "unknown" | "broker_timed_out" | "broker_changed_without_completion" }
-const originReasons = { stream_exchange: ["wait_timeout", "non_success_state", "unknown"], outer_frame: ["single_frame_invalid", "frame_cap_exceeded", "json_invalid", "object_invalid", "correlation_invalid"], inner_response: ["json_invalid", "object_invalid", "keys_invalid", "schema_invalid"], executor: ["unknown", "broker_timed_out", "broker_changed_without_completion"] } as const
+  | { readonly stage: "executor"; readonly reason: "unknown" | "broker_timed_out" | "broker_changed_without_completion" | LeanContinuationExecutorReason }
+export const LEAN_CONTINUATION_EXECUTOR_REASONS = Object.freeze(["host_deadline_pre_exchange", "host_deadline_post_startup_metadata", "host_deadline_post_decode", "host_deadline_post_inner_response", "response_status_null", "response_status_nonzero"] as const)
+export type LeanContinuationExecutorReason = typeof LEAN_CONTINUATION_EXECUTOR_REASONS[number]
+const continuationExecutorAuthorities = new WeakSet<object>()
+/** Only a host-issued V8 capability bound to this validated continuation can
+ * opt in. The existing factory/planner/session claim order remains mandatory. */
+export const enableLeanContinuationExecutorOrigins = (authority: LeanRuntimeAuthority, allocation: LeanBaselineContinuationAllocation): void => {
+  const a = validateLeanBaselineContinuationAllocation(allocation), grant = leanStartupAuthorityDescriptorV8(authority)
+  if (!grant || grant.allocationRoot !== a.root) throw new TypeError("LEAN_CONTINUATION_EXECUTOR_AUTHORITY")
+  continuationExecutorAuthorities.add(authority)
+}
+const originReasons = { stream_exchange: ["wait_timeout", "non_success_state", "unknown"], outer_frame: ["single_frame_invalid", "frame_cap_exceeded", "json_invalid", "object_invalid", "correlation_invalid"], inner_response: ["json_invalid", "object_invalid", "keys_invalid", "schema_invalid"], executor: ["unknown", "broker_timed_out", "broker_changed_without_completion", ...LEAN_CONTINUATION_EXECUTOR_REASONS] } as const
 /** Data validation only; no issuance follows from a matching pair. */
 export const isLeanPrivateFailureOrigin = (value: unknown): boolean => {
   if (!value || typeof value !== "object") return false
@@ -538,6 +548,10 @@ const strictJsonResponse = (stdout: Buffer, byteLimit: number, origins: WeakMap<
 
 export const createLeanContainerMatchSession = (options: LeanContainerMatchSessionOptions): LeanContainerMatchSession => {
   const origins = new WeakMap<object, LeanPrivateFailureOrigin>()
+  const executorExit = (reason: LeanContinuationExecutorReason, message: string) => {
+    const error = new SubprocessSystemFailure("SUBPROCESS_EXIT", message)
+    return options.leanExperimentAuthority && continuationExecutorAuthorities.has(options.leanExperimentAuthority) ? observeFailure(origins, error, { stage: "executor", reason }) : error
+  }
   if (options.correctionOriginObserver !== undefined && (options.infrastructureProfile !== "closeout" || options.prospectiveHostReceiptAuthority !== undefined || options.prospectiveHostReceiptBinding !== undefined || (options.leanExperimentAuthority !== undefined || options.leanExperimentBinding !== undefined) && !isLeanCorrectionRuntimeAuthority(options.leanExperimentAuthority))) throw new TypeError("LEAN_CORRECTION_ORIGIN_PROFILE")
   let hostResponseReceiptMilliseconds: 5000 | undefined
   let startup: Readonly<LeanStartupGrantV5 | LeanStartupGrantV8> | undefined
@@ -623,7 +637,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
     const frame = `${JSON.stringify({ requestId, mode, payloadBase64: payload.toString("base64"), timeoutMilliseconds, stdoutByteLimit: stdoutLimit, stderrByteLimit: stderrLimit, ...(timingBinding === undefined ? {} : { timingBinding }), ...(correctionBinding === undefined ? {} : { correctionOrigin: correctionBinding }), ...(startupBinding === undefined ? {} : { startup: { binding: startupBinding, hostBudgetMs: hostRemaining() } }) })}\n`
     if (Buffer.byteLength(frame) > STREAM_FRAME_LIMIT_BYTES) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded frame cap") }
     try {
-      if ((startup || probeStartup) && hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
+      if ((startup || probeStartup) && hostRemaining() <= 0) throw executorExit("host_deadline_pre_exchange", "Private host deadline exhausted")
       const transportStart = observer ? process.hrtime.bigint() : undefined
       let raw: Buffer
       try { raw = stream!.exchange(frame, { timeoutMilliseconds: startup || probeStartup ? hostRemaining() : hostResponseReceiptMilliseconds ?? timeoutMilliseconds, maxBufferBytes: Math.min(STREAM_FRAME_LIMIT_BYTES, Math.max(stdoutLimit, stderrLimit) * 2 + CONTROL_BUFFER_BYTES) }) }
@@ -638,7 +652,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
         if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64", "startupOrigin"])) throw new TypeError("LEAN_STARTUP_FRAME_V5")
         const normalMetadata = !probeStartup ? startup?.version === 8 ? validateLeanStartupOriginV8(value.startupOrigin, startupBinding as LeanStartupBindingV5) : startup?.version === 7 ? validateLeanStartupOriginV7(value.startupOrigin, startupBinding as LeanStartupBindingV5) : startup?.version === 6 ? validateLeanStartupOriginV6(value.startupOrigin, startupBinding as LeanStartupBindingV5) : validateLeanStartupOriginV5(value.startupOrigin, startupBinding as LeanStartupBindingV5) : undefined
         const metadata = probeStartup ? validateLeanPrivateProbeStartupOriginV8(value.startupOrigin, probeStartupBinding!) : normalMetadata!
-        if (hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
+        if (hostRemaining() <= 0) throw executorExit("host_deadline_post_startup_metadata", "Private host deadline exhausted")
         if (metadata.branch !== "complete") {
           if (metadata.termination !== "completed") startupCleanupUncertain = true
           if (normalMetadata) options.startupOriginObserver?.observe(normalMetadata)
@@ -649,7 +663,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
       const correctionOrigin = value.correctionOrigin !== undefined && options.correctionOriginObserver !== undefined && correctionBinding !== undefined ? validateLeanCorrectionOriginMetadata(value.correctionOrigin, correctionBinding) : undefined
       if (correctionOrigin !== undefined) options.correctionOriginObserver!.observe(correctionOrigin)
       const stdout = Buffer.from(value.stdoutBase64, "base64"); const stderr = Buffer.from(value.stderrBase64, "base64")
-      if ((startup || probeStartup) && hostRemaining() <= 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted")
+      if ((startup || probeStartup) && hostRemaining() <= 0) throw executorExit("host_deadline_post_decode", "Private host deadline exhausted")
       if (stdout.byteLength > stdoutLimit || stderr.byteLength > stderrLimit || stderr.byteLength !== 0) throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Persistent response exceeded cap or emitted stderr")
       if (value.signal !== null) {
         const error = new SubprocessSystemFailure("SUBPROCESS_SIGNAL", "Container method was signalled")
@@ -662,7 +676,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
         }
         throw error
       }
-      if (value.status !== 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Container method exited nonzero")
+      if (value.status !== 0) throw executorExit(value.status === null ? "response_status_null" : "response_status_nonzero", "Container method exited nonzero")
       if (observer && timingBinding) {
         if (Buffer.byteLength(JSON.stringify(value.timing)) > 2048) throw new TypeError("LEAN_TIMING_CAP")
         observer.observe(validateLeanTimingObservation(value.timing, timingBinding), transportMs)
@@ -676,7 +690,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
       const hostDeadline = startup || probeStartup ? process.hrtime.bigint() + 5_000_000_000n : undefined
       const stdoutLimit = request.outputByteLimit ?? SUBPROCESS_STDOUT_BYTES, encoded = encodeSubprocessIpcRequest({ source: request.source, methodName: request.methodName, input: request.input, outputByteLimit: request.outputByteLimit })
       const response = runMethod(request, "legacy", request.timeoutMs ?? RUNTIME_TIMEOUT_MS, stdoutLimit, SUBPROCESS_STDERR_BYTES, encoded, hostDeadline)
-      try { const result = strictJsonResponse(response.stdout, stdoutLimit, origins); if (hostDeadline !== undefined && process.hrtime.bigint() >= hostDeadline) { poison(); throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Private host deadline exhausted") }; return result }
+      try { const result = strictJsonResponse(response.stdout, stdoutLimit, origins); if (hostDeadline !== undefined && process.hrtime.bigint() >= hostDeadline) { poison(); throw executorExit("host_deadline_post_inner_response", "Private host deadline exhausted") }; return result }
       catch (error) {
         if (hostResponseReceiptMilliseconds !== undefined) { try { poison() } catch { /* Preserve the original inner admission error; state is already poisoned. */ } }
         throw error

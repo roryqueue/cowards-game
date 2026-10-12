@@ -23,9 +23,26 @@ import { readLeanPrivateMatchContextV2, checkpointLeanPrivateMatchV2, issueLeanP
 import { captureLeanHostFailureV7, type LeanHostFailureBindingV7 } from "./v1-38-lean-host-stage-v7.js"
 import { validateLeanStartupOriginV8, type LeanStartupOriginV8 } from "./v1-38-lean-container-match-session.js"
 import { LEAN_STARTUP_POLICY_V5 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { enableLeanContinuationExecutorOrigins, LEAN_CONTINUATION_EXECUTOR_REASONS, type LeanContinuationExecutorReason } from "./v1-38-lean-container-match-session.js"
 
 const fail = (): never => { throw new TypeError("LEAN_BASELINE_MATCH") }
 const CORRECTION_RUNTIME_OUTPUT_BYTES = 262144
+export interface LeanContinuationExecutorDiagnostic {
+  schemaVersion: "lean-continuation-executor-diagnostic-v1"; availability: "available"; originAvailability: "available" | "unavailable"
+  allocationRoot: LabRoot; chargeRoot: LabRoot; accountingRoot: LabRoot; executionRoot: LabRoot; sourceRoot: LabRoot; executableRoot: LabRoot
+  invocationRoot: LabRoot; requestIdRoot: LabRoot; inputRoot: LabRoot; method: "selectActivations" | "soldierBrain"; ordinal: number
+  stage: "executor" | "unknown"; reason: LeanContinuationExecutorReason | "unknown"; code: "SUBPROCESS_EXIT"; initiatingCause: "unknown"; root: LabRoot
+}
+/** The factory accessor is the issuance boundary: serialized diagnostics and
+ * cloned/cross-provider evidence cannot mint this private extension. */
+export const deriveLeanContinuationExecutorDiagnostic = (allocationRoot: LabRoot, chargeRoot: LabRoot, compact: LeanCompactMatchRecord, provider: FactorySupervisionProvider, evidence: Parameters<typeof getFactoryPrivateDiagnostic>[1]): LeanContinuationExecutorDiagnostic => {
+  if (!provider.verify(evidence) || evidence.identity !== provider.identity || !evidence.charged || evidence.result.ok || !("systemFailure" in evidence.result) || evidence.result.systemFailure.code !== "SUBPROCESS_EXIT" || evidence.identity.budgetRoot !== allocationRoot || evidence.identity.attemptRoot !== chargeRoot || compact.classification !== "system_failure" || compact.code !== "SUPERVISOR_FAILURE" || evidence.method !== "selectActivations" && evidence.method !== "soldierBrain") return fail()
+  const origin = getFactoryPrivateDiagnostic(provider, evidence)
+  if (origin && (origin.identity !== evidence.identity || origin.invocationRoot !== evidence.invocationRoot || origin.requestId !== evidence.requestId || origin.inputRoot !== evidence.inputRoot || origin.method !== evidence.method || origin.ordinal !== evidence.ordinal || !isLeanPrivateFailureOrigin(origin))) return fail()
+  const reason = origin?.stage === "executor" && (LEAN_CONTINUATION_EXECUTOR_REASONS as readonly string[]).includes(origin.reason) ? origin.reason as LeanContinuationExecutorReason : "unknown" as const
+  const body = { schemaVersion: "lean-continuation-executor-diagnostic-v1" as const, availability: "available" as const, originAvailability: origin ? "available" as const : "unavailable" as const, allocationRoot, chargeRoot, accountingRoot: compact.accountingRoot, executionRoot: compact.executionRoot, sourceRoot: evidence.identity.sourceRoot, executableRoot: evidence.identity.executableRoot, invocationRoot: evidence.invocationRoot, requestIdRoot: labRoot("lean-continuation-request-id-v1", evidence.requestId), inputRoot: evidence.inputRoot, method: evidence.method, ordinal: evidence.ordinal, stage: reason === "unknown" ? "unknown" as const : "executor" as const, reason, code: "SUBPROCESS_EXIT" as const, initiatingCause: "unknown" as const }
+  return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
+}
 export const leanBaselineMatchSeed = (seed: string, ordinal: number): string => `${seed}-${ordinal >= 32 ? ordinal - 24 : ordinal}`
 /** Repeats preserve the initial matrix's seed, arena, side and initiative. */
 export const leanBaselineScenario = (input: { seed: string; slot: LeanSlot; bottom: LeanBaselineSource; top: LeanBaselineSource }) => {
@@ -176,6 +193,7 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
     const runtime = prospectiveLeagueRuntimeBinding(admission, { revisionId: revision.id, sourceRoot: snapshot.sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image })
     const binding = { budgetRoot: allocationRoot, attemptRoot: chargeRoot, matchId, containerName, ownershipLabel, seat, runtime }
     const authority = continuation ? issueLeanBaselineContinuationRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, checkpoint) : v3 ? issueLeanPrivateMatchRuntimeAuthorityV3(v3.admission, v3.debit, snapshot, binding) : v2 ? issueLeanPrivateMatchRuntimeAuthorityV2(v2.admission, v2.debit, snapshot, binding) : v1 ? issueLeanPrivateMatchRuntimeAuthorityV1(v1.admission, v1.debit, snapshot, binding) : legacy!.correction ? issueLeanCorrectionRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, legacy!.correction.reuse) : issueLeanBaselineRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding)
+    if (continuation) enableLeanContinuationExecutorOrigins(authority, validateLeanBaselineContinuationAllocation(legacy!.ledger.allocation))
     let activePrivateRequest: PrivateStartupRequestV3 | undefined
     let activeTransportBinding: LeanCorrectionInvocationTransportBinding | undefined
     let activePrivateTransport: LeanCorrectionInvocationTransportBinding | undefined
@@ -244,6 +262,7 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
     }
     // This accessor is kept private and only read after a finite failure.
     diagnosticProviders.set(provider, evidence => getFactoryPrivateDiagnostic(native, evidence))
+    if (continuation) continuationDiagnosticProviders.set(provider, native)
     diagnosticTransportBindings.set(provider, retainedTransportBindings)
     opened.push(provider); input.register(provider)
     return provider
@@ -282,7 +301,9 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
   const invocationBinding = origin && retainedOrigin && failedEvidence && provider ? bindLeanCorrectionInvocation(retainedOrigin.origin, retainedOrigin.transport, failedEvidence, origin, provider.identity.sourceRoot === bottomSource.sourceRoot ? "bottom" : "top") : undefined
   if (context && actual.accounting.some(evidence => !opened.some(provider => provider.identity.sourceRoot === evidence.identity.sourceRoot && provider.verify(evidence)))) return fail()
   const baseDiagnostic = compact.classification !== "success" ? deriveLeanSupervisorDiagnostic(chargeRoot, actual, origin ? { stage: "native_response", reason: ["stream_exchange", "outer_frame", "inner_response", "executor"].includes(origin.stage) ? origin.stage as "stream_exchange" | "outer_frame" | "inner_response" | "executor" : "system_failure", method: failedEvidence!.method, ordinal: failedEvidence!.ordinal, code: !failedEvidence!.result.ok && "systemFailure" in failedEvidence!.result ? failedEvidence!.result.systemFailure.code : undefined } : undefined) : null
-  const diagnostic = baseDiagnostic && invocationBinding ? { ...baseDiagnostic, invocationBinding } : baseDiagnostic
+  const nativeFailureProvider = provider && continuationDiagnosticProviders.get(provider)
+  const continuationExecutor = continuation && baseDiagnostic?.code === "SUBPROCESS_EXIT" && failedEvidence && nativeFailureProvider && compact.classification === "system_failure" && compact.code === "SUPERVISOR_FAILURE" ? deriveLeanContinuationExecutorDiagnostic(allocationRoot, chargeRoot, compact, nativeFailureProvider, failedEvidence) : undefined
+  const diagnostic = baseDiagnostic && continuationExecutor ? { ...baseDiagnostic, continuationExecutor } : baseDiagnostic && invocationBinding ? { ...baseDiagnostic, invocationBinding } : baseDiagnostic
   const returned = { compact, replayFrames: replayFrames(), brainInputs, strategyInputs, trainingHalfPoints, semanticRoot, metrics, decisionRoot: labRoot("lean-baseline-observed-decisions-v1", decisionRows), diagnostic, ...(context ? { privateActual: actual, privateProviderIdentities: opened.map(provider => provider.identity) } : {}), ...(hostBindingV15 ? { hostFailureV15: compact.classification === "success" ? null : readLabHostFailureV15(actual, hostBindingV15) } : {}) }
   if (v2 || v3) {
     const failed = actual.accounting.filter(e => e.charged && !e.result.ok && "systemFailure" in e.result)
@@ -313,6 +334,7 @@ const privateStartupReceiptReturnsV1 = new WeakMap<object, PrivateStartupReceipt
 /** Separate diagnostic-only provenance. Foreign/cloned and V1 returns refuse. */
 export const readLeanPrivateStartupReceiptV1 = (returned: object): PrivateStartupReceiptV1 | undefined => privateStartupReceiptReturnsV1.get(returned)
 const diagnosticProviders = new WeakMap<object, (evidence: Parameters<typeof getFactoryPrivateDiagnostic>[1]) => ReturnType<typeof getFactoryPrivateDiagnostic>>()
+const continuationDiagnosticProviders = new WeakMap<object, FactorySupervisionProvider>()
 const diagnosticTransportBindings = new WeakMap<object, Map<number, { origin: LeanPrivateCorrectionOrigin; transport: LeanCorrectionInvocationTransportBinding }>>()
 
 type PrivateStartupRequestV3 = Parameters<typeof leanCorrectionInvocationTransportBinding>[0]

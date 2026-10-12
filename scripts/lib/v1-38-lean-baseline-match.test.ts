@@ -114,6 +114,97 @@ import { LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js
 import { createHash } from "node:crypto"
 import { encodeSubprocessIpcRequest } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { buildLeanStartupWorkerHarnessV8 } from "./v1-38-lean-container-match-session.js"
+import * as sessionModule from "./v1-38-lean-container-match-session.js"
+import * as retainedModule from "./v1-38-lean-baseline-retained.js"
+import { factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../../packages/strategy-lab/src/factory/contracts.js"
+import { deriveFactoryOraclePacketRoot } from "../../packages/strategy-lab/src/factory/identity.js"
+
+const executorFixture = vi.hoisted(() => ({ active: false, owners: new Map<string, string>(), frame: (_q: any): Buffer => { throw new Error("inert frame unset") } }))
+vi.mock("node:child_process", async original => ({ ...await original<typeof import("node:child_process")>(), spawnSync: (_command: string, args: string[]) => {
+  if (!executorFixture.active) throw new Error("native process forbidden in source tests")
+  const name = args[0] === "create" ? args[args.indexOf("--name") + 1]! : args.at(-1)!
+  if (args[0] === "inspect") { const owner = executorFixture.owners.get(name); return { status: owner ? 0 : 1, signal: null, stdout: Buffer.from(owner ? `${owner}\n` : ""), stderr: Buffer.from(owner ? "" : `Error: No such object: ${name}\n`) } }
+  if (args[0] === "create") executorFixture.owners.set(name, args[args.indexOf("--label") + 1]!.split("=")[1]!)
+  if (args[0] === "rm") executorFixture.owners.delete(name)
+  return { status: 0, signal: null, stdout: Buffer.from(args[0] === "create" ? "inert-container\n" : ""), stderr: Buffer.alloc(0) }
+} }))
+vi.mock("node:worker_threads", async original => ({ ...await original<typeof import("node:worker_threads")>(), Worker: class {
+  constructor(_source: string, options: any) { if (!executorFixture.active) throw new Error("native Worker forbidden in source tests"); Atomics.store(new Int32Array(options.workerData.start), 0, 1) }
+  postMessage(message: any) { const bytes = message.type === "close" ? Buffer.alloc(0) : executorFixture.frame(JSON.parse(Buffer.from(message.request).toString())); new Uint8Array(message.response).set(bytes); const control = new Int32Array(message.control); Atomics.store(control, 1, bytes.length); Atomics.store(control, 0, 1) }
+  terminate() { return Promise.resolve(0) }
+} }))
+
+describe("continuation issued executor branches", () => {
+  it("refuses serialized opt-in authority before any constructor", () => {
+    expect(() => sessionModule.enableLeanContinuationExecutorOrigins({ runtime: {} } as never, {} as never)).toThrow()
+  })
+  it.each((["host_deadline_pre_exchange", "host_deadline_post_startup_metadata", "host_deadline_post_decode", "host_deadline_post_inner_response", "response_status_null", "response_status_nonzero"] as const).flatMap(reason => [true, false].map(enabled => ({ reason, enabled }))))("carries $reason with opt-in $enabled through real session/planner/factory branding", async ({ reason, enabled }) => {
+    const root = (v: string) => labRoot("inert-executor-continuation", v)
+    const carry = { schemaVersion: "lean-baseline-continuation-carry-v1" as const, chargedMatches: 43 as const, elapsedUpperBoundMs: 459375903 as const, allocatedDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, custodyRoot: root("custody"), inventoryRoot: root("inventory"), qualifiedReaderAuthority: "cost_only" as const }
+    const allocation = lean.createLeanBaselineContinuationAllocation({ sourceRoot: root("implementation"), reviewRoot: root("review"), coldRoot: root("cold"), planRoot: root("plan"), candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, i) => root(String(i))), seed: "inert", sourceHead: "a".repeat(40), planningRoot: root("planning"), requestBytesRoot: root("request"), offlineOverheadMs: 60000, predecessor: { ...carry, root: labRoot(carry.schemaVersion, carry) } })
+    const sourceBytes = Buffer.from("export default {selectActivations(){return {activationOrders:[],strategyMemory:{}}},soldierBrain(){return {action:{type:'TURN_TO_STONE'},soldierMemory:{}}}}")
+    const sourceRoot = lean.leanBytesRoot(sourceBytes), packetBase = { ...factoryOraclePacketFixture(), source: { root: sourceRoot, sha256: sourceRoot, byteLength: sourceBytes.length, encoding: "utf8" as const } }
+    const packet = { ...packetBase, root: deriveFactoryOraclePacketRoot(packetBase) }, proposal = factoryProposalFromPacket(packet)
+    const admission = admissionModule.authorizeFactorySupervision({ sourceAdmission: admissionModule.admitFactory({ packet, proposal, sourceBytes }), validation: factoryValidationFixture(proposal) })
+    const chargeRoot = root("charge"), grant = { version: 8 as const, allocationRoot: allocation.root, chargeRoot, seat: "bottom" as const, policyRoot: lean.LEAN_STARTUP_POLICY_V5.root, harnessRoot: lean.leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())), toJSON() { throw new Error("opaque") } }
+    const authority = { schemaVersion: "lean-runtime-authority-v1", runtime: { sourceRoot }, seat: "bottom" } as unknown as authorityModule.LeanRuntimeAuthority
+    const descriptor = vi.spyOn(authorityModule, "leanStartupAuthorityDescriptorV8").mockImplementation(a => a === authority ? grant : undefined)
+    const layers: string[] = []
+    const claim = vi.spyOn(authorityModule, "claimLeanStartupAuthorityV8").mockImplementation((a, binding, layer) => { expect(a).toBe(authority); expect(layer).toBe(["factory", "planner", "session"][layers.length]); layers.push(layer); Object.assign(authority.runtime, binding.runtime); return { lifetimeMs: 600000, receiptMs: 5000, startup: grant } })
+    let native: ReturnType<typeof runtimeModule.createFactorySupervisedRuntime> | undefined
+    let clock: ReturnType<typeof vi.spyOn> | undefined
+    executorFixture.active = true; executorFixture.owners.clear()
+    executorFixture.frame = q => {
+      const complete = !reason.startsWith("response_status")
+      const startupOrigin = { ...q.startup.binding, schemaVersion: "v1.38-lean-startup-origin-v8", stage: complete ? "receipt" : "host", branch: complete ? "complete" : "host_expired", ready: complete, go: complete, wait: "changed", termination: complete ? "not_required" : "completed", unknown: !complete, constructorDurationBucket: "0_9ms", prefixMilestone: complete ? "ready_published" : "not_entered", readyPublicationDurationBucket: complete ? "0_9ms" : "unknown", finalAtomicState: complete ? "state_3" : "state_0", lifecycleBeforeTermination: "neither_seen", deadlineOutcome: complete ? "ready_before_deadline" : "unknown" }
+      return Buffer.from(JSON.stringify({ requestId: q.requestId, status: reason === "response_status_null" ? null : reason === "response_status_nonzero" ? 17 : 0, signal: null, stdoutBase64: Buffer.from(JSON.stringify({ ok: true, value: { activationOrders: [], strategyMemory: {} } })).toString("base64"), stderrBase64: "", startupOrigin }) + "\n")
+    }
+    try {
+      if (enabled) sessionModule.enableLeanContinuationExecutorOrigins(authority, allocation)
+      native = runtimeModule.createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, factoryLifetimeMs: 600000, budgetRoot: allocation.root, attemptRoot: chargeRoot, matchId: "inert-executor", containerName: "inert-executor", ownershipLabel: "inert-owner" })
+      const soldiers = [{ id: "inert-soldier", ownerPlayerId: "bottom", status: "ACTIVE", position: { x: 2, y: 11 }, facing: "UP", lastSuccessfulMoveDirection: null }]
+      const input = { phaseNumber: 1, roundNumber: 1, activationCount: 1, board: { bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 }, soldiers, terrainStones: [] }, mySoldiers: soldiers, enemySoldiers: [], strategyMemory: {}, initialInitiativePlayerId: "bottom", hasInitialInitiative: true, roundInitiativePlayerId: "bottom", hasRoundInitiative: true }
+      const cutoff = ({ host_deadline_pre_exchange: 3, host_deadline_post_startup_metadata: 5, host_deadline_post_decode: 6, host_deadline_post_inner_response: 7 } as Record<string, number>)[reason] ?? Infinity
+      let ticks = 0
+      clock = vi.spyOn(process.hrtime, "bigint").mockImplementation(() => ++ticks >= cutoff ? 6_000_000_000n : 0n)
+      const evidence = await native.invoke({ kind: "selectActivations", requestId: `effect:v1.19:${"a".repeat(64)}`, semanticTupleId: native.identity.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input } as never, native.identity)
+      clock.mockRestore(); clock = undefined
+      expect(layers).toEqual(["factory", "planner", "session"])
+      expect(evidence.result).toMatchObject({ ok: false, systemFailure: { code: "SUBPROCESS_EXIT", retryable: false } })
+      const issued = runtimeModule.getFactoryPrivateDiagnostic(native, evidence)
+      expect(issued).toMatchObject({ stage: "executor", reason: enabled ? reason : "unknown" })
+      expect(runtimeModule.getFactoryPrivateDiagnostic(native, { ...evidence })).toBeUndefined()
+      if (!enabled) return
+      const compact = { classification: "system_failure", code: "SUPERVISOR_FAILURE", accountingRoot: root("accounting"), executionRoot: root("execution") } as never
+      const extension = composerModule.deriveLeanContinuationExecutorDiagnostic(allocation.root, chargeRoot, compact, native, evidence)
+      expect(extension).toMatchObject({ availability: "available", originAvailability: "available", reason, initiatingCause: "unknown", chargeRoot, sourceRoot })
+      expect(() => composerModule.deriveLeanContinuationExecutorDiagnostic(allocation.root, chargeRoot, compact, native!, { ...evidence })).toThrow()
+      const expected = { allocationRoot: allocation.root, chargeRoot, accountingRoot: root("accounting"), executionRoot: root("execution"), sourceRoots: [sourceRoot], method: evidence.method, ordinal: evidence.ordinal, code: "SUBPROCESS_EXIT" }
+      expect(retainedModule.validateLeanContinuationExecutorDiagnostic(extension, expected)).toEqual(extension)
+      expect(JSON.stringify(extension)).not.toMatch(/activationOrders|strategyMemory|"status"|"exitCode"|stdout|stderr|sourceBytes/)
+      const snapshots = [{ role: "tactical-0", sourceRoot, root: root("bottom-snapshot"), source: sourceBytes.toString(), packet, proposal, validation: factoryValidationFixture(proposal) }, { role: "cold-opponent", sourceRoot: root("top-source"), root: root("top-snapshot"), source: sourceBytes.toString(), packet, proposal, validation: factoryValidationFixture(proposal) }]
+      const actual = { kind: "failure", privacy: "private_offline", transitions: [], accounting: [evidence], unchangedState: null, failure: { classification: "system_failure", code: "LAB_SUPERVISOR_FAILURE" } } as const
+      const mocks = [
+        vi.spyOn(sourceModule, "validateLeanBaselineSource").mockImplementation(v => v as never),
+        vi.spyOn(authorityModule, "issueLeanBaselineContinuationRuntimeAuthority").mockReturnValue(authority),
+        vi.spyOn(authorityModule, "issueLeanBaselineRuntimeAuthority").mockReturnValue(authority),
+        vi.spyOn(runtimeModule, "createFactorySupervisedRuntime").mockReturnValue(native),
+        vi.spyOn(bridgeModule, "runCanonicalLabMatch").mockResolvedValue(actual as never),
+      ]
+      try {
+        const slot = allocation.slots[0]!, matchInput = { ledger: { directory: "inert", allocation }, charge: { root: chargeRoot, allocationRoot: allocation.root, slotRoot: slot.root, ordinal: 0 }, slot, seed: allocation.seed, bottom: snapshots[0]!, top: snapshots[1]!, checkpoint() {}, register() {}, unregister() {} }
+        const returned = await composerModule.runLeanBaselineContinuationMatch(matchInput as never)
+        expect(returned.compact).toMatchObject({ classification: "system_failure", code: "SUPERVISOR_FAILURE" })
+        expect(returned.diagnostic).toMatchObject({ continuationExecutor: { reason, chargeRoot, invocationRoot: evidence.invocationRoot } })
+        const legacy = await composerModule.runLeanBaselineMatch(matchInput as never)
+        expect(Object.keys(legacy.diagnostic!).sort()).toEqual(["schemaVersion", "chargeRoot", "stage", "reason", "code", "method", "ordinal"].sort())
+        const { continuationExecutor: retained, ...seven } = returned.diagnostic as NonNullable<typeof returned.diagnostic> & { continuationExecutor: composerModule.LeanContinuationExecutorDiagnostic }
+        expect(seven).toEqual(legacy.diagnostic)
+        expect(retainedModule.validateLeanContinuationExecutorDiagnostic(retained, { ...expected, accountingRoot: returned.compact.accountingRoot, executionRoot: returned.compact.executionRoot })).toEqual(retained)
+      } finally { for (const mock of mocks) mock.mockRestore() }
+    } finally { clock?.mockRestore(); native?.close(); descriptor.mockRestore(); claim.mockRestore(); executorFixture.active = false; executorFixture.owners.clear() }
+  })
+})
 import { runLeanPrivateFeasibilityMatch } from "./v1-38-lean-baseline-match.js"
 import { runLeanPrivateFeasibilityMatchV2, readLeanPrivateMatchDiagnosticV2 } from "./v1-38-lean-baseline-match.js"
 import * as composerModule from "./v1-38-lean-baseline-match.js"
