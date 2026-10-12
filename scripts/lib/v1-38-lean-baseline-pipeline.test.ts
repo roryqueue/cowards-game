@@ -50,6 +50,12 @@ const syntheticMetrics = (executionRoot: string, success: boolean): LeanBaseline
 }
 
 describe("current-only staged baseline wiring (synthetic source tests)", () => {
+  it("[continuation-v2] refuses metadata reservation before legacy journal/time parsing", () => {
+    const ledgerRead = vi.fn(), timeRead = vi.fn(), reserve = vi.fn((bytes: number) => { if (bytes > 0) throw new Error("RESERVATION_REFUSED") })
+    expect(() => continuationMain.withLeanContinuationMetadataReservationV2(4096, reserve, () => { ledgerRead(); timeRead() })).toThrow("RESERVATION_REFUSED")
+    expect(reserve).toHaveBeenCalledWith(4096 + 7 * 4194304 + 262144)
+    expect(ledgerRead).not.toHaveBeenCalled(); expect(timeRead).not.toHaveBeenCalled()
+  })
   // This legacy integration case consumes a canonical historical store. Source
   // execution is explicitly forbidden from opening it; keep it out of this suite.
   it.skip("reuses all seven frozen old packets with zero cold builders and rejects forged authority before dispatch", async () => {

@@ -801,6 +801,16 @@ const continuationCapacityV2 = (w: LeanBaselineContinuationWindowV2, retained = 
   const usage = process.memoryUsage(), fs = statfsSync(resolve("."), { bigint: true }), reserve = 2 * 268435456 + 512000000 + 335544320, scratch = scratchExists ? measureLeanPhysicalBytes(CONTINUATION_V2.temp) : 0
   if (![retained, additional, scratch].every(n => Number.isSafeInteger(n) && n >= 0) || retained > LEAN_CAPS.retainedBytes || scratch + additional + usage.arrayBuffers > LEAN_CAPS.scratchBytes || usage.rss + (process.connected ? rssOf(process.ppid) : 0) + usage.arrayBuffers + additional + reserve > LEAN_BASELINE_CONTINUATION_POLICY_V2.memoryBytes || observeLeagueAvailableMemoryBytes() < reserve || fs.bavail * fs.bsize > BigInt(Number.MAX_SAFE_INTEGER) || fs.bavail * fs.bsize < BigInt(LEAN_CAPS.totalBytes - retained)) return fail("V2_CAPACITY")
 }
+const CONTINUATION_V2_METADATA_PARSE_RESERVE = 7 * 4194304 + 262144
+/** Testable seam for reserving all bounded journal/time metadata parsing before
+ * legacy helpers allocate strings, split rows or parse JSON. */
+export const withLeanContinuationMetadataReservationV2 = <T>(additionalBytes: number, reserve: (bytes: number) => void, readMetadata: () => T): T => {
+  if (!Number.isSafeInteger(additionalBytes) || additionalBytes < 0) return fail("V2_METADATA_RESERVE")
+  const bytes = additionalBytes + CONTINUATION_V2_METADATA_PARSE_RESERVE
+  if (!Number.isSafeInteger(bytes)) return fail("V2_METADATA_RESERVE")
+  reserve(bytes)
+  return readMetadata()
+}
 const continuationClaimBodyV2 = (request: LeanBaselineContinuationRequestV2, window: LeanBaselineContinuationWindowV2, requestBytesRoot: LabRoot) => ({ schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: window.grantId, routeNamespace: window.routeNamespace, windowRoot: window.root, windowBytesRoot: request.windowBytesRoot, requestBytesRoot, sourceHead: request.sourceHead, sourceRoot: request.sourceRoot, sourceGateRoot: request.sourceGateRoot, dataReviewRoot: request.dataReviewRoot, planningRoot: request.planningRoot, manifestRoot: request.manifestRoot })
 const continuationReviewRowsV2 = (manifest: ReturnType<typeof leanBaselineContinuationDataManifestV2>, sourceHead: string): LeanContinuationReviewedRowV2[] => [...manifest.implementationEntries.map(row => ({ ...row, commit: sourceHead, kind: "reviewed_source" as const })), ...manifest.planningEntries.filter(row => row.path !== CONTINUATION_V2.window).map(row => ({ ...row, commit: sourceHead, kind: "active_planning" as const }))]
 const continuationPreflightV2 = (requestPath: string, consumed: boolean, reader: boolean) => {
@@ -914,22 +924,25 @@ export const openLeanBaselineContinuationContextV2 = (requestPath: string, reade
   const pinned = [...c.manifest.entries.map(row => row.path), requestPath, CONTINUATION_V2.claim, CONTINUATION_V2.allocation, ...["allocation.json", "carry.json", "source-manifest.json", "source-hold.json"].map(name => join(ledger.directory, name))].map(path => ({ path, stat: lstatSync(resolve(path)) }))
   const identities = createLeanContinuationIdentityGuardV2(pinned, [...carry.inventory as LeanContinuationInventoryRowV2[], ...hold.rows as LeanContinuationInventoryRowV2[]])
   const startWall = Date.now(), startMono = process.hrtime.bigint()
-  let closure = reader, closureBegan = reader ? readLeanTimeAccounting(ledger).closes.get("pilot-entry") ?? startWall : startWall, active = false, expectedLedger: LabRoot | undefined
+  let closure = reader, closureBegan = reader ? withLeanContinuationMetadataReservationV2(0, bytes => continuationCapacityV2(c.window, cumulativeLeanPhysicalBytes(ledger), bytes, true), () => readLeanTimeAccounting(ledger).closes.get("pilot-entry") ?? startWall) : startWall, active = false, expectedLedger: LabRoot | undefined
   const guard = (additionalBytes = 0) => {
     if (!Number.isSafeInteger(additionalBytes) || additionalBytes < 0 || Date.now() < startWall || c.git(["rev-parse", "HEAD"]).toString("utf8").trim() !== c.fixedHead) return fail("V2_HOLD")
+    let metadataReserveBytes = 0
+    return withLeanContinuationMetadataReservationV2(additionalBytes, bytes => { metadataReserveBytes = bytes; continuationCapacityV2(c.window, cumulativeLeanPhysicalBytes(ledger), bytes, true) }, () => {
     identities(); continuationStoreMembershipV2(ledger)
     // No recursive callback: the outer complete observation surrounds this
     // descriptor read. Its small reservation is included in the final sample.
-    const journal = readLeanContinuationBoundedBytesV2(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600, bytes => continuationCapacityV2(c.window, cumulativeLeanPhysicalBytes(ledger), additionalBytes + (bytes ?? 0), true))
+    const journal = readLeanContinuationBoundedBytesV2(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600, bytes => continuationCapacityV2(c.window, cumulativeLeanPhysicalBytes(ledger), additionalBytes + CONTINUATION_V2_METADATA_PARSE_RESERVE + (bytes ?? 0), true))
     if (expectedLedger && leanBytesRoot(journal) !== expectedLedger) return fail("V2_LEDGER_CHANGED")
     const state = readLeanLedger(ledger), nowMs = Date.now(), usage = process.memoryUsage(), fs = statfsSync(ledger.directory, { bigint: true }), child = process.connected ? process.pid : 0, parent = process.connected ? process.ppid : process.pid
     if (state.stopped && !closure) { closure = true; closureBegan = readLeanTimeAccounting(ledger).closes.get("pilot-entry") ?? nowMs }
     const elapsedMono = process.hrtime.bigint() - startMono
     if (elapsedMono < 0n || elapsedMono > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n || child && process.ppid !== readLeanChildEntry(ledger).parentPid) return fail("V2_LIVENESS")
-    const sample = { nowMs, monotonicElapsedMs: Math.max(0, startWall - c.window.anchorMs) + Number((elapsedMono + 999999n) / 1000000n), remainingSlots: closure ? 0 : 36 - state.charges.size + (active ? 1 : 0), ...(closure ? { remainingClosureMs: Math.max(0, c.window.closureMs - Math.max(0, nowMs - closureBegan)), remainingOfflineMs: 0 } : {}), charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger), scratchBytes: measureLeanPhysicalBytes(CONTINUATION_V2.temp) + additionalBytes, parentRssBytes: child ? rssOf(parent) : usage.rss, childRssBytes: child ? usage.rss : 0, arrayBuffersBytes: usage.arrayBuffers + additionalBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(fs.bavail * fs.bsize), live: !child || process.connected === true }
+    const sample = { nowMs, monotonicElapsedMs: Math.max(0, startWall - c.window.anchorMs) + Number((elapsedMono + 999999n) / 1000000n), remainingSlots: closure ? 0 : 36 - state.charges.size + (active ? 1 : 0), ...(closure ? { remainingClosureMs: Math.max(0, c.window.closureMs - Math.max(0, nowMs - closureBegan)), remainingOfflineMs: 0 } : {}), charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger), scratchBytes: measureLeanPhysicalBytes(CONTINUATION_V2.temp) + additionalBytes + metadataReserveBytes, parentRssBytes: child ? rssOf(parent) : usage.rss, childRssBytes: child ? usage.rss : 0, arrayBuffersBytes: usage.arrayBuffers + additionalBytes + metadataReserveBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(fs.bavail * fs.bsize), live: !child || process.connected === true }
     assertLeanBaselineContinuationFrontierV2(allocation, sample)
     if (currentLeanElapsedMs(ledger) + sample.remainingSlots * LEAN_CAPS.matchMs + (sample.remainingClosureMs ?? c.window.closureMs) + (sample.remainingOfflineMs ?? c.window.offlineOverheadMs) > allocation.caps.elapsedMs) return fail("V2_JOURNAL_FRONTIER")
     identities(); return sample
+    })
   }
   guard()
   const authenticated = authenticateLeanBaselineContinuationCarryV2(c.git, continuationReviewRowsV2(c.manifest, allocation.sourceHead), guard)
