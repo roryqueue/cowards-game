@@ -14,6 +14,12 @@ export const continuationAllocationFixture = () => {
 }
 
 describe("prospective baseline continuation allocation", () => {
+  it("preserves the authenticated debit and adds each survivor increment once", () => {
+    const prior = { allocatedDiskBytes: 20000, survivors: [{ identity: "old", allocatedBytes: 4096 }] }
+    expect(continuation.reconcileLeanContinuationDiskDebit(prior, [{ path: "old", allocatedBytes: 4096 }])).toBe(20000)
+    expect(continuation.reconcileLeanContinuationDiskDebit(prior, [{ path: "old", allocatedBytes: 8192 }, { path: "new", allocatedBytes: 4096 }])).toBe(28192)
+    for (const rows of [[], [{ path: "old", allocatedBytes: 2048 }], [{ path: "old", allocatedBytes: 4096 }, { path: "old", allocatedBytes: 4096 }]]) expect(() => continuation.reconcileLeanContinuationDiskDebit(prior, rows)).toThrow(/OLD_COST/)
+  })
   it("requires the closed unique run admission before entry, preserving the legacy empty journal", () => {
     const time = { active: false, starts: new Map([["continuation-run-admission", 1]]), closed: new Set(["continuation-run-admission"]) }
     expect(ledger.admitsLeanBaselineContinuationPreEntryTime(time)).toBe(true)

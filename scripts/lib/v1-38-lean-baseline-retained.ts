@@ -1,6 +1,6 @@
 /** One prospective, read-only reader for the private current-baseline route.
  * Historical pilot readers and their spent routes are intentionally absent. */
-import { constants, closeSync, lstatSync, openSync, readFileSync, realpathSync, readdirSync, fstatSync } from "node:fs"
+import { constants, closeSync, lstatSync, openSync, readFileSync, realpathSync, readdirSync, fstatSync, statfsSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { join, relative, resolve } from "node:path"
 import { exactLabKeys, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
@@ -28,6 +28,8 @@ import { readLeanContinuationJson, assertLeanBaselineContinuationFrontier, type 
 import { deriveLeanContinuationWorkAccounting } from "./v1-38-lean-baseline-pipeline.js"
 import type { LeanResponseNodeReceipt, LeanResponseWork } from "../../packages/strategy-lab/src/league/lean-training.js"
 import * as parentReaderContract from "../run-v1-38-lean-baseline.js"
+import { measureLeanPhysicalBytes } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { observeLeagueAvailableMemoryBytes } from "../run-v1-38-serious-league.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_RETAINED_${code}`) }
 /** Strict v12 custody join, shared by ordinary and terminal-only readers.
@@ -486,7 +488,7 @@ export const auditLeanBaselineContinuationRetained = (s: LeanBaselineContinuatio
   const a = validateLeanBaselineContinuationAllocation(s.allocation), r = s.request, e = s.entry, t = s.terminal
   const interval = "continuation-retained-verifier", closed = s.time.closed.has(interval)
   if (!s.time.closed.has("continuation-run-admission") || !s.time.starts.has("continuation-run-admission") || Number(s.time.starts.get("continuation-run-admission")) < a.window.anchorMs || Number(s.time.closes.get("continuation-run-admission")) > e.wallStartMs) return fail("CONTINUATION_ADMISSION")
-  if (!exactLabKeys(r, ["schemaVersion", "seed", "sourceHead", "sourceRoot", "planningRoot", "planRoot", "reviewRoot", "coldRoot", "candidateRoots", "requestRoots", "offlineOverheadMs", "sourceAuthor", "runOperator", "readerOperator"]) || r.schemaVersion !== "lean-baseline-continuation-request-v1" || r.seed !== a.seed || r.sourceHead !== a.sourceHead || r.sourceRoot !== a.sourceRoot || r.planningRoot !== a.planningRoot || r.planRoot !== a.planRoot || r.reviewRoot !== a.reviewRoot || r.coldRoot !== a.coldRoot || r.offlineOverheadMs !== a.offlineOverheadMs || !same(r.candidateRoots, a.candidateRoots) || !same(r.requestRoots, a.requestRoots) || s.requestBytesRoot !== a.requestBytesRoot || leanBytesRoot(leanCanonicalBytes(r)) !== a.requestBytesRoot || [r.sourceAuthor, r.runOperator, r.readerOperator].some(v => typeof v !== "string" || !/^[A-Za-z0-9_.:@/-]{1,128}$/u.test(v)) || new Set([r.sourceAuthor, r.runOperator, r.readerOperator]).size !== 3) return fail("CONTINUATION_REQUEST")
+  if (!exactLabKeys(r, ["schemaVersion", "seed", "sourceHead", "sourceRoot", "planningRoot", "planRoot", "reviewRoot", "coldRoot", "candidateRoots", "requestRoots", "offlineOverheadMs", "sourceAuthor", "runOperator", "readerOperator"]) || r.schemaVersion !== "lean-baseline-continuation-request-v1" || r.seed !== a.seed || r.sourceHead !== a.sourceHead || r.sourceRoot !== a.sourceRoot || r.planningRoot !== a.planningRoot || r.planRoot !== a.planRoot || r.reviewRoot !== a.reviewRoot || r.coldRoot !== a.coldRoot || r.offlineOverheadMs !== a.offlineOverheadMs || !Array.isArray(r.candidateRoots) || !same([...r.candidateRoots].sort(), a.candidateRoots) || !same(r.requestRoots, a.requestRoots) || s.requestBytesRoot !== a.requestBytesRoot || leanBytesRoot(leanCanonicalBytes(r)) !== a.requestBytesRoot || [r.sourceAuthor, r.runOperator, r.readerOperator].some(v => typeof v !== "string" || !/^[A-Za-z0-9_.:@/-]{1,128}$/u.test(v)) || new Set([r.sourceAuthor, r.runOperator, r.readerOperator]).size !== 3) return fail("CONTINUATION_REQUEST")
   if (e.allocationRoot !== a.root || e.sourceRoot !== a.sourceRoot || e.requestBytesRoot !== a.requestBytesRoot || e.head !== s.head || !/^[a-f0-9]{40}$/u.test(s.head) || t.entryBytesRoot !== leanBytesRoot(leanCanonicalBytes(e)) || t.allocationRoot !== a.root || t.sourceRoot !== a.sourceRoot || t.head !== s.head || t.parentPid !== e.parentPid || t.childPid !== e.childPid || t.status !== "child_exited" || t.exitCode !== 0 || t.signal !== null || e.wallStartMs < a.window.anchorMs || t.wallObservedMs > a.window.deadlineMs || s.time.starts.size !== 3 || s.time.closed.size !== (closed ? 3 : 2) || s.time.active === closed || s.time.starts.get("pilot-entry") !== e.wallStartMs || s.time.closes.get("pilot-entry") !== e.wallStartMs + t.elapsedUpperBoundMs || Number(s.time.starts.get(interval)) < Number(s.time.closes.get("pilot-entry")) || !s.time.starts.has(interval) || Number(s.time.starts.get(interval)) > a.window.deadlineMs || closed && Number(s.time.closes.get(interval)) > a.window.deadlineMs || s.time.elapsedMs > a.caps.elapsedMs) return fail("CONTINUATION_ENTRY")
   const pipeline = s.result.pipeline as Record<string, unknown> | null
   const unused = s.evidence.records.flatMap((row, ordinal) => row.chargeRoot === null ? [ordinal] : [])
@@ -523,7 +525,7 @@ export const verifyLeanBaselineContinuationRetained = (requestPath: string) => {
   const before = readLeanTimeAccounting(ledger)
   if (before.active || before.starts.has("continuation-retained-verifier") || !before.closed.has("continuation-run-admission") || readdirSync(ledger.directory).includes("retained-check.json")) return fail("CONTINUATION_READER_USED")
   beginLeanInterval(ledger, "continuation-retained-verifier")
-  let report: ReturnType<typeof auditLeanBaselineContinuationRetained> | undefined, failure = false
+  let report: ReturnType<typeof auditLeanBaselineContinuationRetained> | undefined, failure: string | null = null
   let resourceGuard: (() => void) | undefined
   try {
     const entry = readLeanChildEntry(ledger), terminal = readLeanChildTerminal(ledger)
@@ -557,14 +559,61 @@ export const verifyLeanBaselineContinuationRetained = (requestPath: string) => {
     const time = { ...readLeanTimeAccounting(ledger), elapsedMs: currentLeanElapsedMs(ledger) }
     report = auditLeanBaselineContinuationRetained({ allocation, request: { ...c.request }, requestBytesRoot: allocation.requestBytesRoot, head: c.fixedHead, entry, terminal, evidence, ledgerEvents: state.events, time, result, pairs, observations, sources, artifacts }, guard)
     guard()
-  } catch { failure = true }
-  finally { closeLeanInterval(ledger, "continuation-retained-verifier") }
-  resourceGuard?.()
-  const elapsedMs = currentLeanElapsedMs(ledger), physicalBytes = cumulativeLeanPhysicalBytes(ledger)
-  if (elapsedMs > allocation.caps.elapsedMs || Date.now() >= allocation.window.deadlineMs) return fail("CONTINUATION_READER_WINDOW")
-  const state = readLeanLedger(ledger)
-  const body = { schemaVersion: "lean-baseline-continuation-retained-check-v1", allocationRoot: allocation.root, disposition: failure || !report?.complete ? "gaps_found" : "passed", report: report ?? null, charged: state.charged, currentCharged: state.charges.size, unusedOrdinals: allocation.slots.filter(slot => !state.charges.has(slot.root)).map(slot => slot.ordinal), elapsedMs, physicalBytes, readerPeakRssBytes: Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024), historicalPeakRssBytes: "unknown", holdoutOpened: false, formationMaterialized: false }
-  const check = { ...body, root: labRoot(body.schemaVersion, body) }
-  writeLeanContinuationArtifact(ledger, "retained-check.json", check, 4194304)
-  resourceGuard?.(); return check
+  } catch (error) { failure = continuationReaderFailure(error) }
+  finally {
+    try { closeLeanInterval(ledger, "continuation-retained-verifier") }
+    catch { return fail("CONTINUATION_TERMINAL_REFUSAL") }
+  }
+  return publishLeanContinuationRetainedCheck(ledger, report, failure, resourceGuard)
+}
+
+const continuationReaderFailure = (error: unknown): string => error instanceof Error && /^LEAN_[A-Z0-9_]{1,160}$/u.test(error.message) ? error.message : "CONTINUATION_READER_FAILURE"
+/** Publication has its own capacity check: a broken source hold can only
+ * produce failure evidence, never bypass RAM, disk, scratch or time limits. */
+const continuationReaderPublicationGuard = (ledger: LeanExperimentLedger): number => {
+  const allocation = validateLeanBaselineContinuationAllocation(ledger.allocation)
+  const capacity = (growth: number): number => {
+    const usage = process.memoryUsage(), disk = statfsSync(ledger.directory, { bigint: true }), nowMs = Date.now(), publicationBytes = 16777216
+    const physicalBytes = cumulativeLeanPhysicalBytes(ledger) + growth
+    assertLeanBaselineContinuationFrontier(allocation, { nowMs, monotonicElapsedMs: Math.max(0, currentLeanElapsedMs(ledger) - allocation.window.carryMs), remainingSlots: 0, remainingClosureMs: 0, remainingOfflineMs: 0, charged: readLeanLedger(ledger).charged, retainedBytes: physicalBytes + publicationBytes, scratchBytes: measureLeanPhysicalBytes(CONTINUATION.temp) + publicationBytes, parentRssBytes: Math.max(usage.rss, process.resourceUsage().maxRSS * 1024), childRssBytes: 0, arrayBuffersBytes: usage.arrayBuffers + publicationBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(disk.bavail * disk.bsize), live: true })
+    return physicalBytes
+  }
+  capacity(0)
+  const carry = readLeanContinuationJson(join(ledger.directory, "carry.json"), 4194304, 0o600)
+  const rows = carry.inventory as import("./v1-38-lean-baseline-continuation.js").LeanContinuationInventoryRow[]
+  if (!Array.isArray(rows) || rows.length > 4096 || labRoot("lean-baseline-continuation-inventory-v1", rows) !== allocation.predecessor.inventoryRoot) return fail("CONTINUATION_CARRY")
+  // Keep every old debit even if a file shrinks; add growth once. Content drift
+  // is already a failure, but its newly consumed blocks still cost capacity.
+  let growth = 0
+  for (const row of rows) {
+    const stat = lstatSync(resolve(row.path))
+    if (stat.isSymbolicLink() || stat.uid !== process.getuid?.() || realpathSync(resolve(row.path)) !== resolve(row.path) || stat.isFile() && stat.nlink !== 1 || !stat.isFile() && !stat.isDirectory()) return fail("CONTINUATION_PUBLICATION_FILE")
+    // A changed directory could hide newly added, unmeasured children. Refuse
+    // finitely instead of scanning history or treating capacity as known.
+    if (stat.isDirectory() && (stat.ino !== row.ino || stat.dev !== row.dev || stat.size !== row.bytes || stat.mtimeMs !== row.mtimeMs || stat.ctimeMs !== row.ctimeMs)) return fail("CONTINUATION_PUBLICATION_INVENTORY")
+    growth += Math.max(0, stat.blocks * 512 - row.allocatedBytes)
+  }
+  return capacity(growth)
+}
+
+/** Only the ordinary reader calls this after its one-use admission is closed.
+ * Injected guards/publisher are inert fixture seams, not CLI authority. */
+export const publishLeanContinuationRetainedCheck = (ledger: LeanExperimentLedger, report: ReturnType<typeof auditLeanBaselineContinuationRetained> | undefined, failure: string | null, sourceGuard: (() => void) | undefined, publicationGuard: (ledger: LeanExperimentLedger) => number | void = continuationReaderPublicationGuard, publish: typeof writeLeanContinuationArtifact = writeLeanContinuationArtifact) => {
+  let sourceHoldFailure: string | null = null
+  try { sourceGuard?.() } catch (error) { sourceHoldFailure = continuationReaderFailure(error); failure ??= sourceHoldFailure }
+  try {
+    const observedPhysicalBytes = publicationGuard(ledger)
+    const allocation = validateLeanBaselineContinuationAllocation(ledger.allocation)
+    const time = readLeanTimeAccounting(ledger)
+    if (time.active || !time.starts.has("continuation-retained-verifier") || !time.closed.has("continuation-retained-verifier")) return fail("CONTINUATION_READER_ADMISSION")
+    const elapsedMs = currentLeanElapsedMs(ledger), physicalBytes = Math.max(cumulativeLeanPhysicalBytes(ledger), observedPhysicalBytes ?? 0)
+    if (elapsedMs > allocation.caps.elapsedMs || Date.now() >= allocation.window.deadlineMs) return fail("CONTINUATION_READER_WINDOW")
+    const state = readLeanLedger(ledger)
+    const body = { schemaVersion: "lean-baseline-continuation-retained-check-v1", allocationRoot: allocation.root, disposition: failure || !report?.complete ? "gaps_found" : "passed", failure, sourceHoldFailure, report: failure ? null : report ?? null, charged: state.charged, currentCharged: state.charges.size, unusedOrdinals: allocation.slots.filter(slot => !state.charges.has(slot.root)).map(slot => slot.ordinal), elapsedMs, physicalBytes, readerPeakRssBytes: Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024), historicalPeakRssBytes: "unknown", holdoutOpened: false, formationMaterialized: false }
+    const check = { ...body, root: labRoot(body.schemaVersion, body) }
+    publish(ledger, "retained-check.json", check, 4194304)
+    publicationGuard(ledger)
+    if (!failure) sourceGuard?.()
+    return check
+  } catch { return fail("CONTINUATION_TERMINAL_REFUSAL") }
 }

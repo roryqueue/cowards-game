@@ -104,6 +104,15 @@ export const inventoryLeanContinuationSurvivors = (pinnedPaths: readonly string[
 }
 
 const privateNames = ["allocation.json", "debit-0.json", "entry.json", "ledger.ndjson", "pair-0.json", "replay-0.ndjson", "result.json", "terminal-0.json"] as const
+/** Preserve the authenticated no-refund debit, including debit not represented
+ * by surviving rows. Overlapping pinned paths have one current inventory row. */
+export const reconcileLeanContinuationDiskDebit = (prior: { allocatedDiskBytes: number; survivors: readonly { identity: string; allocatedBytes: number }[] }, current: readonly { path: string; allocatedBytes: number }[]): number => {
+  const old = new Map(prior.survivors.map(row => [row.identity, row.allocatedBytes])), live = new Map(current.map(row => [row.path, row.allocatedBytes]))
+  if (!integer(prior.allocatedDiskBytes) || old.size !== prior.survivors.length || live.size !== current.length || [...old.values(), ...live.values()].some(bytes => !integer(bytes)) || [...old.values()].reduce((sum, bytes) => sum + bytes, 0) > prior.allocatedDiskBytes || [...old].some(([path, bytes]) => !live.has(path) || live.get(path)! < bytes)) return fail("OLD_COST")
+  const debit = prior.allocatedDiskBytes + [...live].reduce((sum, [path, bytes]) => sum + Math.max(0, bytes - (old.get(path) ?? 0)), 0)
+  if (!integer(debit) || debit > LEAN_CAPS.retainedBytes) return fail("CARRY_CAPACITY")
+  return debit
+}
 const rooted = (value: Record<string, any>, domain: string) => { const { root, ...body } = value; if (root !== labRoot(domain, body)) return fail("CUSTODY_ROOT") }
 /** Exact bounded canonical custody, no historical reader or source materializer. */
 export const authenticateLeanBaselineContinuationCarry = (git: LeanContinuationGit, pinnedPaths: readonly string[], guard: () => void) => {
@@ -147,12 +156,11 @@ export const authenticateLeanBaselineContinuationCarry = (git: LeanContinuationG
     const report = `.planning/phases/265-serious-current-rules-league-and-development-red-team/${old.reader}`
     if (leanBytesRoot(readLeanContinuationBytes(report, 65536, 0o644)) !== old.carry.readerRawRoot) return fail("OLD_READER_COST")
   }
-  if (costPaths.some(path => !byPath.has(path))) return fail("OLD_COST")
+  const allocatedDiskBytes = reconcileLeanContinuationDiskDebit(cost as { allocatedDiskBytes: number; survivors: { identity: string; allocatedBytes: number }[] }, inventory)
   if (!equal(a.priorProbeCarry, authenticateLeanPrivateMatchProbeCarryV1())) return fail("PROBE_COST")
   const replay = byPath.get(`${store}/replay-0.ndjson`)
   if (!replay?.rawRoot || terminal.evidence?.streamRawRoot !== replay.rawRoot || terminal.evidence?.streamBytes !== replay.bytes || result.terminals[0].streamRawRoot !== replay.rawRoot || result.terminals[0].streamBytes !== replay.bytes) return fail("REPLAY_CUSTODY")
   const custody = { allocationRoot: a.root, allocationDigest: leanBytesRoot(bytes), allocationCommit: commit, sourceHead: a.sourceHead, records: [...values].map(([name, b]) => ({ name, rawRoot: leanBytesRoot(b) })), replayRoot: replay.rawRoot, priorMatchCarryRoot: a.priorMatchCarry.root, priorProbeCarryRoot: a.priorProbeCarry.root, costSnapshotRoot: cost.root, resultRoot: result.root, terminalRoot: terminal.root }
-  const allocatedDiskBytes = inventory.reduce((sum, row) => sum + row.allocatedBytes, 0)
   if (!integer(allocatedDiskBytes) || allocatedDiskBytes > LEAN_CAPS.retainedBytes) return fail("CARRY_CAPACITY")
   const body = { schemaVersion: "lean-baseline-continuation-carry-v1" as const, chargedMatches: 43 as const, elapsedUpperBoundMs: 415746903 as const, allocatedDiskBytes, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, custodyRoot: labRoot("lean-baseline-continuation-custody-v1", custody), inventoryRoot: labRoot("lean-baseline-continuation-inventory-v1", inventory), qualifiedReaderAuthority: "cost_only" as const }
   const carry: LeanBaselineContinuationCarry = freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })

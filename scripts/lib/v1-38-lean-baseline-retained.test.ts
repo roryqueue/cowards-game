@@ -10,6 +10,7 @@ import { CANONICAL_ARENA_CATALOG_V1_37, type StrategyInputV119 } from "@cowards/
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { LEAN_BASELINE_REQUIRED_METRICS, type LeanBaselineMetricReceipt } from "./v1-38-lean-baseline-metrics.js"
 import * as continuationReader from "./v1-38-lean-baseline-retained.js"
+import * as continuationEntry from "../run-v1-38-lean-baseline.js"
 import * as continuationLedger from "../../packages/strategy-lab/src/league/lean-experiment.js"
 vi.mock("./v1-38-lean-seal-metadata.js", () => ({ inspectLeanSealMetadata: () => {
   const body = { schemaVersion: "lean-seal-metadata-inventory-v1", protocol: { present: false, bytesRoot: null }, originalPublicReference: { present: false, bytesRoot: null }, checkoutDirty: true, originalCompatibleUnopenedSealVerified: false, privateStoreOrPreimageRead: false, newExploratorySealCreated: false, reservedHoldoutPerProfile: 4, disposition: "holdout_claim_deferred_no_verified_compatible_seal", reason: "existing_clean_checkout_seal_prerequisite_not_met", claims: { absenceOfAllExternalSealsProved: false, originalCommitmentSatisfied: false, holdoutOpened: false } }
@@ -174,6 +175,7 @@ const continuationFixtureBase = (): LeanBaselineRetainedSnapshot => {
   const carry = { schemaVersion: "lean-baseline-continuation-carry-v1" as const, chargedMatches: 43 as const, elapsedUpperBoundMs: 415746903 as const, allocatedDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, custodyRoot: root("custody"), inventoryRoot: root("inventory"), qualifiedReaderAuthority: "cost_only" as const }
   const request = { schemaVersion: "lean-baseline-continuation-request-v1", seed: old.seed, sourceHead: "b".repeat(40), sourceRoot: old.sourceRoot, planningRoot: root("planning"), planRoot: old.planRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot, candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, offlineOverheadMs: 60000, sourceAuthor: "fixture-author", runOperator: "fixture-run", readerOperator: "fixture-reader" }
   const { schemaVersion: _schema, sourceAuthor: _author, runOperator: _operator, readerOperator: _reader, ...allocationInput } = request
+  request.candidateRoots = [...request.candidateRoots].sort().reverse()
   const a = continuationLedger.createLeanBaselineContinuationAllocation({ ...allocationInput, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), predecessor: { ...carry, root: labRoot(carry.schemaVersion, carry) } })
   base.allocation = a; base.request = request; base.requestBytesRoot = a.requestBytesRoot
   const start = a.window.anchorMs + 100
@@ -185,6 +187,34 @@ const continuationFixtureBase = (): LeanBaselineRetainedSnapshot => {
 }
 
 describe("continuation full retained reconstruction", () => {
+  it("publishes one honest failure after persistent planning drift, or finitely refuses unsafe publication", () => {
+    const allocation = continuationFixtureBase().allocation
+    const fakeLedger = { allocation, directory: "inert-only" } as never
+    const guard = () => { throw new TypeError("LEAN_BASELINE_CONTINUATION_PIN_CHANGED") }
+    const state = vi.spyOn(continuationLedger, "readLeanLedger").mockReturnValue({ charged: 43, charges: new Map() } as never)
+    const elapsed = vi.spyOn(continuationLedger, "currentLeanElapsedMs").mockReturnValue(415747903)
+    const physical = vi.spyOn(continuationLedger, "cumulativeLeanPhysicalBytes").mockReturnValue(4096)
+    const clock = vi.spyOn(Date, "now").mockReturnValue(continuationLedger.LEAN_BASELINE_CONTINUATION_WINDOW.anchorMs + 1000)
+    const time = vi.spyOn(continuationLedger, "readLeanTimeAccounting").mockReturnValue({ active: false, starts: new Map([["continuation-retained-verifier", 1]]), closed: new Set(["continuation-retained-verifier"]) } as never)
+    let record: any
+    const publish = vi.fn((_ledger: unknown, _name: string, value: unknown) => { if (record) throw new Error("EEXIST"); record = value })
+    try {
+      const safe = vi.fn()
+      const result = continuationReader.publishLeanContinuationRetainedCheck(fakeLedger, undefined, null, guard, safe, publish)
+      expect(result).toMatchObject({ disposition: "gaps_found", failure: "LEAN_BASELINE_CONTINUATION_PIN_CHANGED", sourceHoldFailure: "LEAN_BASELINE_CONTINUATION_PIN_CHANGED", report: null, currentCharged: 0, unusedOrdinals: Array.from({ length: 36 }, (_, n) => n) })
+      expect(safe).toHaveBeenCalledTimes(2)
+      expect(() => continuationReader.publishLeanContinuationRetainedCheck(fakeLedger, undefined, null, guard, safe, publish)).toThrow(/TERMINAL_REFUSAL/)
+      const forbiddenWrite = vi.fn()
+      expect(() => continuationReader.publishLeanContinuationRetainedCheck(fakeLedger, undefined, null, guard, () => { throw new Error("CAPACITY") }, forbiddenWrite)).toThrow(/TERMINAL_REFUSAL/)
+      expect(forbiddenWrite).not.toHaveBeenCalled()
+      const scope = vi.spyOn(continuationEntry, "assertLeanBaselineContinuationScope").mockImplementation(() => {})
+      const open = vi.spyOn(continuationLedger, "openLeanLedger").mockReturnValue(fakeLedger)
+      const ipc = Object.fromEntries(["send", "connected"].map(key => [key, Object.getOwnPropertyDescriptor(process, key)!]))
+      Object.defineProperties(process, { send: { value: undefined, configurable: true }, connected: { value: false, configurable: true } })
+      try { expect(() => continuationReader.verifyLeanBaselineContinuationRetained(continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS.request)).toThrow(/CONTINUATION_READER_USED/) }
+      finally { Object.defineProperties(process, ipc); scope.mockRestore(); open.mockRestore() }
+    } finally { state.mockRestore(); elapsed.mockRestore(); physical.mockRestore(); clock.mockRestore(); time.mockRestore() }
+  })
   it("rebuilds all 36 cells and real work, and denies mutated roots, grants, receipts and reader identities", async () => {
     const s = await completeFixture(() => "DRAW", true)
     const audit = (v: unknown) => continuationReader.auditLeanBaselineContinuationRetained(v as never)
