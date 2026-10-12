@@ -48,6 +48,129 @@ describe("complete fresh identity guard", () => {
 })
 
 const r = (value: unknown) => labRoot("inert-continuation-fixture", value)
+export const continuationWindowFixtureV2 = () => {
+  const body = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "synthetic-unit-grant", approvalEvidence: { humanDecisionId: "synthetic-unit-decision", recordedBy: "synthetic-root" }, approvedAtMs: 1791820000000, anchorMs: 1791820000000, deadlineMs: 1791848800000, carryMs: 472058903, capMs: 500858903, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261012-v3" as const, reviewedSourceHead: "a".repeat(40), sourceRoot: r("source"), sourceGateRoot: r("source-gate"), planRoot: r("plan"), runOperator: "synthetic-runner", readerOperator: "synthetic-reader" }
+  return { ...body, root: labRoot(body.schemaVersion, body) }
+}
+export const continuationAllocationFixtureV2 = () => {
+  const window = continuationWindowFixtureV2()
+  const body = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: 465187899, allocatedDiskBytes: 88924160, residualDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: r("original-carry"), closedCapsuleRoot: r("closed-capsule"), custodyRoot: r("custody"), inventoryRoot: r("inventory"), qualifiedReaderAuthority: "cost_only" as const }
+  return ledger.createLeanBaselineContinuationAllocationV2({ sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: r("plan"), candidateRoots: [r("a"), r("b")], requestRoots: Array.from({ length: 36 }, (_, n) => r(n)), seed: "inert-continuation-v2", sourceHead: "b".repeat(40), planningRoot: r("planning"), manifestRoot: r("manifest"), requestBytesRoot: r("request"), window, windowBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(window)), sourceGateRoot: window.sourceGateRoot, dataReviewRoot: r("data-review"), predecessor: { ...body, root: labRoot(body.schemaVersion, body) } })
+}
+describe("[continuation-v2] pure policy and ledger admission", () => {
+  it("preserves the V1 window and constructor while admitting a distinct fifty-cost schema", () => {
+    const old = continuationAllocationFixture(), bytes = ledger.leanCanonicalBytes(old)
+    const a = continuationAllocationFixtureV2()
+    expect(ledger.admitLeanAllocation(a)).toEqual(a)
+    expect(a.predecessor.chargedMatches).toBe(50)
+    expect(a.slots).toHaveLength(36); expect(a.holdoutReservations).toHaveLength(4)
+    expect(ledger.leanCapsForAllocation(a).elapsedMs).toBe(a.window.capMs)
+    expect(ledger.leanMemoryLimitForAllocation(a)).toBe(3000000000)
+    expect(ledger.leanWritablePaths(a)).toEqual([ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.temp, ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.allocation, ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request, ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.window])
+    expect(ledger.leanCanonicalBytes(continuationAllocationFixture())).toEqual(bytes)
+    expect(old.predecessor.chargedMatches).toBe(43)
+    expect(ledger.LEAN_BASELINE_CONTINUATION_WINDOW).toEqual({ anchorMs: 1791807317000, deadlineMs: 1791836117000, carryMs: 459375903, capMs: 488175903, reserveMs: 1860000, memoryBytes: 3000000000 })
+  })
+  it("refuses pending, extra-key, wrong-namespace and recomputed arithmetic claims", () => {
+    const w = continuationWindowFixtureV2()
+    for (const changes of [{ status: "pending" }, { routeNamespace: "20261012-v2" }, { carryMs: 465187899 }, { deadlineMs: w.deadlineMs + 1 }, { durationMs: 1 }, { approvedAtMs: w.anchorMs - 1 }, { capMs: Number.MAX_SAFE_INTEGER }, { readerOperator: w.runOperator }, { extra: true }]) {
+      const { root: _, ...body } = { ...w, ...changes }
+      expect(() => ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })).toThrow()
+    }
+    expect(() => ledger.validateLeanBaselineContinuationWindowV2(undefined)).toThrow()
+  })
+  it.each([43, 49, 51])("rejects rerooted prior count %i", chargedMatches => {
+    const a = continuationAllocationFixtureV2(), { root: _, ...body } = { ...a.predecessor, chargedMatches }
+    expect(() => ledger.validateLeanBaselineContinuationAllocationV2({ ...a, predecessor: { ...body, root: labRoot(body.schemaVersion, body) } })).toThrow()
+  })
+  it("requires the complete frontier and preserves global, grant and monotonic floors", () => {
+    const a = continuationAllocationFixtureV2(), w = a.window
+    const s = { nowMs: w.anchorMs + 1000, monotonicElapsedMs: 2000, remainingSlots: 36, charged: 50, retainedBytes: 88924160, scratchBytes: 0, parentRssBytes: 100000000, childRssBytes: 0, arrayBuffersBytes: 0, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true }
+    expect(continuation.assertLeanBaselineContinuationFrontierV2(a, s)).toBe(w.carryMs + 2000)
+    for (const changes of [{ remainingSlots: 37 }, { charged: 49 }, { nowMs: w.deadlineMs - 1 }, { remainingClosureMs: 0 }, { freeBytes: 0 }, { live: false }]) expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, { ...s, ...changes })).toThrow()
+  })
+  it("reserves bounded descriptor bytes before allocation and reobserves mutations", () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-v2-inert-"))), path = join(dir, "fixture.json")
+    try {
+      writeFileSync(path, "{}", { mode: 0o600 })
+      const guard = vi.fn((additional?: number) => { if (additional) throw new Error("reservation-denied") })
+      expect(() => continuation.readLeanContinuationBoundedBytesV2(path, 65536, 0o600, guard)).toThrow("reservation-denied")
+      expect(guard).toHaveBeenCalledWith(2)
+      expect(continuation.readLeanContinuationBoundedBytesV2(path, 65536, 0o600, () => {}).toString()).toBe("{}")
+      let calls = 0
+      expect(() => continuation.readLeanContinuationBoundedBytesV2(path, 65536, 0o600, () => { if (++calls === 3) writeFileSync(path, "[]") })).toThrow(/CHANGED/)
+    } finally { rmSync(dir, { recursive: true }) }
+  })
+})
+describe("[continuation-v2] exact reviewed transitions and bounded metadata", () => {
+  const old: continuation.LeanContinuationInventoryRow = { path: "scripts/unit.ts", kind: "file", bytes: 10, allocatedBytes: 4096, dev: 1, ino: 2, mode: 0o644, mtimeMs: 1, ctimeMs: 1, rawRoot: r("old") }
+  const reviewed: continuation.LeanContinuationReviewedRowV2 = { path: old.path, root: r("reviewed"), commit: "a".repeat(40), kind: "reviewed_source" }
+  it("admits only exact reviewed bytes with preserved debit; consumed v2 stays in inventory", () => {
+    const current = { ...old, ino: 3, bytes: 20, mtimeMs: 2, ctimeMs: 2, rawRoot: reviewed.root }
+    expect(() => continuation.reconcileLeanContinuationInventoryV2([old], [current], [reviewed])).not.toThrow()
+    for (const change of [{ rawRoot: r("unreviewed") }, { allocatedBytes: 0 }, { mode: 0o600 }]) expect(() => continuation.reconcileLeanContinuationInventoryV2([old], [{ ...current, ...change }], [reviewed])).toThrow()
+    expect(() => continuation.reconcileLeanContinuationInventoryV2([old], [], [reviewed])).toThrow()
+    expect(() => continuation.reconcileLeanContinuationInventoryV2([old], [current, current], [reviewed])).toThrow()
+    const consumed = { ...old, path: `${ledger.LEAN_BASELINE_CONTINUATION_PATHS.store}/result.json` }
+    expect(() => continuation.reconcileLeanContinuationInventoryV2([consumed], [consumed], [])).not.toThrow()
+    expect(() => continuation.reconcileLeanContinuationInventoryV2([consumed], [{ ...consumed, ino: 8 }], [])).toThrow(/IMMUTABLE/)
+    expect(() => continuation.reconcileLeanContinuationInventoryV2([consumed], [], [])).toThrow()
+    expect(() => continuation.reconcileLeanContinuationInventoryV2([], [{ ...old, path: ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request }], [])).toThrow()
+  })
+  it("bounds ancestor membership instead of exempting directories", () => {
+    const directory: continuation.LeanContinuationInventoryRow = { ...old, path: "scripts", kind: "directory", ino: 5, rawRoot: null }
+    const current = { ...old, rawRoot: reviewed.root }
+    expect(() => continuation.reconcileLeanContinuationInventoryV2([directory, old], [{ ...directory, mtimeMs: 2, members: ["unit.ts"] }, current], [reviewed])).not.toThrow()
+    expect(() => continuation.reconcileLeanContinuationInventoryV2([directory, old], [{ ...directory, mtimeMs: 2, members: ["unit.ts", "unknown"] }, current], [reviewed])).toThrow(/MEMBERS/)
+  })
+  it("does not cache exact Git scope or mutable HEAD observations", async () => {
+    const { readLeanBaselineContinuationGitV2, enableLeanContinuationExecutorOriginsV2 } = await import("./v1-38-lean-container-match-session.js")
+    const exec = vi.mocked(childProcess.execFileSync).mockReturnValue(Buffer.from(`${"b".repeat(40)}\n`)), manifest = [{ path: "scripts/unit.ts", root: r("unit") }]
+    try {
+      readLeanBaselineContinuationGitV2(["rev-parse", "HEAD"], manifest)
+      readLeanBaselineContinuationGitV2(["rev-parse", "HEAD"], manifest)
+      expect(exec).toHaveBeenCalledTimes(2)
+      expect(() => readLeanBaselineContinuationGitV2(["show", `${"a".repeat(40)}:scripts/unit.ts`], [])).toThrow()
+      for (const args of [["status"], ["show", "HEAD:scripts/unit.ts"], ["show", `${"a".repeat(40)}:scripts/other.ts`], ["merge-base", "--is-ancestor", "HEAD", "a".repeat(40)]]) expect(() => readLeanBaselineContinuationGitV2(args, manifest)).toThrow()
+      expect(() => enableLeanContinuationExecutorOriginsV2({} as never, continuationAllocationFixtureV2())).toThrow()
+    } finally { exec.mockReset() }
+  })
+})
+describe("[continuation-v2] closed seven-charge cost capsule", () => {
+  const rooted = (body: Record<string, any>, domain = body.schemaVersion): any => { const { root: _, ...value } = body; return { ...value, root: labRoot(domain, value) } }
+  const capsule = () => {
+    const original = continuationAllocationFixture(), inventory: unknown[] = [], custody = { inert: true }
+    const predecessor = rooted({ ...original.predecessor, inventoryRoot: labRoot("lean-baseline-continuation-inventory-v1", inventory), custodyRoot: labRoot("lean-baseline-continuation-custody-v1", custody) })
+    const a = rooted({ ...original, predecessor }) as ledger.LeanBaselineContinuationAllocation
+    const events: Record<string, any>[] = [], charges: Record<string, any>[] = [], terminals: Record<string, any>[] = []
+    for (let ordinal = 0; ordinal < 7; ordinal++) {
+      const slot = a.slots[ordinal]!, charge = rooted({ schemaVersion: "lean-slot-charge-v1", allocationRoot: a.root, slotRoot: slot.root, ordinal })
+      const terminal = { kind: "terminal", chargeRoot: charge.root, record: { classification: ordinal === 6 ? "system_failure" : "success", code: ordinal === 6 ? "SUPERVISOR_FAILURE" : "OK", cleanupComplete: true, outcome: ordinal === 6 ? null : "DRAW" }, replay: null }
+      charges.push(charge); terminals.push(terminal); events.push({ kind: "charge", charge }, terminal)
+    }
+    events.push({ kind: "stop", reason: "failure" })
+    const evidenceRecords = a.slots.map((slot, i) => ({ slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: charges[i]?.root ?? null, terminal: terminals[i] ?? null, status: charges[i] ? terminals[i]!.record.classification : "unused" }))
+    const evidenceRoot = labRoot("lean-evidence-v1", { allocationRoot: a.root, events, records: evidenceRecords }), unusedOrdinals = Array.from({ length: 29 }, (_, i) => i + 7), head = "b".repeat(40)
+    const pipeline = rooted({ schemaVersion: "lean-baseline-continuation-pipeline-v1", unusedOrdinals })
+    const entry = { allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot, head, parentPid: 1, childPid: 2, wallStartMs: a.window.anchorMs + 200 }
+    const terminal = { allocationRoot: a.root, sourceRoot: a.sourceRoot, head, entryBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(entry)), parentPid: 1, childPid: 2, status: "child_exited", exitCode: 0, signal: null, elapsedUpperBoundMs: 100, wallObservedMs: a.window.anchorMs + 300, physicalBytes: 88924160 }
+    const parent = rooted({ schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: a.root, head, entryBytesRoot: terminal.entryBytesRoot, parentPid: 1, childPid: 2, exitCode: 0, signal: null, uncertain: false })
+    const result = { schemaVersion: "lean-baseline-continuation-result-v1", allocationRoot: a.root, sourceRoot: a.sourceRoot, planningRoot: a.planningRoot, requestBytesRoot: a.requestBytesRoot, head, charged: 50, successful: 6, failure: null, status: "partial_or_failed_baseline", holdoutOpened: false, formationMaterialized: false, sourceAuthor: "author", runOperator: "runner", evidenceRoot, pipeline, unusedOrdinals, holdoutReservations: a.holdoutReservations, elapsedMs: 465187800 }
+    const report = rooted({ schemaVersion: "lean-baseline-continuation-retained-v1", allocationRoot: a.root, head, charged: 50, currentCharged: 7, successful: 6, complete: false, evidenceRoot, pipelineRoot: pipeline.root, sourceAuthor: "author", runOperator: "runner", unusedOrdinals })
+    const check = rooted({ schemaVersion: "lean-baseline-continuation-retained-check-v1", allocationRoot: a.root, disposition: "gaps_found", failure: null, sourceHoldFailure: null, report, charged: 50, currentCharged: 7, unusedOrdinals, elapsedMs: 465187899, physicalBytes: 88924160 })
+    const intervals = ["continuation-run-admission", "pilot-entry", "continuation-retained-verifier"].flatMap((id, i) => [{ kind: "start", id, atMs: a.window.anchorMs + i * 200 }, { kind: "close", id, atMs: a.window.anchorMs + i * 200 + 100 }])
+    return { a, value: { carry: { carry: predecessor, inventory, custody }, result, check, entry, terminal, parent, events, intervals } }
+  }
+  it("joins all fifty cost charges without promoting the old gaps or reconstructing a replay", () => {
+    const f = capsule()
+    expect(continuation.validateLeanContinuationClosedCapsuleV2(f.a, f.value)).toEqual({ elapsedMs: 465187899, allocatedDiskBytes: 88924160 })
+  })
+  it("denies extra terminals, reordered or open time, promoted checks and changed event roots", () => {
+    for (const change of [(v: any) => v.events.push(v.events[1]), (v: any) => v.events.splice(1, 1), (v: any) => v.intervals.pop(), (v: any) => v.intervals.reverse(), (v: any) => { v.check = rooted({ ...v.check, disposition: "passed" }) }, (v: any) => { v.events[1].record.outcome = "top" }, (v: any) => { v.entry.head = "c".repeat(40) }, (v: any) => { v.carry.inventory.push({ path: "forged" }) }]) {
+      const f = capsule(); change(f.value); expect(() => continuation.validateLeanContinuationClosedCapsuleV2(f.a, f.value)).toThrow()
+    }
+  })
+})
 export const continuationAllocationFixture = () => {
   const predecessorBody = { schemaVersion: "lean-baseline-continuation-carry-v1" as const, chargedMatches: 43 as const, elapsedUpperBoundMs: 459375903 as const, allocatedDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, custodyRoot: r("custody"), inventoryRoot: r("inventory"), qualifiedReaderAuthority: "cost_only" as const }
   return ledger.createLeanBaselineContinuationAllocation({ sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: r("plan"), candidateRoots: [r("a"), r("b")], requestRoots: Array.from({ length: 36 }, (_, n) => r(n)), seed: "inert-continuation", sourceHead: "a".repeat(40), planningRoot: r("planning"), requestBytesRoot: r("request"), offlineOverheadMs: 60000, predecessor: { ...predecessorBody, root: labRoot(predecessorBody.schemaVersion, predecessorBody) } })

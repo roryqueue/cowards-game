@@ -4,6 +4,8 @@ import { constants, openSync, closeSync, fstatSync, readSync, lstatSync, realpat
 import { resolve, join, relative } from "node:path"
 import { labRoot, freezeLabValue, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_CAPS, LEAN_BASELINE_CONTINUATION_WINDOW as WINDOW, LEAN_BASELINE_CONTINUATION_PATHS, leanBytesRoot, leanCanonicalBytes, validateLeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocation, type LeanBaselineContinuationCarry } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V2, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationAllocationV2, leanBaselineContinuationElapsedFloorV2, type LeanBaselineContinuationAllocationV2, type LeanBaselineContinuationCarryV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { exactLabKeys } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_PRIVATE_MATCH_CARRY_V3, LEAN_PRIVATE_MATCH_CARRY_V2, LEAN_PRIVATE_MATCH_ARTIFACT_V3, LEAN_PRIVATE_PROBE_COST_ROOT, validateLeanPrivateMatchAllocationV3, validateLeanPrivateMatchAllocationV2, validateLeanPrivateMatchAllocationV1, authenticateLeanPrivateMatchProbeCarryV1 } from "./v1-38-lean-experiment-authority.js"
 
 export { LEAN_BASELINE_CONTINUATION_PATHS }
@@ -12,6 +14,37 @@ const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_CONTI
 const integer = (v: unknown): v is number => Number.isSafeInteger(v) && Number(v) >= 0
 const equal = (a: unknown, b: unknown) => Buffer.from(leanCanonicalBytes(a)).equals(Buffer.from(leanCanonicalBytes(b)))
 export type LeanContinuationGit = (args: readonly string[]) => Buffer
+/** Bounded descriptor reads reserve before allocation; no real caller can opt out. */
+export const readLeanContinuationBoundedBytesV2 = (name: string, maximum: number, mode: number, guard: (additionalBytes?: number) => void): Buffer => {
+  if (!integer(maximum) || maximum > 4194304 || /preimage|secret|sealed/iu.test(name) || typeof guard !== "function") return fail("V2_READ_SCOPE")
+  guard()
+  const path = resolve(name), stat = lstatSync(path)
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== process.getuid?.() || realpathSync(path) !== path || (stat.mode & 0o777) !== mode || stat.size > maximum || !integer(stat.size)) return fail("V2_FILE")
+  const same = (s: Stats) => s.isFile() && !s.isSymbolicLink() && s.nlink === 1 && s.uid === stat.uid && s.mode === stat.mode && s.dev === stat.dev && s.ino === stat.ino && s.size === stat.size && s.blocks === stat.blocks && s.mtimeMs === stat.mtimeMs && s.ctimeMs === stat.ctimeMs
+  guard(stat.size)
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
+  const hold = () => { if (!same(fstatSync(fd)) || !same(lstatSync(path)) || realpathSync(path) !== path) return fail("V2_FILE_CHANGED") }
+  try {
+    hold(); const bytes = Buffer.alloc(stat.size)
+    for (let offset = 0; offset < bytes.length;) { guard(); hold(); const n = readSync(fd, bytes, offset, Math.min(65536, bytes.length - offset), offset); if (!n) return fail("V2_TORN"); offset += n; hold(); guard() }
+    guard(); hold(); return bytes
+  } finally { closeSync(fd) }
+}
+export const readLeanContinuationJsonV2 = (path: string, maximum: number, mode: number, guard: (additionalBytes?: number) => void): Record<string, any> => {
+  const bytes = readLeanContinuationBoundedBytesV2(path, maximum, mode, guard)
+  guard(bytes.length * 6)
+  const value = JSON.parse(bytes.toString("utf8")) as Record<string, any>
+  if (!bytes.equals(Buffer.from(leanCanonicalBytes(value)))) return fail("V2_CANONICAL")
+  guard(); return value
+}
+export const assertLeanBaselineContinuationFrontierV2 = (allocation: LeanBaselineContinuationAllocationV2, s: LeanContinuationFrontier): number => {
+  const a = validateLeanBaselineContinuationAllocationV2(allocation), w = a.window
+  if (Object.entries(s).some(([key, value]) => key !== "live" && !integer(value)) || !s.live || s.remainingSlots > 36 || s.charged < 50 || s.charged > 86 || s.remainingSlots !== 0 && (s.charged + s.remainingSlots < 86 || s.charged + s.remainingSlots > 87) || s.remainingSlots !== 0 && (s.remainingClosureMs !== undefined || s.remainingOfflineMs !== undefined) || (s.remainingClosureMs ?? w.closureMs) > w.closureMs || (s.remainingOfflineMs ?? w.offlineOverheadMs) > w.offlineOverheadMs) return fail("V2_FRONTIER")
+  const elapsed = leanBaselineContinuationElapsedFloorV2(w, s.nowMs, a.predecessor.elapsedUpperBoundMs, s.monotonicElapsedMs)
+  const reserve = s.remainingSlots * LEAN_CAPS.matchMs + (s.remainingClosureMs ?? w.closureMs) + (s.remainingOfflineMs ?? w.offlineOverheadMs), native = 2 * 268435456 + 512000000 + 335544320
+  if (!integer(s.nowMs + reserve) || !integer(elapsed + reserve) || s.nowMs + reserve > w.deadlineMs || elapsed + reserve > w.capMs || s.retainedBytes < a.predecessor.allocatedDiskBytes || s.retainedBytes > LEAN_CAPS.retainedBytes || s.scratchBytes > LEAN_CAPS.scratchBytes || s.retainedBytes + s.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || s.parentRssBytes + s.childRssBytes + s.arrayBuffersBytes + native > LEAN_BASELINE_CONTINUATION_POLICY_V2.memoryBytes || s.availableMemoryBytes < native || s.freeBytes < LEAN_CAPS.totalBytes - s.retainedBytes) return fail("V2_CAPACITY")
+  return elapsed
+}
 export const assertLeanContinuationDirectParent = (commit: string, sourceHead: string, parents: readonly string[], canonical: Uint8Array, committed: Uint8Array): void => {
   if (!/^[a-f0-9]{40}$/u.test(commit) || !/^[a-f0-9]{40}$/u.test(sourceHead) || !equal(parents, [commit, sourceHead]) || !Buffer.from(canonical).equals(Buffer.from(committed))) return fail("DIRECT_PARENT")
 }
@@ -158,6 +191,154 @@ export const inventoryLeanContinuationSurvivors = (pinnedPaths: readonly string[
 }
 
 const privateNames = ["allocation.json", "debit-0.json", "entry.json", "ledger.ndjson", "pair-0.json", "replay-0.ndjson", "result.json", "terminal-0.json"] as const
+export interface LeanContinuationReviewedRowV2 { path: string; root: LabRoot; commit: string; kind: "reviewed_source" | "active_planning" }
+export interface LeanContinuationInventoryRowV2 extends LeanContinuationInventoryRow { members?: readonly string[] }
+const futurePathsV2: readonly string[] = [LEAN_BASELINE_CONTINUATION_PATHS_V2.request, LEAN_BASELINE_CONTINUATION_PATHS_V2.allocation, LEAN_BASELINE_CONTINUATION_PATHS_V2.store, LEAN_BASELINE_CONTINUATION_PATHS_V2.temp, LEAN_BASELINE_CONTINUATION_PATHS_V2.window]
+const futureV2 = (path: string) => futurePathsV2.some(p => path === p || path.startsWith(`${p}/`))
+const sameIdentityV2 = (old: LeanContinuationInventoryRow, row: LeanContinuationInventoryRow) => ["path", "kind", "bytes", "allocatedBytes", "dev", "ino", "mode", "mtimeMs", "ctimeMs"].every(key => old[key as keyof LeanContinuationInventoryRow] === row[key as keyof LeanContinuationInventoryRow])
+/** Exact reviewed bytes may transition before freeze. Consumed evidence cannot. */
+export const reconcileLeanContinuationInventoryV2 = (prior: readonly LeanContinuationInventoryRow[], current: readonly LeanContinuationInventoryRowV2[], reviewed: readonly LeanContinuationReviewedRowV2[]): void => {
+  const live = new Map(current.map(row => [row.path, row])), transitions = new Map(reviewed.map(row => [row.path, row]))
+  if (prior.length > 4096 || current.length > 4096 || reviewed.length > 1024 || new Set(prior.map(row => row.path)).size !== prior.length || live.size !== current.length || transitions.size !== reviewed.length || current.some(row => futureV2(row.path)) || reviewed.some(row => !["reviewed_source", "active_planning"].includes(row.kind) || !/^[a-f0-9]{40}$/u.test(row.commit) || !/^sha256:[a-f0-9]{64}$/u.test(row.root) || row.path.startsWith(".strategy-lab/") || row.path.startsWith(".planning/artifacts/"))) return fail("V2_TRANSITION_SCOPE")
+  for (const old of prior) {
+    const row = live.get(old.path), transition = transitions.get(old.path)
+    if (!row || row.allocatedBytes < old.allocatedBytes || row.mode !== old.mode || row.kind !== old.kind) return fail("V2_SURVIVOR_SHRINK")
+    if (transition) { if (row.kind !== "file" || row.rawRoot !== transition.root) return fail("V2_UNREVIEWED_BYTES"); continue }
+    if (old.kind === "directory") {
+      const ancestor = reviewed.some(r => r.path.startsWith(`${old.path}/`))
+      if (!ancestor) { if (!sameIdentityV2(old, row)) return fail("V2_IMMUTABLE_CHANGED") }
+      else {
+        if (row.dev !== old.dev || row.ino !== old.ino || !row.members) return fail("V2_DIRECTORY")
+        const known = new Set([...prior.map(r => r.path), ...reviewed.map(r => r.path)].filter(p => p.startsWith(`${old.path}/`)).map(p => p.slice(old.path.length + 1).split("/")[0]!))
+        if (!equal([...known].sort(), row.members)) return fail("V2_DIRECTORY_MEMBERS")
+      }
+    } else if (!sameIdentityV2(old, row) || row.rawRoot !== old.rawRoot) return fail("V2_IMMUTABLE_CHANGED")
+  }
+}
+/** Enumerate bounded metadata. Historical contents are never reopened here. */
+export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinuationInventoryRow[], reviewed: readonly LeanContinuationReviewedRowV2[], git: LeanContinuationGit, guard: (additionalBytes?: number) => void): readonly LeanContinuationInventoryRowV2[] => {
+  const old = new Map(prior.map(row => [row.path, row])), review = new Map(reviewed.map(row => [row.path, row])), names = new Set([...old.keys(), ...review.keys()])
+  if (old.size !== prior.length || review.size !== reviewed.length || prior.length > 4096 || reviewed.length > 1024) return fail("V2_INVENTORY_BOUND")
+  for (const dir of [".strategy-lab", ".planning/artifacts"]) {
+    const members = readdirSync(resolve(dir)); if (members.length > 4096) return fail("V2_INVENTORY_BOUND")
+    for (const name of members) if (dir === ".strategy-lab" ? /^(?:lean-|v1[.-]38|sealed-|holdout)/u.test(name) : /^v1\.38-/u.test(name)) names.add(`${dir}/${name}`)
+  }
+  const rows: LeanContinuationInventoryRowV2[] = [], seen = new Set<string>(), inodes = new Set<string>()
+  const visit = (name: string, depth: number): void => {
+    if (futureV2(name) || seen.has(name)) return
+    if (depth > 16 || rows.length >= 4096 || name.startsWith("/") || name.split("/").some(p => !p || p === "." || p === "..")) return fail("V2_INVENTORY_SCOPE")
+    guard(); const path = resolve(name), s = lstatSync(path), inode = `${s.dev}:${s.ino}`
+    if (s.isSymbolicLink() || s.uid !== process.getuid?.() || realpathSync(path) !== path || !s.isFile() && !s.isDirectory() || s.isFile() && s.nlink !== 1 || inodes.has(inode) || !integer(s.blocks * 512)) return fail("V2_INVENTORY_ALIAS")
+    seen.add(name); inodes.add(inode)
+    const priorRow = old.get(name), reviewedRow = review.get(name), sealed = /preimage|secret|sealed|holdout/iu.test(name)
+    let rawRoot = priorRow?.rawRoot ?? null
+    if (reviewedRow) {
+      if (!s.isFile() || sealed || (s.mode & 0o777) !== 0o644) return fail("V2_REVIEWED_FILE")
+      guard(65536); authenticateLeanContinuationPinnedSource(reviewedRow, reviewedRow.commit, [...review.keys()], git, guard)
+      rawRoot = s.size > 4194304 ? reviewedRow.root : leanBytesRoot(readLeanContinuationBoundedBytesV2(name, 4194304, 0o644, guard))
+      if (rawRoot !== reviewedRow.root) return fail("V2_UNREVIEWED_BYTES")
+    }
+    const members = s.isDirectory() ? readdirSync(path).sort() : undefined
+    if (members && (members.length > 4096 || members.some(n => n.includes("/") || n === "." || n === ".."))) return fail("V2_DIRECTORY_BOUND")
+    const row: LeanContinuationInventoryRowV2 = { path: name, kind: s.isDirectory() ? "directory" : sealed ? "sealed_metadata" : "file", bytes: s.size, allocatedBytes: s.blocks * 512, dev: s.dev, ino: s.ino, mode: s.mode & 0o777, mtimeMs: s.mtimeMs, ctimeMs: s.ctimeMs, rawRoot, ...(members ? { members } : {}) }
+    rows.push(row)
+    if (members) for (const child of members) visit(`${name}/${child}`, depth + 1)
+    guard(); const after = lstatSync(path)
+    if (after.dev !== s.dev || after.ino !== s.ino || after.size !== s.size || after.blocks !== s.blocks || after.mtimeMs !== s.mtimeMs || after.ctimeMs !== s.ctimeMs) return fail("V2_INVENTORY_CHANGED")
+  }
+  for (const name of [...names].sort()) visit(name, 0)
+  rows.sort((a, b) => a.path.localeCompare(b.path)); reconcileLeanContinuationInventoryV2(prior, rows, reviewed)
+  guard(); return freezeLabValue(rows)
+}
+export const createLeanContinuationIdentityGuardV2 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[]): (() => void) => {
+  const base = createLeanContinuationIdentityGuard(pins, survivors)
+  return () => {
+    base()
+    for (const row of survivors) {
+      const path = resolve(row.path), s = lstatSync(path)
+      if (s.uid !== process.getuid?.() || realpathSync(path) !== path || (s.mode & 0o777) !== row.mode || row.members && !equal(readdirSync(path).sort(), row.members)) return fail("V2_IDENTITY_CHANGED")
+    }
+  }
+}
+
+export const LEAN_CONTINUATION_CLOSED_COST_V2 = Object.freeze({ sourceHead: "16db0fa0610e1a2378be8594b191d61f2f3c3baa", allocationCommit: "f6ff7ec36de7387feab7e4b4ad3695db480a4c1f", allocationBytesRoot: "sha256:3ea8c18d1a8a5b7816ed44f10572d4469870e75dcee8c7223895809830cd2c87", resultBytesRoot: "sha256:79ad5c21114afcec3b420b2f452db20cc29b2ca769c8ade317a343187b792796", checkBytesRoot: "sha256:64015d7c5e2c0ced02e0fa09f7c10f2cd7534a3f42b7f046af2a65d7bef17286", checkRoot: "sha256:e1711e16eafd3ded5d69988fe7617208fa7fcdc62b9681d45910ef2825f88838" })
+/** Pure closed-cost join, shared by the pinned importer and inert fixtures. */
+export const validateLeanContinuationClosedCapsuleV2 = (a: LeanBaselineContinuationAllocation, capsule: { carry: Record<string, any>; result: Record<string, any>; check: Record<string, any>; entry: Record<string, any>; terminal: Record<string, any>; parent: Record<string, any>; events: readonly Record<string, any>[]; intervals: readonly Record<string, any>[] }): { elapsedMs: number; allocatedDiskBytes: number } => {
+  validateLeanBaselineContinuationAllocation(a)
+  const { carry, result, check, entry, terminal, parent, events, intervals } = capsule
+  if (!equal(carry.carry, a.predecessor) || !Array.isArray(carry.inventory) || carry.inventory.length > 4096 || labRoot("lean-baseline-continuation-inventory-v1", carry.inventory) !== a.predecessor.inventoryRoot || labRoot("lean-baseline-continuation-custody-v1", carry.custody) !== a.predecessor.custodyRoot) return fail("V2_ORIGINAL_CARRY")
+  const { root: checkRoot, ...checkBody } = check
+  if (check.schemaVersion !== "lean-baseline-continuation-retained-check-v1" || checkRoot !== labRoot(check.schemaVersion, checkBody) || check.disposition !== "gaps_found" || check.failure !== null || check.sourceHoldFailure !== null || check.report?.complete !== false || check.charged !== 50 || check.currentCharged !== 7 || check.report?.charged !== 50 || check.report?.currentCharged !== 7 || check.report?.successful !== 6 || check.report?.allocationRoot !== a.root || result.schemaVersion !== "lean-baseline-continuation-result-v1" || result.charged !== 50 || result.successful !== 6 || result.failure !== null || result.status !== "partial_or_failed_baseline" || result.holdoutOpened !== false || result.formationMaterialized !== false || result.planningRoot !== a.planningRoot || result.requestBytesRoot !== a.requestBytesRoot || result.sourceRoot !== a.sourceRoot || result.sourceAuthor !== check.report.sourceAuthor || result.runOperator !== check.report.runOperator || result.evidenceRoot !== check.report.evidenceRoot || result.pipeline?.root !== check.report.pipelineRoot || !equal(result.holdoutReservations, a.holdoutReservations)) return fail("V2_CLOSED_CHECK")
+  const { root: reportRoot, ...reportBody } = check.report
+  if (reportRoot !== labRoot("lean-baseline-continuation-retained-v1", reportBody)) return fail("V2_CLOSED_CHECK")
+  const unused = Array.from({ length: 29 }, (_, i) => i + 7)
+  if (![result, check, check.report, result.pipeline].every(r => equal(r.unusedOrdinals, unused)) || ![result, check, entry, terminal, parent].every(r => r.allocationRoot === a.root) || ![entry, terminal, parent, result, check.report].every(r => r.head === result.head) || entry.sourceRoot !== a.sourceRoot || entry.requestBytesRoot !== a.requestBytesRoot || terminal.sourceRoot !== a.sourceRoot || terminal.entryBytesRoot !== leanBytesRoot(leanCanonicalBytes(entry)) || terminal.parentPid !== entry.parentPid || terminal.childPid !== entry.childPid || terminal.status !== "child_exited" || terminal.exitCode !== 0 || terminal.signal !== null || parent.entryBytesRoot !== terminal.entryBytesRoot || parent.parentPid !== entry.parentPid || parent.childPid !== entry.childPid || parent.exitCode !== 0 || parent.signal !== null || parent.uncertain !== false) return fail("V2_CLOSED_JOIN")
+  const { root: parentRoot, ...parentBody } = parent
+  if (parentRoot !== labRoot(parent.schemaVersion, parentBody)) return fail("V2_PARENT_ROOT")
+  if (intervals.length !== 6) return fail("V2_CLOSED_TIME")
+  let elapsedMs: number = a.predecessor.elapsedUpperBoundMs, previous: number = a.window.anchorMs
+  for (const [i, id] of ["continuation-run-admission", "pilot-entry", "continuation-retained-verifier"].entries()) {
+    const start = intervals[2 * i]!, close = intervals[2 * i + 1]!
+    if (!exactLabKeys(start, ["kind", "id", "atMs"]) || !exactLabKeys(close, ["kind", "id", "atMs"]) || start.kind !== "start" || close.kind !== "close" || start.id !== id || close.id !== id || !integer(start.atMs) || !integer(close.atMs) || start.atMs < previous || close.atMs < start.atMs || close.atMs > a.window.deadlineMs) return fail("V2_CLOSED_TIME")
+    elapsedMs += close.atMs - start.atMs; previous = close.atMs
+    if (id === "pilot-entry" && (start.atMs !== entry.wallStartMs || close.atMs !== entry.wallStartMs + terminal.elapsedUpperBoundMs || terminal.wallObservedMs > close.atMs)) return fail("V2_CLOSED_TIME")
+  }
+  if (!integer(check.elapsedMs) || check.elapsedMs < Math.max(465187899, elapsedMs, a.window.carryMs + previous - a.window.anchorMs) || !integer(result.elapsedMs) || result.elapsedMs > check.elapsedMs) return fail("V2_CLOSED_TIME")
+  const charges: Record<string, any>[] = [], terminals: Record<string, any>[] = []
+  let stopped = false, debit = a.predecessor.allocatedDiskBytes
+  if (events.length > 64) return fail("V2_CLOSED_LEDGER")
+  for (const event of events) {
+    if (stopped) return fail("V2_CLOSED_LEDGER")
+    if (event.kind === "charge") {
+      const c = event.charge, slot = a.slots[charges.length]
+      if (charges.length !== terminals.length || !slot || !exactLabKeys(event, ["kind", "charge"]) || !exactLabKeys(c, ["schemaVersion", "allocationRoot", "slotRoot", "ordinal", "root"]) || c.schemaVersion !== "lean-slot-charge-v1" || c.allocationRoot !== a.root || c.ordinal !== charges.length || c.slotRoot !== slot.root) return fail("V2_CLOSED_LEDGER")
+      const { root, ...body } = c; if (root !== labRoot(c.schemaVersion, body)) return fail("V2_CLOSED_LEDGER"); charges.push(c)
+    } else if (event.kind === "terminal") {
+      const record = event.record as Record<string, unknown>
+      if (!exactLabKeys(event, ["kind", "chargeRoot", "record", "replay"]) || charges.length !== terminals.length + 1 || event.chargeRoot !== charges.at(-1)?.root || record.classification !== (terminals.length === 6 ? "system_failure" : "success") || record.code !== (terminals.length === 6 ? "SUPERVISOR_FAILURE" : "OK") || record.cleanupComplete !== true || (terminals.length === 6 ? record.outcome !== null : !["bottom", "top", "DRAW"].includes(String(record.outcome)))) return fail("V2_CLOSED_LEDGER")
+      terminals.push(event)
+    } else if (event.kind === "resource") {
+      if (!exactLabKeys(event, ["kind", "elapsedMs", "physicalBytes", "bufferBytes", "scratchBytes"]) || ![event.elapsedMs, event.physicalBytes, event.bufferBytes, event.scratchBytes].every(integer) || Number(event.elapsedMs) > check.elapsedMs) return fail("V2_CLOSED_LEDGER")
+      debit = Math.max(debit, a.predecessor.allocatedDiskBytes + Number(event.physicalBytes))
+    } else if (event.kind === "stop" && event.reason === "failure" && exactLabKeys(event, ["kind", "reason"])) stopped = true
+    else return fail("V2_CLOSED_LEDGER")
+  }
+  if (!stopped || charges.length !== 7 || terminals.length !== 7 || !integer(check.physicalBytes) || !integer(terminal.physicalBytes) || check.physicalBytes < debit) return fail("V2_CLOSED_LEDGER")
+  const evidenceRecords = a.slots.map((slot, ordinal) => ({ slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: charges[ordinal]?.root ?? null, terminal: terminals[ordinal] ?? null, status: charges[ordinal] ? terminals[ordinal]!.record.classification : "unused" }))
+  if (result.evidenceRoot !== labRoot("lean-evidence-v1", { allocationRoot: a.root, events, records: evidenceRecords })) return fail("V2_CLOSED_EVIDENCE_ROOT")
+  const { root: pipelineRoot, ...pipelineBody } = result.pipeline
+  if (pipelineRoot !== labRoot("lean-baseline-continuation-pipeline-v1", pipelineBody)) return fail("V2_CLOSED_PIPELINE_ROOT")
+  return { elapsedMs: check.elapsedMs, allocatedDiskBytes: Math.max(88924160, check.physicalBytes, terminal.physicalBytes, debit) }
+}
+/** Fixed raw anchors authenticate cost only; no old reader/replay/recursive importer. */
+export const authenticateLeanBaselineContinuationCarryV2 = (git: LeanContinuationGit, pinnedPaths: readonly LeanContinuationReviewedRowV2[], guard: (additionalBytes?: number) => void) => {
+  const old = LEAN_BASELINE_CONTINUATION_PATHS, anchor = LEAN_CONTINUATION_CLOSED_COST_V2, records: { name: string; rawRoot: LabRoot }[] = []
+  const read = (name: string, mode = 0o600, maximum = 4194304): Buffer => { const bytes = readLeanContinuationBoundedBytesV2(name, maximum, mode, guard); records.push({ name, rawRoot: leanBytesRoot(bytes) }); return bytes }
+  const parse = (bytes: Buffer): Record<string, any> => { guard(bytes.length * 6); const v = JSON.parse(bytes.toString("utf8")) as Record<string, any>; if (!bytes.equals(Buffer.from(leanCanonicalBytes(v)))) return fail("V2_CANONICAL"); return v }
+  const bytes = read(old.allocation, 0o644, 262144)
+  if (leanBytesRoot(bytes) !== anchor.allocationBytesRoot) return fail("V2_ALLOCATION_ANCHOR")
+  const a = validateLeanBaselineContinuationAllocation(parse(bytes))
+  if (a.sourceHead !== anchor.sourceHead || !bytes.equals(read(`${old.store}/allocation.json`, 0o600, 262144))) return fail("V2_ALLOCATION_JOIN")
+  assertLeanContinuationDirectParent(anchor.allocationCommit, a.sourceHead, git(["rev-list", "--parents", "-n", "1", anchor.allocationCommit]).toString("utf8").trim().split(/\s+/u), bytes, git(["show", `${anchor.allocationCommit}:${old.allocation}`]))
+  if (git(["diff", "--name-only", a.sourceHead, anchor.allocationCommit]).toString("utf8").trim() !== old.allocation) return fail("V2_ALLOCATION_DIFF")
+  const resultBytes = read(`${old.store}/result.json`), checkBytes = read(`${old.store}/retained-check.json`)
+  if (leanBytesRoot(resultBytes) !== anchor.resultBytesRoot || leanBytesRoot(checkBytes) !== anchor.checkBytesRoot) return fail("V2_CLOSED_ANCHOR")
+  const result = parse(resultBytes), check = parse(checkBytes), carry = parse(read(`${old.store}/carry.json`)), entry = parse(read(`${old.store}/entry.json`)), terminal = parse(read(`${old.store}/child-terminal.json`)), parent = parse(read(`${old.store}/parent-supervisor-reasons.json`))
+  if (check.root !== anchor.checkRoot || result.head !== anchor.allocationCommit || leanBytesRoot(read(old.request, 0o600, 65536)) !== a.requestBytesRoot) return fail("V2_CLOSED_ANCHOR")
+  const lines = (name: string) => { const b = read(`${old.store}/${name}`), t = b.toString("utf8"); if (!t.endsWith("\n")) return fail("V2_CLOSED_LINES"); return t.slice(0, -1).split("\n").map(line => parse(Buffer.from(line))) }
+  const events = lines("ledger.ndjson"), intervals = lines("time.ndjson"), closed = validateLeanContinuationClosedCapsuleV2(a, { carry, result, check, entry, terminal, parent, events, intervals })
+  const inventory = inventoryLeanContinuationSurvivorsV2(carry.inventory as LeanContinuationInventoryRow[], pinnedPaths, git, guard)
+  const originalSum = (carry.inventory as LeanContinuationInventoryRow[]).reduce((n, row) => n + row.allocatedBytes, 0), residualDiskBytes = a.predecessor.allocatedDiskBytes - originalSum
+  if (!integer(residualDiskBytes)) return fail("V2_RESIDUAL")
+  const reconciled = reconcileLeanContinuationDiskDebit({ allocatedDiskBytes: a.predecessor.allocatedDiskBytes, survivors: (carry.inventory as LeanContinuationInventoryRow[]).map(row => ({ identity: row.path, allocatedBytes: row.allocatedBytes })) }, inventory)
+  // Consumed-v2 is already in current inventory. Preserve larger authenticated
+  // debit as residual, rather than adding that store a second time.
+  const allocatedDiskBytes = Math.max(closed.allocatedDiskBytes, reconciled)
+  const custody = { originalCarryRoot: a.predecessor.root, allocationRoot: a.root, allocationBytesRoot: leanBytesRoot(bytes), allocationCommit: anchor.allocationCommit, sourceHead: a.sourceHead, resultRoot: labRoot(result.schemaVersion, result), resultBytesRoot: leanBytesRoot(resultBytes), checkRoot: check.root as LabRoot, checkBytesRoot: leanBytesRoot(checkBytes), records }
+  const body = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: closed.elapsedMs, allocatedDiskBytes, residualDiskBytes: residualDiskBytes + Math.max(0, closed.allocatedDiskBytes - reconciled), historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: a.predecessor.root, closedCapsuleRoot: labRoot("lean-baseline-continuation-closed-capsule-v2", custody), custodyRoot: labRoot("lean-baseline-continuation-custody-v2", custody), inventoryRoot: labRoot("lean-baseline-continuation-inventory-v2", inventory), qualifiedReaderAuthority: "cost_only" as const }
+  const newCarry: LeanBaselineContinuationCarryV2 = freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
+  guard(); return freezeLabValue({ carry: newCarry, custody, inventory })
+}
 /** Preserve the authenticated no-refund debit, including debit not represented
  * by surviving rows. Overlapping pinned paths have one current inventory row. */
 export const reconcileLeanContinuationDiskDebit = (prior: { allocatedDiskBytes: number; survivors: readonly { identity: string; allocatedBytes: number }[] }, current: readonly { path: string; allocatedBytes: number }[]): number => {

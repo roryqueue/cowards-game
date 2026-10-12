@@ -826,6 +826,61 @@ export const validateLeanBaselineContinuationAllocation = (value: unknown): Read
   if (labRoot("lean-baseline-continuation-admission-v1", a) !== labRoot("lean-baseline-continuation-admission-v1", expected)) return fail("CONTINUATION_ALLOCATION")
   return expected
 }
+/** Policy only. There is deliberately no default or actual V2 grant. */
+export const LEAN_BASELINE_CONTINUATION_POLICY_V2 = Object.freeze({ durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, memoryBytes: 3000000000, physicalFloorBytes: 88924160, oldCheckElapsedMs: 465187899, globalCarryMs: 459375903, globalAnchorMs: 1791807317000 })
+export const LEAN_BASELINE_CONTINUATION_PATHS_V2 = Object.freeze({ request: ".strategy-lab/lean-baseline-continuation-request-20261012-v3.json", allocation: ".planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261012-v3.json", store: ".strategy-lab/lean-baseline-continuation-20261012-v3", temp: ".strategy-lab/lean-baseline-continuation-20261012-v3-tmp", window: ".strategy-lab/lean-baseline-continuation-window-20261012-v3.json", claim: ".strategy-lab/lean-baseline-continuation-20261012-v3-tmp/window-claim.json", gates: LEAN_BASELINE_CONTINUATION_PATHS.gates })
+export interface LeanBaselineContinuationWindowV2 {
+  schemaVersion: "lean-baseline-continuation-window-v2"; status: "approved"; grantId: string
+  approvalEvidence: { humanDecisionId: string; recordedBy: string }; approvedAtMs: number; anchorMs: number; deadlineMs: number; carryMs: number; capMs: number; durationMs: number; closureMs: number; offlineOverheadMs: number
+  routeNamespace: "20261012-v3"; reviewedSourceHead: string; sourceRoot: LabRoot; sourceGateRoot: LabRoot; planRoot: LabRoot; runOperator: string; readerOperator: string; root: LabRoot
+}
+export const leanContinuationIdentityV2 = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_.:-]{1,120}$/u.test(v)
+export const leanContinuationGlobalFloorV2 = (nowMs: number): number => {
+  const p = LEAN_BASELINE_CONTINUATION_POLICY_V2
+  if (!natural(nowMs) || nowMs < p.globalAnchorMs || !natural(p.globalCarryMs + nowMs - p.globalAnchorMs)) return fail("CONTINUATION_V2_CLOCK")
+  return p.globalCarryMs + nowMs - p.globalAnchorMs
+}
+export const validateLeanBaselineContinuationWindowV2 = (value: unknown): Readonly<LeanBaselineContinuationWindowV2> => {
+  if (!exactLabKeys(value, ["schemaVersion", "status", "grantId", "approvalEvidence", "approvedAtMs", "anchorMs", "deadlineMs", "carryMs", "capMs", "durationMs", "closureMs", "offlineOverheadMs", "routeNamespace", "reviewedSourceHead", "sourceRoot", "sourceGateRoot", "planRoot", "runOperator", "readerOperator", "root"])) return fail("CONTINUATION_V2_WINDOW")
+  const w = value as unknown as LeanBaselineContinuationWindowV2, { root: claimed, ...body } = w, p = LEAN_BASELINE_CONTINUATION_POLICY_V2
+  if (w.schemaVersion !== "lean-baseline-continuation-window-v2" || w.status !== "approved" || w.routeNamespace !== "20261012-v3" || !exactLabKeys(w.approvalEvidence, ["humanDecisionId", "recordedBy"]) || ![w.grantId, w.approvalEvidence.humanDecisionId, w.approvalEvidence.recordedBy, w.runOperator, w.readerOperator].every(leanContinuationIdentityV2) || w.runOperator === w.readerOperator || !/^[a-f0-9]{40}$/u.test(w.reviewedSourceHead) || ![w.sourceRoot, w.sourceGateRoot, w.planRoot, w.root].every(root)) return fail("CONTINUATION_V2_WINDOW")
+  if (![w.approvedAtMs, w.anchorMs, w.deadlineMs, w.carryMs, w.capMs, w.durationMs, w.closureMs, w.offlineOverheadMs, w.anchorMs + w.durationMs, w.carryMs + w.durationMs].every(natural) || w.durationMs !== p.durationMs || w.closureMs !== p.closureMs || w.offlineOverheadMs !== p.offlineOverheadMs || w.approvedAtMs !== w.anchorMs || w.deadlineMs !== w.anchorMs + w.durationMs || w.capMs !== w.carryMs + w.durationMs || w.carryMs < Math.max(p.oldCheckElapsedMs, leanContinuationGlobalFloorV2(w.anchorMs)) || claimed !== labRoot(w.schemaVersion, body)) return fail("CONTINUATION_V2_WINDOW")
+  return freezeLabValue({ ...w, approvalEvidence: { ...w.approvalEvidence } })
+}
+export const leanBaselineContinuationElapsedFloorV2 = (window: LeanBaselineContinuationWindowV2, nowMs: number, journalMs = 0, monotonicSinceAnchorMs = 0): number => {
+  const w = validateLeanBaselineContinuationWindowV2(window)
+  if (!natural(nowMs) || nowMs < w.anchorMs || !natural(journalMs) || !natural(monotonicSinceAnchorMs)) return fail("CONTINUATION_V2_CLOCK")
+  const elapsed = Math.max(leanContinuationGlobalFloorV2(nowMs), w.carryMs + Math.max(nowMs - w.anchorMs, monotonicSinceAnchorMs), journalMs)
+  return natural(elapsed) ? elapsed : fail("CONTINUATION_V2_CLOCK")
+}
+export interface LeanBaselineContinuationCarryV2 extends Omit<LeanBaselineContinuationCarry, "schemaVersion" | "chargedMatches" | "elapsedUpperBoundMs"> {
+  schemaVersion: "lean-baseline-continuation-carry-v2"; chargedMatches: 50; elapsedUpperBoundMs: number; originalCarryRoot: LabRoot; closedCapsuleRoot: LabRoot; residualDiskBytes: number
+}
+export interface LeanBaselineContinuationAllocationV2 extends Omit<LeanBaselineContinuationAllocation, "schemaVersion" | "caps" | "predecessor" | "window"> {
+  schemaVersion: "lean-baseline-continuation-allocation-v2"; caps: Omit<typeof LEAN_CAPS, "elapsedMs"> & { readonly elapsedMs: number }; predecessor: LeanBaselineContinuationCarryV2; window: LeanBaselineContinuationWindowV2
+  windowBytesRoot: LabRoot; sourceGateRoot: LabRoot; dataReviewRoot: LabRoot; manifestRoot: LabRoot
+}
+export type LeanBaselineContinuationInputV2 = LeanCurrentBaselineInput & Pick<LeanBaselineContinuationAllocationV2, "sourceHead" | "planningRoot" | "manifestRoot" | "requestBytesRoot" | "window" | "windowBytesRoot" | "sourceGateRoot" | "dataReviewRoot" | "predecessor">
+const continuationInputKeysV2 = ["sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "sourceHead", "planningRoot", "manifestRoot", "requestBytesRoot", "window", "windowBytesRoot", "sourceGateRoot", "dataReviewRoot", "predecessor"]
+export const createLeanBaselineContinuationAllocationV2 = (input: LeanBaselineContinuationInputV2): Readonly<LeanBaselineContinuationAllocationV2> => {
+  if (!exactLabKeys(input, continuationInputKeysV2) || ![input.sourceRoot, input.reviewRoot, input.coldRoot, input.planRoot, input.planningRoot, input.manifestRoot, input.requestBytesRoot, input.windowBytesRoot, input.sourceGateRoot, input.dataReviewRoot].every(root) || !/^[a-f0-9]{40}$/u.test(input.sourceHead) || !/^[a-z0-9-]{1,100}$/u.test(input.seed) || !Array.isArray(input.candidateRoots) || input.candidateRoots.length !== 2 || !input.candidateRoots.every(root) || new Set(input.candidateRoots).size !== 2 || !Array.isArray(input.requestRoots) || input.requestRoots.length !== 36 || !input.requestRoots.every(root) || new Set(input.requestRoots).size !== 36) return fail("CONTINUATION_V2_ALLOCATION")
+  const window = validateLeanBaselineContinuationWindowV2(input.window), p = input.predecessor
+  if (window.sourceRoot !== input.sourceRoot || window.planRoot !== input.planRoot || window.sourceGateRoot !== input.sourceGateRoot || leanBytesRoot(leanCanonicalBytes(window)) !== input.windowBytesRoot) return fail("CONTINUATION_V2_WINDOW_JOIN")
+  if (!exactLabKeys(p, ["schemaVersion", "chargedMatches", "elapsedUpperBoundMs", "allocatedDiskBytes", "residualDiskBytes", "historicalPeakDiskBytes", "historicalPeakRssBytes", "originalCarryRoot", "closedCapsuleRoot", "custodyRoot", "inventoryRoot", "qualifiedReaderAuthority", "root"])) return fail("CONTINUATION_V2_CARRY")
+  const { root: pr, ...pb } = p
+  if (p.schemaVersion !== "lean-baseline-continuation-carry-v2" || p.chargedMatches !== 50 || !natural(p.elapsedUpperBoundMs) || p.elapsedUpperBoundMs < 465187899 || p.elapsedUpperBoundMs > window.carryMs || !natural(p.allocatedDiskBytes) || p.allocatedDiskBytes < 88924160 || p.allocatedDiskBytes > LEAN_CAPS.retainedBytes || !natural(p.residualDiskBytes) || p.residualDiskBytes > p.allocatedDiskBytes || p.historicalPeakDiskBytes !== "unknown" || p.historicalPeakRssBytes !== "unknown" || p.qualifiedReaderAuthority !== "cost_only" || ![p.originalCarryRoot, p.closedCapsuleRoot, p.custodyRoot, p.inventoryRoot].every(root) || pr !== labRoot(p.schemaVersion, pb)) return fail("CONTINUATION_V2_CARRY")
+  const arenas = currentBaselineArenas(), slots = input.requestRoots.map((requestRoot, ordinal) => { const { arenaIndex, condition } = currentBaselineSlotKind(ordinal), body = { ordinal, condition, arenaHash: arenas[arenaIndex]!.semanticGeometryHash, requestRoot }; return { ...body, root: labRoot("lean-slot-v1", body) } })
+  const holdoutReservations = Array.from({ length: 4 }, (_, condition) => { const body = { ordinal: 36 + condition, condition, status: "reserved_unopened" as const }; return { ...body, root: labRoot("lean-baseline-continuation-holdout-reservation-v2", { ...body, coldRoot: input.coldRoot }) } })
+  const body = { ...input, window, candidateRoots: [...input.candidateRoots].sort(), schemaVersion: "lean-baseline-continuation-allocation-v2" as const, privacy: "private_offline" as const, caps: { ...LEAN_CAPS, elapsedMs: window.capMs }, offlineOverheadMs: window.offlineOverheadMs, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, slots, holdoutReservations, sampleSlotRoots: [0, 8, 12, 20, 28, 32].map(n => slots[n]!.root) }
+  return freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
+}
+export const validateLeanBaselineContinuationAllocationV2 = (value: unknown): Readonly<LeanBaselineContinuationAllocationV2> => {
+  if (!exactLabKeys(value, [...continuationInputKeysV2, "schemaVersion", "privacy", "caps", "offlineOverheadMs", "tupleRoot", "runtimeRoot", "slots", "holdoutReservations", "sampleSlotRoots", "root"])) return fail("CONTINUATION_V2_ALLOCATION")
+  const a = value as unknown as LeanBaselineContinuationAllocationV2
+  const expected = createLeanBaselineContinuationAllocationV2({ sourceRoot: a.sourceRoot, reviewRoot: a.reviewRoot, coldRoot: a.coldRoot, planRoot: a.planRoot, candidateRoots: a.candidateRoots, requestRoots: a.requestRoots, seed: a.seed, sourceHead: a.sourceHead, planningRoot: a.planningRoot, manifestRoot: a.manifestRoot, requestBytesRoot: a.requestBytesRoot, window: a.window, windowBytesRoot: a.windowBytesRoot, sourceGateRoot: a.sourceGateRoot, dataReviewRoot: a.dataReviewRoot, predecessor: a.predecessor })
+  if (labRoot("lean-baseline-continuation-admission-v2", a) !== labRoot("lean-baseline-continuation-admission-v2", expected)) return fail("CONTINUATION_V2_ALLOCATION")
+  return expected
+}
 export interface LeanCorrectionPredecessor {
   schemaVersion: "lean-correction-predecessor-v1"; chargedMatches: number; elapsedUpperBoundMs: number; allocatedDiskBytes: number
   historicalPeakDiskBytes: "unknown"; historicalPeakRssBytes: "unknown"; historyRoot: LabRoot
@@ -838,9 +893,9 @@ export interface LeanCorrectionAllocation extends Omit<LeanCurrentBaselineAlloca
   supervisorDecisionRoot?: LabRoot; acceptedCheckRoot?: LabRoot | null; requestBytesRoot?: LabRoot; dataReviewRoot?: LabRoot; setupAccountingRoot?: LabRoot
   attemptOrdinal?: LeanRetryOrdinal | LeanPostV13FivePairOrdinal; priorClosureRoot?: LabRoot | null; continuationRoot?: LabRoot | null; acceptedReaderCloseRoot?: LabRoot | null
 }
-export type AnyLeanAllocation = LeanExperimentAllocation | LeanExperimentAllocationV2 | LeanExperimentAllocationV3 | LeanExperimentAllocationV4 | LeanExperimentAllocationV5 | LeanExperimentAllocationV6 | LeanExperimentAllocationV7 | LeanCurrentBaselineAllocation | LeanCorrectionAllocation | LeanBaselineContinuationAllocation
+export type AnyLeanAllocation = LeanExperimentAllocation | LeanExperimentAllocationV2 | LeanExperimentAllocationV3 | LeanExperimentAllocationV4 | LeanExperimentAllocationV5 | LeanExperimentAllocationV6 | LeanExperimentAllocationV7 | LeanCurrentBaselineAllocation | LeanCorrectionAllocation | LeanBaselineContinuationAllocation | LeanBaselineContinuationAllocationV2
 const leanProspective = (a: AnyLeanAllocation): a is Exclude<AnyLeanAllocation, LeanExperimentAllocation> => a.schemaVersion !== "lean-experiment-allocation-v1"
-const leanPriorMs = (a: AnyLeanAllocation): number => leanProspective(a) ? a.predecessor.elapsedUpperBoundMs : 0
+const leanPriorMs = (a: AnyLeanAllocation): number => a.schemaVersion === "lean-baseline-continuation-allocation-v2" ? Math.max(a.window.carryMs, a.predecessor.elapsedUpperBoundMs) : leanProspective(a) ? a.predecessor.elapsedUpperBoundMs : 0
 const leanPriorBytes = (a: AnyLeanAllocation): number => leanProspective(a) ? a.predecessor.allocatedDiskBytes : 0
 export const LEAN_TWO_PAIR_V11_ROUTES = Object.freeze(Object.fromEntries((["v11-1", "v11-2"] as const).map(mode => [mode, Object.freeze(Object.fromEntries((["diagnostic", "baseline"] as const).map(route => [route, Object.freeze({ store: `.strategy-lab/lean-correction-supervisor-${route}-20261007-${mode}`, request: `.strategy-lab/lean-correction-supervisor-${route}-request-20261007-${mode}.json`, allocation: `.planning/artifacts/v1.38-lean-correction-supervisor-${route}-allocation-${mode}.json`, check: `correction-supervisor-${route}-check-${mode}.json`, temp: `.strategy-lab/lean-correction-supervisor-${route}-20261007-${mode}-tmp`, result: "result.json", owner: "entry.json", reason: "parent-supervisor-reasons.json" })])))])) as Record<LeanTwoPairMode, typeof LEAN_STARTUP_V5_ROUTES>)
 export const LEAN_SUPERVISOR_RETEST_V12_ROUTES = Object.freeze(Object.fromEntries((["diagnostic", "baseline"] as const).map(route => [route, Object.freeze({ store: `.strategy-lab/lean-correction-supervisor-${route}-20261008-v12-1`, request: `.strategy-lab/lean-correction-supervisor-${route}-request-20261008-v12-1.json`, allocation: `.planning/artifacts/v1.38-lean-correction-supervisor-${route}-allocation-v12-1.json`, check: `correction-supervisor-${route}-check-v12-1.json`, temp: `.strategy-lab/lean-correction-supervisor-${route}-20261008-v12-1-tmp`, result: "result.json", owner: "entry.json", reason: "parent-supervisor-reasons.json" })])) as typeof LEAN_STARTUP_V5_ROUTES)
@@ -863,7 +918,7 @@ const leanRetryAllocationMode = (a: LeanCorrectionAllocation): LeanRetryMode => 
   return isLeanRetryMode(mode) ? mode : fail("RETRY_ORDINAL")
 }
 export const leanSupervisorAllocationMode = (a: AnyLeanAllocation): LeanSupervisorMode => a.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v8" || a.schemaVersion === "lean-correction-supervisor-baseline-allocation-v8" ? leanRetryAllocationMode(a as LeanCorrectionAllocation) : a.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v7" || a.schemaVersion === "lean-correction-supervisor-baseline-allocation-v7" ? "v7" : a.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v6" || a.schemaVersion === "lean-correction-supervisor-baseline-allocation-v6" ? "v6" : a.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v5" || a.schemaVersion === "lean-correction-supervisor-baseline-allocation-v5" ? "v5" : a.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v4" || a.schemaVersion === "lean-correction-supervisor-baseline-allocation-v4" ? "v4" : a.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v3" || a.schemaVersion === "lean-correction-supervisor-baseline-allocation-v3" ? "v3" : isLeanSupervisorAllocation(a)
-export const leanWritablePaths = (a: AnyLeanAllocation): readonly string[] => a.schemaVersion === "lean-baseline-continuation-allocation-v1" ? [LEAN_BASELINE_CONTINUATION_PATHS.temp, LEAN_BASELINE_CONTINUATION_PATHS.allocation, LEAN_BASELINE_CONTINUATION_PATHS.request] : "route" in a ? (() => { const supervisor = leanSupervisorAllocationMode(a), p = leanCorrectionRoutePaths(a.route, supervisor); return [p.temp, p.allocation, p.request, ...(supervisor ? [isLeanRetryMode(supervisor) ? leanRetrySetupPath(supervisor) : supervisor === "v7" ? LEAN_REPLAY_V7_SETUP_PATH : supervisor === "v6" ? LEAN_REPLAY_V6_SETUP_PATH : supervisor === "v5" ? LEAN_STARTUP_V5_SETUP_PATH : supervisor === "v4" ? LEAN_REPAIRED_READER_SETUP_PATH : supervisor === "v3" ? LEAN_FRESH_SUPERVISOR_SETUP_PATH : LEAN_SUPERVISOR_SETUP_PATH] : [])] })() : a.schemaVersion === "lean-experiment-allocation-v2" ? LEAN_PROSPECTIVE_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v3" ? LEAN_SUCCESSOR_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v4" ? LEAN_V4_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v5" ? LEAN_V5_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v6" ? LEAN_V6_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v7" ? LEAN_V7_WRITABLE_PATHS : a.schemaVersion === "lean-current-baseline-allocation-v1" ? LEAN_BASELINE_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v1" ? [] : fail("ALLOCATION")
+export const leanWritablePaths = (a: AnyLeanAllocation): readonly string[] => a.schemaVersion === "lean-baseline-continuation-allocation-v2" ? [LEAN_BASELINE_CONTINUATION_PATHS_V2.temp, LEAN_BASELINE_CONTINUATION_PATHS_V2.allocation, LEAN_BASELINE_CONTINUATION_PATHS_V2.request, LEAN_BASELINE_CONTINUATION_PATHS_V2.window] : a.schemaVersion === "lean-baseline-continuation-allocation-v1" ? [LEAN_BASELINE_CONTINUATION_PATHS.temp, LEAN_BASELINE_CONTINUATION_PATHS.allocation, LEAN_BASELINE_CONTINUATION_PATHS.request] : "route" in a ? (() => { const supervisor = leanSupervisorAllocationMode(a), p = leanCorrectionRoutePaths(a.route, supervisor); return [p.temp, p.allocation, p.request, ...(supervisor ? [isLeanRetryMode(supervisor) ? leanRetrySetupPath(supervisor) : supervisor === "v7" ? LEAN_REPLAY_V7_SETUP_PATH : supervisor === "v6" ? LEAN_REPLAY_V6_SETUP_PATH : supervisor === "v5" ? LEAN_STARTUP_V5_SETUP_PATH : supervisor === "v4" ? LEAN_REPAIRED_READER_SETUP_PATH : supervisor === "v3" ? LEAN_FRESH_SUPERVISOR_SETUP_PATH : LEAN_SUPERVISOR_SETUP_PATH] : [])] })() : a.schemaVersion === "lean-experiment-allocation-v2" ? LEAN_PROSPECTIVE_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v3" ? LEAN_SUCCESSOR_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v4" ? LEAN_V4_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v5" ? LEAN_V5_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v6" ? LEAN_V6_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v7" ? LEAN_V7_WRITABLE_PATHS : a.schemaVersion === "lean-current-baseline-allocation-v1" ? LEAN_BASELINE_WRITABLE_PATHS : a.schemaVersion === "lean-experiment-allocation-v1" ? [] : fail("ALLOCATION")
 export const createLeanAllocation = (input: { sourceRoot: LabRoot; reviewRoot: LabRoot; candidateRoots: readonly LabRoot[]; seed: string }): Readonly<LeanExperimentAllocation> => {
   if (!exactLabKeys(input, ["sourceRoot", "reviewRoot", "candidateRoots", "seed"]) || !root(input.sourceRoot) || !root(input.reviewRoot) || !Array.isArray(input.candidateRoots) || input.candidateRoots.length !== 2 || !input.candidateRoots.every(root) || new Set(input.candidateRoots).size !== 2 || !/^[a-z0-9-]{1,100}$/u.test(input.seed)) return fail("ALLOCATION")
   const candidateRoots = [...input.candidateRoots].sort()
@@ -1216,6 +1271,7 @@ const hostPolicyForIdentityV15 = (value: unknown) => {
   return cached
 }
 export const admitLeanAllocation = (value: unknown): Readonly<AnyLeanAllocation> => {
+  if ((value as { schemaVersion?: unknown } | null)?.schemaVersion === "lean-baseline-continuation-allocation-v2") return validateLeanBaselineContinuationAllocationV2(value)
   if (typeof value === "object" && value !== null && (value as { schemaVersion?: unknown }).schemaVersion === "lean-baseline-continuation-allocation-v1") return validateLeanBaselineContinuationAllocation(value)
   if (typeof value === "object" && value !== null && ["lean-correction-supervisor-diagnostic-allocation-v8", "lean-correction-supervisor-baseline-allocation-v8"].includes((value as { schemaVersion: string }).schemaVersion)) {
     const a = value as LeanCorrectionAllocation
@@ -1306,7 +1362,7 @@ export interface LeanReplayContainer { schemaVersion: "lean-sampled-replay-gzip-
 const REPLAY_MAX = 256_000_000
 export const LEAN_EXTERNAL_SCRATCH_RESERVE = 512_000_000
 const assertTransient = (additionalBytes = 0, allocation?: AnyLeanAllocation, guard?: (additionalBytes?: number) => void) => {
-  if (allocation?.schemaVersion === "lean-baseline-continuation-allocation-v1") {
+  if (allocation?.schemaVersion === "lean-baseline-continuation-allocation-v1" || allocation?.schemaVersion === "lean-baseline-continuation-allocation-v2") {
     if (typeof guard !== "function" || !natural(additionalBytes) || process.memoryUsage().arrayBuffers + additionalBytes > LEAN_CAPS.scratchBytes) return fail("RESOURCE_GUARD")
     guard(additionalBytes); return
   }
@@ -1447,12 +1503,12 @@ export const readLeanTimeAccounting = (ledger: LeanExperimentLedger) => {
   const text = Buffer.from(readSafe(join(safeDirectory(ledger.directory), "time.ndjson"))).toString("utf8")
   if (text.length && !text.endsWith("\n")) return fail("TIME_PUBLICATION")
   const starts = new Map<string, number>(), closed = new Set<string>(), closes = new Map<string, number>()
-  let elapsedMs = priorMs
+  let elapsedMs = priorMs, lastCloseMs = 0
   for (const line of text ? text.slice(0, -1).split("\n") : []) {
     const e = parse(Buffer.from(line)) as { kind: string; id: string; atMs: number }
     if (!exactLabKeys(e, ["kind", "id", "atMs"]) || !/^[a-z0-9-]{1,80}$/u.test(e.id) || !natural(e.atMs)) return fail("TIME")
-    if (e.kind === "start") { if (starts.has(e.id) || starts.size !== closed.size) return fail("TIME_ACTIVE"); starts.set(e.id, e.atMs) }
-    else if (e.kind === "close") { const start = starts.get(e.id); if (start === undefined || closed.has(e.id) || e.atMs < start) return fail("TIME"); elapsedMs += e.atMs - start; if ((leanSupervisorAllocationMode(ledger.allocation) === "v5" || (leanSupervisorAllocationMode(ledger.allocation) === "v6" || (leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation))))) && !natural(elapsedMs)) return fail("TIME"); closed.add(e.id); closes.set(e.id, e.atMs) }
+    if (e.kind === "start") { if (starts.has(e.id) || starts.size !== closed.size || ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && e.atMs < lastCloseMs) return fail("TIME_ACTIVE"); starts.set(e.id, e.atMs) }
+    else if (e.kind === "close") { const start = starts.get(e.id); if (start === undefined || closed.has(e.id) || e.atMs < start) return fail("TIME"); elapsedMs += e.atMs - start; if ((leanSupervisorAllocationMode(ledger.allocation) === "v5" || (leanSupervisorAllocationMode(ledger.allocation) === "v6" || (leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation))))) && !natural(elapsedMs)) return fail("TIME"); closed.add(e.id); closes.set(e.id, e.atMs); lastCloseMs = e.atMs }
     else return fail("TIME")
   }
   return { elapsedMs: starts.size === closed.size ? elapsedMs : leanCapsForAllocation(ledger.allocation).elapsedMs, closedElapsedMs: elapsedMs, active: starts.size !== closed.size, starts, closed, closes }
@@ -1470,7 +1526,7 @@ export const beginLeanInterval = (ledger: LeanExperimentLedger, id: string, atMs
 }
 export const closeLeanInterval = (ledger: LeanExperimentLedger, id: string, atMs = Date.now(), monotonicObservedNs = process.hrtime.bigint()) => {
   const s = readLeanTimeAccounting(ledger), start = s.starts.get(id)
-  const v5 = (leanSupervisorAllocationMode(ledger.allocation) === "v5" || (leanSupervisorAllocationMode(ledger.allocation) === "v6" || (leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation)))))
+  const v5 = (ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && id !== "pilot-entry") || (leanSupervisorAllocationMode(ledger.allocation) === "v5" || (leanSupervisorAllocationMode(ledger.allocation) === "v6" || (leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation)))))
   if (!s.active || start === undefined || s.closed.has(id) || !natural(atMs) || !v5 && atMs < start) return fail("TIME")
   const local = activeTime.get(ledger.directory)
   if (v5) {
@@ -1499,7 +1555,7 @@ export const leanRetryRootElapsedFloorV8 = (observedMs: number, timeboxExtension
 }
 const currentLeanJournalElapsedMs = (ledger: LeanExperimentLedger) => {
   const s = readLeanTimeAccounting(ledger), local = activeTime.get(ledger.directory)
-  if (ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" && s.active && local?.id === "continuation-run-admission") {
+  if ((ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" || ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2") && s.active && local?.id === "continuation-run-admission") {
     const elapsed = process.hrtime.bigint() - local.monotonicStartNs
     if (elapsed < 0n) return fail("CONTINUATION_CLOCK")
     return s.closedElapsedMs + Math.max(Date.now() - local.atMs, Number((elapsed + 999999n) / 1000000n))
@@ -1512,7 +1568,7 @@ const currentLeanJournalElapsedMs = (ledger: LeanExperimentLedger) => {
       if (mono < 0n || mono > BigInt(Number.MAX_SAFE_INTEGER) * 1_000_000n) return leanCapsForAllocation(ledger.allocation).elapsedMs
       return s.closedElapsedMs + Math.max(0, Date.now() - started, Number((mono + 999_999n) / 1_000_000n))
     }
-    if ((leanSupervisorAllocationMode(ledger.allocation) === "v5" || (leanSupervisorAllocationMode(ledger.allocation) === "v6" || (leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation)))))) {
+    if (ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" || (leanSupervisorAllocationMode(ledger.allocation) === "v5" || (leanSupervisorAllocationMode(ledger.allocation) === "v6" || (leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation)))))) {
       if (!local || local.atMs !== started) return leanCapsForAllocation(ledger.allocation).elapsedMs
       const mono = process.hrtime.bigint() - local.monotonicStartNs, wall = Date.now() - started
       if (mono < 0n || mono > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n) return leanCapsForAllocation(ledger.allocation).elapsedMs
@@ -1529,7 +1585,7 @@ export const leanBaselineContinuationElapsedFloor = (nowMs: number): number => {
   if (!natural(nowMs) || nowMs < LEAN_BASELINE_CONTINUATION_WINDOW.anchorMs) return fail("CONTINUATION_CLOCK")
   return LEAN_BASELINE_CONTINUATION_WINDOW.carryMs + nowMs - LEAN_BASELINE_CONTINUATION_WINDOW.anchorMs
 }
-export const currentLeanElapsedMs = (ledger: LeanExperimentLedger, notYetImportedGapMs = 0) => Math.max(currentLeanJournalElapsedMs(ledger) + notYetImportedGapMs, ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" ? leanBaselineContinuationElapsedFloor(Date.now()) : ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v8" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v8" ? leanRetryRootElapsedFloorV8(Date.now(), ledger.allocation.timeboxExtension) : 0)
+export const currentLeanElapsedMs = (ledger: LeanExperimentLedger, notYetImportedGapMs = 0) => Math.max(currentLeanJournalElapsedMs(ledger) + notYetImportedGapMs, ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" ? leanBaselineContinuationElapsedFloorV2(ledger.allocation.window, Date.now()) : ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" ? leanBaselineContinuationElapsedFloor(Date.now()) : ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v8" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v8" ? leanRetryRootElapsedFloorV8(Date.now(), ledger.allocation.timeboxExtension) : 0)
 export const createLeanLedger = (directory: string, allocation: AnyLeanAllocation): LeanExperimentLedger => {
   const p = resolve(directory)
   if (realpathSync(dirname(p)) !== dirname(p)) return fail("STORE")
@@ -1583,7 +1639,7 @@ export const publishLeanChildEntry = (ledger: LeanExperimentLedger, entry: LeanC
   if (!leanProspective(ledger.allocation) || !exactLabKeys(entry, ["schemaVersion", "allocationRoot", "sourceRoot", "requestBytesRoot", "head", "parentPid", "childPid", "handshakeRoot", "wallStartMs", "monotonicStartNs"]) || entry.schemaVersion !== "lean-child-entry-v2" || entry.allocationRoot !== ledger.allocation.root || entry.sourceRoot !== ledger.allocation.sourceRoot || !root(entry.requestBytesRoot) || !root(entry.handshakeRoot) || !/^[a-f0-9]{40}$/u.test(entry.head) || !natural(entry.parentPid) || entry.parentPid === 0 || !natural(entry.childPid) || entry.childPid === 0 || entry.parentPid === entry.childPid || !natural(entry.wallStartMs)) return fail("ENTRY")
   monotonic(entry.monotonicStartNs)
   const entryTime = readLeanTimeAccounting(ledger)
-  if (!(ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" ? admitsLeanBaselineContinuationPreEntryTime(entryTime) : admitsLeanPreEntryTime("route" in ledger.allocation, entryTime)) || readLeanLedger(ledger).events.length) return fail("ENTRY")
+  if (!((ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" || ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2") ? admitsLeanBaselineContinuationPreEntryTime(entryTime) : admitsLeanPreEntryTime("route" in ledger.allocation, entryTime)) || readLeanLedger(ledger).events.length) return fail("ENTRY")
   writeExclusive(join(safeDirectory(ledger.directory), "entry.json"), leanCanonicalBytes(entry)); syncLeanDirectory(ledger.directory)
 }
 export const readLeanChildEntry = (ledger: LeanExperimentLedger): LeanChildEntryV2 => {
@@ -1606,7 +1662,7 @@ export const publishLeanChildTerminal = (ledger: LeanExperimentLedger, terminal:
   const expected = deriveLeanChildTerminal(ledger, entry, observation)
   if (labRoot("lean-terminal-admission", terminal) !== labRoot("lean-terminal-admission", expected)) return fail("TERMINAL")
   const time = readLeanTimeAccounting(ledger)
-  if (!time.active || (ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" ? time.starts.size !== 2 || time.closed.size !== 1 || !time.closed.has("continuation-run-admission") : "route" in ledger.allocation ? time.starts.size !== time.closed.size + 1 : time.starts.size !== 1 || time.closed.size !== 0) || time.starts.get("pilot-entry") !== entry.wallStartMs) return fail("TERMINAL")
+  if (!time.active || ((ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" || ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2") ? time.starts.size !== 2 || time.closed.size !== 1 || !time.closed.has("continuation-run-admission") : "route" in ledger.allocation ? time.starts.size !== time.closed.size + 1 : time.starts.size !== 1 || time.closed.size !== 0) || time.starts.get("pilot-entry") !== entry.wallStartMs) return fail("TERMINAL")
   writeExclusive(join(safeDirectory(ledger.directory), "child-terminal.json"), leanCanonicalBytes(terminal)); syncLeanDirectory(ledger.directory)
   // V5 closes at the receipt's authenticated clock snapshot. Publication work
   // after that observation is debited by admission finalization, not silently
@@ -1780,12 +1836,13 @@ export const readLeanLedger = (ledger: LeanExperimentLedger) => {
   const events = text ? text.slice(0, -1).split("\n").map(line => parse(Buffer.from(line)) as Event) : []
   const charges = new Map<LabRoot, LeanCharge>(), terminals = new Map<LabRoot, Extract<Event, { kind: "terminal" }>>()
   const previous = leanProspective(ledger.allocation) ? ledger.allocation.predecessor : null
-  let elapsedMs = previous?.elapsedUpperBoundMs ?? 0, physicalHighWaterBytes = previous?.allocatedDiskBytes ?? 0, scratchHighWaterBytes = 0, memoryHighWaterBytes = 0, stopped = false
+  let elapsedMs = ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" ? leanPriorMs(ledger.allocation) : previous?.elapsedUpperBoundMs ?? 0, physicalHighWaterBytes = previous?.allocatedDiskBytes ?? 0, scratchHighWaterBytes = 0, memoryHighWaterBytes = 0, stopped = false
   for (const e of events) {
     if (e.kind === "charge") {
       if (!exactLabKeys(e, ["kind", "charge"]) || stopped) return fail("LEDGER")
       const c = e.charge, slot = ledger.allocation.slots[c.ordinal]
       if (!slot || !exactLabKeys(c, ["schemaVersion", "allocationRoot", "slotRoot", "ordinal", "root"]) || c.schemaVersion !== "lean-slot-charge-v1" || c.allocationRoot !== ledger.allocation.root || c.slotRoot !== slot.root || c.root !== labRoot("lean-slot-charge-v1", { schemaVersion: c.schemaVersion, allocationRoot: c.allocationRoot, slotRoot: c.slotRoot, ordinal: c.ordinal }) || charges.has(c.slotRoot)) return fail("CHARGED")
+      if (ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && (c.ordinal !== charges.size || charges.size !== terminals.size)) return fail("CONTINUATION_V2_CHARGE_ORDER")
       charges.set(c.slotRoot, c)
     } else if (e.kind === "terminal") {
       if (!exactLabKeys(e, ["kind", "chargeRoot", "record", "replay"]) || ![...charges.values()].some(c => c.root === e.chargeRoot) || terminals.has(e.chargeRoot)) return fail("TERMINAL")
@@ -1823,6 +1880,11 @@ export const chargeLeanSlot = (ledger: LeanExperimentLedger, slot: LeanSlot, cap
   const state = readLeanLedger(ledger)
   if (state.stopped || ledger.allocation.slots[slot.ordinal]?.root !== slot.root || labRoot("lean-slot-v1", { ordinal: slot.ordinal, condition: slot.condition, arenaHash: slot.arenaHash, requestRoot: slot.requestRoot }) !== slot.root) return fail("SLOT")
   if (state.charges.has(slot.root)) return fail("CHARGED")
+  if (ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2") {
+    const a = validateLeanBaselineContinuationAllocationV2(ledger.allocation), remaining = 36 - state.charges.size
+    const reserve = remaining * LEAN_CAPS.matchMs + a.window.closureMs + a.window.offlineOverheadMs
+    if (slot.ordinal !== state.charges.size || state.charged !== 50 + slot.ordinal || Date.now() + reserve > a.window.deadlineMs || currentLeanElapsedMs(ledger) + reserve > a.window.capMs) return fail("CONTINUATION_V2_FRONTIER")
+  }
   if (ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1") {
     const a = validateLeanBaselineContinuationAllocation(ledger.allocation), remaining = a.slots.length - state.charges.size
     const reserve = remaining * LEAN_CAPS.matchMs + LEAN_BASELINE_CONTINUATION_WINDOW.reserveMs + a.offlineOverheadMs
@@ -1893,12 +1955,12 @@ export const readLeanContinuationCompressedReplay = (name: string, expectedBytes
   guard(); holdPath()
   return bytes
 }
-export const verifyLeanEvidence = (ledger: LeanExperimentLedger, resourceGuard?: (additionalBytes?: number) => void, compressedReadPolicy?: "continuation-descriptor-v1") => {
-  if (compressedReadPolicy !== undefined && (compressedReadPolicy !== "continuation-descriptor-v1" || ledger.allocation.schemaVersion !== "lean-baseline-continuation-allocation-v1" || typeof resourceGuard !== "function")) return fail("REPLAY_READ_POLICY")
+export const verifyLeanEvidence = (ledger: LeanExperimentLedger, resourceGuard?: (additionalBytes?: number) => void, compressedReadPolicy?: "continuation-descriptor-v1" | "continuation-descriptor-v2") => {
+  if (compressedReadPolicy !== undefined && (!(compressedReadPolicy === "continuation-descriptor-v1" && ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" || compressedReadPolicy === "continuation-descriptor-v2" && ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2") || typeof resourceGuard !== "function")) return fail("REPLAY_READ_POLICY")
   if (leanResourcePolicyForAllocationV15(ledger.allocation) && typeof resourceGuard !== "function") return fail("RESOURCE_GUARD")
   resourceGuard?.()
   const state = readLeanLedger(ledger)
-  const validationOnly = ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" || isLeanRetryMode(leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation))) || (ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v7" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v7") && leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v7" || ((ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v6" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v6") && (leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v6" || leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v7")) || (ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v5" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v5") && leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v5"
+  const validationOnly = ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" || ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" || isLeanRetryMode(leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation))) || (ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v7" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v7") && leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v7" || ((ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v6" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v6") && (leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v6" || leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v7")) || (ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v5" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v5") && leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v5"
   const records = ledger.allocation.slots.map(slot => {
     resourceGuard?.()
     const c = state.charges.get(slot.root), terminal = c && state.terminals.get(c.root)
@@ -1908,7 +1970,7 @@ export const verifyLeanEvidence = (ledger: LeanExperimentLedger, resourceGuard?:
       if (selected !== (terminal.replay !== null)) return fail("REPLAY_MISSING")
       if (terminal.replay) {
         const path = join(ledger.directory, `${c!.root.slice(7)}.gz`)
-        const bytes = compressedReadPolicy === "continuation-descriptor-v1" ? readLeanContinuationCompressedReplay(path, terminal.replay.compressedBytes, resourceGuard!) : readSafe(path)
+        const bytes = compressedReadPolicy !== undefined ? readLeanContinuationCompressedReplay(path, terminal.replay.compressedBytes, resourceGuard!) : readSafe(path)
         if (validationOnly) validateLeanReplay(terminal.replay, bytes, REPLAY_MAX, ledger.allocation, resourceGuard)
         else decodeLeanReplay(terminal.replay, bytes)
       }
@@ -1929,7 +1991,8 @@ export const leanReplayV7CapsForAllocation = (value: unknown): typeof LEAN_REPLA
   if (leanSupervisorAllocationMode(a) !== "v7") return fail("ALLOCATION_VERSION")
   return LEAN_REPLAY_V7_CAPS
 }
-export const leanCapsForAllocation = (value: unknown): typeof LEAN_CAPS | typeof LEAN_SUPERVISOR_V5_CAPS | typeof LEAN_REPLAY_V7_CAPS | typeof LEAN_RETRY_V8_TIMEBOX_CAPS | typeof LEAN_TWENTY_SIX_V10_CAPS | typeof LEAN_TWO_PAIR_V11_CAPS | typeof LEAN_SUPERVISOR_RETEST_V12_CAPS | typeof LEAN_PREPARATION_CONTINUATION_V13_CAPS | typeof LEAN_RESOURCE_WINDOW_V15_CAPS | typeof LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS | typeof LEAN_BASELINE_CONTINUATION_CAPS => {
+export const leanCapsForAllocation = (value: unknown): typeof LEAN_CAPS | typeof LEAN_SUPERVISOR_V5_CAPS | typeof LEAN_REPLAY_V7_CAPS | typeof LEAN_RETRY_V8_TIMEBOX_CAPS | typeof LEAN_TWENTY_SIX_V10_CAPS | typeof LEAN_TWO_PAIR_V11_CAPS | typeof LEAN_SUPERVISOR_RETEST_V12_CAPS | typeof LEAN_PREPARATION_CONTINUATION_V13_CAPS | typeof LEAN_RESOURCE_WINDOW_V15_CAPS | typeof LEAN_RESOURCE_WINDOW_V15_SUCCESSOR_CAPS | typeof LEAN_BASELINE_CONTINUATION_CAPS | LeanBaselineContinuationAllocationV2["caps"] => {
+  if ((value as { schemaVersion?: unknown } | null)?.schemaVersion === "lean-baseline-continuation-allocation-v2") return validateLeanBaselineContinuationAllocationV2(value).caps
   if ((value as { schemaVersion?: unknown } | null)?.schemaVersion === "lean-baseline-continuation-allocation-v1") { validateLeanBaselineContinuationAllocation(value); return LEAN_BASELINE_CONTINUATION_CAPS }
   const hostPolicy = hostPolicyForIdentityV15(value)
   if (hostPolicy) return hostPolicy.caps
@@ -2114,7 +2177,7 @@ export const leanResourcePolicyForAllocationV15 = (value: unknown) => {
   const mode = leanSupervisorAllocationMode(allocation)
   return isLeanResourceWindowModeV15(mode) ? leanResourceWindowPolicyForModeV15(mode) : null
 }
-export const leanMemoryLimitForAllocation = (value: unknown): number => (value as { schemaVersion?: unknown } | null)?.schemaVersion === "lean-baseline-continuation-allocation-v1" ? (validateLeanBaselineContinuationAllocation(value), LEAN_BASELINE_CONTINUATION_WINDOW.memoryBytes) : leanResourcePolicyForAllocationV15(value)?.memoryBytes ?? LEAN_CAPS.scratchBytes
+export const leanMemoryLimitForAllocation = (value: unknown): number => (value as { schemaVersion?: unknown } | null)?.schemaVersion === "lean-baseline-continuation-allocation-v2" ? (validateLeanBaselineContinuationAllocationV2(value), LEAN_BASELINE_CONTINUATION_POLICY_V2.memoryBytes) : (value as { schemaVersion?: unknown } | null)?.schemaVersion === "lean-baseline-continuation-allocation-v1" ? (validateLeanBaselineContinuationAllocation(value), LEAN_BASELINE_CONTINUATION_WINDOW.memoryBytes) : leanResourcePolicyForAllocationV15(value)?.memoryBytes ?? LEAN_CAPS.scratchBytes
 export const validateLeanResourceWindowPredecessorV15 = (p: LeanCorrectionPredecessor, policy: LeanResourceWindowPolicyV15 = LEAN_RESOURCE_WINDOW_V15_POLICY): void => {
   const b = admitLeanRetryTimeboxExtension(policy), { root: claimed, ...body } = p
   if (!isLeanResourceWindowExtensionV15(b)) return fail("RESOURCE_POLICY")

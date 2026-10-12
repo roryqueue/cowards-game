@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs"
 export { superviseLeanStartupV5 } from "./v1-38-lean-startup-supervisor.mjs"
 export { superviseLeanStartupV8 } from "./v1-38-lean-startup-supervisor-v8.mjs"
 import { LEAN_STARTUP_POLICY_V5, leanBytesRoot, validateLeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V2, validateLeanBaselineContinuationAllocationV2, type LeanBaselineContinuationAllocationV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, leanStartupAuthorityDescriptorV8, isLeanCorrectionRuntimeAuthority, claimLeanPrivateProbeRuntimeAuthority, type LeanRuntimeAuthority, type LeanStartupGrantV5, type LeanStartupGrantV8, type LeanPrivateProbeBindingV1, type LeanPrivateProbeRuntimeAuthority, type LeanPrivateProbeStartupGrantV1 } from "./v1-38-lean-experiment-authority.js"
@@ -88,6 +89,24 @@ export const readLeanBaselineContinuationGit = (args: readonly string[]): Buffer
   return bytes
 }
 import { Worker } from "node:worker_threads"
+/** Caller supplies the exact reviewed manifest; no cached path inventory or HEAD. */
+export const readLeanBaselineContinuationGitV2 = (args: readonly string[], exactManifest: readonly { path: string; root: LabRoot }[]): Buffer => {
+  const commit = /^[a-f0-9]{40}$/u, paths = new Set(exactManifest.map(row => row.path))
+  if (paths.size !== exactManifest.length || paths.size > 1024 || exactManifest.some(row => !/^sha256:[a-f0-9]{64}$/u.test(row.root) || !/^[A-Za-z0-9_./-]+$/u.test(row.path) || row.path.startsWith("/") || row.path.split("/").some(p => !p || p === "." || p === "..") || /preimage|secret/iu.test(row.path))) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_V2_METADATA")
+  let maximum: number | undefined
+  if (args.length === 2 && args[0] === "rev-parse" && args[1] === "HEAD") maximum = 128
+  if (args.length === 5 && args.slice(0, 4).join("\0") === ["rev-list", "--parents", "-n", "1"].join("\0") && commit.test(args[4]!)) maximum = 256
+  if (args.length === 4 && args[0] === "merge-base" && args[1] === "--is-ancestor" && commit.test(args[2]!) && commit.test(args[3]!)) maximum = 128
+  if (args.length === 4 && args[0] === "diff" && args[1] === "--name-only" && commit.test(args[2]!) && commit.test(args[3]!)) maximum = 65536
+  if (args.length === 2 && (args[0] === "show" || args[0] === "rev-parse")) {
+    const [revision, path, extra] = args[1]!.split(":")
+    if (revision && commit.test(revision) && path && extra === undefined && (paths.has(path) || path === LEAN_BASELINE_CONTINUATION_PATHS.allocation || path === LEAN_BASELINE_CONTINUATION_PATHS_V2.allocation)) maximum = args[0] === "rev-parse" ? 128 : path === LEAN_BASELINE_CONTINUATION_PATHS.allocation || path === LEAN_BASELINE_CONTINUATION_PATHS_V2.allocation ? 262144 : 4194304
+  }
+  if (maximum === undefined) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_V2_METADATA")
+  const bytes = runLeanBoundedGitMetadata(args, maximum)
+  if (bytes.length > maximum || args[0] === "rev-parse" && !/^[a-f0-9]{40}\n?$/u.test(bytes.toString("utf8"))) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_V2_METADATA")
+  return bytes
+}
 /** Explicit new route: old V1/probe command predicates are not widened. */
 export const readLeanPrivateMatchGitV2 = (args: readonly string[]): Buffer => {
   const commit = /^[a-f0-9]{40}$/u
@@ -199,6 +218,11 @@ const continuationExecutorAuthorities = new WeakSet<object>()
  * opt in. The existing factory/planner/session claim order remains mandatory. */
 export const enableLeanContinuationExecutorOrigins = (authority: LeanRuntimeAuthority, allocation: LeanBaselineContinuationAllocation): void => {
   const a = validateLeanBaselineContinuationAllocation(allocation), grant = leanStartupAuthorityDescriptorV8(authority)
+  if (!grant || grant.allocationRoot !== a.root) throw new TypeError("LEAN_CONTINUATION_EXECUTOR_AUTHORITY")
+  continuationExecutorAuthorities.add(authority)
+}
+export const enableLeanContinuationExecutorOriginsV2 = (authority: LeanRuntimeAuthority, allocation: LeanBaselineContinuationAllocationV2): void => {
+  const a = validateLeanBaselineContinuationAllocationV2(allocation), grant = leanStartupAuthorityDescriptorV8(authority)
   if (!grant || grant.allocationRoot !== a.root) throw new TypeError("LEAN_CONTINUATION_EXECUTOR_AUTHORITY")
   continuationExecutorAuthorities.add(authority)
 }
