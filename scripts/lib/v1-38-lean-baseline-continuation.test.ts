@@ -102,8 +102,9 @@ describe("[continuation-v2-permissions] actual isolated inventory", () => {
     fixture(f => { const alloc = vi.spyOn(Buffer, "alloc"); try { expect(() => f.inventory([], additional => { if (additional) throw new Error("reservation-denied") })).toThrow("reservation-denied"); expect(alloc).not.toHaveBeenCalled() } finally { alloc.mockRestore() } })
   })
   it("keeps bounded private metadata strictly 0600", () => fixture(f => {
-    for (const mode of [0o600, 0o644, 0o755]) {
-      const path = resolve(`scripts/private-${mode}.json`); writeFileSync(path, "{}", { mode })
+    for (const mode of [0o600, 0o644, 0o755, 0o4600]) {
+      const path = resolve(`scripts/private-${mode}.json`); writeFileSync(path, "{}", { mode }); fs.chmodSync(path, mode)
+      expect(fs.lstatSync(path).mode & 0o7777).toBe(mode)
       const read = () => continuation.readLeanContinuationBoundedBytesV2(path, 2, 0o600, () => {})
       if (mode === 0o600) expect(read().toString()).toBe("{}"); else expect(read).toThrow(/V2_FILE/)
     }

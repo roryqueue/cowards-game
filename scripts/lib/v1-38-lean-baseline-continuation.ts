@@ -19,7 +19,7 @@ export const readLeanContinuationBoundedBytesV2 = (name: string, maximum: number
   if (!integer(maximum) || maximum > 4194304 || /preimage|secret|sealed/iu.test(name) || typeof guard !== "function") return fail("V2_READ_SCOPE")
   guard()
   const path = resolve(name), stat = lstatSync(path)
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== process.getuid?.() || realpathSync(path) !== path || (stat.mode & 0o777) !== mode || stat.size > maximum || !integer(stat.size)) return fail("V2_FILE")
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== process.getuid?.() || realpathSync(path) !== path || (stat.mode & 0o7777) !== mode || stat.size > maximum || !integer(stat.size)) return fail("V2_FILE")
   const same = (s: Stats) => s.isFile() && !s.isSymbolicLink() && s.nlink === 1 && s.uid === stat.uid && s.mode === stat.mode && s.dev === stat.dev && s.ino === stat.ino && s.size === stat.size && s.blocks === stat.blocks && s.mtimeMs === stat.mtimeMs && s.ctimeMs === stat.ctimeMs
   guard(stat.size)
   const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
