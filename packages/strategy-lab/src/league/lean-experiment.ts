@@ -1499,6 +1499,11 @@ export const leanRetryRootElapsedFloorV8 = (observedMs: number, timeboxExtension
 }
 const currentLeanJournalElapsedMs = (ledger: LeanExperimentLedger) => {
   const s = readLeanTimeAccounting(ledger), local = activeTime.get(ledger.directory)
+  if (ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" && s.active && local?.id === "continuation-run-admission") {
+    const elapsed = process.hrtime.bigint() - local.monotonicStartNs
+    if (elapsed < 0n) return fail("CONTINUATION_CLOCK")
+    return s.closedElapsedMs + Math.max(Date.now() - local.atMs, Number((elapsed + 999999n) / 1000000n))
+  }
   if (s.active && leanProspective(ledger.allocation)) {
     const started = [...s.starts.values()].at(-1)
     if (started === undefined) return leanCapsForAllocation(ledger.allocation).elapsedMs
@@ -1573,11 +1578,12 @@ const syncLeanDirectory = (path: string): void => { const fd = openSync(safeDire
 export const admitsLeanPreEntryTime = (correction: boolean, time: Pick<ReturnType<typeof readLeanTimeAccounting>, "active" | "starts" | "closed">): boolean => correction
   ? !time.active && time.starts.size === time.closed.size && [...time.starts.keys()].every(id => (id === "correction-preparation" || id === "correction-request-data") && time.closed.has(id))
   : time.starts.size === 0 && !time.active && time.closed.size === 0
+export const admitsLeanBaselineContinuationPreEntryTime = (time: Pick<ReturnType<typeof readLeanTimeAccounting>, "active" | "starts" | "closed">): boolean => !time.active && time.starts.size === 1 && time.closed.size === 1 && time.starts.has("continuation-run-admission") && time.closed.has("continuation-run-admission")
 export const publishLeanChildEntry = (ledger: LeanExperimentLedger, entry: LeanChildEntryV2): void => {
   if (!leanProspective(ledger.allocation) || !exactLabKeys(entry, ["schemaVersion", "allocationRoot", "sourceRoot", "requestBytesRoot", "head", "parentPid", "childPid", "handshakeRoot", "wallStartMs", "monotonicStartNs"]) || entry.schemaVersion !== "lean-child-entry-v2" || entry.allocationRoot !== ledger.allocation.root || entry.sourceRoot !== ledger.allocation.sourceRoot || !root(entry.requestBytesRoot) || !root(entry.handshakeRoot) || !/^[a-f0-9]{40}$/u.test(entry.head) || !natural(entry.parentPid) || entry.parentPid === 0 || !natural(entry.childPid) || entry.childPid === 0 || entry.parentPid === entry.childPid || !natural(entry.wallStartMs)) return fail("ENTRY")
   monotonic(entry.monotonicStartNs)
   const entryTime = readLeanTimeAccounting(ledger)
-  if (!admitsLeanPreEntryTime("route" in ledger.allocation, entryTime) || readLeanLedger(ledger).events.length) return fail("ENTRY")
+  if (!(ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" ? admitsLeanBaselineContinuationPreEntryTime(entryTime) : admitsLeanPreEntryTime("route" in ledger.allocation, entryTime)) || readLeanLedger(ledger).events.length) return fail("ENTRY")
   writeExclusive(join(safeDirectory(ledger.directory), "entry.json"), leanCanonicalBytes(entry)); syncLeanDirectory(ledger.directory)
 }
 export const readLeanChildEntry = (ledger: LeanExperimentLedger): LeanChildEntryV2 => {
@@ -1600,7 +1606,7 @@ export const publishLeanChildTerminal = (ledger: LeanExperimentLedger, terminal:
   const expected = deriveLeanChildTerminal(ledger, entry, observation)
   if (labRoot("lean-terminal-admission", terminal) !== labRoot("lean-terminal-admission", expected)) return fail("TERMINAL")
   const time = readLeanTimeAccounting(ledger)
-  if (!time.active || ("route" in ledger.allocation ? time.starts.size !== time.closed.size + 1 : time.starts.size !== 1 || time.closed.size !== 0) || time.starts.get("pilot-entry") !== entry.wallStartMs) return fail("TERMINAL")
+  if (!time.active || (ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" ? time.starts.size !== 2 || time.closed.size !== 1 || !time.closed.has("continuation-run-admission") : "route" in ledger.allocation ? time.starts.size !== time.closed.size + 1 : time.starts.size !== 1 || time.closed.size !== 0) || time.starts.get("pilot-entry") !== entry.wallStartMs) return fail("TERMINAL")
   writeExclusive(join(safeDirectory(ledger.directory), "child-terminal.json"), leanCanonicalBytes(terminal)); syncLeanDirectory(ledger.directory)
   // V5 closes at the receipt's authenticated clock snapshot. Publication work
   // after that observation is debited by admission finalization, not silently

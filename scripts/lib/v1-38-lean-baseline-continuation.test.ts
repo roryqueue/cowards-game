@@ -14,6 +14,12 @@ export const continuationAllocationFixture = () => {
 }
 
 describe("prospective baseline continuation allocation", () => {
+  it("requires the closed unique run admission before entry, preserving the legacy empty journal", () => {
+    const time = { active: false, starts: new Map([["continuation-run-admission", 1]]), closed: new Set(["continuation-run-admission"]) }
+    expect(ledger.admitsLeanBaselineContinuationPreEntryTime(time)).toBe(true)
+    expect(ledger.admitsLeanPreEntryTime(false, time)).toBe(false)
+    for (const invalid of [{ ...time, active: true }, { ...time, closed: new Set<string>() }, { ...time, starts: new Map<string, number>() }, { ...time, starts: new Map([...time.starts, ["pilot-entry", 2]]) }]) expect(ledger.admitsLeanBaselineContinuationPreEntryTime(invalid)).toBe(false)
+  })
   it("refuses non-direct parents and mismatched committed custody bytes", () => {
     const commit = "a".repeat(40), source = "b".repeat(40), bytes = Buffer.from("inert")
     expect(() => continuation.assertLeanContinuationDirectParent(commit, source, [commit, source], bytes, bytes)).not.toThrow()
