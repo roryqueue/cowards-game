@@ -3,7 +3,7 @@ import { isLeanRetryMode, leanRetryOrdinal, admitLeanAllocation } from "../../pa
 /** New compact-route capability; never a legacy full-league receipt. */
 import { labRoot, freezeLabValue, LAB_ADMITTED_ROOTS, exactLabKeys, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { readLeanLedger, readLeanChildEntry, type LeanExperimentLedger, type LeanCharge } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { validateLeanBaselineContinuationAllocationV2, LEAN_BASELINE_CONTINUATION_PATHS_V2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { validateLeanBaselineContinuationAllocationV2, leanBaselineContinuationPathsForWindowV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { readLeanContinuationBoundedBytesV2, readLeanContinuationJsonV2 } from "./v1-38-lean-baseline-continuation.js"
 import type { ProspectiveLeagueLifetimeProviderBinding } from "./v1-38-league-prospective-lifetime.js"
 import { prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
@@ -404,7 +404,7 @@ export const issueLeanBaselineContinuationRuntimeAuthorityV2 = (ledger: LeanExpe
     if (live.stopped || !retained || live.terminals.has(charge.root) || retained.root !== charge.root || retained.ordinal !== charge.ordinal || retained.slotRoot !== charge.slotRoot || !slot || slot.root !== charge.slotRoot || labRoot("lean-slot-charge", retained) !== labRoot("lean-slot-charge", charge)) return fail()
     const entry = readLeanChildEntry(ledger)
     const nestedGuard = (required?: number) => guard(additionalBytes + (required ?? 0))
-    if (entry.allocationRoot !== allocation.root || entry.sourceRoot !== allocation.sourceRoot || entry.requestBytesRoot !== allocation.requestBytesRoot || !/^[a-f0-9]{40}$/u.test(entry.head) || entry.head === allocation.sourceHead || !matchEqual(readLeanContinuationJsonV2(LEAN_BASELINE_CONTINUATION_PATHS_V2.claim, 65536, 0o600, nestedGuard), { ...body, root: labRoot(body.schemaVersion, body) })) return fail()
+    if (entry.allocationRoot !== allocation.root || entry.sourceRoot !== allocation.sourceRoot || entry.requestBytesRoot !== allocation.requestBytesRoot || !/^[a-f0-9]{40}$/u.test(entry.head) || entry.head === allocation.sourceHead || !matchEqual(readLeanContinuationJsonV2(leanBaselineContinuationPathsForWindowV2(allocation.window).claim, 65536, 0o600, nestedGuard), { ...body, root: labRoot(body.schemaVersion, body) })) return fail()
     guard(additionalBytes)
   }
   boundGuard()
