@@ -1,5 +1,11 @@
 # Baseline continuation gates
 
+## Current V4 Task A source owner and aborted-checkout cleanup
+
+ROOT2026-10-12T22:41UTC: actual `/root/execute_265_permission_repair` exclusively owns checked V4 TaskA's four original files; B/C/D remain unstarted. Permission-source closure is complete, new-route source/data admission is not. ROOT10445 ten-file strict baseline CLOSED2: eight inherited FULL diagnostic blocks captured, not assumed globalgreen. All permission proofs and checked plans committed/pushed6e35279d before TaskA handoff; source-only edits may continue under the unchanged05:23:47 deadline, with full36entryfrontier22:42:47 still binding.
+
+The aborted typed-fixer checkout was read-only checked to have exactly one generated test-file modification and no untracked content. ROOT preserved that edit recoverably in Git stash object8aa44c4b13fbfb4ce2f6be7f819a7095a958355e, confirmed clean checkout, then removed ONLY `/private/tmp/sv-265-reviewfix-permission-D2JVBW` with normal worktree removal. Its branch and dedicated recovery sentinel remain preserved; no old marker/evidence/user file deleted or fix-success claimed. Earlier preservation statements record history, superseded only for this disposable source checkout's location. No runtime or empirical artifact was created by cleanup.
+
 ## Current permission repair ROOT validation — source verification pending
 
 Source commits fc54fcdf562f54264662272cd6e3442c04ea45b8 and4d639c97f08122c52b38ba135aa3d335b7a9b618 change exactly the continuation helper/test. Actual typed planner `/root/plan_265_permission_repair` and checker `/root/check_265_permission_repair` closed the bounded plan; typed executor `/root/execute_265_permission_repair` performed source and WR-PERM-01 correction in shared main. Typed independent reviewer `/root/review_265_permission_repair` final PASS_SOURCE_REVIEW/findings[] supersedes its real warning after V2 exact07777 private-mode correction; V1 remains unchanged. Original V3 suppressed throw remains UNKNOWN.
