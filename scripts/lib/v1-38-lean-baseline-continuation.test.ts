@@ -48,6 +48,80 @@ describe("complete fresh identity guard", () => {
 })
 
 const r = (value: unknown) => labRoot("inert-continuation-fixture", value)
+describe("[continuation-v2-permissions] actual isolated inventory", () => {
+  const fixture = (run: (f: { paths: string[]; reviewed: continuation.LeanContinuationReviewedRowV2[]; git: continuation.LeanContinuationGit; inventory: (prior?: readonly continuation.LeanContinuationInventoryRow[], guard?: (additional?: number) => void) => readonly continuation.LeanContinuationInventoryRowV2[] }) => void, modes = [0o755, 0o644, 0o644], large = false) => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-permissions-")))
+    const paths = ["scripts/run-v1-38-lean-baseline.sh", "scripts/unit.ts", ".planning/STATE.md"], head = "a".repeat(40)
+    const bytes = paths.map((_, i) => large && i === 0 ? Buffer.alloc(4194305, 97) : Buffer.from(`synthetic committed ${i}`))
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    try {
+      for (const name of ["scripts", ".strategy-lab", ".planning/artifacts"]) fs.mkdirSync(join(dir, name), { recursive: true })
+      paths.forEach((path, i) => { writeFileSync(join(dir, path), bytes[i]!, { mode: modes[i]! }); fs.chmodSync(join(dir, path), modes[i]!); expect(fs.lstatSync(join(dir, path)).mode & 0o7777).toBe(modes[i]) })
+      const reviewed = paths.map((path, i): continuation.LeanContinuationReviewedRowV2 => ({ path, root: ledger.leanBytesRoot(bytes[i]!), commit: head, kind: i === 2 ? "active_planning" : "reviewed_source" }))
+      const git: continuation.LeanContinuationGit = vi.fn(args => {
+        const i = paths.findIndex(path => args[1] === `${head}:${path}`)
+        expect(i).toBeGreaterThanOrEqual(0); expect(args).toHaveLength(2)
+        expect(args[0]).toBe(bytes[i]!.length > 4194304 ? "rev-parse" : "show")
+        return args[0] === "show" ? bytes[i]! : Buffer.from(createHash("sha1").update(`blob ${bytes[i]!.length}\0`).update(bytes[i]!).digest("hex") + "\n")
+      })
+      run({ paths, reviewed, git, inventory: (prior = [], guard = () => {}) => continuation.inventoryLeanContinuationSurvivorsV2(prior, reviewed, git, guard) })
+    } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+  }
+  it("admits registered 0755 plus source/planning 0644 with historical modes and no debit refund", () => fixture(f => {
+    const rows = f.inventory(); expect(rows.map(row => [row.path, row.mode])).toEqual([[f.paths[2], 0o644], [f.paths[0], 0o755], [f.paths[1], 0o644]])
+    expect(f.inventory(rows)).toEqual(rows); expect(f.git).toHaveBeenCalledTimes(6)
+    const originalDebit = rows.reduce((n, row) => n + row.allocatedBytes, 0) + 8192
+    const consumed = [ledger.LEAN_BASELINE_CONTINUATION_PATHS.request, ledger.LEAN_BASELINE_CONTINUATION_PATHS.allocation, ledger.LEAN_BASELINE_CONTINUATION_PATHS.store, ledger.LEAN_BASELINE_CONTINUATION_PATHS.temp].map(path => ({ path, allocatedBytes: 4096 }))
+    const debit = continuation.reconcileLeanContinuationV2DiskDebit(originalDebit, rows, originalDebit + 32768, [...rows, ...consumed])
+    expect(debit.allocatedDiskBytes).toBe(originalDebit + 32768)
+    const growth = rows.map((row, i) => i === 0 ? { ...row, allocatedBytes: row.allocatedBytes + 4096 } : row)
+    expect(continuation.reconcileLeanContinuationV2DiskDebit(originalDebit, rows, debit.allocatedDiskBytes, [...growth, ...consumed]).allocatedDiskBytes).toBe(debit.allocatedDiskBytes + 4096)
+    for (const changed of [rows.slice(1), rows.map((row, i) => i === 0 ? { ...row, allocatedBytes: 0 } : row)]) expect(() => continuation.reconcileLeanContinuationV2DiskDebit(originalDebit, rows, debit.allocatedDiskBytes, [...changed, ...consumed])).toThrow(/MISSING_OR_SHRINK/)
+    for (const row of rows.filter(row => row.path.startsWith("scripts/"))) expect(() => f.inventory(rows.map(old => old.path === row.path ? { ...old, mode: old.mode === 0o755 ? 0o644 : 0o755 } : old))).toThrow(/SURVIVOR_SHRINK/)
+  }))
+  it.each([0o600, 0o664, 0o700, 0o775, 0o4755, 0o2644, 0o1644])("denies exact source mode %i including special bits", mode => fixture(f => expect(() => f.inventory()).toThrow(/REVIEWED_FILE/), [mode, 0o644, 0o644]))
+  it.each([0o755, 0o600])("denies planning mode %i", mode => fixture(f => expect(() => f.inventory()).toThrow(/REVIEWED_FILE/), [0o644, 0o644, mode]))
+  it("streams registered large 0755 content through exact committed OID and fresh guards", () => fixture(f => {
+    const guard = vi.fn(); expect(f.inventory([], guard).find(row => row.path === f.paths[0])?.mode).toBe(0o755)
+    expect(guard.mock.calls.length).toBeGreaterThan(64); expect(f.git).toHaveBeenCalledWith(["rev-parse", `${"a".repeat(40)}:${f.paths[0]}`])
+  }, undefined, true))
+  it("denies wrong committed bytes/root/ref/path, duplicate registration and aliases", () => fixture(f => {
+    const run = (reviewed = f.reviewed, git = f.git) => continuation.inventoryLeanContinuationSurvivorsV2([], reviewed, git, () => {})
+    expect(() => run(f.reviewed, () => Buffer.from("wrong"))).toThrow(/SOURCE_ROOT/)
+    for (const change of [{ root: r("wrong") }, { commit: "HEAD" }, { path: "../unit.ts" }, { kind: "unknown" }]) expect(() => run(f.reviewed.map((row, i) => i === 0 ? { ...row, ...change } as continuation.LeanContinuationReviewedRowV2 : row))).toThrow()
+    expect(() => run([...f.reviewed, f.reviewed[0]!])).toThrow(/INVENTORY_BOUND/)
+    const path = resolve(f.paths[0]!); fs.renameSync(path, `${path}.original`); symlinkSync(`${path}.original`, path)
+    expect(() => run()).toThrow(/ALIAS/); fs.unlinkSync(path); fs.linkSync(`${path}.original`, path); expect(() => run()).toThrow(/ALIAS/)
+  }, [0o644, 0o644, 0o644]))
+  it("denies reservation before allocation and descriptor replacement/mode mutation during read", () => {
+    for (const mutation of ["replace", "mode"] as const) fixture(f => {
+      let calls = 0
+      const guard = () => { if (++calls === 6) { const path = resolve(f.paths[2]!); if (mutation === "mode") fs.chmodSync(path, 0o755); else { fs.renameSync(path, `${path}.old`); writeFileSync(path, "replacement", { mode: 0o644 }) } } }
+      expect(() => f.inventory([], guard)).toThrow(/CHANGED/)
+    }, [0o644, 0o644, 0o644])
+    fixture(f => { const alloc = vi.spyOn(Buffer, "alloc"); try { expect(() => f.inventory([], additional => { if (additional) throw new Error("reservation-denied") })).toThrow("reservation-denied"); expect(alloc).not.toHaveBeenCalled() } finally { alloc.mockRestore() } })
+  })
+  it("keeps bounded private metadata strictly 0600", () => fixture(f => {
+    for (const mode of [0o600, 0o644, 0o755]) {
+      const path = resolve(`scripts/private-${mode}.json`); writeFileSync(path, "{}", { mode })
+      const read = () => continuation.readLeanContinuationBoundedBytesV2(path, 2, 0o600, () => {})
+      if (mode === 0o600) expect(read().toString()).toBe("{}"); else expect(read).toThrow(/V2_FILE/)
+    }
+  }))
+  it("denies a foreign owner and reobserves final authenticated mode", () => {
+    fixture(f => {
+      const stat = vi.mocked(fs.lstatSync), original = stat.getMockImplementation()!
+      try {
+        stat.mockImplementation((...args) => { const value = original(...args); return value && String(args[0]) === resolve(f.paths[0]!) ? Object.assign(Object.create(Object.getPrototypeOf(value)), value, { uid: Number(value.uid) + 1 }) : value })
+        expect(() => f.inventory()).toThrow(/ALIAS/)
+      } finally { stat.mockImplementation(original) }
+    })
+    fixture(f => {
+      let calls = 0
+      expect(() => f.inventory([], () => { if (++calls === 10) fs.chmodSync(resolve(f.paths[2]!), 0o755) })).toThrow(/INVENTORY_CHANGED/)
+    })
+  })
+})
 export const continuationWindowFixtureV2 = () => {
   const body = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "synthetic-unit-grant", approvalEvidence: { humanDecisionId: "synthetic-unit-decision", recordedBy: "synthetic-root" }, approvedAtMs: 1791820000000, anchorMs: 1791820000000, deadlineMs: 1791848800000, carryMs: 472058903, capMs: 500858903, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261012-v3" as const, reviewedSourceHead: "a".repeat(40), sourceRoot: r("source"), sourceGateRoot: r("source-gate"), planRoot: r("plan"), runOperator: "synthetic-runner", readerOperator: "synthetic-reader" }
   return { ...body, root: labRoot(body.schemaVersion, body) }

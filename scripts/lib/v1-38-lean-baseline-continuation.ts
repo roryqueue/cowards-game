@@ -235,9 +235,11 @@ export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinu
     const priorRow = old.get(name), reviewedRow = review.get(name), sealed = /preimage|secret|sealed|holdout/iu.test(name)
     let rawRoot = priorRow?.rawRoot ?? null
     if (reviewedRow) {
-      if (!s.isFile() || sealed || (s.mode & 0o777) !== 0o644) return fail("V2_REVIEWED_FILE")
+      const mode = s.mode & 0o7777
+      const permitted = reviewedRow.kind === "reviewed_source" ? mode === 0o644 || mode === 0o755 : reviewedRow.kind === "active_planning" && mode === 0o644
+      if (!s.isFile() || sealed || !permitted) return fail("V2_REVIEWED_FILE")
       guard(65536); authenticateLeanContinuationPinnedSource(reviewedRow, reviewedRow.commit, [...review.keys()], git, guard)
-      rawRoot = s.size > 4194304 ? reviewedRow.root : leanBytesRoot(readLeanContinuationBoundedBytesV2(name, 4194304, 0o644, guard))
+      rawRoot = s.size > 4194304 ? reviewedRow.root : leanBytesRoot(readLeanContinuationBoundedBytesV2(name, 4194304, mode, guard))
       if (rawRoot !== reviewedRow.root) return fail("V2_UNREVIEWED_BYTES")
     }
     const members = s.isDirectory() ? readdirSync(path).sort() : undefined
@@ -246,7 +248,7 @@ export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinu
     rows.push(row)
     if (members) for (const child of members) visit(`${name}/${child}`, depth + 1)
     guard(); const after = lstatSync(path)
-    if (after.dev !== s.dev || after.ino !== s.ino || after.size !== s.size || after.blocks !== s.blocks || after.mtimeMs !== s.mtimeMs || after.ctimeMs !== s.ctimeMs) return fail("V2_INVENTORY_CHANGED")
+    if (after.dev !== s.dev || after.ino !== s.ino || after.size !== s.size || after.blocks !== s.blocks || after.mtimeMs !== s.mtimeMs || after.ctimeMs !== s.ctimeMs || reviewedRow && (after.mode !== s.mode || after.uid !== s.uid || !after.isFile() || after.nlink !== 1 || realpathSync(path) !== path)) return fail("V2_INVENTORY_CHANGED")
   }
   for (const name of [...names].sort()) visit(name, 0)
   rows.sort((a, b) => a.path.localeCompare(b.path)); reconcileLeanContinuationInventoryV2(prior, rows, reviewed)
