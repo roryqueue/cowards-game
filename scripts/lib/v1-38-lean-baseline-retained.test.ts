@@ -162,7 +162,9 @@ const completeFixture = async (outcomeForSlot: (ordinal: number, entrantSeat: "b
   } })
   ledgerEvents.push({ kind: "stop", reason: "complete" })
   const evidence = { ...base.evidence, records, charged: allocation.predecessor.chargedMatches + 36, elapsedMs: allocation.predecessor.elapsedUpperBoundMs + 100, root: root("complete-evidence") }
-  const result = { ...base.result, pipeline, evidenceRoot: evidence.root, charged: evidence.charged, successful: 36, status: "pending_independent_verification", ...(continuation ? { unusedOrdinals: [] } : {}) }
+  const frontier = (ordinal: number, after: boolean) => ({ nowMs: continuationLedger.LEAN_BASELINE_CONTINUATION_WINDOW.anchorMs + 200 + ordinal * 2 + Number(after), monotonicElapsedMs: 200 + ordinal * 2 + Number(after), remainingSlots: 36 - ordinal - Number(after), charged: 43 + ordinal + Number(after), retainedBytes: 1000000, scratchBytes: 0, parentRssBytes: 100000000, childRssBytes: 100000000, arrayBuffersBytes: 1000, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true })
+  const resourceReceipts = records.map((row, ordinal) => ({ ordinal, chargeRoot: row.chargeRoot, before: frontier(ordinal, false), after: frontier(ordinal, true) }))
+  const result = { ...base.result, pipeline, evidenceRoot: evidence.root, charged: evidence.charged, successful: 36, status: "pending_independent_verification", ...(continuation ? { unusedOrdinals: [], resourceReceipts } : {}) }
   return { ...base, sources, artifacts, pairs: pairs as LeanBaselineRetainedSnapshot["pairs"], observations: observations as LeanBaselineRetainedSnapshot["observations"], ledgerEvents: ledgerEvents as LeanBaselineRetainedSnapshot["ledgerEvents"], evidence: evidence as LeanBaselineRetainedSnapshot["evidence"], result }
 }
 
@@ -199,6 +201,8 @@ describe("continuation full retained reconstruction", () => {
       v => { v.time.closes.set("continuation-retained-verifier", v.allocation.window.deadlineMs + 1) },
       v => { v.allocation.slots.push(v.allocation.slots[0]) },
       v => { v.result.pipeline.response.admitted = true },
+      v => { v.result.resourceReceipts.pop() },
+      v => { v.result.resourceReceipts[0].after.childRssBytes = 3000000000 },
       v => { v.sources[0].source = "forged" },
     ]
     for (const [index, mutate] of mutations.entries()) { const v = structuredClone(s); mutate(v); expect(() => audit(v), `mutation ${index}`).toThrow() }
