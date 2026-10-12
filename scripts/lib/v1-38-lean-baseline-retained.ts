@@ -24,7 +24,7 @@ import { admitLeanRetryTimeboxExtension, admitLeanAllocation, leanCorrectionRout
 import { leanCorrectionSourceManifest, authenticateLeanTwoPairAcceptedJoinV11, authenticateLeanSupervisorRetestAcceptedJoinV12, authenticateLeanPreparationContinuationAcceptedJoinV13, authenticateLeanPostV13FivePairAcceptedJoinV14 } from "../run-v1-38-lean-correction.js"
 import { isLeanTwoPairMode, isLeanSupervisorRetestMode, isLeanPreparationContinuationMode, isLeanPostV13FivePairMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { validateLeanSupervisorReasonBytesV2 } from "../run-v1-38-lean-baseline.js"
-import { validateLeanBaselineContinuationAllocation, validateLeanBaselineContinuationAllocationV2, LEAN_BASELINE_CONTINUATION_PATHS as CONTINUATION, LEAN_BASELINE_CONTINUATION_PATHS_V2 as CONTINUATION_V2, LEAN_BASELINE_CONTINUATION_WINDOW, leanContinuationIdentityV2, leanContinuationGlobalFloorV2, type LeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocationV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { validateLeanBaselineContinuationAllocation, validateLeanBaselineContinuationAllocationV2, leanBaselineContinuationPathsForRequestV2, leanBaselineContinuationPathsForWindowV2, LEAN_BASELINE_CONTINUATION_PATHS as CONTINUATION, LEAN_BASELINE_CONTINUATION_WINDOW, leanContinuationIdentityV2, leanContinuationGlobalFloorV2, type LeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocationV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { openLeanBaselineContinuationContext, openLeanBaselineContinuationContextV2, writeLeanContinuationArtifact, assertLeanBaselineContinuationScope } from "../run-v1-38-lean-baseline.js"
 import { readLeanContinuationJson, readLeanContinuationJsonV2, assertLeanBaselineContinuationFrontier, assertLeanBaselineContinuationFrontierV2, type LeanContinuationFrontier } from "./v1-38-lean-baseline-continuation.js"
 import { deriveLeanContinuationWorkAccounting } from "./v1-38-lean-baseline-pipeline.js"
@@ -610,7 +610,7 @@ export const auditLeanBaselineContinuationRetainedV2 = (s: LeanBaselineContinuat
   guard()
   const a = validateLeanBaselineContinuationAllocationV2(s.allocation), w = a.window, r = s.request, e = s.entry, t = s.terminal
   const interval = "continuation-retained-verifier-v2"
-  if (s.window.root !== w.root || s.windowBytesRoot !== a.windowBytesRoot || s.sourceGateRoot !== a.sourceGateRoot || s.dataReviewRoot !== a.dataReviewRoot || s.manifestRoot !== a.manifestRoot ||
+  if (!same(s.window, w) || s.window.root !== w.root || s.windowBytesRoot !== a.windowBytesRoot || s.sourceGateRoot !== a.sourceGateRoot || s.dataReviewRoot !== a.dataReviewRoot || s.manifestRoot !== a.manifestRoot ||
       !exactLabKeys(r, ["schemaVersion", "seed", "sourceHead", "sourceRoot", "planningRoot", "planRoot", "reviewRoot", "coldRoot", "candidateRoots", "requestRoots", "offlineOverheadMs", "sourceAuthor", "runOperator", "readerOperator", "windowRoot", "windowBytesRoot", "sourceGateRoot", "dataReviewRoot", "manifestRoot"]) ||
       r.schemaVersion !== "lean-baseline-continuation-request-v2" || r.seed !== a.seed || r.sourceHead !== a.sourceHead || r.sourceRoot !== a.sourceRoot || r.planningRoot !== a.planningRoot || r.planRoot !== a.planRoot || r.reviewRoot !== a.reviewRoot || r.coldRoot !== a.coldRoot || r.offlineOverheadMs !== a.offlineOverheadMs ||
       !same([...r.candidateRoots as LabRoot[]].sort(), a.candidateRoots) || !same(r.requestRoots, a.requestRoots) || r.windowRoot !== w.root || r.windowBytesRoot !== a.windowBytesRoot || r.sourceGateRoot !== a.sourceGateRoot || r.dataReviewRoot !== a.dataReviewRoot || r.manifestRoot !== a.manifestRoot ||
@@ -704,16 +704,18 @@ export const verifyLeanBaselineContinuationRetained = (requestPath: string) => {
 /** V2 is a separate, one-use ordinary reader. The V1 pathname/schema and
  * count-43 path above remain byte- and behavior-compatible. */
 export const verifyLeanBaselineContinuationRetainedV2 = (requestPath: string) => {
-  if (requestPath !== CONTINUATION_V2.request || process.send || process.connected) return fail("V2_READER_SCOPE")
+  const initialPaths = leanBaselineContinuationPathsForRequestV2(requestPath)
+  if (process.send || process.connected) return fail("V2_READER_SCOPE")
   // Authenticate true V2 scope, exact approved window/allocation binding and
   // live global/deadline reserve before any one-use journal mutation.
-  parentReaderContract.assertLeanBaselineContinuationScopeV2()
-  const approvedWindow = parentReaderContract.readLeanBaselineContinuationWindowV2()
+  const approvedWindow = parentReaderContract.readLeanBaselineContinuationWindowV2(requestPath), paths = leanBaselineContinuationPathsForWindowV2(approvedWindow)
+  if (!same(initialPaths, paths)) return fail("V2_READER_WINDOW_BINDING")
+  parentReaderContract.assertLeanBaselineContinuationScopeV2(false, approvedWindow)
   const admissionNow = Date.now()
   if (approvedWindow.status !== "approved" || admissionNow < approvedWindow.anchorMs || admissionNow >= approvedWindow.deadlineMs ||
       leanContinuationGlobalFloorV2(admissionNow) > approvedWindow.capMs) return fail("V2_READER_WINDOW")
-  const { ledger, allocation, before } = parentReaderContract.withLeanContinuationReaderMetadataV2(approvedWindow, () => { const ledger = openLeanLedger(CONTINUATION_V2.store); return { ledger, allocation: validateLeanBaselineContinuationAllocationV2(ledger.allocation), before: readLeanTimeAccounting(ledger) } })
-  if (!same(allocation.window, approvedWindow) || allocation.windowBytesRoot !== leanBytesRoot(leanCanonicalBytes(approvedWindow)) || allocation.window.root !== approvedWindow.root) return fail("V2_READER_WINDOW_BINDING")
+  const { ledger, allocation, before } = parentReaderContract.withLeanContinuationReaderMetadataV2(approvedWindow, () => { const ledger = openLeanLedger(paths.store); return { ledger, allocation: validateLeanBaselineContinuationAllocationV2(ledger.allocation), before: readLeanTimeAccounting(ledger) } })
+  if (!same(leanBaselineContinuationPathsForWindowV2(allocation.window), initialPaths) || !same(allocation.window, approvedWindow) || allocation.windowBytesRoot !== leanBytesRoot(leanCanonicalBytes(approvedWindow)) || allocation.window.root !== approvedWindow.root) return fail("V2_READER_WINDOW_BINDING")
   if (Date.now() >= approvedWindow.deadlineMs) return fail("V2_READER_WINDOW")
   if (before.active || before.starts.has("continuation-retained-verifier-v2") || !before.closed.has("continuation-run-admission") || readdirSync(ledger.directory).some(name => ["reader-claim.json", "retained-check.json"].includes(name))) return fail("V2_READER_USED")
   const pilotCloseMs = before.closes.get("pilot-entry"), remainingClosureMs = pilotCloseMs === undefined ? approvedWindow.closureMs : Math.max(0, approvedWindow.closureMs - Math.max(0, admissionNow - pilotCloseMs))
@@ -730,6 +732,7 @@ export const verifyLeanBaselineContinuationRetainedV2 = (requestPath: string) =>
       return fail("V2_PROCESS_LIVE")
     }
     const c = openLeanBaselineContinuationContextV2(requestPath, true), guard = (additionalBytes?: number) => c.guard(additionalBytes ?? 0)
+    if (!same(c.paths, paths) || !same(leanBaselineContinuationPathsForWindowV2(c.allocation.window), initialPaths) || !same(c.allocation.window, approvedWindow) || c.window.root !== approvedWindow.root || c.allocation.root !== allocation.root || c.ledger.directory !== ledger.directory) return fail("V2_READER_CONTEXT_BINDING")
     resourceGuard = guard
     const claimBody = { schemaVersion: "lean-baseline-continuation-reader-claim-v2", allocationRoot: allocation.root, grantId: allocation.window.grantId, windowRoot: allocation.window.root, requestBytesRoot: allocation.requestBytesRoot, readerOperator: c.request.readerOperator, startedAtMs: Date.now() }
     const readerClaim = { ...claimBody, root: labRoot(claimBody.schemaVersion, claimBody) }
