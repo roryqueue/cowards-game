@@ -811,6 +811,15 @@ export const withLeanContinuationMetadataReservationV2 = <T>(additionalBytes: nu
   reserve(bytes)
   return readMetadata()
 }
+export const withLeanContinuationDescriptorPreflightV2 = <T>(paths: readonly [string, string, string], reserve: (bytes: number) => void, readDescriptor: (path: string, maximum: number, mode: number, guard: (additionalBytes?: number) => void) => Buffer, parseLegacyMetadata: () => T, additionalBytes = 0): T => {
+  return withLeanContinuationMetadataReservationV2(additionalBytes, reserve, () => {
+    const guardedRead = (path: string, maximum: number, mode: number) => readDescriptor(path, maximum, mode, additional => reserve(CONTINUATION_V2_METADATA_PARSE_RESERVE + (additional ?? 0)))
+    guardedRead(paths[0], 262144, 0o644)
+    guardedRead(paths[1], 4194304, 0o600)
+    guardedRead(paths[2], 4194304, 0o600)
+    return parseLegacyMetadata()
+  })
+}
 const continuationClaimBodyV2 = (request: LeanBaselineContinuationRequestV2, window: LeanBaselineContinuationWindowV2, requestBytesRoot: LabRoot) => ({ schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: window.grantId, routeNamespace: window.routeNamespace, windowRoot: window.root, windowBytesRoot: request.windowBytesRoot, requestBytesRoot, sourceHead: request.sourceHead, sourceRoot: request.sourceRoot, sourceGateRoot: request.sourceGateRoot, dataReviewRoot: request.dataReviewRoot, planningRoot: request.planningRoot, manifestRoot: request.manifestRoot })
 const continuationReviewRowsV2 = (manifest: ReturnType<typeof leanBaselineContinuationDataManifestV2>, sourceHead: string): LeanContinuationReviewedRowV2[] => [...manifest.implementationEntries.map(row => ({ ...row, commit: sourceHead, kind: "reviewed_source" as const })), ...manifest.planningEntries.filter(row => row.path !== CONTINUATION_V2.window).map(row => ({ ...row, commit: sourceHead, kind: "active_planning" as const }))]
 const continuationPreflightV2 = (requestPath: string, consumed: boolean, reader: boolean) => {
@@ -924,11 +933,13 @@ export const openLeanBaselineContinuationContextV2 = (requestPath: string, reade
   const pinned = [...c.manifest.entries.map(row => row.path), requestPath, CONTINUATION_V2.claim, CONTINUATION_V2.allocation, ...["allocation.json", "carry.json", "source-manifest.json", "source-hold.json"].map(name => join(ledger.directory, name))].map(path => ({ path, stat: lstatSync(resolve(path)) }))
   const identities = createLeanContinuationIdentityGuardV2(pinned, [...carry.inventory as LeanContinuationInventoryRowV2[], ...hold.rows as LeanContinuationInventoryRowV2[]])
   const startWall = Date.now(), startMono = process.hrtime.bigint()
-  let closure = reader, closureBegan = reader ? withLeanContinuationMetadataReservationV2(0, bytes => continuationCapacityV2(c.window, cumulativeLeanPhysicalBytes(ledger), bytes, true), () => readLeanTimeAccounting(ledger).closes.get("pilot-entry") ?? startWall) : startWall, active = false, expectedLedger: LabRoot | undefined
+  const metadataPaths = [CONTINUATION_V2.allocation, join(ledger.directory, "ledger.ndjson"), join(ledger.directory, "time.ndjson")] as const
+  const reserveMetadata = (bytes: number) => continuationCapacityV2(c.window, cumulativeLeanPhysicalBytes(ledger), bytes, true)
+  let closure = reader, closureBegan = reader ? withLeanContinuationDescriptorPreflightV2(metadataPaths, reserveMetadata, readLeanContinuationBoundedBytesV2, () => readLeanTimeAccounting(ledger).closes.get("pilot-entry") ?? startWall) : startWall, active = false, expectedLedger: LabRoot | undefined
   const guard = (additionalBytes = 0) => {
     if (!Number.isSafeInteger(additionalBytes) || additionalBytes < 0 || Date.now() < startWall || c.git(["rev-parse", "HEAD"]).toString("utf8").trim() !== c.fixedHead) return fail("V2_HOLD")
-    let metadataReserveBytes = 0
-    return withLeanContinuationMetadataReservationV2(additionalBytes, bytes => { metadataReserveBytes = bytes; continuationCapacityV2(c.window, cumulativeLeanPhysicalBytes(ledger), bytes, true) }, () => {
+    let metadataReserveBytes = additionalBytes + CONTINUATION_V2_METADATA_PARSE_RESERVE
+    return withLeanContinuationDescriptorPreflightV2(metadataPaths, bytes => { metadataReserveBytes = bytes; reserveMetadata(bytes) }, readLeanContinuationBoundedBytesV2, () => {
     identities(); continuationStoreMembershipV2(ledger)
     // No recursive callback: the outer complete observation surrounds this
     // descriptor read. Its small reservation is included in the final sample.
@@ -942,7 +953,7 @@ export const openLeanBaselineContinuationContextV2 = (requestPath: string, reade
     assertLeanBaselineContinuationFrontierV2(allocation, sample)
     if (currentLeanElapsedMs(ledger) + sample.remainingSlots * LEAN_CAPS.matchMs + (sample.remainingClosureMs ?? c.window.closureMs) + (sample.remainingOfflineMs ?? c.window.offlineOverheadMs) > allocation.caps.elapsedMs) return fail("V2_JOURNAL_FRONTIER")
     identities(); return sample
-    })
+    }, additionalBytes)
   }
   guard()
   const authenticated = authenticateLeanBaselineContinuationCarryV2(c.git, continuationReviewRowsV2(c.manifest, allocation.sourceHead), guard)

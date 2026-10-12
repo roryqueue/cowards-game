@@ -56,6 +56,14 @@ describe("current-only staged baseline wiring (synthetic source tests)", () => {
     expect(reserve).toHaveBeenCalledWith(4096 + 7 * 4194304 + 262144)
     expect(ledgerRead).not.toHaveBeenCalled(); expect(timeRead).not.toHaveBeenCalled()
   })
+  it.each(["allocation", "ledger", "time"] as const)("[continuation-v2] rejects an oversized %s descriptor before legacy parsers", target => {
+    const paths = ["allocation", "ledger", "time"] as const, calls: string[] = [], parseLegacy = vi.fn(), reserve = vi.fn()
+    const readDescriptor = (path: string, maximum: number) => { calls.push(path); if (path === target) throw new Error("OVERSIZED_DESCRIPTOR"); expect(maximum).toBe(path === "allocation" ? 262144 : 4194304); return Buffer.alloc(0) }
+    expect(() => continuationMain.withLeanContinuationDescriptorPreflightV2(paths, reserve, readDescriptor, parseLegacy)).toThrow("OVERSIZED_DESCRIPTOR")
+    expect(calls).toEqual(paths.slice(0, paths.indexOf(target) + 1))
+    expect(reserve).toHaveBeenCalledWith(7 * 4194304 + 262144)
+    expect(parseLegacy).not.toHaveBeenCalled()
+  })
   // This legacy integration case consumes a canonical historical store. Source
   // execution is explicitly forbidden from opening it; keep it out of this suite.
   it.skip("reuses all seven frozen old packets with zero cold builders and rejects forged authority before dispatch", async () => {
