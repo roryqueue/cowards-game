@@ -23,6 +23,7 @@ import { executeLeanBaselineContinuationPipeline } from "./lib/v1-38-lean-baseli
 import { publishLeanBaselineContinuationSource } from "./lib/v1-38-lean-baseline-source.js"
 import { runLeanBaselineContinuationMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { readLeanBaselineContinuationGit } from "./lib/v1-38-lean-container-match-session.js"
+import { closeLeanInterval } from "../packages/strategy-lab/src/league/lean-experiment.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_${code}`) }
 const STORE = resolve(LEAN_BASELINE_STORE)
@@ -535,6 +536,11 @@ const continuationWindowGuard = (remaining: number, overhead: number) => {
   const now = Date.now()
   if (now < CONTINUATION_WINDOW.anchorMs || now + remaining * 600000 + CONTINUATION_WINDOW.reserveMs + overhead > CONTINUATION_WINDOW.deadlineMs) return fail("CONTINUATION_WINDOW")
 }
+const continuationPreAuthenticationCapacity = (retainedBytes = 0): void => {
+  const usage = process.memoryUsage(), fs = statfsSync(resolve(CONTINUATION.temp), { bigint: true })
+  const reserve = 2 * 268435456 + 512000000 + 335544320
+  if (!Number.isSafeInteger(retainedBytes) || retainedBytes < 0 || retainedBytes > LEAN_CAPS.retainedBytes || usage.rss + (process.connected ? rssOf(process.ppid) : 0) + usage.arrayBuffers + reserve > CONTINUATION_WINDOW.memoryBytes || observeLeagueAvailableMemoryBytes() < reserve || fs.bavail * fs.bsize < BigInt(LEAN_CAPS.totalBytes - retainedBytes) || measureLeanPhysicalBytes(CONTINUATION.temp) > LEAN_CAPS.scratchBytes) return fail("CONTINUATION_PREAUTH_CAPACITY")
+}
 export const assertLeanBaselineContinuationScope = (): void => {
   if (process.env.TSX_DISABLE_CACHE !== "1" || process.env.NODE_DISABLE_COMPILE_CACHE !== "1" || ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"].some(key => process.env[key] !== undefined) || process.env.TMPDIR !== resolve(CONTINUATION.temp) || !process.execArgv.some((arg, i, args) => arg === "--import" && args[i + 1] === "tsx" || arg === "--import=tsx") || process.execArgv.some(arg => /(?:loader|inspect|require)/u.test(arg)) || coreSoftLimit().trim() !== "0") return fail("CONTINUATION_SCOPE")
   const stat = lstatSync(resolve(CONTINUATION.temp))
@@ -557,13 +563,13 @@ export const writeLeanContinuationArtifact = (ledger: LeanExperimentLedger, name
 }
 /** Prepare is data-only and is never called by source tests. */
 export const prepareLeanBaselineContinuation = (requestPath: string) => {
-  assertLeanBaselineContinuationScope(); continuationWindowGuard(36, 1)
+  assertLeanBaselineContinuationScope(); continuationWindowGuard(36, 1); continuationPreAuthenticationCapacity()
   const request = readLeanBaselineContinuationRequest(requestPath), manifest = leanBaselineContinuationSourceManifest()
   const guard = () => { continuationWindowGuard(36, request.offlineOverheadMs); if (continuationHead() !== request.sourceHead || leanBaselineContinuationSourceManifest().manifestRoot !== manifest.manifestRoot || leanBytesRoot(readLeanContinuationBytes(requestPath, 65536, 0o600)) !== requestRoot) return fail("CONTINUATION_HOLD") }
   const requestRoot = leanBytesRoot(readLeanContinuationBytes(requestPath, 65536, 0o600))
   guard()
   for (const row of manifest.entries) if (leanBytesRoot(readLeanBaselineContinuationGit(["show", `${request.sourceHead}:${row.path}`])) !== row.root) return fail("CONTINUATION_UNCOMMITTED_SOURCE")
-  const carried = authenticateLeanBaselineContinuationCarry(readLeanBaselineContinuationGit, manifest.entries.map(row => row.path), () => continuationWindowGuard(36, request.offlineOverheadMs))
+  const carried = authenticateLeanBaselineContinuationCarry(readLeanBaselineContinuationGit, manifest.entries.map(row => row.path), () => { continuationWindowGuard(36, request.offlineOverheadMs); continuationPreAuthenticationCapacity() })
   guard()
   const allocation = createLeanBaselineContinuationAllocation({ sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, sourceHead: request.sourceHead, planningRoot: request.planningRoot, requestBytesRoot: requestRoot, offlineOverheadMs: request.offlineOverheadMs, predecessor: carried.carry })
   const fs = statfsSync(resolve(CONTINUATION.temp), { bigint: true }), freeBytes = Number(fs.bavail * fs.bsize), usage = process.memoryUsage()
@@ -583,8 +589,10 @@ export const prepareLeanBaselineContinuation = (requestPath: string) => {
 /** Pins every source/test/planning byte and survivor stat. Full streaming carry
  * authentication occurs at admission; later claims recheck immutable identity. */
 export const openLeanBaselineContinuationContext = (requestPath: string, reader = false) => {
-  assertLeanBaselineContinuationScope(); continuationWindowGuard(reader ? 0 : 36, 1)
-  const request = readLeanBaselineContinuationRequest(requestPath), ledger = openLeanLedger(CONTINUATION.store), allocation = validateLeanBaselineContinuationAllocation(ledger.allocation)
+  assertLeanBaselineContinuationScope(); if (reader) { if (Date.now() < CONTINUATION_WINDOW.anchorMs || Date.now() >= CONTINUATION_WINDOW.deadlineMs) return fail("CONTINUATION_WINDOW") } else continuationWindowGuard(36, 1)
+  const ledger = openLeanLedger(CONTINUATION.store), allocation = validateLeanBaselineContinuationAllocation(ledger.allocation)
+  continuationPreAuthenticationCapacity(cumulativeLeanPhysicalBytes(ledger))
+  const request = readLeanBaselineContinuationRequest(requestPath)
   const manifest = leanBaselineContinuationSourceManifest(), fixedHead = continuationHead(), fixedRequest = leanBytesRoot(readLeanContinuationBytes(requestPath, 65536, 0o600))
   if (allocation.sourceRoot !== request.sourceRoot || allocation.planningRoot !== request.planningRoot || allocation.sourceHead !== request.sourceHead || allocation.requestBytesRoot !== fixedRequest || allocation.reviewRoot !== request.reviewRoot || allocation.coldRoot !== request.coldRoot || allocation.seed !== request.seed || allocation.offlineOverheadMs !== request.offlineOverheadMs || !exact(allocation.requestRoots, request.requestRoots) || !exact(readLeanContinuationJson(join(ledger.directory, "source-manifest.json"), 4194304, 0o600), manifest)) return fail("CONTINUATION_ALLOCATION_JOIN")
   assertLeanContinuationDirectParent(fixedHead, allocation.sourceHead, readLeanBaselineContinuationGit(["rev-list", "--parents", "-n", "1", fixedHead]).toString("utf8").trim().split(/\s+/u), leanCanonicalBytes(allocation), readLeanBaselineContinuationGit(["show", `${fixedHead}:${CONTINUATION.allocation}`]))
@@ -595,7 +603,7 @@ export const openLeanBaselineContinuationContext = (requestPath: string, reader 
   const pinned = manifest.entries.map(row => ({ ...row, stat: lstatSync(resolve(row.path)) }))
   const survivors = carry.inventory as LeanContinuationInventoryRow[]
   if (!Array.isArray(survivors) || survivors.length > 4096 || labRoot("lean-baseline-continuation-inventory-v1", survivors) !== allocation.predecessor.inventoryRoot || labRoot("lean-baseline-continuation-custody-v1", carry.custody) !== allocation.predecessor.custodyRoot) return fail("CONTINUATION_CARRY")
-  let closure = reader, expectedLedger: LabRoot | undefined, active = false
+  let closure = reader, closureBegan = reader ? readLeanTimeAccounting(ledger).closes.get("pilot-entry") ?? wallBegan : wallBegan, expectedLedger: LabRoot | undefined, active = false
   const guard = (additionalBytes = 0) => {
     const nowMs = Date.now()
     if (nowMs < wallBegan || continuationHead() !== fixedHead || leanBytesRoot(readLeanContinuationBytes(requestPath, 65536, 0o600)) !== fixedRequest) return fail("CONTINUATION_HOLD")
@@ -606,18 +614,25 @@ export const openLeanBaselineContinuationContext = (requestPath: string, reader 
     const state = readLeanLedger(ledger), usage = process.memoryUsage(), fs = statfsSync(ledger.directory, { bigint: true })
     const child = process.connected ? process.pid : 0, parent = process.connected ? process.ppid : process.pid
     if (child && process.ppid !== readLeanChildEntry(ledger).parentPid) return fail("CONTINUATION_PARENT")
-    assertLeanBaselineContinuationFrontier(allocation, { nowMs, monotonicElapsedMs: wallBegan - CONTINUATION_WINDOW.anchorMs + Number((process.hrtime.bigint() - began) / 1000000n), remainingSlots: closure ? 0 : 36 - state.charges.size + (active ? 1 : 0), charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger), scratchBytes: measureLeanPhysicalBytes(CONTINUATION.temp) + additionalBytes, parentRssBytes: child ? rssOf(parent) : usage.rss, childRssBytes: child ? usage.rss : 0, arrayBuffersBytes: usage.arrayBuffers + additionalBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(fs.bavail * fs.bsize), live: !child || process.connected === true })
+    assertLeanBaselineContinuationFrontier(allocation, { nowMs, monotonicElapsedMs: wallBegan - CONTINUATION_WINDOW.anchorMs + Number((process.hrtime.bigint() - began) / 1000000n), remainingSlots: closure ? 0 : 36 - state.charges.size + (active ? 1 : 0), ...(closure ? { remainingClosureMs: Math.max(0, CONTINUATION_WINDOW.reserveMs - Math.max(0, nowMs - closureBegan)), remainingOfflineMs: 0 } : {}), charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger), scratchBytes: measureLeanPhysicalBytes(CONTINUATION.temp) + additionalBytes, parentRssBytes: child ? rssOf(parent) : usage.rss, childRssBytes: child ? usage.rss : 0, arrayBuffersBytes: usage.arrayBuffers + additionalBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(fs.bavail * fs.bsize), live: !child || process.connected === true })
   }
   guard()
   // Fresh hashes and canonical custody on both sides of the expensive read.
-  const authenticated = authenticateLeanBaselineContinuationCarry(readLeanBaselineContinuationGit, manifest.entries.map(row => row.path), () => continuationWindowGuard(reader ? 0 : 36, request.offlineOverheadMs))
+  const authenticated = authenticateLeanBaselineContinuationCarry(readLeanBaselineContinuationGit, manifest.entries.map(row => row.path), () => { if (reader) guard(); else { continuationWindowGuard(36, request.offlineOverheadMs); continuationPreAuthenticationCapacity(cumulativeLeanPhysicalBytes(ledger)) } })
   if (!exact(authenticated, carry)) return fail("CONTINUATION_CARRY_CHANGED")
   for (const row of manifest.entries) if (leanBytesRoot(readLeanBaselineContinuationGit(["show", `${fixedHead}:${row.path}`])) !== row.root) return fail("CONTINUATION_PIN_UNCOMMITTED")
   guard()
-  return { request, ledger, allocation, manifest, fixedHead, guard, startCell() { active = true; expectedLedger = leanBytesRoot(readLeanContinuationBytes(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600)); guard() }, finishCell() { active = false; expectedLedger = undefined }, closeRun() { active = false; expectedLedger = undefined; closure = true } }
+  return { request, ledger, allocation, manifest, fixedHead, guard, startCell() { active = true; expectedLedger = leanBytesRoot(readLeanContinuationBytes(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600)); guard() }, finishCell() { active = false; expectedLedger = undefined }, closeRun() { active = false; expectedLedger = undefined; closure = true; closureBegan = Date.now() } }
 }
 export const runLeanBaselineContinuation = async (requestPath: string) => {
-  const c = openLeanBaselineContinuationContext(requestPath)
+  if (requestPath !== CONTINUATION.request || process.send || process.connected) return fail("CONTINUATION_RUN_SCOPE")
+  assertLeanBaselineContinuationScope()
+  const ledger = openLeanLedger(CONTINUATION.store)
+  validateLeanBaselineContinuationAllocation(ledger.allocation)
+  // Existing time journal is the one-use marker, including failed admission.
+  beginLeanInterval(ledger, "continuation-run-admission")
+  let c: ReturnType<typeof openLeanBaselineContinuationContext>
+  try { c = openLeanBaselineContinuationContext(requestPath) } finally { closeLeanInterval(ledger, "continuation-run-admission") }
   c.guard()
   return runLeanBoundedParent({ ledger: c.ledger, requestPath, allocationPath: CONTINUATION.allocation, store: CONTINUATION.store, sourceRoot: c.allocation.sourceRoot, manifestRoot: () => { if (leanBaselineContinuationSourceManifest().planningRoot !== c.allocation.planningRoot) return fail("CONTINUATION_PLANNING_HOLD"); return leanBaselineContinuationSourceManifest().root }, childMode: "child-continuation", prospectiveStart: { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, beforeRelease: c.guard, terminalReserveMs: CONTINUATION_WINDOW.reserveMs, supervisorObservation: true })
 }
@@ -658,8 +673,11 @@ export const runLeanBaselineContinuationChild = async (requestPath: string) => {
   const state = readLeanLedger(ledger)
   if (!state.stopped) stopLeanLedger(ledger, complete ? "complete" : "failure")
   checkpoint()
-  const evidence = verifyLeanEvidence(ledger, checkpoint)
-  const result = { schemaVersion: "lean-baseline-continuation-result-v1", issued: false, evidenceClass: "exploratory_current_only", allocationRoot: c.allocation.root, sourceRoot: c.allocation.sourceRoot, planningRoot: c.allocation.planningRoot, requestBytesRoot: c.allocation.requestBytesRoot, head: c.fixedHead, evidenceRoot: evidence.root, pipeline, charged: evidence.charged, successful: evidence.records.filter(row => row.status === "success").length, status: complete ? "pending_independent_verification" : "partial_or_failed_baseline", elapsedMs: Math.max(evidence.elapsedMs, currentLeanElapsedMs(ledger)), physicalHighWaterBytes: evidence.physicalHighWaterBytes, scratchHighWaterBytes: evidence.scratchHighWaterBytes, unusedOrdinals: c.allocation.slots.filter(slot => !state.charges.has(slot.root)).map(slot => slot.ordinal), holdoutReservations: c.allocation.holdoutReservations, failure: failed ? "source_runtime_or_integrity_stop" : null, sourceAuthor: c.request.sourceAuthor, runOperator: c.request.runOperator, holdoutOpened: false, formationMaterialized: false }
+  let evidence: ReturnType<typeof verifyLeanEvidence> | null = null
+  try { evidence = verifyLeanEvidence(ledger, checkpoint) } catch { failed = true }
+  // Missing evidence stays missing. The charge, any published work/terminal,
+  // and exact unused slots survive a host failure without imputed outcomes.
+  const result = { schemaVersion: "lean-baseline-continuation-result-v1", issued: false, evidenceClass: "exploratory_current_only", allocationRoot: c.allocation.root, sourceRoot: c.allocation.sourceRoot, planningRoot: c.allocation.planningRoot, requestBytesRoot: c.allocation.requestBytesRoot, head: c.fixedHead, evidenceRoot: evidence?.root ?? null, pipeline, charged: state.charged, successful: [...state.terminals.values()].filter(row => row.record.classification === "success").length, status: complete && !failed ? "pending_independent_verification" : "partial_or_failed_baseline", elapsedMs: Math.max(state.elapsedMs, currentLeanElapsedMs(ledger)), physicalHighWaterBytes: state.physicalHighWaterBytes, scratchHighWaterBytes: state.scratchHighWaterBytes, unusedOrdinals: c.allocation.slots.filter(slot => !state.charges.has(slot.root)).map(slot => slot.ordinal), holdoutReservations: c.allocation.holdoutReservations, failure: failed ? "source_runtime_or_integrity_stop" : null, sourceAuthor: c.request.sourceAuthor, runOperator: c.request.runOperator, holdoutOpened: false, formationMaterialized: false }
   writeLeanContinuationArtifact(ledger, "result.json", result, 4194304); checkpoint()
   return result
 }

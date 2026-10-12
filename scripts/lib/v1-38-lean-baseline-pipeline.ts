@@ -168,9 +168,9 @@ const executeCurrentPipeline = async (input: LeanCurrentPipelineInput | LeanBase
   }
   if (responseTraining.some(cell => !cell.strategyInputs.length)) return partial("response_observation_missing", initial)
   let responseWork: LeanResponseWork | undefined, responseReceipts: readonly LeanResponseNodeReceipt[] | undefined
-  input.checkpoint()
+  if (continuation) input.checkpoint()
   const trained = trainLeanResponse({ ...common, initial, responseExamples: observedExamples(responseTraining, 8), responsePlannerNodes: responseTraining.map(cell => ({ input: cell.strategyInputs[0]!, trainingMatchRoot: cell.compact.executionRoot })), targetRoots: { mixture: labRoot("lean-frozen-initial-mixture-v1", initialAnalysis.mixture), strongestPure: strongest.sourceRoot } }, work => { responseWork = work; input.retainArtifact("response-work.json", work) }, reuse || continuation ? receipts => { responseReceipts = receipts; input.retainArtifact("response-node-receipts.json", receipts) } : undefined)
-  input.checkpoint()
+  if (continuation) input.checkpoint()
   if (continuation) input.retainArtifact("work-accounting.json", deriveLeanContinuationWorkAccounting(corpus, proposals, responseWork ?? fail("RESPONSE_WORK"), responseReceipts ?? fail("RESPONSE_RECEIPTS")))
   input.retainArtifact("response-training.json", trained)
   const responseCandidate = trained.candidates.find(c => c.mechanism === "response") ?? fail("RESPONSE")
