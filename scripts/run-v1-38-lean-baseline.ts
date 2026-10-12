@@ -24,7 +24,7 @@ import { publishLeanBaselineContinuationSource } from "./lib/v1-38-lean-baseline
 import { runLeanBaselineContinuationMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { readLeanBaselineContinuationGit } from "./lib/v1-38-lean-container-match-session.js"
 import { closeLeanInterval } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { LEAN_BASELINE_CONTINUATION_PATHS_V2 as CONTINUATION_V2, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationWindowV2, validateLeanBaselineContinuationAllocationV2, createLeanBaselineContinuationAllocationV2, leanBaselineContinuationElapsedFloorV2, leanContinuationIdentityV2, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2 } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V2 as CONTINUATION_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, leanBaselineContinuationPathsForWindowV2, leanBaselineContinuationPathsForRequestV2, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationWindowV2, validateLeanBaselineContinuationAllocationV2, createLeanBaselineContinuationAllocationV2, leanBaselineContinuationElapsedFloorV2, leanContinuationIdentityV2, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { readLeanContinuationBoundedBytesV2, readLeanContinuationJsonV2, authenticateLeanBaselineContinuationCarryV2, assertLeanBaselineContinuationFrontierV2, createLeanContinuationIdentityGuardV2, type LeanContinuationInventoryRowV2, type LeanContinuationReviewedRowV2 } from "./lib/v1-38-lean-baseline-continuation.js"
 import { readLeanBaselineContinuationGitV2 } from "./lib/v1-38-lean-container-match-session.js"
 import { executeLeanBaselineContinuationPipelineV2 } from "./lib/v1-38-lean-baseline-pipeline.js"
@@ -190,7 +190,7 @@ export const deriveLeanBaselineCandidateRoots = (coldRoot: LabRoot): readonly [L
 }
 export interface LeanBaselineRequest { schemaVersion: "lean-current-baseline-request-v1"; seed: string; reviewPath: string; reviewRoot: LabRoot; sourceRoot: LabRoot; planRoot: LabRoot; coldRoot: LabRoot; candidateRoots: readonly LabRoot[]; requestRoots: readonly LabRoot[] }
 export const parseLeanBaselineCommand = (args: readonly string[]) => {
-  if (args.length === 3 && ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"].includes(args[0]!) && args[1] === "--request" && args[2] === CONTINUATION_V2.request) return { mode: args[0] as "prepare-continuation-v2" | "run-continuation-v2" | "verify-continuation-v2", request: args[2] }
+  if (args.length === 3 && ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"].includes(args[0]!) && args[1] === "--request" && (args[2] === CONTINUATION_V2.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request)) return { mode: args[0] as "prepare-continuation-v2" | "run-continuation-v2" | "verify-continuation-v2", request: args[2] }
   if (args.length !== 3 || !["prepare-current", "run-current", "verify-retained", "prepare-continuation", "run-continuation", "verify-continuation"].includes(args[0]!) || args[1] !== "--request" || !args[2] || args[2].startsWith("--") || args[0]!.endsWith("-continuation") && args[2] !== CONTINUATION.request) return fail("ARGUMENTS")
   return { mode: args[0] as "prepare-current" | "run-current" | "verify-retained" | "prepare-continuation" | "run-continuation" | "verify-continuation", request: args[2]! }
 }
@@ -757,21 +757,23 @@ const continuationWindowAdmissionV2 = (window: LeanBaselineContinuationWindowV2,
   if (!Number.isSafeInteger(remainingSlots) || remainingSlots < 0 || remainingSlots > 36 || now >= window.deadlineMs || now + reserve > window.deadlineMs || elapsed + reserve > window.capMs) return fail("V2_WINDOW_EXPIRED")
   return elapsed
 }
-export const readLeanBaselineContinuationWindowV2 = (): Readonly<LeanBaselineContinuationWindowV2> => {
-  const bytes = readLeanContinuationBoundedBytesV2(CONTINUATION_V2.window, 65536, 0o600, additional => { if ((additional ?? 0) > 65536 || process.memoryUsage().arrayBuffers + (additional ?? 0) > LEAN_CAPS.scratchBytes) return fail("V2_WINDOW_BUFFER") })
+export const readLeanBaselineContinuationWindowV2 = (requestPath: string = CONTINUATION_V2.request): Readonly<LeanBaselineContinuationWindowV2> => {
+  const paths = leanBaselineContinuationPathsForRequestV2(requestPath)
+  const bytes = readLeanContinuationBoundedBytesV2(paths.window, 65536, 0o600, additional => { if ((additional ?? 0) > 65536 || process.memoryUsage().arrayBuffers + (additional ?? 0) > LEAN_CAPS.scratchBytes) return fail("V2_WINDOW_BUFFER") })
   const window = validateLeanBaselineContinuationWindowV2(JSON.parse(bytes.toString("utf8")))
+  if (leanBaselineContinuationPathsForWindowV2(window).request !== requestPath) return fail("V2_WINDOW_NAMESPACE")
   if (!bytes.equals(Buffer.from(leanCanonicalBytes(window)))) return fail("V2_WINDOW_CANONICAL")
   return window
 }
 export const leanBaselineContinuationDataManifestV2 = (window: LeanBaselineContinuationWindowV2, source: ReturnType<typeof leanBaselineContinuationSourceManifestV2>) => {
-  const w = validateLeanBaselineContinuationWindowV2(window), gate = validateLeanContinuationSourceGateV2(source.sourceGate)
+  const w = validateLeanBaselineContinuationWindowV2(window), paths = leanBaselineContinuationPathsForWindowV2(w), gate = validateLeanContinuationSourceGateV2(source.sourceGate)
   if (source.admitting !== false || source.root !== w.sourceRoot || source.sourceGateRoot !== w.sourceGateRoot || source.root !== labRoot("lean-baseline-continuation-implementation-v2", source.implementationEntries) || source.planningRoot !== labRoot("lean-baseline-continuation-planning-source-v2", source.planningEntries) || !exact(source.entries, [...source.implementationEntries, ...source.planningEntries].sort((a, b) => a.path.localeCompare(b.path))) || source.manifestRoot !== labRoot("lean-baseline-continuation-source-manifest-v2", source.entries)) return fail("V2_SOURCE_MANIFEST")
-  const windowBytes = readLeanContinuationBoundedBytesV2(CONTINUATION_V2.window, 65536, 0o600, () => { continuationWindowAdmissionV2(w, 0) })
+  const windowBytes = readLeanContinuationBoundedBytesV2(paths.window, 65536, 0o600, () => { continuationWindowAdmissionV2(w, 0) })
   if (!windowBytes.equals(Buffer.from(leanCanonicalBytes(w)))) return fail("V2_WINDOW_BYTES")
-  const gateBytes = readLeanContinuationBoundedBytesV2(CONTINUATION_V2.gates, 4194304, 0o644, () => { continuationWindowAdmissionV2(w, 0) })
-  if (leanBytesRoot(gateBytes) !== source.planningEntries.find(row => row.path === CONTINUATION_V2.gates)?.root || w.planRoot !== source.planningEntries.find(row => row.path.endsWith("265-16-BASELINE-CONTINUATION-PLAN-20261012.md"))?.root) return fail("V2_PLANNING_BYTES")
+  const gateBytes = readLeanContinuationBoundedBytesV2(paths.gates, 4194304, 0o644, () => { continuationWindowAdmissionV2(w, 0) })
+  if (leanBytesRoot(gateBytes) !== source.planningEntries.find(row => row.path === paths.gates)?.root || w.planRoot !== source.planningEntries.find(row => row.path.endsWith("265-16-BASELINE-CONTINUATION-PLAN-20261012.md"))?.root) return fail("V2_PLANNING_BYTES")
   const dataGate = validateLeanContinuationDataGateV2(readLeanContinuationGateProjectionV2(gateBytes.toString("utf8"), "lean-baseline-continuation-data-gate-v2"), w, gate)
-  const planningEntries = [...source.planningEntries, { path: CONTINUATION_V2.window, root: leanBytesRoot(windowBytes) }].sort((a, b) => a.path.localeCompare(b.path)), entries = [...source.implementationEntries, ...planningEntries].sort((a, b) => a.path.localeCompare(b.path))
+  const planningEntries = [...source.planningEntries, { path: paths.window, root: leanBytesRoot(windowBytes) }].sort((a, b) => a.path.localeCompare(b.path)), entries = [...source.implementationEntries, ...planningEntries].sort((a, b) => a.path.localeCompare(b.path))
   if (entries.length > 1024 || new Set(entries.map(row => row.path)).size !== entries.length || leanCanonicalBytes(entries).length > 4194304) return fail("V2_MANIFEST_BOUND")
   return { schemaVersion: "lean-baseline-continuation-data-manifest-v2" as const, admitting: true as const, implementationEntries: source.implementationEntries, planningEntries, entries, root: source.root, planningRoot: labRoot("lean-baseline-continuation-planning-v2", planningEntries), manifestRoot: labRoot("lean-baseline-continuation-data-manifest-v2", entries), windowRoot: w.root, windowBytesRoot: leanBytesRoot(windowBytes), sourceGateRoot: w.sourceGateRoot, dataReviewRoot: labRoot(dataGate.schemaVersion, dataGate), sourceGate: gate, dataGate }
 }
@@ -786,19 +788,21 @@ export const validateLeanBaselineContinuationRequestV2 = (value: unknown, w: Lea
   return r
 }
 export const readLeanBaselineContinuationRequestV2 = (path: string): LeanBaselineContinuationRequestV2 => {
-  if (path !== CONTINUATION_V2.request) return fail("V2_REQUEST_PATH")
-  const window = readLeanBaselineContinuationWindowV2(); continuationWindowAdmissionV2(window, 0)
+  leanBaselineContinuationPathsForRequestV2(path)
+  const window = readLeanBaselineContinuationWindowV2(path); continuationWindowAdmissionV2(window, 0)
   const manifest = leanBaselineContinuationDataManifestV2(window, leanBaselineContinuationSourceManifestV2())
   return validateLeanBaselineContinuationRequestV2(readLeanContinuationJsonV2(path, 65536, 0o600, () => { continuationWindowAdmissionV2(window, 0) }), window, manifest)
 }
 
-export const assertLeanBaselineContinuationScopeV2 = (preparing = false): void => {
-  if (process.env.TSX_DISABLE_CACHE !== "1" || process.env.NODE_DISABLE_COMPILE_CACHE !== "1" || ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"].some(key => process.env[key] !== undefined) || process.env.TMPDIR !== resolve(CONTINUATION_V2.temp) || !process.execArgv.some((arg, i, args) => arg === "--import" && args[i + 1] === "tsx" || arg === "--import=tsx") || process.execArgv.some(arg => /(?:loader|inspect|require)/u.test(arg)) || coreSoftLimit().trim() !== "0") return fail("V2_SCOPE")
-  if (!preparing) { const s = lstatSync(CONTINUATION_V2.temp); if (!s.isDirectory() || s.isSymbolicLink() || s.uid !== process.getuid?.() || (s.mode & 0o777) !== 0o700 || realpathSync(resolve(CONTINUATION_V2.temp)) !== resolve(CONTINUATION_V2.temp)) return fail("V2_SCRATCH") }
+export const assertLeanBaselineContinuationScopeV2 = (preparing = false, window?: LeanBaselineContinuationWindowV2): void => {
+  const paths = window === undefined ? CONTINUATION_V2 : leanBaselineContinuationPathsForWindowV2(window)
+  if (process.env.TSX_DISABLE_CACHE !== "1" || process.env.NODE_DISABLE_COMPILE_CACHE !== "1" || ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"].some(key => process.env[key] !== undefined) || process.env.TMPDIR !== resolve(paths.temp) || !process.execArgv.some((arg, i, args) => arg === "--import" && args[i + 1] === "tsx" || arg === "--import=tsx") || process.execArgv.some(arg => /(?:loader|inspect|require)/u.test(arg)) || coreSoftLimit().trim() !== "0") return fail("V2_SCOPE")
+  if (!preparing) { const s = lstatSync(paths.temp); if (!s.isDirectory() || s.isSymbolicLink() || s.uid !== process.getuid?.() || (s.mode & 0o777) !== 0o700 || realpathSync(resolve(paths.temp)) !== resolve(paths.temp)) return fail("V2_SCRATCH") }
 }
 const continuationCapacityV2 = (w: LeanBaselineContinuationWindowV2, retained = 88924160, additional = 0, scratchExists = false) => {
+  const paths = leanBaselineContinuationPathsForWindowV2(w)
   continuationWindowAdmissionV2(w, 0)
-  const usage = process.memoryUsage(), fs = statfsSync(resolve("."), { bigint: true }), reserve = 2 * 268435456 + 512000000 + 335544320, scratch = scratchExists ? measureLeanPhysicalBytes(CONTINUATION_V2.temp) : 0
+  const usage = process.memoryUsage(), fs = statfsSync(resolve("."), { bigint: true }), reserve = 2 * 268435456 + 512000000 + 335544320, scratch = scratchExists ? measureLeanPhysicalBytes(paths.temp) : 0
   if (![retained, additional, scratch].every(n => Number.isSafeInteger(n) && n >= 0) || retained > LEAN_CAPS.retainedBytes || scratch + additional + usage.arrayBuffers > LEAN_CAPS.scratchBytes || usage.rss + (process.connected ? rssOf(process.ppid) : 0) + usage.arrayBuffers + additional + reserve > LEAN_BASELINE_CONTINUATION_POLICY_V2.memoryBytes || observeLeagueAvailableMemoryBytes() < reserve || fs.bavail * fs.bsize > BigInt(Number.MAX_SAFE_INTEGER) || fs.bavail * fs.bsize < BigInt(LEAN_CAPS.totalBytes - retained)) return fail("V2_CAPACITY")
 }
 const CONTINUATION_V2_METADATA_PARSE_RESERVE = 2 * 7 * 4194304 + 4 * 3 * 262144
@@ -824,30 +828,30 @@ export const withLeanContinuationDescriptorPreflightV2 = <T>(paths: readonly [st
   })
 }
 export const withLeanContinuationStoreMetadataV2 = <T>(window: LeanBaselineContinuationWindowV2, parseLegacyMetadata: () => T, additionalBytes = 0): T => {
-  const store = CONTINUATION_V2.store
-  const paths = [CONTINUATION_V2.allocation, join(store, "allocation.json"), join(store, "ledger.ndjson"), join(store, "time.ndjson")] as const
+  const selected = leanBaselineContinuationPathsForWindowV2(window), store = selected.store
+  const paths = [selected.allocation, join(store, "allocation.json"), join(store, "ledger.ndjson"), join(store, "time.ndjson")] as const
   return withLeanContinuationDescriptorPreflightV2(paths, bytes => continuationCapacityV2(window, 88924160, bytes, true), readLeanContinuationBoundedBytesV2, parseLegacyMetadata, additionalBytes)
 }
 export const withLeanContinuationReaderMetadataV2 = <T>(window: LeanBaselineContinuationWindowV2, parseLegacyMetadata: () => T, additionalBytes = 0): T => {
-  const store = CONTINUATION_V2.store
-  const paths = [CONTINUATION_V2.allocation, join(store, "allocation.json"), join(store, "ledger.ndjson"), join(store, "time.ndjson")] as const
+  const selected = leanBaselineContinuationPathsForWindowV2(window), store = selected.store
+  const paths = [selected.allocation, join(store, "allocation.json"), join(store, "ledger.ndjson"), join(store, "time.ndjson")] as const
   return withLeanContinuationDescriptorPreflightV2(paths, bytes => continuationCapacityV2(window, 88924160, bytes, true), readLeanContinuationBoundedBytesV2, parseLegacyMetadata, additionalBytes, [join(store, "entry.json"), join(store, "child-terminal.json")])
 }
 const continuationClaimBodyV2 = (request: LeanBaselineContinuationRequestV2, window: LeanBaselineContinuationWindowV2, requestBytesRoot: LabRoot) => ({ schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: window.grantId, routeNamespace: window.routeNamespace, windowRoot: window.root, windowBytesRoot: request.windowBytesRoot, requestBytesRoot, sourceHead: request.sourceHead, sourceRoot: request.sourceRoot, sourceGateRoot: request.sourceGateRoot, dataReviewRoot: request.dataReviewRoot, planningRoot: request.planningRoot, manifestRoot: request.manifestRoot })
-const continuationReviewRowsV2 = (manifest: ReturnType<typeof leanBaselineContinuationDataManifestV2>, sourceHead: string): LeanContinuationReviewedRowV2[] => [...manifest.implementationEntries.map(row => ({ ...row, commit: sourceHead, kind: "reviewed_source" as const })), ...manifest.planningEntries.filter(row => row.path !== CONTINUATION_V2.window).map(row => ({ ...row, commit: sourceHead, kind: "active_planning" as const }))]
-const continuationPreflightV2 = (requestPath: string, consumed: boolean, reader: boolean) => {
-  if (requestPath !== CONTINUATION_V2.request) return fail("V2_REQUEST_PATH")
+const continuationReviewRowsV2 = (manifest: ReturnType<typeof leanBaselineContinuationDataManifestV2>, sourceHead: string, window: LeanBaselineContinuationWindowV2): LeanContinuationReviewedRowV2[] => [...manifest.implementationEntries.map(row => ({ ...row, commit: sourceHead, kind: "reviewed_source" as const })), ...manifest.planningEntries.filter(row => row.path !== leanBaselineContinuationPathsForWindowV2(window).window).map(row => ({ ...row, commit: sourceHead, kind: "active_planning" as const }))]
+const continuationPreflightV2 = (requestPath: string, consumed: boolean, reader: boolean, stage?: (value: LeanContinuationPreparationStageV4) => void) => {
+  stage?.("WINDOW"); leanBaselineContinuationPathsForRequestV2(requestPath)
   // This is the first external read. No directory, claim, allocation or cost
   // import is reachable before a genuine, exact approved record validates.
-  const window = readLeanBaselineContinuationWindowV2(); continuationWindowAdmissionV2(window, reader ? 0 : 36)
-  if (!consumed && [CONTINUATION_V2.claim, CONTINUATION_V2.temp, CONTINUATION_V2.store, CONTINUATION_V2.allocation].some(path => existsSync(path))) return fail("V2_GRANT_CLAIMED")
-  assertLeanBaselineContinuationScopeV2(!consumed); continuationCapacityV2(window, 88924160, 0, consumed)
-  const source = leanBaselineContinuationSourceManifestV2(), manifest = leanBaselineContinuationDataManifestV2(window, source)
-  const requestBytes = readLeanContinuationBoundedBytesV2(requestPath, 65536, 0o600, additional => continuationCapacityV2(window, 88924160, additional, consumed))
+  const window = readLeanBaselineContinuationWindowV2(requestPath), paths = leanBaselineContinuationPathsForWindowV2(window); continuationWindowAdmissionV2(window, reader ? 0 : 36)
+  if (!consumed && [paths.claim, paths.temp, paths.store, paths.allocation].some(path => existsSync(path))) return fail("V2_GRANT_CLAIMED")
+  stage?.("SCOPE"); assertLeanBaselineContinuationScopeV2(!consumed, window); continuationCapacityV2(window, 88924160, 0, consumed)
+  stage?.("SOURCE_DATA"); const source = leanBaselineContinuationSourceManifestV2(), manifest = leanBaselineContinuationDataManifestV2(window, source)
+  stage?.("REQUEST"); const requestBytes = readLeanContinuationBoundedBytesV2(requestPath, 65536, 0o600, additional => continuationCapacityV2(window, 88924160, additional, consumed))
   const request = validateLeanBaselineContinuationRequestV2(JSON.parse(requestBytes.toString("utf8")), window, manifest)
   if (!requestBytes.equals(Buffer.from(leanCanonicalBytes(request)))) return fail("V2_REQUEST_CANONICAL")
-  const git = (args: readonly string[]) => readLeanBaselineContinuationGitV2(args, manifest.entries)
-  const fixedHead = git(["rev-parse", "HEAD"]).toString("utf8").trim()
+  const git = (args: readonly string[]) => readLeanBaselineContinuationGitV2(args, manifest.entries, window)
+  stage?.("SOURCE_IDENTITY"); const fixedHead = git(["rev-parse", "HEAD"]).toString("utf8").trim()
   if (!/^[a-f0-9]{40}$/u.test(fixedHead) || !consumed && fixedHead !== request.sourceHead) return fail("V2_SOURCE_HEAD")
   git(["merge-base", "--is-ancestor", window.reviewedSourceHead, request.sourceHead])
   const requestBytesRoot = leanBytesRoot(requestBytes)
@@ -860,9 +864,9 @@ const continuationPreflightV2 = (requestPath: string, consumed: boolean, reader:
     identity()
   }
   for (const row of manifest.implementationEntries) { guard(65536); authenticateLeanContinuationPinnedSource(row, window.reviewedSourceHead, manifest.implementationEntries.map(r => r.path), git, guard) }
-  for (const row of manifest.entries.filter(row => row.path !== CONTINUATION_V2.window)) { guard(65536); authenticateLeanContinuationPinnedSource(row, request.sourceHead, manifest.entries.map(r => r.path), git, guard) }
+  for (const row of manifest.entries.filter(row => row.path !== paths.window)) { guard(65536); authenticateLeanContinuationPinnedSource(row, request.sourceHead, manifest.entries.map(r => r.path), git, guard) }
   guard()
-  return { window, source, manifest, request, requestBytesRoot, git, fixedHead, guard }
+  return { paths, window, source, manifest, request, requestBytesRoot, git, fixedHead, guard }
 }
 const continuationStatRowV2 = (path: string): LeanContinuationInventoryRowV2 => {
   const absolute = resolve(path), s = lstatSync(absolute)
@@ -878,44 +882,67 @@ const continuationAncestorsV2 = (paths: readonly string[]): string[] => {
   return [...ancestors].sort()
 }
 /** Pure bounded setup transition: only the registered three new identities. */
-export const validateLeanContinuationSetupDirectoriesV2 = (before: readonly LeanContinuationInventoryRowV2[], after: readonly LeanContinuationInventoryRowV2[]): void => {
+export const validateLeanContinuationSetupDirectoriesV2 = (before: readonly LeanContinuationInventoryRowV2[], after: readonly LeanContinuationInventoryRowV2[], window?: LeanBaselineContinuationWindowV2): void => {
+  const paths = window === undefined ? CONTINUATION_V2 : leanBaselineContinuationPathsForWindowV2(window)
   if (before.length !== after.length || before.length > 1024 || new Set(before.map(row => row.path)).size !== before.length || new Set(after.map(row => row.path)).size !== after.length) return fail("V2_SETUP_DIRECTORIES")
   for (const old of before) {
     const current = after.find(row => row.path === old.path)
-    const added = [CONTINUATION_V2.temp, CONTINUATION_V2.store, CONTINUATION_V2.allocation].filter(path => dirname(path) === old.path).map(path => path.slice(old.path === "." ? 0 : old.path.length + 1))
+    const added = [paths.temp, paths.store, paths.allocation].filter(path => dirname(path) === old.path).map(path => path.slice(old.path === "." ? 0 : old.path.length + 1))
     if (!current || old.kind !== "directory" || current.kind !== "directory" || current.dev !== old.dev || current.ino !== old.ino || current.mode !== old.mode || current.allocatedBytes < old.allocatedBytes || !old.members || !current.members || !exact(current.members, [...old.members, ...added].sort()) || added.length === 0 && (current.bytes !== old.bytes || current.mtimeMs !== old.mtimeMs || current.ctimeMs !== old.ctimeMs)) return fail("V2_SETUP_DIRECTORIES")
   }
 }
+type LeanContinuationPreparationStageV4 = "WINDOW" | "SCOPE" | "SOURCE_DATA" | "REQUEST" | "SOURCE_IDENTITY" | "CARRY" | "SETUP" | "PUBLICATION" | "UNKNOWN"
+type LeanContinuationPreparationCodeV4 = "WINDOW_EXPIRED" | "WINDOW_NAMESPACE" | "GRANT_CLAIMED" | "SCOPE" | "CAPACITY" | "SOURCE_GATE" | "DATA_GATE" | "SOURCE_MANIFEST" | "REQUEST" | "SOURCE_HEAD" | "DETAILS_WITHHELD"
+const continuationPreparationFailuresV4 = new WeakMap<object, { stage: LeanContinuationPreparationStageV4; code: LeanContinuationPreparationCodeV4 }>()
+export const leanContinuationPreparationCodeV4 = (error: unknown): LeanContinuationPreparationCodeV4 => {
+  if (!(error instanceof TypeError)) return "DETAILS_WITHHELD"
+  const codes: Readonly<Record<string, LeanContinuationPreparationCodeV4>> = { LEAN_BASELINE_V2_WINDOW_EXPIRED: "WINDOW_EXPIRED", LEAN_BASELINE_V2_WINDOW_NAMESPACE: "WINDOW_NAMESPACE", LEAN_BASELINE_V2_GRANT_CLAIMED: "GRANT_CLAIMED", LEAN_BASELINE_V2_SCOPE: "SCOPE", LEAN_BASELINE_V2_CAPACITY: "CAPACITY", LEAN_BASELINE_V2_SOURCE_GATE: "SOURCE_GATE", LEAN_BASELINE_V2_DATA_GATE: "DATA_GATE", LEAN_BASELINE_V2_SOURCE_MANIFEST: "SOURCE_MANIFEST", LEAN_BASELINE_V2_REQUEST: "REQUEST", LEAN_BASELINE_V2_SOURCE_HEAD: "SOURCE_HEAD" }
+  try { const message: unknown = Object.getOwnPropertyDescriptor(error, "message")?.value; return typeof message === "string" && Object.prototype.hasOwnProperty.call(codes, message) ? codes[message]! : "DETAILS_WITHHELD" } catch { return "DETAILS_WITHHELD" }
+}
+/** Finite attribution only; never formats raw errors or grants authority. */
+export const leanBaselineContinuationPreparationFailureV4 = (error: unknown): string => {
+  const failure = error !== null && typeof error === "object" ? continuationPreparationFailuresV4.get(error) : undefined
+  return `LEAN_BASELINE_PREPARATION_V4 stage=${failure?.stage ?? "UNKNOWN"} code=${failure?.code ?? "DETAILS_WITHHELD"}\n`
+}
 export const prepareLeanBaselineContinuationV2 = (requestPath: string) => {
-  const c = continuationPreflightV2(requestPath, false, false)
-  const carried = authenticateLeanBaselineContinuationCarryV2(c.git, continuationReviewRowsV2(c.manifest, c.request.sourceHead), c.guard)
+  let stage: LeanContinuationPreparationStageV4 = "WINDOW"
+  try {
+  const c = continuationPreflightV2(requestPath, false, false, value => { stage = value })
+  stage = "CARRY"
+  const carried = authenticateLeanBaselineContinuationCarryV2(c.git, continuationReviewRowsV2(c.manifest, c.request.sourceHead, c.window), c.guard, c.window)
   if (carried.carry.elapsedUpperBoundMs > c.window.carryMs) return fail("V2_CARRY_TIME")
   const priorGuard = createLeanContinuationIdentityGuardV2([], carried.inventory)
-  const ancestors = continuationAncestorsV2([...c.manifest.entries.map(row => row.path), requestPath, CONTINUATION_V2.allocation, CONTINUATION_V2.store]), before = ancestors.map(continuationStatRowV2)
+  stage = "SETUP"
+  const ancestors = continuationAncestorsV2([...c.manifest.entries.map(row => row.path), requestPath, c.paths.allocation, c.paths.store]), before = ancestors.map(continuationStatRowV2)
   c.guard(); priorGuard(); continuationCapacityV2(c.window, carried.carry.allocatedDiskBytes)
-  if ([CONTINUATION_V2.temp, CONTINUATION_V2.store, CONTINUATION_V2.allocation].some(path => existsSync(path))) return fail("V2_GRANT_CLAIMED")
+  if ([c.paths.temp, c.paths.store, c.paths.allocation].some(path => existsSync(path))) return fail("V2_GRANT_CLAIMED")
   // Exclusive scratch creation is the concurrency barrier. A partial failure
   // consumes this namespace even if it never publishes an allocation.
-  mkdirSync(CONTINUATION_V2.temp, { mode: 0o700 })
+  stage = "PUBLICATION"
+  mkdirSync(c.paths.temp, { mode: 0o700 })
   const body = continuationClaimBodyV2(c.request, c.window, c.requestBytesRoot), claim = { ...body, root: labRoot(body.schemaVersion, body) }
-  const fd = openSync(CONTINUATION_V2.claim, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600)
+  const fd = openSync(c.paths.claim, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600)
   try { writeLeanAll(fd, leanCanonicalBytes(claim)); fsyncSync(fd) } finally { closeSync(fd) }
   c.guard(); priorGuard(); continuationCapacityV2(c.window, carried.carry.allocatedDiskBytes, 1048576, true)
   const allocation = createLeanBaselineContinuationAllocationV2({ sourceRoot: c.request.sourceRoot, reviewRoot: c.request.reviewRoot, coldRoot: c.request.coldRoot, planRoot: c.request.planRoot, candidateRoots: c.request.candidateRoots, requestRoots: c.request.requestRoots, seed: c.request.seed, sourceHead: c.request.sourceHead, planningRoot: c.request.planningRoot, manifestRoot: c.request.manifestRoot, requestBytesRoot: c.requestBytesRoot, window: c.window, windowBytesRoot: c.request.windowBytesRoot, sourceGateRoot: c.request.sourceGateRoot, dataReviewRoot: c.request.dataReviewRoot, predecessor: carried.carry })
-  const ledger = createLeanLedger(CONTINUATION_V2.store, allocation)
+  const ledger = createLeanLedger(c.paths.store, allocation)
   c.guard(); writeLeanContinuationArtifact(ledger, "carry.json", carried, 4194304)
   c.guard(); writeLeanContinuationArtifact(ledger, "source-manifest.json", c.manifest, 4194304)
   c.guard()
-  const allocationFd = openSync(CONTINUATION_V2.allocation, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o644)
+  const allocationFd = openSync(c.paths.allocation, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o644)
   try { fchmodSync(allocationFd, 0o644); writeLeanAll(allocationFd, leanCanonicalBytes(allocation)); fsyncSync(allocationFd) } finally { closeSync(allocationFd) }
-  for (const path of [CONTINUATION_V2.temp, dirname(CONTINUATION_V2.allocation), dirname(CONTINUATION_V2.store)]) { const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW); try { fsyncSync(fd) } finally { closeSync(fd) } }
-  const after = ancestors.map(continuationStatRowV2); validateLeanContinuationSetupDirectoriesV2(before, after)
+  for (const path of [c.paths.temp, dirname(c.paths.allocation), dirname(c.paths.store)]) { const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW); try { fsyncSync(fd) } finally { closeSync(fd) } }
+  const after = ancestors.map(continuationStatRowV2); validateLeanContinuationSetupDirectoriesV2(before, after, c.window)
   c.guard(); priorGuard()
-  const rows = [...after, ...[CONTINUATION_V2.window, requestPath, CONTINUATION_V2.claim, CONTINUATION_V2.allocation, CONTINUATION_V2.temp].map(continuationStatRowV2)]
+  const rows = [...after, ...[c.paths.window, requestPath, c.paths.claim, c.paths.allocation, c.paths.temp].map(continuationStatRowV2)]
   const holdBody = { schemaVersion: "lean-baseline-continuation-source-hold-v2", allocationRoot: allocation.root, sourceHead: allocation.sourceHead, manifestRoot: allocation.manifestRoot, claimRoot: claim.root, rows }
   writeLeanContinuationArtifact(ledger, "source-hold.json", { ...holdBody, root: labRoot(holdBody.schemaVersion, holdBody) }, 4194304)
   c.guard(); createLeanContinuationIdentityGuardV2([], rows)(); continuationCapacityV2(c.window, cumulativeLeanPhysicalBytes(ledger), 0, true)
-  return { schemaVersion: "lean-baseline-continuation-prepared-v2", allocationRoot: allocation.root, allocationPath: CONTINUATION_V2.allocation, sourceHead: allocation.sourceHead, store: CONTINUATION_V2.store, grantId: c.window.grantId, claimRoot: claim.root, charged: 50, plannedCurrentCells: 36, holdoutReservations: allocation.holdoutReservations, issued: false }
+  return { schemaVersion: "lean-baseline-continuation-prepared-v2", allocationRoot: allocation.root, allocationPath: c.paths.allocation, sourceHead: allocation.sourceHead, store: c.paths.store, grantId: c.window.grantId, claimRoot: claim.root, charged: 50, plannedCurrentCells: 36, holdoutReservations: allocation.holdoutReservations, issued: false }
+  } catch (error) {
+    if (requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V4.request && error !== null && typeof error === "object") continuationPreparationFailuresV4.set(error, { stage, code: leanContinuationPreparationCodeV4(error) })
+    throw error
+  }
 }
 
 const continuationStoreMembershipV2 = (ledger: LeanExperimentLedger): void => {
@@ -930,24 +957,24 @@ const continuationStoreMembershipV2 = (ledger: LeanExperimentLedger): void => {
 }
 export const openLeanBaselineContinuationContextV2 = (requestPath: string, reader = false) => {
   const c = continuationPreflightV2(requestPath, true, reader)
-  const { ledger, allocation } = withLeanContinuationStoreMetadataV2(c.window, () => { const ledger = openLeanLedger(CONTINUATION_V2.store); return { ledger, allocation: validateLeanBaselineContinuationAllocationV2(ledger.allocation) } })
+  const { ledger, allocation } = withLeanContinuationStoreMetadataV2(c.window, () => { const ledger = openLeanLedger(c.paths.store); return { ledger, allocation: validateLeanBaselineContinuationAllocationV2(ledger.allocation) } })
   const expectedClaimBody = continuationClaimBodyV2(c.request, c.window, c.requestBytesRoot), expectedClaim = { ...expectedClaimBody, root: labRoot(expectedClaimBody.schemaVersion, expectedClaimBody) }
-  const claim = readLeanContinuationJsonV2(CONTINUATION_V2.claim, 65536, 0o600, c.guard)
+  const claim = readLeanContinuationJsonV2(c.paths.claim, 65536, 0o600, c.guard)
   if (!exact(claim, expectedClaim) || allocation.requestBytesRoot !== c.requestBytesRoot || allocation.sourceHead !== c.request.sourceHead || allocation.sourceRoot !== c.manifest.root || allocation.planningRoot !== c.manifest.planningRoot || allocation.manifestRoot !== c.manifest.manifestRoot || allocation.window.root !== c.window.root || allocation.windowBytesRoot !== c.manifest.windowBytesRoot || allocation.sourceGateRoot !== c.manifest.sourceGateRoot || allocation.dataReviewRoot !== c.manifest.dataReviewRoot || allocation.reviewRoot !== c.request.reviewRoot || allocation.coldRoot !== c.request.coldRoot || allocation.seed !== c.request.seed || !exact(allocation.requestRoots, c.request.requestRoots) || !exact([...allocation.candidateRoots].sort(), [...c.request.candidateRoots].sort())) return fail("V2_ALLOCATION_JOIN")
-  const allocationBytes = readLeanContinuationBoundedBytesV2(CONTINUATION_V2.allocation, 262144, 0o644, c.guard)
+  const allocationBytes = readLeanContinuationBoundedBytesV2(c.paths.allocation, 262144, 0o644, c.guard)
   if (!allocationBytes.equals(Buffer.from(leanCanonicalBytes(allocation)))) return fail("V2_ALLOCATION_BYTES")
-  assertLeanContinuationDirectParent(c.fixedHead, allocation.sourceHead, c.git(["rev-list", "--parents", "-n", "1", c.fixedHead]).toString("utf8").trim().split(/\s+/u), allocationBytes, c.git(["show", `${c.fixedHead}:${CONTINUATION_V2.allocation}`]))
-  if (c.git(["diff", "--name-only", allocation.sourceHead, c.fixedHead]).toString("utf8").trim() !== CONTINUATION_V2.allocation) return fail("V2_ALLOCATION_DIFF")
+  assertLeanContinuationDirectParent(c.fixedHead, allocation.sourceHead, c.git(["rev-list", "--parents", "-n", "1", c.fixedHead]).toString("utf8").trim().split(/\s+/u), allocationBytes, c.git(["show", `${c.fixedHead}:${c.paths.allocation}`]))
+  if (c.git(["diff", "--name-only", allocation.sourceHead, c.fixedHead]).toString("utf8").trim() !== c.paths.allocation) return fail("V2_ALLOCATION_DIFF")
   const storedManifest = readLeanContinuationJsonV2(join(ledger.directory, "source-manifest.json"), 4194304, 0o600, c.guard)
   if (!exact(storedManifest, c.manifest)) return fail("V2_MANIFEST_CHANGED")
   const carry = readLeanContinuationJsonV2(join(ledger.directory, "carry.json"), 4194304, 0o600, c.guard)
   if (!exact(carry.carry, allocation.predecessor) || !Array.isArray(carry.inventory) || carry.inventory.length > 4096 || labRoot("lean-baseline-continuation-inventory-v2", carry.inventory) !== allocation.predecessor.inventoryRoot || labRoot("lean-baseline-continuation-custody-v2", carry.custody) !== allocation.predecessor.custodyRoot || labRoot("lean-baseline-continuation-closed-capsule-v2", carry.custody) !== allocation.predecessor.closedCapsuleRoot) return fail("V2_CARRY")
   const hold = readLeanContinuationJsonV2(join(ledger.directory, "source-hold.json"), 4194304, 0o600, c.guard), { root: holdRoot, ...holdBody } = hold
   if (!exactLabKeys(hold, ["schemaVersion", "allocationRoot", "sourceHead", "manifestRoot", "claimRoot", "rows", "root"]) || hold.schemaVersion !== "lean-baseline-continuation-source-hold-v2" || holdRoot !== labRoot(hold.schemaVersion, holdBody) || hold.allocationRoot !== allocation.root || hold.sourceHead !== allocation.sourceHead || hold.manifestRoot !== allocation.manifestRoot || hold.claimRoot !== claim.root || !Array.isArray(hold.rows) || hold.rows.length > 1024) return fail("V2_SOURCE_HOLD")
-  const pinned = [...c.manifest.entries.map(row => row.path), requestPath, CONTINUATION_V2.claim, CONTINUATION_V2.allocation, ...["allocation.json", "carry.json", "source-manifest.json", "source-hold.json"].map(name => join(ledger.directory, name))].map(path => ({ path, stat: lstatSync(resolve(path)) }))
+  const pinned = [...c.manifest.entries.map(row => row.path), requestPath, c.paths.claim, c.paths.allocation, ...["allocation.json", "carry.json", "source-manifest.json", "source-hold.json"].map(name => join(ledger.directory, name))].map(path => ({ path, stat: lstatSync(resolve(path)) }))
   const identities = createLeanContinuationIdentityGuardV2(pinned, [...carry.inventory as LeanContinuationInventoryRowV2[], ...hold.rows as LeanContinuationInventoryRowV2[]])
   const startWall = Date.now(), startMono = process.hrtime.bigint()
-  const guardedMetadataPaths = [CONTINUATION_V2.allocation, join(ledger.directory, "allocation.json"), join(ledger.directory, "ledger.ndjson"), join(ledger.directory, "time.ndjson")] as const
+  const guardedMetadataPaths = [c.paths.allocation, join(ledger.directory, "allocation.json"), join(ledger.directory, "ledger.ndjson"), join(ledger.directory, "time.ndjson")] as const
   const optionalExecutionReceiptPaths = [join(ledger.directory, "entry.json"), join(ledger.directory, "child-terminal.json")]
   const reserveMetadata = (bytes: number) => continuationCapacityV2(c.window, cumulativeLeanPhysicalBytes(ledger), bytes, true)
   let closure = reader, closureBegan = reader ? withLeanContinuationDescriptorPreflightV2(guardedMetadataPaths, reserveMetadata, readLeanContinuationBoundedBytesV2, () => readLeanTimeAccounting(ledger).closes.get("pilot-entry") ?? startWall, 0, optionalExecutionReceiptPaths) : startWall, active = false, expectedLedger: LabRoot | undefined
@@ -964,14 +991,14 @@ export const openLeanBaselineContinuationContextV2 = (requestPath: string, reade
     if (state.stopped && !closure) { closure = true; closureBegan = readLeanTimeAccounting(ledger).closes.get("pilot-entry") ?? nowMs }
     const elapsedMono = process.hrtime.bigint() - startMono
     if (elapsedMono < 0n || elapsedMono > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n || child && process.ppid !== readLeanChildEntry(ledger).parentPid) return fail("V2_LIVENESS")
-    const sample = { nowMs, monotonicElapsedMs: Math.max(0, startWall - c.window.anchorMs) + Number((elapsedMono + 999999n) / 1000000n), remainingSlots: closure ? 0 : 36 - state.charges.size + (active ? 1 : 0), ...(closure ? { remainingClosureMs: Math.max(0, c.window.closureMs - Math.max(0, nowMs - closureBegan)), remainingOfflineMs: 0 } : {}), charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger), scratchBytes: measureLeanPhysicalBytes(CONTINUATION_V2.temp) + metadataReserveBytes, parentRssBytes: child ? rssOf(parent) : usage.rss, childRssBytes: child ? usage.rss : 0, arrayBuffersBytes: usage.arrayBuffers + metadataReserveBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(fs.bavail * fs.bsize), live: !child || process.connected === true }
+    const sample = { nowMs, monotonicElapsedMs: Math.max(0, startWall - c.window.anchorMs) + Number((elapsedMono + 999999n) / 1000000n), remainingSlots: closure ? 0 : 36 - state.charges.size + (active ? 1 : 0), ...(closure ? { remainingClosureMs: Math.max(0, c.window.closureMs - Math.max(0, nowMs - closureBegan)), remainingOfflineMs: 0 } : {}), charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger), scratchBytes: measureLeanPhysicalBytes(c.paths.temp) + metadataReserveBytes, parentRssBytes: child ? rssOf(parent) : usage.rss, childRssBytes: child ? usage.rss : 0, arrayBuffersBytes: usage.arrayBuffers + metadataReserveBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(fs.bavail * fs.bsize), live: !child || process.connected === true }
     assertLeanBaselineContinuationFrontierV2(allocation, sample)
     if (currentLeanElapsedMs(ledger) + sample.remainingSlots * LEAN_CAPS.matchMs + (sample.remainingClosureMs ?? c.window.closureMs) + (sample.remainingOfflineMs ?? c.window.offlineOverheadMs) > allocation.caps.elapsedMs) return fail("V2_JOURNAL_FRONTIER")
     identities(); return sample
     }, additionalBytes, optionalExecutionReceiptPaths)
   }
   guard()
-  const authenticated = authenticateLeanBaselineContinuationCarryV2(c.git, continuationReviewRowsV2(c.manifest, allocation.sourceHead), guard)
+  const authenticated = authenticateLeanBaselineContinuationCarryV2(c.git, continuationReviewRowsV2(c.manifest, allocation.sourceHead, c.window), guard, c.window)
   if (!exact(authenticated, carry)) return fail("V2_CARRY_CHANGED")
   guard()
   return { ...c, ledger, allocation, carry, claim, guard, startCell() { active = true; expectedLedger = leanBytesRoot(readLeanContinuationBoundedBytesV2(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600, bytes => continuationCapacityV2(c.window, cumulativeLeanPhysicalBytes(ledger), bytes, true))); guard() }, finishCell() { active = false; expectedLedger = undefined }, closeRun() { active = false; expectedLedger = undefined; closure = true; closureBegan = Date.now() } }
@@ -985,15 +1012,15 @@ export const runLeanBaselineContinuationV2 = async (requestPath: string) => {
   beginLeanInterval(ledger, "continuation-run-admission")
   try { c.guard() } finally { closeLeanInterval(ledger, "continuation-run-admission") }
   c.guard()
-  return runLeanBoundedParent({ ledger, requestPath, allocationPath: CONTINUATION_V2.allocation, store: CONTINUATION_V2.store, sourceRoot: c.allocation.sourceRoot, manifestRoot: () => { c.guard(); const manifest = leanBaselineContinuationDataManifestV2(c.window, leanBaselineContinuationSourceManifestV2()); if (manifest.manifestRoot !== c.allocation.manifestRoot || manifest.planningRoot !== c.allocation.planningRoot) return fail("V2_MANIFEST_HOLD"); return manifest.root }, childMode: "child-continuation-v2", prospectiveStart: { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, beforeRelease: c.guard, terminalReserveMs: c.window.closureMs, supervisorObservation: true })
+  return runLeanBoundedParent({ ledger, requestPath, allocationPath: c.paths.allocation, store: c.paths.store, sourceRoot: c.allocation.sourceRoot, manifestRoot: () => { c.guard(); const manifest = leanBaselineContinuationDataManifestV2(c.window, leanBaselineContinuationSourceManifestV2()); if (manifest.manifestRoot !== c.allocation.manifestRoot || manifest.planningRoot !== c.allocation.planningRoot) return fail("V2_MANIFEST_HOLD"); return manifest.root }, childMode: "child-continuation-v2", prospectiveStart: { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, beforeRelease: c.guard, terminalReserveMs: c.window.closureMs, supervisorObservation: true })
 }
 
 export const runLeanBaselineContinuationChildV2 = async (requestPath: string) => {
-  const approvedWindow = readLeanBaselineContinuationWindowV2(); continuationWindowAdmissionV2(approvedWindow, 36)
-  assertLeanBaselineContinuationScopeV2()
-  if (requestPath !== CONTINUATION_V2.request || !process.send || !process.connected) return fail("CONTINUATION_CHILD_PARENT")
+  const approvedWindow = readLeanBaselineContinuationWindowV2(requestPath), paths = leanBaselineContinuationPathsForWindowV2(approvedWindow); continuationWindowAdmissionV2(approvedWindow, 36)
+  assertLeanBaselineContinuationScopeV2(false, approvedWindow)
+  if (requestPath !== paths.request || !process.send || !process.connected) return fail("CONTINUATION_CHILD_PARENT")
   const token = await new Promise<string>((accept, reject) => { const timer = setTimeout(() => reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")), 30000); process.once("disconnect", () => { clearTimeout(timer); reject(new TypeError("LEAN_CONTINUATION_PARENT_LOST")) }); process.once("message", value => { clearTimeout(timer); if (!exactLabKeys(value, ["release"]) || typeof value.release !== "string") { reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")); return }; accept(value.release) }); process.send!({ ready: process.pid }) })
-  const ledger = openLeanLedger(CONTINUATION_V2.store), entry = readLeanChildEntry(ledger)
+  const ledger = openLeanLedger(paths.store), entry = readLeanChildEntry(ledger)
   admitLeanChildRelease(entry, token, process.pid, process.ppid)
   const c = openLeanBaselineContinuationContextV2(requestPath), parent = createLeanParentObservationGuard(entry.parentPid)
   assertLeanEntryBinding(entry, { head: c.fixedHead, sourceRoot: c.allocation.sourceRoot, requestBytesRoot: c.allocation.requestBytesRoot, allocationRoot: c.allocation.root, parentPid: process.ppid, childPid: process.pid, intervalStartMs: readLeanTimeAccounting(ledger).starts.get("pilot-entry") ?? -1 })
@@ -1018,7 +1045,7 @@ export const runLeanBaselineContinuationChildV2 = async (requestPath: string) =>
       const body = { schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }
       writeLeanContinuationArtifact(ledger, `observation-${slot.ordinal}.json`, { ...body, root: labRoot(body.schemaVersion, body) }, 8388608)
       if (execution.diagnostic) writeLeanContinuationArtifact(ledger, `diagnostic-${charge.root.slice(7)}.json`, execution.diagnostic, 16384)
-      checkpointLeanResources(ledger, currentLeanElapsedMs(ledger), process.memoryUsage().arrayBuffers, measureLeanPhysicalBytes(CONTINUATION_V2.temp))
+      checkpointLeanResources(ledger, currentLeanElapsedMs(ledger), process.memoryUsage().arrayBuffers, measureLeanPhysicalBytes(paths.temp))
       const resourceAfter = checkpoint()
       resourceReceipts.push({ ordinal: slot.ordinal, chargeRoot: charge.root, before: resourceBefore, after: resourceAfter })
       return cell
@@ -1057,5 +1084,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const childMode = args.length === 3 && ["child-current", "child-continuation", "child-continuation-v2"].includes(args[0]!) && args[1] === "--request"
   const action = childMode ? args[0] === "child-continuation-v2" ? runLeanBaselineContinuationChildV2(args[2]!) : args[0] === "child-continuation" ? runLeanBaselineContinuationChild(args[2]!) : runLeanCurrentChild(args[2]!) : leanBaselineMain(args)
   if (childMode) void resolveLeanChildCliTerminal(action)
-  else void action.then(value => { process.stdout.write(`${JSON.stringify(value)}\n`) }).catch(() => { process.stderr.write("LEAN_BASELINE_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
+  else void action.then(value => { process.stdout.write(`${JSON.stringify(value)}\n`) }).catch(error => { if (args.length === 3 && args[0] === "prepare-continuation-v2" && args[1] === "--request" && args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request) process.stderr.write(leanBaselineContinuationPreparationFailureV4(error)); process.stderr.write("LEAN_BASELINE_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
 }
