@@ -53,16 +53,31 @@ describe("current-only staged baseline wiring (synthetic source tests)", () => {
   it("[continuation-v2] refuses metadata reservation before legacy journal/time parsing", () => {
     const ledgerRead = vi.fn(), timeRead = vi.fn(), reserve = vi.fn((bytes: number) => { if (bytes > 0) throw new Error("RESERVATION_REFUSED") })
     expect(() => continuationMain.withLeanContinuationMetadataReservationV2(4096, reserve, () => { ledgerRead(); timeRead() })).toThrow("RESERVATION_REFUSED")
-    expect(reserve).toHaveBeenCalledWith(4096 + 7 * 4194304 + 262144)
+    expect(reserve).toHaveBeenCalledWith(4096 + 2 * 7 * 4194304 + 4 * 3 * 262144)
     expect(ledgerRead).not.toHaveBeenCalled(); expect(timeRead).not.toHaveBeenCalled()
   })
-  it.each(["allocation", "ledger", "time"] as const)("[continuation-v2] rejects an oversized %s descriptor before legacy parsers", target => {
-    const paths = ["allocation", "ledger", "time"] as const, calls: string[] = [], parseLegacy = vi.fn(), reserve = vi.fn()
-    const readDescriptor = (path: string, maximum: number) => { calls.push(path); if (path === target) throw new Error("OVERSIZED_DESCRIPTOR"); expect(maximum).toBe(path === "allocation" ? 262144 : 4194304); return Buffer.alloc(0) }
-    expect(() => continuationMain.withLeanContinuationDescriptorPreflightV2(paths, reserve, readDescriptor, parseLegacy)).toThrow("OVERSIZED_DESCRIPTOR")
-    expect(calls).toEqual(paths.slice(0, paths.indexOf(target) + 1))
-    expect(reserve).toHaveBeenCalledWith(7 * 4194304 + 262144)
+  it.each(["canonical-allocation", "store-allocation", "ledger", "time", "entry", "child-terminal"] as const)("[continuation-v2] rejects an oversized %s descriptor before legacy parsers", target => {
+    const paths = ["canonical-allocation", "store-allocation", "ledger", "time"] as const, optional = ["entry", "child-terminal"] as const, ordered = [...paths, ...optional], calls: string[] = [], parseLegacy = vi.fn(), reserve = vi.fn()
+    const readDescriptor = (path: string, maximum: number, _mode: number, guard: (additionalBytes?: number) => void) => { calls.push(path); expect(maximum).toBe(path.includes("allocation") || path === "entry" || path === "child-terminal" ? 262144 : 4194304); if (path === target) { guard(maximum + 1); throw new Error("OVERSIZED_DESCRIPTOR") }; return Buffer.alloc(0) }
+    expect(() => continuationMain.withLeanContinuationDescriptorPreflightV2(paths, reserve, readDescriptor, parseLegacy, 0, optional, () => true)).toThrow("OVERSIZED_DESCRIPTOR")
+    expect(calls).toEqual(ordered.slice(0, ordered.indexOf(target) + 1))
+    expect(reserve).toHaveBeenCalledWith(2 * 7 * 4194304 + 4 * 3 * 262144)
     expect(parseLegacy).not.toHaveBeenCalled()
+  })
+  it("[continuation-v2] carries outer and nested byte reservations before descriptor allocation", () => {
+    const outer = 12345, inner = 6789, parseLegacy = vi.fn(), allocations = vi.fn(), reserve = vi.fn((bytes: number) => { if (bytes > outer + 2 * 7 * 4194304 + 4 * 3 * 262144) throw new Error("NESTED_RESERVATION_DENIED") })
+    const readDescriptor = (_path: string, _maximum: number, _mode: number, guard: (additionalBytes?: number) => void) => { guard(inner); allocations(); return Buffer.alloc(1) }
+    expect(() => continuationMain.withLeanContinuationDescriptorPreflightV2(["canonical", "store", "ledger", "time"], reserve, readDescriptor, parseLegacy, outer)).toThrow("NESTED_RESERVATION_DENIED")
+    const base = 2 * 7 * 4194304 + 4 * 3 * 262144
+    expect(reserve).toHaveBeenNthCalledWith(1, outer + base)
+    expect(reserve).toHaveBeenNthCalledWith(2, outer + base + inner)
+    expect(allocations).not.toHaveBeenCalled(); expect(parseLegacy).not.toHaveBeenCalled()
+  })
+  it("[continuation-v2] denies the combined ledger/time/allocation parse budget before descriptor reads", () => {
+    const reads = vi.fn(), parseLegacy = vi.fn(), reserve = vi.fn(() => { throw new Error("COMBINED_BUDGET_DENIED") })
+    expect(() => continuationMain.withLeanContinuationDescriptorPreflightV2(["canonical", "store", "ledger", "time"], reserve, reads, parseLegacy)).toThrow("COMBINED_BUDGET_DENIED")
+    expect(reserve).toHaveBeenCalledWith(2 * 7 * 4194304 + 4 * 3 * 262144)
+    expect(reads).not.toHaveBeenCalled(); expect(parseLegacy).not.toHaveBeenCalled()
   })
   // This legacy integration case consumes a canonical historical store. Source
   // execution is explicitly forbidden from opening it; keep it out of this suite.
