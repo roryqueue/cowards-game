@@ -19,6 +19,7 @@ import * as authorityIO from "./v1-38-lean-experiment-authority.js"
 import * as leanIO from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as sourceIO from "./v1-38-lean-baseline-source.js"
 import { buildLeanStartupWorkerHarnessV8 } from "./v1-38-lean-container-match-session.js"
+import * as continuationIO from "./v1-38-lean-baseline-continuation.js"
 
 const retained = vi.hoisted(() => ({ state: {} as unknown }))
 vi.mock("../../packages/strategy-lab/src/league/lean-experiment.js", async importOriginal => ({ ...await importOriginal<object>(), readLeanLedger: () => retained.state }))
@@ -50,6 +51,55 @@ const fixture = () => {
   return { ledger, charge, source, pair, pairPath, journal, binding }
 }
 describe("distinct baseline runtime authority", () => {
+  it("[continuation-v2] burns refused issuance and rejects a V1 allocation", () => {
+    const f = fixture(), a = f.ledger.allocation as any
+    expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, () => {})).toThrow()
+    a.schemaVersion = "lean-baseline-continuation-allocation-v2"
+    const validate = vi.spyOn(leanIO, "validateLeanBaselineContinuationAllocationV2").mockReturnValue(a)
+    const guard = vi.fn(() => { throw new Error("INERT_FULL_GUARD_DENIED") })
+    try {
+      expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)).toThrow("INERT_FULL_GUARD_DENIED")
+      expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, () => {})).toThrow()
+    } finally { validate.mockRestore() }
+  })
+  it.each(["valid", "wrong-request", "wrong-grant", "wrong-publication", "wrong-source", "wrong-seat"] as const)("[continuation-v2] opaque V8 issuance and exact joins: %s", mode => {
+    const f = fixture(), a = f.ledger.allocation as any, root = (s: string) => labRoot("inert-v2-authority", s)
+    Object.assign(a, { schemaVersion: "lean-baseline-continuation-allocation-v2", sourceHead: "b".repeat(40), requestBytesRoot: root("request"), planningRoot: root("planning"), manifestRoot: root("manifest"), sourceGateRoot: root("source-gate"), dataReviewRoot: root("data-review"), windowBytesRoot: root("window-bytes"), window: { root: root("window"), grantId: "inert-grant", routeNamespace: "20261012-v3" }, predecessor: { chargedMatches: 50 } })
+    const pairBody = { ...f.pair, priorCharged: 50 }; const { root: _, ...pb } = pairBody
+    writeFileSync(f.pairPath, leanCanonicalBytes({ ...pb, root: labRoot("lean-baseline-pair-v1", pb) }))
+    const claimBody = { schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: a.window.grantId, routeNamespace: a.window.routeNamespace, windowRoot: a.window.root, windowBytesRoot: a.windowBytesRoot, requestBytesRoot: a.requestBytesRoot, sourceHead: a.sourceHead, sourceRoot: a.sourceRoot, sourceGateRoot: a.sourceGateRoot, dataReviewRoot: a.dataReviewRoot, planningRoot: a.planningRoot, manifestRoot: a.manifestRoot }
+    const claim = { ...claimBody, root: labRoot(claimBody.schemaVersion, claimBody) }
+    const validate = vi.spyOn(leanIO, "validateLeanBaselineContinuationAllocationV2").mockReturnValue(a)
+    const entry = vi.spyOn(leanIO, "readLeanChildEntry").mockReturnValue({ head: "a".repeat(40), sourceRoot: a.sourceRoot, allocationRoot: a.root, requestBytesRoot: a.requestBytesRoot } as any)
+    const read = vi.spyOn(continuationIO, "readLeanContinuationJsonV2").mockImplementation(path => {
+      if (path === leanIO.LEAN_BASELINE_CONTINUATION_PATHS_V2.claim) {
+        if (mode === "wrong-request" || mode === "wrong-grant") { const { root: _, ...body } = { ...claim, ...(mode === "wrong-request" ? { requestBytesRoot: root("other-request") } : { grantId: "other-grant" }) }; return { ...body, root: labRoot(body.schemaVersion, body) } }
+        return claim
+      }
+      const body = { schemaVersion: "lean-baseline-continuation-source-publication-v2", allocationRoot: a.root, sourceHead: a.sourceHead, head: "a".repeat(40), implementationRoot: a.sourceRoot, coldRoot: a.coldRoot, role: f.source.role, snapshotRoot: f.source.root, sourceRoot: f.source.sourceRoot, windowRoot: a.window.root, windowBytesRoot: a.windowBytesRoot, requestBytesRoot: a.requestBytesRoot, dataReviewRoot: a.dataReviewRoot }
+      if (mode === "wrong-publication") body.windowRoot = root("other-window")
+      if (mode === "wrong-source") body.sourceRoot = root("other-source")
+      return { ...body, root: labRoot(body.schemaVersion, body) }
+    })
+    const guard = vi.fn()
+    try {
+      if (mode === "wrong-seat") f.binding.seat = "foreign" as never
+      if (mode !== "valid") { expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)).toThrow(); return }
+      const auth = authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)
+      expect(authorityIO.leanStartupAuthorityDescriptorV8(auth)?.version).toBe(8)
+      expect(() => authorityIO.claimLeanStartupAuthorityV8({ ...auth }, f.binding, "factory")).toThrow()
+      expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "session")).toThrow()
+      const before = guard.mock.calls.length
+      authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "factory")
+      authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "planner")
+      expect(guard.mock.calls.length).toBeGreaterThanOrEqual(before + 2)
+      guard.mockImplementation(() => { throw new Error("INERT_SURVIVOR_GROWTH") })
+      expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "session")).toThrow("INERT_SURVIVOR_GROWTH")
+      guard.mockImplementation(() => {})
+      expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "session")).toThrow()
+      expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)).toThrow()
+    } finally { validate.mockRestore(); entry.mockRestore(); read.mockRestore() }
+  })
   it("continuation V8 guards issuance and every ordered construction claim without refunding a failed seat", () => {
     const f = fixture(), a = f.ledger.allocation as any
     Object.assign(a, { schemaVersion: "lean-baseline-continuation-allocation-v1", sourceHead: "b".repeat(40) })

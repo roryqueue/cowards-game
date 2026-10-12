@@ -23,7 +23,7 @@ import { readLeanPrivateMatchContextV2, checkpointLeanPrivateMatchV2, issueLeanP
 import { captureLeanHostFailureV7, type LeanHostFailureBindingV7 } from "./v1-38-lean-host-stage-v7.js"
 import { validateLeanStartupOriginV8, type LeanStartupOriginV8 } from "./v1-38-lean-container-match-session.js"
 import { LEAN_STARTUP_POLICY_V5 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { enableLeanContinuationExecutorOrigins, LEAN_CONTINUATION_EXECUTOR_REASONS, type LeanContinuationExecutorReason } from "./v1-38-lean-container-match-session.js"
+import { enableLeanContinuationExecutorOriginsV2, enableLeanContinuationExecutorOrigins, LEAN_CONTINUATION_EXECUTOR_REASONS, type LeanContinuationExecutorReason } from "./v1-38-lean-container-match-session.js"
 
 const fail = (): never => { throw new TypeError("LEAN_BASELINE_MATCH") }
 const CORRECTION_RUNTIME_OUTPUT_BYTES = 262144
@@ -152,20 +152,26 @@ type PrivateMatchInputV3 = Pick<LegacyMatchInput, "bottom" | "top" | "register" 
 export const runLeanPrivateFeasibilityMatchV3 = async (input: PrivateMatchInputV3) => composeLeanNativeMatch(input, { version: 3, context: readLeanPrivateMatchContextV3(input.admission, input.debit) })
 type PrivateMatchInputV2 = Pick<LegacyMatchInput, "bottom" | "top" | "register" | "unregister"> & { admission: LeanPrivateMatchAdmissionV2; debit: LeanPrivateMatchDebitV2 }
 export const runLeanBaselineMatch = (input: LegacyMatchInput) => composeLeanNativeMatch(input)
-import { validateLeanBaselineContinuationAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { issueLeanBaselineContinuationRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+import { validateLeanBaselineContinuationAllocationV2, validateLeanBaselineContinuationAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { issueLeanBaselineContinuationRuntimeAuthorityV2, issueLeanBaselineContinuationRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
 export const runLeanBaselineContinuationMatch = async (input: Omit<LegacyMatchInput, "correction">) => {
   const a = validateLeanBaselineContinuationAllocation(input.ledger.allocation)
   input.checkpoint()
   if (input.seed !== a.seed || input.slot.root !== a.slots[input.slot.ordinal]?.root || input.charge.allocationRoot !== a.root || input.charge.slotRoot !== input.slot.root || input.charge.ordinal !== input.slot.ordinal) return fail()
-  return composeLeanNativeMatch(input, undefined, true)
+  return composeLeanNativeMatch(input, undefined, "v1")
+}
+export const runLeanBaselineContinuationMatchV2 = async (input: Omit<LegacyMatchInput, "correction">) => {
+  const a = validateLeanBaselineContinuationAllocationV2(input.ledger.allocation)
+  input.checkpoint()
+  if (input.seed !== a.seed || input.slot.root !== a.slots[input.slot.ordinal]?.root || input.charge.allocationRoot !== a.root || input.charge.slotRoot !== input.slot.root || input.charge.ordinal !== input.slot.ordinal) return fail()
+  return composeLeanNativeMatch(input, undefined, "v2")
 }
 /** Only opaque admitted/debited context enters the new lane; no callable
  * issuer, scalar capacity, arbitrary scenario or fabricated ledger seam. */
 export const runLeanPrivateFeasibilityMatch = async (input: PrivateMatchInput) => composeLeanNativeMatch(input, { version: 1, context: readLeanPrivateMatchContextV1(input.admission, input.debit) })
 export const runLeanPrivateFeasibilityMatchV2 = async (input: PrivateMatchInputV2) => composeLeanNativeMatch(input, { version: 2, context: readLeanPrivateMatchContextV2(input.admission, input.debit) })
 type AuthenticatedPrivateRoute = { version: 3; context: ReturnType<typeof readLeanPrivateMatchContextV3> } | { version: 1; context: ReturnType<typeof readLeanPrivateMatchContextV1> } | { version: 2; context: ReturnType<typeof readLeanPrivateMatchContextV2> }
-const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInput | PrivateMatchInputV2 | PrivateMatchInputV3, route?: AuthenticatedPrivateRoute, continuation = false) => {
+const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInput | PrivateMatchInputV2 | PrivateMatchInputV3, route?: AuthenticatedPrivateRoute, continuation?: "v1" | "v2") => {
   const legacy = "ledger" in input ? input : undefined
   const privateInput = "admission" in input ? input : undefined
   const v3 = route?.version === 3 ? privateInput as PrivateMatchInputV3 : undefined
@@ -208,8 +214,9 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
     const matchId = `lean-${chargeRoot.slice(7, 31)}`, containerName = `lean-${chargeRoot.slice(7, 25)}-${seat}`, ownershipLabel = `lean-${allocationRoot.slice(7, 25)}`
     const runtime = prospectiveLeagueRuntimeBinding(admission, { revisionId: revision.id, sourceRoot: snapshot.sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image })
     const binding = { budgetRoot: allocationRoot, attemptRoot: chargeRoot, matchId, containerName, ownershipLabel, seat, runtime }
-    const authority = continuation ? issueLeanBaselineContinuationRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, checkpoint) : v3 ? issueLeanPrivateMatchRuntimeAuthorityV3(v3.admission, v3.debit, snapshot, binding) : v2 ? issueLeanPrivateMatchRuntimeAuthorityV2(v2.admission, v2.debit, snapshot, binding) : v1 ? issueLeanPrivateMatchRuntimeAuthorityV1(v1.admission, v1.debit, snapshot, binding) : legacy!.correction ? issueLeanCorrectionRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, legacy!.correction.reuse) : issueLeanBaselineRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding)
-    if (continuation) enableLeanContinuationExecutorOrigins(authority, validateLeanBaselineContinuationAllocation(legacy!.ledger.allocation))
+    const authority = continuation === "v2" ? issueLeanBaselineContinuationRuntimeAuthorityV2(legacy!.ledger, legacy!.charge, snapshot, binding, checkpoint) : continuation === "v1" ? issueLeanBaselineContinuationRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, checkpoint) : v3 ? issueLeanPrivateMatchRuntimeAuthorityV3(v3.admission, v3.debit, snapshot, binding) : v2 ? issueLeanPrivateMatchRuntimeAuthorityV2(v2.admission, v2.debit, snapshot, binding) : v1 ? issueLeanPrivateMatchRuntimeAuthorityV1(v1.admission, v1.debit, snapshot, binding) : legacy!.correction ? issueLeanCorrectionRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, legacy!.correction.reuse) : issueLeanBaselineRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding)
+    if (continuation === "v2") enableLeanContinuationExecutorOriginsV2(authority, validateLeanBaselineContinuationAllocationV2(legacy!.ledger.allocation))
+    else if (continuation === "v1") enableLeanContinuationExecutorOrigins(authority, validateLeanBaselineContinuationAllocation(legacy!.ledger.allocation))
     let activePrivateRequest: PrivateStartupRequestV3 | undefined
     let activeTransportBinding: LeanCorrectionInvocationTransportBinding | undefined
     let activePrivateTransport: LeanCorrectionInvocationTransportBinding | undefined

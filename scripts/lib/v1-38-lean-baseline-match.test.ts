@@ -1,4 +1,13 @@
 import { describe, it, expect, vi } from "vitest"
+it("[continuation-v2] refuses mixed allocation and a refused full guard before provider construction", async () => {
+  const create = vi.spyOn(runtimeModule, "createFactorySupervisedRuntime")
+  try {
+    for (const schemaVersion of ["lean-current-baseline-allocation-v1", "lean-baseline-continuation-allocation-v1", "lean-baseline-continuation-allocation-v2"]) await expect(composerModule.runLeanBaselineContinuationMatchV2({ ledger: { allocation: { schemaVersion } }, checkpoint() {} } as never)).rejects.toThrow()
+    const validate = vi.spyOn(lean, "validateLeanBaselineContinuationAllocationV2").mockReturnValue({} as never)
+    try { await expect(composerModule.runLeanBaselineContinuationMatchV2({ ledger: { allocation: {} }, checkpoint() { throw new Error("INERT_CAPACITY_DENIAL") } } as never)).rejects.toThrow("INERT_CAPACITY_DENIAL") } finally { validate.mockRestore() }
+    expect(create).not.toHaveBeenCalled()
+  } finally { create.mockRestore() }
+})
 it("fresh continuation denies an invalid allocation before any supervised provider construction", async () => {
   const create = vi.spyOn(runtimeModule, "createFactorySupervisedRuntime")
   try {
@@ -138,10 +147,14 @@ describe("continuation issued executor branches", () => {
   it("refuses serialized opt-in authority before any constructor", () => {
     expect(() => sessionModule.enableLeanContinuationExecutorOrigins({ runtime: {} } as never, {} as never)).toThrow()
   })
-  it.each((["host_deadline_pre_exchange", "host_deadline_post_startup_metadata", "host_deadline_post_decode", "host_deadline_post_inner_response", "response_status_null", "response_status_nonzero"] as const).flatMap(reason => [true, false].map(enabled => ({ reason, enabled }))))("carries $reason with opt-in $enabled through real session/planner/factory branding", async ({ reason, enabled }) => {
+  it.each((["host_deadline_pre_exchange", "host_deadline_post_startup_metadata", "host_deadline_post_decode", "host_deadline_post_inner_response", "response_status_null", "response_status_nonzero"] as const).flatMap(reason => (["v1", "v2"] as const).flatMap(version => [true, false].map(enabled => ({ reason, enabled, version, label: version === "v2" ? "[continuation-v2]" : "legacy continuation" }))))) ("$label carries $reason with opt-in $enabled through real session/planner/factory branding", async ({ reason, enabled, version }) => {
     const root = (v: string) => labRoot("inert-executor-continuation", v)
     const carry = { schemaVersion: "lean-baseline-continuation-carry-v1" as const, chargedMatches: 43 as const, elapsedUpperBoundMs: 459375903 as const, allocatedDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, custodyRoot: root("custody"), inventoryRoot: root("inventory"), qualifiedReaderAuthority: "cost_only" as const }
-    const allocation = lean.createLeanBaselineContinuationAllocation({ sourceRoot: root("implementation"), reviewRoot: root("review"), coldRoot: root("cold"), planRoot: root("plan"), candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, i) => root(String(i))), seed: "inert", sourceHead: "a".repeat(40), planningRoot: root("planning"), requestBytesRoot: root("request"), offlineOverheadMs: 60000, predecessor: { ...carry, root: labRoot(carry.schemaVersion, carry) } })
+    const allocationV1 = lean.createLeanBaselineContinuationAllocation({ sourceRoot: root("implementation"), reviewRoot: root("review"), coldRoot: root("cold"), planRoot: root("plan"), candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, i) => root(String(i))), seed: "inert", sourceHead: "a".repeat(40), planningRoot: root("planning"), requestBytesRoot: root("request"), offlineOverheadMs: 60000, predecessor: { ...carry, root: labRoot(carry.schemaVersion, carry) } })
+    const windowBody = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "synthetic-transport", approvalEvidence: { humanDecisionId: "synthetic-decision", recordedBy: "synthetic-root" }, approvedAtMs: 1791820000000, anchorMs: 1791820000000, deadlineMs: 1791848800000, carryMs: 472058903, capMs: 500858903, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261012-v3" as const, reviewedSourceHead: "a".repeat(40), sourceRoot: root("implementation"), sourceGateRoot: root("source-gate"), planRoot: root("plan"), runOperator: "synthetic-runner", readerOperator: "synthetic-reader" }
+    const window = { ...windowBody, root: labRoot(windowBody.schemaVersion, windowBody) }
+    const carryV2 = { ...carry, schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: 465187899, allocatedDiskBytes: 88924160, residualDiskBytes: 4096, originalCarryRoot: root("old"), closedCapsuleRoot: root("closed") }
+    const allocation = version === "v1" ? allocationV1 : lean.createLeanBaselineContinuationAllocationV2({ sourceRoot: window.sourceRoot, reviewRoot: root("review"), coldRoot: root("cold"), planRoot: window.planRoot, candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, i) => root(String(i))), seed: "inert", sourceHead: "b".repeat(40), planningRoot: root("planning"), manifestRoot: root("manifest"), requestBytesRoot: root("request"), window, windowBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(window)), sourceGateRoot: window.sourceGateRoot, dataReviewRoot: root("data-review"), predecessor: { ...carryV2, root: labRoot(carryV2.schemaVersion, carryV2) } })
     const sourceBytes = Buffer.from("export default {selectActivations(){return {activationOrders:[],strategyMemory:{}}},soldierBrain(){return {action:{type:'TURN_TO_STONE'},soldierMemory:{}}}}")
     const sourceRoot = lean.leanBytesRoot(sourceBytes), packetBase = { ...factoryOraclePacketFixture(), source: { root: sourceRoot, sha256: sourceRoot, byteLength: sourceBytes.length, encoding: "utf8" as const } }
     const packet = { ...packetBase, root: deriveFactoryOraclePacketRoot(packetBase) }, proposal = factoryProposalFromPacket(packet)
@@ -160,7 +173,7 @@ describe("continuation issued executor branches", () => {
       return Buffer.from(JSON.stringify({ requestId: q.requestId, status: reason === "response_status_null" ? null : reason === "response_status_nonzero" ? 17 : 0, signal: null, stdoutBase64: Buffer.from(JSON.stringify({ ok: true, value: { activationOrders: [], strategyMemory: {} } })).toString("base64"), stderrBase64: "", startupOrigin }) + "\n")
     }
     try {
-      if (enabled) sessionModule.enableLeanContinuationExecutorOrigins(authority, allocation)
+      if (enabled) { if (allocation.schemaVersion === "lean-baseline-continuation-allocation-v2") sessionModule.enableLeanContinuationExecutorOriginsV2(authority, allocation); else sessionModule.enableLeanContinuationExecutorOrigins(authority, allocation) }
       native = runtimeModule.createFactorySupervisedRuntime({ admission, sourceBytes, leanExperimentAuthority: authority, factoryLifetimeMs: 600000, budgetRoot: allocation.root, attemptRoot: chargeRoot, matchId: "inert-executor", containerName: "inert-executor", ownershipLabel: "inert-owner" })
       const soldiers = [{ id: "inert-soldier", ownerPlayerId: "bottom", status: "ACTIVE", position: { x: 2, y: 11 }, facing: "UP", lastSuccessfulMoveDirection: null }]
       const input = { phaseNumber: 1, roundNumber: 1, activationCount: 1, board: { bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 }, soldiers, terrainStones: [] }, mySoldiers: soldiers, enemySoldiers: [], strategyMemory: {}, initialInitiativePlayerId: "bottom", hasInitialInitiative: true, roundInitiativePlayerId: "bottom", hasRoundInitiative: true }
@@ -188,13 +201,14 @@ describe("continuation issued executor branches", () => {
       const mocks = [
         vi.spyOn(sourceModule, "validateLeanBaselineSource").mockImplementation(v => v as never),
         vi.spyOn(authorityModule, "issueLeanBaselineContinuationRuntimeAuthority").mockReturnValue(authority),
+        vi.spyOn(authorityModule, "issueLeanBaselineContinuationRuntimeAuthorityV2").mockReturnValue(authority),
         vi.spyOn(authorityModule, "issueLeanBaselineRuntimeAuthority").mockReturnValue(authority),
         vi.spyOn(runtimeModule, "createFactorySupervisedRuntime").mockReturnValue(native),
         vi.spyOn(bridgeModule, "runCanonicalLabMatch").mockResolvedValue(actual as never),
       ]
       try {
         const slot = allocation.slots[0]!, matchInput = { ledger: { directory: "inert", allocation }, charge: { root: chargeRoot, allocationRoot: allocation.root, slotRoot: slot.root, ordinal: 0 }, slot, seed: allocation.seed, bottom: snapshots[0]!, top: snapshots[1]!, checkpoint() {}, register() {}, unregister() {} }
-        const returned = await composerModule.runLeanBaselineContinuationMatch(matchInput as never)
+        const returned = await (version === "v2" ? composerModule.runLeanBaselineContinuationMatchV2 : composerModule.runLeanBaselineContinuationMatch)(matchInput as never)
         expect(returned.compact).toMatchObject({ classification: "system_failure", code: "SUPERVISOR_FAILURE" })
         expect(returned.diagnostic).toMatchObject({ continuationExecutor: { reason, chargeRoot, invocationRoot: evidence.invocationRoot } })
         const legacy = await composerModule.runLeanBaselineMatch(matchInput as never)
