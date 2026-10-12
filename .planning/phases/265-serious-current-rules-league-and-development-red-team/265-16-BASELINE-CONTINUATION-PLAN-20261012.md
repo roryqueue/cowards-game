@@ -409,3 +409,104 @@ Acceptance must establish all of these caller chains, not just constructor tests
 Only after source gates close and a genuine human window is supplied can ROOT perform its data review, pin final planning bytes and consider fresh prepare. Each such later step still requires actual whole-schedule time and fresh SAME-PROCESS capacity; neither this plan nor inert fixture success admits it. No real record, request, allocation, store, time grant, Match or reader is created now.
 
 Planning-author closure for this appendix: one owned Markdown file appended with `apply_patch`; prior content and others' edits preserved. Read-only git/rg/sed source/interface inspection and final diff checks only; no source edits, tests/program execution, empirical data reads, native/Match work, allocations, agents, commit or push. `commands_closed: true`; `ownership_released: true`. Future commands above are instructions, not executed results.
+
+## ACTIVE SOURCE-ONLY permission-contract repair — after V3 refusal, 2026-10-12
+
+This bounded appendix is the next source-only task within EXISTING incomplete Plan 265-16. Earlier route instructions and window snapshots above are history; this appendix authorizes no route, preparation, allocation, reader or Match. Planning ownership is this Markdown ONLY; preserve concurrent work. Subsequent source ownership is the two original helper/test files below, SERIAL and exclusive. ROOT alone owns STATE/GATES/debug/report/commit/push; source worker is not alone and must not revert others' edits. No new numbered plan, phase or workstream.
+
+Basis: latest confirmed finding in `.planning/debug/265-native-exit-reader-cost.md`, “V3 bounded crypto/descriptor diagnosis closure.” Registered implementation source `scripts/run-v1-38-lean-baseline.sh` is owner-owned, regular, single-link, resolved 0755. Its exact registered path enters the current implementation manifest and then a `reviewed_source` row. `inventoryLeanContinuationSurvivorsV2` nevertheless requires every reviewed row to be 0644 and passes 0644 to its bounded small-file read. Pinned committed-source authentication already preserves actual descriptor mode. Repair BOTH prospective consumer assumptions, not the launcher. This producer/consumer contradiction is confirmed; the original V3 suppressed throw and earlier native SUBPROCESS_EXIT cause remain UNKNOWN. Passing new fixtures must not be reported as recovery of either original cause.
+
+### Immutable authority and continuous time
+
+V3 attempt, window, request and every consumed predecessor remain immutable/spent even though V3 stopped before allocation/store/charge. NO same-prepare retry, request/window reuse, refund, unused-slot reuse or retrospective credit. Do not manufacture an allocation HEAD or invoke any ordinary reader. The existing approved window remains **2026-10-12T21:23:47UTC → 2026-10-13T05:23:47UTC**, anchor1791840227000/carry492285903/cap521085903/deadline1791869027000; uninterrupted global floor remains `F(t)=459375903+(t-1791807317000)`. ALL diagnosis/source/review/tests/waits/idle/preparation time continues to count. Full36 entry frontier **22:42:47UTC** and31min closure+10min offline remain unchanged; no source-ready target creates time or discounts future maximum durations.
+
+A later fresh V4 namespace/request/window-binding design is a SEPARATE dependency after this source task and its independent gates. Do not design/materialize it, retarget constants, create records or allocate now. Existing human same-scope consent does not revive V3. No new human resource decision, numeric bound change, engine/rules/Native ABI change, formation/holdout/public/counting/production authority or baseline/LEAG/freeze completion follows from this repair.
+
+<objective>
+Remove the prospective V2 reviewed-file mode-contract contradiction while preserving exact authenticated registration, frozen current identities, historical modes and cost-only accounting, per D-01/D-02/D-05/D-22/D-25/D-27/D-28. Support only authenticated registered reviewed_source 0644 or0755; active_planning remains0644 and private metadata remains0600. This is source eligibility repair supporting existing LEAG-01/02/03/04/05/07 evidence machinery, not completion of any empirical requirement.
+</objective>
+
+<tasks>
+<task type="auto" tdd="true">
+  <name>Permission repair P1: align actual V2 inventory with authenticated source modes</name>
+  <files>scripts/lib/v1-38-lean-baseline-continuation.ts, scripts/lib/v1-38-lean-baseline-continuation.test.ts</files>
+  <read_first>
+    scripts/lib/v1-38-lean-baseline-continuation.ts — readLeanContinuationBoundedBytesV2, authenticateLeanContinuationPinnedSource, inventoryLeanContinuationSurvivorsV2, reconcileLeanContinuationInventoryV2, createLeanContinuationIdentityGuardV2, authenticateLeanBaselineContinuationCarryV2, reconcileLeanContinuationV2DiskDebit.
+    scripts/lib/v1-38-lean-baseline-continuation.test.ts — current V2 reviewed transition, bounded descriptor, historical-cost and no-refund fixtures; retain existing compatibility tests.
+    scripts/run-v1-38-lean-baseline.ts — READ ONLY: SOURCE_PATHS, implementation manifest and exact reviewed_source/active_planning row producer; no edit or invocation.
+    .planning/debug/265-native-exit-reader-cost.md — latest registered0755 finding and uncertainty; no exported authenticator/diagnostic execution.
+    .planning/STATE.md — current top frontier/closure only; .planning/phases/265-serious-current-rules-league-and-development-red-team/265-CONTEXT.md D-01/D-02/D-05/D-22/D-25/D-27/D-28 and this appendix.
+  </read_first>
+  <behavior>
+    - Invoke the ACTUAL inventoryLeanContinuationSurvivorsV2 with bounded isolated synthetic filesystem/Git fixtures: registered launcher path as reviewed_source0755 and ordinary reviewed_source0644 plus active_planning0644 all admit their exact committed content and return actual modes.
+    - Active planning0755/0600 deny; reviewed source0600/0664/0700/0775/04755 and other permissions outside exact0644/0755 deny. No executable-bit test or mask dropping special permission bits may admit an arbitrary mode.
+    - Changing a historical0755 source to0644 or historical0644 source to0755 still denies, even with unchanged content, a recomputed reviewed root or an otherwise allowed current mode. Unreviewed historical bytes/modes/identity remain immutable.
+    - Wrong committed bytes/root/commit/path, duplicate paths, symlink/hardlink, foreign owner, descriptor replacement/mode mutation during read and changed final identity deny before returned inventory use. Resource reservation refusal precedes Buffer/read allocation; complete fresh guards remain connected.
+    - Private cost metadata0600 still reads through the existing strict bounded API;0644/0755 private metadata deny. Historical allocated blocks cannot shrink; authenticated old debit/residual survives, growth adds once and cumulative prior count stays50, cost_only.
+  </behavior>
+  <action>
+Start RED with connected tests titled [continuation-v2-permissions] that actually call inventoryLeanContinuationSurvivorsV2, not only a newly extracted permission predicate or reconcile helper. Build a bounded isolated temporary fixture repository with empty synthetic .strategy-lab and .planning/artifacts discovery directories; no traversal/read/hash of live retained history. Use a scoped mocked cwd or existing isolated filesystem seam and restore every spy in finally. Fixtures have real regular owner-owned files with explicit creation permissions and current descriptor metadata; the synthetic reviewed list includes the exact registered scripts/run-v1-38-lean-baseline.sh path. Mock only bounded Git responses to exact commit:path requests using those synthetic committed bytes; assert requested commit/path and authenticate content through the existing production helper. Do not mock the inventory/authentication functions into acceptance, replace descriptor checks with canned success, or report inert fixture guards as real SAME-PROCESS capacity proof. Tests never launch a shell/runtime/provider/Strategy/Match or invoke real prepare/reader/cost authentication. Fixture permission creation is isolated; never chmod the live launcher or any retained artifact.
+
+Then alter ONLY the prospective reviewed-row branch in inventoryLeanContinuationSurvivorsV2. Determine the captured actual permission bits, including special bits, from the fresh stat. Require reviewedRow.kind=reviewed_source to have exact0644 or0755, or active_planning to have exact0644; unknown kinds fail closed. Preserve regular-file/nonsealed/owner/one-link/realpath/bounded-path checks and exact registered reviewed manifest membership. This is not authority to add reviewed paths or accept executables outside the authenticated producer's current source set. Keep authenticateLeanContinuationPinnedSource with the exact reviewed commit, complete reviewed path set and trusted current roots; no old manifest/root substituted as current authority. For small reviewed content, pass that captured permitted mode into readLeanContinuationBoundedBytesV2 instead of the fixed0644 argument, so the real descriptor reader enforces the SAME mode rather than broadening its mode API. Large-file streaming remains bounded64KiB and its existing descriptor/Git OID/raw-root checks stay unchanged. Ensure the final inventory observation denies mode or descriptor changes after authentication before returning the row, using existing complete identity predicates rather than any mode exemption.
+
+Per D-01/D-02/D-22/D-25, DO NOT relax reconcileLeanContinuationInventoryV2's historical row.mode equality, allocated-block floor, kind equality, directory membership or immutable consumed-evidence identity/raw roots. Preserve owner/single-link/no-alias/current trusted implementation and planning roots, every fresh callback, pre-allocation reservation and no-refund disk reconciliation. Keep private metadata0600 readers and all V1 behavior/defaults/constants/canonical bytes unchanged. Test historical0755 acceptance by carrying a prior0755 row, not by replacing it with a new0644 row; independently deny both historical mode transitions. Couple returned actual inventory rows to reconcileLeanContinuationV2DiskDebit using the existing consumed-route synthetic roots so the test proves no debit shrink/refund and growth counted once. No policy/source-path/schema/namespace/resource/runtime change outside this consumer repair.
+  </action>
+  <acceptance_criteria>
+    Actual connected V2 inventory admits authenticated registered0755 source and0644 source/planning, denies planning0755/0600/arbitrary source permission modes, and returns unchanged historical modes with exact current authenticated bytes. Both small and large reviewed-source read paths remain descriptor-checked. Historical identity/mode/block denials, private0600 metadata, complete guard cadence, trusted-root joins, cost-only50+n/no-refund arithmetic and V1 golden compatibility remain intact. Exactly TWO original source/test paths change; no launcher chmod, broad executable exception, actual namespace/data mutation or new admission. Original causes stay UNKNOWN.
+  </acceptance_criteria>
+  <verify>
+    <automated>pnpm exec vitest run --maxWorkers=1 scripts/lib/v1-38-lean-baseline-continuation.test.ts -t '\[continuation-v2-permissions\]'</automated>
+    <automated>pnpm exec vitest run --maxWorkers=1 scripts/lib/v1-38-lean-baseline-continuation.test.ts</automated>
+    <automated>git diff --check -- scripts/lib/v1-38-lean-baseline-continuation.ts scripts/lib/v1-38-lean-baseline-continuation.test.ts</automated>
+    First command must fail for the legitimate0755 connected inventory case before the production edit and pass after. Keep each command bounded under60s; stop/report an overrun, do not silently invoke heavy history or empirical suites. Full helper file is existing inert compatibility coverage, not live retained verification. Capture complete test counts/skips/status; no claim that all prior six-suite/229-test proof was rerun.
+  </verify>
+  <done>Two-file prospective source repair and connected permission/descriptor/historical/no-refund regressions pass without changing any frozen policy, historical bytes, route or authority. Source task releases ownership only after all its commands close. Plan16/Phase265 remain incomplete and nonadmitting pending the independent gates below and separate fresh-route dependency.</done>
+</task>
+</tasks>
+
+### Bounded independent gates and artifacts
+
+Independent plan check precedes source edits. Source author captures the pre-edit exact two-owned-file strict diagnostic output, runs the focused RED/GREEN and full inert helper commands, then releases the two files. One independent source reviewer checks actual final diff and connected tests; fix only scoped findings and re-review. At the actual reviewed40hex source commit, use a bounded read-only exact-path Git tree metadata check for registered `scripts/run-v1-38-lean-baseline.sh`: require committed regular-file mode100755 corresponding to current0755; selected ordinary registered source/planning must be committed100644/current0644. A blob hash alone does not prove committed executable mode. Record this finite source-mode check in existing GATES; do not infer registration from executable bits, add an arbitrary executable path or extend the production Git adapter/launcher in this two-file task. If exact trusted registration/committed modes cannot be confirmed, stop source acceptance and report the missing evidence, not a broad exception. ROOT validates the affected inert helper suite and compares the SAME strict scope before/after with complete diagnostic identities/text and explicit line-shift mapping, allowing zero NEW diagnostics, not a global-green claim or a presumed13 count. Distinct source verifier, separate from author/reviewer/run operator, checks final source, actual gates, committed/current modes and prohibitions; record actual identities, statuses and commands_closed in the EXISTING GATES under ROOT ownership after closure. Reuse unchanged qualified project/boundary/source-root proofs where applicable; no repeated heavy successful scans, native probes, retained readers, cost/history scans or new proof-carrier tree.
+
+Future ROOT strict command, source-only and scoped identically before/after:
+
+`./node_modules/.bin/tsc --ignoreConfig --noEmit --types node --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --pretty false scripts/lib/v1-38-lean-baseline-continuation.ts scripts/lib/v1-38-lean-baseline-continuation.test.ts`
+
+Artifacts: only the existing helper and test change during P1; this appended existing Plan16 supplies directives. ROOT records actual plan/source-review/validation/distinct-source-verification in existing `265-16-BASELINE-CONTINUATION-GATES-20261012.md`; no new numbered plan, runtime data or source route artifact. Capture final reviewed source identity honestly; any new implementation root is recomputed for the actual changed code by the existing guarded source-gate workflow, not copied from a predecessor. This planner does not edit GATES/STATE/source, commit or push.
+
+### Supplement must_haves and prohibitions
+
+- Truths: legitimate authenticated registered0755 source reaches the actual inventory; planning cannot gain executable/private mode eligibility; prior modes/identity/debit remain binding. Source-only proof does not explain the original suppressed throw or admit execution.
+- Artifacts: the two owned files above with connected regressions; ROOT's existing GATES records actual closed independent review/validation/distinct verification, not synthetic signatures.
+- Key links: exact registered implementation/planning producer → reviewedRow.kind/current commit+root → fresh captured mode → actual committed-source authentication and bounded read → returned inventory with frozen actual mode → historical reconcile/full identity guard → unchanged cost-only/no-refund debit.
+- Prohibitions: no chmod/current artifact rewrite, blanket executable exemption, arbitrary path/transition list, masked special-mode admission, skipped owner/link/root/identity check, guard/cadence weakening, old-mode/debit relaxation, numeric bound/window change, repeated heavy scan, prepare/reader/runtime/history execution, V3 reuse, V4 design/allocation, rules/engine/ABI/public/downstream authority.
+
+<threat_model>
+| Trust boundary | Required protection |
+|---|---|
+| Trusted reviewed registration → local filesystem descriptor | Exact role/mode, owner/regular/single-link/realpath/current commit/raw-root checks before use; tests call the actual consumer. |
+| Historical cost inventory → prospective current inventory | Prior mode equality, immutable identity and allocated-block floor; no refunds/growth counted once. |
+
+| Threat ID | STRIDE | Severity | Disposition | Specific mitigation |
+|---|---|---|---|---|
+| T-265-PERM-01 | Tampering | high | mitigate | P1 role-specific exact0644/0755 source vs0644 planning, include special-bit denial and captured-mode bounded read; preserve historical equality. |
+| T-265-PERM-02 | Spoofing | high | mitigate | Preserve authenticated registered path/current commit/raw-root plus owner/one-link/no-alias; connected wrong-identity tests. |
+| T-265-PERM-03 | Tampering | high | mitigate | Actual inventory→unchanged debit reconciliation tests deny shrink/missing historical rows and count growth once. |
+| T-265-PERM-04 | Information disclosure | medium | mitigate | Synthetic bounded fixtures only; private metadata0600 unchanged; no actual private content/raw errors or retained-history reads. |
+</threat_model>
+
+### Multi-source supplement coverage audit
+
+This audit covers the bounded repair delta; the prior Plan16 phase-wide coverage/dispositions above remain in force. No phase feature is removed or replanned, and no empirical requirement is marked satisfied.
+
+| Source | ID/item | Existing plan coverage / repair link | Status |
+|---|---|---|---|
+| GOAL | Bounded cold current-rules evidence and honest exploratory outcome | Existing Plan16 A→D; P1 removes source eligibility contradiction only | COVERED in existing plan; empirical pending |
+| REQ | LEAG-01/02/03/04/05/07 | Existing Plan16 pipeline/reader tasks unchanged; P1 preserves their authenticated source/cost input | COVERED; not completed |
+| REQ | LEAG-06/08; LEAG-09 | Existing approved deferred original diversity/robust gates and superseded single automated round dispositions unchanged | EXCLUDED from repair; no new deferral |
+| RESEARCH | Registered0755 contradiction; finite strict descriptors/current roots/private data | Latest debug research finding → P1 actual inventory/read tests and preserved0600 boundary | COVERED |
+| RESEARCH | Bounded private offline tier; no alternate engine/runtime/execution | Phase265 responsibility map/validation → two host helper/test files only; no live calls | COVERED / unchanged |
+| CONTEXT | D-01/D-02/D-05/D-22/D-25/D-27/D-28 | P1 exact role/commit/root/mode/identity plus historical/no-refund tests; continuous window/no V3 reuse/no downstream authority | COVERED |
+| CONTEXT | Other locked decisions D-03/04/06–21/23/24/26 | Prior complete Plan16 coverage/dispositions remain unchanged; P1 neither changes game/scientific behavior nor implements deferred ideas | COVERED by existing plans, unchanged |
+
+Planning-author closure: append-only change to this existing Markdown via apply_patch; no source/test execution, metadata diagnostic, preparation, reader, provider/Strategy/Match, record creation, commit or push by this lane. All planning inspection commands CLOSED; source/ROOT gates above are future instructions, not results. Ownership of this Markdown released to ROOT after final append check.
