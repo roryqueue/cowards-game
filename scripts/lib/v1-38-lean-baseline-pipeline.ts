@@ -11,6 +11,8 @@ import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtu
 import type { runLeanBaselineMatch } from "./v1-38-lean-baseline-match.js"
 import { inspectLeanSealMetadata } from "./v1-38-lean-seal-metadata.js"
 import { validateLeanColdReuse, readLeanOwnedReuse, type LeanOwnedReuseAdmission, type LeanOwnedReuseScope, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
+import { validateLeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import type { LeanResponseNodeReceipt, LeanResponseWork } from "../../packages/strategy-lab/src/league/lean-training.js"
 
 type Observed = Awaited<ReturnType<typeof runLeanBaselineMatch>>
 export interface LeanBaselineObservedCell extends Omit<Observed, "replayFrames"> { readonly ordinal: number; readonly slotRoot: LabRoot; readonly bottomRoot: LabRoot; readonly topRoot: LabRoot }
@@ -53,6 +55,27 @@ export interface LeanCurrentPipelineInput {
   dispatch: (slot: LeanSlot, bottom: LeanBaselineSource, top: LeanBaselineSource, observedRole?: string) => Promise<LeanBaselineObservedCell>
 }
 export const executeLeanCurrentPipeline = async (input: LeanCurrentPipelineInput) => executeCurrentPipeline(input)
+export type LeanBaselineContinuationPipelineInput = Omit<LeanCurrentPipelineInput, "allocation"> & { allocation: LeanBaselineContinuationAllocation }
+export const executeLeanBaselineContinuationPipeline = async (input: LeanBaselineContinuationPipelineInput) => {
+  input.checkpoint()
+  const allocation = validateLeanBaselineContinuationAllocation(input.allocation)
+  const result = await executeCurrentPipeline({ ...input, allocation }, undefined, true)
+  const { root: _root, ...content } = result
+  const body = { ...content, unusedOrdinals: allocation.slots.slice(result.cells.length).map(slot => slot.ordinal), holdoutReservations: allocation.holdoutReservations }
+  input.checkpoint()
+  return { ...body, root: labRoot("lean-baseline-continuation-pipeline-v1", body) }
+}
+/** Counts executed operations from retained inputs/receipts; grants are a
+ * separate vector. A node receipt can represent zero or many expansions. */
+export const deriveLeanContinuationWorkAccounting = (corpus: ReturnType<typeof buildLeanColdCorpus>, proposals: ReturnType<typeof buildLeanInitialProposals>, work: LeanResponseWork, receipts: readonly LeanResponseNodeReceipt[]) => {
+  const tactical = proposals.tactical[0]?.inputRoots.length ?? -1
+  const teacher = corpus.teacherSearchReceipts.reduce((sum, receipt) => sum + receipt.nodesVisited, 0)
+  const examples = proposals.distillationExampleRoots.length
+  const actualResponse = receipts.reduce((sum, row) => sum + row.actualNodes, 0)
+  if (tactical !== 64 || corpus.tacticalInputs.length !== tactical || teacher !== 64 || proposals.teacherSearchNodeRoots.length !== teacher || examples !== 64 || receipts.length !== 8 || receipts.some((row, ordinal) => row.ordinal !== ordinal || !Number.isSafeInteger(row.allocation) || !Number.isSafeInteger(row.actualNodes) || row.actualNodes < 0 || row.actualNodes > row.allocation || row.nodeRoot !== labRoot("lean-response-planner-node-v1", { ordinal, trainingMatchRoot: row.trainingMatchRoot, allocation: row.allocation, actualNodes: row.actualNodes, inputRoot: row.inputRoot, output: row.output })) || receipts.reduce((sum, row) => sum + row.allocation, 0) !== 128 || actualResponse !== work.actualAssignmentNodes || work.plannerNodeRoots.some((root, n) => root !== receipts[n]?.nodeRoot)) return fail("REALIZED_WORK")
+  const body = { schemaVersion: "lean-baseline-continuation-work-v1", allocated: { tacticalEvaluations: 64, teacherNodes: 64, distillationExamples: 64, responseNodes: 128, total: 320 }, actual: { tacticalEvaluations: tactical, teacherNodes: teacher, distillationExamples: examples, responseNodes: actualResponse, total: tactical + teacher + examples + actualResponse }, unused: { tacticalEvaluations: 0, teacherNodes: 0, distillationExamples: 0, responseNodes: 128 - actualResponse, total: 128 - actualResponse }, evidence: { corpusRoot: corpus.corpusRoot, proposalRoot: proposals.root, teacherReceiptRoots: proposals.teacherReceiptRoots, distillationExampleRoots: proposals.distillationExampleRoots, responseNodeRoots: receipts.map(row => row.nodeRoot), responseWorkRoot: labRoot("lean-training-decision-v1", work) } }
+  return { ...body, root: labRoot(body.schemaVersion, body) }
+}
 /** Explicit reuse only: admission precedes retention, source publication and dispatch.
  * The original entry has no fallback or configurable reuse authority. */
 export const executeLeanReusedCurrentPipeline = async (input: LeanCurrentPipelineInput & { reuse: LeanColdReuse }) => {
@@ -66,8 +89,9 @@ export const executeLeanOwnedReusedCurrentPipeline = async (input: LeanCurrentPi
   if (input.allocation.root !== input.reuseScope.allocationRoot || input.allocation.sourceRoot !== input.reuseScope.sourceRoot || input.allocation.seed !== reuse.grant.seed || input.allocation.coldRoot !== reuse.grant.coldRoot || !("reuseGrantRoot" in input.allocation) || input.allocation.reuseGrantRoot !== reuse.grant.root) return fail("REUSE_ALLOCATION")
   return executeCurrentPipeline(input, reuse)
 }
-const executeCurrentPipeline = async (input: LeanCurrentPipelineInput, reuse?: LeanColdReuse) => {
+const executeCurrentPipeline = async (input: LeanCurrentPipelineInput | LeanBaselineContinuationPipelineInput, reuse?: LeanColdReuse, continuation = false) => {
   const allocation = input.allocation
+  if (continuation !== (allocation.schemaVersion === "lean-baseline-continuation-allocation-v1") || continuation && reuse !== undefined) return fail("CONTINUATION_NAMESPACE")
   if (allocation.coldRoot !== leanColdProcedureRoot(allocation.seed) || allocation.slots.length !== 36) return fail("ALLOCATION")
   const sources = new Map<string, LeanBaselineSource>(), cells: LeanBaselineObservedCell[] = []
   // Metadata inventory and an explicit deferral precede all learned outputs;
@@ -143,10 +167,14 @@ const executeCurrentPipeline = async (input: LeanCurrentPipelineInput, reuse?: L
     responseTraining.push(cell)
   }
   if (responseTraining.some(cell => !cell.strategyInputs.length)) return partial("response_observation_missing", initial)
-  const trained = trainLeanResponse({ ...common, initial, responseExamples: observedExamples(responseTraining, 8), responsePlannerNodes: responseTraining.map(cell => ({ input: cell.strategyInputs[0]!, trainingMatchRoot: cell.compact.executionRoot })), targetRoots: { mixture: labRoot("lean-frozen-initial-mixture-v1", initialAnalysis.mixture), strongestPure: strongest.sourceRoot } }, work => input.retainArtifact("response-work.json", work), reuse ? receipts => input.retainArtifact("response-node-receipts.json", receipts) : undefined)
+  let responseWork: LeanResponseWork | undefined, responseReceipts: readonly LeanResponseNodeReceipt[] | undefined
+  input.checkpoint()
+  const trained = trainLeanResponse({ ...common, initial, responseExamples: observedExamples(responseTraining, 8), responsePlannerNodes: responseTraining.map(cell => ({ input: cell.strategyInputs[0]!, trainingMatchRoot: cell.compact.executionRoot })), targetRoots: { mixture: labRoot("lean-frozen-initial-mixture-v1", initialAnalysis.mixture), strongestPure: strongest.sourceRoot } }, work => { responseWork = work; input.retainArtifact("response-work.json", work) }, reuse || continuation ? receipts => { responseReceipts = receipts; input.retainArtifact("response-node-receipts.json", receipts) } : undefined)
+  input.checkpoint()
+  if (continuation) input.retainArtifact("work-accounting.json", deriveLeanContinuationWorkAccounting(corpus, proposals, responseWork ?? fail("RESPONSE_WORK"), responseReceipts ?? fail("RESPONSE_RECEIPTS")))
   input.retainArtifact("response-training.json", trained)
   const responseCandidate = trained.candidates.find(c => c.mechanism === "response") ?? fail("RESPONSE")
-  if (responseCandidate.disposition === "clone_rejected" || responseCandidate.disposition === "invalid_rejected" || responseCandidate.disposition === "weak_preserved") return partial("response_attempt_rejected_unused_pairings", trained)
+  if (responseCandidate.disposition === "clone_rejected" || responseCandidate.disposition === "invalid_rejected" || !continuation && responseCandidate.disposition === "weak_preserved") return partial("response_attempt_rejected_unused_pairings", trained)
   const response = freeze("final-response", responseCandidate.source)
   const responseMatrix: LeanBaselineObservedCell[] = []
   for (let ordinal = 20; ordinal < 28; ordinal++) {

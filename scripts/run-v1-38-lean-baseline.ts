@@ -1,8 +1,8 @@
 /** Prospective current-only private baseline entry. Importing this module is inert. */
-import { constants, closeSync, fsyncSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync, statfsSync } from "node:fs"
+import { constants, closeSync, fsyncSync, fchmodSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync, statfsSync } from "node:fs"
 import { fork, execFileSync } from "node:child_process"
 import { randomBytes } from "node:crypto"
-import { join, resolve } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { isLeanPostV13FivePairMode, isLeanPreparationContinuationMode, isLeanSupervisorRetestMode, isLeanResourceWindowModeV15, leanCapsForAllocation, leanSupervisorAllocationMode, type AnyLeanAllocation } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
@@ -17,6 +17,12 @@ import { executeLeanCurrentPipeline, leanColdProcedureRoot, compactLeanBaselineC
 import { publishLeanBaselineSource } from "./lib/v1-38-lean-baseline-source.js"
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { isLeanChildFailureReceipt, isLeanChildFailureReceiptV7, publishChildTerminalAfterOptionalReceipt, resolveLeanChildCliTerminal, type LeanChildFailureReceipt, type LeanChildFailureReceiptV7 } from "./lib/v1-38-lean-child-cli-terminal.js"
+import { createLeanBaselineContinuationAllocation, validateLeanBaselineContinuationAllocation, LEAN_BASELINE_CONTINUATION_PATHS as CONTINUATION, LEAN_BASELINE_CONTINUATION_WINDOW as CONTINUATION_WINDOW, measureLeanPhysicalBytes, type LeanBaselineContinuationAllocation } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { authenticateLeanBaselineContinuationCarry, assertLeanBaselineContinuationFrontier, assertLeanContinuationDirectParent, readLeanContinuationBytes, readLeanContinuationJson, type LeanContinuationInventoryRow } from "./lib/v1-38-lean-baseline-continuation.js"
+import { executeLeanBaselineContinuationPipeline } from "./lib/v1-38-lean-baseline-pipeline.js"
+import { publishLeanBaselineContinuationSource } from "./lib/v1-38-lean-baseline-source.js"
+import { runLeanBaselineContinuationMatch } from "./lib/v1-38-lean-baseline-match.js"
+import { readLeanBaselineContinuationGit } from "./lib/v1-38-lean-container-match-session.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_${code}`) }
 const STORE = resolve(LEAN_BASELINE_STORE)
@@ -177,13 +183,14 @@ export const deriveLeanBaselineCandidateRoots = (coldRoot: LabRoot): readonly [L
 }
 export interface LeanBaselineRequest { schemaVersion: "lean-current-baseline-request-v1"; seed: string; reviewPath: string; reviewRoot: LabRoot; sourceRoot: LabRoot; planRoot: LabRoot; coldRoot: LabRoot; candidateRoots: readonly LabRoot[]; requestRoots: readonly LabRoot[] }
 export const parseLeanBaselineCommand = (args: readonly string[]) => {
-  if (args.length !== 3 || !["prepare-current", "run-current", "verify-retained"].includes(args[0]!) || args[1] !== "--request" || !args[2] || args[2].startsWith("--")) return fail("ARGUMENTS")
-  return { mode: args[0] as "prepare-current" | "run-current" | "verify-retained", request: args[2]! }
+  if (args.length !== 3 || !["prepare-current", "run-current", "verify-retained", "prepare-continuation", "run-continuation", "verify-continuation"].includes(args[0]!) || args[1] !== "--request" || !args[2] || args[2].startsWith("--") || args[0]!.endsWith("-continuation") && args[2] !== CONTINUATION.request) return fail("ARGUMENTS")
+  return { mode: args[0] as "prepare-current" | "run-current" | "verify-retained" | "prepare-continuation" | "run-continuation" | "verify-continuation", request: args[2]! }
 }
 export const assertLeanBaselineWritableScope = (scope: { cacheDisabled?: string; compileDisabled?: string; nodeOptions?: string; compileCache?: string; warningRedirect?: string; coverage?: string; tempDirectory?: string }, coreSoftLimit: string): void => {
   if (scope.cacheDisabled !== "1" || scope.compileDisabled !== "1" || scope.nodeOptions !== undefined || scope.compileCache !== undefined || scope.warningRedirect !== undefined || scope.coverage !== undefined || scope.tempDirectory !== TEMP || coreSoftLimit.trim() !== "0") return fail("WRITABLE_SCOPE")
 }
-const requireScope = () => assertLeanBaselineWritableScope({ cacheDisabled: process.env.TSX_DISABLE_CACHE, compileDisabled: process.env.NODE_DISABLE_COMPILE_CACHE, nodeOptions: process.env.NODE_OPTIONS, compileCache: process.env.NODE_COMPILE_CACHE, warningRedirect: process.env.NODE_REDIRECT_WARNINGS, coverage: process.env.NODE_V8_COVERAGE, tempDirectory: process.env.TMPDIR }, execFileSync("sh", ["-c", "ulimit -c"], { encoding: "utf8", timeout: 1000, maxBuffer: 128 }))
+const coreSoftLimit = () => execFileSync("sh", ["-c", "ulimit -c"], { encoding: "utf8", timeout: 1000, maxBuffer: 128 })
+const requireScope = () => assertLeanBaselineWritableScope({ cacheDisabled: process.env.TSX_DISABLE_CACHE, compileDisabled: process.env.NODE_DISABLE_COMPILE_CACHE, nodeOptions: process.env.NODE_OPTIONS, compileCache: process.env.NODE_COMPILE_CACHE, warningRedirect: process.env.NODE_REDIRECT_WARNINGS, coverage: process.env.NODE_V8_COVERAGE, tempDirectory: process.env.TMPDIR }, coreSoftLimit())
 const head = () => execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 128 }).trim()
 const safeBytes = (path: string, max = 262144) => readLeanSafeFile(path, max)
 const exact = (a: unknown, b: unknown) => labRoot("lean-baseline-exact-join-v1", a) === labRoot("lean-baseline-exact-join-v1", b)
@@ -485,8 +492,183 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     if (!entered && options.onPreEntryCleanup && child.pid && (child.exitCode !== null || child.signalCode !== null)) options.onPreEntryCleanup({ childPid: child.pid, exitCode: child.exitCode, signal: child.signalCode })
   }
 }
+const CONTINUATION_PHASE = ".planning/phases/265-serious-current-rules-league-and-development-red-team/"
+export const LEAN_BASELINE_CONTINUATION_OWNED_PATHS = Object.freeze([
+  "packages/strategy-lab/src/league/lean-experiment.ts", "scripts/lib/v1-38-lean-baseline-continuation.ts", "scripts/lib/v1-38-lean-baseline-continuation.test.ts",
+  "scripts/lib/v1-38-lean-experiment-authority.ts", "scripts/lib/v1-38-lean-baseline-authority.test.ts", "scripts/lib/v1-38-lean-baseline-match.ts", "scripts/lib/v1-38-lean-baseline-match.test.ts",
+  "scripts/run-v1-38-lean-baseline.ts", "scripts/lib/v1-38-lean-baseline-pipeline.ts", "scripts/lib/v1-38-lean-baseline-source.ts", "scripts/lib/v1-38-lean-baseline-pipeline.test.ts",
+  "scripts/lib/v1-38-lean-baseline-retained.ts", "scripts/lib/v1-38-lean-baseline-retained.test.ts", "scripts/run-v1-38-lean-baseline.test.ts", "scripts/lib/v1-38-lean-container-match-session.ts",
+])
+export const LEAN_BASELINE_CONTINUATION_PLANNING_PATHS = Object.freeze([
+  ".planning/PROJECT.md", ".planning/REQUIREMENTS.md", ".planning/ROADMAP.md", ".planning/STATE.md", ".planning/research/SUMMARY.md",
+  ...["265-16-PLAN.md", "265-15-PLAN.md", "265-15-PILOT-RETAINED-VERIFICATION-v2.md", "265-16-BASELINE-CONTINUATION-APPROVAL-20261012.md", "265-16-BASELINE-CONTINUATION-RESEARCH-20261012.md", "265-16-BASELINE-CONTINUATION-PLAN-20261012.md", "265-16-BASELINE-CONTINUATION-GATES-20261012.md"].map(name => `${CONTINUATION_PHASE}${name}`),
+  ".planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-EXPERIMENT-20261003.md",
+  ".planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-REMAINING-PLAN-20261003.md",
+])
+export const leanBaselineContinuationSourceManifest = () => {
+  const source = new Map(leanBaselineSourceManifest().entries.filter(row => /^(?:packages|scripts)\//u.test(row.path) || ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.json", "tsconfig.base.json"].includes(row.path)).map(row => [row.path, row]))
+  for (const path of [...LEAN_BASELINE_CONTINUATION_OWNED_PATHS, "packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"]) {
+    source.set(path, { path, root: leanBytesRoot(readLeanContinuationBytes(path, 4194304)) })
+  }
+  const implementationEntries = [...source.values()].sort((a, b) => a.path.localeCompare(b.path))
+  const planningEntries = LEAN_BASELINE_CONTINUATION_PLANNING_PATHS.map(path => ({ path, root: leanBytesRoot(readLeanContinuationBytes(path, 4194304)) })).sort((a, b) => a.path.localeCompare(b.path))
+  const entries = [...implementationEntries, ...planningEntries].sort((a, b) => a.path.localeCompare(b.path))
+  if (entries.length > 1024 || new Set(entries.map(e => e.path)).size !== entries.length || leanCanonicalBytes(entries).length > 4194304) return fail("CONTINUATION_MANIFEST_BOUND")
+  return { entries, implementationEntries, planningEntries, root: labRoot("lean-baseline-continuation-implementation-v1", implementationEntries), planningRoot: labRoot("lean-baseline-continuation-planning-v1", planningEntries), manifestRoot: labRoot("lean-baseline-continuation-manifest-v1", entries) }
+}
+export interface LeanBaselineContinuationRequest {
+  schemaVersion: "lean-baseline-continuation-request-v1"; seed: string; sourceHead: string; sourceRoot: LabRoot; planningRoot: LabRoot; planRoot: LabRoot; reviewRoot: LabRoot; coldRoot: LabRoot
+  candidateRoots: readonly LabRoot[]; requestRoots: readonly LabRoot[]; offlineOverheadMs: number; sourceAuthor: string; runOperator: string; readerOperator: string
+}
+export const readLeanBaselineContinuationRequest = (path: string): LeanBaselineContinuationRequest => {
+  if (path !== CONTINUATION.request) return fail("CONTINUATION_REQUEST_PATH")
+  const r = readLeanContinuationJson(path, 65536, 0o600) as unknown as LeanBaselineContinuationRequest
+  const manifest = leanBaselineContinuationSourceManifest()
+  if (!exactLabKeys(r, ["schemaVersion", "seed", "sourceHead", "sourceRoot", "planningRoot", "planRoot", "reviewRoot", "coldRoot", "candidateRoots", "requestRoots", "offlineOverheadMs", "sourceAuthor", "runOperator", "readerOperator"]) || r.schemaVersion !== "lean-baseline-continuation-request-v1" || !/^[a-f0-9]{40}$/u.test(r.sourceHead) || r.sourceRoot !== manifest.root || r.planningRoot !== manifest.planningRoot || r.planRoot !== manifest.planningEntries.find(row => row.path.endsWith("265-16-BASELINE-CONTINUATION-PLAN-20261012.md"))?.root || r.reviewRoot !== manifest.planningEntries.find(row => row.path === CONTINUATION.gates)?.root || r.coldRoot !== leanColdProcedureRoot(r.seed) || !exact(r.candidateRoots, deriveLeanBaselineCandidateRoots(r.coldRoot)) || !exact(r.requestRoots, deriveLeanBaselineRequestRoots({ seed: r.seed, coldRoot: r.coldRoot, planRoot: r.planRoot, sourceRoot: r.sourceRoot })) || !Number.isSafeInteger(r.offlineOverheadMs) || r.offlineOverheadMs < 1 || r.offlineOverheadMs > 5340000 || [r.sourceAuthor, r.runOperator, r.readerOperator].some(id => typeof id !== "string" || !/^[A-Za-z0-9_./:-]{1,120}$/u.test(id)) || new Set([r.sourceAuthor, r.runOperator, r.readerOperator]).size !== 3) return fail("CONTINUATION_REQUEST")
+  const gates = readLeanContinuationBytes(CONTINUATION.gates, 262144).toString("utf8")
+  const field = (name: string) => gates.match(new RegExp(`^${name}: ([^\\n]+)$`, "mu"))?.[1]
+  if (["plan_check", "source_review", "root_validation", "source_verification"].some(name => field(name) !== "passed") || field("commands_closed") !== "true" || field("source_root") !== r.sourceRoot || field("source_author") !== r.sourceAuthor || field("run_operator") !== r.runOperator || field("reader_operator") !== r.readerOperator || !field("source_reviewer") || !field("source_verifier") || new Set([r.sourceAuthor, field("source_reviewer"), field("source_verifier")]).size !== 3) return fail("CONTINUATION_GATES")
+  return r
+}
+const continuationHead = () => readLeanBaselineContinuationGit(["rev-parse", "HEAD"]).toString("utf8").trim()
+const continuationWindowGuard = (remaining: number, overhead: number) => {
+  const now = Date.now()
+  if (now < CONTINUATION_WINDOW.anchorMs || now + remaining * 600000 + CONTINUATION_WINDOW.reserveMs + overhead > CONTINUATION_WINDOW.deadlineMs) return fail("CONTINUATION_WINDOW")
+}
+export const assertLeanBaselineContinuationScope = (): void => {
+  if (process.env.TSX_DISABLE_CACHE !== "1" || process.env.NODE_DISABLE_COMPILE_CACHE !== "1" || ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"].some(key => process.env[key] !== undefined) || process.env.TMPDIR !== resolve(CONTINUATION.temp) || !process.execArgv.some((arg, i, args) => arg === "--import" && args[i + 1] === "tsx" || arg === "--import=tsx") || process.execArgv.some(arg => /(?:loader|inspect|require)/u.test(arg)) || coreSoftLimit().trim() !== "0") return fail("CONTINUATION_SCOPE")
+  const stat = lstatSync(resolve(CONTINUATION.temp))
+  if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || (stat.mode & 0o777) !== 0o700 || realpathSync(resolve(CONTINUATION.temp)) !== resolve(CONTINUATION.temp)) return fail("CONTINUATION_SCRATCH")
+}
+export const writeLeanContinuationArtifact = (ledger: LeanExperimentLedger, name: string, value: unknown, maximum: number): void => {
+  // Estimate before allocating canonical serialization buffers. Recursive depth
+  // and byte bounds deny hostile structures rather than truncating evidence.
+  let size = 0
+  const measure = (v: unknown, depth: number): void => { if (depth > 96) return fail("CONTINUATION_SERIALIZATION"); size += typeof v === "string" ? Buffer.byteLength(v) * 6 + 2 : 32; if (size > maximum * 6) return fail("CONTINUATION_SERIALIZATION"); if (Array.isArray(v)) for (const item of v) measure(item, depth + 1); else if (v && typeof v === "object") for (const [key, item] of Object.entries(v)) { size += Buffer.byteLength(key) * 6 + 4; measure(item, depth + 1) } }
+  measure(value, 0)
+  if (!/^[A-Za-z0-9_.-]+$/u.test(name) || maximum > 8388608) return fail("CONTINUATION_ARTIFACT")
+  assertLeanPublicationCapacity(ledger, Math.min(size, maximum) * 3)
+  const bytes = leanCanonicalBytes(value)
+  if (bytes.length > maximum) return fail("CONTINUATION_ARTIFACT_SIZE")
+  const path = join(ledger.directory, name), fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600)
+  try { writeLeanAll(fd, bytes); fsyncSync(fd) } finally { closeSync(fd) }
+  const parent = openSync(ledger.directory, constants.O_RDONLY | constants.O_NOFOLLOW)
+  try { fsyncSync(parent) } finally { closeSync(parent) }
+}
+/** Prepare is data-only and is never called by source tests. */
+export const prepareLeanBaselineContinuation = (requestPath: string) => {
+  assertLeanBaselineContinuationScope(); continuationWindowGuard(36, 1)
+  const request = readLeanBaselineContinuationRequest(requestPath), manifest = leanBaselineContinuationSourceManifest()
+  const guard = () => { continuationWindowGuard(36, request.offlineOverheadMs); if (continuationHead() !== request.sourceHead || leanBaselineContinuationSourceManifest().manifestRoot !== manifest.manifestRoot || leanBytesRoot(readLeanContinuationBytes(requestPath, 65536, 0o600)) !== requestRoot) return fail("CONTINUATION_HOLD") }
+  const requestRoot = leanBytesRoot(readLeanContinuationBytes(requestPath, 65536, 0o600))
+  guard()
+  for (const row of manifest.entries) if (leanBytesRoot(readLeanBaselineContinuationGit(["show", `${request.sourceHead}:${row.path}`])) !== row.root) return fail("CONTINUATION_UNCOMMITTED_SOURCE")
+  const carried = authenticateLeanBaselineContinuationCarry(readLeanBaselineContinuationGit, manifest.entries.map(row => row.path), () => continuationWindowGuard(36, request.offlineOverheadMs))
+  guard()
+  const allocation = createLeanBaselineContinuationAllocation({ sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, sourceHead: request.sourceHead, planningRoot: request.planningRoot, requestBytesRoot: requestRoot, offlineOverheadMs: request.offlineOverheadMs, predecessor: carried.carry })
+  const fs = statfsSync(resolve(CONTINUATION.temp), { bigint: true }), freeBytes = Number(fs.bavail * fs.bsize), usage = process.memoryUsage()
+  assertLeanBaselineContinuationFrontier(allocation, { nowMs: Date.now(), monotonicElapsedMs: 0, remainingSlots: 36, charged: 43, retainedBytes: carried.carry.allocatedDiskBytes, scratchBytes: measureLeanPhysicalBytes(CONTINUATION.temp), parentRssBytes: usage.rss, childRssBytes: 0, arrayBuffersBytes: usage.arrayBuffers, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes, live: true })
+  guard()
+  const ledger = createLeanLedger(CONTINUATION.store, allocation)
+  writeLeanContinuationArtifact(ledger, "carry.json", carried, 4194304)
+  writeLeanContinuationArtifact(ledger, "source-manifest.json", manifest, 4194304)
+  const fd = openSync(CONTINUATION.allocation, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o644)
+  try { fchmodSync(fd, 0o644); writeLeanAll(fd, leanCanonicalBytes(allocation)); fsyncSync(fd) } finally { closeSync(fd) }
+  const parent = openSync(dirname(CONTINUATION.allocation), constants.O_RDONLY | constants.O_NOFOLLOW)
+  try { fsyncSync(parent) } finally { closeSync(parent) }
+  guard()
+  return { schemaVersion: "lean-baseline-continuation-prepared-v1", allocationRoot: allocation.root, allocationPath: CONTINUATION.allocation, store: CONTINUATION.store, sourceHead: request.sourceHead, charged: 43, plannedCurrentCells: 36, holdoutReservations: allocation.holdoutReservations, issued: false }
+}
+
+/** Pins every source/test/planning byte and survivor stat. Full streaming carry
+ * authentication occurs at admission; later claims recheck immutable identity. */
+export const openLeanBaselineContinuationContext = (requestPath: string, reader = false) => {
+  assertLeanBaselineContinuationScope(); continuationWindowGuard(reader ? 0 : 36, 1)
+  const request = readLeanBaselineContinuationRequest(requestPath), ledger = openLeanLedger(CONTINUATION.store), allocation = validateLeanBaselineContinuationAllocation(ledger.allocation)
+  const manifest = leanBaselineContinuationSourceManifest(), fixedHead = continuationHead(), fixedRequest = leanBytesRoot(readLeanContinuationBytes(requestPath, 65536, 0o600))
+  if (allocation.sourceRoot !== request.sourceRoot || allocation.planningRoot !== request.planningRoot || allocation.sourceHead !== request.sourceHead || allocation.requestBytesRoot !== fixedRequest || allocation.reviewRoot !== request.reviewRoot || allocation.coldRoot !== request.coldRoot || allocation.seed !== request.seed || allocation.offlineOverheadMs !== request.offlineOverheadMs || !exact(allocation.requestRoots, request.requestRoots) || !exact(readLeanContinuationJson(join(ledger.directory, "source-manifest.json"), 4194304, 0o600), manifest)) return fail("CONTINUATION_ALLOCATION_JOIN")
+  assertLeanContinuationDirectParent(fixedHead, allocation.sourceHead, readLeanBaselineContinuationGit(["rev-list", "--parents", "-n", "1", fixedHead]).toString("utf8").trim().split(/\s+/u), leanCanonicalBytes(allocation), readLeanBaselineContinuationGit(["show", `${fixedHead}:${CONTINUATION.allocation}`]))
+  if (!readLeanContinuationBytes(CONTINUATION.allocation, 262144).equals(Buffer.from(leanCanonicalBytes(allocation)))) return fail("CONTINUATION_ALLOCATION_JOIN")
+  const carry = readLeanContinuationJson(join(ledger.directory, "carry.json"), 4194304, 0o600)
+  if (!exact(carry.carry, allocation.predecessor)) return fail("CONTINUATION_CARRY")
+  const began = process.hrtime.bigint(), wallBegan = Date.now()
+  const pinned = manifest.entries.map(row => ({ ...row, stat: lstatSync(resolve(row.path)) }))
+  const survivors = carry.inventory as LeanContinuationInventoryRow[]
+  if (!Array.isArray(survivors) || survivors.length > 4096 || labRoot("lean-baseline-continuation-inventory-v1", survivors) !== allocation.predecessor.inventoryRoot || labRoot("lean-baseline-continuation-custody-v1", carry.custody) !== allocation.predecessor.custodyRoot) return fail("CONTINUATION_CARRY")
+  let closure = reader, expectedLedger: LabRoot | undefined, active = false
+  const guard = (additionalBytes = 0) => {
+    const nowMs = Date.now()
+    if (nowMs < wallBegan || continuationHead() !== fixedHead || leanBytesRoot(readLeanContinuationBytes(requestPath, 65536, 0o600)) !== fixedRequest) return fail("CONTINUATION_HOLD")
+    for (const row of pinned) { const s = lstatSync(resolve(row.path)); if (!s.isFile() || s.nlink !== 1 || s.dev !== row.stat.dev || s.ino !== row.stat.ino || s.size !== row.stat.size || s.mtimeMs !== row.stat.mtimeMs || s.ctimeMs !== row.stat.ctimeMs) return fail("CONTINUATION_PIN_CHANGED") }
+    for (const row of survivors) { const s = lstatSync(resolve(row.path)); if (s.dev !== row.dev || s.ino !== row.ino || s.blocks * 512 !== row.allocatedBytes || s.size !== row.bytes || s.mtimeMs !== row.mtimeMs || s.ctimeMs !== row.ctimeMs || s.isSymbolicLink() || s.isFile() && s.nlink !== 1) return fail("CONTINUATION_SURVIVOR_CHANGED") }
+    const journal = readLeanContinuationBytes(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600)
+    if (expectedLedger && leanBytesRoot(journal) !== expectedLedger) return fail("CONTINUATION_LEDGER_CHANGED")
+    const state = readLeanLedger(ledger), usage = process.memoryUsage(), fs = statfsSync(ledger.directory, { bigint: true })
+    const child = process.connected ? process.pid : 0, parent = process.connected ? process.ppid : process.pid
+    if (child && process.ppid !== readLeanChildEntry(ledger).parentPid) return fail("CONTINUATION_PARENT")
+    assertLeanBaselineContinuationFrontier(allocation, { nowMs, monotonicElapsedMs: wallBegan - CONTINUATION_WINDOW.anchorMs + Number((process.hrtime.bigint() - began) / 1000000n), remainingSlots: closure ? 0 : 36 - state.charges.size + (active ? 1 : 0), charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger), scratchBytes: measureLeanPhysicalBytes(CONTINUATION.temp) + additionalBytes, parentRssBytes: child ? rssOf(parent) : usage.rss, childRssBytes: child ? usage.rss : 0, arrayBuffersBytes: usage.arrayBuffers + additionalBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(fs.bavail * fs.bsize), live: !child || process.connected === true })
+  }
+  guard()
+  // Fresh hashes and canonical custody on both sides of the expensive read.
+  const authenticated = authenticateLeanBaselineContinuationCarry(readLeanBaselineContinuationGit, manifest.entries.map(row => row.path), () => continuationWindowGuard(reader ? 0 : 36, request.offlineOverheadMs))
+  if (!exact(authenticated, carry)) return fail("CONTINUATION_CARRY_CHANGED")
+  for (const row of manifest.entries) if (leanBytesRoot(readLeanBaselineContinuationGit(["show", `${fixedHead}:${row.path}`])) !== row.root) return fail("CONTINUATION_PIN_UNCOMMITTED")
+  guard()
+  return { request, ledger, allocation, manifest, fixedHead, guard, startCell() { active = true; expectedLedger = leanBytesRoot(readLeanContinuationBytes(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600)); guard() }, finishCell() { active = false; expectedLedger = undefined }, closeRun() { active = false; expectedLedger = undefined; closure = true } }
+}
+export const runLeanBaselineContinuation = async (requestPath: string) => {
+  const c = openLeanBaselineContinuationContext(requestPath)
+  c.guard()
+  return runLeanBoundedParent({ ledger: c.ledger, requestPath, allocationPath: CONTINUATION.allocation, store: CONTINUATION.store, sourceRoot: c.allocation.sourceRoot, manifestRoot: () => { if (leanBaselineContinuationSourceManifest().planningRoot !== c.allocation.planningRoot) return fail("CONTINUATION_PLANNING_HOLD"); return leanBaselineContinuationSourceManifest().root }, childMode: "child-continuation", prospectiveStart: { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, beforeRelease: c.guard, terminalReserveMs: CONTINUATION_WINDOW.reserveMs, supervisorObservation: true })
+}
+export const runLeanBaselineContinuationChild = async (requestPath: string) => {
+  assertLeanBaselineContinuationScope()
+  if (requestPath !== CONTINUATION.request || !process.send || !process.connected) return fail("CONTINUATION_CHILD_PARENT")
+  const token = await new Promise<string>((accept, reject) => { const timer = setTimeout(() => reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")), 30000); process.once("disconnect", () => { clearTimeout(timer); reject(new TypeError("LEAN_CONTINUATION_PARENT_LOST")) }); process.once("message", value => { clearTimeout(timer); if (!exactLabKeys(value, ["release"]) || typeof value.release !== "string") { reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")); return }; accept(value.release) }); process.send!({ ready: process.pid }) })
+  const ledger = openLeanLedger(CONTINUATION.store), entry = readLeanChildEntry(ledger)
+  admitLeanChildRelease(entry, token, process.pid, process.ppid)
+  const c = openLeanBaselineContinuationContext(requestPath), parent = createLeanParentObservationGuard(entry.parentPid)
+  assertLeanEntryBinding(entry, { head: c.fixedHead, sourceRoot: c.allocation.sourceRoot, requestBytesRoot: c.allocation.requestBytesRoot, allocationRoot: c.allocation.root, parentPid: process.ppid, childPid: process.pid, intervalStartMs: readLeanTimeAccounting(ledger).starts.get("pilot-entry") ?? -1 })
+  const disconnect = () => { parent.disconnect(); process.exit(1) }
+  process.once("disconnect", disconnect)
+  const checkpoint = (additionalBytes = 0) => { parent.assert(); c.guard(additionalBytes); parent.assert() }
+  let pipeline: unknown = null, failed = false
+  try {
+    pipeline = await executeLeanBaselineContinuationPipeline({ allocation: c.allocation, checkpoint, freezeSource: source => publishLeanBaselineContinuationSource(ledger, source, checkpoint), retainArtifact(name, value) { if (!/^(?:seal-metadata|cold-corpus|initial-proposals|initial-selection|initial-training|initial-analysis|response-work|response-node-receipts|response-training|work-accounting|current-analysis)\.json$/u.test(name)) return fail("CONTINUATION_ARTIFACT_NAME"); checkpoint(); writeLeanContinuationArtifact(ledger, name, value, 8388608); checkpoint() }, async dispatch(slot, bottom, top, observedRole) {
+      checkpoint()
+      const before = readLeanContinuationBytes(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600)
+      const pair = leanBaselinePair({ ordinal: slot.ordinal, slot, priorLedgerBytesRoot: leanBytesRoot(before), priorLedgerByteLength: before.length, priorCharged: readLeanLedger(ledger).charged, bottom, top })
+      writeLeanContinuationArtifact(ledger, `pair-${slot.ordinal}.json`, pair, 16384); checkpoint()
+      const fs = statfsSync(ledger.directory, { bigint: true }), charge = chargeLeanSlot(ledger, slot, { freeBytes: Number(fs.bavail * fs.bsize), availableMemoryBytes: observeLeagueAvailableMemoryBytes() })
+      c.startCell()
+      const execution = await runLeanBaselineContinuationMatch({ ledger, charge, slot, seed: c.allocation.seed, bottom, top, ...(observedRole === undefined ? {} : { observedRole }), checkpoint, register: parent.register, unregister: parent.unregister })
+      c.finishCell(); checkpoint()
+      retainLeanMatch(ledger, charge, execution.compact, execution.replayFrames, undefined, checkpoint)
+      const { replayFrames: _frames, ...content } = execution
+      const cell = { ...content, ordinal: slot.ordinal, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot }
+      const body = { schemaVersion: "lean-baseline-observation-v1", pairRoot: pair.root, cell }
+      writeLeanContinuationArtifact(ledger, `observation-${slot.ordinal}.json`, { ...body, root: labRoot(body.schemaVersion, body) }, 8388608)
+      if (execution.diagnostic) writeLeanContinuationArtifact(ledger, `diagnostic-${charge.root.slice(7)}.json`, execution.diagnostic, 16384)
+      checkpointLeanResources(ledger, currentLeanElapsedMs(ledger), process.memoryUsage().arrayBuffers, measureLeanPhysicalBytes(CONTINUATION.temp))
+      checkpoint(); return cell
+    } })
+  } catch { failed = true }
+  finally { c.closeRun(); process.off("disconnect", disconnect) }
+  const complete = !failed && (pipeline as { status?: string } | null)?.status === "current_baseline_complete"
+  const state = readLeanLedger(ledger)
+  if (!state.stopped) stopLeanLedger(ledger, complete ? "complete" : "failure")
+  checkpoint()
+  const evidence = verifyLeanEvidence(ledger, checkpoint)
+  const result = { schemaVersion: "lean-baseline-continuation-result-v1", issued: false, evidenceClass: "exploratory_current_only", allocationRoot: c.allocation.root, sourceRoot: c.allocation.sourceRoot, planningRoot: c.allocation.planningRoot, requestBytesRoot: c.allocation.requestBytesRoot, head: c.fixedHead, evidenceRoot: evidence.root, pipeline, charged: evidence.charged, successful: evidence.records.filter(row => row.status === "success").length, status: complete ? "pending_independent_verification" : "partial_or_failed_baseline", elapsedMs: Math.max(evidence.elapsedMs, currentLeanElapsedMs(ledger)), physicalHighWaterBytes: evidence.physicalHighWaterBytes, scratchHighWaterBytes: evidence.scratchHighWaterBytes, unusedOrdinals: c.allocation.slots.filter(slot => !state.charges.has(slot.root)).map(slot => slot.ordinal), holdoutReservations: c.allocation.holdoutReservations, failure: failed ? "source_runtime_or_integrity_stop" : null, sourceAuthor: c.request.sourceAuthor, runOperator: c.request.runOperator, holdoutOpened: false, formationMaterialized: false }
+  writeLeanContinuationArtifact(ledger, "result.json", result, 4194304); checkpoint()
+  return result
+}
+
 export const leanBaselineMain = async (args: readonly string[]) => {
   const command = parseLeanBaselineCommand(args)
+  if (command.mode === "prepare-continuation") return prepareLeanBaselineContinuation(command.request)
+  if (command.mode === "run-continuation") return runLeanBaselineContinuation(command.request)
+  if (command.mode === "verify-continuation") { const reader = await import("./lib/v1-38-lean-baseline-retained.js"); return reader.verifyLeanBaselineContinuationRetained(command.request) }
   if (command.mode === "prepare-current") return prepareLeanCurrent(command.request)
   if (command.mode === "run-current") return runLeanCurrent(command.request)
   const { verifyLeanCurrentBaselineRetained } = await import("./lib/v1-38-lean-baseline-retained.js")
@@ -494,8 +676,8 @@ export const leanBaselineMain = async (args: readonly string[]) => {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const args = process.argv.slice(2)
-  const childMode = args.length === 3 && args[0] === "child-current" && args[1] === "--request"
-  const action = childMode ? runLeanCurrentChild(args[2]!) : leanBaselineMain(args)
+  const childMode = args.length === 3 && ["child-current", "child-continuation"].includes(args[0]!) && args[1] === "--request"
+  const action = childMode ? args[0] === "child-continuation" ? runLeanBaselineContinuationChild(args[2]!) : runLeanCurrentChild(args[2]!) : leanBaselineMain(args)
   if (childMode) void resolveLeanChildCliTerminal(action)
   else void action.then(value => { process.stdout.write(`${JSON.stringify(value)}\n`) }).catch(() => { process.stderr.write("LEAN_BASELINE_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
 }

@@ -1,6 +1,5 @@
 /** Source-contract fixtures only: these synthetic rows are never Match evidence. */
 import { describe, expect, it, vi } from "vitest"
-import { existsSync } from "node:fs"
 import * as coldBuilder from "./v1-38-lean-cold-corpus.js"
 import * as proposalBuilder from "./v1-38-lean-training-adapter.js"
 import { authenticateLeanColdReuse, LEAN_COLD_REUSE_HISTORY } from "./v1-38-lean-baseline-reuse.js"
@@ -11,6 +10,9 @@ import { currentBaselineSlotKind, type LeanCurrentBaselineAllocation, type LeanS
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
 import { executeLeanCurrentPipeline, executeLeanReusedCurrentPipeline, leanColdProcedureRoot, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
 import { LEAN_BASELINE_REQUIRED_METRICS, type LeanBaselineMetricReceipt } from "./v1-38-lean-baseline-metrics.js"
+import { createLeanBaselineContinuationAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import * as pipelineModule from "./v1-38-lean-baseline-pipeline.js"
+vi.mock("./v1-38-lean-seal-metadata.js", () => ({ inspectLeanSealMetadata: () => ({ schemaVersion: "inert-seal-metadata", holdoutOpened: false }) }))
 
 const seed = "lean-source-fixture-only"
 const arenas = CANONICAL_ARENA_CATALOG_V1_37.arenas.filter(a => a.status === "active").sort((a, b) => a.semanticGeometryHash.localeCompare(b.semanticGeometryHash))
@@ -38,7 +40,9 @@ const syntheticMetrics = (executionRoot: string, success: boolean): LeanBaseline
 }
 
 describe("current-only staged baseline wiring (synthetic source tests)", () => {
-  it.skipIf(!existsSync(".strategy-lab/lean-baseline-20261004-v1/cold-corpus.json"))("reuses all seven frozen old packets with zero cold builders and rejects forged authority before dispatch", async () => {
+  // This legacy integration case consumes a canonical historical store. Source
+  // execution is explicitly forbidden from opening it; keep it out of this suite.
+  it.skip("reuses all seven frozen old packets with zero cold builders and rejects forged authority before dispatch", async () => {
     const current = { ...allocation(), seed: LEAN_COLD_REUSE_HISTORY.seed, coldRoot: LEAN_COLD_REUSE_HISTORY.coldRoot }
     const reuse = authenticateLeanColdReuse({ directory: ".strategy-lab/lean-baseline-20261004-v1", newSourceRoot: current.sourceRoot, amendmentRoot: LEAN_COLD_REUSE_HISTORY.amendmentRoot })
     const cold = vi.spyOn(coldBuilder, "buildLeanColdCorpus").mockImplementation(() => { throw new Error("FORBIDDEN_COLD_BUILDER") })
@@ -128,4 +132,26 @@ describe("current-only staged baseline wiring (synthetic source tests)", () => {
     expect(result.response).toMatchObject({ admitted: false, strongestPureFreshComparator: { status: "unsupported", reason: "strongest_pure_self_pair_not_allocated" } })
     }
   }, 45000)
+})
+
+describe("fresh continuation only", () => {
+  it.each([0, 1] as const)("preserves response score %i, actual receipts and all 36 scheduled cells", async points => {
+    const r = (v: unknown) => labRoot("inert-continuation-pipeline", v), coldRoot = leanColdProcedureRoot(seed)
+    const p = { schemaVersion: "lean-baseline-continuation-carry-v1" as const, chargedMatches: 43 as const, elapsedUpperBoundMs: 415746903 as const, allocatedDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, custodyRoot: r("custody"), inventoryRoot: r("inventory"), qualifiedReaderAuthority: "cost_only" as const }
+    const a = createLeanBaselineContinuationAllocation({ sourceRoot: r("source"), reviewRoot: r("review"), coldRoot, planRoot: r("plan"), candidateRoots: [r("a"), r("b")], requestRoots: Array.from({ length: 36 }, (_, n) => r(n)), seed, sourceHead: "a".repeat(40), planningRoot: r("planning"), requestBytesRoot: r("request"), offlineOverheadMs: 60000, predecessor: { ...p, root: labRoot(p.schemaVersion, p) } })
+    const corpus = buildLeanColdCorpus(seed), input = initialStrategyInput(), artifacts: Record<string, any> = {}, ordinals: number[] = []
+    const result = await pipelineModule.executeLeanBaselineContinuationPipeline({ allocation: a, checkpoint() {}, freezeSource() {}, retainArtifact(name, value) { artifacts[name] = value }, async dispatch(slot, bottom, top) {
+      ordinals.push(slot.ordinal)
+      return { ordinal: slot.ordinal, slotRoot: slot.root, bottomRoot: bottom.sourceRoot, topRoot: top.sourceRoot, compact: { classification: "success", code: "OK", outcome: "DRAW", elapsedMs: 1, cleanupComplete: true, invocationCount: 2, accountingRoot: r(`accounting-${slot.ordinal}`), executionRoot: r(`execution-${slot.ordinal}`), telemetry: { transitions: 1, events: 1 } }, brainInputs: [corpus.tacticalInputs[0]!], strategyInputs: [input], trainingHalfPoints: slot.ordinal >= 12 && slot.ordinal < 20 ? points : 1, semanticRoot: r(`semantic-${slot.ordinal >= 32 ? slot.ordinal - 24 : slot.ordinal}`), decisionRoot: r(`decision-${slot.ordinal}`), diagnostic: null, metrics: syntheticMetrics(r(`execution-${slot.ordinal}`), true) } as LeanBaselineObservedCell
+    } })
+    expect(ordinals).toEqual(Array.from({ length: 36 }, (_, n) => n))
+    expect(result).toMatchObject({ status: "current_baseline_complete", response: { admitted: false }, unusedOrdinals: [], holdoutOpened: false })
+    expect(result.holdoutReservations).toEqual(a.holdoutReservations)
+    expect(artifacts["response-node-receipts.json"]).toHaveLength(8)
+    const receipts = artifacts["response-node-receipts.json"] as Array<{ allocation: number; actualNodes: number }>, work = artifacts["work-accounting.json"]
+    const actual = receipts.reduce((sum, row) => sum + row.actualNodes, 0)
+    expect(receipts.reduce((sum, row) => sum + row.allocation, 0)).toBe(128)
+    expect(work).toMatchObject({ allocated: { tacticalEvaluations: 64, teacherNodes: 64, distillationExamples: 64, responseNodes: 128, total: 320 }, actual: { responseNodes: actual, total: 192 + actual }, unused: { responseNodes: 128 - actual, total: 128 - actual } })
+    expect(work.actual.responseNodes).toBe(artifacts["response-work.json"].actualAssignmentNodes)
+  }, 30000)
 })

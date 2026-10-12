@@ -75,6 +75,26 @@ export const publishLeanBaselineSource = (ledger: LeanExperimentLedger, value: L
   publishSourceBytes(ledger, v, bytes)
 }
 
+import { validateLeanBaselineContinuationAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+/** The new publication binds current implementation and held allocation HEAD.
+ * Old publication predicates and schemas remain exact. */
+export const publishLeanBaselineContinuationSource = (ledger: LeanExperimentLedger, value: LeanBaselineSource, guard: () => void): void => {
+  guard()
+  const a = validateLeanBaselineContinuationAllocation(ledger.allocation), source = validateLeanBaselineSource(value), entry = readLeanChildEntry(ledger)
+  if (source.coldRoot !== a.coldRoot || source.implementationRoot !== a.sourceRoot || entry.sourceRoot !== a.sourceRoot || entry.allocationRoot !== a.root || !/^[a-f0-9]{40}$/u.test(entry.head)) return fail()
+  const body = { schemaVersion: "lean-baseline-continuation-source-publication-v1", allocationRoot: a.root, sourceHead: a.sourceHead, head: entry.head, implementationRoot: a.sourceRoot, coldRoot: a.coldRoot, role: source.role, snapshotRoot: source.root, sourceRoot: source.sourceRoot }
+  const publication = { ...body, root: labRoot(body.schemaVersion, body) }, sourceBytes = leanCanonicalBytes(source), proofBytes = leanCanonicalBytes(publication)
+  if (sourceBytes.length > 262144 || proofBytes.length > 16384) return fail()
+  guard(); assertLeanPublicationCapacity(ledger, sourceBytes.length + proofBytes.length)
+  for (const [name, bytes] of [[`source-${source.role}.json`, sourceBytes], [`publication-${source.role}-continuation-v1.json`, proofBytes]] as const) {
+    const fd = openSync(join(ledger.directory, name), constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
+    try { writeLeanAll(fd, bytes); fsyncSync(fd) } finally { closeSync(fd) }
+  }
+  const fd = openSync(ledger.directory, constants.O_RDONLY | constants.O_NOFOLLOW)
+  try { fsyncSync(fd) } finally { closeSync(fd) }
+  guard()
+}
+
 /** A checked outer grant, never a relabelled packet, admits only its exact seven
  * original snapshots. Default publication above still requires current provenance. */
 export const publishLeanReusedBaselineSource = (ledger: LeanExperimentLedger, value: LeanBaselineSource, reuse: LeanColdReuse): void => {
