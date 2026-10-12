@@ -9,12 +9,15 @@ import { currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCu
 import { leanColdProcedureRoot, compactLeanBaselineCell, executeLeanCurrentPipeline, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
 import { auditLeanCurrentBaselineRetained, assertLeanRetryBaselineJoinV8, verifyLeanRetryBaselineRetainedV8, assertLeanSupervisorReasonCustodyV2, type LeanBaselineRetainedSnapshot } from "./v1-38-lean-baseline-retained.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
+import type { LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { CANONICAL_ARENA_CATALOG_V1_37, type StrategyInputV119 } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { LEAN_BASELINE_REQUIRED_METRICS, type LeanBaselineMetricReceipt } from "./v1-38-lean-baseline-metrics.js"
 import * as continuationReader from "./v1-38-lean-baseline-retained.js"
 import * as continuationEntry from "../run-v1-38-lean-baseline.js"
 import * as continuationLedger from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import * as continuationFiles from "./v1-38-lean-baseline-continuation.js"
+import * as continuationSources from "./v1-38-lean-baseline-source.js"
 vi.mock("node:fs", async original => ({ ...await original<typeof import("node:fs")>(), readSync: vi.fn((await original<typeof import("node:fs")>()).readSync) }))
 vi.mock("./v1-38-lean-seal-metadata.js", () => ({ inspectLeanSealMetadata: () => {
   const body = { schemaVersion: "lean-seal-metadata-inventory-v1", protocol: { present: false, bytesRoot: null }, originalPublicReference: { present: false, bytesRoot: null }, checkoutDirty: true, originalCompatibleUnopenedSealVerified: false, privateStoreOrPreimageRead: false, newExploratorySealCreated: false, reservedHoldoutPerProfile: 4, disposition: "holdout_claim_deferred_no_verified_compatible_seal", reason: "existing_clean_checkout_seal_prerequisite_not_met", claims: { absenceOfAllExternalSealsProved: false, originalCommitmentSatisfied: false, holdoutOpened: false } }
@@ -115,18 +118,18 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     const anchorMs = policy.globalAnchorMs, carryMs = Math.max(policy.oldCheckElapsedMs, continuationLedger.leanContinuationGlobalFloorV2(anchorMs))
     const windowBody = {
       schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const,
-      grantId: "synthetic-no-authority", approvalEvidence: { humanDecisionId: "synthetic-only", recordedBy: "fixture" },
+      grantId: "synthetic-no-authority", approvalEvidence: { humanDecisionId: "synthetic-only", recordedBy: "/root/cowards-game/reviewers/human" },
       approvedAtMs: anchorMs, anchorMs, deadlineMs: anchorMs + policy.durationMs, carryMs, capMs: carryMs + policy.durationMs,
       durationMs: policy.durationMs, closureMs: policy.closureMs, offlineOverheadMs: policy.offlineOverheadMs,
       routeNamespace: "20261012-v3" as const, reviewedSourceHead: "c".repeat(40), sourceRoot: old.sourceRoot,
-      sourceGateRoot: root("source-gate"), planRoot: old.planRoot, runOperator: "fixture-run", readerOperator: "fixture-reader",
+      sourceGateRoot: root("source-gate"), planRoot: old.planRoot, runOperator: "/root/cowards-game/operators/runner", readerOperator: "/root/cowards-game/operators/retained-reader",
     }
     const window = { ...windowBody, root: labRoot(windowBody.schemaVersion, windowBody) }
     const carryBody = {
       schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const,
       elapsedUpperBoundMs: policy.oldCheckElapsedMs, allocatedDiskBytes: policy.physicalFloorBytes, residualDiskBytes: 0,
       historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const,
-      originalCarryRoot: root("original-carry"), closedCapsuleRoot: root("closed-capsule"), custodyRoot: root("custody"), inventoryRoot: root("inventory"), qualifiedReaderAuthority: "cost_only" as const,
+      originalCarryRoot: root("original-carry"), closedCapsuleRoot: labRoot("lean-baseline-continuation-closed-capsule-v2", []), custodyRoot: labRoot("lean-baseline-continuation-custody-v2", []), inventoryRoot: labRoot("lean-baseline-continuation-inventory-v2", []), qualifiedReaderAuthority: "cost_only" as const,
     }
     const predecessor = { ...carryBody, root: labRoot(carryBody.schemaVersion, carryBody) }
     const input = {
@@ -141,11 +144,45 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       schemaVersion: "lean-baseline-continuation-request-v2", seed: input.seed, sourceHead: input.sourceHead,
       sourceRoot: input.sourceRoot, planningRoot: input.planningRoot, planRoot: input.planRoot, reviewRoot: input.reviewRoot,
       coldRoot: input.coldRoot, candidateRoots: input.candidateRoots, requestRoots: input.requestRoots,
-      offlineOverheadMs: policy.offlineOverheadMs, sourceAuthor: "fixture-author", runOperator: "fixture-run", readerOperator: "fixture-reader",
+      offlineOverheadMs: policy.offlineOverheadMs, sourceAuthor: "/root/cowards-game/authors/source-owner", runOperator: window.runOperator, readerOperator: window.readerOperator,
       windowRoot: window.root, windowBytesRoot: input.windowBytesRoot, sourceGateRoot: input.sourceGateRoot, dataReviewRoot: input.dataReviewRoot, manifestRoot: input.manifestRoot,
     }
     const allocation = continuationLedger.createLeanBaselineContinuationAllocationV2({ ...input, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)) })
     return { allocation, request }
+  }
+  const partialV2Snapshot = () => {
+    const old = fixture(), { allocation, request } = v2Allocation(), slot = allocation.slots[0]!, oldPair = old.pairs[0]!, sourceByRole = new Map(old.sources.map(source => [source.role, source]))
+    const pairBody = { ...oldPair, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: leanBytesRoot(new Uint8Array()), priorLedgerByteLength: 0, priorCharged: 50 }
+    const pair = { ...pairBody, root: labRoot("lean-baseline-pair-v1", Object.fromEntries(Object.entries(pairBody).filter(([key]) => key !== "root"))) }
+    const cell = { ...old.observations[0]!.cell, slotRoot: slot.root }
+    const observationBody = { schemaVersion: "lean-baseline-observation-v1" as const, pairRoot: pair.root, cell }
+    const observation = { ...observationBody, root: labRoot("lean-baseline-observation-v1", observationBody) }
+    const chargeBody = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: allocation.root, slotRoot: slot.root, ordinal: 0 }
+    const charge = { ...chargeBody, root: labRoot("lean-slot-charge-v1", chargeBody) }
+    const record = { slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: charge.root, terminal: { kind: "terminal", chargeRoot: charge.root, record: cell.compact, replay: null }, status: "success" }
+    const records = allocation.slots.map((s, i) => i === 0 ? record : ({ slotRoot: s.root, requestRoot: s.requestRoot, chargeRoot: null, terminal: null, status: "unused" }))
+    const evidence = { root: labRoot("lean-evidence-v2-fixture", records), charged: 51, elapsedMs: allocation.predecessor.elapsedUpperBoundMs + 1000, physicalHighWaterBytes: 1000000, scratchHighWaterBytes: 0, records }
+    const prior = [{ kind: "charge", charge }, { kind: "terminal", chargeRoot: charge.root, record: cell.compact, replay: null }]
+    const ledgerEvents = [...prior, { kind: "stop", reason: "failure" }]
+    const head = "a".repeat(40), start = allocation.window.anchorMs + 100
+    const entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, head, parentPid: 100, childPid: 101, handshakeRoot: root("v2-handshake"), wallStartMs: start, monotonicStartNs: "1000000" }
+    const terminal = { schemaVersion: "lean-child-terminal-v2", entryBytesRoot: leanBytesRoot(leanCanonicalBytes(entry)), allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, head, parentPid: 100, childPid: 101, status: "child_exited", exitCode: 0, signal: null, elapsedUpperBoundMs: 1000, wallObservedMs: start + 1000, monotonicObservedNs: "1001000000", parentRssBytes: 100000000, childRssObservedBytes: 100000000, physicalBytes: 1000000, freeBytes: 16000000000 }
+    const basePipeline = old.result.pipeline as Record<string, any>
+    const unusedOrdinals = allocation.slots.slice(1).map(s => s.ordinal)
+    const pipelineBody = { ...Object.fromEntries(Object.entries(basePipeline).filter(([key]) => key !== "root")), status: "partial_or_failed_baseline", stage: "initial_training", cells: [compactLeanBaselineCell(cell as never)], sources: old.sources.map(s => ({ role: s.role, sourceRoot: s.sourceRoot, snapshotRoot: s.root })), unusedOrdinals, holdoutReservations: allocation.holdoutReservations, schemaVersion: "lean-baseline-continuation-pipeline-v2", allocationRoot: allocation.root, windowRoot: allocation.window.root, requestBytesRoot: allocation.requestBytesRoot, implementationRoot: allocation.sourceRoot, coldRoot: allocation.coldRoot, sourceHead: allocation.sourceHead, head }
+    const pipeline = { ...pipelineBody, root: labRoot("lean-baseline-continuation-pipeline-v2", pipelineBody) }
+    const anchor = allocation.window.anchorMs
+    const frontier = (ordinal: number, after: boolean) => ({ nowMs: anchor + 200 + ordinal * 2 + Number(after), monotonicElapsedMs: 200 + ordinal * 2 + Number(after), remainingSlots: 36 - ordinal - Number(after), charged: 50 + ordinal + Number(after), retainedBytes: 100000000, scratchBytes: 1000, parentRssBytes: 100000000, childRssBytes: 100000000, arrayBuffersBytes: 1000, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true })
+    const resourceReceipts = [{ ordinal: 0, chargeRoot: charge.root, before: frontier(0, false), after: frontier(0, true) }]
+    const result = { schemaVersion: "lean-baseline-continuation-result-v2", issued: false, evidenceClass: "exploratory_current_only", allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, head, evidenceRoot: evidence.root, pipeline, charged: 51, successful: 1, status: "partial_or_failed_baseline", elapsedMs: evidence.elapsedMs, physicalHighWaterBytes: 1000000, scratchHighWaterBytes: 0, holdoutOpened: false, formationMaterialized: false, planningRoot: allocation.planningRoot, unusedOrdinals, holdoutReservations: allocation.holdoutReservations, failure: null, sourceAuthor: request.sourceAuthor, runOperator: request.runOperator, resourceReceipts, sourceHead: allocation.sourceHead, windowRoot: allocation.window.root, windowBytesRoot: allocation.windowBytesRoot, sourceGateRoot: allocation.sourceGateRoot, dataReviewRoot: allocation.dataReviewRoot, manifestRoot: allocation.manifestRoot }
+    const carry = { carry: allocation.predecessor, custody: [], inventory: [] }
+    const claimBody = { schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: allocation.window.grantId, routeNamespace: allocation.window.routeNamespace, windowRoot: allocation.window.root, windowBytesRoot: allocation.windowBytesRoot, requestBytesRoot: allocation.requestBytesRoot, sourceHead: allocation.sourceHead, sourceRoot: allocation.sourceRoot, sourceGateRoot: allocation.sourceGateRoot, dataReviewRoot: allocation.dataReviewRoot, planningRoot: allocation.planningRoot, manifestRoot: allocation.manifestRoot }
+    const claim = { ...claimBody, root: labRoot(claimBody.schemaVersion, claimBody) }
+    const sourceHoldBody = { schemaVersion: "lean-baseline-continuation-source-hold-v2", allocationRoot: allocation.root, sourceHead: allocation.sourceHead, manifestRoot: allocation.manifestRoot, claimRoot: claim.root, rows: [] }
+    const sourceHold = { ...sourceHoldBody, root: labRoot(sourceHoldBody.schemaVersion, sourceHoldBody) }
+    const time = { elapsedMs: evidence.elapsedMs, active: false, starts: new Map([["continuation-run-admission", start - 10], ["pilot-entry", start], ["continuation-retained-verifier-v2", start + 1100]]), closes: new Map([["continuation-run-admission", start - 1], ["pilot-entry", start + 1000], ["continuation-retained-verifier-v2", start + 1900]]), closed: new Set(["continuation-run-admission", "pilot-entry", "continuation-retained-verifier-v2"]) }
+    const snapshot = { ...old, allocation, request, requestBytesRoot: allocation.requestBytesRoot, head, entry, terminal, evidence, ledgerEvents, time, result, pairs: [pair], observations: [observation], window: allocation.window, windowBytesRoot: allocation.windowBytesRoot, sourceGateRoot: allocation.sourceGateRoot, dataReviewRoot: allocation.dataReviewRoot, manifestRoot: allocation.manifestRoot, claim, carry, sourceHold }
+    return snapshot as unknown as continuationReader.LeanBaselineContinuationRetainedSnapshotV2
   }
 
   it("[continuation-v2] uses the separate schema and preserves the exact 50 + n ledger arithmetic and 36 cold slots", () => {
@@ -153,6 +190,13 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     expect(continuationLedger.validateLeanBaselineContinuationAllocationV2(allocation)).toEqual(allocation)
     expect(allocation.predecessor.chargedMatches).toBe(50)
     expect(allocation.slots).toHaveLength(36)
+    expect(continuationLedger.leanContinuationIdentityV2("/root/cowards-game/authors/source-owner")).toBe(true)
+    expect(continuationLedger.leanContinuationIdentityV2("/root/cowards-game/reviewer/primary")).toBe(true)
+    expect(continuationLedger.leanContinuationIdentityV2("/root/cowards-game/verifier/independent")).toBe(true)
+    expect(continuationLedger.leanContinuationIdentityV2("/root/cowards-game/operators/runner")).toBe(true)
+    expect(continuationLedger.leanContinuationIdentityV2("/root/cowards-game/operators/retained-reader")).toBe(true)
+    expect(continuationLedger.leanContinuationIdentityV2("/root/with spaces")).toBe(false)
+    expect(continuationLedger.leanContinuationIdentityV2("x".repeat(121))).toBe(false)
     expect(allocation.holdoutReservations).toHaveLength(4)
     expect(continuationReader.assertLeanBaselineContinuationV2ClosedCount(50, 0)).toEqual({ cumulative: 50, current: 0, unused: 36, complete: false })
     expect(continuationReader.assertLeanBaselineContinuationV2ClosedCount(51, 1)).toEqual({ cumulative: 51, current: 1, unused: 35, complete: false })
@@ -171,6 +215,32 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     expect(() => continuationReader.auditLeanBaselineContinuationRetainedV2({ ...snapshot, allocation: { ...allocation, schemaVersion: "lean-baseline-continuation-allocation-v1" } as never })).toThrow()
     expect(continuationReader.verifyLeanContinuationEvidence).toBeDefined()
   })
+  it("[continuation-v2] accepts an independently rebuilt partial 50 + 1 synthetic audit snapshot", () => {
+    const snapshot = partialV2Snapshot()
+    expect(continuationReader.auditLeanBaselineContinuationRetainedV2(snapshot)).toMatchObject({ count: { cumulative: 51, current: 1, unused: 35, complete: false } })
+    const identity = structuredClone(snapshot) as any
+    identity.request.sourceAuthor = "changed-author"
+    expect(() => continuationReader.auditLeanBaselineContinuationRetainedV2(identity)).toThrow(/V2_REQUEST/)
+    const resource = structuredClone(snapshot) as any
+    delete resource.result.resourceReceipts[0].after.availableMemoryBytes
+    expect(() => continuationReader.auditLeanBaselineContinuationRetainedV2(resource)).toThrow(/V2_RESOURCE_SHAPE/)
+    const grant = structuredClone(snapshot) as any
+    grant.claim.grantId = "changed-grant"
+    expect(() => continuationReader.auditLeanBaselineContinuationRetainedV2(grant)).toThrow(/V2_CLAIM/)
+  })
+  it("[continuation-v2] accepts a synthetic full 86-charge V2 pipeline snapshot", async () => {
+    const { allocation, request } = v2Allocation()
+    const full = await completeFixture(() => "DRAW", true, allocation)
+    const inventory: unknown[] = [], custody: unknown[] = [], carry = { carry: allocation.predecessor, custody, inventory }
+    const claimBody = { schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: allocation.window.grantId, routeNamespace: allocation.window.routeNamespace, windowRoot: allocation.window.root, windowBytesRoot: allocation.windowBytesRoot, requestBytesRoot: allocation.requestBytesRoot, sourceHead: allocation.sourceHead, sourceRoot: allocation.sourceRoot, sourceGateRoot: allocation.sourceGateRoot, dataReviewRoot: allocation.dataReviewRoot, planningRoot: allocation.planningRoot, manifestRoot: allocation.manifestRoot }
+    const claim = { ...claimBody, root: labRoot(claimBody.schemaVersion, claimBody) }
+    const sourceHoldBody = { schemaVersion: "lean-baseline-continuation-source-hold-v2", allocationRoot: allocation.root, sourceHead: allocation.sourceHead, manifestRoot: allocation.manifestRoot, claimRoot: claim.root, rows: [] }
+    const sourceHold = { ...sourceHoldBody, root: labRoot(sourceHoldBody.schemaVersion, sourceHoldBody) }
+    const snapshot = { ...full, request, allocation, window: allocation.window, windowBytesRoot: allocation.windowBytesRoot, sourceGateRoot: allocation.sourceGateRoot, dataReviewRoot: allocation.dataReviewRoot, manifestRoot: allocation.manifestRoot, carry, claim, sourceHold } as unknown as continuationReader.LeanBaselineContinuationRetainedSnapshotV2
+    expect(Object.keys(snapshot.result).sort()).toEqual(["schemaVersion", "issued", "evidenceClass", "allocationRoot", "sourceRoot", "requestBytesRoot", "head", "evidenceRoot", "charged", "successful", "status", "pipeline", "elapsedMs", "physicalHighWaterBytes", "scratchHighWaterBytes", "holdoutOpened", "formationMaterialized", "planningRoot", "unusedOrdinals", "holdoutReservations", "failure", "sourceAuthor", "runOperator", "resourceReceipts", "sourceHead", "windowRoot", "windowBytesRoot", "sourceGateRoot", "dataReviewRoot", "manifestRoot"].sort())
+    expect((snapshot.result.resourceReceipts as any[]).map(row => [row.ordinal, row.chargeRoot, row.before.charged, row.after.charged, row.before.remainingSlots, row.after.remainingSlots])).toEqual(Array.from({ length: 36 }, (_, ordinal) => [ordinal, snapshot.evidence.records[ordinal]?.chargeRoot, 50 + ordinal, 51 + ordinal, 36 - ordinal, 35 - ordinal]))
+    expect(continuationReader.auditLeanBaselineContinuationRetainedV2(snapshot)).toMatchObject({ count: { cumulative: 86, current: 36, unused: 0, complete: true } })
+  }, 30000)
   it("[continuation-v2] accepts only an authentic legacy parent envelope joined to the exact reader terminal", () => {
     const actual = { allocationRoot: root("allocation"), sourceRoot: root("source"), requestBytesRoot: root("request"), entryBytesRoot: root("entry"), head: "a".repeat(40), parentPid: 100, childPid: 101, exitCode: 0, signal: null, status: "child_exited" as const }
     const body = { schemaVersion: "lean-parent-supervisor-reasons-v1" as const, allocationRoot: actual.allocationRoot, sourceRoot: actual.sourceRoot, requestBytesRoot: actual.requestBytesRoot, entryBytesRoot: actual.entryBytesRoot, head: actual.head, parentPid: actual.parentPid, childPid: actual.childPid, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published" as const, childReady: "observed" as const, resourceSampling: "observed" as const, finalIdentity: "matched" as const, failureReceipt: "absent" as const, cleanup: "child_exit_observed" as const, terminalization: "unobserved" as const, initiatingCause: "unknown" as const } }
@@ -178,9 +248,96 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     expect(continuationReader.assertLeanContinuationSupervisorCustodyV2(bytes, actual)).toMatchObject({ schemaVersion: "lean-parent-supervisor-reasons-v1" })
     expect(continuationReader.assertLeanContinuationSupervisorCustodyV1ForV2(bytes, actual)).toMatchObject({ schemaVersion: "lean-parent-supervisor-reasons-v1" })
     expect(() => continuationReader.assertLeanContinuationSupervisorCustodyV2(bytes, { ...actual, head: "b".repeat(40) })).toThrow(/SUPERVISOR_CUSTODY_V2/)
-    const { root: _root, ...v2Body } = { ...body, schemaVersion: "lean-parent-supervisor-reasons-v2" }
+    const { root: _root, ...v2Body } = { ...body, schemaVersion: "lean-parent-supervisor-reasons-v2", root: "placeholder" }
     expect(() => continuationReader.assertLeanContinuationSupervisorCustodyV1ForV2(leanCanonicalBytes({ ...v2Body, root: labRoot(v2Body.schemaVersion, v2Body) }), actual)).toThrow()
   })
+  it("[continuation-v2] reserves publication construction before body/root allocation", () => {
+    const { allocation } = v2Allocation(), ledger = { directory: "inert", allocation } as continuationLedger.LeanExperimentLedger
+    const guard = vi.fn((bytes?: number) => { if (bytes) throw new Error("RESERVATION_DENIED") }), publish = vi.fn()
+    expect(() => continuationReader.publishLeanContinuationRetainedCheckV2(ledger, undefined, null, guard, publish as never)).toThrow(/V2_TERMINAL_REFUSAL/)
+    expect(guard).toHaveBeenCalledWith(16 * 1024 * 1024)
+    expect(publish).not.toHaveBeenCalled()
+  })
+  it("[continuation-v2] rejects wrong scope and expired window before interval or claim/check writes", () => {
+    const { allocation } = v2Allocation(), begin = vi.spyOn(continuationLedger, "beginLeanInterval"), write = vi.spyOn(continuationEntry, "writeLeanContinuationArtifact")
+    const connected = Object.getOwnPropertyDescriptor(process, "connected")
+    const send = Object.getOwnPropertyDescriptor(process, "send")
+    Object.defineProperty(process, "connected", { configurable: true, value: false })
+    Object.defineProperty(process, "send", { configurable: true, value: undefined })
+    const scope = vi.spyOn(continuationEntry, "assertLeanBaselineContinuationScopeV2").mockImplementation(() => { throw new Error("WRONG_SCOPE") })
+    const window = vi.spyOn(continuationEntry, "readLeanBaselineContinuationWindowV2")
+    try {
+      expect(() => continuationReader.verifyLeanBaselineContinuationRetainedV2(continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request)).toThrow("WRONG_SCOPE")
+      expect(begin).not.toHaveBeenCalled(); expect(write).not.toHaveBeenCalled(); expect(window).not.toHaveBeenCalled()
+      scope.mockImplementation(() => {})
+      window.mockReturnValue({ ...allocation.window, anchorMs: Date.now() - 1000, deadlineMs: Date.now() - 1 } as never)
+      expect(() => continuationReader.verifyLeanBaselineContinuationRetainedV2(continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request)).toThrow(/V2_READER_WINDOW/)
+      expect(begin).not.toHaveBeenCalled(); expect(write).not.toHaveBeenCalled()
+    } finally { scope.mockRestore(); window.mockRestore(); begin.mockRestore(); write.mockRestore(); if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send") }
+  })
+  it("[continuation-v2] connects the ordinary reader to synthetic 4 MiB reads and the authentic reason-v1 join", () => {
+    const snapshot = partialV2Snapshot(), ledger = { directory: "synthetic-only", allocation: snapshot.allocation } as continuationLedger.LeanExperimentLedger
+    const interval = "continuation-retained-verifier-v2", starts = new Map([["continuation-run-admission", snapshot.entry.wallStartMs - 10], ["pilot-entry", snapshot.entry.wallStartMs], [interval, snapshot.terminal.wallObservedMs + 1]]), closes = new Map([["continuation-run-admission", snapshot.entry.wallStartMs - 1], ["pilot-entry", snapshot.entry.wallStartMs + snapshot.terminal.elapsedUpperBoundMs], [interval, snapshot.terminal.wallObservedMs + 20]])
+    let timeReads = 0
+    const timeFixture = () => ({ ...snapshot.time, active: false, starts: timeReads++ === 0 ? new Map([...starts].filter(([key]) => key !== interval)) : starts, closes, closed: new Set(timeReads === 1 ? ["continuation-run-admission", "pilot-entry"] : ["continuation-run-admission", "pilot-entry", interval]) })
+    const state = { allocation: snapshot.allocation, events: snapshot.ledgerEvents, charged: 51, charges: new Map(snapshot.evidence.records.filter(r => r.chargeRoot).map(r => [r.chargeRoot, r])) } as unknown as ReturnType<typeof continuationLedger.readLeanLedger>
+    const ctx = { ...snapshot, fixedHead: snapshot.head, manifest: { windowBytesRoot: snapshot.windowBytesRoot, sourceGateRoot: snapshot.sourceGateRoot, dataReviewRoot: snapshot.dataReviewRoot, manifestRoot: snapshot.manifestRoot }, guard: vi.fn() }
+    const fixtureClock = vi.spyOn(Date, "now").mockReturnValue(snapshot.allocation.window.anchorMs + 300000)
+    const connected = Object.getOwnPropertyDescriptor(process, "connected"), send = Object.getOwnPropertyDescriptor(process, "send")
+    Object.defineProperty(process, "connected", { configurable: true, value: false }); Object.defineProperty(process, "send", { configurable: true, value: undefined })
+    const scope = vi.spyOn(continuationEntry, "assertLeanBaselineContinuationScopeV2").mockImplementation(() => {})
+    const window = vi.spyOn(continuationEntry, "readLeanBaselineContinuationWindowV2").mockReturnValue(snapshot.allocation.window)
+    const open = vi.spyOn(continuationLedger, "openLeanLedger").mockReturnValue(ledger)
+    const time = vi.spyOn(continuationLedger, "readLeanTimeAccounting").mockImplementation(timeFixture as never)
+    const elapsed = vi.spyOn(continuationLedger, "currentLeanElapsedMs").mockReturnValue(snapshot.allocation.predecessor.elapsedUpperBoundMs + 5000)
+    const begin = vi.spyOn(continuationLedger, "beginLeanInterval").mockImplementation(() => {})
+    const close = vi.spyOn(continuationLedger, "closeLeanInterval").mockImplementation(() => timeFixture() as never)
+    const terminal = vi.spyOn(continuationLedger, "readLeanChildTerminal").mockReturnValue(snapshot.terminal as never)
+    const entry = vi.spyOn(continuationLedger, "readLeanChildEntry").mockReturnValue(snapshot.entry as never)
+    const readLedger = vi.spyOn(continuationLedger, "readLeanLedger").mockReturnValue(state)
+    const evidence = vi.spyOn(continuationLedger, "verifyLeanEvidence").mockReturnValue(snapshot.evidence as never)
+    const physical = vi.spyOn(continuationLedger, "cumulativeLeanPhysicalBytes").mockReturnValue(100000000)
+    const context = vi.spyOn(continuationEntry, "openLeanBaselineContinuationContextV2").mockReturnValue(ctx as never)
+    const write = vi.spyOn(continuationEntry, "writeLeanContinuationArtifact").mockImplementation(() => undefined as never)
+    const reads = vi.spyOn(continuationFiles, "readLeanContinuationJsonV2").mockImplementation((path: string) => {
+      const name = path.split("/").at(-1)
+      if (name === "result.json") return snapshot.result as never
+      if (name === "pair-0.json") return snapshot.pairs[0] as never
+      if (name === "observation-0.json") return snapshot.observations[0] as never
+      if (name === "carry.json") return snapshot.carry as never
+      if (name === "source-hold.json") return snapshot.sourceHold as never
+      if (name === "source-manifest.json") return ctx.manifest as never
+      if (name === "seal-metadata.json") return snapshot.artifacts["seal-metadata.json"] as never
+      if (name === "parent-supervisor-reasons.json") {
+        const body = { schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: snapshot.allocation.root, sourceRoot: snapshot.allocation.sourceRoot, requestBytesRoot: snapshot.allocation.requestBytesRoot, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(snapshot.entry)), head: snapshot.head, parentPid: snapshot.entry.parentPid, childPid: snapshot.entry.childPid, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
+        return { ...body, root: labRoot(body.schemaVersion, body) } as never
+      }
+      if (name?.startsWith("publication-")) {
+        const source = snapshot.sources.find(s => name === `publication-${s.role}-continuation-v2.json`)!
+        const body = { schemaVersion: "lean-baseline-continuation-source-publication-v2", allocationRoot: snapshot.allocation.root, sourceHead: snapshot.allocation.sourceHead, head: snapshot.head, implementationRoot: snapshot.allocation.sourceRoot, coldRoot: snapshot.allocation.coldRoot, role: source.role, snapshotRoot: source.root, sourceRoot: source.sourceRoot, windowRoot: snapshot.allocation.window.root, windowBytesRoot: snapshot.allocation.windowBytesRoot, requestBytesRoot: snapshot.allocation.requestBytesRoot, dataReviewRoot: snapshot.allocation.dataReviewRoot }
+        return { ...body, root: labRoot(body.schemaVersion, body) } as never
+      }
+      throw new Error(`UNEXPECTED_SYNTHETIC_READ:${name}`)
+    })
+    const sourceRead = vi.spyOn(continuationSources, "readLeanBaselineSource").mockImplementation((_dir: string, role: string) => snapshot.sources.find(s => s.role === role) as never)
+    const names = ["allocation.json", "ledger.ndjson", "time.ndjson", "carry.json", "source-manifest.json", "source-hold.json", "run-claim.json", "reader-claim.json", "entry.json", "child-terminal.json", "parent-supervisor-reasons.json", "result.json", "seal-metadata.json", "pair-0.json", "observation-0.json", ...snapshot.sources.flatMap(s => [`source-${s.role}.json`, `publication-${s.role}-continuation-v2.json`])]
+    let directoryReads = 0
+    const readdir = vi.spyOn(fs, "readdirSync").mockImplementation(() => (directoryReads++ === 0 ? names.filter(name => name !== "reader-claim.json") : names) as never)
+    const kill = vi.spyOn(process, "kill").mockImplementation(() => { throw Object.assign(new Error("gone"), { code: "ESRCH" }) })
+    try {
+      const report = continuationReader.verifyLeanBaselineContinuationRetainedV2(continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request)
+      expect((report as any).failure).toBeNull()
+      expect(report).toMatchObject({ schemaVersion: "lean-baseline-continuation-retained-check-v2", disposition: "gaps_found", charged: 51 })
+      expect(reads.mock.calls.some(call => call[1] === 4194304)).toBe(true)
+      expect(begin).toHaveBeenCalledTimes(1); expect(close).toHaveBeenCalledTimes(1); expect(ctx.guard).toHaveBeenCalledWith(65536)
+      expect(write.mock.calls.map(call => call[1])).toContain("reader-claim.json")
+      expect(sourceRead).toHaveBeenCalled()
+    } finally {
+      for (const spy of [scope, window, open, time, elapsed, begin, close, terminal, entry, readLedger, evidence, physical, context, write, reads, sourceRead, readdir, kill, fixtureClock]) spy.mockRestore()
+      if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected")
+      if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send")
+    }
+  }, 30000)
 })
 describe("strict v12 finite attribution custody join", () => {
   const fixture = () => {
@@ -280,8 +437,8 @@ const failedFirstCell = (classification: "player_violation" | "system_failure", 
   s.result.successful = 0
   return s
 }
-const completeFixture = async (outcomeForSlot: (ordinal: number, entrantSeat: "bottom" | "top") => "bottom" | "top" | "DRAW" = () => "DRAW", continuation = false): Promise<LeanBaselineRetainedSnapshot> => {
-  const base = continuation ? continuationFixtureBase() : fixture(), allocation = base.allocation, corpus = buildLeanColdCorpus(allocation.seed)
+const completeFixture = async (outcomeForSlot: (ordinal: number, entrantSeat: "bottom" | "top") => "bottom" | "top" | "DRAW" = () => "DRAW", continuation = false, allocationOverride?: any): Promise<LeanBaselineRetainedSnapshot> => {
+  const base = continuation ? continuationFixtureBase() : fixture(), allocation = allocationOverride ?? base.allocation, corpus = buildLeanColdCorpus(allocation.seed)
   const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(item => item.status === "active")!
   let machine = MATCH_KERNEL.createMachineV119({ matchId: "retained-source-only", seed: allocation.seed, arenaVariant: arena, bottomPlayerId: "fixture-bottom", topPlayerId: "fixture-top", bottomStrategyRevisionId: "fixture-bottom-revision", topStrategyRevisionId: "fixture-top-revision", initialInitiativePlayerId: "fixture-bottom" })
   let strategyInput: StrategyInputV119 | null = null
@@ -296,9 +453,10 @@ const completeFixture = async (outcomeForSlot: (ordinal: number, entrantSeat: "b
   const artifacts: Record<string, unknown> = {}
   const ledgerEvents: Array<Record<string, unknown>> = []
   const pairs: unknown[] = [], observations: unknown[] = []
-  const records = allocation.slots.map(slot => ({ slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: null as LabRoot | null, terminal: null as Record<string, unknown> | null, status: "unused" }))
-  const execute = continuation ? (await import("./v1-38-lean-baseline-pipeline.js")).executeLeanBaselineContinuationPipeline : executeLeanCurrentPipeline
-  const pipeline = await execute({ allocation: allocation as never, freezeSource: source => { sources.push(source) }, retainArtifact: (name, value) => { artifacts[name] = value }, checkpoint() {}, async dispatch(slot, bottom, top) {
+  const records = allocation.slots.map((slot: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanSlot) => ({ slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: null as LabRoot | null, terminal: null as Record<string, unknown> | null, status: "unused" }))
+  const pipelineModule = await import("./v1-38-lean-baseline-pipeline.js")
+  const execute: (input: any) => Promise<any> = allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" ? pipelineModule.executeLeanBaselineContinuationPipelineV2 : continuation ? pipelineModule.executeLeanBaselineContinuationPipeline : executeLeanCurrentPipeline
+  const pipeline = await execute({ allocation: allocation as never, ...(allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" ? { heldHead: "a".repeat(40) } : {}), freezeSource: (source: LeanBaselineSource) => { sources.push(source) }, retainArtifact: (name: string, value: unknown) => { artifacts[name] = value }, checkpoint() {}, async dispatch(slot: import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanSlot, bottom: LeanBaselineSource, top: LeanBaselineSource) {
     const prior = Buffer.from(ledgerEvents.map(event => Buffer.from(leanCanonicalBytes(event)).toString("utf8") + "\n").join(""))
     const pairBody = { schemaVersion: "lean-baseline-pair-v1" as const, ordinal: slot.ordinal, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: leanBytesRoot(prior), priorLedgerByteLength: prior.length, priorCharged: allocation.predecessor.chargedMatches + slot.ordinal, bottomRole: bottom.role, bottomSourceRoot: bottom.sourceRoot, bottomSnapshotRoot: bottom.root, topRole: top.role, topSourceRoot: top.sourceRoot, topSnapshotRoot: top.root }
     const pair = { ...pairBody, root: labRoot("lean-baseline-pair-v1", pairBody) }; pairs.push(pair)
@@ -316,10 +474,17 @@ const completeFixture = async (outcomeForSlot: (ordinal: number, entrantSeat: "b
   } })
   ledgerEvents.push({ kind: "stop", reason: "complete" })
   const evidence = { ...base.evidence, records, charged: allocation.predecessor.chargedMatches + 36, elapsedMs: allocation.predecessor.elapsedUpperBoundMs + 100, root: root("complete-evidence") }
-  const frontier = (ordinal: number, after: boolean) => ({ nowMs: continuationLedger.LEAN_BASELINE_CONTINUATION_WINDOW.anchorMs + 200 + ordinal * 2 + Number(after), monotonicElapsedMs: 200 + ordinal * 2 + Number(after), remainingSlots: 36 - ordinal - Number(after), charged: 43 + ordinal + Number(after), retainedBytes: 1000000, scratchBytes: 0, parentRssBytes: 100000000, childRssBytes: 100000000, arrayBuffersBytes: 1000, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true })
-  const resourceReceipts = records.map((row, ordinal) => ({ ordinal, chargeRoot: row.chargeRoot, before: frontier(ordinal, false), after: frontier(ordinal, true) }))
-  const result = { ...base.result, pipeline, evidenceRoot: evidence.root, charged: evidence.charged, successful: 36, status: "pending_independent_verification", ...(continuation ? { unusedOrdinals: [], resourceReceipts } : {}) }
-  return { ...base, sources, artifacts, pairs: pairs as LeanBaselineRetainedSnapshot["pairs"], observations: observations as LeanBaselineRetainedSnapshot["observations"], ledgerEvents: ledgerEvents as LeanBaselineRetainedSnapshot["ledgerEvents"], evidence: evidence as LeanBaselineRetainedSnapshot["evidence"], result }
+  const frontier = (ordinal: number, after: boolean) => {
+    const remainingSlots = 36 - ordinal - Number(after), anchor = "window" in allocation ? allocation.window.anchorMs : continuationLedger.LEAN_BASELINE_CONTINUATION_WINDOW.anchorMs, body = { nowMs: anchor + 200 + ordinal * 2 + Number(after), monotonicElapsedMs: 200 + ordinal * 2 + Number(after), remainingSlots, charged: allocation.predecessor.chargedMatches + ordinal + Number(after), retainedBytes: allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" ? 100000000 : 1000000, scratchBytes: 1000, parentRssBytes: 100000000, childRssBytes: 100000000, arrayBuffersBytes: 1000, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true }
+    return allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && remainingSlots === 0 ? { ...body, remainingClosureMs: 0, remainingOfflineMs: 0 } : body
+  }
+  const resourceReceipts = (records as Array<{ chargeRoot: LabRoot | null }>).map((row, ordinal) => ({ ordinal, chargeRoot: row.chargeRoot, before: frontier(ordinal, false), after: frontier(ordinal, true) }))
+  const v2 = allocation.schemaVersion === "lean-baseline-continuation-allocation-v2"
+  const result = { ...base.result, ...(v2 ? { schemaVersion: "lean-baseline-continuation-result-v2", allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, sourceHead: allocation.sourceHead, windowRoot: allocation.window.root, windowBytesRoot: allocation.windowBytesRoot, sourceGateRoot: allocation.sourceGateRoot, dataReviewRoot: allocation.dataReviewRoot, manifestRoot: allocation.manifestRoot, elapsedMs: evidence.elapsedMs } : {}), pipeline, evidenceRoot: evidence.root, charged: evidence.charged, successful: 36, status: "pending_independent_verification", ...(continuation || v2 ? { unusedOrdinals: [], resourceReceipts, planningRoot: allocation.planningRoot, holdoutReservations: allocation.holdoutReservations, failure: null, sourceAuthor: "/root/cowards-game/authors/source-owner", runOperator: "/root/cowards-game/operators/runner" } : {}) }
+  const time = v2 ? { elapsedMs: allocation.predecessor.elapsedUpperBoundMs + 2000, active: false, starts: new Map([["continuation-run-admission", allocation.window.anchorMs + 50], ["pilot-entry", allocation.window.anchorMs + 100], ["continuation-retained-verifier-v2", allocation.window.anchorMs + 1200]]), closes: new Map([["continuation-run-admission", allocation.window.anchorMs + 99], ["pilot-entry", allocation.window.anchorMs + 1100], ["continuation-retained-verifier-v2", allocation.window.anchorMs + 2000]]), closed: new Set(["continuation-run-admission", "pilot-entry", "continuation-retained-verifier-v2"]) } : base.time
+  const entry = v2 ? { ...base.entry, allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, head: "a".repeat(40), wallStartMs: allocation.window.anchorMs + 100 } : base.entry
+  const terminal = v2 ? { ...base.terminal, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(entry)), allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, head: "a".repeat(40), wallObservedMs: allocation.window.anchorMs + 1100 } : base.terminal
+  return { ...base, ...(v2 ? { allocation, requestBytesRoot: allocation.requestBytesRoot, head: "a".repeat(40), entry, terminal, time } : {}), sources, artifacts, pairs: pairs as LeanBaselineRetainedSnapshot["pairs"], observations: observations as LeanBaselineRetainedSnapshot["observations"], ledgerEvents: ledgerEvents as LeanBaselineRetainedSnapshot["ledgerEvents"], evidence: evidence as LeanBaselineRetainedSnapshot["evidence"], result } as unknown as LeanBaselineRetainedSnapshot
 }
 
 /** All objects remain inert, in-memory fixture data. */

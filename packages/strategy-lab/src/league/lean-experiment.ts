@@ -834,7 +834,7 @@ export interface LeanBaselineContinuationWindowV2 {
   approvalEvidence: { humanDecisionId: string; recordedBy: string }; approvedAtMs: number; anchorMs: number; deadlineMs: number; carryMs: number; capMs: number; durationMs: number; closureMs: number; offlineOverheadMs: number
   routeNamespace: "20261012-v3"; reviewedSourceHead: string; sourceRoot: LabRoot; sourceGateRoot: LabRoot; planRoot: LabRoot; runOperator: string; readerOperator: string; root: LabRoot
 }
-export const leanContinuationIdentityV2 = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_.:-]{1,120}$/u.test(v)
+export const leanContinuationIdentityV2 = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_./:-]{1,120}$/u.test(v)
 export const leanContinuationGlobalFloorV2 = (nowMs: number): number => {
   const p = LEAN_BASELINE_CONTINUATION_POLICY_V2
   if (!natural(nowMs) || nowMs < p.globalAnchorMs || !natural(p.globalCarryMs + nowMs - p.globalAnchorMs)) return fail("CONTINUATION_V2_CLOCK")
