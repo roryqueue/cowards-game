@@ -516,6 +516,7 @@ export const auditLeanBaselineContinuationRetained = (s: LeanBaselineContinuatio
 
 /** Ordinary IPC-free one-use reader. Admission is charged before expensive
  * authentication; a failed attempt remains consumed and cannot be rerun. */
+export const verifyLeanContinuationEvidence = (ledger: LeanExperimentLedger, guard: (additionalBytes?: number) => void) => verifyLeanEvidence(ledger, guard, "continuation-descriptor-v1")
 export const verifyLeanBaselineContinuationRetained = (requestPath: string) => {
   if (requestPath !== CONTINUATION.request || process.send || process.connected) return fail("CONTINUATION_READER_SCOPE")
   assertLeanBaselineContinuationScope()
@@ -530,10 +531,10 @@ export const verifyLeanBaselineContinuationRetained = (requestPath: string) => {
   try {
     const entry = readLeanChildEntry(ledger), terminal = readLeanChildTerminal(ledger)
     for (const pid of [entry.parentPid, entry.childPid]) { try { process.kill(pid, 0) } catch (error) { if ((error as NodeJS.ErrnoException).code === "ESRCH") continue; throw error }; return fail("CONTINUATION_PROCESS_LIVE") }
-    const c = openLeanBaselineContinuationContext(requestPath, true), guard = () => c.guard()
+    const c = openLeanBaselineContinuationContext(requestPath, true), guard = (additionalBytes?: number) => c.guard(additionalBytes)
     resourceGuard = guard; guard()
     const read = (name: string, maximum = 8388608) => { guard(); const value = readLeanContinuationJson(join(ledger.directory, name), maximum, 0o600); guard(); return value }
-    const evidence = verifyLeanEvidence(ledger, guard), state = readLeanLedger(ledger), result = read("result.json", 4194304)
+    const evidence = verifyLeanContinuationEvidence(ledger, guard), state = readLeanLedger(ledger), result = read("result.json", 4194304)
     const charged = evidence.records.filter(row => row.chargeRoot !== null).length
     const pairs = Array.from({ length: charged }, (_, i) => read(`pair-${i}.json`, 16384) as unknown as LeanBaselinePairReceipt)
     const observations = Array.from({ length: charged }, (_, i) => read(`observation-${i}.json`) as unknown as LeanBaselineObservationReceipt)

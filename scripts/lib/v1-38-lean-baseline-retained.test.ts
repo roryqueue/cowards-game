@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 import { readFileSync } from "node:fs"
+import * as fs from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { LEAN_TWO_PAIR_V11_EXTENSION } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCurrentBaselineAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
@@ -12,12 +15,47 @@ import { LEAN_BASELINE_REQUIRED_METRICS, type LeanBaselineMetricReceipt } from "
 import * as continuationReader from "./v1-38-lean-baseline-retained.js"
 import * as continuationEntry from "../run-v1-38-lean-baseline.js"
 import * as continuationLedger from "../../packages/strategy-lab/src/league/lean-experiment.js"
+vi.mock("node:fs", async original => ({ ...await original<typeof import("node:fs")>(), readSync: vi.fn((await original<typeof import("node:fs")>()).readSync) }))
 vi.mock("./v1-38-lean-seal-metadata.js", () => ({ inspectLeanSealMetadata: () => {
   const body = { schemaVersion: "lean-seal-metadata-inventory-v1", protocol: { present: false, bytesRoot: null }, originalPublicReference: { present: false, bytesRoot: null }, checkoutDirty: true, originalCompatibleUnopenedSealVerified: false, privateStoreOrPreimageRead: false, newExploratorySealCreated: false, reservedHoldoutPerProfile: 4, disposition: "holdout_claim_deferred_no_verified_compatible_seal", reason: "existing_clean_checkout_seal_prerequisite_not_met", claims: { absenceOfAllExternalSealsProved: false, originalCommitmentSatisfied: false, holdoutOpened: false } }
   return { ...body, root: labRoot("lean-seal-metadata-inventory-v1", body) }
 } }))
 
 const root = (name: string): LabRoot => labRoot("lean-retained-test-v1", name)
+describe("continuation compressed read admission", () => {
+  it("forwards optional reservations unchanged through the ordinary-reader evidence hook", () => {
+    const guard = vi.fn(), ledger = { directory: "inert", allocation: continuationFixtureBase().allocation } as continuationLedger.LeanExperimentLedger
+    const verify = vi.spyOn(continuationLedger, "verifyLeanEvidence").mockImplementation((_ledger, check, policy) => { expect(policy).toBe("continuation-descriptor-v1"); check?.(123456); check?.(); return { root: root("evidence") } as never })
+    try { continuationReader.verifyLeanContinuationEvidence(ledger, guard); expect(guard.mock.calls).toEqual([[123456], []]) }
+    finally { verify.mockRestore() }
+  })
+  it("reserves before allocation/read, checks each chunk and detects fd/path changes and unrelated growth", () => {
+    const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-replay-"))), path = join(dir, "replay.gz"), original = Buffer.alloc(131073, 97)
+    fs.writeFileSync(path, original, { mode: 0o600 })
+    const alloc = vi.spyOn(Buffer, "alloc"), read = vi.spyOn(fs, "readSync")
+    try {
+      const deny = vi.fn(() => { throw new Error("CAPACITY") })
+      expect(() => continuationLedger.readLeanContinuationCompressedReplay(path, original.length, deny)).toThrow("CAPACITY")
+      expect(alloc).not.toHaveBeenCalled(); expect(read).not.toHaveBeenCalled()
+      const reservations: (number | undefined)[] = []
+      expect(continuationLedger.readLeanContinuationCompressedReplay(path, original.length, n => { reservations.push(n) })).toEqual(original)
+      expect(reservations[0]).toBe(original.length * 2)
+      expect(reservations.length).toBeGreaterThanOrEqual(8)
+      for (const mutation of ["growth", "restore", "replace", "alias", "unrelated"] as const) {
+        fs.rmSync(path, { force: true }); fs.writeFileSync(path, original, { mode: 0o600 })
+        let checks = 0
+        expect(() => continuationLedger.readLeanContinuationCompressedReplay(path, original.length, () => {
+          if (++checks !== 3) return
+          if (mutation === "growth") fs.appendFileSync(path, "x")
+          if (mutation === "restore") { fs.writeFileSync(path, Buffer.alloc(original.length, 98)); fs.writeFileSync(path, original) }
+          if (mutation === "replace") { fs.renameSync(path, join(dir, "old")); fs.writeFileSync(path, original, { mode: 0o600 }) }
+          if (mutation === "alias") fs.linkSync(path, join(dir, "alias"))
+          if (mutation === "unrelated") throw new Error("SURVIVOR_CHANGED")
+        })).toThrow(mutation === "unrelated" ? /SURVIVOR_CHANGED/ : /REPLAY_FILE_CHANGED/)
+      }
+    } finally { alloc.mockRestore(); read.mockRestore(); fs.rmSync(dir, { recursive: true }) }
+  })
+})
 describe("distinct continuation reader admission", () => {
   it("refuses old nine-charge snapshots and a spoofed 43-charge retag", () => {
     expect(typeof continuationReader.auditLeanBaselineContinuationRetained).toBe("function")

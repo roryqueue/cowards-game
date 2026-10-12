@@ -1,7 +1,7 @@
 /** Private trusted-coordinator evidence. Never imported by the rules engine. */
 import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
-import { constants, openSync, closeSync, writeSync, fsyncSync, readFileSync, mkdirSync, lstatSync, realpathSync, readdirSync, statSync, statfsSync } from "node:fs"
+import { constants, openSync, closeSync, writeSync, fsyncSync, readSync, fstatSync, readFileSync, mkdirSync, lstatSync, realpathSync, readdirSync, statSync, statfsSync, type Stats } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { gzipSync, gunzipSync } from "node:zlib"
 import { types as nodeTypes } from "node:util"
@@ -1865,7 +1865,36 @@ export const checkpointLeanResources = (ledger: LeanExperimentLedger, elapsedMs:
   append(ledger, e); readLeanLedger(ledger)
 }
 export const stopLeanLedger = (ledger: LeanExperimentLedger, reason: "complete" | "failure" | "capacity" | "integrity") => { readLeanLedger(ledger); append(ledger, { kind: "stop", reason }) }
-export const verifyLeanEvidence = (ledger: LeanExperimentLedger, resourceGuard?: (additionalBytes?: number) => void) => {
+/** Continuation-only compressed admission. No compressed Buffer exists until
+ * the complete resource guard admits its conservative two-copy reservation. */
+export const readLeanContinuationCompressedReplay = (name: string, expectedBytes: number, guard: (additionalBytes?: number) => void): Buffer => {
+  if (!natural(expectedBytes) || expectedBytes > REPLAY_MAX || typeof guard !== "function") return fail("REPLAY_FILE")
+  const path = resolve(name), stat = lstatSync(path)
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== process.getuid?.() || (stat.mode & 0o777) !== 0o600 || stat.size !== expectedBytes || realpathSync(path) !== path) return fail("REPLAY_FILE")
+  const same = (s: Stats) => s.isFile() && !s.isSymbolicLink() && s.nlink === 1 && s.uid === stat.uid && s.mode === stat.mode && s.dev === stat.dev && s.ino === stat.ino && s.size === stat.size && s.blocks === stat.blocks && s.mtimeMs === stat.mtimeMs && s.ctimeMs === stat.ctimeMs
+  const holdPath = () => { if (!same(lstatSync(path)) || realpathSync(path) !== path) return fail("REPLAY_FILE_CHANGED") }
+  guard(stat.size * 2); holdPath()
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
+  let bytes: Buffer
+  const hold = () => { if (!same(fstatSync(fd))) return fail("REPLAY_FILE_CHANGED"); holdPath() }
+  try {
+    hold()
+    bytes = Buffer.alloc(stat.size)
+    let offset = 0
+    while (offset < bytes.length) {
+      guard(); hold()
+      const maximum = Math.min(65536, bytes.length - offset), n = readSync(fd, bytes, offset, maximum, offset)
+      if (!Number.isSafeInteger(n) || n <= 0 || n > maximum) return fail("REPLAY_FILE_CHANGED")
+      offset += n
+      guard(); hold()
+    }
+    guard(); hold()
+  } finally { closeSync(fd) }
+  guard(); holdPath()
+  return bytes
+}
+export const verifyLeanEvidence = (ledger: LeanExperimentLedger, resourceGuard?: (additionalBytes?: number) => void, compressedReadPolicy?: "continuation-descriptor-v1") => {
+  if (compressedReadPolicy !== undefined && (compressedReadPolicy !== "continuation-descriptor-v1" || ledger.allocation.schemaVersion !== "lean-baseline-continuation-allocation-v1" || typeof resourceGuard !== "function")) return fail("REPLAY_READ_POLICY")
   if (leanResourcePolicyForAllocationV15(ledger.allocation) && typeof resourceGuard !== "function") return fail("RESOURCE_GUARD")
   resourceGuard?.()
   const state = readLeanLedger(ledger)
@@ -1878,7 +1907,8 @@ export const verifyLeanEvidence = (ledger: LeanExperimentLedger, resourceGuard?:
       const selected = ledger.allocation.sampleSlotRoots.includes(slot.root) || terminal.record.classification !== "success" || !terminal.record.cleanupComplete
       if (selected !== (terminal.replay !== null)) return fail("REPLAY_MISSING")
       if (terminal.replay) {
-        const bytes = readSafe(join(ledger.directory, `${c!.root.slice(7)}.gz`))
+        const path = join(ledger.directory, `${c!.root.slice(7)}.gz`)
+        const bytes = compressedReadPolicy === "continuation-descriptor-v1" ? readLeanContinuationCompressedReplay(path, terminal.replay.compressedBytes, resourceGuard!) : readSafe(path)
         if (validationOnly) validateLeanReplay(terminal.replay, bytes, REPLAY_MAX, ledger.allocation, resourceGuard)
         else decodeLeanReplay(terminal.replay, bytes)
       }
