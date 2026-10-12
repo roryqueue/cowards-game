@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V4 source verified; awaiting prospective eight-hour time decision before full36 admission
+stopped_at: V4 source and DATA gates closed; final pins and unique ROOT preparation next
 last_updated: "2026-10-12"
 last_activity: 2026-10-12
-last_activity_desc: V4 fixed4908ee0e independently verified,167 tests passed; new time allowance pending, no Match
+last_activity_desc: V4 actual approval DATA independently reviewed; source unchanged, no Match yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,20 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V4 actual DATA gates closed; preparation next
+
+ROOT2026-10-12T23:55UTC. Actual typed narrowchecker /root/check_265_v4_time_amendment PASS/issues[] and independent /root/review_265_permission_repair PASS_DATA_REVIEW/findings[]/commandsCLOSED; observed fresh935B exact0600/owner501/singlelink/canonicalwindow raw98b0cd90/domain e0f548b9, approval provenance and uninterrupted arithmetic/sourceGate/planRoot/roles/ancestor joins, exactoldV3roots unchanged and allV4setup/request paths absent. Sole active DATAprojection20810de91bd0587b1ba535c55c87bf1589dc432df2ad2bf611fe06dcbbaa4898 now recorded. Source4908ee0e/b41b/gate7b1f actualallsourceproofCLOSED unchanged, no source edit/rerun/phasecredit.
+
+Next ROOT commits/pushes final planning pins, creates fresh exactV4request, then ONE preparation using actual canonical CLI with cachesoff/core0 and exact prospective TMPDIR. No separate wrapper/probe: legacy wrapper selects oldTMPDIR and must not be used for this route. New immutable allocation-only directchild commit BEFORE uniqueROOTentry, fresh passing SAMEPROCESS capacity BEFORE charge, source AND all pinned planning/HEAD fixed through terminal and ONE distinct actual ordinaryretainedverifier withrealepochHEAD. Everypreparation failure stays spent, unique bounded terminal-only check withoutfakehead/retry. No other active agent/process/run/verifier or competingheavywork; no newcharge atthischeckpoint.
+
+Human approval remains anchor1791848836000/carry500894903/cap529694903/hard07:47:16UTC/latestfullentry01:06:16UTC. Allsource/research/review/idle/prep/run/reader costs continue; same15GB/all50oldcost-onlycharges/global300/new36/fourunopened/allgueststartuphostMatch/rules/privacy; nofreeze/formation/holdout/public/counting/production orPhase265completion. Earlierentries history; actual markers govern after this final planning pin.
+
+## Current continuation — fresh V4 time decision approved
+
+ROOT2026-10-12T23:47:16UTC first observed latest human `yes, approved`, accepting ONE fresh eight-hour PRIVATE window/same15GB/carryALLcosts. Provenance label human-approval-observed-20261012T234716Z is an actual observation label, not external custody/message UUID. ApprovedAt/anchor1791848836000/carry500894903/cap529694903/deadline1791877636000=2026-10-13T07:47:16UTC/03:47:16EDT. Full36 latest entry1791853576000/01:06:16UTC, six hours maximum Matches plus31minclosure/10minoffline; all later work and idle count continuously. Earlier pending-time paragraph below now resolved prospectively only; old grant/attempt/window/request and50cost-onlycharges immutable.
+
+Existing Plan16 DATA-only amendment records the decision; independent narrow amendment/data review next, before any active DATA projection/request/preparation. Verified source4908ee0e/rootb41b/sourcegate7b1f/167ROOTpasses unchanged, no new source tests or edits needed. ExactV4window/request/allocation/store/temp/claim still absent at approval; no duplicate active process/agent/run/reader. Same15GB/3GBRAM/36new/fourunopened/global300/allrules/runtime/privacy. Unique ROOT preparation/new immutable allocation-only directchild commit→unique ROOTentry/fresh SAMEPROCESS capacity→ONE distinct actual retained verifier; source AND HEAD held through actual closures. No Phase265/baseline/freeze/formation/holdout/public/counting/production credit. Earlier entries are history.
 
 ## Current continuation — source repaired; genuine time decision pending
 
