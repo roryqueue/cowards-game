@@ -321,6 +321,8 @@ export const claimLeanPrivateProbeRuntimeAuthority = (authority: LeanPrivateProb
 }
 export interface LeanStartupGrantV5 { readonly version?: 6 | 7; readonly allocationRoot: LabRoot; readonly chargeRoot: LabRoot; readonly seat: "bottom" | "top"; readonly policyRoot: LabRoot; readonly harnessRoot: LabRoot }
 export interface LeanStartupGrantV8 extends Omit<LeanStartupGrantV5, "version"> { readonly version: 8; toJSON(): never }
+import { validateLeanBaselineContinuationAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { readLeanContinuationJson } from "./v1-38-lean-baseline-continuation.js"
 const issued = new WeakMap<object, { binding: ProspectiveLeagueLifetimeProviderBinding; claims: Set<Layer>; startup?: Readonly<LeanStartupGrantV5>; startupV8?: Readonly<LeanStartupGrantV8> }>()
 export const leanStartupAuthorityDescriptorV5 = (authority: LeanRuntimeAuthority): Readonly<LeanStartupGrantV5> | undefined => issued.get(authority)?.startup
 export const leanStartupAuthorityDescriptorV8 = (authority: LeanRuntimeAuthority): Readonly<LeanStartupGrantV8> | undefined => issued.get(authority)?.startupV8
@@ -357,10 +359,17 @@ export const claimLeanRuntimeAuthority = (authority: LeanRuntimeAuthority, bindi
 }
 /** Distinct claim path: no legacy caller can dispatch V8 between units. */
 const privateMatchConstructionGuardsV3 = new WeakMap<object, () => void>()
+const continuationConstructionGuards = new WeakMap<object, () => void>()
 export const claimLeanStartupAuthorityV8 = (authority: LeanRuntimeAuthority, binding: Omit<ProspectiveLeagueLifetimeProviderBinding, "seat"> & { seat?: "bottom" | "top" }, layer: Layer): { lifetimeMs: 600000; receiptMs: 5000; startup: Readonly<LeanStartupGrantV8> } => {
   const state = authority && issued.get(authority)
   if (!state?.startupV8 || authority.schemaVersion !== "lean-runtime-authority-v1" || !["factory", "planner", "session"].includes(layer) || state.claims.has(layer) || layer === "planner" && !state.claims.has("factory") || layer === "session" && !state.claims.has("planner") || labRoot("lean-runtime-binding-v1", { ...binding, seat: authority.seat }) !== labRoot("lean-runtime-binding-v1", state.binding)) return fail()
   privateMatchConstructionGuardsV3.get(authority)?.()
+  const continuationGuard = continuationConstructionGuards.get(authority)
+  if (continuationGuard) {
+    // A construction refusal burns this opaque authority. No later capacity
+    // improvement can recover the seat or replay the rejected claim.
+    try { continuationGuard() } catch (error) { issued.delete(authority); throw error }
+  }
   state.claims.add(layer)
   return { lifetimeMs: 600000, receiptMs: 5000, startup: state.startupV8 }
 }
@@ -369,10 +378,20 @@ export const claimLeanStartupAuthorityV8 = (authority: LeanRuntimeAuthority, bin
  * scheduling predicate are unchanged. A pair is retained before charge and
  * both independently validated immutable source snapshots are reopened here. */
 export const issueLeanBaselineRuntimeAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding): LeanRuntimeAuthority => issueBaselineAuthority(ledger, charge, snapshot, binding)
+/** Fresh-source only; no reuse grant, diagnostic admission or old mode alias. */
+export const issueLeanBaselineContinuationRuntimeAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding, guard: () => void): LeanRuntimeAuthority => {
+  const allocation = validateLeanBaselineContinuationAllocation(ledger.allocation)
+  if (allocation.root !== binding.budgetRoot || typeof guard !== "function") return fail()
+  const key = `${allocation.root}:${charge.root}:${binding.seat}`
+  if (used.has(key)) return fail()
+  used.add(key)
+  guard()
+  return issueBaselineAuthority(ledger, charge, snapshot, binding, undefined, { guard })
+}
 export const issueLeanCorrectionRuntimeAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding, reuse: LeanColdReuse): LeanRuntimeAuthority => issueBaselineAuthority(ledger, charge, snapshot, binding, validateLeanColdReuse(reuse, ledger.allocation.sourceRoot))
-const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding, reuse?: LeanColdReuse): LeanRuntimeAuthority => {
+const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding, reuse?: LeanColdReuse, continuation?: { guard: () => void }): LeanRuntimeAuthority => {
   const allocation = ledger.allocation as unknown as { schemaVersion: string; coldRoot?: LabRoot; sourceRoot: LabRoot; predecessor?: { chargedMatches: number } }
-  if (reuse ? !["lean-correction-diagnostic-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-diagnostic-allocation-v4", "lean-correction-supervisor-baseline-allocation-v4", "lean-correction-supervisor-diagnostic-allocation-v5", "lean-correction-supervisor-baseline-allocation-v5", "lean-correction-supervisor-diagnostic-allocation-v6", "lean-correction-supervisor-baseline-allocation-v6", "lean-correction-supervisor-diagnostic-allocation-v7", "lean-correction-supervisor-baseline-allocation-v7", "lean-correction-supervisor-diagnostic-allocation-v8", "lean-correction-supervisor-baseline-allocation-v8"].includes(allocation.schemaVersion) || !("reuseGrantRoot" in ledger.allocation) || ledger.allocation.reuseGrantRoot !== reuse.grant.root : allocation.schemaVersion !== "lean-current-baseline-allocation-v1") return fail()
+  if (continuation ? allocation.schemaVersion !== "lean-baseline-continuation-allocation-v1" || reuse !== undefined : reuse ? !["lean-correction-diagnostic-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-diagnostic-allocation-v4", "lean-correction-supervisor-baseline-allocation-v4", "lean-correction-supervisor-diagnostic-allocation-v5", "lean-correction-supervisor-baseline-allocation-v5", "lean-correction-supervisor-diagnostic-allocation-v6", "lean-correction-supervisor-baseline-allocation-v6", "lean-correction-supervisor-diagnostic-allocation-v7", "lean-correction-supervisor-baseline-allocation-v7", "lean-correction-supervisor-diagnostic-allocation-v8", "lean-correction-supervisor-baseline-allocation-v8"].includes(allocation.schemaVersion) || !("reuseGrantRoot" in ledger.allocation) || ledger.allocation.reuseGrantRoot !== reuse.grant.root : allocation.schemaVersion !== "lean-current-baseline-allocation-v1") return fail()
   if ((allocation.schemaVersion.endsWith("-v5") || allocation.schemaVersion.endsWith("-v6") || allocation.schemaVersion.endsWith("-v7") || allocation.schemaVersion.endsWith("-v8"))) leanCapsForAllocation(ledger.allocation)
   if (allocation.schemaVersion.endsWith("-v8")) {
     // Admission authenticates the prospective extension as part of the exact
@@ -427,16 +446,29 @@ const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge
   const runtime = prospectiveLeagueRuntimeBinding(admission, { revisionId: revision.id, sourceRoot: source.sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image })
   if (labRoot("lean-candidate-runtime", binding.runtime) !== labRoot("lean-candidate-runtime", runtime) || binding.budgetRoot !== ledger.allocation.root || binding.attemptRoot !== retainedCharge.root || binding.matchId !== `lean-${retainedCharge.root.slice(7, 31)}` || binding.containerName !== `lean-${retainedCharge.root.slice(7, 25)}-${binding.seat}` || binding.ownershipLabel !== `lean-${ledger.allocation.root.slice(7, 25)}`) return fail()
   const key = `${ledger.allocation.root}:${charge.root}:${binding.seat}`
-  if (used.has(key)) return fail()
+  if (!continuation && used.has(key)) return fail()
+  if (continuation) {
+    const a = validateLeanBaselineContinuationAllocation(ledger.allocation), entry = readLeanChildEntry(ledger)
+    if (entry.sourceRoot !== a.sourceRoot || entry.allocationRoot !== a.root) return fail()
+    for (const [role, snapshotRoot, sourceRoot] of [[pair.bottomRole, pair.bottomSnapshotRoot, pair.bottomSourceRoot], [pair.topRole, pair.topSnapshotRoot, pair.topSourceRoot]] as const) {
+      const fresh = readLeanBaselineSource(ledger.directory, role)
+      if (fresh.root !== snapshotRoot || fresh.sourceRoot !== sourceRoot || fresh.implementationRoot !== a.sourceRoot || fresh.coldRoot !== a.coldRoot) return fail()
+      const body = { schemaVersion: "lean-baseline-continuation-source-publication-v1", allocationRoot: a.root, sourceHead: a.sourceHead, head: entry.head, implementationRoot: a.sourceRoot, coldRoot: a.coldRoot, role, snapshotRoot, sourceRoot }
+      const publication = readLeanContinuationJson(resolve(ledger.directory, `publication-${role}-continuation-v1.json`), 16384, 0o600)
+      if (!matchEqual(publication, { ...body, root: labRoot(body.schemaVersion, body) })) return fail()
+    }
+    continuation.guard()
+  }
   const authority: LeanRuntimeAuthority = Object.freeze({ schemaVersion: "lean-runtime-authority-v1", runtime: freezeLabValue(structuredClone(runtime)), seat: binding.seat, toJSON: fail })
-  const mode = leanSupervisorAllocationMode(ledger.allocation), v8 = mode === "v15-5"
+  const mode = leanSupervisorAllocationMode(ledger.allocation), v8 = !!continuation || mode === "v15-5"
   const correction = ledger.allocation as LeanCorrectionAllocation
-  if (v8 && (correction.attemptOrdinal !== 5 || correction.timeboxExtension?.root !== LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY.root || correction.startupPolicyRoot !== LEAN_STARTUP_POLICY_V5.root)) return fail()
-  const startupV8: Readonly<LeanStartupGrantV8> | undefined = v8 ? Object.freeze({ version: 8 as const, allocationRoot: ledger.allocation.root, chargeRoot: retainedCharge.root, seat: binding.seat, policyRoot: correction.startupPolicyRoot!, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())), toJSON: fail }) : undefined
+  if (v8 && !continuation && (correction.attemptOrdinal !== 5 || correction.timeboxExtension?.root !== LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY.root || correction.startupPolicyRoot !== LEAN_STARTUP_POLICY_V5.root)) return fail()
+  const startupV8: Readonly<LeanStartupGrantV8> | undefined = v8 ? Object.freeze({ version: 8 as const, allocationRoot: ledger.allocation.root, chargeRoot: retainedCharge.root, seat: binding.seat, policyRoot: continuation ? LEAN_STARTUP_POLICY_V5.root : correction.startupPolicyRoot!, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV8())), toJSON: fail }) : undefined
   const startup = !v8 && (leanSupervisorAllocationMode(ledger.allocation) === "v5" || (leanSupervisorAllocationMode(ledger.allocation) === "v6" || (leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation))))) ? Object.freeze({ ...((leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation))) ? { version: 7 as const } : leanSupervisorAllocationMode(ledger.allocation) === "v6" ? { version: 6 as const } : {}), allocationRoot: ledger.allocation.root, chargeRoot: retainedCharge.root, seat: binding.seat, policyRoot: (ledger.allocation as LeanCorrectionAllocation).startupPolicyRoot!, harnessRoot: leanBytesRoot(Buffer.from(buildLeanStartupWorkerHarnessV5())) }) : undefined
   if (startup && startup.policyRoot !== LEAN_STARTUP_POLICY_V5.root) return fail()
   issued.set(authority, { binding: freezeLabValue(structuredClone(binding)), claims: new Set(), ...(startup === undefined ? {} : { startup }), ...(startupV8 === undefined ? {} : { startupV8 }) }); used.add(key)
   if (reuse) correctionAuthorities.add(authority)
+  if (continuation) continuationConstructionGuards.set(authority, continuation.guard)
   return authority
 }
 

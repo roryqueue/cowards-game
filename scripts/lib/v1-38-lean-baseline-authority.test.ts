@@ -50,6 +50,40 @@ const fixture = () => {
   return { ledger, charge, source, pair, pairPath, journal, binding }
 }
 describe("distinct baseline runtime authority", () => {
+  it("continuation V8 guards issuance and every ordered construction claim without refunding a failed seat", () => {
+    const f = fixture(), a = f.ledger.allocation as any
+    Object.assign(a, { schemaVersion: "lean-baseline-continuation-allocation-v1", sourceHead: "b".repeat(40) })
+    const validate = vi.spyOn(leanIO, "validateLeanBaselineContinuationAllocation").mockReturnValue(a)
+    const entry = vi.spyOn(leanIO, "readLeanChildEntry").mockReturnValue({ head: "a".repeat(40), sourceRoot: a.sourceRoot, allocationRoot: a.root } as any)
+    const guard = vi.fn()
+    const proof = (role: string) => { const body = { schemaVersion: "lean-baseline-continuation-source-publication-v1", allocationRoot: a.root, sourceHead: a.sourceHead, head: "a".repeat(40), implementationRoot: a.sourceRoot, coldRoot: a.coldRoot, role, snapshotRoot: f.source.root, sourceRoot: f.source.sourceRoot }; return { ...body, root: labRoot(body.schemaVersion, body) } }
+    writeFileSync(join(f.ledger.directory, `publication-${f.source.role}-continuation-v1.json`), leanCanonicalBytes(proof(f.source.role)), { mode: 0o600, flag: "wx" })
+    try {
+      const auth = authorityIO.issueLeanBaselineContinuationRuntimeAuthority(f.ledger, f.charge, f.source, f.binding, guard)
+      expect(guard.mock.calls.length).toBeGreaterThanOrEqual(2)
+      expect(authorityIO.leanStartupAuthorityDescriptorV8(auth)?.version).toBe(8)
+      expect(() => JSON.stringify(auth)).toThrow()
+      expect(() => authorityIO.claimLeanStartupAuthorityV8({ ...auth }, f.binding, "factory")).toThrow()
+      expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "planner")).toThrow()
+      authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "factory")
+      guard.mockImplementation(() => { throw new Error("INERT_FRONTIER_CROSSED") })
+      expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "planner")).toThrow("INERT_FRONTIER_CROSSED")
+      guard.mockImplementation(() => {})
+      expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "planner")).toThrow()
+      expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthority(f.ledger, f.charge, f.source, f.binding, guard)).toThrow()
+    } finally { validate.mockRestore(); entry.mockRestore() }
+  })
+  it("continuation rejects at its admission guard and cannot issue that spent seat again", () => {
+    const f = fixture(), a = f.ledger.allocation as any
+    Object.assign(a, { schemaVersion: "lean-baseline-continuation-allocation-v1", sourceHead: "b".repeat(40) })
+    const validate = vi.spyOn(leanIO, "validateLeanBaselineContinuationAllocation").mockReturnValue(a)
+    const guard = vi.fn<() => void>(() => { throw new Error("INERT_NO_CAPACITY") })
+    try {
+      expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthority(f.ledger, f.charge, f.source, f.binding, guard)).toThrow("INERT_NO_CAPACITY")
+      guard.mockImplementation(() => {})
+      expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthority(f.ledger, f.charge, f.source, f.binding, guard)).toThrow()
+    } finally { validate.mockRestore() }
+  })
   it("[startup-origin-v8] host-issued ordinal5 descriptor is nonserializable and single-use; forged/default claims fail", () => {
     const f = fixture(), grantRoot = labRoot("NON_AUTHORIZING-startup-grant", f.charge.root)
     const reuse = { grant: { root: grantRoot }, sources: [f.source] } as unknown as LeanColdReuse

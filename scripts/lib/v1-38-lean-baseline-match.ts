@@ -119,12 +119,20 @@ type PrivateMatchInputV3 = Pick<LegacyMatchInput, "bottom" | "top" | "register" 
 export const runLeanPrivateFeasibilityMatchV3 = async (input: PrivateMatchInputV3) => composeLeanNativeMatch(input, { version: 3, context: readLeanPrivateMatchContextV3(input.admission, input.debit) })
 type PrivateMatchInputV2 = Pick<LegacyMatchInput, "bottom" | "top" | "register" | "unregister"> & { admission: LeanPrivateMatchAdmissionV2; debit: LeanPrivateMatchDebitV2 }
 export const runLeanBaselineMatch = (input: LegacyMatchInput) => composeLeanNativeMatch(input)
+import { validateLeanBaselineContinuationAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { issueLeanBaselineContinuationRuntimeAuthority } from "./v1-38-lean-experiment-authority.js"
+export const runLeanBaselineContinuationMatch = async (input: Omit<LegacyMatchInput, "correction">) => {
+  const a = validateLeanBaselineContinuationAllocation(input.ledger.allocation)
+  input.checkpoint()
+  if (input.seed !== a.seed || input.slot.root !== a.slots[input.slot.ordinal]?.root || input.charge.allocationRoot !== a.root || input.charge.slotRoot !== input.slot.root || input.charge.ordinal !== input.slot.ordinal) return fail()
+  return composeLeanNativeMatch(input, undefined, true)
+}
 /** Only opaque admitted/debited context enters the new lane; no callable
  * issuer, scalar capacity, arbitrary scenario or fabricated ledger seam. */
 export const runLeanPrivateFeasibilityMatch = async (input: PrivateMatchInput) => composeLeanNativeMatch(input, { version: 1, context: readLeanPrivateMatchContextV1(input.admission, input.debit) })
 export const runLeanPrivateFeasibilityMatchV2 = async (input: PrivateMatchInputV2) => composeLeanNativeMatch(input, { version: 2, context: readLeanPrivateMatchContextV2(input.admission, input.debit) })
 type AuthenticatedPrivateRoute = { version: 3; context: ReturnType<typeof readLeanPrivateMatchContextV3> } | { version: 1; context: ReturnType<typeof readLeanPrivateMatchContextV1> } | { version: 2; context: ReturnType<typeof readLeanPrivateMatchContextV2> }
-const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInput | PrivateMatchInputV2 | PrivateMatchInputV3, route?: AuthenticatedPrivateRoute) => {
+const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInput | PrivateMatchInputV2 | PrivateMatchInputV3, route?: AuthenticatedPrivateRoute, continuation = false) => {
   const legacy = "ledger" in input ? input : undefined
   const privateInput = "admission" in input ? input : undefined
   const v3 = route?.version === 3 ? privateInput as PrivateMatchInputV3 : undefined
@@ -137,7 +145,9 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
   const hostBindingV15: LabHostBindingV15 | undefined = legacy && leanSupervisorAllocationMode(legacy.ledger.allocation) === "v15-4" && leanSupervisorAllocationMode(admitLeanAllocation(legacy.ledger.allocation)) === "v15-4" ? { allocationRoot, chargeRoot, slotRoot: legacy.slot.root } : undefined
   let bottomSource: LeanBaselineSource, topSource: LeanBaselineSource, scenario: ReturnType<typeof leanBaselineScenario>
   try {
+    if (continuation) checkpoint()
     bottomSource = validateLeanBaselineSource(input.bottom); topSource = validateLeanBaselineSource(input.top)
+    if (continuation) checkpoint()
     if (context) {
       const a = context.allocation, slot = context.slot
       if (a.seed !== LEAN_PRIVATE_MATCH_SEED_V1 || bottomSource.role !== slot.bottomRole || topSource.role !== slot.topRole || !a.sources.some(s => s.snapshotRoot === bottomSource.root && s.sourceRoot === bottomSource.sourceRoot) || !a.sources.some(s => s.snapshotRoot === topSource.root && s.sourceRoot === topSource.sourceRoot)) return fail()
@@ -165,7 +175,7 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
     const matchId = `lean-${chargeRoot.slice(7, 31)}`, containerName = `lean-${chargeRoot.slice(7, 25)}-${seat}`, ownershipLabel = `lean-${allocationRoot.slice(7, 25)}`
     const runtime = prospectiveLeagueRuntimeBinding(admission, { revisionId: revision.id, sourceRoot: snapshot.sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image })
     const binding = { budgetRoot: allocationRoot, attemptRoot: chargeRoot, matchId, containerName, ownershipLabel, seat, runtime }
-    const authority = v3 ? issueLeanPrivateMatchRuntimeAuthorityV3(v3.admission, v3.debit, snapshot, binding) : v2 ? issueLeanPrivateMatchRuntimeAuthorityV2(v2.admission, v2.debit, snapshot, binding) : v1 ? issueLeanPrivateMatchRuntimeAuthorityV1(v1.admission, v1.debit, snapshot, binding) : legacy!.correction ? issueLeanCorrectionRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, legacy!.correction.reuse) : issueLeanBaselineRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding)
+    const authority = continuation ? issueLeanBaselineContinuationRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, checkpoint) : v3 ? issueLeanPrivateMatchRuntimeAuthorityV3(v3.admission, v3.debit, snapshot, binding) : v2 ? issueLeanPrivateMatchRuntimeAuthorityV2(v2.admission, v2.debit, snapshot, binding) : v1 ? issueLeanPrivateMatchRuntimeAuthorityV1(v1.admission, v1.debit, snapshot, binding) : legacy!.correction ? issueLeanCorrectionRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding, legacy!.correction.reuse) : issueLeanBaselineRuntimeAuthority(legacy!.ledger, legacy!.charge, snapshot, binding)
     let activePrivateRequest: PrivateStartupRequestV3 | undefined
     let activeTransportBinding: LeanCorrectionInvocationTransportBinding | undefined
     let activePrivateTransport: LeanCorrectionInvocationTransportBinding | undefined

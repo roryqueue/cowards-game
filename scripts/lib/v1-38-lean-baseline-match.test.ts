@@ -1,4 +1,11 @@
 import { describe, it, expect, vi } from "vitest"
+it("fresh continuation denies an invalid allocation before any supervised provider construction", async () => {
+  const create = vi.spyOn(runtimeModule, "createFactorySupervisedRuntime")
+  try {
+    await expect(composerModule.runLeanBaselineContinuationMatch({ ledger: { allocation: { schemaVersion: "lean-current-baseline-allocation-v1" } }, checkpoint() {} } as never)).rejects.toThrow()
+    expect(create).not.toHaveBeenCalled()
+  } finally { create.mockRestore() }
+})
 it.each(["available", "absent", "no-diagnostic", "extra-origin-key", "malformed-origin", "wrong-request", "wrong-input", "wrong-method", "wrong-ordinal", "wrong-seat", "wrong-source", "wrong-executable", "wrong-allocation", "wrong-debit", "wrong-harness", "wrong-diagnostic", "unverified", "throw", "throw-then-absent", "success-then-absent", "success-then-fresh", "duplicate-observation", "duplicate-failed-row", "foreign-identity", "uncharged", "consumer-throws", "v1"] as const)("private startup receipt uses current inert V3 invocation: %s", async mode => {
   const r = (n: number) => labRoot("inert-private-startup-receipt", n)
   const executableSource = "INERT_PRIVATE_SENTINEL_NEVER_EXECUTED", requestInput = { private: "INPUT_PRIVATE_SENTINEL" }
