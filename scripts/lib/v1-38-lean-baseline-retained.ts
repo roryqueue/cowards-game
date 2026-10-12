@@ -11,7 +11,7 @@ import { leanColdProcedureRoot, leanBaselineMetricCoverage, compactLeanBaselineC
 import { LEAN_BASELINE_REQUIRED_METRICS } from "./v1-38-lean-baseline-metrics.js"
 import { LEAN_CONTINUATION_EXECUTOR_REASONS } from "./v1-38-lean-container-match-session.js"
 import type { LeanContinuationExecutorDiagnostic, LeanContinuationFailureAccounting } from "./v1-38-lean-baseline-match.js"
-import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
+import { readLeanBaselineSource, validateLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { inspectLeanSealMetadata } from "./v1-38-lean-seal-metadata.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
 import { buildLeanInitialProposals, selectLeanBestTrainedProposal, selectLeanTrainedProposal } from "./v1-38-lean-training-adapter.js"
@@ -714,8 +714,7 @@ export const verifyLeanBaselineContinuationRetainedV2 = (requestPath: string) =>
       leanContinuationGlobalFloorV2(admissionNow) > approvedWindow.capMs) return fail("V2_READER_WINDOW")
   const ledger = openLeanLedger(CONTINUATION_V2.store), allocation = validateLeanBaselineContinuationAllocationV2(ledger.allocation)
   if (!same(allocation.window, approvedWindow) || allocation.windowBytesRoot !== leanBytesRoot(leanCanonicalBytes(approvedWindow)) || allocation.window.root !== approvedWindow.root) return fail("V2_READER_WINDOW_BINDING")
-  const admissionElapsed = currentLeanElapsedMs(ledger)
-  if (admissionElapsed + approvedWindow.closureMs + approvedWindow.offlineOverheadMs > allocation.caps.elapsedMs || Date.now() >= approvedWindow.deadlineMs) return fail("V2_READER_WINDOW")
+  if (Date.now() >= approvedWindow.deadlineMs) return fail("V2_READER_WINDOW")
   const before = readLeanTimeAccounting(ledger)
   if (before.active || before.starts.has("continuation-retained-verifier-v2") || !before.closed.has("continuation-run-admission") || readdirSync(ledger.directory).some(name => ["reader-claim.json", "retained-check.json"].includes(name))) return fail("V2_READER_USED")
   const pilotCloseMs = before.closes.get("pilot-entry"), remainingClosureMs = pilotCloseMs === undefined ? approvedWindow.closureMs : Math.max(0, approvedWindow.closureMs - Math.max(0, admissionNow - pilotCloseMs))
@@ -745,7 +744,7 @@ export const verifyLeanBaselineContinuationRetainedV2 = (requestPath: string) =>
     if (roles.length > sourceRoles.length || roles.some(role => !sourceRoles.includes(role as typeof sourceRoles[number]))) return fail("V2_SOURCE_ROLE")
     const sources = roles.map(role => {
       c.guard()
-      const source = readLeanBaselineSource(ledger.directory, role), publication = read(`publication-${role}-continuation-v2.json`, 16384)
+      const source = validateLeanBaselineSource(read(`source-${role}.json`, 262144)), publication = read(`publication-${role}-continuation-v2.json`, 16384)
       const body = { schemaVersion: "lean-baseline-continuation-source-publication-v2", allocationRoot: allocation.root, sourceHead: allocation.sourceHead, head: c.fixedHead, implementationRoot: allocation.sourceRoot, coldRoot: allocation.coldRoot, role, snapshotRoot: source.root, sourceRoot: source.sourceRoot, windowRoot: allocation.window.root, windowBytesRoot: allocation.windowBytesRoot, requestBytesRoot: allocation.requestBytesRoot, dataReviewRoot: allocation.dataReviewRoot }
       if (!same(publication, { ...body, root: labRoot(body.schemaVersion, body) })) return fail("V2_PUBLICATION")
       c.guard(); return source

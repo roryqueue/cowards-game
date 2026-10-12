@@ -9,7 +9,8 @@ import { currentBaselineSlotKind, leanBytesRoot, leanCanonicalBytes, type LeanCu
 import { leanColdProcedureRoot, compactLeanBaselineCell, executeLeanCurrentPipeline, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
 import { auditLeanCurrentBaselineRetained, assertLeanRetryBaselineJoinV8, verifyLeanRetryBaselineRetainedV8, assertLeanSupervisorReasonCustodyV2, type LeanBaselineRetainedSnapshot } from "./v1-38-lean-baseline-retained.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
-import type { LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
+import { buildLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
+import { emitTacticalSource } from "../../packages/strategy-oracle-tactical/src/emit.js"
 import { CANONICAL_ARENA_CATALOG_V1_37, type StrategyInputV119 } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { LEAN_BASELINE_REQUIRED_METRICS, type LeanBaselineMetricReceipt } from "./v1-38-lean-baseline-metrics.js"
@@ -17,7 +18,6 @@ import * as continuationReader from "./v1-38-lean-baseline-retained.js"
 import * as continuationEntry from "../run-v1-38-lean-baseline.js"
 import * as continuationLedger from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as continuationFiles from "./v1-38-lean-baseline-continuation.js"
-import * as continuationSources from "./v1-38-lean-baseline-source.js"
 vi.mock("node:fs", async original => ({ ...await original<typeof import("node:fs")>(), readSync: vi.fn((await original<typeof import("node:fs")>()).readSync) }))
 vi.mock("./v1-38-lean-seal-metadata.js", () => ({ inspectLeanSealMetadata: () => {
   const body = { schemaVersion: "lean-seal-metadata-inventory-v1", protocol: { present: false, bytesRoot: null }, originalPublicReference: { present: false, bytesRoot: null }, checkoutDirty: true, originalCompatibleUnopenedSealVerified: false, privateStoreOrPreimageRead: false, newExploratorySealCreated: false, reservedHoldoutPerProfile: 4, disposition: "holdout_claim_deferred_no_verified_compatible_seal", reason: "existing_clean_checkout_seal_prerequisite_not_met", claims: { absenceOfAllExternalSealsProved: false, originalCommitmentSatisfied: false, holdoutOpened: false } }
@@ -151,10 +151,10 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     return { allocation, request }
   }
   const partialV2Snapshot = () => {
-    const old = fixture(), { allocation, request } = v2Allocation(), slot = allocation.slots[0]!, oldPair = old.pairs[0]!, sourceByRole = new Map(old.sources.map(source => [source.role, source]))
-    const pairBody = { ...oldPair, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: leanBytesRoot(new Uint8Array()), priorLedgerByteLength: 0, priorCharged: 50 }
+    const old = fixture(), { allocation, request } = v2Allocation(), slot = allocation.slots[0]!, oldPair = old.pairs[0]!, sources = [buildLeanBaselineSource({ role: "cold-opponent", source: emitTacticalSource(), coldRoot: allocation.coldRoot, implementationRoot: allocation.sourceRoot }), buildLeanBaselineSource({ role: "tactical-0", source: emitTacticalSource(), coldRoot: allocation.coldRoot, implementationRoot: allocation.sourceRoot })], sourceByRole = new Map(sources.map(source => [source.role, source]))
+    const pairBody = { ...oldPair, slotRoot: slot.root, requestRoot: slot.requestRoot, topSourceRoot: sourceByRole.get(oldPair.topRole)!.sourceRoot, topSnapshotRoot: sourceByRole.get(oldPair.topRole)!.root, bottomSourceRoot: sourceByRole.get(oldPair.bottomRole)!.sourceRoot, bottomSnapshotRoot: sourceByRole.get(oldPair.bottomRole)!.root, priorLedgerBytesRoot: leanBytesRoot(new Uint8Array()), priorLedgerByteLength: 0, priorCharged: 50 }
     const pair = { ...pairBody, root: labRoot("lean-baseline-pair-v1", Object.fromEntries(Object.entries(pairBody).filter(([key]) => key !== "root"))) }
-    const cell = { ...old.observations[0]!.cell, slotRoot: slot.root }
+    const cell = { ...old.observations[0]!.cell, slotRoot: slot.root, topRoot: pairBody.topSourceRoot, bottomRoot: pairBody.bottomSourceRoot }
     const observationBody = { schemaVersion: "lean-baseline-observation-v1" as const, pairRoot: pair.root, cell }
     const observation = { ...observationBody, root: labRoot("lean-baseline-observation-v1", observationBody) }
     const chargeBody = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: allocation.root, slotRoot: slot.root, ordinal: 0 }
@@ -169,7 +169,7 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     const terminal = { schemaVersion: "lean-child-terminal-v2", entryBytesRoot: leanBytesRoot(leanCanonicalBytes(entry)), allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, head, parentPid: 100, childPid: 101, status: "child_exited", exitCode: 0, signal: null, elapsedUpperBoundMs: 1000, wallObservedMs: start + 1000, monotonicObservedNs: "1001000000", parentRssBytes: 100000000, childRssObservedBytes: 100000000, physicalBytes: 1000000, freeBytes: 16000000000 }
     const basePipeline = old.result.pipeline as Record<string, any>
     const unusedOrdinals = allocation.slots.slice(1).map(s => s.ordinal)
-    const pipelineBody = { ...Object.fromEntries(Object.entries(basePipeline).filter(([key]) => key !== "root")), status: "partial_or_failed_baseline", stage: "initial_training", cells: [compactLeanBaselineCell(cell as never)], sources: old.sources.map(s => ({ role: s.role, sourceRoot: s.sourceRoot, snapshotRoot: s.root })), unusedOrdinals, holdoutReservations: allocation.holdoutReservations, schemaVersion: "lean-baseline-continuation-pipeline-v2", allocationRoot: allocation.root, windowRoot: allocation.window.root, requestBytesRoot: allocation.requestBytesRoot, implementationRoot: allocation.sourceRoot, coldRoot: allocation.coldRoot, sourceHead: allocation.sourceHead, head }
+    const pipelineBody = { ...Object.fromEntries(Object.entries(basePipeline).filter(([key]) => key !== "root")), status: "partial_or_failed_baseline", stage: "initial_training", cells: [compactLeanBaselineCell(cell as never)], sources: sources.map(s => ({ role: s.role, sourceRoot: s.sourceRoot, snapshotRoot: s.root })), unusedOrdinals, holdoutReservations: allocation.holdoutReservations, schemaVersion: "lean-baseline-continuation-pipeline-v2", allocationRoot: allocation.root, windowRoot: allocation.window.root, requestBytesRoot: allocation.requestBytesRoot, implementationRoot: allocation.sourceRoot, coldRoot: allocation.coldRoot, sourceHead: allocation.sourceHead, head }
     const pipeline = { ...pipelineBody, root: labRoot("lean-baseline-continuation-pipeline-v2", pipelineBody) }
     const anchor = allocation.window.anchorMs
     const frontier = (ordinal: number, after: boolean) => ({ nowMs: anchor + 200 + ordinal * 2 + Number(after), monotonicElapsedMs: 200 + ordinal * 2 + Number(after), remainingSlots: 36 - ordinal - Number(after), charged: 50 + ordinal + Number(after), retainedBytes: 100000000, scratchBytes: 1000, parentRssBytes: 100000000, childRssBytes: 100000000, arrayBuffersBytes: 1000, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true })
@@ -181,7 +181,7 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     const sourceHoldBody = { schemaVersion: "lean-baseline-continuation-source-hold-v2", allocationRoot: allocation.root, sourceHead: allocation.sourceHead, manifestRoot: allocation.manifestRoot, claimRoot: claim.root, rows: [] }
     const sourceHold = { ...sourceHoldBody, root: labRoot(sourceHoldBody.schemaVersion, sourceHoldBody) }
     const time = { elapsedMs: evidence.elapsedMs, active: false, starts: new Map([["continuation-run-admission", start - 10], ["pilot-entry", start], ["continuation-retained-verifier-v2", start + 1100]]), closes: new Map([["continuation-run-admission", start - 1], ["pilot-entry", start + 1000], ["continuation-retained-verifier-v2", start + 1900]]), closed: new Set(["continuation-run-admission", "pilot-entry", "continuation-retained-verifier-v2"]) }
-    const snapshot = { ...old, allocation, request, requestBytesRoot: allocation.requestBytesRoot, head, entry, terminal, evidence, ledgerEvents, time, result, pairs: [pair], observations: [observation], window: allocation.window, windowBytesRoot: allocation.windowBytesRoot, sourceGateRoot: allocation.sourceGateRoot, dataReviewRoot: allocation.dataReviewRoot, manifestRoot: allocation.manifestRoot, claim, carry, sourceHold }
+    const snapshot = { ...old, allocation, request, requestBytesRoot: allocation.requestBytesRoot, head, entry, terminal, evidence, ledgerEvents, time, result, sources, pairs: [pair], observations: [observation], window: allocation.window, windowBytesRoot: allocation.windowBytesRoot, sourceGateRoot: allocation.sourceGateRoot, dataReviewRoot: allocation.dataReviewRoot, manifestRoot: allocation.manifestRoot, claim, carry, sourceHold }
     return snapshot as unknown as continuationReader.LeanBaselineContinuationRetainedSnapshotV2
   }
 
@@ -275,14 +275,17 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       expect(begin).not.toHaveBeenCalled(); expect(write).not.toHaveBeenCalled()
     } finally { scope.mockRestore(); window.mockRestore(); begin.mockRestore(); write.mockRestore(); if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send") }
   })
-  it("[continuation-v2] connects the ordinary reader to synthetic 4 MiB reads and the authentic reason-v1 join", () => {
+  it("[continuation-v2] admits a delayed reader using remaining closure, bounded source reads and authentic reason-v1 custody", () => {
     const snapshot = partialV2Snapshot(), ledger = { directory: "synthetic-only", allocation: snapshot.allocation } as continuationLedger.LeanExperimentLedger
     const interval = "continuation-retained-verifier-v2", starts = new Map([["continuation-run-admission", snapshot.entry.wallStartMs - 10], ["pilot-entry", snapshot.entry.wallStartMs], [interval, snapshot.terminal.wallObservedMs + 1]]), closes = new Map([["continuation-run-admission", snapshot.entry.wallStartMs - 1], ["pilot-entry", snapshot.entry.wallStartMs + snapshot.terminal.elapsedUpperBoundMs], [interval, snapshot.terminal.wallObservedMs + 20]])
     let timeReads = 0
     const timeFixture = () => ({ ...snapshot.time, active: false, starts: timeReads++ === 0 ? new Map([...starts].filter(([key]) => key !== interval)) : starts, closes, closed: new Set(timeReads === 1 ? ["continuation-run-admission", "pilot-entry"] : ["continuation-run-admission", "pilot-entry", interval]) })
     const state = { allocation: snapshot.allocation, events: snapshot.ledgerEvents, charged: 51, charges: new Map(snapshot.evidence.records.filter(r => r.chargeRoot).map(r => [r.chargeRoot, r])) } as unknown as ReturnType<typeof continuationLedger.readLeanLedger>
-    const ctx = { ...snapshot, fixedHead: snapshot.head, manifest: { windowBytesRoot: snapshot.windowBytesRoot, sourceGateRoot: snapshot.sourceGateRoot, dataReviewRoot: snapshot.dataReviewRoot, manifestRoot: snapshot.manifestRoot }, guard: vi.fn() }
-    const fixtureClock = vi.spyOn(Date, "now").mockReturnValue(snapshot.allocation.window.anchorMs + 300000)
+    const ctx = { ...snapshot, fixedHead: snapshot.head, manifest: { schemaVersion: "lean-baseline-continuation-data-manifest-v2", admitting: true, implementationEntries: [], planningEntries: [], entries: [], root: snapshot.allocation.sourceRoot, planningRoot: snapshot.allocation.planningRoot, manifestRoot: snapshot.manifestRoot, windowRoot: snapshot.allocation.window.root, windowBytesRoot: snapshot.windowBytesRoot, sourceGateRoot: snapshot.sourceGateRoot, dataReviewRoot: snapshot.dataReviewRoot, sourceGate: null, dataGate: null }, guard: vi.fn() }
+    // Ten minutes into the approved window leaves 26 minutes. The closed pilot
+    // interval is already over five minutes old, so only its remaining closure
+    // reserve fits; the original full closure+offline reserve would not.
+    const fixtureClock = vi.spyOn(Date, "now").mockReturnValue(snapshot.allocation.window.deadlineMs - 26 * 60_000)
     const connected = Object.getOwnPropertyDescriptor(process, "connected"), send = Object.getOwnPropertyDescriptor(process, "send")
     Object.defineProperty(process, "connected", { configurable: true, value: false }); Object.defineProperty(process, "send", { configurable: true, value: undefined })
     const scope = vi.spyOn(continuationEntry, "assertLeanBaselineContinuationScopeV2").mockImplementation(() => {})
@@ -307,6 +310,7 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       if (name === "carry.json") return snapshot.carry as never
       if (name === "source-hold.json") return snapshot.sourceHold as never
       if (name === "source-manifest.json") return ctx.manifest as never
+      if (name?.startsWith("source-") && name.endsWith(".json")) return snapshot.sources.find(source => name === `source-${source.role}.json`) as never
       if (name === "seal-metadata.json") return snapshot.artifacts["seal-metadata.json"] as never
       if (name === "parent-supervisor-reasons.json") {
         const body = { schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: snapshot.allocation.root, sourceRoot: snapshot.allocation.sourceRoot, requestBytesRoot: snapshot.allocation.requestBytesRoot, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(snapshot.entry)), head: snapshot.head, parentPid: snapshot.entry.parentPid, childPid: snapshot.entry.childPid, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
@@ -319,7 +323,6 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       }
       throw new Error(`UNEXPECTED_SYNTHETIC_READ:${name}`)
     })
-    const sourceRead = vi.spyOn(continuationSources, "readLeanBaselineSource").mockImplementation((_dir: string, role: string) => snapshot.sources.find(s => s.role === role) as never)
     const names = ["allocation.json", "ledger.ndjson", "time.ndjson", "carry.json", "source-manifest.json", "source-hold.json", "run-claim.json", "reader-claim.json", "entry.json", "child-terminal.json", "parent-supervisor-reasons.json", "result.json", "seal-metadata.json", "pair-0.json", "observation-0.json", ...snapshot.sources.flatMap(s => [`source-${s.role}.json`, `publication-${s.role}-continuation-v2.json`])]
     let directoryReads = 0
     const readdir = vi.spyOn(fs, "readdirSync").mockImplementation(() => (directoryReads++ === 0 ? names.filter(name => name !== "reader-claim.json") : names) as never)
@@ -331,9 +334,9 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       expect(reads.mock.calls.some(call => call[1] === 4194304)).toBe(true)
       expect(begin).toHaveBeenCalledTimes(1); expect(close).toHaveBeenCalledTimes(1); expect(ctx.guard).toHaveBeenCalledWith(65536)
       expect(write.mock.calls.map(call => call[1])).toContain("reader-claim.json")
-      expect(sourceRead).toHaveBeenCalled()
+      expect(reads.mock.calls.some(call => String(call[0]).includes("/source-") && call[1] === 262144)).toBe(true)
     } finally {
-      for (const spy of [scope, window, open, time, elapsed, begin, close, terminal, entry, readLedger, evidence, physical, context, write, reads, sourceRead, readdir, kill, fixtureClock]) spy.mockRestore()
+      for (const spy of [scope, window, open, time, elapsed, begin, close, terminal, entry, readLedger, evidence, physical, context, write, reads, readdir, kill, fixtureClock]) spy.mockRestore()
       if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected")
       if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send")
     }
