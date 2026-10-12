@@ -20,6 +20,17 @@ export const continuationAllocationFixture = () => {
 }
 
 describe("prospective baseline continuation allocation", () => {
+  it("reads private cost fixtures only with exact 0600 permissions", () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-private-cost-")))
+    try {
+      const bytes = Buffer.from(ledger.leanCanonicalBytes({ schemaVersion: "inert-private-cost-v1" }))
+      const privatePath = join(dir, "private-cost.json"), publicPath = join(dir, "public-cost.json")
+      writeFileSync(privatePath, bytes, { mode: 0o600 })
+      writeFileSync(publicPath, bytes, { mode: 0o644 })
+      expect(continuation.readLeanContinuationBytes(privatePath, 262144, continuation.LEAN_CONTINUATION_PRIVATE_COST_MODE)).toEqual(bytes)
+      expect(() => continuation.readLeanContinuationBytes(publicPath, 262144, continuation.LEAN_CONTINUATION_PRIVATE_COST_MODE)).toThrow(/LEAN_BASELINE_CONTINUATION_FILE/)
+    } finally { rmSync(dir, { recursive: true }) }
+  })
   it("preserves the authenticated debit and adds each survivor increment once", () => {
     const prior = { allocatedDiskBytes: 20000, survivors: [{ identity: "old", allocatedBytes: 4096 }] }
     expect(continuation.reconcileLeanContinuationDiskDebit(prior, [{ path: "old", allocatedBytes: 4096 }])).toBe(20000)

@@ -7,6 +7,7 @@ import { LEAN_CAPS, LEAN_BASELINE_CONTINUATION_WINDOW as WINDOW, LEAN_BASELINE_C
 import { LEAN_PRIVATE_MATCH_CARRY_V3, LEAN_PRIVATE_MATCH_CARRY_V2, LEAN_PRIVATE_MATCH_ARTIFACT_V3, LEAN_PRIVATE_PROBE_COST_ROOT, validateLeanPrivateMatchAllocationV3, validateLeanPrivateMatchAllocationV2, validateLeanPrivateMatchAllocationV1, authenticateLeanPrivateMatchProbeCarryV1 } from "./v1-38-lean-experiment-authority.js"
 
 export { LEAN_BASELINE_CONTINUATION_PATHS }
+export const LEAN_CONTINUATION_PRIVATE_COST_MODE = 0o600
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_CONTINUATION_${code}`) }
 const integer = (v: unknown): v is number => Number.isSafeInteger(v) && Number(v) >= 0
 const equal = (a: unknown, b: unknown) => Buffer.from(leanCanonicalBytes(a)).equals(Buffer.from(leanCanonicalBytes(b)))
@@ -170,7 +171,7 @@ export const authenticateLeanBaselineContinuationCarry = (git: LeanContinuationG
     { carry: LEAN_PRIVATE_MATCH_CARRY_V2, version: 1, validate: validateLeanPrivateMatchAllocationV1, inventoryDomain: "lean-private-match-spent-inventory-v2", reader: "265-16-TWO-MATCH-RETAINED-VERIFICATION-v1.md" },
   ] as const
   const costPath = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-POST-V14-RESOURCE-WINDOW-diagnostic-v15-5-PAIR-CLOSURE-v1.json"
-  const costBytes = readLeanContinuationBytes(costPath, 262144, 0o644), cost = JSON.parse(costBytes.toString("utf8")) as Record<string, any>
+  const costBytes = readLeanContinuationBytes(costPath, 262144, LEAN_CONTINUATION_PRIVATE_COST_MODE), cost = JSON.parse(costBytes.toString("utf8")) as Record<string, any>
   rooted(cost, "lean-resource-window-pair-closure-v15")
   if (leanBytesRoot(costBytes) !== "sha256:efe0acbd35beb37c47877cd843e695b4ed0d94b781e66c07464238f152bc45b4" || cost.root !== LEAN_PRIVATE_PROBE_COST_ROOT || cost.cumulativeCharged !== 40 || cost.survivors?.length !== 1077) return fail("OLD_COST")
   const costPaths = cost.survivors.map((row: { identity: string }) => row.identity) as string[]
