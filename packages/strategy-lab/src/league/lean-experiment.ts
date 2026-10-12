@@ -1306,6 +1306,10 @@ export interface LeanReplayContainer { schemaVersion: "lean-sampled-replay-gzip-
 const REPLAY_MAX = 256_000_000
 export const LEAN_EXTERNAL_SCRATCH_RESERVE = 512_000_000
 const assertTransient = (additionalBytes = 0, allocation?: AnyLeanAllocation, guard?: (additionalBytes?: number) => void) => {
+  if (allocation?.schemaVersion === "lean-baseline-continuation-allocation-v1") {
+    if (typeof guard !== "function" || !natural(additionalBytes) || process.memoryUsage().arrayBuffers + additionalBytes > LEAN_CAPS.scratchBytes) return fail("RESOURCE_GUARD")
+    guard(additionalBytes); return
+  }
   const policy = allocation === undefined ? null : leanResourcePolicyForAllocationV15(allocation)
   if (policy) {
     if (typeof guard !== "function") return fail("RESOURCE_GUARD")
@@ -1859,7 +1863,7 @@ export const verifyLeanEvidence = (ledger: LeanExperimentLedger, resourceGuard?:
   if (leanResourcePolicyForAllocationV15(ledger.allocation) && typeof resourceGuard !== "function") return fail("RESOURCE_GUARD")
   resourceGuard?.()
   const state = readLeanLedger(ledger)
-  const validationOnly = isLeanRetryMode(leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation))) || (ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v7" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v7") && leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v7" || ((ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v6" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v6") && (leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v6" || leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v7")) || (ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v5" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v5") && leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v5"
+  const validationOnly = ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" || isLeanRetryMode(leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation))) || (ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v7" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v7") && leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v7" || ((ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v6" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v6") && (leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v6" || leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v7")) || (ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v5" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v5") && leanSupervisorAllocationMode(admitLeanAllocation(ledger.allocation)) === "v5"
   const records = ledger.allocation.slots.map(slot => {
     resourceGuard?.()
     const c = state.charges.get(slot.root), terminal = c && state.terminals.get(c.root)
