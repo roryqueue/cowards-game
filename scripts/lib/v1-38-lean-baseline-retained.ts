@@ -712,10 +712,9 @@ export const verifyLeanBaselineContinuationRetainedV2 = (requestPath: string) =>
   const admissionNow = Date.now()
   if (approvedWindow.status !== "approved" || admissionNow < approvedWindow.anchorMs || admissionNow >= approvedWindow.deadlineMs ||
       leanContinuationGlobalFloorV2(admissionNow) > approvedWindow.capMs) return fail("V2_READER_WINDOW")
-  const ledger = openLeanLedger(CONTINUATION_V2.store), allocation = validateLeanBaselineContinuationAllocationV2(ledger.allocation)
+  const { ledger, allocation, before } = parentReaderContract.withLeanContinuationReaderMetadataV2(approvedWindow, () => { const ledger = openLeanLedger(CONTINUATION_V2.store); return { ledger, allocation: validateLeanBaselineContinuationAllocationV2(ledger.allocation), before: readLeanTimeAccounting(ledger) } })
   if (!same(allocation.window, approvedWindow) || allocation.windowBytesRoot !== leanBytesRoot(leanCanonicalBytes(approvedWindow)) || allocation.window.root !== approvedWindow.root) return fail("V2_READER_WINDOW_BINDING")
   if (Date.now() >= approvedWindow.deadlineMs) return fail("V2_READER_WINDOW")
-  const before = readLeanTimeAccounting(ledger)
   if (before.active || before.starts.has("continuation-retained-verifier-v2") || !before.closed.has("continuation-run-admission") || readdirSync(ledger.directory).some(name => ["reader-claim.json", "retained-check.json"].includes(name))) return fail("V2_READER_USED")
   const pilotCloseMs = before.closes.get("pilot-entry"), remainingClosureMs = pilotCloseMs === undefined ? approvedWindow.closureMs : Math.max(0, approvedWindow.closureMs - Math.max(0, admissionNow - pilotCloseMs))
   if (!before.closed.has("pilot-entry") || pilotCloseMs === undefined || admissionNow + remainingClosureMs > approvedWindow.deadlineMs ||

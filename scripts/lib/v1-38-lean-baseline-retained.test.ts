@@ -266,6 +266,8 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     Object.defineProperty(process, "send", { configurable: true, value: undefined })
     const scope = vi.spyOn(continuationEntry, "assertLeanBaselineContinuationScopeV2").mockImplementation(() => { throw new Error("WRONG_SCOPE") })
     const window = vi.spyOn(continuationEntry, "readLeanBaselineContinuationWindowV2")
+    const open = vi.spyOn(continuationLedger, "openLeanLedger")
+    const preflight = vi.spyOn(continuationEntry, "withLeanContinuationReaderMetadataV2").mockImplementation((_window, parse) => parse())
     try {
       expect(() => continuationReader.verifyLeanBaselineContinuationRetainedV2(continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request)).toThrow("WRONG_SCOPE")
       expect(begin).not.toHaveBeenCalled(); expect(write).not.toHaveBeenCalled(); expect(window).not.toHaveBeenCalled()
@@ -273,7 +275,12 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       window.mockReturnValue({ ...allocation.window, anchorMs: Date.now() - 1000, deadlineMs: Date.now() - 1 } as never)
       expect(() => continuationReader.verifyLeanBaselineContinuationRetainedV2(continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request)).toThrow(/V2_READER_WINDOW/)
       expect(begin).not.toHaveBeenCalled(); expect(write).not.toHaveBeenCalled()
-    } finally { scope.mockRestore(); window.mockRestore(); begin.mockRestore(); write.mockRestore(); if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send") }
+      expect(open).not.toHaveBeenCalled(); expect(preflight).not.toHaveBeenCalled()
+      window.mockReturnValue(allocation.window as never)
+      preflight.mockImplementation(() => { throw new Error("OVERSIZED_STORE_METADATA") })
+      expect(() => continuationReader.verifyLeanBaselineContinuationRetainedV2(continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request)).toThrow("OVERSIZED_STORE_METADATA")
+      expect(open).not.toHaveBeenCalled(); expect(begin).not.toHaveBeenCalled(); expect(write).not.toHaveBeenCalled()
+    } finally { scope.mockRestore(); window.mockRestore(); preflight.mockRestore(); open.mockRestore(); begin.mockRestore(); write.mockRestore(); if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send") }
   })
   it("[continuation-v2] admits a delayed reader using remaining closure, bounded source reads and authentic reason-v1 custody", () => {
     const snapshot = partialV2Snapshot(), ledger = { directory: "synthetic-only", allocation: snapshot.allocation } as continuationLedger.LeanExperimentLedger
@@ -290,7 +297,9 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     Object.defineProperty(process, "connected", { configurable: true, value: false }); Object.defineProperty(process, "send", { configurable: true, value: undefined })
     const scope = vi.spyOn(continuationEntry, "assertLeanBaselineContinuationScopeV2").mockImplementation(() => {})
     const window = vi.spyOn(continuationEntry, "readLeanBaselineContinuationWindowV2").mockReturnValue(snapshot.allocation.window)
-    const open = vi.spyOn(continuationLedger, "openLeanLedger").mockReturnValue(ledger)
+    const sequence: string[] = []
+    const open = vi.spyOn(continuationLedger, "openLeanLedger").mockImplementation(() => { sequence.push("open"); return ledger })
+    const preflight = vi.spyOn(continuationEntry, "withLeanContinuationReaderMetadataV2").mockImplementation((_window, parse) => { sequence.push("preflight"); return parse() })
     const time = vi.spyOn(continuationLedger, "readLeanTimeAccounting").mockImplementation(timeFixture as never)
     const elapsed = vi.spyOn(continuationLedger, "currentLeanElapsedMs").mockReturnValue(snapshot.allocation.predecessor.elapsedUpperBoundMs + 5000)
     const begin = vi.spyOn(continuationLedger, "beginLeanInterval").mockImplementation(() => {})
@@ -333,10 +342,11 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       expect(report).toMatchObject({ schemaVersion: "lean-baseline-continuation-retained-check-v2", disposition: "gaps_found", charged: 51 })
       expect(reads.mock.calls.some(call => call[1] === 4194304)).toBe(true)
       expect(begin).toHaveBeenCalledTimes(1); expect(close).toHaveBeenCalledTimes(1); expect(ctx.guard).toHaveBeenCalledWith(65536)
+      expect(sequence.slice(0, 2)).toEqual(["preflight", "open"])
       expect(write.mock.calls.map(call => call[1])).toContain("reader-claim.json")
       expect(reads.mock.calls.some(call => String(call[0]).includes("/source-") && call[1] === 262144)).toBe(true)
     } finally {
-      for (const spy of [scope, window, open, time, elapsed, begin, close, terminal, entry, readLedger, evidence, physical, context, write, reads, readdir, kill, fixtureClock]) spy.mockRestore()
+      for (const spy of [scope, window, open, preflight, time, elapsed, begin, close, terminal, entry, readLedger, evidence, physical, context, write, reads, readdir, kill, fixtureClock]) spy.mockRestore()
       if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected")
       if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send")
     }
