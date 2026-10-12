@@ -620,6 +620,12 @@ Before real candidate/Match/model/human/external work, 265-07 Task2 is the one c
 
 Approval: standing autonomous implementation instruction covers in-scope source work. This strategy does not invent a live allocation or change frozen rules, thresholds or formation/holdout gates.
 
+### Scoped validation audit — continuation permission repair, 2026-10-12
+
+Distinct typed `/root/verify_265_permission_repair` subsequently CLOSED/PASS_SOURCE_ONLY/gaps[] over4d639c97. This closes only permission P1; the pending qualifier in the original validation observation below records its earlier frontier. V4 implementation and empirical requirements remain pending.
+
+Scope is source commits fc54fcdf/4d639c97, not whole Phase265. ROOT15326 full helper46/46 passed with zero skips. Connected actual-inventory tests cover registered0755/ordinary0644 source, planning0644, exact private0600 and special-bit denial, bounded small/large authentication, descriptor/owner/link/root/mode mutations, historical mode equality and no-refund disk accounting. ROOT89577 retains eight inherited full-text diagnostics, no new errors; not global type-green. Independent source review closed clean after WR-PERM-01 correction; distinct source verification pending. No delta automated validation gap remains observed, while every empirical LEAG/baseline/freeze requirement remains pending. No actual prepare, retained reader or Match was invoked by these checks; old V3 records stay immutable and original cause UNKNOWN.
+
 ### Planned scoped validation — prospective host response-receipt supplement (2026-10-02)
 
 Status: **planned, not run**. This appendix covers only the source amendment described in [265-07-HOST-RECEIPT-PLAN-v1.md](265-07-HOST-RECEIPT-PLAN-v1.md); it does not update whole-phase Nyquist status or claim Phase 265 completion.
