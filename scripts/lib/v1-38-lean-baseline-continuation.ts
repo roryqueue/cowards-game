@@ -90,6 +90,21 @@ export const readLeanContinuationJson = (name: string, maximum = 8388608, mode?:
   return value
 }
 export interface LeanContinuationInventoryRow { path: string; kind: "file" | "directory" | "sealed_metadata"; bytes: number; allocatedBytes: number; dev: number; ino: number; mode: number; mtimeMs: number; ctimeMs: number; rawRoot: LabRoot | null }
+/** Merge immutable predicates, never observations. Every invocation stats every
+ * unique absolute path afresh, including directories and non-pinned survivors. */
+export const createLeanContinuationIdentityGuard = (pins: readonly { path: string; stat: ReturnType<typeof lstatSync> }[], survivors: readonly LeanContinuationInventoryRow[]): (() => void) => {
+  const predicates = new Map<string, { pins: { dev: number | bigint; ino: number | bigint; size: number | bigint; mtimeMs: number | bigint; ctimeMs: number | bigint }[]; survivors: LeanContinuationInventoryRow[] }>()
+  const at = (path: string) => { const absolute = resolve(path); let row = predicates.get(absolute); if (!row) { row = { pins: [], survivors: [] }; predicates.set(absolute, row) }; return row }
+  for (const { path, stat } of pins) at(path).pins.push({ dev: stat.dev, ino: stat.ino, size: stat.size, mtimeMs: stat.mtimeMs, ctimeMs: stat.ctimeMs })
+  for (const row of survivors) at(row.path).survivors.push({ ...row })
+  return () => {
+    for (const [path, expected] of predicates) {
+      const s = lstatSync(path)
+      for (const pin of expected.pins) if (!s.isFile() || s.nlink !== 1 || s.dev !== pin.dev || s.ino !== pin.ino || s.size !== pin.size || s.mtimeMs !== pin.mtimeMs || s.ctimeMs !== pin.ctimeMs) return fail("CONTINUATION_PIN_CHANGED")
+      for (const row of expected.survivors) if (s.dev !== row.dev || s.ino !== row.ino || s.blocks * 512 !== row.allocatedBytes || s.size !== row.bytes || s.mtimeMs !== row.mtimeMs || s.ctimeMs !== row.ctimeMs || s.isSymbolicLink() || s.isFile() && s.nlink !== 1) return fail("CONTINUATION_SURVIVOR_CHANGED")
+    }
+  }
+}
 const rootFiles = ["AGENTS.md", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.json", "tsconfig.base.json"]
 /** Scope only: the caller must authenticate frozen cost bytes and root first.
  * These historical identities confer no pinned/source authority. */

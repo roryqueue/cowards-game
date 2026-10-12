@@ -15,6 +15,15 @@ import { assertLeanSupervisorReasonCustodyV2 } from "./lib/v1-38-lean-baseline-r
 const root = (name: string) => labRoot("baseline-cli-test", name)
 import * as continuationGit from "./lib/v1-38-lean-container-match-session.js"
 describe("continuation CLI and narrow metadata", () => {
+  it("observes one fresh complete parent manifest per callback and pins only the reviewed debug document", () => {
+    const observe = vi.fn(() => ({ root: root("source"), planningRoot: root("planning") }))
+    expect(parentApi.readLeanBaselineContinuationManifestRoot(root("planning"), observe)).toBe(root("source"))
+    expect(observe).toHaveBeenCalledTimes(1)
+    observe.mockReturnValue({ root: root("source"), planningRoot: root("changed") })
+    expect(() => parentApi.readLeanBaselineContinuationManifestRoot(root("planning"), observe)).toThrow(/PLANNING_HOLD/)
+    expect(observe).toHaveBeenCalledTimes(2)
+    expect(parentApi.LEAN_BASELINE_CONTINUATION_PLANNING_PATHS.filter(p => p.startsWith(".planning/debug/"))).toEqual([".planning/debug/265-native-exit-reader-cost.md"])
+  })
   it("accepts only the new exact request and keeps hidden child mode out of public dispatch", () => {
     const request = lean.LEAN_BASELINE_CONTINUATION_PATHS.request
     for (const mode of ["prepare-continuation", "run-continuation", "verify-continuation"]) {

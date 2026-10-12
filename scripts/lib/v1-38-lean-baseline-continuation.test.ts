@@ -2,6 +2,8 @@
 import { describe, expect, it, vi } from "vitest"
 import { mkdtempSync, writeFileSync, symlinkSync, rmSync, realpathSync } from "node:fs"
 import * as childProcess from "node:child_process"
+import * as fs from "node:fs"
+import { resolve } from "node:path"
 import * as baseline from "../run-v1-38-lean-baseline.js"
 import { readLeanBaselineContinuationGit } from "./v1-38-lean-container-match-session.js"
 import { createHash } from "node:crypto"
@@ -12,6 +14,38 @@ import * as ledger from "../../packages/strategy-lab/src/league/lean-experiment.
 import * as continuation from "./v1-38-lean-baseline-continuation.js"
 
 vi.mock("node:child_process", async importOriginal => ({ ...await importOriginal<typeof import("node:child_process")>(), execFileSync: vi.fn() }))
+vi.mock("node:fs", async original => ({ ...await original<typeof import("node:fs")>(), lstatSync: vi.fn((await original<typeof import("node:fs")>()).lstatSync) }))
+
+describe("complete fresh identity guard", () => {
+  it("merges normalized paths within one call, retaining both roles and every other identity", () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-guard-")))
+    try {
+      const path = join(dir, "pin"), other = join(dir, "other")
+      writeFileSync(path, "pin"); writeFileSync(other, "other")
+      const row = (path: string): continuation.LeanContinuationInventoryRow => { const s = fs.lstatSync(path); return { path, kind: s.isDirectory() ? "directory" : "file", bytes: s.size, allocatedBytes: s.blocks * 512, dev: s.dev, ino: s.ino, mode: s.mode & 0o777, mtimeMs: s.mtimeMs, ctimeMs: s.ctimeMs, rawRoot: null } }
+      const pin = { path, stat: fs.lstatSync(path) }, survivor = row(path)
+      const guard = continuation.createLeanContinuationIdentityGuard([pin], [{ ...survivor, path: `${dir}/./pin` }, row(other), row(dir)])
+      vi.mocked(fs.lstatSync).mockClear()
+      guard(); expect(vi.mocked(fs.lstatSync).mock.calls.map(c => c[0])).toEqual([path, other, dir].map(p => resolve(p)))
+      guard(); expect(fs.lstatSync).toHaveBeenCalledTimes(6)
+      const incompatible = continuation.createLeanContinuationIdentityGuard([pin], [{ ...survivor, allocatedBytes: survivor.allocatedBytes + 512 }])
+      expect(incompatible).toThrow(/SURVIVOR_CHANGED/)
+      writeFileSync(other, "other grows")
+      expect(guard).toThrow(/SURVIVOR_CHANGED/)
+      writeFileSync(path, "PIN")
+      expect(guard).toThrow(/PIN_CHANGED/)
+    } finally { rmSync(dir, { recursive: true }) }
+  })
+  it("reobserves directory membership and replacement on the next callback", () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-directory-")))
+    try {
+      const s = fs.lstatSync(dir)
+      const row: continuation.LeanContinuationInventoryRow = { path: dir, kind: "directory", bytes: s.size, allocatedBytes: s.blocks * 512, dev: s.dev, ino: s.ino, mode: s.mode & 0o777, mtimeMs: s.mtimeMs, ctimeMs: s.ctimeMs, rawRoot: null }
+      const guard = continuation.createLeanContinuationIdentityGuard([], [row])
+      guard(); writeFileSync(join(dir, "new"), "new"); expect(guard).toThrow(/SURVIVOR_CHANGED/)
+    } finally { rmSync(dir, { recursive: true }) }
+  })
+})
 
 const r = (value: unknown) => labRoot("inert-continuation-fixture", value)
 export const continuationAllocationFixture = () => {
