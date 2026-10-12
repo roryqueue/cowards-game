@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V4 A/B/C source tasks closed; Task D retained verifier integration active, no runtime admission
+stopped_at: V4 A/B/C/D source tasks closed; combined independent source review next, no runtime admission
 last_updated: "2026-10-12"
 last_activity: 2026-10-12
 last_activity_desc: Permission repair4d639c97 independently source-verified; V4 four-task plan checked, no new Match
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+V4 AUTHOR SOURCE CLOSED — ROOT2026-10-12T23:20:42UTC. Dfc32d00b8719c369b2162fda9af32dbb7abf7427/exactretainedhelper+test committed, actualauthor `/root/execute_265_permission_repair` commandsCLOSED/ownedclean/released. Authorfourdisjointinertbatches10+12+3+9=34/34/zeroomissions, durations5.79/27.10/24.61/36.46s, sameeightFULLinheritedstrict/noNEW/no shifts/diff0reported. Dadditionalrealgap REDreproducedroot-only snapshotwindow comparison acceptingdifferentnamespace withstalehash; fixedfullwindow equality and connectednegativefixtures. Selectedinitialrequest/window/metadata/context/ledger pathsagreebeforereadercredit; syntheticpartial51/full86 pass. ROOTactualdiff/cleanstatus confirms A→B→C→D exactly10plannedfiles459insertions/101deletions over4d639c97, no sourceowner/processactive. Combinedindependentsource review/fix→ROOTvalidation→distinctsourceverification next; no newsource/data projection/root/grant/request/prepare/allocation/Match/ordinaryreader/phasecredit. Full36frontierelapsed/sourceworkuntil05:23:47; no reanchor/allfrozenbounds/oldV3immutability/cost-only50/privacy/downstreamgates unchanged.
 
 ACTIVE V4 TASK D / C CLOSED — ROOT2026-10-12T23:02UTC. Actualsameauthor `/root/execute_265_permission_repair` committedC521cd117ef5c471d5ed8f86c9f9042343639ecd3/exactauthority+test; productiononlyimport/validatedwindow-selectedclaimlookup, opaqueAPI/guardsunchanged. AuthorRED2fail→focused10pass22skipped/finalfull32pass0skips23.20s, strictsameeightFULLinherited/zeroNEW/no shifts/diff0reported; commandsCLOSED/ownerreleased. ROOTreadactualproductiondelta. Dnowexclusivelyowns retainedhelper/test2files, finalsource/taskclosure pending. No actualretainedreader/fakehead/data/prepare/runtime/Match; no finalV4review/sourceRoot/data projection or empiricalcredit. Currentfullentryfrontierelapsed/sourceworkuntil05:23:47/allbounds/continuouscosts/oldV3immutability/privacy/downstreamgates unchanged.
 
