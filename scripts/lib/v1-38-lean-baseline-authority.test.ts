@@ -65,17 +65,20 @@ describe("distinct baseline runtime authority", () => {
   it.each(["valid", "wrong-request", "wrong-grant", "wrong-publication", "wrong-source", "wrong-seat"] as const)("[continuation-v2] opaque V8 issuance and exact joins: %s", mode => {
     const f = fixture(), a = f.ledger.allocation as any, root = (s: string) => labRoot("inert-v2-authority", s)
     Object.assign(a, { schemaVersion: "lean-baseline-continuation-allocation-v2", sourceHead: "b".repeat(40), requestBytesRoot: root("request"), planningRoot: root("planning"), manifestRoot: root("manifest"), sourceGateRoot: root("source-gate"), dataReviewRoot: root("data-review"), windowBytesRoot: root("window-bytes"), window: { root: root("window"), grantId: "inert-grant", routeNamespace: "20261012-v3" }, predecessor: { chargedMatches: 50 } })
-    const pairBody = { ...f.pair, priorCharged: 50 }; const { root: _, ...pb } = pairBody
-    writeFileSync(f.pairPath, leanCanonicalBytes({ ...pb, root: labRoot("lean-baseline-pair-v1", pb) }))
+    const pairBody = { ...f.pair, priorCharged: 50 }; const { root: _, ...pb } = pairBody, pair = { ...pb, root: labRoot("lean-baseline-pair-v1", pb) }
+    writeFileSync(f.pairPath, leanCanonicalBytes(pair))
     const claimBody = { schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: a.window.grantId, routeNamespace: a.window.routeNamespace, windowRoot: a.window.root, windowBytesRoot: a.windowBytesRoot, requestBytesRoot: a.requestBytesRoot, sourceHead: a.sourceHead, sourceRoot: a.sourceRoot, sourceGateRoot: a.sourceGateRoot, dataReviewRoot: a.dataReviewRoot, planningRoot: a.planningRoot, manifestRoot: a.manifestRoot }
     const claim = { ...claimBody, root: labRoot(claimBody.schemaVersion, claimBody) }
     const validate = vi.spyOn(leanIO, "validateLeanBaselineContinuationAllocationV2").mockReturnValue(a)
     const entry = vi.spyOn(leanIO, "readLeanChildEntry").mockReturnValue({ head: "a".repeat(40), sourceRoot: a.sourceRoot, allocationRoot: a.root, requestBytesRoot: a.requestBytesRoot } as any)
-    const read = vi.spyOn(continuationIO, "readLeanContinuationJsonV2").mockImplementation(path => {
+    const read = vi.spyOn(continuationIO, "readLeanContinuationJsonV2").mockImplementation((path, _maximum, _mode, guard) => {
+      guard?.(2)
       if (path === leanIO.LEAN_BASELINE_CONTINUATION_PATHS_V2.claim) {
         if (mode === "wrong-request" || mode === "wrong-grant") { const { root: _, ...body } = { ...claim, ...(mode === "wrong-request" ? { requestBytesRoot: root("other-request") } : { grantId: "other-grant" }) }; return { ...body, root: labRoot(body.schemaVersion, body) } }
         return claim
       }
+      if (path === f.pairPath) return pair
+      if (path.endsWith(`source-${f.source.role}.json`)) return f.source as any
       const body = { schemaVersion: "lean-baseline-continuation-source-publication-v2", allocationRoot: a.root, sourceHead: a.sourceHead, head: "a".repeat(40), implementationRoot: a.sourceRoot, coldRoot: a.coldRoot, role: f.source.role, snapshotRoot: f.source.root, sourceRoot: f.source.sourceRoot, windowRoot: a.window.root, windowBytesRoot: a.windowBytesRoot, requestBytesRoot: a.requestBytesRoot, dataReviewRoot: a.dataReviewRoot }
       if (mode === "wrong-publication") body.windowRoot = root("other-window")
       if (mode === "wrong-source") body.sourceRoot = root("other-source")
@@ -86,6 +89,7 @@ describe("distinct baseline runtime authority", () => {
       if (mode === "wrong-seat") f.binding.seat = "foreign" as never
       if (mode !== "valid") { expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)).toThrow(); return }
       const auth = authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)
+      expect(guard.mock.calls.some(([bytes]) => Number(bytes) > 0)).toBe(true)
       expect(authorityIO.leanStartupAuthorityDescriptorV8(auth)?.version).toBe(8)
       expect(() => authorityIO.claimLeanStartupAuthorityV8({ ...auth }, f.binding, "factory")).toThrow()
       expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "session")).toThrow()
@@ -99,6 +103,43 @@ describe("distinct baseline runtime authority", () => {
       expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "session")).toThrow()
       expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)).toThrow()
     } finally { validate.mockRestore(); entry.mockRestore(); read.mockRestore() }
+  })
+  it.each(["stopped", "terminal"] as const)("[continuation-v2] burns every ordered claim after a fresh %s ledger observation", status => {
+    const f = fixture(), a = f.ledger.allocation as any, root = (s: string) => labRoot("inert-v2-stale", s)
+    Object.assign(a, { schemaVersion: "lean-baseline-continuation-allocation-v2", sourceHead: "b".repeat(40), requestBytesRoot: root("request"), planningRoot: root("planning"), manifestRoot: root("manifest"), sourceGateRoot: root("source-gate"), dataReviewRoot: root("data-review"), windowBytesRoot: root("window-bytes"), window: { root: root("window"), grantId: "inert-grant", routeNamespace: "20261012-v3" }, predecessor: { chargedMatches: 50 } })
+    const pairBody = { ...f.pair, priorCharged: 50 }; const { root: _, ...pb } = pairBody, pair = { ...pb, root: labRoot("lean-baseline-pair-v1", pb) }
+    writeFileSync(f.pairPath, leanCanonicalBytes(pair))
+    const claimBody = { schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: a.window.grantId, routeNamespace: a.window.routeNamespace, windowRoot: a.window.root, windowBytesRoot: a.windowBytesRoot, requestBytesRoot: a.requestBytesRoot, sourceHead: a.sourceHead, sourceRoot: a.sourceRoot, sourceGateRoot: a.sourceGateRoot, dataReviewRoot: a.dataReviewRoot, planningRoot: a.planningRoot, manifestRoot: a.manifestRoot }
+    const claim = { ...claimBody, root: labRoot(claimBody.schemaVersion, claimBody) }
+    const validate = vi.spyOn(leanIO, "validateLeanBaselineContinuationAllocationV2").mockReturnValue(a)
+    const entry = vi.spyOn(leanIO, "readLeanChildEntry").mockReturnValue({ head: "a".repeat(40), sourceRoot: a.sourceRoot, allocationRoot: a.root, requestBytesRoot: a.requestBytesRoot } as any)
+    const read = vi.spyOn(continuationIO, "readLeanContinuationJsonV2").mockImplementation(path => {
+      if (path === leanIO.LEAN_BASELINE_CONTINUATION_PATHS_V2.claim) return claim
+      if (path === f.pairPath) return pair
+      if (path.endsWith(`source-${f.source.role}.json`)) return f.source as any
+      const body = { schemaVersion: "lean-baseline-continuation-source-publication-v2", allocationRoot: a.root, sourceHead: a.sourceHead, head: "a".repeat(40), implementationRoot: a.sourceRoot, coldRoot: a.coldRoot, role: f.source.role, snapshotRoot: f.source.root, sourceRoot: f.source.sourceRoot, windowRoot: a.window.root, windowBytesRoot: a.windowBytesRoot, requestBytesRoot: a.requestBytesRoot, dataReviewRoot: a.dataReviewRoot }
+      return { ...body, root: labRoot(body.schemaVersion, body) }
+    })
+    try {
+      const auth = authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, () => {})
+      retained.state = { charges: new Map([[f.charge.slotRoot, f.charge]]), terminals: status === "terminal" ? new Map([[f.charge.root, { root: root("terminal") }]]) : new Map(), stopped: status === "stopped" }
+      expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "factory")).toThrow()
+      expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "planner")).toThrow()
+      expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, "session")).toThrow()
+      expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, () => {})).toThrow()
+    } finally { validate.mockRestore(); entry.mockRestore(); read.mockRestore() }
+  })
+  it("[continuation-v2] forwards positive allocation reservations before use and burns denied issuance", () => {
+    const f = fixture(), a = f.ledger.allocation as any
+    Object.assign(a, { schemaVersion: "lean-baseline-continuation-allocation-v2", sourceHead: "b".repeat(40), predecessor: { chargedMatches: 50 }, window: { root: labRoot("window", 1), grantId: "inert-grant", routeNamespace: "20261012-v3" } })
+    const validate = vi.spyOn(leanIO, "validateLeanBaselineContinuationAllocationV2").mockReturnValue(a)
+    const guard = vi.fn((bytes = 0) => { if (bytes > 0) throw new Error("INERT_BUFFER_RESERVATION_DENIED") })
+    try {
+      expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)).toThrow("INERT_BUFFER_RESERVATION_DENIED")
+      expect(guard.mock.calls.some(([bytes]) => Number(bytes) > 0)).toBe(true)
+      guard.mockImplementation(() => {})
+      expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)).toThrow()
+    } finally { validate.mockRestore() }
   })
   it("continuation V8 guards issuance and every ordered construction claim without refunding a failed seat", () => {
     const f = fixture(), a = f.ledger.allocation as any

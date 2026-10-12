@@ -4,7 +4,7 @@ import { isLeanRetryMode, leanRetryOrdinal, admitLeanAllocation } from "../../pa
 import { labRoot, freezeLabValue, LAB_ADMITTED_ROOTS, exactLabKeys, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { readLeanLedger, readLeanChildEntry, type LeanExperimentLedger, type LeanCharge } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { validateLeanBaselineContinuationAllocationV2, LEAN_BASELINE_CONTINUATION_PATHS_V2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { readLeanContinuationJsonV2 } from "./v1-38-lean-baseline-continuation.js"
+import { readLeanContinuationBoundedBytesV2, readLeanContinuationJsonV2 } from "./v1-38-lean-baseline-continuation.js"
 import type { ProspectiveLeagueLifetimeProviderBinding } from "./v1-38-league-prospective-lifetime.js"
 import { prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { readCandidateClosure, type FactoryCandidateClosure } from "../../packages/strategy-lab/src/league/connected-runner.js"
@@ -361,7 +361,7 @@ export const claimLeanRuntimeAuthority = (authority: LeanRuntimeAuthority, bindi
 }
 /** Distinct claim path: no legacy caller can dispatch V8 between units. */
 const privateMatchConstructionGuardsV3 = new WeakMap<object, () => void>()
-const continuationConstructionGuards = new WeakMap<object, () => void>()
+const continuationConstructionGuards = new WeakMap<object, (additionalBytes?: number) => void>()
 export const claimLeanStartupAuthorityV8 = (authority: LeanRuntimeAuthority, binding: Omit<ProspectiveLeagueLifetimeProviderBinding, "seat"> & { seat?: "bottom" | "top" }, layer: Layer): { lifetimeMs: 600000; receiptMs: 5000; startup: Readonly<LeanStartupGrantV8> } => {
   const state = authority && issued.get(authority)
   if (!state?.startupV8 || authority.schemaVersion !== "lean-runtime-authority-v1" || !["factory", "planner", "session"].includes(layer) || state.claims.has(layer) || layer === "planner" && !state.claims.has("factory") || layer === "session" && !state.claims.has("planner") || labRoot("lean-runtime-binding-v1", { ...binding, seat: authority.seat }) !== labRoot("lean-runtime-binding-v1", state.binding)) return fail()
@@ -390,7 +390,7 @@ export const issueLeanBaselineContinuationRuntimeAuthority = (ledger: LeanExperi
   guard()
   return issueBaselineAuthority(ledger, charge, snapshot, binding, undefined, { version: "v1", guard })
 }
-export const issueLeanBaselineContinuationRuntimeAuthorityV2 = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding, guard: () => void): LeanRuntimeAuthority => {
+export const issueLeanBaselineContinuationRuntimeAuthorityV2 = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding, guard: (additionalBytes?: number) => void): LeanRuntimeAuthority => {
   const allocation = validateLeanBaselineContinuationAllocationV2(ledger.allocation)
   if (allocation.root !== binding.budgetRoot || typeof guard !== "function") return fail()
   const key = `${allocation.root}:${charge.root}:${binding.seat}`
@@ -398,17 +398,20 @@ export const issueLeanBaselineContinuationRuntimeAuthorityV2 = (ledger: LeanExpe
   used.add(key)
   guard()
   const body = { schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: allocation.window.grantId, routeNamespace: allocation.window.routeNamespace, windowRoot: allocation.window.root, windowBytesRoot: allocation.windowBytesRoot, requestBytesRoot: allocation.requestBytesRoot, sourceHead: allocation.sourceHead, sourceRoot: allocation.sourceRoot, sourceGateRoot: allocation.sourceGateRoot, dataReviewRoot: allocation.dataReviewRoot, planningRoot: allocation.planningRoot, manifestRoot: allocation.manifestRoot }
-  const boundGuard = () => {
-    guard()
+  const boundGuard = (additionalBytes = 0) => {
+    guard(additionalBytes + 4 * 1024 * 1024 * 7)
+    const live = readLeanLedger(ledger), retained = live.charges.get(charge.slotRoot), slot = allocation.slots[charge.ordinal]
+    if (live.stopped || !retained || live.terminals.has(charge.root) || retained.root !== charge.root || retained.ordinal !== charge.ordinal || retained.slotRoot !== charge.slotRoot || !slot || slot.root !== charge.slotRoot || labRoot("lean-slot-charge", retained) !== labRoot("lean-slot-charge", charge)) return fail()
     const entry = readLeanChildEntry(ledger)
-    if (entry.allocationRoot !== allocation.root || entry.sourceRoot !== allocation.sourceRoot || entry.requestBytesRoot !== allocation.requestBytesRoot || !/^[a-f0-9]{40}$/u.test(entry.head) || entry.head === allocation.sourceHead || !matchEqual(readLeanContinuationJsonV2(LEAN_BASELINE_CONTINUATION_PATHS_V2.claim, 65536, 0o600, guard), { ...body, root: labRoot(body.schemaVersion, body) })) return fail()
-    guard()
+    const nestedGuard = (required?: number) => guard(additionalBytes + (required ?? 0))
+    if (entry.allocationRoot !== allocation.root || entry.sourceRoot !== allocation.sourceRoot || entry.requestBytesRoot !== allocation.requestBytesRoot || !/^[a-f0-9]{40}$/u.test(entry.head) || entry.head === allocation.sourceHead || !matchEqual(readLeanContinuationJsonV2(LEAN_BASELINE_CONTINUATION_PATHS_V2.claim, 65536, 0o600, nestedGuard), { ...body, root: labRoot(body.schemaVersion, body) })) return fail()
+    guard(additionalBytes)
   }
   boundGuard()
   return issueBaselineAuthority(ledger, charge, snapshot, binding, undefined, { version: "v2", guard: boundGuard })
 }
 export const issueLeanCorrectionRuntimeAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding, reuse: LeanColdReuse): LeanRuntimeAuthority => issueBaselineAuthority(ledger, charge, snapshot, binding, validateLeanColdReuse(reuse, ledger.allocation.sourceRoot))
-const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding, reuse?: LeanColdReuse, continuation?: { version: "v1" | "v2"; guard: () => void }): LeanRuntimeAuthority => {
+const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge, snapshot: LeanBaselineSource, binding: ProspectiveLeagueLifetimeProviderBinding, reuse?: LeanColdReuse, continuation?: { version: "v1" | "v2"; guard: (additionalBytes?: number) => void }): LeanRuntimeAuthority => {
   const allocation = ledger.allocation as unknown as { schemaVersion: string; coldRoot?: LabRoot; sourceRoot: LabRoot; predecessor?: { chargedMatches: number } }
   if (continuation ? allocation.schemaVersion !== (continuation.version === "v2" ? "lean-baseline-continuation-allocation-v2" : "lean-baseline-continuation-allocation-v1") || reuse !== undefined : reuse ? !["lean-correction-diagnostic-allocation-v1", "lean-correction-baseline-allocation-v1", "lean-correction-supervisor-diagnostic-allocation-v2", "lean-correction-supervisor-diagnostic-allocation-v3", "lean-correction-supervisor-baseline-allocation-v2", "lean-correction-supervisor-baseline-allocation-v3", "lean-correction-supervisor-diagnostic-allocation-v4", "lean-correction-supervisor-baseline-allocation-v4", "lean-correction-supervisor-diagnostic-allocation-v5", "lean-correction-supervisor-baseline-allocation-v5", "lean-correction-supervisor-diagnostic-allocation-v6", "lean-correction-supervisor-baseline-allocation-v6", "lean-correction-supervisor-diagnostic-allocation-v7", "lean-correction-supervisor-baseline-allocation-v7", "lean-correction-supervisor-diagnostic-allocation-v8", "lean-correction-supervisor-baseline-allocation-v8"].includes(allocation.schemaVersion) || !("reuseGrantRoot" in ledger.allocation) || ledger.allocation.reuseGrantRoot !== reuse.grant.root : allocation.schemaVersion !== "lean-current-baseline-allocation-v1") return fail()
   if ((allocation.schemaVersion.endsWith("-v5") || allocation.schemaVersion.endsWith("-v6") || allocation.schemaVersion.endsWith("-v7") || allocation.schemaVersion.endsWith("-v8"))) leanCapsForAllocation(ledger.allocation)
@@ -419,21 +422,25 @@ const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge
     if (admitted.root !== binding.budgetRoot) return fail()
   }
   if (allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v8") authenticateLeanRetryBaselineAuthorityV8(ledger.allocation as import("../../packages/strategy-lab/src/league/lean-experiment.js").LeanCorrectionAllocation, readLeanChildEntry(ledger).head)
-  continuation?.guard()
+  if (continuation?.version === "v2") continuation.guard(4 * 1024 * 1024 * 7)
+  else continuation?.guard()
   const state = readLeanLedger(ledger), retainedCharge = state.charges.get(charge.slotRoot)
   if (!retainedCharge || state.stopped || state.terminals.has(retainedCharge.root) || labRoot("lean-slot-charge", charge) !== labRoot("lean-slot-charge", retainedCharge)) return fail()
   const path = resolve(ledger.directory, `pair-${charge.ordinal}.json`), stat = lstatSync(path)
   if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600 || stat.size > 16384 || realpathSync(path) !== path) return fail()
-  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
   let pair: LeanBaselinePair
-  try {
-    const opened = fstatSync(fd)
-    if (!opened.isFile() || opened.dev !== stat.dev || opened.ino !== stat.ino || opened.nlink !== 1 || opened.size !== stat.size || (opened.mode & 0o777) !== 0o600) return fail()
-    const bytes = readFileSync(fd)
-    if (bytes.length > 16384) return fail()
-    pair = JSON.parse(Buffer.from(bytes).toString("utf8"))
-    if (leanBytesRoot(bytes) !== leanBytesRoot(leanCanonicalBytes(pair))) return fail()
-  } finally { closeSync(fd) }
+  if (continuation?.version === "v2") pair = readLeanContinuationJsonV2(path, 16384, 0o600, continuation.guard) as unknown as LeanBaselinePair
+  else {
+    const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
+    try {
+      const opened = fstatSync(fd)
+      if (!opened.isFile() || opened.dev !== stat.dev || opened.ino !== stat.ino || opened.nlink !== 1 || opened.size !== stat.size || (opened.mode & 0o777) !== 0o600) return fail()
+      const bytes = readFileSync(fd)
+      if (bytes.length > 16384) return fail()
+      pair = JSON.parse(Buffer.from(bytes).toString("utf8"))
+      if (leanBytesRoot(bytes) !== leanBytesRoot(leanCanonicalBytes(pair))) return fail()
+    } finally { closeSync(fd) }
+  }
   const slot = ledger.allocation.slots[retainedCharge.ordinal]
   if (!exactLabKeys(pair, ["schemaVersion", "ordinal", "slotRoot", "requestRoot", "priorLedgerBytesRoot", "priorLedgerByteLength", "priorCharged", "bottomRole", "bottomSourceRoot", "bottomSnapshotRoot", "topRole", "topSourceRoot", "topSnapshotRoot", "root"]) || pair.schemaVersion !== "lean-baseline-pair-v1" || pair.ordinal !== retainedCharge.ordinal || pair.slotRoot !== retainedCharge.slotRoot || pair.requestRoot !== slot?.requestRoot || pair.priorCharged !== (allocation.predecessor?.chargedMatches ?? -1) + retainedCharge.ordinal || !["bottom", "top"].includes(binding.seat)) return fail()
   const { root: pairRoot, ...pairBody } = pair
@@ -442,21 +449,33 @@ const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge
   // fresh capacity resource rows may occur between that prefix and its charge.
   const journalPath = resolve(ledger.directory, "ledger.ndjson"), journalStat = lstatSync(journalPath)
   if (!journalStat.isFile() || journalStat.isSymbolicLink() || journalStat.nlink !== 1 || (journalStat.mode & 0o777) !== 0o600 || journalStat.size > 4 * 1024 * 1024 || realpathSync(journalPath) !== journalPath || !Number.isSafeInteger(pair.priorLedgerByteLength) || pair.priorLedgerByteLength < 0 || pair.priorLedgerByteLength > journalStat.size) return fail()
-  const journalFd = openSync(journalPath, constants.O_RDONLY | constants.O_NOFOLLOW)
-  try {
-    const opened = fstatSync(journalFd)
-    if (!opened.isFile() || opened.dev !== journalStat.dev || opened.ino !== journalStat.ino || opened.nlink !== 1 || opened.size !== journalStat.size) return fail()
-    const bytes = readFileSync(journalFd)
+  let journalBytes: Buffer
+  if (continuation?.version === "v2") {
+    journalBytes = readLeanContinuationBoundedBytesV2(journalPath, 4 * 1024 * 1024, 0o600, continuation.guard)
+    if (journalBytes.length !== journalStat.size) return fail()
+    continuation.guard(journalBytes.length * 6)
+  } else {
+    const journalFd = openSync(journalPath, constants.O_RDONLY | constants.O_NOFOLLOW)
+    try {
+      const opened = fstatSync(journalFd)
+      if (!opened.isFile() || opened.dev !== journalStat.dev || opened.ino !== journalStat.ino || opened.nlink !== 1 || opened.size !== journalStat.size) return fail()
+      journalBytes = readFileSync(journalFd)
+    } finally { closeSync(journalFd) }
+  }
+  {
+    const bytes = journalBytes
     const prefix = bytes.subarray(0, pair.priorLedgerByteLength), suffix = bytes.subarray(pair.priorLedgerByteLength)
     if (leanBytesRoot(prefix) !== pair.priorLedgerBytesRoot || (prefix.length && prefix[prefix.length - 1] !== 10)) return fail()
     const charges = (part: Uint8Array) => Buffer.from(part).toString("utf8").split("\n").filter(Boolean).map(line => JSON.parse(line) as { kind: string; charge?: LeanCharge }).filter(row => row.kind === "charge").map(row => row.charge)
     const before = charges(prefix), after = charges(suffix)
     if (before.length !== retainedCharge.ordinal || before.some(c => c?.root === retainedCharge.root) || after.length !== 1 || labRoot("lean-slot-charge", after[0]) !== labRoot("lean-slot-charge", retainedCharge)) return fail()
-  } finally { closeSync(journalFd) }
+  }
   const expectedRole = binding.seat === "bottom" ? pair.bottomRole : pair.topRole
   const expectedRoot = binding.seat === "bottom" ? pair.bottomSourceRoot : pair.topSourceRoot
   const expectedSnapshot = binding.seat === "bottom" ? pair.bottomSnapshotRoot : pair.topSnapshotRoot
-  const source = readLeanBaselineSource(ledger.directory, expectedRole, (leanSupervisorAllocationMode(ledger.allocation) === "v6" || (leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation)))) ? { allocation: ledger.allocation, head: readLeanChildEntry(ledger).head } : undefined)
+  const source = continuation?.version === "v2"
+    ? validateLeanBaselineSource(readLeanContinuationJsonV2(resolve(ledger.directory, `source-${expectedRole}.json`), 262144, 0o600, continuation.guard))
+    : readLeanBaselineSource(ledger.directory, expectedRole, (leanSupervisorAllocationMode(ledger.allocation) === "v6" || (leanSupervisorAllocationMode(ledger.allocation) === "v7" || isLeanRetryMode(leanSupervisorAllocationMode(ledger.allocation)))) ? { allocation: ledger.allocation, head: readLeanChildEntry(ledger).head } : undefined)
   if (source.sourceRoot !== expectedRoot || source.root !== expectedSnapshot || source.root !== snapshot.root || source.coldRoot !== allocation.coldRoot || (source.implementationRoot !== allocation.sourceRoot && (!reuse || !reuse.sources.some(s => s.root === source.root && s.role === source.role)))) return fail()
   continuation?.guard()
   const sourceBytes = new TextEncoder().encode(source.source)
@@ -473,7 +492,7 @@ const issueBaselineAuthority = (ledger: LeanExperimentLedger, charge: LeanCharge
     const a = continuation.version === "v2" ? validateLeanBaselineContinuationAllocationV2(ledger.allocation) : validateLeanBaselineContinuationAllocation(ledger.allocation), entry = readLeanChildEntry(ledger)
     if (entry.sourceRoot !== a.sourceRoot || entry.allocationRoot !== a.root) return fail()
     for (const [role, snapshotRoot, sourceRoot] of [[pair.bottomRole, pair.bottomSnapshotRoot, pair.bottomSourceRoot], [pair.topRole, pair.topSnapshotRoot, pair.topSourceRoot]] as const) {
-      const fresh = readLeanBaselineSource(ledger.directory, role)
+      const fresh = continuation.version === "v2" ? validateLeanBaselineSource(readLeanContinuationJsonV2(resolve(ledger.directory, `source-${role}.json`), 262144, 0o600, continuation.guard)) : readLeanBaselineSource(ledger.directory, role)
       if (fresh.root !== snapshotRoot || fresh.sourceRoot !== sourceRoot || fresh.implementationRoot !== a.sourceRoot || fresh.coldRoot !== a.coldRoot) return fail()
       continuation.guard()
       const body = { schemaVersion: continuation.version === "v2" ? "lean-baseline-continuation-source-publication-v2" : "lean-baseline-continuation-source-publication-v1", allocationRoot: a.root, sourceHead: a.sourceHead, head: entry.head, implementationRoot: a.sourceRoot, coldRoot: a.coldRoot, role, snapshotRoot, sourceRoot, ...(a.schemaVersion === "lean-baseline-continuation-allocation-v2" ? { windowRoot: a.window.root, windowBytesRoot: a.windowBytesRoot, requestBytesRoot: a.requestBytesRoot, dataReviewRoot: a.dataReviewRoot } : {}) }
