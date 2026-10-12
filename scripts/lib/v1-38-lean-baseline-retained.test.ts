@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { readFileSync } from "node:fs"
 import { LEAN_TWO_PAIR_V11_EXTENSION } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
@@ -9,8 +9,25 @@ import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
 import { CANONICAL_ARENA_CATALOG_V1_37, type StrategyInputV119 } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { LEAN_BASELINE_REQUIRED_METRICS, type LeanBaselineMetricReceipt } from "./v1-38-lean-baseline-metrics.js"
+import * as continuationReader from "./v1-38-lean-baseline-retained.js"
+import * as continuationLedger from "../../packages/strategy-lab/src/league/lean-experiment.js"
+vi.mock("./v1-38-lean-seal-metadata.js", () => ({ inspectLeanSealMetadata: () => {
+  const body = { schemaVersion: "lean-seal-metadata-inventory-v1", protocol: { present: false, bytesRoot: null }, originalPublicReference: { present: false, bytesRoot: null }, checkoutDirty: true, originalCompatibleUnopenedSealVerified: false, privateStoreOrPreimageRead: false, newExploratorySealCreated: false, reservedHoldoutPerProfile: 4, disposition: "holdout_claim_deferred_no_verified_compatible_seal", reason: "existing_clean_checkout_seal_prerequisite_not_met", claims: { absenceOfAllExternalSealsProved: false, originalCommitmentSatisfied: false, holdoutOpened: false } }
+  return { ...body, root: labRoot("lean-seal-metadata-inventory-v1", body) }
+} }))
 
 const root = (name: string): LabRoot => labRoot("lean-retained-test-v1", name)
+describe("distinct continuation reader admission", () => {
+  it("refuses old nine-charge snapshots and a spoofed 43-charge retag", () => {
+    expect(typeof continuationReader.auditLeanBaselineContinuationRetained).toBe("function")
+    const s = fixture()
+    expect(() => continuationReader.auditLeanBaselineContinuationRetained(s as never)).toThrow()
+    const forged = structuredClone(s) as any
+    forged.allocation.schemaVersion = "lean-baseline-continuation-allocation-v1"
+    forged.allocation.predecessor.chargedMatches = 43
+    expect(() => continuationReader.auditLeanBaselineContinuationRetained(forged)).toThrow()
+  })
+})
 describe("strict v12 finite attribution custody join", () => {
   const fixture = () => {
     const actual = { allocationRoot: root("allocation"), sourceRoot: root("source"), requestBytesRoot: root("request"), entryBytesRoot: root("entry"), head: "a".repeat(40), parentPid: 100, childPid: 101, exitCode: 0, signal: null, status: "child_failed" as const }
@@ -109,8 +126,8 @@ const failedFirstCell = (classification: "player_violation" | "system_failure", 
   s.result.successful = 0
   return s
 }
-const completeFixture = async (outcomeForSlot: (ordinal: number, entrantSeat: "bottom" | "top") => "bottom" | "top" | "DRAW" = () => "DRAW"): Promise<LeanBaselineRetainedSnapshot> => {
-  const base = fixture(), allocation = base.allocation, corpus = buildLeanColdCorpus(allocation.seed)
+const completeFixture = async (outcomeForSlot: (ordinal: number, entrantSeat: "bottom" | "top") => "bottom" | "top" | "DRAW" = () => "DRAW", continuation = false): Promise<LeanBaselineRetainedSnapshot> => {
+  const base = continuation ? continuationFixtureBase() : fixture(), allocation = base.allocation, corpus = buildLeanColdCorpus(allocation.seed)
   const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(item => item.status === "active")!
   let machine = MATCH_KERNEL.createMachineV119({ matchId: "retained-source-only", seed: allocation.seed, arenaVariant: arena, bottomPlayerId: "fixture-bottom", topPlayerId: "fixture-top", bottomStrategyRevisionId: "fixture-bottom-revision", topStrategyRevisionId: "fixture-top-revision", initialInitiativePlayerId: "fixture-bottom" })
   let strategyInput: StrategyInputV119 | null = null
@@ -126,9 +143,10 @@ const completeFixture = async (outcomeForSlot: (ordinal: number, entrantSeat: "b
   const ledgerEvents: Array<Record<string, unknown>> = []
   const pairs: unknown[] = [], observations: unknown[] = []
   const records = allocation.slots.map(slot => ({ slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: null as LabRoot | null, terminal: null as Record<string, unknown> | null, status: "unused" }))
-  const pipeline = await executeLeanCurrentPipeline({ allocation, freezeSource: source => { sources.push(source) }, retainArtifact: (name, value) => { artifacts[name] = value }, checkpoint() {}, async dispatch(slot, bottom, top) {
+  const execute = continuation ? (await import("./v1-38-lean-baseline-pipeline.js")).executeLeanBaselineContinuationPipeline : executeLeanCurrentPipeline
+  const pipeline = await execute({ allocation: allocation as never, freezeSource: source => { sources.push(source) }, retainArtifact: (name, value) => { artifacts[name] = value }, checkpoint() {}, async dispatch(slot, bottom, top) {
     const prior = Buffer.from(ledgerEvents.map(event => Buffer.from(leanCanonicalBytes(event)).toString("utf8") + "\n").join(""))
-    const pairBody = { schemaVersion: "lean-baseline-pair-v1" as const, ordinal: slot.ordinal, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: leanBytesRoot(prior), priorLedgerByteLength: prior.length, priorCharged: 9 + slot.ordinal, bottomRole: bottom.role, bottomSourceRoot: bottom.sourceRoot, bottomSnapshotRoot: bottom.root, topRole: top.role, topSourceRoot: top.sourceRoot, topSnapshotRoot: top.root }
+    const pairBody = { schemaVersion: "lean-baseline-pair-v1" as const, ordinal: slot.ordinal, slotRoot: slot.root, requestRoot: slot.requestRoot, priorLedgerBytesRoot: leanBytesRoot(prior), priorLedgerByteLength: prior.length, priorCharged: allocation.predecessor.chargedMatches + slot.ordinal, bottomRole: bottom.role, bottomSourceRoot: bottom.sourceRoot, bottomSnapshotRoot: bottom.root, topRole: top.role, topSourceRoot: top.sourceRoot, topSnapshotRoot: top.root }
     const pair = { ...pairBody, root: labRoot("lean-baseline-pair-v1", pairBody) }; pairs.push(pair)
     const chargeBody = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: allocation.root, slotRoot: slot.root, ordinal: slot.ordinal }
     const charge = { ...chargeBody, root: labRoot("lean-slot-charge-v1", chargeBody) }
@@ -143,10 +161,48 @@ const completeFixture = async (outcomeForSlot: (ordinal: number, entrantSeat: "b
     return cell
   } })
   ledgerEvents.push({ kind: "stop", reason: "complete" })
-  const evidence = { ...base.evidence, records, charged: 45, elapsedMs: 3_305_706, root: root("complete-evidence") }
-  const result = { ...base.result, pipeline, evidenceRoot: evidence.root, charged: 45, successful: 36, status: "pending_independent_verification" }
+  const evidence = { ...base.evidence, records, charged: allocation.predecessor.chargedMatches + 36, elapsedMs: allocation.predecessor.elapsedUpperBoundMs + 100, root: root("complete-evidence") }
+  const result = { ...base.result, pipeline, evidenceRoot: evidence.root, charged: evidence.charged, successful: 36, status: "pending_independent_verification", ...(continuation ? { unusedOrdinals: [] } : {}) }
   return { ...base, sources, artifacts, pairs: pairs as LeanBaselineRetainedSnapshot["pairs"], observations: observations as LeanBaselineRetainedSnapshot["observations"], ledgerEvents: ledgerEvents as LeanBaselineRetainedSnapshot["ledgerEvents"], evidence: evidence as LeanBaselineRetainedSnapshot["evidence"], result }
 }
+
+/** All objects remain inert, in-memory fixture data. */
+const continuationFixtureBase = (): LeanBaselineRetainedSnapshot => {
+  const base = structuredClone(fixture()) as any, old = base.allocation
+  const carry = { schemaVersion: "lean-baseline-continuation-carry-v1" as const, chargedMatches: 43 as const, elapsedUpperBoundMs: 415746903 as const, allocatedDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, custodyRoot: root("custody"), inventoryRoot: root("inventory"), qualifiedReaderAuthority: "cost_only" as const }
+  const request = { schemaVersion: "lean-baseline-continuation-request-v1", seed: old.seed, sourceHead: "b".repeat(40), sourceRoot: old.sourceRoot, planningRoot: root("planning"), planRoot: old.planRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot, candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, offlineOverheadMs: 60000, sourceAuthor: "fixture-author", runOperator: "fixture-run", readerOperator: "fixture-reader" }
+  const { schemaVersion: _schema, sourceAuthor: _author, runOperator: _operator, readerOperator: _reader, ...allocationInput } = request
+  const a = continuationLedger.createLeanBaselineContinuationAllocation({ ...allocationInput, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), predecessor: { ...carry, root: labRoot(carry.schemaVersion, carry) } })
+  base.allocation = a; base.request = request; base.requestBytesRoot = a.requestBytesRoot
+  const start = a.window.anchorMs + 100
+  base.entry = { ...base.entry, allocationRoot: a.root, requestBytesRoot: a.requestBytesRoot, wallStartMs: start }
+  base.terminal = { ...base.terminal, allocationRoot: a.root, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(base.entry)), wallObservedMs: start + 1000 }
+  base.time = { elapsedMs: a.predecessor.elapsedUpperBoundMs + 2000, closedElapsedMs: a.predecessor.elapsedUpperBoundMs + 2000, active: false, starts: new Map([["pilot-entry", start], ["continuation-retained-verifier", start + 1100]]), closes: new Map([["pilot-entry", start + 1000], ["continuation-retained-verifier", start + 1900]]), closed: new Set(["pilot-entry", "continuation-retained-verifier"]) }
+  base.result = { ...base.result, schemaVersion: "lean-baseline-continuation-result-v1", allocationRoot: a.root, requestBytesRoot: a.requestBytesRoot, elapsedMs: a.predecessor.elapsedUpperBoundMs + 100, planningRoot: a.planningRoot, unusedOrdinals: [], holdoutReservations: a.holdoutReservations, failure: null, sourceAuthor: request.sourceAuthor, runOperator: request.runOperator }
+  return base
+}
+
+describe("continuation full retained reconstruction", () => {
+  it("rebuilds all 36 cells and real work, and denies mutated roots, grants, receipts and reader identities", async () => {
+    const s = await completeFixture(() => "DRAW", true)
+    const audit = (v: unknown) => continuationReader.auditLeanBaselineContinuationRetained(v as never)
+    expect(audit(s)).toMatchObject({ complete: true, charged: 79, currentCharged: 36, disposition: "passed", unusedOrdinals: [], historicalMemoryPeaks: "unknown" })
+    const mutations: Array<(v: any) => void> = [
+      v => { v.pairs[0].priorLedgerBytesRoot = root("changed") },
+      v => { v.observations[4].cell.decisionRoot = root("changed") },
+      v => { v.artifacts["response-node-receipts.json"].pop() },
+      v => { v.artifacts["work-accounting.json"].actual.responseNodes += 1; v.artifacts["work-accounting.json"].actual.total = 320 },
+      v => { v.result.planningRoot = root("changed") },
+      v => { v.request.readerOperator = v.request.runOperator },
+      v => { v.time.starts.delete("continuation-retained-verifier") },
+      v => { v.time.closes.set("continuation-retained-verifier", v.allocation.window.deadlineMs + 1) },
+      v => { v.allocation.slots.push(v.allocation.slots[0]) },
+      v => { v.result.pipeline.response.admitted = true },
+      v => { v.sources[0].source = "forged" },
+    ]
+    for (const [index, mutate] of mutations.entries()) { const v = structuredClone(s); mutate(v); expect(() => audit(v), `mutation ${index}`).toThrow() }
+  }, 60000)
+})
 
 describe("new current-baseline retained audit (synthetic source-only)", () => {
   it("retains an honest incomplete first-cell result without granting completion", () => {

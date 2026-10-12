@@ -51,7 +51,34 @@ export const readLeanPrivateMatchGitV3 = (args: readonly string[]): Buffer => {
     if (head && commit.test(head) && path && extra === undefined && /^(?:scripts|\.planning)\/[a-zA-Z0-9_./-]{1,240}$/u.test(path) && !path.split("/").some(p => p === ".." || p === "." || !p)) maximum = path === ".planning/artifacts/v1.38-phase-265-private-match-allocation-v3.json" ? 65537 : 4194305
   }
   if (maximum === undefined) throw new TypeError("LEAN_PRIVATE_MATCH_GIT_METADATA")
-  return execFileSync("git", [...args], { stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: maximum })
+  return runLeanBoundedGitMetadata(args, maximum)
+}
+// The existing host-owned metadata execution site is shared. There is no new
+// launcher and no change to any V1/V2/V3 command predicate.
+const runLeanBoundedGitMetadata = (args: readonly string[], maximum: number): Buffer => execFileSync("git", [...args], { stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: maximum })
+import { leanBaselineContinuationSourceManifest } from "../run-v1-38-lean-baseline.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+let continuationMetadataPaths: ReadonlySet<string> | undefined
+export const readLeanBaselineContinuationGit = (args: readonly string[]): Buffer => {
+  const commit = /^[a-f0-9]{40}$/u
+  let maximum: number | undefined
+  if (args.length === 2 && args[0] === "rev-parse" && args[1] === "HEAD") maximum = 128
+  if (args.length === 5 && args.slice(0, 4).join("\0") === ["rev-list", "--parents", "-n", "1"].join("\0") && commit.test(args[4]!)) maximum = 256
+  if (args.length === 2 && args[0] === "show") {
+    const parts = args[1]!.split(":"), revision = parts[0], path = parts[1]
+    if (parts.length !== 2 || !revision || !commit.test(revision) || !path || path.startsWith("/") || path.split("/").some(part => !part || part === "." || part === "..") || /preimage|secret/iu.test(path)) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_METADATA")
+    const allocations = [LEAN_BASELINE_CONTINUATION_PATHS.allocation, ...[1, 2, 3].map(n => `.planning/artifacts/v1.38-phase-265-private-match-allocation-v${n}.json`)]
+    if (allocations.includes(path)) maximum = path === LEAN_BASELINE_CONTINUATION_PATHS.allocation ? 262144 : 65536
+    else {
+      if (!/^(?:scripts|packages|\.planning)\/[A-Za-z0-9_./-]+$/u.test(path) && !["AGENTS.md", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.json", "tsconfig.base.json"].includes(path)) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_METADATA")
+      continuationMetadataPaths ??= new Set(leanBaselineContinuationSourceManifest().entries.map(row => row.path))
+      if (continuationMetadataPaths.has(path)) maximum = 4194304
+    }
+  }
+  if (maximum === undefined) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_METADATA")
+  const bytes = runLeanBoundedGitMetadata(args, maximum)
+  if (bytes.length > maximum) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_METADATA")
+  return bytes
 }
 import { Worker } from "node:worker_threads"
 /** Explicit new route: old V1/probe command predicates are not widened. */

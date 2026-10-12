@@ -13,6 +13,20 @@ import { validateLeanPreparationContinuationReasonJoinV13 } from "./lib/v1-38-le
 import { assertLeanSupervisorReasonCustodyV2 } from "./lib/v1-38-lean-baseline-retained.js"
 
 const root = (name: string) => labRoot("baseline-cli-test", name)
+import * as continuationGit from "./lib/v1-38-lean-container-match-session.js"
+describe("continuation CLI and narrow metadata", () => {
+  it("accepts only the new exact request and keeps hidden child mode out of public dispatch", () => {
+    const request = lean.LEAN_BASELINE_CONTINUATION_PATHS.request
+    for (const mode of ["prepare-continuation", "run-continuation", "verify-continuation"]) {
+      expect(parseLeanBaselineCommand([mode, "--request", request])).toEqual({ mode, request })
+      expect(() => parseLeanBaselineCommand([mode, "--request", "/tmp/override.json"])).toThrow()
+    }
+    expect(() => parseLeanBaselineCommand(["child-continuation", "--request", request])).toThrow()
+  })
+  it("denies arbitrary programs, refs, paths and writes before any metadata process", () => {
+    for (const args of [["status"], ["show", "HEAD:package.json"], ["show", `${"a".repeat(40)}:/etc/passwd`], ["show", `${"a".repeat(40)}:.strategy-lab/holdout/PREIMAGE`], ["rev-parse", "HEAD~1"], ["checkout", "main"], ["sh", "-c", "true"]]) expect(() => continuationGit.readLeanBaselineContinuationGit(args)).toThrow("LEAN_BASELINE_CONTINUATION_GIT_METADATA")
+  })
+})
 
 describe("additive finite supervisor reason-v2 contract", () => {
   const fixture = (): parentApi.LeanSupervisorReasonEnvelopeV2 => {
@@ -369,7 +383,9 @@ describe("current-only baseline CLI source contracts", () => {
     expect(() => assertLeanBaselineWritableScope(scope, "unlimited")).toThrow(/WRITABLE_SCOPE/u)
   })
 
-  it("wrapper reports safe inherited scope without entering preparation or Matches", () => {
+  // This legacy integration probe creates the canonical actual scratch path.
+  // Source-only suites must never consume that path.
+  it.skip("wrapper reports safe inherited scope without entering preparation or Matches", () => {
     const output = execFileSync("sh", ["scripts/run-v1-38-lean-baseline.sh", "--probe-launch-scope"], { cwd: resolve("."), env: { ...process.env, LEAN_BASELINE_LAUNCH_PROBE: "1", NODE_OPTIONS: "--trace-warnings", NODE_COMPILE_CACHE: "/tmp/leak", NODE_REDIRECT_WARNINGS: "/tmp/leak", NODE_V8_COVERAGE: "/tmp/leak" }, encoding: "utf8", timeout: 10_000 })
     expect(output).toContain("cache=1 compile=1")
     expect(output).toContain("node_options=unset compile_cache=unset warnings=unset coverage=unset core=0")
