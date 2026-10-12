@@ -23,6 +23,28 @@ vi.mock("./v1-38-lean-seal-metadata.js", () => ({ inspectLeanSealMetadata: () =>
 
 const root = (name: string): LabRoot => labRoot("lean-retained-test-v1", name)
 describe("continuation compressed read admission", () => {
+  it("connects bounded reads to shared verification without changing legacy evidence roots or inflation reservations", () => {
+    const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-evidence-")))
+    const allocation = continuationFixtureBase().allocation
+    const slot = allocation.slots[0]!
+    const chargeBody = { schemaVersion: "lean-slot-charge-v1", allocationRoot: allocation.root, slotRoot: slot.root, ordinal: 0 }
+    const charge = { ...chargeBody, root: labRoot("lean-slot-charge-v1", chargeBody) }
+    const replay = continuationLedger.encodeLeanReplay([{ kind: "failure", code: "SUPERVISOR_FAILURE" }])
+    const record = { classification: "system_failure", code: "SUPERVISOR_FAILURE", outcome: null, elapsedMs: 1, cleanupComplete: true, invocationCount: 1, accountingRoot: root("accounting"), executionRoot: root("execution"), telemetry: { transitions: 0, events: 0 } }
+    try {
+      fs.writeFileSync(join(directory, "allocation.json"), leanCanonicalBytes(allocation), { mode: 0o600 })
+      fs.writeFileSync(join(directory, "ledger.ndjson"), [{ kind: "charge", charge }, { kind: "terminal", chargeRoot: charge.root, record, replay: replay.container }].map(e => Buffer.from(leanCanonicalBytes(e)).toString() + "\n").join(""), { mode: 0o600 })
+      fs.writeFileSync(join(directory, `${charge.root.slice(7)}.gz`), replay.bytes, { mode: 0o600 })
+      const ledger = { directory, allocation }, legacyGuard = vi.fn(), guard = vi.fn()
+      const legacy = continuationLedger.verifyLeanEvidence(ledger, legacyGuard)
+      const bounded = continuationReader.verifyLeanContinuationEvidence(ledger, guard)
+      expect(bounded).toEqual(legacy)
+      expect(guard.mock.calls.filter(c => c[0] !== undefined)).toEqual([[replay.bytes.length * 2], [replay.container.uncompressedBytes * 4]])
+      expect(legacyGuard.mock.calls.filter(c => c[0] !== undefined)).toEqual([[replay.container.uncompressedBytes * 4]])
+      expect(() => continuationReader.verifyLeanContinuationEvidence(ledger, bytes => { if (bytes === replay.bytes.length * 2) throw new Error("RESERVATION_DENIED") })).toThrow("RESERVATION_DENIED")
+      expect(() => continuationReader.verifyLeanContinuationEvidence(ledger, bytes => { if (bytes === replay.container.uncompressedBytes * 4) throw new Error("INFLATION_DENIED") })).toThrow("INFLATION_DENIED")
+    } finally { fs.rmSync(directory, { recursive: true }) }
+  })
   it("forwards optional reservations unchanged through the ordinary-reader evidence hook", () => {
     const guard = vi.fn(), ledger = { directory: "inert", allocation: continuationFixtureBase().allocation } as continuationLedger.LeanExperimentLedger
     const verify = vi.spyOn(continuationLedger, "verifyLeanEvidence").mockImplementation((_ledger, check, policy) => { expect(policy).toBe("continuation-descriptor-v1"); check?.(123456); check?.(); return { root: root("evidence") } as never })
@@ -32,7 +54,7 @@ describe("continuation compressed read admission", () => {
   it("reserves before allocation/read, checks each chunk and detects fd/path changes and unrelated growth", () => {
     const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-replay-"))), path = join(dir, "replay.gz"), original = Buffer.alloc(131073, 97)
     fs.writeFileSync(path, original, { mode: 0o600 })
-    const alloc = vi.spyOn(Buffer, "alloc"), read = vi.spyOn(fs, "readSync")
+    const alloc = vi.spyOn(Buffer, "alloc"), read = vi.spyOn(fs, "readSync").mockClear()
     try {
       const deny = vi.fn(() => { throw new Error("CAPACITY") })
       expect(() => continuationLedger.readLeanContinuationCompressedReplay(path, original.length, deny)).toThrow("CAPACITY")
@@ -54,6 +76,24 @@ describe("continuation compressed read admission", () => {
         })).toThrow(mutation === "unrelated" ? /SURVIVOR_CHANGED/ : /REPLAY_FILE_CHANGED/)
       }
     } finally { alloc.mockRestore(); read.mockRestore(); fs.rmSync(dir, { recursive: true }) }
+  })
+})
+describe("continuation executor retained joins", () => {
+  const fixture = () => {
+    const body = { schemaVersion: "lean-continuation-executor-diagnostic-v1", availability: "available", originAvailability: "available", allocationRoot: root("allocation"), chargeRoot: root("charge"), accountingRoot: root("accounting"), executionRoot: root("execution"), sourceRoot: root("source"), executableRoot: root("executable"), invocationRoot: root("invocation"), requestIdRoot: root("request"), inputRoot: root("input"), method: "selectActivations", ordinal: 0, stage: "executor", reason: "response_status_null", code: "SUBPROCESS_EXIT", initiatingCause: "unknown" }
+    return { value: { ...body, root: labRoot(body.schemaVersion, body) }, expected: { allocationRoot: body.allocationRoot, chargeRoot: body.chargeRoot, accountingRoot: body.accountingRoot, executionRoot: body.executionRoot, sourceRoots: [body.sourceRoot], method: body.method, ordinal: body.ordinal, code: body.code } }
+  }
+  it("denies cross-charge/call/source joins, extra keys, unlisted reasons, speculative causes and stale roots", () => {
+    const { value, expected } = fixture(), validate = (v: unknown) => continuationReader.validateLeanContinuationExecutorDiagnostic(v, expected)
+    expect(validate(value)).toEqual(value)
+    for (const patch of [{ allocationRoot: root("other") }, { chargeRoot: root("other") }, { accountingRoot: root("other") }, { executionRoot: root("other") }, { sourceRoot: root("other") }, { method: "soldierBrain" }, { ordinal: 1 }, { ordinal: -1 }, { ordinal: 24800 }, { inputRoot: "raw input" }, { reason: "oom" }, { reason: "exit_17" }, { initiatingCause: "timeout" }, { stage: "guest" }, { rawError: "PRIVATE" }, { stdout: "PRIVATE" }, { originAvailability: "unavailable" }]) {
+      const { root: _root, ...body } = { ...value, ...patch }
+      expect(() => validate({ ...body, root: labRoot(body.schemaVersion, body) })).toThrow(/CONTINUATION_EXECUTOR/)
+    }
+    expect(() => validate({ ...value, invocationRoot: root("another-call") })).toThrow(/CONTINUATION_EXECUTOR/)
+    expect(() => validate({ ...value, root: root("wrong") })).toThrow(/CONTINUATION_EXECUTOR/)
+    const { root: _root, ...unknown } = { ...value, originAvailability: "unavailable", stage: "unknown", reason: "unknown" }
+    expect(validate({ ...unknown, root: labRoot(unknown.schemaVersion, unknown) })).toMatchObject({ initiatingCause: "unknown", originAvailability: "unavailable" })
   })
 })
 describe("distinct continuation reader admission", () => {
@@ -225,6 +265,40 @@ const continuationFixtureBase = (): LeanBaselineRetainedSnapshot => {
 }
 
 describe("continuation full retained reconstruction", () => {
+  it("joins the private extension through observation and pipeline roots and preserves seven-key continuation history", () => {
+    const s = { ...continuationFixtureBase() }, a = s.allocation as unknown as continuationLedger.LeanBaselineContinuationAllocation
+    const failed = failedFirstCell("system_failure", "SUPERVISOR_FAILURE", null, true)
+    const oldPair = s.pairs[0]!, slot = a.slots[0]!
+    const { root: _pairRoot, ...pairBody } = { ...oldPair, slotRoot: slot.root, requestRoot: slot.requestRoot, priorCharged: 43 }
+    const pair = { ...pairBody, root: labRoot("lean-baseline-pair-v1", pairBody) }
+    const chargeBody = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: a.root, slotRoot: slot.root, ordinal: 0 }, charge = { ...chargeBody, root: labRoot("lean-slot-charge-v1", chargeBody) }
+    const compact = failed.observations[0]!.cell.compact
+    const seven = { schemaVersion: "lean-supervisor-diagnostic-v1", chargeRoot: charge.root, stage: "native_response", reason: "executor", code: "SUBPROCESS_EXIT", method: "selectActivations", ordinal: 0 }
+    const extensionBody = { schemaVersion: "lean-continuation-executor-diagnostic-v1", availability: "available", originAvailability: "available", allocationRoot: a.root, chargeRoot: charge.root, accountingRoot: compact.accountingRoot, executionRoot: compact.executionRoot, sourceRoot: pair.bottomSourceRoot, executableRoot: root("executable"), invocationRoot: root("invocation"), requestIdRoot: root("request"), inputRoot: root("input"), method: seven.method, ordinal: seven.ordinal, stage: "executor", reason: "response_status_null", code: seven.code, initiatingCause: "unknown" }
+    const extension = { ...extensionBody, root: labRoot(extensionBody.schemaVersion, extensionBody) }
+    const terminal = { kind: "terminal" as const, chargeRoot: charge.root, record: compact, replay: null }
+    const unused = Array.from({ length: 35 }, (_, i) => i + 1)
+    s.pairs = [pair]
+    s.ledgerEvents = [{ kind: "charge", charge }, terminal, { kind: "stop", reason: "failure" }]
+    s.evidence = { ...s.evidence, charged: 44, elapsedMs: a.predecessor.elapsedUpperBoundMs + 100, records: a.slots.map((slot, i) => ({ slotRoot: slot.root, requestRoot: slot.requestRoot, chargeRoot: i === 0 ? charge.root : null, terminal: i === 0 ? terminal : null, status: i === 0 ? "system_failure" : "unused" })) }
+    const before = { nowMs: a.window.anchorMs + 200, monotonicElapsedMs: 200, remainingSlots: 36, charged: 43, retainedBytes: 1000000, scratchBytes: 0, parentRssBytes: 100000000, childRssBytes: 100000000, arrayBuffersBytes: 1000, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true }
+    s.result = { ...s.result, charged: 44, successful: 0, unusedOrdinals: unused, resourceReceipts: [{ ordinal: 0, chargeRoot: charge.root, before, after: { ...before, nowMs: before.nowMs + 1, monotonicElapsedMs: 201, remainingSlots: 35, charged: 44 } }] }
+    const reroot = (diagnostic: unknown) => {
+      const cell = { ...failed.observations[0]!.cell, slotRoot: slot.root, diagnostic } as LeanBaselineObservedCell
+      const receiptBody = { schemaVersion: "lean-baseline-observation-v1" as const, pairRoot: pair.root, cell }
+      s.observations = [{ ...receiptBody, root: labRoot(receiptBody.schemaVersion, receiptBody) }]
+      const { root: _pipelineRoot, ...pipeline } = failed.result.pipeline as Record<string, unknown>
+      const body = { ...pipeline, cells: [compactLeanBaselineCell(cell)], unusedOrdinals: unused, holdoutReservations: a.holdoutReservations }
+      s.result.pipeline = { ...body, root: labRoot("lean-baseline-continuation-pipeline-v1", body) }
+      return s as unknown as continuationReader.LeanBaselineContinuationRetainedSnapshot
+    }
+    expect(continuationReader.auditLeanBaselineContinuationRetained(reroot(seven))).toMatchObject({ complete: false, disposition: "gaps_found" })
+    expect(continuationReader.auditLeanBaselineContinuationRetained(reroot({ ...seven, continuationExecutor: extension }))).toMatchObject({ complete: false, disposition: "gaps_found" })
+    for (const patch of [{ chargeRoot: root("cross-call") }, { ordinal: 1 }, { sourceRoot: root("foreign-source") }, { rawError: "PRIVATE" }]) {
+      const { root: _root, ...body } = { ...extension, ...patch }
+      expect(() => continuationReader.auditLeanBaselineContinuationRetained(reroot({ ...seven, continuationExecutor: { ...body, root: labRoot(body.schemaVersion, body) } }))).toThrow(/CONTINUATION_EXECUTOR/)
+    }
+  })
   it("publishes one honest failure after persistent planning drift, or finitely refuses unsafe publication", () => {
     const allocation = continuationFixtureBase().allocation
     const fakeLedger = { allocation, directory: "inert-only" } as never
