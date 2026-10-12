@@ -1,5 +1,11 @@
 # Approved eight-hour current-rules baseline continuation
 
+## Prospective replacement window approved at 12:15:17 UTC
+
+The human's latest `yes, approved` accepts ROOT's specific fresh eight-hour remaining-baseline proposal. ROOT observed approval at 2026-10-12T12:15:17UTC (08:15:17 America/New_York), anchor1791807317000. This prospective window ends20:15:17UTC/16:15:17EDT, deadline1791836117000. Carry459375903 =415746903 +(1791807317000−1791763688000); cumulative cap488175903 =459375903+28800000. Every earlier idle, source, closure and wait interval is carried forward; old windows and consumed artifacts remain immutable history, not reset or revived.
+
+The unchanged full36-cell maximum schedule21600000 +closure1860000 +offline600000 =24060000ms requires full entry by13:34:17UTC/09:34:17EDT (1791812057000). All15GB/36new/four unopened reservations/43old/300cumulative/RAM/scratch/runtime/rules/privacy bounds below remain unchanged. This supersedes ONLY the prior prospective continuation window/carry numbers, not historical evidence or gameplay authority. Narrow numeric source amendment, independent review, ROOT affected validation and distinct source verification precede the fresh v2 request/allocation/unique ROOT entry and its one retained reader. No repeated approval literal is needed. The earlier approval text below is retained as history.
+
 The human answered `approved` to ROOT's recommendation of an eight-hour ceiling for continuing the existing lean current-rules baseline, keeping15GB and every other bound unchanged. ROOT's first actual anchor is2026-10-12T00:08:08UTC (1791763688000ms). Hard stop2026-10-12T08:08:08UTC (1791792488000ms). Eight hours is a ceiling, not a target.
 
 Continuous prior carry415746903ms =399420903 +(1791763688000−1791747362000), including earlier closure, read-only inspection, waiting and idle intervals. New cumulative ceiling444546903ms =carry+28800000. No old ceiling, charge, byte, failure, result, reader, allocation, authorization or source is mutated/reset/refunded. This prospective allowance is new; older windows remain expired.

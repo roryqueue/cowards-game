@@ -28,6 +28,10 @@ files_modified:
 
 # Plan 265-16 supplement: fresh current-rules baseline continuation
 
+## Active numeric amendment — human approved 2026-10-12T12:15:17UTC
+
+The latest explicit approval adopts the fresh eight-hour window recorded in APPROVAL above: anchor1791807317000, deadline1791836117000, carry459375903, cumulative cap488175903. Full36-cell entry frontier1791812057000/13:34:17UTC; unchanged31minute closure and10minute offline allowances. Original window table and repair paragraphs below are historical; no old artifact is changed or reused. All prior elapsed time remains included. Five numeric-only source/fixture paths, serial taskA<=3 and taskB<=2, within original15 ownership: ledger, continuation helper/test, pipeline test and retained test. No new schedule, schema, threshold, resource, runtime, rules, custody or launcher behavior. Independent narrow review → ROOT affected three-test-suite validation/exact inherited strict comparison → distinct source verification → final pinned source/docs commit/push → fresh v2 request and ONE prepare → allocation-only direct-child commit → unique ROOT entry/fresh SAMEPROCESS capacity → ONE ordinary retained reader. Source AND pinned planning/HEAD held through both closures; no empirical admission before closed gates. Standing private prospective-route approval remains sufficient, no new plan or repeat literal.
+
 Status: prospective, requires independent plan check; no execution evidence. Generic planner fallback, not a new numbered plan, typed GSD dispatch, workstream, diagnostic, or runtime. Supplements `265-16-PLAN.md` under `265-16-BASELINE-CONTINUATION-APPROVAL-20261012.md`, its RESEARCH, the active `LEAN-REMAINING-PLAN-20261003.md`, and latest STATE. This author owns only this file; source ownership below is for subsequent execution. Other authors' edits must be preserved.
 
 ## Objective, requirements and fixed decisions

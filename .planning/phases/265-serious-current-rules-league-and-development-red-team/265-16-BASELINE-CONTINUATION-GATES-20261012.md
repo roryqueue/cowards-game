@@ -1,6 +1,12 @@
 # Baseline continuation gates
 
-No empirical admission yet. Existing Plan16 supplement; no new numbered plan. Approval00:08:08–08:08:08UTC/415746903carry/444546903cap/43previouscharges/15GB300 and every frozen rule/runtime/privacy bound unchanged. All old consumed routes/checks remain immutable.
+## Active approved replacement window / numeric source gates closed
+
+Human `yes, approved`; ROOT observation2026-10-12T12:15:17UTC. New anchor1791807317000/deadline1791836117000/carry459375903/cap488175903; original costs fully carried, old approvals/artifacts immutable. Full-schedule frontier13:34:17UTC, hardstop20:15:17UTC;15GB/36new/four unopened reservations/43old/300 and every other frozen bound unchanged. Numeric-only source author, independent review, ROOT affected validation and distinct source verification ALL CLOSED below. Machine fields now describe amended source; fresh actual admission still required. No new request/preparation/allocation/entry/Match/reader. Prior source and cost proofs below remain history and are not repeated heavy empirical scans.
+
+Numeric author1268/local-codex:01a1300d-c5db-7d81-8aff-0e326c1f1418 CLOSED0 at170e82196c93e23402ac2bc532f14c885718443e, serial3+2paths/exactfive numeric-only diff, ownership released. Author installed Vitest three affected suites37passed/one explicitly retained legacy canonical-history case omitted, no empirical data. ROOT43939 CLOSED0/continuation suite15passed6.23s. ROOT1541 CLOSED2/owned strict scope: exactly13 unchanged inherited diagnostics (eight source plus five nullable Match-test positions), same full identities/messages/columns/locations194/314 and291/292; zero NEW, NOT global typegreen. No line shifts in numeric diff. ROOT43466 inert source identity CLOSED0/697implementation+14planning rows/source298b1d2bd6df240866f60972a00c0dbaa15d712f7adf824685f196b770a71123. Existing166tests/two disclosed omissions/configured project/import/privacy/factory1443 proof retained on unchanged behavior, not claimed rerun. Review41615 active, distinct narrow source verification pending. No request/allocation/charge/Match/reader.
+
+Independent narrow reviewer41615/local-codex:01a13010-8e6c-7572-a7b9-7c4f4aab8760 CLOSED0/PASS_SOURCE_REVIEW+PASS_PLAN_AMENDMENT/findings[]/commands_closed over170e8219 vs83e9c910. Exactfivepaths/11numeric substitutions, all arithmetic/full reservation/no-reset/unchanged limits and separate active docs verified. No private scan/runtime/test/empirical activity by reviewer. ROOT checks above closed; distinct source verification next. No empirical admission yet. Existing Plan16 supplement; no new numbered plan. Original approval00:08:08–08:08:08UTC/415746903carry/444546903cap is expired history, superseded only prospectively by the active approved numeric amendment;43previouscharges/15GB300 and every frozen rule/runtime/privacy bound unchanged. All old consumed routes/checks remain immutable.
 
 ## Research and plan
 
@@ -48,10 +54,10 @@ source_review: passed
 root_validation: passed
 source_verification: passed
 commands_closed: true
-source_root: sha256:41ae3e3b4e41eb54829ada3dff01aad5cc37b2270d4ea557d5093b6fa6a2bc7e
-source_author: local-codex:01a12d86-5f4f-71b3-9553-74d7a6a9743b
-source_reviewer: local-codex:01a12dd6-c7a5-7033-80be-8ae79ab30581
-source_verifier: local-codex:01a12dde-516a-71a0-b85d-93528b5249a1
+source_root: sha256:298b1d2bd6df240866f60972a00c0dbaa15d712f7adf824685f196b770a71123
+source_author: local-codex:01a1300d-c5db-7d81-8aff-0e326c1f1418
+source_reviewer: local-codex:01a13010-8e6c-7572-a7b9-7c4f4aab8760
+source_verifier: local-codex:01a13012-7db9-7932-a9ad-38326c96f69c
 run_operator: main-orchestrator:/root
 reader_operator: generic-cli:265-baseline-continuation-reader-20261012-v1
 
@@ -78,6 +84,8 @@ ONE first full bounded read-only cost authentication8088 CLOSED0 at02:05:43UTC:4
 Distinct final verifier40496/local-codex:01a12dde-516a-71a0-b85d-93528b5249a1 CLOSED0/PASS_SOURCE_ONLY/gaps[]/commands_closed at02:10:42UTC, exact8d618bfd/alltwofinalpaths/03bf1dff..HEAD. Frozen cost SHA/root, exact private mode/two identities, no-refund and all limits preserved; no actual old-reader invocation or game credit. All source owners/reviews/ROOT checks/verification commands closed; source fields above now match this final implementation. No v2request/allocation/entry/Match exists.
 
 ## Human work-time checkpoint (no late admission)
+
+Historical checkpoint below is resolved prospectively by explicit12:15:17UTC human approval, not altered retroactively. Distinct narrow verifier13243/local-codex:01a13012-7db9-7932-a9ad-38326c96f69c CLOSED0/PASS_SOURCE_ONLY/gaps[]/commands_closed over170e8219 at12:26UTC. Five original owned paths/11numeric-only replacements/no line shifts; correct carry/arithmetic/frontier, unchanged legacy limits/history/runtime/source mechanics and exact fresh-v2 route. Goal-backward preparation/direct-parent allocation/unique entry/perclaim guard/terminal/one-use ordinary-reader/source+planning+HEAD hold verified. ROOT affected15tests/exact13inherited/noNEW and author37tests/one omission retained honestly; original source proof qualified. All source/review/test/verifier owners and commands CLOSED. No empirical credit. Next finalsource/docs commit+push, new canonical request/real0700scratch/ONEprepare/immutableallocation-only direct-child commit/uniqueROOTentry/freshpassing SAMEPROCESS capacity then ONEdistinct actualordinaryreader. No STATE/GATES/planning edits or commits until BOTH actual entry and reader close; designated reader identity remains prospective until actual CLI UUID recorded after hold release. No external attestation/typed-agent guarantee fabricated.
 
 The old00:08:08anchor/415746903carry/444546903cap/08:08:08hardstop remain unchanged. Full-schedule01:27:08 frontier is missed. The unapproved30minute proposal is superseded and INSUFFICIENT; do not apply it as late run authority. ROOT's latest human question proposes a fresh EIGHT-HOUR remaining-baseline window beginning at the next explicit approval, with continuous carry of ALL preceding elapsed time/costs,43charges,15GB/36+4/300/allruntime/resource/privacy/rules bounds unchanged. PENDING/notapproved/notimplemented. Derive the new anchor from actual approval time; carry=415746903+(newAnchor-1791763688000), cap=carry+28800000, deadline=newAnchor+28800000, latest full entry=deadline-23460000-600000. No old clock override/refund/exclusion/reuse. Prospective numeric-only source/carry amendment and affected review/ROOT validation/distinct verification still needed before actual new fixed request/allocation/direct-child commit, unique entry/fresh SAMEPROCESS capacity and one ordinary reader. Standing same-scope route consent grants no larger time budget by itself. No repeated authority literal needed once this genuine resource choice is supplied.
 

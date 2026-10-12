@@ -1,5 +1,7 @@
 # Current-rules baseline continuation research
 
+Active prospective window amendment approved2026-10-12T12:15:17UTC: anchor1791807317000/deadline1791836117000/carry459375903/cap488175903, carrying ALL preceding elapsed from original anchor; full36maximum+31minclosure+10minoffline frontier13:34:17UTC/hardstop20:15:17UTC. Same science/schedule/15GB/allotherbounds. Old window statements below are historical, not current admission. Only numeric fields/fixtures changed at170e8219; existing successful bounded source/cost proofs are retained, not repeated. Fresh request/actual admission/unique run/one retained reader remain required.
+
 Research-only generic independent local reviewer7425 CLOSEDexit0; typed in-chat dispatch refused agent-thread limit. No tests, edits, empirical artifacts/readers, native execution, allocation or Match. ROOT additionally inspected the original plan, active lean outline and concrete fresh pipeline. Existing installation/workflows are reused; no dependency, external custody or new numbered plan.
 
 ## Implementation-ready route
