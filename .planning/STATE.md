@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Numeric source gates closed; final pin then fresh remaining-baseline preparation and unique entry
+stopped_at: Baseline v2 and unique retained reader closed gaps_found; source-only diagnostic and efficiency repair next
 last_updated: "2026-10-12"
 last_activity: 2026-10-12
-last_activity_desc: Source170e8219 independentreview and distinctverify clean, ROOT15tests/exact13inherited; next fresh allocation and baseline
+last_activity_desc: Seven new cells/sixsuccess/one SUBPROCESS_EXIT; reader verified partial/sourceholdnull, fifty cumulative charges; sourcehold released
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION — V2 PARTIAL VERIFIED / SOURCE-ONLY REPAIR (ROOT2026-10-12T13:55:18UTC). UniqueROOT28008/PID9931/child34016 CLOSED0 overallocation283a39d6/source16db0fa0/directchildheldHEADf6ff7ec3. Sevennewcharged/sixsuccess/one SUPERVISOR_FAILURE/29unused/fiftycumulative. Finitefailedordinal6: native_response/executor/SUBPROCESS_EXIT/soldierBrain205/264951ms/398calls/cleanuptrue; underlying native exitcauseUNKNOWN. ONEactualordinaryreader73777/PID15555/actualthread01a13039-f28a-7470-a847-e9975232562c CLOSED0/gaps_found/checke1711e16/failure=null/sourceHoldFailure=null/report.complete=false; no requirementsComplete emitted, no baseline/LEAG/phase/freezecredit. ActualUUID witnessedROOTevent despite readerfinalnotreportingit. ROOT allPIDsabsent/pinneddiffclean/heldHEAD/result raw79ad5c21 unchanged; source+HEADhold RELEASED afterbothclosures. Canonicalallocation raw3ea8c18d/result79ad5c21/check64015d7c; fullrootsinnewdebugsession. Checkphysical88924160B/current2453504B/46rows/readerpeakRSS566411264B/historicalpeaksunknown; laterreport/idle/source time stillcounts. Allcurrentandolderconsumedauthority/allocations/results/requests/ledgers/verifiers immutable/costonly; no retry/resume/recredit/unusedslot reuse.
+
+Source-only research85308 CLOSED: several nativeexit branches collapse into7-key diagnostic; origin.reason lost; fullguard multiplied across~8000callbacks(~23.5midentity comparisons); parentmanifestcomputedtwice; readerdropsadditionalBytesreservation. These are concrete source issues, NOTproven nativefailurecause. ExistingPlan16 boundedsource-repair supplement/check→serialownedexecution→independentreview-fix→ROOTaffectedvalidation→distinctsourceverify next; no new numberedplan or empiricalauthority. Currentanchor1791807317000/carry459375903/cap488175903/hard20:15:17UTC unchanged; full36max+31minclosure+10minoffline13:34:17frontier MISSED, soNOnewfullbaseline underthiswindow. Source-onlysafe work maycontinue withincap; no newrequest/preparation/allocation/Match now. Same15GB/36schedule/fourunopenedholdoutreservations/300cap/allruntime/rules/privacybounds. Phase265 incomplete, Phase266 suspended originalplans/planning-only untilvalidbaseline. No formation/holdout/public/counting/production/archive/tag. Earliercheckpoints history.
 
 CURRENT CONTINUATION — SOURCE GATES CLOSED / PRE-RUN PIN (ROOT2026-10-12T12:26UTC). Human approved fresh8h12:15:17→20:15:17UTC; anchor1791807317000/carry459375903/cap488175903, allprior elapsed carried, full36+31minclosure+10minoffline entryfrontier13:34:17UTC. Numeric source170e82196c93e23402ac2bc532f14c885718443e/implementation298b1d2b; author1268 actual01a1300d CLOSED37pass/onelegacyomission; independentreview41615 actual01a13010 CLOSED PASS_SOURCE_REVIEW+PASS_PLAN_AMENDMENT/findings[]; ROOT4393915pass/1541exact13inherited(noNEW,no line shifts,NOTglobaltypegreen); distinctverifier13243 actual01a13012 CLOSED PASS_SOURCE_ONLY/gaps[]. All owners/commandsclosed. Prior166/sourceproject/privacy/costproof retained qualified, not repeated heavy scans. Next finalpinnedsource/docscommit+push→freshv2request/empty0700scratch→ONEprepare→newimmutableallocation-only directchildcommit→uniqueROOTentry/freshpassing SAMEPROCESScapacity BEFOREcharge→ONEdistinct ordinaryreader. HOLD SOURCEANDALLPINNEDPLANNING/HEAD fromprepare through BOTHterminal+readerclosures; noSTATE/GATES updates/commits/heavy competingwork duringhold. No request/allocation/entry/newMatch/ordinaryreader yet. Same15GB/36new/four unopened reservations/43old/300/RAMscratch/runtime/rules/privacy; oldbytes/results/qualifiedfailures/costs immutable. Phase265baseline/266freeze remainincomplete; no formation/holdout/public/counting/production/archive/tag credit. Earliercheckpointshistory.
 
