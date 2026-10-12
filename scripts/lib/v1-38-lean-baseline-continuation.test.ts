@@ -15,7 +15,7 @@ vi.mock("node:child_process", async importOriginal => ({ ...await importOriginal
 
 const r = (value: unknown) => labRoot("inert-continuation-fixture", value)
 export const continuationAllocationFixture = () => {
-  const predecessorBody = { schemaVersion: "lean-baseline-continuation-carry-v1" as const, chargedMatches: 43 as const, elapsedUpperBoundMs: 415746903 as const, allocatedDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, custodyRoot: r("custody"), inventoryRoot: r("inventory"), qualifiedReaderAuthority: "cost_only" as const }
+  const predecessorBody = { schemaVersion: "lean-baseline-continuation-carry-v1" as const, chargedMatches: 43 as const, elapsedUpperBoundMs: 459375903 as const, allocatedDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, custodyRoot: r("custody"), inventoryRoot: r("inventory"), qualifiedReaderAuthority: "cost_only" as const }
   return ledger.createLeanBaselineContinuationAllocation({ sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: r("plan"), candidateRoots: [r("a"), r("b")], requestRoots: Array.from({ length: 36 }, (_, n) => r(n)), seed: "inert-continuation", sourceHead: "a".repeat(40), planningRoot: r("planning"), requestBytesRoot: r("request"), offlineOverheadMs: 60000, predecessor: { ...predecessorBody, root: labRoot(predecessorBody.schemaVersion, predecessorBody) } })
 }
 
@@ -66,7 +66,7 @@ describe("prospective baseline continuation allocation", () => {
     expect(a.slots).toHaveLength(36)
     expect(a.holdoutReservations).toHaveLength(4)
     expect(a.predecessor.chargedMatches).toBe(43)
-    expect(ledger.leanCapsForAllocation(a).elapsedMs).toBe(444546903)
+    expect(ledger.leanCapsForAllocation(a).elapsedMs).toBe(488175903)
     expect(ledger.LEAN_CAPS.elapsedMs).toBe(28800000)
     expect(ledger.leanMemoryLimitForAllocation(a)).toBe(3000000000)
     expect(ledger.leanWritablePaths(a)).toContain(continuation.LEAN_BASELINE_CONTINUATION_PATHS.request)
@@ -83,8 +83,8 @@ describe("prospective baseline continuation allocation", () => {
   it("requires all remaining maximum durations, closure and offline overhead, without a clock rollback", () => {
     const a = continuationAllocationFixture(), w = ledger.LEAN_BASELINE_CONTINUATION_WINDOW
     const sample = { nowMs: w.anchorMs + 1000, monotonicElapsedMs: 1000, remainingSlots: 36, charged: 43, retainedBytes: 4096, scratchBytes: 0, parentRssBytes: 100000000, childRssBytes: 100000000, arrayBuffersBytes: 1000, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true }
-    expect(continuation.assertLeanBaselineContinuationFrontier(a, sample)).toBe(415747903)
-    expect(continuation.assertLeanBaselineContinuationFrontier(a, { ...sample, remainingSlots: 0, charged: 44 })).toBe(415747903)
+    expect(continuation.assertLeanBaselineContinuationFrontier(a, sample)).toBe(459376903)
+    expect(continuation.assertLeanBaselineContinuationFrontier(a, { ...sample, remainingSlots: 0, charged: 44 })).toBe(459376903)
     // Closure consumes its already reserved budget instead of reserving a new
     // 31 minutes at every reader checkpoint near the hard stop.
     expect(continuation.assertLeanBaselineContinuationFrontier(a, { ...sample, nowMs: w.deadlineMs - 1000, monotonicElapsedMs: w.deadlineMs - w.anchorMs - 1000, remainingSlots: 0, charged: 79, remainingClosureMs: 500, remainingOfflineMs: 0 })).toBe(w.capMs - 1000)

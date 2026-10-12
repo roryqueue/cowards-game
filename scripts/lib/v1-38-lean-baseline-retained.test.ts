@@ -172,7 +172,7 @@ const completeFixture = async (outcomeForSlot: (ordinal: number, entrantSeat: "b
 /** All objects remain inert, in-memory fixture data. */
 const continuationFixtureBase = (): LeanBaselineRetainedSnapshot => {
   const base = structuredClone(fixture()) as any, old = base.allocation
-  const carry = { schemaVersion: "lean-baseline-continuation-carry-v1" as const, chargedMatches: 43 as const, elapsedUpperBoundMs: 415746903 as const, allocatedDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, custodyRoot: root("custody"), inventoryRoot: root("inventory"), qualifiedReaderAuthority: "cost_only" as const }
+  const carry = { schemaVersion: "lean-baseline-continuation-carry-v1" as const, chargedMatches: 43 as const, elapsedUpperBoundMs: 459375903 as const, allocatedDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, custodyRoot: root("custody"), inventoryRoot: root("inventory"), qualifiedReaderAuthority: "cost_only" as const }
   const request = { schemaVersion: "lean-baseline-continuation-request-v1", seed: old.seed, sourceHead: "b".repeat(40), sourceRoot: old.sourceRoot, planningRoot: root("planning"), planRoot: old.planRoot, reviewRoot: old.reviewRoot, coldRoot: old.coldRoot, candidateRoots: old.candidateRoots, requestRoots: old.requestRoots, offlineOverheadMs: 60000, sourceAuthor: "fixture-author", runOperator: "fixture-run", readerOperator: "fixture-reader" }
   const { schemaVersion: _schema, sourceAuthor: _author, runOperator: _operator, readerOperator: _reader, ...allocationInput } = request
   request.candidateRoots = [...request.candidateRoots].sort().reverse()
@@ -192,7 +192,7 @@ describe("continuation full retained reconstruction", () => {
     const fakeLedger = { allocation, directory: "inert-only" } as never
     const guard = () => { throw new TypeError("LEAN_BASELINE_CONTINUATION_PIN_CHANGED") }
     const state = vi.spyOn(continuationLedger, "readLeanLedger").mockReturnValue({ charged: 43, charges: new Map() } as never)
-    const elapsed = vi.spyOn(continuationLedger, "currentLeanElapsedMs").mockReturnValue(415747903)
+    const elapsed = vi.spyOn(continuationLedger, "currentLeanElapsedMs").mockReturnValue(459376903)
     const physical = vi.spyOn(continuationLedger, "cumulativeLeanPhysicalBytes").mockReturnValue(4096)
     const clock = vi.spyOn(Date, "now").mockReturnValue(continuationLedger.LEAN_BASELINE_CONTINUATION_WINDOW.anchorMs + 1000)
     const time = vi.spyOn(continuationLedger, "readLeanTimeAccounting").mockReturnValue({ active: false, starts: new Map([["continuation-retained-verifier", 1]]), closed: new Set(["continuation-retained-verifier"]) } as never)
