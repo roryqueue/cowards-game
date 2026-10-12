@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V4 A/B/C/D source tasks closed; combined independent source review next, no runtime admission
+stopped_at: V4 source verified; awaiting prospective eight-hour time decision before full36 admission
 last_updated: "2026-10-12"
 last_activity: 2026-10-12
-last_activity_desc: Permission repair4d639c97 independently source-verified; V4 four-task plan checked, no new Match
+last_activity_desc: V4 fixed4908ee0e independently verified,167 tests passed; new time allowance pending, no Match
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,16 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — source repaired; genuine time decision pending
+
+2026-10-12T23:43UTC. Fixed source4908ee0e219436216f19f274adb139c65d25a000 has clean independent combined review, actual ROOT167tests passed/one existing skip, configured project types and boundary checks, and distinct source verification PASS_SOURCE_ONLY/gaps[]. All authors, checks and verifiers are CLOSED; source ownership released. Inherited eight strict-script errors remain byte-identical, not globally green. Sole active source projection is in existing GATES: sourceRoot sha256:b41babeeb63178042bbc830904cc8febc4b613f10c93479349ec8e3daa8ba920, gateRoot sha256:7b1f8c18259045002c139a68130effd2de96a9122fb626b96d40f1441f391db8.
+
+No new V4 window, request, data projection, preparation, allocation, store, claim, Match or ordinary reader. Plan16 and Phase265 remain empirically incomplete. Old V3 preparation/unique terminal check are CLOSED/spent, old50 charges cost-only, original suppressed throw UNKNOWN; all old evidence immutable.
+
+Human-only blocker: current full36 latest entry22:42:47UTC elapsed during source repair; current hardstop05:23:47UTC remains unchanged. Whole36 requires24060000ms (six hours plus31min closure and10min offline), more than remaining time. Proposed, NOT adopted: ONE prospective fresh eight-hour private window anchored at actual next approval observation, carrying ALL prior uninterrupted elapsed/costs via F(t)=459375903+(t−1791807317000), cap=carry+28800000, same15GB/global300/new36/four unopenedholdout and every rule/runtime/resource/privacy bound. No refund, clock exclusion, old authority reuse or automatic extension. No late full36prepare/run. After actual approval: narrow data/window supplement and independent data review, new immutable allocation committed before unique ROOTentry and fresh passing SAMEPROCESS capacity before charge; source AND HEAD held through terminal plus ONE actual retained verifier. Current-rules freeze-before-formation, unopenedholdout/no public/counting/production remain binding. Earlier entries below are history.
+
+CURRENT V4 SOURCE VALIDATION CLOSED — ROOT2026-10-12T23:36:49UTC. Fixed4908ee0e; combined independent re-review findings[] after WR-V4-01 correction. ROOT all commands CLOSED: helper51/authority32/driver50/retained34 =167passed/one existing wrapper.skip, all retained filters covered; real driver source-manifest tests passed. Configured project types/factory1443zero/public discovery/service strict0ownership0 pass,19 inherited report-only observations. Ten-file strict exit2 entire output byte-equal to eight inherited pre-edit diagnostics/zeroNEW/no shifts, NOT globally green. Inert actual sourceRootb41babeeb63178042bbc830904cc8febc4b613f10c93479349ec8e3daa8ba920/admittingfalse/sourceGatenull. Distinct combined source verification next, no active projection/data/window/request/prepare/allocation/Match/ordinaryreader/phasecredit. No process or source owner active. Full36 frontier22:42:47 elapsed; existing sourcework window05:23:47 unchanged, no reanchor/refund. Every spent V3/older artifact and50costonly remains immutable; original causes UNKNOWN; privacy/unopenedholdout/current-freeze-beforeformation unchanged. Earlier snapshots history.
 
 V4 AUTHOR SOURCE CLOSED — ROOT2026-10-12T23:20:42UTC. Dfc32d00b8719c369b2162fda9af32dbb7abf7427/exactretainedhelper+test committed, actualauthor `/root/execute_265_permission_repair` commandsCLOSED/ownedclean/released. Authorfourdisjointinertbatches10+12+3+9=34/34/zeroomissions, durations5.79/27.10/24.61/36.46s, sameeightFULLinheritedstrict/noNEW/no shifts/diff0reported. Dadditionalrealgap REDreproducedroot-only snapshotwindow comparison acceptingdifferentnamespace withstalehash; fixedfullwindow equality and connectednegativefixtures. Selectedinitialrequest/window/metadata/context/ledger pathsagreebeforereadercredit; syntheticpartial51/full86 pass. ROOTactualdiff/cleanstatus confirms A→B→C→D exactly10plannedfiles459insertions/101deletions over4d639c97, no sourceowner/processactive. Combinedindependentsource review/fix→ROOTvalidation→distinctsourceverification next; no newsource/data projection/root/grant/request/prepare/allocation/Match/ordinaryreader/phasecredit. Full36frontierelapsed/sourceworkuntil05:23:47; no reanchor/allfrozenbounds/oldV3immutability/cost-only50/privacy/downstreamgates unchanged.
 
