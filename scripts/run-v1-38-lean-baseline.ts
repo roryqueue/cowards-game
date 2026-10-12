@@ -614,7 +614,9 @@ export const openLeanBaselineContinuationContext = (requestPath: string, reader 
     const state = readLeanLedger(ledger), usage = process.memoryUsage(), fs = statfsSync(ledger.directory, { bigint: true })
     const child = process.connected ? process.pid : 0, parent = process.connected ? process.ppid : process.pid
     if (child && process.ppid !== readLeanChildEntry(ledger).parentPid) return fail("CONTINUATION_PARENT")
-    assertLeanBaselineContinuationFrontier(allocation, { nowMs, monotonicElapsedMs: wallBegan - CONTINUATION_WINDOW.anchorMs + Number((process.hrtime.bigint() - began) / 1000000n), remainingSlots: closure ? 0 : 36 - state.charges.size + (active ? 1 : 0), ...(closure ? { remainingClosureMs: Math.max(0, CONTINUATION_WINDOW.reserveMs - Math.max(0, nowMs - closureBegan)), remainingOfflineMs: 0 } : {}), charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger), scratchBytes: measureLeanPhysicalBytes(CONTINUATION.temp) + additionalBytes, parentRssBytes: child ? rssOf(parent) : usage.rss, childRssBytes: child ? usage.rss : 0, arrayBuffersBytes: usage.arrayBuffers + additionalBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(fs.bavail * fs.bsize), live: !child || process.connected === true })
+    const sample = { nowMs, monotonicElapsedMs: wallBegan - CONTINUATION_WINDOW.anchorMs + Number((process.hrtime.bigint() - began) / 1000000n), remainingSlots: closure ? 0 : 36 - state.charges.size + (active ? 1 : 0), ...(closure ? { remainingClosureMs: Math.max(0, CONTINUATION_WINDOW.reserveMs - Math.max(0, nowMs - closureBegan)), remainingOfflineMs: 0 } : {}), charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger), scratchBytes: measureLeanPhysicalBytes(CONTINUATION.temp) + additionalBytes, parentRssBytes: child ? rssOf(parent) : usage.rss, childRssBytes: child ? usage.rss : 0, arrayBuffersBytes: usage.arrayBuffers + additionalBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(fs.bavail * fs.bsize), live: !child || process.connected === true }
+    assertLeanBaselineContinuationFrontier(allocation, sample)
+    return sample
   }
   guard()
   // Fresh hashes and canonical custody on both sides of the expensive read.
@@ -646,14 +648,15 @@ export const runLeanBaselineContinuationChild = async (requestPath: string) => {
   assertLeanEntryBinding(entry, { head: c.fixedHead, sourceRoot: c.allocation.sourceRoot, requestBytesRoot: c.allocation.requestBytesRoot, allocationRoot: c.allocation.root, parentPid: process.ppid, childPid: process.pid, intervalStartMs: readLeanTimeAccounting(ledger).starts.get("pilot-entry") ?? -1 })
   const disconnect = () => { parent.disconnect(); process.exit(1) }
   process.once("disconnect", disconnect)
-  const checkpoint = (additionalBytes = 0) => { parent.assert(); c.guard(additionalBytes); parent.assert() }
+  const checkpoint = (additionalBytes = 0) => { parent.assert(); const sample = c.guard(additionalBytes); parent.assert(); return sample }
+  const resourceReceipts: Array<{ ordinal: number; chargeRoot: LabRoot; before: ReturnType<typeof checkpoint>; after: ReturnType<typeof checkpoint> }> = []
   let pipeline: unknown = null, failed = false
   try {
     pipeline = await executeLeanBaselineContinuationPipeline({ allocation: c.allocation, checkpoint, freezeSource: source => publishLeanBaselineContinuationSource(ledger, source, checkpoint), retainArtifact(name, value) { if (!/^(?:seal-metadata|cold-corpus|initial-proposals|initial-selection|initial-training|initial-analysis|response-work|response-node-receipts|response-training|work-accounting|current-analysis)\.json$/u.test(name)) return fail("CONTINUATION_ARTIFACT_NAME"); checkpoint(); writeLeanContinuationArtifact(ledger, name, value, 8388608); checkpoint() }, async dispatch(slot, bottom, top, observedRole) {
       checkpoint()
       const before = readLeanContinuationBytes(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600)
       const pair = leanBaselinePair({ ordinal: slot.ordinal, slot, priorLedgerBytesRoot: leanBytesRoot(before), priorLedgerByteLength: before.length, priorCharged: readLeanLedger(ledger).charged, bottom, top })
-      writeLeanContinuationArtifact(ledger, `pair-${slot.ordinal}.json`, pair, 16384); checkpoint()
+      writeLeanContinuationArtifact(ledger, `pair-${slot.ordinal}.json`, pair, 16384); const resourceBefore = checkpoint()
       const fs = statfsSync(ledger.directory, { bigint: true }), charge = chargeLeanSlot(ledger, slot, { freeBytes: Number(fs.bavail * fs.bsize), availableMemoryBytes: observeLeagueAvailableMemoryBytes() })
       c.startCell()
       const execution = await runLeanBaselineContinuationMatch({ ledger, charge, slot, seed: c.allocation.seed, bottom, top, ...(observedRole === undefined ? {} : { observedRole }), checkpoint, register: parent.register, unregister: parent.unregister })
@@ -665,7 +668,9 @@ export const runLeanBaselineContinuationChild = async (requestPath: string) => {
       writeLeanContinuationArtifact(ledger, `observation-${slot.ordinal}.json`, { ...body, root: labRoot(body.schemaVersion, body) }, 8388608)
       if (execution.diagnostic) writeLeanContinuationArtifact(ledger, `diagnostic-${charge.root.slice(7)}.json`, execution.diagnostic, 16384)
       checkpointLeanResources(ledger, currentLeanElapsedMs(ledger), process.memoryUsage().arrayBuffers, measureLeanPhysicalBytes(CONTINUATION.temp))
-      checkpoint(); return cell
+      const resourceAfter = checkpoint()
+      resourceReceipts.push({ ordinal: slot.ordinal, chargeRoot: charge.root, before: resourceBefore, after: resourceAfter })
+      return cell
     } })
   } catch { failed = true }
   finally { c.closeRun(); process.off("disconnect", disconnect) }
@@ -677,7 +682,7 @@ export const runLeanBaselineContinuationChild = async (requestPath: string) => {
   try { evidence = verifyLeanEvidence(ledger, checkpoint) } catch { failed = true }
   // Missing evidence stays missing. The charge, any published work/terminal,
   // and exact unused slots survive a host failure without imputed outcomes.
-  const result = { schemaVersion: "lean-baseline-continuation-result-v1", issued: false, evidenceClass: "exploratory_current_only", allocationRoot: c.allocation.root, sourceRoot: c.allocation.sourceRoot, planningRoot: c.allocation.planningRoot, requestBytesRoot: c.allocation.requestBytesRoot, head: c.fixedHead, evidenceRoot: evidence?.root ?? null, pipeline, charged: state.charged, successful: [...state.terminals.values()].filter(row => row.record.classification === "success").length, status: complete && !failed ? "pending_independent_verification" : "partial_or_failed_baseline", elapsedMs: Math.max(state.elapsedMs, currentLeanElapsedMs(ledger)), physicalHighWaterBytes: state.physicalHighWaterBytes, scratchHighWaterBytes: state.scratchHighWaterBytes, unusedOrdinals: c.allocation.slots.filter(slot => !state.charges.has(slot.root)).map(slot => slot.ordinal), holdoutReservations: c.allocation.holdoutReservations, failure: failed ? "source_runtime_or_integrity_stop" : null, sourceAuthor: c.request.sourceAuthor, runOperator: c.request.runOperator, holdoutOpened: false, formationMaterialized: false }
+  const result = { schemaVersion: "lean-baseline-continuation-result-v1", issued: false, evidenceClass: "exploratory_current_only", allocationRoot: c.allocation.root, sourceRoot: c.allocation.sourceRoot, planningRoot: c.allocation.planningRoot, requestBytesRoot: c.allocation.requestBytesRoot, head: c.fixedHead, evidenceRoot: evidence?.root ?? null, pipeline, resourceReceipts, charged: state.charged, successful: [...state.terminals.values()].filter(row => row.record.classification === "success").length, status: complete && !failed ? "pending_independent_verification" : "partial_or_failed_baseline", elapsedMs: Math.max(state.elapsedMs, currentLeanElapsedMs(ledger)), physicalHighWaterBytes: state.physicalHighWaterBytes, scratchHighWaterBytes: state.scratchHighWaterBytes, unusedOrdinals: c.allocation.slots.filter(slot => !state.charges.has(slot.root)).map(slot => slot.ordinal), holdoutReservations: c.allocation.holdoutReservations, failure: failed ? "source_runtime_or_integrity_stop" : null, sourceAuthor: c.request.sourceAuthor, runOperator: c.request.runOperator, holdoutOpened: false, formationMaterialized: false }
   writeLeanContinuationArtifact(ledger, "result.json", result, 4194304); checkpoint()
   return result
 }
