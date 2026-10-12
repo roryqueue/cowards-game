@@ -132,6 +132,72 @@ export const continuationAllocationFixtureV2 = () => {
   const body = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: 465187899, allocatedDiskBytes: 88924160, residualDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: r("original-carry"), closedCapsuleRoot: r("closed-capsule"), custodyRoot: r("custody"), inventoryRoot: r("inventory"), qualifiedReaderAuthority: "cost_only" as const }
   return ledger.createLeanBaselineContinuationAllocationV2({ sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: r("plan"), candidateRoots: [r("a"), r("b")], requestRoots: Array.from({ length: 36 }, (_, n) => r(n)), seed: "inert-continuation-v2", sourceHead: "b".repeat(40), planningRoot: r("planning"), manifestRoot: r("manifest"), requestBytesRoot: r("request"), window, windowBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(window)), sourceGateRoot: window.sourceGateRoot, dataReviewRoot: r("data-review"), predecessor: { ...body, root: labRoot(body.schemaVersion, body) } })
 }
+describe("[continuation-v4] finite namespace and spent-cost isolation", () => {
+  const window = () => { const { root: _, ...body } = { ...continuationWindowFixtureV2(), routeNamespace: "20261012-v4" as const }; return { ...body, root: labRoot(body.schemaVersion, body) } }
+  it("selects only exact fixed requests and whole validated windows, preserving V3 bytes", () => {
+    const before = ledger.leanCanonicalBytes(continuationWindowFixtureV2())
+    expect(ledger.leanBaselineContinuationPathsForWindowV2(window())).toEqual(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4)
+    expect(ledger.leanBaselineContinuationPathsForWindowV2(continuationWindowFixtureV2())).toEqual(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2)
+    expect(ledger.leanBaselineContinuationPathsForRequestV2(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.request)).toEqual(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4)
+    expect(ledger.leanBaselineContinuationPathsForRequestV2(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request)).toEqual(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2)
+    for (const path of ["other", `${ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request}/extra`, ledger.LEAN_BASELINE_CONTINUATION_PATHS.request]) expect(() => ledger.leanBaselineContinuationPathsForRequestV2(path)).toThrow()
+    for (const change of [{ routeNamespace: "20261012-v5" }, { status: "pending" }, { capMs: 1 }]) expect(() => ledger.leanBaselineContinuationPathsForWindowV2({ ...window(), ...change } as never)).toThrow()
+    const { root: _, ...body } = { ...continuationAllocationFixtureV2(), window: window(), windowBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(window())) }
+    const allocation = ledger.validateLeanBaselineContinuationAllocationV2({ ...body, root: labRoot(body.schemaVersion, body) })
+    const paths = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4
+    expect(ledger.leanWritablePaths(allocation)).toEqual([paths.temp, paths.allocation, paths.request, paths.window])
+    expect(ledger.leanCanonicalBytes(continuationWindowFixtureV2())).toEqual(before)
+  })
+  it("selects bounded Git allocation metadata without admitting crossed allocations or refs", async () => {
+    const { readLeanBaselineContinuationGitV2 } = await import("./v1-38-lean-container-match-session.js")
+    const exec = vi.mocked(childProcess.execFileSync).mockReturnValue(Buffer.from("synthetic")), head = "a".repeat(40)
+    try {
+      const path = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.allocation
+      readLeanBaselineContinuationGitV2(["show", `${head}:${path}`], [], window())
+      expect(exec).toHaveBeenLastCalledWith("git", ["show", `${head}:${path}`], { stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 262144 })
+      readLeanBaselineContinuationGitV2(["show", `${head}:${ledger.LEAN_BASELINE_CONTINUATION_PATHS.allocation}`], [], window())
+      for (const path of [ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.allocation, "arbitrary.json"]) expect(() => readLeanBaselineContinuationGitV2(["show", `${head}:${path}`], [], window())).toThrow(/METADATA/)
+      const crossed = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.allocation
+      expect(() => readLeanBaselineContinuationGitV2(["show", `${head}:${crossed}`], [{ path: crossed, root: r("crossed") }], window())).toThrow(/METADATA/)
+      expect(() => readLeanBaselineContinuationGitV2(["show", `HEAD:${path}`], [], window())).toThrow(/METADATA/)
+      expect(() => readLeanBaselineContinuationGitV2(["show", `${head}:${path}`], [])).toThrow(/METADATA/)
+    } finally { exec.mockReset() }
+  })
+  it("keeps synthetic V3 cost rows once under V4 reconciliation, rejecting selected future and shrink", () => {
+    const old = ledger.LEAN_BASELINE_CONTINUATION_PATHS, spent = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2
+    const rows = [spent.request, spent.window].map(path => ({ path, kind: "file" as const, bytes: 1, allocatedBytes: 4096, dev: 1, ino: path === spent.request ? 1 : 2, mode: 0o600, mtimeMs: 1, ctimeMs: 1, rawRoot: r(path) }))
+    expect(() => continuation.reconcileLeanContinuationInventoryV2(rows, rows, [], window())).not.toThrow()
+    const consumed = [old.request, old.allocation, old.store, old.temp].map(path => ({ path, allocatedBytes: 4096 }))
+    const debit = continuation.reconcileLeanContinuationV2DiskDebit(16384, rows, 49152, [...rows, ...consumed], window())
+    expect(debit).toMatchObject({ allocatedDiskBytes: 49152, residualDiskBytes: 24576, newRows: 0 })
+    for (const changed of [rows.slice(1), rows.map((row, i) => i ? row : { ...row, mode: 0o644 }), rows.map((row, i) => i ? row : { ...row, allocatedBytes: 0 }), rows.map((row, i) => i ? row : { ...row, rawRoot: r("mutated") })]) expect(() => continuation.reconcileLeanContinuationInventoryV2(rows, changed, [], window())).toThrow()
+    expect(() => continuation.reconcileLeanContinuationV2DiskDebit(16384, rows, 49152, [...rows, ...consumed, { path: ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.request, allocatedBytes: 4096 }], window())).toThrow(/SCOPE/)
+  })
+  it("does not reanchor the same approved window or admit full36 after its unchanged frontier", () => {
+    const { root: _, ...body } = { ...window(), approvedAtMs: 1791840227000, anchorMs: 1791840227000, carryMs: 492285903, capMs: 521085903, deadlineMs: 1791869027000 }
+    const w = { ...body, root: labRoot(body.schemaVersion, body) }
+    const { root: _allocationRoot, ...allocationBody } = { ...continuationAllocationFixtureV2(), caps: { ...ledger.LEAN_CAPS, elapsedMs: w.capMs }, window: w, windowBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(w)) }
+    const a = ledger.validateLeanBaselineContinuationAllocationV2({ ...allocationBody, root: labRoot(allocationBody.schemaVersion, allocationBody) })
+    const frontier = w.deadlineMs - 36 * ledger.LEAN_CAPS.matchMs - w.closureMs - w.offlineOverheadMs
+    expect(frontier).toBe(1791844967000)
+    const sample = { nowMs: frontier + 1, monotonicElapsedMs: frontier + 1 - w.anchorMs, remainingSlots: 36, charged: 50, retainedBytes: 88924160, scratchBytes: 0, parentRssBytes: 0, childRssBytes: 0, arrayBuffersBytes: 0, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true }
+    expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, sample)).toThrow(/CAPACITY/)
+    expect(ledger.leanBaselineContinuationElapsedFloorV2(w, sample.nowMs)).toBe(492285903 + sample.monotonicElapsedMs)
+  })
+  it("authenticates actual isolated spent metadata and refuses synthetic bytes rather than inventing matching anchors", () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-v4-inert-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    try {
+      fs.mkdirSync(join(dir, ".strategy-lab")); fs.mkdirSync(join(dir, ".planning/artifacts"), { recursive: true })
+      const spent = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2, selected = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4
+      writeFileSync(resolve(selected.request), "ignored active request", { mode: 0o600 })
+      writeFileSync(resolve(spent.request), Buffer.alloc(4041, 97), { mode: 0o600 }); writeFileSync(resolve(spent.window), Buffer.alloc(935, 97), { mode: 0o600 })
+      const git = vi.fn(() => { throw new Error("unexpected Git") }), guard = vi.fn()
+      expect(() => continuation.inventoryLeanContinuationSurvivorsV2([], [], git, guard, window())).toThrow(/V3_SPENT_METADATA/)
+      expect(guard).toHaveBeenCalledWith(4041); expect(git).not.toHaveBeenCalled()
+      fs.unlinkSync(resolve(spent.request)); expect(() => continuation.inventoryLeanContinuationSurvivorsV2([], [], git, guard, window())).toThrow()
+    } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+  })
+})
 describe("[continuation-v2] pure policy and ledger admission", () => {
   it("preserves the V1 window and constructor while admitting a distinct fifty-cost schema", () => {
     const old = continuationAllocationFixture(), bytes = ledger.leanCanonicalBytes(old)
