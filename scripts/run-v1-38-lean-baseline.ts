@@ -895,9 +895,8 @@ type LeanContinuationPreparationStageV4 = "WINDOW" | "SCOPE" | "SOURCE_DATA" | "
 type LeanContinuationPreparationCodeV4 = "WINDOW_EXPIRED" | "WINDOW_NAMESPACE" | "GRANT_CLAIMED" | "SCOPE" | "CAPACITY" | "SOURCE_GATE" | "DATA_GATE" | "SOURCE_MANIFEST" | "REQUEST" | "SOURCE_HEAD" | "DETAILS_WITHHELD"
 const continuationPreparationFailuresV4 = new WeakMap<object, { stage: LeanContinuationPreparationStageV4; code: LeanContinuationPreparationCodeV4 }>()
 export const leanContinuationPreparationCodeV4 = (error: unknown): LeanContinuationPreparationCodeV4 => {
-  if (!(error instanceof TypeError)) return "DETAILS_WITHHELD"
   const codes: Readonly<Record<string, LeanContinuationPreparationCodeV4>> = { LEAN_BASELINE_V2_WINDOW_EXPIRED: "WINDOW_EXPIRED", LEAN_BASELINE_V2_WINDOW_NAMESPACE: "WINDOW_NAMESPACE", LEAN_BASELINE_V2_GRANT_CLAIMED: "GRANT_CLAIMED", LEAN_BASELINE_V2_SCOPE: "SCOPE", LEAN_BASELINE_V2_CAPACITY: "CAPACITY", LEAN_BASELINE_V2_SOURCE_GATE: "SOURCE_GATE", LEAN_BASELINE_V2_DATA_GATE: "DATA_GATE", LEAN_BASELINE_V2_SOURCE_MANIFEST: "SOURCE_MANIFEST", LEAN_BASELINE_V2_REQUEST: "REQUEST", LEAN_BASELINE_V2_SOURCE_HEAD: "SOURCE_HEAD" }
-  try { const message: unknown = Object.getOwnPropertyDescriptor(error, "message")?.value; return typeof message === "string" && Object.prototype.hasOwnProperty.call(codes, message) ? codes[message]! : "DETAILS_WITHHELD" } catch { return "DETAILS_WITHHELD" }
+  try { if (!(error instanceof TypeError)) return "DETAILS_WITHHELD"; const message: unknown = Object.getOwnPropertyDescriptor(error, "message")?.value; return typeof message === "string" && Object.prototype.hasOwnProperty.call(codes, message) ? codes[message]! : "DETAILS_WITHHELD" } catch { return "DETAILS_WITHHELD" }
 }
 /** Finite attribution only; never formats raw errors or grants authority. */
 export const leanBaselineContinuationPreparationFailureV4 = (error: unknown): string => {

@@ -21,6 +21,19 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import * as leagueHost from "./run-v1-38-serious-league.js"
 describe("[continuation-v4] real driver namespace and mutation-free refusal", () => {
+  it.each(["revoked", "throwing-prototype"] as const)("withholds hostile Proxy classifier details: %s", kind => {
+    const privateDetail = "PRIVATE prototype payload /private/source"
+    const prototype = vi.fn(() => { throw new Error(privateDetail) })
+    const revocable = Proxy.revocable({}, {})
+    const error = kind === "revoked" ? revocable.proxy : new Proxy({}, { getPrototypeOf: prototype })
+    if (kind === "revoked") revocable.revoke()
+    // Assert only finite results, never ask the test reporter to inspect the Proxy.
+    expect(parentApi.leanContinuationPreparationCodeV4(error)).toBe("DETAILS_WITHHELD")
+    const formatted = parentApi.leanBaselineContinuationPreparationFailureV4(error)
+    expect(formatted).toBe("LEAN_BASELINE_PREPARATION_V4 stage=UNKNOWN code=DETAILS_WITHHELD\n")
+    expect(formatted).not.toContain(privateDetail)
+    if (kind === "throwing-prototype") expect(prototype).toHaveBeenCalledTimes(1)
+  })
   const window = (namespace: "20261012-v3" | "20261012-v4" = "20261012-v4") => {
     const body = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-v4", approvalEvidence: { humanDecisionId: "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1791840227000, anchorMs: 1791840227000, carryMs: 492285903, capMs: 521085903, deadlineMs: 1791869027000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: namespace, reviewedSourceHead: "a".repeat(40), sourceRoot: root("source"), sourceGateRoot: root("source-gate"), planRoot: root("plan"), runOperator: "inert-runner", readerOperator: "inert-reader" }
     return { ...body, root: labRoot(body.schemaVersion, body) }
