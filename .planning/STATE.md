@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Private diagnostic closed; lean baseline requires a new prospective work-time allowance
-last_updated: "2026-10-11"
-last_activity: 2026-10-11
-last_activity_desc: Saved game board/accounting/resource checks pass;95 committed source rows match; post-terminal planning-note gap disclosed
+stopped_at: Eight-hour lean baseline continuation approved; bounded research and checked Plan16 supplement next
+last_updated: "2026-10-12"
+last_activity: 2026-10-12
+last_activity_desc: Human approved baseline continuation00:08:08–08:08:08UTC;43 charges carried; research first, no new run
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT APPROVED CONTINUATION — EIGHT-HOUR BASELINE (ROOT2026-10-12T00:08:08UTC). Human approved8hourceiling/existingcurrentrulesleanbaseline,15GB/allotherbounds unchanged. Anchor1791763688000/hard1791792488000/08:08:08UTC; continuouscarry415746903ms/cap444546903ms includesalloldclosure/read-only/wait/idle/no reset. All43charges/oldroutes/failedreaders/evidence immutable. Initialtrackedcheckoutclean/HEAD8ab53da2/no matching active entry/verifier/test. Nextboundedresearch→checkedexistingPlan16supplement→sourceexecute/review-fix/validate/sourceverify→NEWcommittedallocation/uniqueROOTentry/freshsameprocesscapacity→uniqueactualretainedcheck; no extra numberedplan/workstream. Reduced36preholdout schedule/workvectors/4reservedholdout unchanged; actualroute boundbycheckedplanbeforeexecution. KeepallpinnedsourceANDplanningprefix/HEADfixedduringrun+check, IPC-freeloader; no competingheavywork. No newallocation/Match yet; currentbaseline/Phase265/LEAG remainincomplete. Currentrulesbaseline/evaluation/freeze BEFOREformation, holdoutunopened, no public/counting/production/archive/tag. Earlier checkpoints history.
 
 CURRENT CONTINUATION — PRIVATE DIAGNOSTIC CLOSED / BASELINE TIME DECISION (ROOT2026-10-11T22:36:45UTC). Freshretrospectiveowner88712 CLOSED0/checkingcommandONEexit2/gaps_found: game/board/provider/accounting/receipt/recordedresources/commit/carry/canonical8files PASS, but liveprefixrefused. SeparateROOT source-onlydiagnosis19940 CLOSED0: all95committedsourceHeadrows match lengths/SHA256, executable scripts/packages unchanged; exactlySTATE and integrationPLAN post-terminalnotes differ, physicalprefix2273280→2277376B/+4096. Originalroleverdictnotrelabelled; originaltimedreaderwindowexpired/notinvoked, noclockoverride/budgetrenewal/newMatch. Actualgame successOK/top/cleanuptrue/111348ms/449calls/1325frames/charge43 andexactevidence remainimmutable. Allprocessesclosed/sourceANDHEADholdreleased forsafe docscommit/push. Diagnostic hasqualifiedcomponentvalidation, NOTfullypassingordinaryreader/certification/LEAG/baseline/Phase265/freeze. Sole nexthumanresourcechoice: NEWprospectivebaselinework-timeallowance; recommend8hourceiling underunchanged15GB/300cumulativeMatch/runtime/rules/privatebounds/allpriorcostscarried, NOTapproved/applied. Latesthumanpermissionverificationonly; no newsourcework/allocation/entry/game. Standingprivate-routeconsent no repeatliteraloncewindowexists. Currentrulesbaseline/evaluation/freeze BEFOREformation, privateholdoutunopened, no public/counting/production/archive/tag. Earlier checkpoints history.
 
