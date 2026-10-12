@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Baseline continuation research and independent plan check closed; serial source execution next
+stopped_at: Baseline continuation source gates closed; fresh fixed allocation and unique ROOT entry next
 last_updated: "2026-10-12"
 last_activity: 2026-10-12
-last_activity_desc: Research and15-path/four-task plan PASS; actual strict baseline8 inherited; no allocation or Match
+last_activity_desc: d2a2726c review fixes verified; ROOT166tests/exact inherited diagnostics/boundaries closed; fresh route next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,10 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION — SOURCE GATES CLOSED / PIN FOR RUN (ROOT2026-10-12T01:12:43UTC). Functional d2a2726c; first reviewer3P2 fixed within4ownedpaths/26regressions; independent re-review13492 PASS/findings[]; ROOT ninefiles166passed/twodisclosedlegacyomissions/configuredproject0/scanners0strict/ownership/newviolations; full-source strict8inherited/full-owned13inherited match authenticated before tree exactly after documented line shifts/zeroNEW, NOTglobaltypegreen. Distinct generic verifier11632 PASS_SOURCE_ONLY/gaps[]/all15paths/allcommandsclosed. Actual generic role identities inGATES; typedservice threadlimitfallback disclosed. ROOT source metadata67453 CLOSED/implementation3bd67820/697source+14planningrows. Next finalGATES/STATE source commit+push, fresh exact request/0700scratch→ONEprepare→immutableallocation directchildcommit→uniqueROOTentry/freshpassing SAMEPROCESScapacity beforecharge→ONEdistinct actual ordinary reader. No allocation/charge/Match yet; hold SOURCEANDALLPINNEDPLANNING/HEAD from preparation through BOTH terminal+check, nevereditthisSTATE/GATES duringhold orduplicateanentry/reader. Offline600000ms/fullschedule latest01:27:08UTC/hard08:08:08/36fresh+4unopenedreservations/43old/carry415746903/cap444546903/15GB300/allruntime/resource/rules/privacybounds unchanged. Alloldartifacts/checks/qualifiedfailurescost-onlyimmutable; no LEAG/baseline/phase/freeze/formation/holdout/public/counting/production/archive/tagcredit beforeactualevidence. Earlier checkpoints history.
+
+CURRENT CONTINUATION — SOURCE REVIEW/FIX (ROOT2026-10-12T01:01:40UTC). Single source author69604/local-codex01a12d86 CLOSED0/ownershipreleased; functional5a163b2c/exact15paths. Independent generic reviewer32132/local-codex01a12d9c CLOSED0 found3P2: candidate-order join, no-refund historicaldisk carry, persistent reader-failure publication. Four-path source-only fix87122 ACTIVE; never duplicate it or launch empirical entry. Next independent re-review→ROOT focused/strict/project/boundary validation→distinct source verifier→final fixed/pushed source and all pinned planning bytes before any new allocation. Typed service threadlimit fallback disclosed; no fake external custody. Author testscope13inherited/eight source+five oldnullable tests/zeroNEW; ROOT final proof pending. Anchor00:08:08/hard08:08:08/carry415746903/cap444546903/36fresh+4reserved/43old/15GB/allbounds unchanged. Fullschedule latest01:37:08minusofflineoverhead, not isolatednextMatchfrontier. No empirical/sourcegate admission/LEAG/baseline/phase/freeze/formation/holdout/public/counting/production/archive/tag credit. Earlier checkpoints history.
 
 CURRENT CONTINUATION — BASELINE PLAN CHECKED (ROOT2026-10-12T00:28:25UTC). Genericresearch7425/planner29381/checker25837 CLOSED; PASS_PLAN_ONLY/issues[]/fourserialsource tasks15paths<=4pertask. Typeddispatch threadlimitrefused; actualgenericidentitiesrecorded, no fakeagent/custody/signature. Newown freshbaseline namespace connects existingcoldpipeline+V8 with43cost-onlyhistory/36newcells+4reserved/no oldlearning. Actualscopedstrictbefore96429 CLOSED2/eightinherited(notassumedprior13), zeroNEW allowed. Nextsingleownedsourceexecution→independentreview/fix→ROOTvalidation→distinctsourceverifier beforeNEWallocation/uniqueentry/freshsameprocesscapacity/ordinaryIPC-freereader. Sourcegate target01:20/latestfullscheduleentry01:37:08minusofflineoverhead; hard08:08:08/carry415746903/cap444546903/all15GB300/runtime/rules/privacybounds. No newallocation/Match yet. NoLEAG/baseline/phase/freeze/formation/holdout/public/counting/production/archive/tagcredit. Earlier checkpoints history.
 
