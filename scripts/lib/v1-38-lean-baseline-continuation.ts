@@ -1,6 +1,6 @@
 /** Bounded trusted-host custody for the fresh continuation. Importing is inert. */
 import { createHash } from "node:crypto"
-import { constants, openSync, closeSync, fstatSync, readSync, lstatSync, realpathSync, readdirSync } from "node:fs"
+import { constants, openSync, closeSync, fstatSync, readSync, lstatSync, realpathSync, readdirSync, type Stats } from "node:fs"
 import { resolve, join, relative } from "node:path"
 import { labRoot, freezeLabValue, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_CAPS, LEAN_BASELINE_CONTINUATION_WINDOW as WINDOW, LEAN_BASELINE_CONTINUATION_PATHS, leanBytesRoot, leanCanonicalBytes, validateLeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocation, type LeanBaselineContinuationCarry } from "../../packages/strategy-lab/src/league/lean-experiment.js"
@@ -92,8 +92,8 @@ export const readLeanContinuationJson = (name: string, maximum = 8388608, mode?:
 export interface LeanContinuationInventoryRow { path: string; kind: "file" | "directory" | "sealed_metadata"; bytes: number; allocatedBytes: number; dev: number; ino: number; mode: number; mtimeMs: number; ctimeMs: number; rawRoot: LabRoot | null }
 /** Merge immutable predicates, never observations. Every invocation stats every
  * unique absolute path afresh, including directories and non-pinned survivors. */
-export const createLeanContinuationIdentityGuard = (pins: readonly { path: string; stat: ReturnType<typeof lstatSync> }[], survivors: readonly LeanContinuationInventoryRow[]): (() => void) => {
-  const predicates = new Map<string, { pins: { dev: number | bigint; ino: number | bigint; size: number | bigint; mtimeMs: number | bigint; ctimeMs: number | bigint }[]; survivors: LeanContinuationInventoryRow[] }>()
+export const createLeanContinuationIdentityGuard = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRow[]): (() => void) => {
+  const predicates = new Map<string, { pins: Pick<Stats, "dev" | "ino" | "size" | "mtimeMs" | "ctimeMs">[]; survivors: LeanContinuationInventoryRow[] }>()
   const at = (path: string) => { const absolute = resolve(path); let row = predicates.get(absolute); if (!row) { row = { pins: [], survivors: [] }; predicates.set(absolute, row) }; return row }
   for (const { path, stat } of pins) at(path).pins.push({ dev: stat.dev, ino: stat.ino, size: stat.size, mtimeMs: stat.mtimeMs, ctimeMs: stat.ctimeMs })
   for (const row of survivors) at(row.path).survivors.push({ ...row })
