@@ -792,7 +792,7 @@ export const readLeanBaselineContinuationRequestV2 = (path: string): LeanBaselin
   return validateLeanBaselineContinuationRequestV2(readLeanContinuationJsonV2(path, 65536, 0o600, () => { continuationWindowAdmissionV2(window, 0) }), window, manifest)
 }
 
-const assertLeanBaselineContinuationScopeV2 = (preparing = false): void => {
+export const assertLeanBaselineContinuationScopeV2 = (preparing = false): void => {
   if (process.env.TSX_DISABLE_CACHE !== "1" || process.env.NODE_DISABLE_COMPILE_CACHE !== "1" || ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"].some(key => process.env[key] !== undefined) || process.env.TMPDIR !== resolve(CONTINUATION_V2.temp) || !process.execArgv.some((arg, i, args) => arg === "--import" && args[i + 1] === "tsx" || arg === "--import=tsx") || process.execArgv.some(arg => /(?:loader|inspect|require)/u.test(arg)) || coreSoftLimit().trim() !== "0") return fail("V2_SCOPE")
   if (!preparing) { const s = lstatSync(CONTINUATION_V2.temp); if (!s.isDirectory() || s.isSymbolicLink() || s.uid !== process.getuid?.() || (s.mode & 0o777) !== 0o700 || realpathSync(resolve(CONTINUATION_V2.temp)) !== resolve(CONTINUATION_V2.temp)) return fail("V2_SCRATCH") }
 }

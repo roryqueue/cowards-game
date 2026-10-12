@@ -24,7 +24,7 @@ import { admitLeanRetryTimeboxExtension, admitLeanAllocation, leanCorrectionRout
 import { leanCorrectionSourceManifest, authenticateLeanTwoPairAcceptedJoinV11, authenticateLeanSupervisorRetestAcceptedJoinV12, authenticateLeanPreparationContinuationAcceptedJoinV13, authenticateLeanPostV13FivePairAcceptedJoinV14 } from "../run-v1-38-lean-correction.js"
 import { isLeanTwoPairMode, isLeanSupervisorRetestMode, isLeanPreparationContinuationMode, isLeanPostV13FivePairMode } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { validateLeanSupervisorReasonBytesV2 } from "../run-v1-38-lean-baseline.js"
-import { validateLeanBaselineContinuationAllocation, validateLeanBaselineContinuationAllocationV2, LEAN_BASELINE_CONTINUATION_PATHS as CONTINUATION, LEAN_BASELINE_CONTINUATION_PATHS_V2 as CONTINUATION_V2, LEAN_BASELINE_CONTINUATION_WINDOW, type LeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocationV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { validateLeanBaselineContinuationAllocation, validateLeanBaselineContinuationAllocationV2, LEAN_BASELINE_CONTINUATION_PATHS as CONTINUATION, LEAN_BASELINE_CONTINUATION_PATHS_V2 as CONTINUATION_V2, LEAN_BASELINE_CONTINUATION_WINDOW, leanContinuationGlobalFloorV2, type LeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocationV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { openLeanBaselineContinuationContext, openLeanBaselineContinuationContextV2, writeLeanContinuationArtifact, assertLeanBaselineContinuationScope } from "../run-v1-38-lean-baseline.js"
 import { readLeanContinuationJson, readLeanContinuationJsonV2, assertLeanBaselineContinuationFrontier, assertLeanBaselineContinuationFrontierV2, type LeanContinuationFrontier } from "./v1-38-lean-baseline-continuation.js"
 import { deriveLeanContinuationWorkAccounting } from "./v1-38-lean-baseline-pipeline.js"
@@ -591,6 +591,18 @@ export const assertLeanContinuationSupervisorCustodyV2 = (bytes: Uint8Array, act
   return reason
 }
 
+/** The V2 producer still emits the authentic legacy reason-v1 envelope.
+ * Keep the additive v2 custody validator above for other callers, but this
+ * reader must not silently accept an unproduced envelope variant. */
+export const assertLeanContinuationSupervisorCustodyV1ForV2 = (bytes: Uint8Array, actual: Parameters<typeof assertLeanContinuationSupervisorCustodyV2>[1]) => {
+  const reason = parentReaderContract.validateLeanSupervisorReasonBytes(bytes)
+  if (!exactLabKeys(actual, ["allocationRoot", "sourceRoot", "requestBytesRoot", "entryBytesRoot", "head", "parentPid", "childPid", "exitCode", "signal", "status"]) ||
+      reason.allocationRoot !== actual.allocationRoot || reason.sourceRoot !== actual.sourceRoot || reason.requestBytesRoot !== actual.requestBytesRoot || reason.entryBytesRoot !== actual.entryBytesRoot || reason.head !== actual.head || reason.parentPid !== actual.parentPid || reason.childPid !== actual.childPid || reason.exitCode !== actual.exitCode || reason.signal !== actual.signal) return fail("SUPERVISOR_CUSTODY_V2")
+  const clean = reason.exitCode === 0 && !reason.uncertain && reason.observations.failureReceipt === "absent" && reason.observations.finalIdentity === "matched"
+  if (actual.status !== (clean ? "child_exited" : "child_failed")) return fail("SUPERVISOR_CUSTODY_V2")
+  return reason
+}
+
 /** Pure, closed-schema V2 audit. Fixture callers supply in-memory snapshots;
  * this function has no filesystem, process, grant-issuance or runtime effect. */
 export const auditLeanBaselineContinuationRetainedV2 = (s: LeanBaselineContinuationRetainedSnapshotV2, guard: () => void = () => {}) => {
@@ -691,7 +703,18 @@ export const verifyLeanBaselineContinuationRetained = (requestPath: string) => {
  * count-43 path above remain byte- and behavior-compatible. */
 export const verifyLeanBaselineContinuationRetainedV2 = (requestPath: string) => {
   if (requestPath !== CONTINUATION_V2.request || process.send || process.connected) return fail("V2_READER_SCOPE")
+  // Authenticate true V2 scope, exact approved window/allocation binding and
+  // live global/deadline reserve before any one-use journal mutation.
+  parentReaderContract.assertLeanBaselineContinuationScopeV2()
+  const approvedWindow = parentReaderContract.readLeanBaselineContinuationWindowV2()
+  const admissionNow = Date.now()
+  if (approvedWindow.status !== "approved" || admissionNow < approvedWindow.anchorMs || admissionNow >= approvedWindow.deadlineMs ||
+      admissionNow + approvedWindow.closureMs + approvedWindow.offlineOverheadMs > approvedWindow.deadlineMs ||
+      leanContinuationGlobalFloorV2(admissionNow) + approvedWindow.closureMs + approvedWindow.offlineOverheadMs > approvedWindow.capMs) return fail("V2_READER_WINDOW")
   const ledger = openLeanLedger(CONTINUATION_V2.store), allocation = validateLeanBaselineContinuationAllocationV2(ledger.allocation)
+  if (!same(allocation.window, approvedWindow) || allocation.windowBytesRoot !== leanBytesRoot(leanCanonicalBytes(approvedWindow)) || allocation.window.root !== approvedWindow.root) return fail("V2_READER_WINDOW_BINDING")
+  const admissionElapsed = currentLeanElapsedMs(ledger)
+  if (admissionElapsed + approvedWindow.closureMs + approvedWindow.offlineOverheadMs > allocation.caps.elapsedMs || Date.now() >= approvedWindow.deadlineMs) return fail("V2_READER_WINDOW")
   const before = readLeanTimeAccounting(ledger)
   if (before.active || before.starts.has("continuation-retained-verifier-v2") || !before.closed.has("continuation-run-admission") || readdirSync(ledger.directory).some(name => ["reader-claim.json", "retained-check.json"].includes(name))) return fail("V2_READER_USED")
   readLeanChildTerminal(ledger)
@@ -734,7 +757,7 @@ export const verifyLeanBaselineContinuationRetainedV2 = (requestPath: string) =>
     if (names.length > allowed.size || names.some(name => !allowed.has(name))) return fail("V2_STORE_INVENTORY")
     const reason = read("parent-supervisor-reasons.json", 4096)
     const actual = { allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(entry)), head: c.fixedHead, parentPid: entry.parentPid, childPid: entry.childPid, exitCode: terminal.exitCode, signal: terminal.signal, status: terminal.status }
-    assertLeanContinuationSupervisorCustodyV2(leanCanonicalBytes(reason), actual)
+    assertLeanContinuationSupervisorCustodyV1ForV2(leanCanonicalBytes(reason), actual)
     const artifacts = Object.fromEntries(artifactNames.filter(name => names.includes(name)).map(name => [name, read(name)]))
     const carry = read("carry.json", 4194304), sourceHold = read("source-hold.json", 4194304)
     const storedManifest = read("source-manifest.json", 4194304)

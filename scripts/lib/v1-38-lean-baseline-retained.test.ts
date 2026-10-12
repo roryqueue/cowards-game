@@ -176,7 +176,10 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     const body = { schemaVersion: "lean-parent-supervisor-reasons-v1" as const, allocationRoot: actual.allocationRoot, sourceRoot: actual.sourceRoot, requestBytesRoot: actual.requestBytesRoot, entryBytesRoot: actual.entryBytesRoot, head: actual.head, parentPid: actual.parentPid, childPid: actual.childPid, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published" as const, childReady: "observed" as const, resourceSampling: "observed" as const, finalIdentity: "matched" as const, failureReceipt: "absent" as const, cleanup: "child_exit_observed" as const, terminalization: "unobserved" as const, initiatingCause: "unknown" as const } }
     const bytes = leanCanonicalBytes({ ...body, root: labRoot(body.schemaVersion, body) })
     expect(continuationReader.assertLeanContinuationSupervisorCustodyV2(bytes, actual)).toMatchObject({ schemaVersion: "lean-parent-supervisor-reasons-v1" })
+    expect(continuationReader.assertLeanContinuationSupervisorCustodyV1ForV2(bytes, actual)).toMatchObject({ schemaVersion: "lean-parent-supervisor-reasons-v1" })
     expect(() => continuationReader.assertLeanContinuationSupervisorCustodyV2(bytes, { ...actual, head: "b".repeat(40) })).toThrow(/SUPERVISOR_CUSTODY_V2/)
+    const { root: _root, ...v2Body } = { ...body, schemaVersion: "lean-parent-supervisor-reasons-v2" }
+    expect(() => continuationReader.assertLeanContinuationSupervisorCustodyV1ForV2(leanCanonicalBytes({ ...v2Body, root: labRoot(v2Body.schemaVersion, v2Body) }), actual)).toThrow()
   })
 })
 describe("strict v12 finite attribution custody join", () => {
