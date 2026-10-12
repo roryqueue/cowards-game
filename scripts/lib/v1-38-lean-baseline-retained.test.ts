@@ -177,7 +177,7 @@ const continuationFixtureBase = (): LeanBaselineRetainedSnapshot => {
   const start = a.window.anchorMs + 100
   base.entry = { ...base.entry, allocationRoot: a.root, requestBytesRoot: a.requestBytesRoot, wallStartMs: start }
   base.terminal = { ...base.terminal, allocationRoot: a.root, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(base.entry)), wallObservedMs: start + 1000 }
-  base.time = { elapsedMs: a.predecessor.elapsedUpperBoundMs + 2000, closedElapsedMs: a.predecessor.elapsedUpperBoundMs + 2000, active: false, starts: new Map([["pilot-entry", start], ["continuation-retained-verifier", start + 1100]]), closes: new Map([["pilot-entry", start + 1000], ["continuation-retained-verifier", start + 1900]]), closed: new Set(["pilot-entry", "continuation-retained-verifier"]) }
+  base.time = { elapsedMs: a.predecessor.elapsedUpperBoundMs + 2000, closedElapsedMs: a.predecessor.elapsedUpperBoundMs + 2000, active: false, starts: new Map([["continuation-run-admission", start - 100], ["pilot-entry", start], ["continuation-retained-verifier", start + 1100]]), closes: new Map([["continuation-run-admission", start - 1], ["pilot-entry", start + 1000], ["continuation-retained-verifier", start + 1900]]), closed: new Set(["continuation-run-admission", "pilot-entry", "continuation-retained-verifier"]) }
   base.result = { ...base.result, schemaVersion: "lean-baseline-continuation-result-v1", allocationRoot: a.root, requestBytesRoot: a.requestBytesRoot, elapsedMs: a.predecessor.elapsedUpperBoundMs + 100, planningRoot: a.planningRoot, unusedOrdinals: [], holdoutReservations: a.holdoutReservations, failure: null, sourceAuthor: request.sourceAuthor, runOperator: request.runOperator }
   return base
 }
@@ -195,6 +195,7 @@ describe("continuation full retained reconstruction", () => {
       v => { v.result.planningRoot = root("changed") },
       v => { v.request.readerOperator = v.request.runOperator },
       v => { v.time.starts.delete("continuation-retained-verifier") },
+      v => { v.time.closed.delete("continuation-run-admission") },
       v => { v.time.closes.set("continuation-retained-verifier", v.allocation.window.deadlineMs + 1) },
       v => { v.allocation.slots.push(v.allocation.slots[0]) },
       v => { v.result.pipeline.response.admitted = true },
