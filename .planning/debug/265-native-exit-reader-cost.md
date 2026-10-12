@@ -18,10 +18,10 @@ Retained reader physical88924160B; current store+scratch2453504B/46rows; reader 
 
 ## Current Focus
 
-hypothesis: Diagnostic projection loses issued reason; complete identity scans multiply per inner read callback; reader wrapper drops additionalBytes reservation. These are source findings, not proven native-exit cause.
-test: Targeted inert provenance/branch/legacy tests, callback counts, capacity forwarding and mid-read identity denial; no empirical invocations.
-expecting: Prospective source-only correction with unchanged runtime/rules/resource limits and old evidence.
-next_action: Prepare non-authorizing fresh V2 carry/namespace scaffolding within existing Plan16; no full run without a genuine new human work-time grant.
+hypothesis: The independently reviewed V2 preparation reached a source/cost/capacity predicate refusal before setup; exact suppressed original throw is UNKNOWN. Earlier native-exit findings below remain separate history.
+test: Read-only source/interface analysis of preflight and bounded closed-cost joins; at most one indispensable nonadmitting bounded predicate diagnostic, no prepare retry, Matches, probes or old readers.
+expecting: A finite reproducible current predicate or honest unknown, with no retroactive causal attribution or resource/rule change.
+next_action: Diagnose closed V3 prepare90670 under existing Plan16 and current approved eight-hour window; preserve V3 bytes and do not reuse its attempt/grant/request/window.
 
 ## Evidence and uncertainty
 
@@ -41,3 +41,11 @@ verification: independent re-review98954 clean; ROOT152passed/one disclosed omis
 files_changed: ten original owned source/test paths, no engine/rules/native ABI or resource-window changes
 
 Manual GSD orchestration/generic local CLI fallback, not typed session-manager dispatch or external custody. Known symptoms were supplied by actual safe records; no repeat human symptom questions. No test, native probe, provider, Strategy or Match was executed by this diagnosis.
+
+## V3 preparation refusal — current diagnosis-only lane
+
+Symptoms prefilled from actual closed work: expected one fresh preparation after source229tests/exact13inherited/cleanreview/distinctsourceverify and human8h/DATAreview/requestpins. ActualROOT90670/PID12690 CLOSEDexit1/publicLEAN_BASELINE_FAILED_DETAILS_WITHHELD observed21:40:39UTC, before retained temp/claim/allocation/store/entry/result; original throw/cause UNKNOWN. Unique independent `/root/plan_265_startup_integration` PREPARATION_TERMINAL_CHECKED closed:PIDabsent/HEAD9837aff8 unchanged, window935B/raw2c0c2905 andrequest4041B/raw900e97e9 canonical0600/one-link/owner, exactsetup/epoch/result/check paths absent. No actualallocationHEAD, no ordinaryreader, no new Match or charge, old50costonly. Source/planning hold released only afterthatclosure. Do not fabricatehead/result, rerunprepare, reusegrant/request/window, refund or promote old evidence. Source/data/request reviews remain their honest closed observations, not empirical proof of all driver predicates.
+
+Newhuman8h approval21:23:47UTC/anchor1791840227000/carry492285903/cap521085903/deadline1791869027000=05:23:47UTC andwholeentryfrontier22:42:47 remain unchanged. ALLsource/diagnosis/review/idle/preparation time countscontinuously underF(t)=459375903+(t−1791807317000). Same15GB/3GBRAM/2GBscratch/global300/36+fourunopened/1000guest2500startup5000host600000Match/rules/privacy. Standing distinct same-scope prospective route consent supplies no permission to reviveV3 or expand caps. Any current predicate reproduction must be explicitly nonadmitting/read-only/bounded, not a secondprepare or oldreader/history replay; record finitewhitelisted error metadata only, no raw Strategy/objective/memory/prompt/IO/stdio/error content. A later reproducer is not proof of the exact suppressed originalthrow. Originalold nativeSUBPROCESS_EXIT remainsUNKNOWN separately.
+
+Ownership: ROOT owns STATE/GATES and this initial session setup/commit. A diagnosis worker may own only this debugfile after explicit delegation; no production/source changes until ROOT narrows/approves an existingPlan16 sourcefix with independent gates. No new numberedplan/workstream or current-rules/formation/holdout/public/counting/production authority. mode: source_only; goal: find_root_cause_only.
