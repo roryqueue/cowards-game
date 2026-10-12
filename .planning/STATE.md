@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V4 A/B source tasks closed; Task C claim binding active, no runtime admission
+stopped_at: V4 A/B/C source tasks closed; Task D retained verifier integration active, no runtime admission
 last_updated: "2026-10-12"
 last_activity: 2026-10-12
 last_activity_desc: Permission repair4d639c97 independently source-verified; V4 four-task plan checked, no new Match
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+ACTIVE V4 TASK D / C CLOSED — ROOT2026-10-12T23:02UTC. Actualsameauthor `/root/execute_265_permission_repair` committedC521cd117ef5c471d5ed8f86c9f9042343639ecd3/exactauthority+test; productiononlyimport/validatedwindow-selectedclaimlookup, opaqueAPI/guardsunchanged. AuthorRED2fail→focused10pass22skipped/finalfull32pass0skips23.20s, strictsameeightFULLinherited/zeroNEW/no shifts/diff0reported; commandsCLOSED/ownerreleased. ROOTreadactualproductiondelta. Dnowexclusivelyowns retainedhelper/test2files, finalsource/taskclosure pending. No actualretainedreader/fakehead/data/prepare/runtime/Match; no finalV4review/sourceRoot/data projection or empiricalcredit. Currentfullentryfrontierelapsed/sourceworkuntil05:23:47/allbounds/continuouscosts/oldV3immutability/privacy/downstreamgates unchanged.
 
 ACTIVE V4 TASK C / B CLOSED — ROOT2026-10-12T22:57UTC. Actualsameauthor `/root/execute_265_permission_repair` committedB d538c349ff8e7b50d1079eea1187bc79f73b12de/exactdriver+test, commandsCLOSED/ownedclean/released; authorfocused9pass40skipped andfilteredinertdriver46pass3disclosedskips/full49, strictsame8FULLinherited/zeroNEW/unshifted201/321 reported. Skips: existingwrapper.skip plus two explicitlyomittedrepeatedsource-manifest scans; separateMatchsuiteactualwrapper probes NOTexecuted, notfullold229proofrerun. ActualDataManifestV2 syntheticpositive/crossnamespace denials and finiteprivate-safeV4prepare diagnostics tested; originalV3causeunknown. ROOTspotcheckedactualcommit/sharedgate-onlyV3refs/selectedrequest/window/contextchanges. C nowexclusivelyowns authority+authoritytest2files; D unstarted. Newfullsource/data gates remainpending, no realwindow/request/allocation/prepare/runtime/Match/reader. Full36frontierelapsed; sourceworkuntil05:23:47, all continuouscosts/caps/history/rules/privacy/holdout/freeze-beforeformation unchanged.
 

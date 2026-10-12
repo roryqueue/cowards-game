@@ -1,5 +1,11 @@
 # Baseline continuation gates
 
+## V4 Task C author closure, Task D active
+
+Actualauthor `/root/execute_265_permission_repair` closedC521cd117ef5c471d5ed8f86c9f9042343639ecd3/exacttwofiles. Productiondelta import+claimlookup derivesfixedclaim from validatedallocation.window, nofallback/API/opaqueguardchange. ReportedsemanticRED5733 2failed7passed22skipped31; finalfocused30613 10passed22skipped32; full31322 32passed0skips23.20s. Actualconstructor/validator and real isolated600claim/entry/pair/journal/source/publication descriptors, existinginertledgerstate-map seam only; crossnamespace/no fallback/root/grant/source/request/window mutations, orderedseatburn/survivormode/latefull36 and freshguard/no-serialization tests. Two old testfixtures now supply completecanonicalwindows instead of incomplete mockedones; no validator relaxed. Strict75973/40079 identicaleightFULLinherited/noNEW/no shifts, diff0, allcommandsreportedunder60s/closed/ownerreleased. ROOTinspectedactualcommittedproductiondelta; finalindependentreview/ROOTcombinedvalidation/sourceverification pending.
+
+Dnowexclusivelyowns retainedhelper/testONLY, noactualordinaryreader permitted. Newdata/grant/prepare/allocation/Match remainsabsent/nonadmitting underelapsedfull36frontier; sourceworkonlyuntil05:23:47, samecontinuouscosts/caps/rules/privacy/history.
+
 ## V4 Task B author closure, Task C active
 
 Actualauthor `/root/execute_265_permission_repair` closedB d538c349ff8e7b50d1079eea1187bc79f73b12de/exacttwofiles, focused62321 9pass40skipped, filteredinert71793 46pass3skipped10s, strict78860 exactsameeightFULLinherited/noNEW/no diagnosticshifts201/321, diff0. Allcommandsreportedunder60s/closed/ownershipreleased. ROOTcheckedactualcommit/scopeddriverrefs; not final independentreview or combinedROOTvalidation. Drivernamespace propagates request→window→manifest/source/data→preflight/carry/Git→scope/TMPDIR/setup→metadata/context/parent/child; sharedGATES references intentionallyunchanged. V4-only finiteWeakMap hoststage/code diagnostics retain oldwithheldline, unknownfallback uses own-data descriptor/no getter/rawerror interpolation. Directproductionclassifier test replaced an ambiguous Vitestlazy-error-getter fixture; no productionguard weakening or retrospectiveV3causeclaim.
