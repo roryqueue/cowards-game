@@ -18,7 +18,7 @@ import { publishLeanBaselineSource } from "./lib/v1-38-lean-baseline-source.js"
 import { runLeanBaselineMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { isLeanChildFailureReceipt, isLeanChildFailureReceiptV7, publishChildTerminalAfterOptionalReceipt, resolveLeanChildCliTerminal, type LeanChildFailureReceipt, type LeanChildFailureReceiptV7 } from "./lib/v1-38-lean-child-cli-terminal.js"
 import { createLeanBaselineContinuationAllocation, validateLeanBaselineContinuationAllocation, LEAN_BASELINE_CONTINUATION_PATHS as CONTINUATION, LEAN_BASELINE_CONTINUATION_WINDOW as CONTINUATION_WINDOW, measureLeanPhysicalBytes, type LeanBaselineContinuationAllocation } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { authenticateLeanBaselineContinuationCarry, assertLeanBaselineContinuationFrontier, assertLeanContinuationDirectParent, readLeanContinuationBytes, readLeanContinuationJson, type LeanContinuationInventoryRow } from "./lib/v1-38-lean-baseline-continuation.js"
+import { authenticateLeanContinuationPinnedSource, authenticateLeanBaselineContinuationCarry, assertLeanBaselineContinuationFrontier, assertLeanContinuationDirectParent, readLeanContinuationBytes, readLeanContinuationJson, type LeanContinuationInventoryRow } from "./lib/v1-38-lean-baseline-continuation.js"
 import { executeLeanBaselineContinuationPipeline } from "./lib/v1-38-lean-baseline-pipeline.js"
 import { publishLeanBaselineContinuationSource } from "./lib/v1-38-lean-baseline-source.js"
 import { runLeanBaselineContinuationMatch } from "./lib/v1-38-lean-baseline-match.js"
@@ -568,7 +568,10 @@ export const prepareLeanBaselineContinuation = (requestPath: string) => {
   const guard = () => { continuationWindowGuard(36, request.offlineOverheadMs); if (continuationHead() !== request.sourceHead || leanBaselineContinuationSourceManifest().manifestRoot !== manifest.manifestRoot || leanBytesRoot(readLeanContinuationBytes(requestPath, 65536, 0o600)) !== requestRoot) return fail("CONTINUATION_HOLD") }
   const requestRoot = leanBytesRoot(readLeanContinuationBytes(requestPath, 65536, 0o600))
   guard()
-  for (const row of manifest.entries) if (leanBytesRoot(readLeanBaselineContinuationGit(["show", `${request.sourceHead}:${row.path}`])) !== row.root) return fail("CONTINUATION_UNCOMMITTED_SOURCE")
+  const pinnedPaths = manifest.entries.map(row => row.path)
+  const streamGuard = () => { continuationWindowGuard(36, request.offlineOverheadMs); continuationPreAuthenticationCapacity(); if (continuationHead() !== request.sourceHead) return fail("CONTINUATION_HOLD") }
+  for (const row of manifest.entries) authenticateLeanContinuationPinnedSource(row, request.sourceHead, pinnedPaths, readLeanBaselineContinuationGit, streamGuard)
+  guard()
   const carried = authenticateLeanBaselineContinuationCarry(readLeanBaselineContinuationGit, manifest.entries.map(row => row.path), () => { continuationWindowGuard(36, request.offlineOverheadMs); continuationPreAuthenticationCapacity() })
   guard()
   const allocation = createLeanBaselineContinuationAllocation({ sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, sourceHead: request.sourceHead, planningRoot: request.planningRoot, requestBytesRoot: requestRoot, offlineOverheadMs: request.offlineOverheadMs, predecessor: carried.carry })
@@ -622,7 +625,8 @@ export const openLeanBaselineContinuationContext = (requestPath: string, reader 
   // Fresh hashes and canonical custody on both sides of the expensive read.
   const authenticated = authenticateLeanBaselineContinuationCarry(readLeanBaselineContinuationGit, manifest.entries.map(row => row.path), () => { if (reader) guard(); else { continuationWindowGuard(36, request.offlineOverheadMs); continuationPreAuthenticationCapacity(cumulativeLeanPhysicalBytes(ledger)) } })
   if (!exact(authenticated, carry)) return fail("CONTINUATION_CARRY_CHANGED")
-  for (const row of manifest.entries) if (leanBytesRoot(readLeanBaselineContinuationGit(["show", `${fixedHead}:${row.path}`])) !== row.root) return fail("CONTINUATION_PIN_UNCOMMITTED")
+  const pinnedPaths = manifest.entries.map(row => row.path)
+  for (const row of manifest.entries) authenticateLeanContinuationPinnedSource(row, fixedHead, pinnedPaths, readLeanBaselineContinuationGit, guard)
   guard()
   return { request, ledger, allocation, manifest, fixedHead, guard, startCell() { active = true; expectedLedger = leanBytesRoot(readLeanContinuationBytes(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600)); guard() }, finishCell() { active = false; expectedLedger = undefined }, closeRun() { active = false; expectedLedger = undefined; closure = true; closureBegan = Date.now() } }
 }

@@ -64,6 +64,13 @@ export const readLeanBaselineContinuationGit = (args: readonly string[]): Buffer
   let maximum: number | undefined
   if (args.length === 2 && args[0] === "rev-parse" && args[1] === "HEAD") maximum = 128
   if (args.length === 5 && args.slice(0, 4).join("\0") === ["rev-list", "--parents", "-n", "1"].join("\0") && commit.test(args[4]!)) maximum = 256
+  const blobOid = args.length === 2 && args[0] === "rev-parse" && args[1] !== "HEAD"
+  if (blobOid) {
+    const parts = args[1]!.split(":"), revision = parts[0], path = parts[1]
+    if (parts.length !== 2 || !revision || !commit.test(revision) || !path || !/^[A-Za-z0-9_./-]+$/u.test(path) || path.startsWith("/") || path.split("/").some(part => !part || part === "." || part === "..") || /preimage|secret/iu.test(path)) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_METADATA")
+    continuationMetadataPaths ??= new Set(leanBaselineContinuationSourceManifest().entries.map(row => row.path))
+    if (continuationMetadataPaths.has(path)) maximum = 128
+  }
   if (args.length === 2 && args[0] === "show") {
     const parts = args[1]!.split(":"), revision = parts[0], path = parts[1]
     if (parts.length !== 2 || !revision || !commit.test(revision) || !path || path.startsWith("/") || path.split("/").some(part => !part || part === "." || part === "..") || /preimage|secret/iu.test(path)) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_METADATA")
@@ -77,7 +84,7 @@ export const readLeanBaselineContinuationGit = (args: readonly string[]): Buffer
   }
   if (maximum === undefined) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_METADATA")
   const bytes = runLeanBoundedGitMetadata(args, maximum)
-  if (bytes.length > maximum) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_METADATA")
+  if (bytes.length > maximum || blobOid && !/^[a-f0-9]{40}\n?$/u.test(bytes.toString("utf8"))) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_METADATA")
   return bytes
 }
 import { Worker } from "node:worker_threads"

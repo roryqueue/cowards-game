@@ -51,6 +51,38 @@ export const readLeanContinuationBytes = (name: string, maximum: number, mode?: 
     return bytes
   } finally { closeSync(fd) }
 }
+/** Authenticate all pinned bytes without requesting a large Git blob. The caller
+ * supplies the exact manifest and a live resource/time guard, not a source scan. */
+export const authenticateLeanContinuationPinnedSource = (row: { path: string; root: string }, head: string, pinnedPaths: readonly string[], git: LeanContinuationGit, guard: () => void): void => {
+  const name = row.path
+  if (!/^sha256:[a-f0-9]{64}$/u.test(row.root) || !/^[a-f0-9]{40}$/u.test(head) || !pinnedPaths.includes(name) || name.startsWith("/") || name.split("/").some(p => !p || p === "." || p === "..") || !/^[A-Za-z0-9_./-]+$/u.test(name) || /preimage|secret/iu.test(name)) return fail("SOURCE_SCOPE")
+  guard()
+  const path = resolve(name), stat = lstatSync(path)
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== process.getuid?.() || realpathSync(path) !== path || !integer(stat.size) || stat.size > LEAN_CAPS.totalBytes) return fail("SOURCE_FILE")
+  if (stat.size <= 4194304) {
+    if (leanBytesRoot(git(["show", `${head}:${name}`])) !== row.root) return fail("SOURCE_ROOT")
+    guard(); return
+  }
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
+  const same = (s: ReturnType<typeof fstatSync>) => s.isFile() && s.nlink === 1 && s.uid === stat.uid && s.dev === stat.dev && s.ino === stat.ino && s.size === stat.size && s.mode === stat.mode && s.mtimeMs === stat.mtimeMs && s.ctimeMs === stat.ctimeMs
+  const hold = () => { if (!same(fstatSync(fd)) || !same(lstatSync(path)) || realpathSync(path) !== path) return fail("SOURCE_CHANGED") }
+  try {
+    hold()
+    const output = git(["rev-parse", `${head}:${name}`])
+    if (output.length > 128 || !/^[a-f0-9]{40}\n?$/u.test(output.toString("utf8"))) return fail("SOURCE_OID")
+    const oid = output.toString("utf8").trim(), raw = createHash("sha256"), blob = createHash("sha1").update(`blob ${stat.size}\0`), chunk = Buffer.alloc(65536)
+    let offset = 0
+    while (offset < stat.size) {
+      guard(); hold()
+      const n = readSync(fd, chunk, 0, Math.min(chunk.length, stat.size - offset), offset)
+      if (!n) return fail("SOURCE_TORN")
+      raw.update(chunk.subarray(0, n)); blob.update(chunk.subarray(0, n)); offset += n
+      hold()
+    }
+    guard(); hold()
+    if (`sha256:${raw.digest("hex")}` !== row.root || blob.digest("hex") !== oid) return fail("SOURCE_ROOT")
+  } finally { closeSync(fd) }
+}
 export const readLeanContinuationJson = (name: string, maximum = 8388608, mode?: number): Record<string, any> => {
   const bytes = readLeanContinuationBytes(name, maximum, mode), value = JSON.parse(bytes.toString("utf8")) as Record<string, any>
   if (!bytes.equals(Buffer.from(leanCanonicalBytes(value)))) return fail("CANONICAL")

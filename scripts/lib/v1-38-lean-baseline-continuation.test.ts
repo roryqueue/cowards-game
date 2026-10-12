@@ -1,11 +1,17 @@
 /** Inert continuation contracts; never touches canonical empirical paths. */
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { mkdtempSync, writeFileSync, symlinkSync, rmSync, realpathSync } from "node:fs"
+import * as childProcess from "node:child_process"
+import * as baseline from "../run-v1-38-lean-baseline.js"
+import { readLeanBaselineContinuationGit } from "./v1-38-lean-container-match-session.js"
+import { createHash } from "node:crypto"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import * as ledger from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as continuation from "./v1-38-lean-baseline-continuation.js"
+
+vi.mock("node:child_process", async importOriginal => ({ ...await importOriginal<typeof import("node:child_process")>(), execFileSync: vi.fn() }))
 
 const r = (value: unknown) => labRoot("inert-continuation-fixture", value)
 export const continuationAllocationFixture = () => {
@@ -76,5 +82,51 @@ describe("prospective baseline continuation allocation", () => {
     expect(() => continuation.assertLeanBaselineContinuationFrontier(a, { ...sample, nowMs: w.anchorMs - 1 })).toThrow()
     expect(() => continuation.assertLeanBaselineContinuationFrontier(a, { ...sample, remainingSlots: 37 })).toThrow()
     for (const changes of [{ live: false }, { freeBytes: 1 }, { availableMemoryBytes: 0 }, { parentRssBytes: 3000000000 }, { retainedBytes: 12000000001 }, { scratchBytes: 2000000001 }, { charged: 42 }]) expect(() => continuation.assertLeanBaselineContinuationFrontier(a, { ...sample, ...changes })).toThrow()
+  })
+})
+
+
+describe("bounded pinned source authentication", () => {
+  it("streams >4MiB through bounded OID metadata and denies raw/OID/ref/file changes", () => {
+    const dir = mkdtempSync(".continuation-inert-"), path = `${dir}/source.json`, bytes = Buffer.alloc(4194305, 97), head = "a".repeat(40)
+    const root = ledger.leanBytesRoot(bytes), oid = createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex")
+    const calls: string[][] = []
+    const git = (args: readonly string[]) => { calls.push([...args]); return Buffer.from(`${oid}\n`) }
+    try {
+      writeFileSync(path, bytes)
+      let checks = 0
+      const run = (raw = root, read = git, revision = head, guard = () => { checks++ }) => continuation.authenticateLeanContinuationPinnedSource({ path, root: raw }, revision, [path], read, guard)
+      run(); expect(calls).toEqual([["rev-parse", `${head}:${path}`]]); expect(checks).toBeGreaterThan(64)
+      expect(() => run(r("wrong"))).toThrow(/SOURCE/)
+      expect(() => run(root, () => Buffer.from("b".repeat(40)))).toThrow(/SOURCE/)
+      for (const output of ["x".repeat(40), "a".repeat(129), `${oid} extra`, `${oid}\n\n`]) expect(() => run(root, () => Buffer.from(output))).toThrow(/OID/)
+      for (const ref of ["HEAD", "a".repeat(39), `${head}:other`]) expect(() => run(root, git, ref)).toThrow(/SCOPE/)
+      expect(() => continuation.authenticateLeanContinuationPinnedSource({ path, root }, head, [], git, () => {})).toThrow(/SCOPE/)
+      for (const bad of ["../source", "secret.json", "preimage.json"]) expect(() => continuation.authenticateLeanContinuationPinnedSource({ path: bad, root }, head, [bad], git, () => {})).toThrow(/SCOPE/)
+      let n = 0
+      expect(() => run(root, git, head, () => { if (++n === 5) writeFileSync(path, bytes) })).toThrow(/CHANGED/)
+      writeFileSync(path, bytes)
+      expect(() => run(root, git, head, () => { if (++n > 8) throw new Error("deadline") })).toThrow(/deadline/)
+      writeFileSync(path, "small")
+      const small = ledger.leanBytesRoot(Buffer.from("small"))
+      continuation.authenticateLeanContinuationPinnedSource({ path, root: small }, head, [path], args => { expect(args).toEqual(["show", `${head}:${path}`]); return Buffer.from("small") }, () => {})
+    } finally { rmSync(dir, { recursive: true }) }
+  })
+})
+
+
+describe("continuation OID metadata predicate", () => {
+  it("only allows exact pinned paths and 40hex revisions with bounded valid output", () => {
+    const path = "packages/inert-source.json", head = "a".repeat(40), oid = "b".repeat(40)
+    const manifest = vi.spyOn(baseline, "leanBaselineContinuationSourceManifest").mockReturnValue({ entries: [{ path, root: r("source") }], implementationEntries: [], planningEntries: [], root: r("root"), planningRoot: r("planning"), manifestRoot: r("manifest") })
+    const exec = vi.mocked(childProcess.execFileSync).mockReturnValue(Buffer.from(`${oid}\n`))
+    try {
+      expect(readLeanBaselineContinuationGit(["rev-parse", `${head}:${path}`]).toString()).toBe(`${oid}\n`)
+      expect(exec).toHaveBeenCalledWith("git", ["rev-parse", `${head}:${path}`], { stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 128 })
+      for (const target of [`HEAD:${path}`, `${head}:packages/other.json`, `${head}:packages/../inert-source.json`, `${head}:packages/secret.json`, `${head}:packages/preimage.json`]) {
+        exec.mockClear(); expect(() => readLeanBaselineContinuationGit(["rev-parse", target])).toThrow(/GIT_METADATA/); expect(exec).not.toHaveBeenCalled()
+      }
+      for (const invalid of ["c".repeat(129), "no-oid", `${oid} extra`, `${oid}\n\n`]) { exec.mockReturnValue(Buffer.from(invalid)); expect(() => readLeanBaselineContinuationGit(["rev-parse", `${head}:${path}`])).toThrow(/GIT_METADATA/) }
+    } finally { exec.mockReset(); manifest.mockRestore() }
   })
 })
