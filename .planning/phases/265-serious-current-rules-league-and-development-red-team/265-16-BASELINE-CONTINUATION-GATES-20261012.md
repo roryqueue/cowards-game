@@ -1,5 +1,9 @@
 # Baseline continuation gates
 
+## Active source-only repair after closed v2 partial
+
+V2 uniqueROOT28008 and actualreader73777/01a13039 CLOSED0/gaps_found/sourceHoldFailure=null/failure=null/complete=false;7new/6success/1system/50cumulative/29unused. Alloldartifacts/checke1711e16 immutable, holdreleased13:55:18UTC. Research85308/01a1304d CLOSED/nativecauseUNKNOWN. Plancheck-v1 20430/01a13074 CLOSED NONPASS/tworealfindings(growthescapescheapchecks;missingcompressedguardedreadhook), preserved. Revisedplan KEEPcompleteguardEVERYcallback; mergeonlyduplicateexpectedpathroles inONEfreshstat; ONEfreshparentmanifest; exactdebugplanningpin; original-ownedledger boundeddescriptorhook/reservationforwarding; authenticfiniteopt-inexecutor extension/legacydefaults preserved. Plancheck-v2 8042/01a13083-1118-7702-8515-35f62c3f6fcd CLOSED0/PASS_PLAN_ONLY/issues[]/commands_closed. Tenuniqueoriginalpaths/serial4+3+4shared/<=4task/no newnamespace/window/Matchauthority/rules/resource/sourceallowance. ROOTbeforestrict1541actualexact13inherited atunchanged170e8219 is baseline, NOTglobaltypegreen. Sourceauthornext; newreview/ROOTchecks/distinctsourceverify pending. Deadline20:15:17UTC/allprior elapsed binding/full36frontier13:34:17MISSED; source-onlyworkno lateexecution/newrequest/allocation/Match. Existingadmissionfields suspended untilnewsourceproof; historicalsource/empiricalfacts belowretained.
+
 ## Active approved replacement window / numeric source gates closed
 
 Human `yes, approved`; ROOT observation2026-10-12T12:15:17UTC. New anchor1791807317000/deadline1791836117000/carry459375903/cap488175903; original costs fully carried, old approvals/artifacts immutable. Full-schedule frontier13:34:17UTC, hardstop20:15:17UTC;15GB/36new/four unopened reservations/43old/300 and every other frozen bound unchanged. Numeric-only source author, independent review, ROOT affected validation and distinct source verification ALL CLOSED below. Machine fields now describe amended source; fresh actual admission still required. No new request/preparation/allocation/entry/Match/reader. Prior source and cost proofs below remain history and are not repeated heavy empirical scans.
@@ -50,10 +54,10 @@ Distinct source verifier11632/local-codex:01a12da9-d4c1-7ec3-9911-490c45d2e284 C
 ## Closed source admission fields
 
 plan_check: passed
-source_review: passed
-root_validation: passed
-source_verification: passed
-commands_closed: true
+source_review: pending_source_repair
+root_validation: pending_source_repair
+source_verification: pending_source_repair
+commands_closed: false
 source_root: sha256:298b1d2bd6df240866f60972a00c0dbaa15d712f7adf824685f196b770a71123
 source_author: local-codex:01a1300d-c5db-7d81-8aff-0e326c1f1418
 source_reviewer: local-codex:01a13010-8e6c-7572-a7b9-7c4f4aab8760

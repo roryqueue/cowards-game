@@ -21,7 +21,7 @@ Retained reader physical88924160B; current store+scratch2453504B/46rows; reader 
 hypothesis: Diagnostic projection loses issued reason; complete identity scans multiply per inner read callback; reader wrapper drops additionalBytes reservation. These are source findings, not proven native-exit cause.
 test: Targeted inert provenance/branch/legacy tests, callback counts, capacity forwarding and mid-read identity denial; no empirical invocations.
 expecting: Prospective source-only correction with unchanged runtime/rules/resource limits and old evidence.
-next_action: Check an append to existing Plan16, then execute serial owned tasks, independent review/fix, ROOT validation and distinct source verification.
+next_action: Execute checked revision2 of existing Plan16, then independent review/fix, ROOT validation and distinct source verification.
 
 ## Evidence and uncertainty
 
@@ -30,6 +30,7 @@ next_action: Check an append to existing Plan16, then execute serial owned tasks
 - Parent manifest callback computes full manifest twice; one fresh observation can compare planning and implementation together without cross-callback caching.
 - Reader wrapper currently ignores optional additionalBytes from verification callback: forward it unchanged. This is an allocation-reservation defect; actual run's small retained data/recorded peak do not establish an observed cap breach.
 - Replay validation parses each frame but currently calls resource guard before inflation, not per frame; preserve that distinction.
+- Plancheck-v1 20430 rejected cheap innerguard (unmeasured survivor growth beforeallocation) and missing compressed descriptor/reservation hook. Actualnonpassretained. Revisedplan keepsCOMPLETEguardEVERYcallback, mergesonlyexpectedpathroles intoONEfreshstat perinvocation; adds original-ownedledgeropt-inhook. Plancheck-v2 8042/01a13083-1118-7702-8515-35f62c3f6fcd CLOSED0/PASS_PLAN_ONLY/issues[];ten originalpaths/serial<=4task/no newauthority/no10xspeedclaim.
 - Collector methodordinal205 and elapsed264951 do not prove the600000ms Match ceiling caused failure. Cleanup was observed true; no guest or transport success inferred from it.
 
 ## Resolution
