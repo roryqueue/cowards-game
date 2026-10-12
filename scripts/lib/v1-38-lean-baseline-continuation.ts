@@ -39,7 +39,9 @@ export const readLeanContinuationJsonV2 = (path: string, maximum: number, mode: 
 }
 export const assertLeanBaselineContinuationFrontierV2 = (allocation: LeanBaselineContinuationAllocationV2, s: LeanContinuationFrontier): number => {
   const a = validateLeanBaselineContinuationAllocationV2(allocation), w = a.window
-  if (Object.entries(s).some(([key, value]) => key !== "live" && !integer(value)) || !s.live || s.remainingSlots > 36 || s.charged < 50 || s.charged > 86 || s.remainingSlots !== 0 && (s.charged + s.remainingSlots < 86 || s.charged + s.remainingSlots > 87) || s.remainingSlots !== 0 && (s.remainingClosureMs !== undefined || s.remainingOfflineMs !== undefined) || (s.remainingClosureMs ?? w.closureMs) > w.closureMs || (s.remainingOfflineMs ?? w.offlineOverheadMs) > w.offlineOverheadMs) return fail("V2_FRONTIER")
+  const required = ["nowMs", "monotonicElapsedMs", "remainingSlots", "charged", "retainedBytes", "scratchBytes", "parentRssBytes", "childRssBytes", "arrayBuffersBytes", "availableMemoryBytes", "freeBytes", "live"]
+  const keys = Object.keys(s), optional = keys.includes("remainingClosureMs") || keys.includes("remainingOfflineMs")
+  if (!exactLabKeys(s, optional ? [...required, "remainingClosureMs", "remainingOfflineMs"] : required) || keys.some(key => key !== "live" && !integer((s as any)[key])) || s.live !== true || s.remainingSlots > 36 || s.charged < 50 || s.charged > 86 || s.remainingSlots !== 0 && (s.charged + s.remainingSlots < 86 || s.charged + s.remainingSlots > 87) || optional && s.remainingSlots !== 0 || (s.remainingClosureMs ?? w.closureMs) > w.closureMs || (s.remainingOfflineMs ?? w.offlineOverheadMs) > w.offlineOverheadMs) return fail("V2_FRONTIER")
   const elapsed = leanBaselineContinuationElapsedFloorV2(w, s.nowMs, a.predecessor.elapsedUpperBoundMs, s.monotonicElapsedMs)
   const reserve = s.remainingSlots * LEAN_CAPS.matchMs + (s.remainingClosureMs ?? w.closureMs) + (s.remainingOfflineMs ?? w.offlineOverheadMs), native = 2 * 268435456 + 512000000 + 335544320
   if (!integer(s.nowMs + reserve) || !integer(elapsed + reserve) || s.nowMs + reserve > w.deadlineMs || elapsed + reserve > w.capMs || s.retainedBytes < a.predecessor.allocatedDiskBytes || s.retainedBytes > LEAN_CAPS.retainedBytes || s.scratchBytes > LEAN_CAPS.scratchBytes || s.retainedBytes + s.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || s.parentRssBytes + s.childRssBytes + s.arrayBuffersBytes + native > LEAN_BASELINE_CONTINUATION_POLICY_V2.memoryBytes || s.availableMemoryBytes < native || s.freeBytes < LEAN_CAPS.totalBytes - s.retainedBytes) return fail("V2_CAPACITY")
@@ -330,12 +332,12 @@ export const authenticateLeanBaselineContinuationCarryV2 = (git: LeanContinuatio
   const inventory = inventoryLeanContinuationSurvivorsV2(carry.inventory as LeanContinuationInventoryRow[], pinnedPaths, git, guard)
   const originalSum = (carry.inventory as LeanContinuationInventoryRow[]).reduce((n, row) => n + row.allocatedBytes, 0), residualDiskBytes = a.predecessor.allocatedDiskBytes - originalSum
   if (!integer(residualDiskBytes)) return fail("V2_RESIDUAL")
-  const reconciled = reconcileLeanContinuationDiskDebit({ allocatedDiskBytes: a.predecessor.allocatedDiskBytes, survivors: (carry.inventory as LeanContinuationInventoryRow[]).map(row => ({ identity: row.path, allocatedBytes: row.allocatedBytes })) }, inventory)
   // Consumed-v2 is already in current inventory. Preserve larger authenticated
   // debit as residual, rather than adding that store a second time.
-  const allocatedDiskBytes = Math.max(closed.allocatedDiskBytes, reconciled)
+  const debit = reconcileLeanContinuationV2DiskDebit(a.predecessor.allocatedDiskBytes, carry.inventory as LeanContinuationInventoryRow[], closed.allocatedDiskBytes, inventory)
+  const allocatedDiskBytes = debit.allocatedDiskBytes
   const custody = { originalCarryRoot: a.predecessor.root, allocationRoot: a.root, allocationBytesRoot: leanBytesRoot(bytes), allocationCommit: anchor.allocationCommit, sourceHead: a.sourceHead, resultRoot: labRoot(result.schemaVersion, result), resultBytesRoot: leanBytesRoot(resultBytes), checkRoot: check.root as LabRoot, checkBytesRoot: leanBytesRoot(checkBytes), records }
-  const body = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: closed.elapsedMs, allocatedDiskBytes, residualDiskBytes: residualDiskBytes + Math.max(0, closed.allocatedDiskBytes - reconciled), historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: a.predecessor.root, closedCapsuleRoot: labRoot("lean-baseline-continuation-closed-capsule-v2", custody), custodyRoot: labRoot("lean-baseline-continuation-custody-v2", custody), inventoryRoot: labRoot("lean-baseline-continuation-inventory-v2", inventory), qualifiedReaderAuthority: "cost_only" as const }
+  const body = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: closed.elapsedMs, allocatedDiskBytes, residualDiskBytes: debit.residualDiskBytes, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: a.predecessor.root, closedCapsuleRoot: labRoot("lean-baseline-continuation-closed-capsule-v2", custody), custodyRoot: labRoot("lean-baseline-continuation-custody-v2", custody), inventoryRoot: labRoot("lean-baseline-continuation-inventory-v2", inventory), qualifiedReaderAuthority: "cost_only" as const }
   const newCarry: LeanBaselineContinuationCarryV2 = freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
   guard(); return freezeLabValue({ carry: newCarry, custody, inventory })
 }
@@ -347,6 +349,29 @@ export const reconcileLeanContinuationDiskDebit = (prior: { allocatedDiskBytes: 
   const debit = prior.allocatedDiskBytes + [...live].reduce((sum, [path, bytes]) => sum + Math.max(0, bytes - (old.get(path) ?? 0)), 0)
   if (!integer(debit) || debit > LEAN_CAPS.retainedBytes) return fail("CARRY_CAPACITY")
   return debit
+}
+/** V2 keeps the closed capsule as a base, then adds only post-capsule growth.
+ * The consumed old-v2 route is already represented by closed debit and is
+ * excluded from the incremental rows exactly once. */
+export const reconcileLeanContinuationV2DiskDebit = (
+  originalDebit: number,
+  original: readonly { path: string; allocatedBytes: number }[],
+  closedDebit: number,
+  current: readonly { path: string; allocatedBytes: number }[],
+) => {
+  const consumed = (path: string) => [LEAN_BASELINE_CONTINUATION_PATHS.request, LEAN_BASELINE_CONTINUATION_PATHS.allocation, LEAN_BASELINE_CONTINUATION_PATHS.store, LEAN_BASELINE_CONTINUATION_PATHS.temp].some(root => path === root || (root === LEAN_BASELINE_CONTINUATION_PATHS.store || root === LEAN_BASELINE_CONTINUATION_PATHS.temp) && path.startsWith(`${root}/`))
+  if (!integer(originalDebit) || !integer(closedDebit) || original.length > 4096 || current.length > 4096 || new Set(original.map(r => r.path)).size !== original.length || new Set(current.map(r => r.path)).size !== current.length || [...original, ...current].some(r => !r.path || r.path.startsWith("/") || r.path.split("/").some(x => !x || x === "." || x === "..") || !integer(r.allocatedBytes)) || original.some(r => consumed(r.path)) || current.some(r => futureV2(r.path))) return fail("V2_DISK_SCOPE")
+  const old = new Map(original.map(r => [r.path, r.allocatedBytes])), live = new Map(current.map(r => [r.path, r.allocatedBytes]))
+  const roots = [LEAN_BASELINE_CONTINUATION_PATHS.request, LEAN_BASELINE_CONTINUATION_PATHS.allocation, LEAN_BASELINE_CONTINUATION_PATHS.store, LEAN_BASELINE_CONTINUATION_PATHS.temp]
+  if (roots.some(path => !live.has(path)) || [...old].some(([path, bytes]) => !live.has(path) || live.get(path)! < bytes)) return fail("V2_DISK_MISSING_OR_SHRINK")
+  const oldSum = [...old.values()].reduce((a, b) => a + b, 0), currentSum = [...live.values()].reduce((a, b) => a + b, 0)
+  const consumedBytes = [...live].filter(([path]) => consumed(path)).reduce((a, [, b]) => a + b, 0)
+  const originalGrowth = [...old].reduce((n, [path, bytes]) => n + Math.max(0, live.get(path)! - bytes), 0)
+  const newRows = [...live].filter(([path]) => !old.has(path) && !consumed(path)).reduce((a, [, b]) => a + b, 0)
+  const base = Math.max(closedDebit, originalDebit + consumedBytes)
+  const allocatedDiskBytes = base + originalGrowth + newRows, residualDiskBytes = allocatedDiskBytes - currentSum
+  if (![oldSum, currentSum, consumedBytes, originalGrowth, newRows, base, allocatedDiskBytes, residualDiskBytes].every(integer) || oldSum > originalDebit || residualDiskBytes < 0 || allocatedDiskBytes > LEAN_CAPS.retainedBytes) return fail("V2_DISK_OVERFLOW")
+  return Object.freeze({ allocatedDiskBytes, residualDiskBytes, consumedBytes, originalGrowth, newRows, base })
 }
 const rooted = (value: Record<string, any>, domain: string) => { const { root, ...body } = value; if (root !== labRoot(domain, body)) return fail("CUSTODY_ROOT") }
 /** Exact bounded canonical custody, no historical reader or source materializer. */

@@ -88,6 +88,10 @@ describe("[continuation-v2] pure policy and ledger admission", () => {
     const s = { nowMs: w.anchorMs + 1000, monotonicElapsedMs: 2000, remainingSlots: 36, charged: 50, retainedBytes: 88924160, scratchBytes: 0, parentRssBytes: 100000000, childRssBytes: 0, arrayBuffersBytes: 0, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true }
     expect(continuation.assertLeanBaselineContinuationFrontierV2(a, s)).toBe(w.carryMs + 2000)
     for (const changes of [{ remainingSlots: 37 }, { charged: 49 }, { nowMs: w.deadlineMs - 1 }, { remainingClosureMs: 0 }, { freeBytes: 0 }, { live: false }]) expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, { ...s, ...changes })).toThrow()
+    const required = ["nowMs", "monotonicElapsedMs", "remainingSlots", "charged", "retainedBytes", "scratchBytes", "parentRssBytes", "childRssBytes", "arrayBuffersBytes", "availableMemoryBytes", "freeBytes", "live"] as const
+    for (const key of required) { const incomplete = { ...s } as Record<string, unknown>; delete incomplete[key]; expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, incomplete as never)).toThrow(/V2_FRONTIER/) }
+    expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, { ...s, extra: 1 } as never)).toThrow(/V2_FRONTIER/)
+    expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, { ...s, remainingClosureMs: 10 } as never)).toThrow(/V2_FRONTIER/)
   })
   it("reserves bounded descriptor bytes before allocation and reobserves mutations", () => {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-v2-inert-"))), path = join(dir, "fixture.json")
@@ -299,6 +303,40 @@ describe("continuation OID metadata predicate", () => {
   })
 })
 
+
+describe("[continuation-v2] no-refund closed-debit reconciliation", () => {
+  const old = ledger.LEAN_BASELINE_CONTINUATION_PATHS
+  const fixture = () => {
+    const original = [{ path: "scripts/old-a.ts", allocatedBytes: 60 }, { path: "scripts/old-b.ts", allocatedBytes: 30 }]
+    const current = [
+      { path: "scripts/old-a.ts", allocatedBytes: 65 }, { path: "scripts/old-b.ts", allocatedBytes: 30 },
+      { path: old.request, allocatedBytes: 8 }, { path: old.allocation, allocatedBytes: 8 },
+      { path: old.store, allocatedBytes: 8 }, { path: `${old.store}/result.json`, allocatedBytes: 8 },
+      { path: old.temp, allocatedBytes: 8 },
+    ]
+    return { original, current }
+  }
+  it("keeps original residual and closed excess, adds reviewed growth once, and excludes consumed-v2 overlap", () => {
+    const { original, current } = fixture()
+    const first = continuation.reconcileLeanContinuationV2DiskDebit(100, original, 150, current)
+    expect(first).toMatchObject({ base: 150, consumedBytes: 40, originalGrowth: 5, newRows: 0, allocatedDiskBytes: 155, residualDiskBytes: 20 })
+    const withNew = continuation.reconcileLeanContinuationV2DiskDebit(100, original, 150, [...current, { path: "scripts/reviewed-new.ts", allocatedBytes: 7 }])
+    expect(withNew).toMatchObject({ allocatedDiskBytes: 162, residualDiskBytes: 20, newRows: 7 })
+    expect(continuation.reconcileLeanContinuationV2DiskDebit(100, original, 120, current).allocatedDiskBytes).toBe(145)
+  })
+  it("denies shrink, missing or overlapping identities, duplicates, future-v3 scope, and arithmetic overflow", () => {
+    const { original, current } = fixture()
+    const rejected = [
+      () => continuation.reconcileLeanContinuationV2DiskDebit(100, original, 150, current.slice(0, -1)),
+      () => continuation.reconcileLeanContinuationV2DiskDebit(100, original, 150, current.map(row => row.path === "scripts/old-a.ts" ? { ...row, allocatedBytes: 59 } : row)),
+      () => continuation.reconcileLeanContinuationV2DiskDebit(100, original, 150, [...current, current[0]!]),
+      () => continuation.reconcileLeanContinuationV2DiskDebit(100, [...original, original[0]!], 150, current),
+      () => continuation.reconcileLeanContinuationV2DiskDebit(100, original, 150, [...current, { path: ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.store, allocatedBytes: 1 }]),
+      () => continuation.reconcileLeanContinuationV2DiskDebit(Number.MAX_SAFE_INTEGER, [{ path: "scripts/a.ts", allocatedBytes: Number.MAX_SAFE_INTEGER }], 1, [...current, { path: "scripts/a.ts", allocatedBytes: Number.MAX_SAFE_INTEGER }]),
+    ]
+    for (const run of rejected) expect(run).toThrow(/V2_DISK/)
+  })
+})
 
 describe("authenticated historical cost scope", () => {
   const paths = [".planning/debug/supervisor-sampling-repair.md", ".planning/debug/v9-baseline-prepare.md"]
