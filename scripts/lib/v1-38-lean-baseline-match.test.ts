@@ -175,15 +175,16 @@ describe("continuation issued executor branches", () => {
       expect(issued).toMatchObject({ stage: "executor", reason: enabled ? reason : "unknown" })
       expect(runtimeModule.getFactoryPrivateDiagnostic(native, { ...evidence })).toBeUndefined()
       if (!enabled) return
+      const actual = { kind: "failure", privacy: "private_offline", transitions: [], accounting: [evidence], unchangedState: null, failure: { classification: "system_failure", code: "LAB_SUPERVISOR_FAILURE" } } as const
       const compact = { classification: "system_failure", code: "SUPERVISOR_FAILURE", accountingRoot: root("accounting"), executionRoot: root("execution") } as never
-      const extension = composerModule.deriveLeanContinuationExecutorDiagnostic(allocation.root, chargeRoot, compact, native, evidence)
+      const extension = composerModule.deriveLeanContinuationExecutorDiagnostic(allocation.root, chargeRoot, compact, native, evidence, actual as never)
       expect(extension).toMatchObject({ availability: "available", originAvailability: "available", reason, initiatingCause: "unknown", chargeRoot, sourceRoot })
-      expect(() => composerModule.deriveLeanContinuationExecutorDiagnostic(allocation.root, chargeRoot, compact, native!, { ...evidence })).toThrow()
+      expect(() => composerModule.deriveLeanContinuationExecutorDiagnostic(allocation.root, chargeRoot, compact, native!, { ...evidence }, actual as never)).toThrow()
+      for (const accounting of [[], [{ ...evidence }], [evidence, evidence]]) expect(() => composerModule.deriveLeanContinuationExecutorDiagnostic(allocation.root, chargeRoot, compact, native!, evidence, { ...actual, accounting } as never)).toThrow()
       const expected = { allocationRoot: allocation.root, chargeRoot, accountingRoot: root("accounting"), executionRoot: root("execution"), sourceRoots: [sourceRoot], method: evidence.method, ordinal: evidence.ordinal, code: "SUBPROCESS_EXIT" }
       expect(retainedModule.validateLeanContinuationExecutorDiagnostic(extension, expected)).toEqual(extension)
       expect(JSON.stringify(extension)).not.toMatch(/activationOrders|strategyMemory|"status"|"exitCode"|stdout|stderr|sourceBytes/)
       const snapshots = [{ role: "tactical-0", sourceRoot, root: root("bottom-snapshot"), source: sourceBytes.toString(), packet, proposal, validation: factoryValidationFixture(proposal) }, { role: "cold-opponent", sourceRoot: root("top-source"), root: root("top-snapshot"), source: sourceBytes.toString(), packet, proposal, validation: factoryValidationFixture(proposal) }]
-      const actual = { kind: "failure", privacy: "private_offline", transitions: [], accounting: [evidence], unchangedState: null, failure: { classification: "system_failure", code: "LAB_SUPERVISOR_FAILURE" } } as const
       const mocks = [
         vi.spyOn(sourceModule, "validateLeanBaselineSource").mockImplementation(v => v as never),
         vi.spyOn(authorityModule, "issueLeanBaselineContinuationRuntimeAuthority").mockReturnValue(authority),
@@ -198,9 +199,19 @@ describe("continuation issued executor branches", () => {
         expect(returned.diagnostic).toMatchObject({ continuationExecutor: { reason, chargeRoot, invocationRoot: evidence.invocationRoot } })
         const legacy = await composerModule.runLeanBaselineMatch(matchInput as never)
         expect(Object.keys(legacy.diagnostic!).sort()).toEqual(["schemaVersion", "chargeRoot", "stage", "reason", "code", "method", "ordinal"].sort())
-        const { continuationExecutor: retained, ...seven } = returned.diagnostic as NonNullable<typeof returned.diagnostic> & { continuationExecutor: composerModule.LeanContinuationExecutorDiagnostic }
+        const { continuationExecutor: retained, failureAccounting, ...seven } = returned.diagnostic as NonNullable<typeof returned.diagnostic> & { continuationExecutor: composerModule.LeanContinuationExecutorDiagnostic; failureAccounting: composerModule.LeanContinuationFailureAccounting }
         expect(seven).toEqual(legacy.diagnostic)
-        expect(retainedModule.validateLeanContinuationExecutorDiagnostic(retained, { ...expected, accountingRoot: returned.compact.accountingRoot, executionRoot: returned.compact.executionRoot })).toEqual(retained)
+        expect(failureAccounting).toMatchObject({ schemaVersion: "lean-continuation-failure-accounting-v1", canonicalAccountingRoot: legacy.compact.accountingRoot, executionRoot: legacy.compact.executionRoot, root: returned.compact.accountingRoot })
+        expect(returned.compact.accountingRoot).not.toBe(legacy.compact.accountingRoot)
+        expect(returned.compact.executionRoot).toBe(legacy.compact.executionRoot)
+        expect(retained.accountingRoot).toBe(legacy.compact.accountingRoot)
+        const diagnosticBody = { ...seven, continuationExecutor: retained }
+        expect(failureAccounting.diagnosticRoot).toBe(labRoot("lean-continuation-failure-diagnostic-v1", diagnosticBody))
+        const { root: _commitmentRoot, ...commitmentBody } = failureAccounting
+        expect(returned.compact.accountingRoot).toBe(labRoot(failureAccounting.schemaVersion, commitmentBody))
+        expect(retainedModule.validateLeanContinuationFailureDiagnostic(returned.diagnostic, { ...expected, accountingRoot: returned.compact.accountingRoot, executionRoot: returned.compact.executionRoot, classification: returned.compact.classification, compactCode: returned.compact.code })).toEqual(returned.diagnostic)
+        expect(JSON.stringify(returned.diagnostic).length).toBeLessThan(4096)
+        expect(JSON.stringify(returned.diagnostic)).not.toMatch(/activationOrders|strategyMemory|stdout|stderr|sourceBytes/)
       } finally { for (const mock of mocks) mock.mockRestore() }
     } finally { clock?.mockRestore(); native?.close(); descriptor.mockRestore(); claim.mockRestore(); executorFixture.active = false; executorFixture.owners.clear() }
   })

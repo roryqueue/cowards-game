@@ -10,7 +10,7 @@ import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtu
 import { leanColdProcedureRoot, leanBaselineMetricCoverage, compactLeanBaselineCell, type LeanBaselineObservedCell } from "./v1-38-lean-baseline-pipeline.js"
 import { LEAN_BASELINE_REQUIRED_METRICS } from "./v1-38-lean-baseline-metrics.js"
 import { LEAN_CONTINUATION_EXECUTOR_REASONS } from "./v1-38-lean-container-match-session.js"
-import type { LeanContinuationExecutorDiagnostic } from "./v1-38-lean-baseline-match.js"
+import type { LeanContinuationExecutorDiagnostic, LeanContinuationFailureAccounting } from "./v1-38-lean-baseline-match.js"
 import { readLeanBaselineSource, type LeanBaselineSource } from "./v1-38-lean-baseline-source.js"
 import { inspectLeanSealMetadata } from "./v1-38-lean-seal-metadata.js"
 import { buildLeanColdCorpus } from "./v1-38-lean-cold-corpus.js"
@@ -237,6 +237,8 @@ export const auditLeanCurrentBaselineRetained = (s: LeanBaselineRetainedSnapshot
   assertRequest(s); assertEntry(s)
   return auditBaselineContent(s, guard, false)
 }
+/** Witness shape/join validation only. Retained authority additionally requires
+ * validateLeanContinuationFailureDiagnostic against the charged terminal. */
 export const validateLeanContinuationExecutorDiagnostic = (value: unknown, expected: { allocationRoot: LabRoot; chargeRoot: LabRoot; accountingRoot: LabRoot; executionRoot: LabRoot; sourceRoots: readonly LabRoot[]; method: unknown; ordinal: unknown; code: unknown }): LeanContinuationExecutorDiagnostic => {
   const keys = ["schemaVersion", "availability", "originAvailability", "allocationRoot", "chargeRoot", "accountingRoot", "executionRoot", "sourceRoot", "executableRoot", "invocationRoot", "requestIdRoot", "inputRoot", "method", "ordinal", "stage", "reason", "code", "initiatingCause", "root"]
   if (!value || typeof value !== "object" || Array.isArray(value) || !exactLabKeys(value, keys)) return fail("CONTINUATION_EXECUTOR")
@@ -244,6 +246,24 @@ export const validateLeanContinuationExecutorDiagnostic = (value: unknown, expec
   if (d.schemaVersion !== "lean-continuation-executor-diagnostic-v1" || d.availability !== "available" || !["available", "unavailable"].includes(d.originAvailability) || d.initiatingCause !== "unknown" || d.code !== "SUBPROCESS_EXIT" || d.code !== expected.code || ![d.allocationRoot, d.chargeRoot, d.accountingRoot, d.executionRoot, d.sourceRoot, d.executableRoot, d.invocationRoot, d.requestIdRoot, d.inputRoot, d.root].every(rooted) || d.allocationRoot !== expected.allocationRoot || d.chargeRoot !== expected.chargeRoot || d.accountingRoot !== expected.accountingRoot || d.executionRoot !== expected.executionRoot || !expected.sourceRoots.includes(d.sourceRoot) || !["selectActivations", "soldierBrain"].includes(d.method) || d.method !== expected.method || !natural(d.ordinal) || d.ordinal >= 24800 || d.ordinal !== expected.ordinal || (d.reason === "unknown" ? d.stage !== "unknown" : d.stage !== "executor" || d.originAvailability !== "available" || !(LEAN_CONTINUATION_EXECUTOR_REASONS as readonly string[]).includes(d.reason))) return fail("CONTINUATION_EXECUTOR")
   const { root, ...body } = d
   if (root !== labRoot(d.schemaVersion, body)) return fail("CONTINUATION_EXECUTOR")
+  return d
+}
+/** The prospective continuation reader requires this version for EVERY failed
+ * terminal, based on the frozen compact classification rather than sidecar
+ * presence/code. Pre-policy continuation failures are explicitly unsupported;
+ * the legacy reader and successful-record accounting remain unchanged. */
+export const validateLeanContinuationFailureDiagnostic = (value: unknown, expected: { allocationRoot: LabRoot; chargeRoot: LabRoot; accountingRoot: LabRoot; executionRoot: LabRoot; sourceRoots: readonly LabRoot[]; classification: string; compactCode: string }) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return fail("CONTINUATION_EXECUTOR_COMMITMENT")
+  const d = value as Record<string, unknown>, extension = d.continuationExecutor
+  if (!exactLabKeys(d, ["schemaVersion", "chargeRoot", "stage", "reason", "code", "method", "ordinal", "failureAccounting", ...(extension === undefined ? [] : ["continuationExecutor"])]) || d.schemaVersion !== "lean-supervisor-diagnostic-v1" || d.chargeRoot !== expected.chargeRoot || !exactLabKeys(d.failureAccounting, ["schemaVersion", "canonicalAccountingRoot", "executionRoot", "diagnosticRoot", "root"])) return fail("CONTINUATION_EXECUTOR_COMMITMENT")
+  const c = d.failureAccounting as unknown as LeanContinuationFailureAccounting
+  const { failureAccounting: _commitment, ...diagnostic } = d
+  const { root, ...body } = c
+  if (c.schemaVersion !== "lean-continuation-failure-accounting-v1" || ![c.canonicalAccountingRoot, c.executionRoot, c.diagnosticRoot, c.root].every(rooted) || c.executionRoot !== expected.executionRoot || c.diagnosticRoot !== labRoot("lean-continuation-failure-diagnostic-v1", diagnostic) || root !== labRoot(c.schemaVersion, body) || root !== expected.accountingRoot) return fail("CONTINUATION_EXECUTOR_COMMITMENT")
+  if (d.code === "SUBPROCESS_EXIT" || extension !== undefined) {
+    if (expected.classification !== "system_failure" || !["SUPERVISOR_FAILURE", "CLEANUP"].includes(expected.compactCode)) return fail("CONTINUATION_EXECUTOR")
+    validateLeanContinuationExecutorDiagnostic(extension, { ...expected, accountingRoot: c.canonicalAccountingRoot, method: d.method, ordinal: d.ordinal, code: d.code })
+  }
   return d
 }
 const auditBaselineContent = (s: BaselineContentSnapshot, guard: () => void, continuation: boolean) => {
@@ -275,13 +295,9 @@ const auditBaselineContent = (s: BaselineContentSnapshot, guard: () => void, con
         !same(cell.compact, record.terminal?.record) || !rooted(cell.decisionRoot) ||
         (cell.compact.classification === "success" ? !cell.compact.cleanupComplete || !rooted(cell.semanticRoot) || cell.diagnostic !== null : cell.semanticRoot !== null) ||
         !same((pipeline.cells as unknown[])[i], compactLeanBaselineCell(cell))) return fail("OBSERVATION")
-    if (continuation && cell.diagnostic !== null) {
-      const diagnostic = cell.diagnostic as unknown as Record<string, unknown>, extension = diagnostic.continuationExecutor
-      if (!exactLabKeys(diagnostic, ["schemaVersion", "chargeRoot", "stage", "reason", "code", "method", "ordinal", ...(extension === undefined ? [] : ["continuationExecutor"])]) || diagnostic.schemaVersion !== "lean-supervisor-diagnostic-v1" || diagnostic.chargeRoot !== record.chargeRoot) return fail("CONTINUATION_DIAGNOSTIC")
-      if (extension !== undefined) {
-        if (cell.compact.classification !== "system_failure" || cell.compact.code !== "SUPERVISOR_FAILURE" || !record.chargeRoot) return fail("CONTINUATION_EXECUTOR")
-        validateLeanContinuationExecutorDiagnostic(extension, { allocationRoot: a.root, chargeRoot: record.chargeRoot, accountingRoot: cell.compact.accountingRoot, executionRoot: cell.compact.executionRoot, sourceRoots: [pair.bottomSourceRoot, pair.topSourceRoot], method: diagnostic.method, ordinal: diagnostic.ordinal, code: diagnostic.code })
-      }
+    if (continuation && cell.compact.classification !== "success") {
+      if (!record.chargeRoot) return fail("CONTINUATION_EXECUTOR_COMMITMENT")
+      validateLeanContinuationFailureDiagnostic(cell.diagnostic, { allocationRoot: a.root, chargeRoot: record.chargeRoot, accountingRoot: record.terminal!.record.accountingRoot, executionRoot: record.terminal!.record.executionRoot, sourceRoots: [pair.bottomSourceRoot, pair.topSourceRoot], classification: record.terminal!.record.classification, compactCode: record.terminal!.record.code })
     }
     const metric = cell.metrics
     const alwaysMissing = ["forced_evacuation", "first_contraction_unselected_reserves", "push_and_block_causes", "opening_normalized_entropy", "center_wing_convoy_turtle"] as const

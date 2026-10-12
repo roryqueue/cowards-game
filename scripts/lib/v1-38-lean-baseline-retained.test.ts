@@ -265,17 +265,23 @@ const continuationFixtureBase = (): LeanBaselineRetainedSnapshot => {
 }
 
 describe("continuation full retained reconstruction", () => {
-  it("joins the private extension through observation and pipeline roots and preserves seven-key continuation history", () => {
+  it("binds recomputed surrounding roots to the frozen charged terminal and refuses legacy fallback", () => {
     const s = { ...continuationFixtureBase() }, a = s.allocation as unknown as continuationLedger.LeanBaselineContinuationAllocation
     const failed = failedFirstCell("system_failure", "SUPERVISOR_FAILURE", null, true)
     const oldPair = s.pairs[0]!, slot = a.slots[0]!
     const { root: _pairRoot, ...pairBody } = { ...oldPair, slotRoot: slot.root, requestRoot: slot.requestRoot, priorCharged: 43 }
     const pair = { ...pairBody, root: labRoot("lean-baseline-pair-v1", pairBody) }
     const chargeBody = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: a.root, slotRoot: slot.root, ordinal: 0 }, charge = { ...chargeBody, root: labRoot("lean-slot-charge-v1", chargeBody) }
-    const compact = failed.observations[0]!.cell.compact
+    const canonicalCompact = failed.observations[0]!.cell.compact
     const seven = { schemaVersion: "lean-supervisor-diagnostic-v1", chargeRoot: charge.root, stage: "native_response", reason: "executor", code: "SUBPROCESS_EXIT", method: "selectActivations", ordinal: 0 }
-    const extensionBody = { schemaVersion: "lean-continuation-executor-diagnostic-v1", availability: "available", originAvailability: "available", allocationRoot: a.root, chargeRoot: charge.root, accountingRoot: compact.accountingRoot, executionRoot: compact.executionRoot, sourceRoot: pair.bottomSourceRoot, executableRoot: root("executable"), invocationRoot: root("invocation"), requestIdRoot: root("request"), inputRoot: root("input"), method: seven.method, ordinal: seven.ordinal, stage: "executor", reason: "response_status_null", code: seven.code, initiatingCause: "unknown" }
+    const extensionBody = { schemaVersion: "lean-continuation-executor-diagnostic-v1", availability: "available", originAvailability: "available", allocationRoot: a.root, chargeRoot: charge.root, accountingRoot: canonicalCompact.accountingRoot, executionRoot: canonicalCompact.executionRoot, sourceRoot: pair.bottomSourceRoot, executableRoot: root("executable"), invocationRoot: root("invocation"), requestIdRoot: root("request"), inputRoot: root("input"), method: seven.method, ordinal: seven.ordinal, stage: "executor", reason: "response_status_null", code: seven.code, initiatingCause: "unknown" }
     const extension = { ...extensionBody, root: labRoot(extensionBody.schemaVersion, extensionBody) }
+    const commit = (diagnostic: Record<string, unknown>) => {
+      const body = { schemaVersion: "lean-continuation-failure-accounting-v1", canonicalAccountingRoot: canonicalCompact.accountingRoot, executionRoot: canonicalCompact.executionRoot, diagnosticRoot: labRoot("lean-continuation-failure-diagnostic-v1", diagnostic) }
+      return { ...diagnostic, failureAccounting: { ...body, root: labRoot(body.schemaVersion, body) } }
+    }
+    const genuine = commit({ ...seven, continuationExecutor: extension })
+    const compact = Object.freeze({ ...canonicalCompact, accountingRoot: genuine.failureAccounting.root })
     const terminal = { kind: "terminal" as const, chargeRoot: charge.root, record: compact, replay: null }
     const unused = Array.from({ length: 35 }, (_, i) => i + 1)
     s.pairs = [pair]
@@ -284,7 +290,7 @@ describe("continuation full retained reconstruction", () => {
     const before = { nowMs: a.window.anchorMs + 200, monotonicElapsedMs: 200, remainingSlots: 36, charged: 43, retainedBytes: 1000000, scratchBytes: 0, parentRssBytes: 100000000, childRssBytes: 100000000, arrayBuffersBytes: 1000, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true }
     s.result = { ...s.result, charged: 44, successful: 0, unusedOrdinals: unused, resourceReceipts: [{ ordinal: 0, chargeRoot: charge.root, before, after: { ...before, nowMs: before.nowMs + 1, monotonicElapsedMs: 201, remainingSlots: 35, charged: 44 } }] }
     const reroot = (diagnostic: unknown) => {
-      const cell = { ...failed.observations[0]!.cell, slotRoot: slot.root, diagnostic } as LeanBaselineObservedCell
+      const cell = { ...failed.observations[0]!.cell, compact, slotRoot: slot.root, diagnostic } as LeanBaselineObservedCell
       const receiptBody = { schemaVersion: "lean-baseline-observation-v1" as const, pairRoot: pair.root, cell }
       s.observations = [{ ...receiptBody, root: labRoot(receiptBody.schemaVersion, receiptBody) }]
       const { root: _pipelineRoot, ...pipeline } = failed.result.pipeline as Record<string, unknown>
@@ -292,12 +298,19 @@ describe("continuation full retained reconstruction", () => {
       s.result.pipeline = { ...body, root: labRoot("lean-baseline-continuation-pipeline-v1", body) }
       return s as unknown as continuationReader.LeanBaselineContinuationRetainedSnapshot
     }
-    expect(continuationReader.auditLeanBaselineContinuationRetained(reroot(seven))).toMatchObject({ complete: false, disposition: "gaps_found" })
-    expect(continuationReader.auditLeanBaselineContinuationRetained(reroot({ ...seven, continuationExecutor: extension }))).toMatchObject({ complete: false, disposition: "gaps_found" })
-    for (const patch of [{ chargeRoot: root("cross-call") }, { ordinal: 1 }, { sourceRoot: root("foreign-source") }, { rawError: "PRIVATE" }]) {
-      const { root: _root, ...body } = { ...extension, ...patch }
-      expect(() => continuationReader.auditLeanBaselineContinuationRetained(reroot({ ...seven, continuationExecutor: { ...body, root: labRoot(body.schemaVersion, body) } }))).toThrow(/CONTINUATION_EXECUTOR/)
+    expect(continuationReader.auditLeanBaselineContinuationRetained(reroot(genuine))).toMatchObject({ complete: false, disposition: "gaps_found" })
+    for (const removed of [null, seven, { ...seven, continuationExecutor: extension }, commit(seven), commit({ ...seven, code: null, method: null, ordinal: null, stage: "unknown", reason: "unknown" })]) {
+      expect(() => continuationReader.auditLeanBaselineContinuationRetained(reroot(removed))).toThrow(/CONTINUATION_EXECUTOR/)
     }
+    for (const patch of [{ invocationRoot: root("cross-call") }, { requestIdRoot: root("cross-request") }, { inputRoot: root("cross-input") }, { executableRoot: root("cross-executable") }, { sourceRoot: pair.topSourceRoot }, { method: "soldierBrain" }, { ordinal: 1 }, { reason: "response_status_nonzero" }, { chargeRoot: root("cross-call") }, { sourceRoot: root("foreign-source") }, { rawError: "PRIVATE" }]) {
+      const { root: _root, ...body } = { ...extension, ...patch }
+      // Recompute every mutable surrounding root and coordinate adjacent fields;
+      // the independently charged terminal's accounting/execution roots stay fixed.
+      expect(() => continuationReader.auditLeanBaselineContinuationRetained(reroot(commit({ ...seven, method: body.method, ordinal: body.ordinal, continuationExecutor: { ...body, root: labRoot(body.schemaVersion, body) } })))).toThrow(/CONTINUATION_EXECUTOR/)
+    }
+    for (const patch of [{ code: "SUBPROCESS_SIGNAL" }, { stage: "unknown", reason: "unknown" }, { reason: "system_failure" }]) expect(() => continuationReader.auditLeanBaselineContinuationRetained(reroot(commit({ ...seven, ...patch, continuationExecutor: extension })))).toThrow(/CONTINUATION_EXECUTOR/)
+    expect(compact.accountingRoot).toBe(genuine.failureAccounting.root)
+    expect(compact.executionRoot).toBe(canonicalCompact.executionRoot)
   })
   it("publishes one honest failure after persistent planning drift, or finitely refuses unsafe publication", () => {
     const allocation = continuationFixtureBase().allocation

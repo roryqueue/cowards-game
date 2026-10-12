@@ -35,13 +35,29 @@ export interface LeanContinuationExecutorDiagnostic {
 }
 /** The factory accessor is the issuance boundary: serialized diagnostics and
  * cloned/cross-provider evidence cannot mint this private extension. */
-export const deriveLeanContinuationExecutorDiagnostic = (allocationRoot: LabRoot, chargeRoot: LabRoot, compact: LeanCompactMatchRecord, provider: FactorySupervisionProvider, evidence: Parameters<typeof getFactoryPrivateDiagnostic>[1]): LeanContinuationExecutorDiagnostic => {
-  if (!provider.verify(evidence) || evidence.identity !== provider.identity || !evidence.charged || evidence.result.ok || !("systemFailure" in evidence.result) || evidence.result.systemFailure.code !== "SUBPROCESS_EXIT" || evidence.identity.budgetRoot !== allocationRoot || evidence.identity.attemptRoot !== chargeRoot || compact.classification !== "system_failure" || compact.code !== "SUPERVISOR_FAILURE" || evidence.method !== "selectActivations" && evidence.method !== "soldierBrain") return fail()
+export const deriveLeanContinuationExecutorDiagnostic = (allocationRoot: LabRoot, chargeRoot: LabRoot, compact: LeanCompactMatchRecord, provider: FactorySupervisionProvider, evidence: Parameters<typeof getFactoryPrivateDiagnostic>[1], actual: LabMatchExecution): LeanContinuationExecutorDiagnostic => {
+  const failed = actual.accounting.filter(e => !e.result.ok && "systemFailure" in e.result)
+  if (failed.length !== 1 || failed[0] !== evidence || !provider.verify(evidence) || evidence.identity !== provider.identity || !evidence.charged || evidence.result.ok || !("systemFailure" in evidence.result) || evidence.result.systemFailure.code !== "SUBPROCESS_EXIT" || evidence.identity.budgetRoot !== allocationRoot || evidence.identity.attemptRoot !== chargeRoot || compact.classification !== "system_failure" || !["SUPERVISOR_FAILURE", "CLEANUP"].includes(compact.code) || evidence.method !== "selectActivations" && evidence.method !== "soldierBrain") return fail()
   const origin = getFactoryPrivateDiagnostic(provider, evidence)
   if (origin && (origin.identity !== evidence.identity || origin.invocationRoot !== evidence.invocationRoot || origin.requestId !== evidence.requestId || origin.inputRoot !== evidence.inputRoot || origin.method !== evidence.method || origin.ordinal !== evidence.ordinal || !isLeanPrivateFailureOrigin(origin))) return fail()
   const reason = origin?.stage === "executor" && (LEAN_CONTINUATION_EXECUTOR_REASONS as readonly string[]).includes(origin.reason) ? origin.reason as LeanContinuationExecutorReason : "unknown" as const
   const body = { schemaVersion: "lean-continuation-executor-diagnostic-v1" as const, availability: "available" as const, originAvailability: origin ? "available" as const : "unavailable" as const, allocationRoot, chargeRoot, accountingRoot: compact.accountingRoot, executionRoot: compact.executionRoot, sourceRoot: evidence.identity.sourceRoot, executableRoot: evidence.identity.executableRoot, invocationRoot: evidence.invocationRoot, requestIdRoot: labRoot("lean-continuation-request-id-v1", evidence.requestId), inputRoot: evidence.inputRoot, method: evidence.method, ordinal: evidence.ordinal, stage: reason === "unknown" ? "unknown" as const : "executor" as const, reason, code: "SUBPROCESS_EXIT" as const, initiatingCause: "unknown" as const }
   return Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
+}
+/** Explicit prospective failure policy selected by the continuation entry point,
+ * never by an optional sidecar field. Legacy/default entry points retain their
+ * original accounting semantics. Old continuation failures are not upgraded.
+ * The witness references the ORIGINAL accounting root; only the outer compact
+ * root references this commitment, so there is no circular hash dependency. */
+export interface LeanContinuationFailureAccounting {
+  schemaVersion: "lean-continuation-failure-accounting-v1"
+  canonicalAccountingRoot: LabRoot; executionRoot: LabRoot; diagnosticRoot: LabRoot; root: LabRoot
+}
+type ContinuationFailureDiagnostic = NonNullable<ReturnType<typeof deriveLeanSupervisorDiagnostic>> & { continuationExecutor?: LeanContinuationExecutorDiagnostic }
+const commitContinuationFailure = (compact: LeanCompactMatchRecord, diagnostic: ContinuationFailureDiagnostic) => {
+  const body = { schemaVersion: "lean-continuation-failure-accounting-v1" as const, canonicalAccountingRoot: compact.accountingRoot, executionRoot: compact.executionRoot, diagnosticRoot: labRoot("lean-continuation-failure-diagnostic-v1", diagnostic) }
+  const failureAccounting: LeanContinuationFailureAccounting = Object.freeze({ ...body, root: labRoot(body.schemaVersion, body) })
+  return { compact: { ...compact, accountingRoot: failureAccounting.root }, diagnostic: { ...diagnostic, failureAccounting } }
 }
 export const leanBaselineMatchSeed = (seed: string, ordinal: number): string => `${seed}-${ordinal >= 32 ? ordinal - 24 : ordinal}`
 /** Repeats preserve the initial matrix's seed, arena, side and initiative. */
@@ -295,16 +311,20 @@ const composeLeanNativeMatch = async (input: LegacyMatchInput | PrivateMatchInpu
     } else yield { kind: "failure", code: compact.code }
   }
   const failedEvidence = actual.accounting.find(e => !e.result.ok && "systemFailure" in e.result)
-  const provider = failedEvidence && opened.find(p => p.identity.sourceRoot === failedEvidence.identity.sourceRoot)
+  const provider = failedEvidence && opened.find(p => continuation ? p.identity === failedEvidence.identity && p.verify(failedEvidence) : p.identity.sourceRoot === failedEvidence.identity.sourceRoot)
   const origin = provider && failedEvidence ? diagnosticProviders.get(provider)?.(failedEvidence) : undefined
   const retainedOrigin = provider && failedEvidence ? diagnosticTransportBindings.get(provider)?.get(failedEvidence.ordinal + 1) : undefined
   const invocationBinding = origin && retainedOrigin && failedEvidence && provider ? bindLeanCorrectionInvocation(retainedOrigin.origin, retainedOrigin.transport, failedEvidence, origin, provider.identity.sourceRoot === bottomSource.sourceRoot ? "bottom" : "top") : undefined
   if (context && actual.accounting.some(evidence => !opened.some(provider => provider.identity.sourceRoot === evidence.identity.sourceRoot && provider.verify(evidence)))) return fail()
   const baseDiagnostic = compact.classification !== "success" ? deriveLeanSupervisorDiagnostic(chargeRoot, actual, origin ? { stage: "native_response", reason: ["stream_exchange", "outer_frame", "inner_response", "executor"].includes(origin.stage) ? origin.stage as "stream_exchange" | "outer_frame" | "inner_response" | "executor" : "system_failure", method: failedEvidence!.method, ordinal: failedEvidence!.ordinal, code: !failedEvidence!.result.ok && "systemFailure" in failedEvidence!.result ? failedEvidence!.result.systemFailure.code : undefined } : undefined) : null
   const nativeFailureProvider = provider && continuationDiagnosticProviders.get(provider)
-  const continuationExecutor = continuation && baseDiagnostic?.code === "SUBPROCESS_EXIT" && failedEvidence && nativeFailureProvider && compact.classification === "system_failure" && compact.code === "SUPERVISOR_FAILURE" ? deriveLeanContinuationExecutorDiagnostic(allocationRoot, chargeRoot, compact, nativeFailureProvider, failedEvidence) : undefined
+  // A SUBPROCESS_EXIT witness is mandatory even if cleanup also failed. A
+  // missing/foreign provider cannot silently produce a seven-key fallback.
+  if (continuation && failedEvidence && (!nativeFailureProvider || actual.accounting.filter(e => !e.result.ok && "systemFailure" in e.result).length !== 1)) return fail()
+  const continuationExecutor = continuation && baseDiagnostic?.code === "SUBPROCESS_EXIT" && failedEvidence && nativeFailureProvider && compact.classification === "system_failure" ? deriveLeanContinuationExecutorDiagnostic(allocationRoot, chargeRoot, compact, nativeFailureProvider, failedEvidence, actual) : undefined
   const diagnostic = baseDiagnostic && continuationExecutor ? { ...baseDiagnostic, continuationExecutor } : baseDiagnostic && invocationBinding ? { ...baseDiagnostic, invocationBinding } : baseDiagnostic
-  const returned = { compact, replayFrames: replayFrames(), brainInputs, strategyInputs, trainingHalfPoints, semanticRoot, metrics, decisionRoot: labRoot("lean-baseline-observed-decisions-v1", decisionRows), diagnostic, ...(context ? { privateActual: actual, privateProviderIdentities: opened.map(provider => provider.identity) } : {}), ...(hostBindingV15 ? { hostFailureV15: compact.classification === "success" ? null : readLabHostFailureV15(actual, hostBindingV15) } : {}) }
+  const retained = continuation && diagnostic ? commitContinuationFailure(compact, diagnostic) : { compact, diagnostic }
+  const returned = { ...retained, replayFrames: replayFrames(), brainInputs, strategyInputs, trainingHalfPoints, semanticRoot, metrics, decisionRoot: labRoot("lean-baseline-observed-decisions-v1", decisionRows), ...(context ? { privateActual: actual, privateProviderIdentities: opened.map(provider => provider.identity) } : {}), ...(hostBindingV15 ? { hostFailureV15: compact.classification === "success" ? null : readLabHostFailureV15(actual, hostBindingV15) } : {}) }
   if (v2 || v3) {
     const failed = actual.accounting.filter(e => e.charged && !e.result.ok && "systemFailure" in e.result)
     if (failed.length > 1) return fail()
