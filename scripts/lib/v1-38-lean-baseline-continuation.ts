@@ -17,6 +17,7 @@ export const assertLeanContinuationDirectParent = (commit: string, sourceHead: s
 export interface LeanContinuationFrontier {
   nowMs: number; monotonicElapsedMs: number; remainingSlots: number; charged: number; retainedBytes: number; scratchBytes: number
   parentRssBytes: number; childRssBytes: number; arrayBuffersBytes: number; availableMemoryBytes: number; freeBytes: number; live: boolean
+  remainingClosureMs?: number; remainingOfflineMs?: number
 }
 /** Real callers obtain observations in the same process immediately before each
  * use. This pure predicate never turns a serialized capacity into authority. */
@@ -24,7 +25,8 @@ export const assertLeanBaselineContinuationFrontier = (allocation: LeanBaselineC
   const a = validateLeanBaselineContinuationAllocation(allocation)
   if (Object.entries(s).some(([key, value]) => key !== "live" && !integer(value)) || !s.live || s.nowMs < WINDOW.anchorMs || s.remainingSlots > 36 || s.charged < 43 || s.charged > 79 || s.remainingSlots !== 0 && (s.charged + s.remainingSlots < 79 || s.charged + s.remainingSlots > 80)) return fail("FRONTIER")
   const elapsed = WINDOW.carryMs + Math.max(s.nowMs - WINDOW.anchorMs, s.monotonicElapsedMs)
-  const reserve = s.remainingSlots * LEAN_CAPS.matchMs + WINDOW.reserveMs + a.offlineOverheadMs
+  if (s.remainingSlots !== 0 && (s.remainingClosureMs !== undefined || s.remainingOfflineMs !== undefined) || (s.remainingClosureMs ?? WINDOW.reserveMs) > WINDOW.reserveMs || (s.remainingOfflineMs ?? a.offlineOverheadMs) > a.offlineOverheadMs) return fail("FRONTIER")
+  const reserve = s.remainingSlots * LEAN_CAPS.matchMs + (s.remainingClosureMs ?? WINDOW.reserveMs) + (s.remainingOfflineMs ?? a.offlineOverheadMs)
   // Native heaps, host serialization and decompression remain reserved; an
   // old --max-old-space-size setting is never reported as an observed RSS.
   const memory = s.parentRssBytes + s.childRssBytes + s.arrayBuffersBytes + 2 * 268435456 + 512000000 + 335544320
@@ -59,7 +61,7 @@ export interface LeanContinuationInventoryRow { path: string; kind: "file" | "di
  * and never open/hash/decode anything within a sealed or preimage subtree. */
 export const inventoryLeanContinuationSurvivors = (pinnedPaths: readonly string[], guard: () => void, authenticatedCostPaths: readonly string[] = []): readonly LeanContinuationInventoryRow[] => {
   const rootFiles = ["AGENTS.md", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.json", "tsconfig.base.json"]
-  if (pinnedPaths.length > 1024 || authenticatedCostPaths.length > 2048 || new Set(pinnedPaths).size !== pinnedPaths.length || pinnedPaths.some(p => !rootFiles.includes(p) && !/^(?:scripts|packages|\.planning)\/[A-Za-z0-9_./-]+$/u.test(p) || p.split("/").includes("..") || /preimage|secret/iu.test(p)) || authenticatedCostPaths.some(p => !/^(?:\.strategy-lab|\.planning\/(?:artifacts|phases\/265-serious-current-rules-league-and-development-red-team))\/[A-Za-z0-9_./-]+$/u.test(p) || p.split("/").includes(".."))) return fail("INVENTORY_SCOPE")
+  if (pinnedPaths.length > 1024 || authenticatedCostPaths.length > 2048 || new Set(pinnedPaths).size !== pinnedPaths.length || pinnedPaths.some(p => !rootFiles.includes(p) && !/^(?:scripts|packages|\.planning)\/[A-Za-z0-9_./-]+$/u.test(p) || p.split("/").includes("..") || /preimage|secret/iu.test(p)) || authenticatedCostPaths.some(p => !rootFiles.includes(p) && !/^(?:scripts|packages|\.strategy-lab|\.planning\/(?:artifacts|phases\/265-serious-current-rules-league-and-development-red-team|milestone-proposals\/v1\.38-competitive-strategy-factory-and-adversarial-league))\/[A-Za-z0-9_./-]+$/u.test(p) || p.split("/").includes(".."))) return fail("INVENTORY_SCOPE")
   const names = new Set([...pinnedPaths, ...authenticatedCostPaths])
   for (const directory of [".strategy-lab", ".planning/artifacts"]) {
     for (const name of readdirSync(resolve(directory))) {
@@ -77,7 +79,7 @@ export const inventoryLeanContinuationSurvivors = (pinnedPaths: readonly string[
     if (seenPaths.has(key)) return
     seenPaths.add(key)
     const s = lstatSync(path), inode = `${s.dev}:${s.ino}`
-    if (s.isSymbolicLink() || realpathSync(path) !== path || !s.isFile() && !s.isDirectory() || s.isFile() && s.nlink !== 1 || seenInodes.has(inode)) return fail("INVENTORY_ALIAS")
+    if (s.isSymbolicLink() || s.uid !== process.getuid?.() || realpathSync(path) !== path || !s.isFile() && !s.isDirectory() || s.isFile() && s.nlink !== 1 || seenInodes.has(inode)) return fail("INVENTORY_ALIAS")
     seenInodes.add(inode); totalBytes += s.size
     if (totalBytes > LEAN_CAPS.totalBytes) return fail("INVENTORY_BOUND")
     sealed ||= /preimage|secret|sealed|holdout/iu.test(key)
@@ -112,10 +114,11 @@ export const authenticateLeanBaselineContinuationCarry = (git: LeanContinuationG
   if (!equal(readdirSync(store).sort(), privateNames)) return fail("CUSTODY_INVENTORY")
   const values = new Map(privateNames.filter(n => n !== "replay-0.ndjson").map(name => [name, readLeanContinuationBytes(join(store, name), name === "terminal-0.json" ? 8388608 : 65536, 0o600)]))
   if (!values.get("allocation.json")!.equals(bytes)) return fail("CANONICAL_ALLOCATION")
-  const parse = (name: Exclude<typeof privateNames[number], "replay-0.ndjson">) => JSON.parse(values.get(name)!.toString("utf8")) as Record<string, any>
+  const parse = (name: Exclude<typeof privateNames[number], "replay-0.ndjson">) => { const bytes = values.get(name)!, value = JSON.parse(bytes.toString("utf8")) as Record<string, any>; if (!bytes.equals(Buffer.from(leanCanonicalBytes(value)))) return fail("CANONICAL"); return value }
   const result = parse("result.json"), entry = parse("entry.json"), pair = parse("pair-0.json"), debit = parse("debit-0.json"), terminal = parse("terminal-0.json")
   for (const [value, kind] of [[result, "result"], [entry, "entry"], [pair, "pair"], [debit, "debit"], [terminal, "terminal"]] as const) { rooted(value, `lean-private-match-${kind}-v3`); if (value.allocationRoot !== a.root) return fail("CUSTODY_ALLOCATION") }
   const commit = result.allocationCommit
+  if (result.matchCount !== 1 || result.terminals?.[0]?.ordinal !== 0 || result.terminals?.[0]?.rowCount !== terminal.evidence?.rowCount || pair.ordinal !== 0 || terminal.ordinal !== 0 || debit.requestRoot !== a.slots[0].requestRoot || pair.requestRoot !== a.slots[0].requestRoot || debit.slotRoot !== a.slots[0].root || !equal(pair.sources, a.sources) || pair.priorLedgerByteLength !== 0 || debit.priorLedgerByteLength !== 0 || pair.priorLedgerBytesRoot !== leanBytesRoot(Buffer.alloc(0)) || debit.priorLedgerBytesRoot !== pair.priorLedgerBytesRoot) return fail("CUSTODY_JOIN")
   if (typeof commit !== "string" || !/^[a-f0-9]{40}$/u.test(commit) || entry.allocationCommit !== commit || result.sourceHead !== a.sourceHead || entry.sourceHead !== a.sourceHead || entry.allocationDigest !== leanBytesRoot(bytes) || result.cumulativeCharged !== 43 || debit.cumulativeCharged !== 43 || debit.ordinal !== 0 || !equal(result.attemptedOrdinals, [0]) || !equal(result.unattemptedOrdinals, []) || debit.pairRoot !== pair.root || terminal.debitRoot !== debit.root || pair.slotRoot !== a.slots[0].root || terminal.slotRoot !== pair.slotRoot || result.terminals?.length !== 1 || result.terminals[0].root !== terminal.root || result.terminals[0].rawRoot !== leanBytesRoot(values.get("terminal-0.json")!) || !values.get("ledger.ndjson")!.equals(Buffer.concat([leanCanonicalBytes(debit), Buffer.from("\n")]))) return fail("CUSTODY_JOIN")
   const parents = git(["rev-list", "--parents", "-n", "1", commit]).toString("utf8").trim().split(/\s+/u)
   assertLeanContinuationDirectParent(commit, a.sourceHead, parents, bytes, git(["show", `${commit}:${LEAN_PRIVATE_MATCH_ARTIFACT_V3}`]))
@@ -130,7 +133,8 @@ export const authenticateLeanBaselineContinuationCarry = (git: LeanContinuationG
   rooted(cost, "lean-resource-window-pair-closure-v15")
   if (leanBytesRoot(costBytes) !== "sha256:efe0acbd35beb37c47877cd843e695b4ed0d94b781e66c07464238f152bc45b4" || cost.root !== LEAN_PRIVATE_PROBE_COST_ROOT || cost.cumulativeCharged !== 40 || cost.survivors?.length !== 1077) return fail("OLD_COST")
   const costPaths = cost.survivors.map((row: { identity: string }) => row.identity) as string[]
-  const inventory = inventoryLeanContinuationSurvivors(pinnedPaths, guard, [...costPaths, costPath, ...predecessors.map(old => `.planning/phases/265-serious-current-rules-league-and-development-red-team/${old.reader}`)]), byPath = new Map(inventory.map(row => [row.path, row]))
+  const costOnlyReaders = ["265-16-PRIVATE-STARTUP-INTEGRATION-RETAINED-VERIFICATION-v1.md", "265-16-PRIVATE-STARTUP-INTEGRATION-RETAINED-VERIFICATION-v2.md"].map(name => `.planning/phases/265-serious-current-rules-league-and-development-red-team/${name}`)
+  const inventory = inventoryLeanContinuationSurvivors(pinnedPaths, guard, [...costPaths, costPath, ...costOnlyReaders, ...predecessors.map(old => `.planning/phases/265-serious-current-rules-league-and-development-red-team/${old.reader}`)]), byPath = new Map(inventory.map(row => [row.path, row]))
   for (const old of predecessors) {
     guard()
     const directory = `.strategy-lab/lean-private-matches-v${old.version}/${old.carry.allocationRoot.slice(7)}`, hashes: Record<string, string> = {}
