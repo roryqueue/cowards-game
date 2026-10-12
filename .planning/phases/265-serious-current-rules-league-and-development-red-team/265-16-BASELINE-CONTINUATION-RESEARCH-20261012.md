@@ -1,0 +1,34 @@
+# Current-rules baseline continuation research
+
+Research-only generic independent local reviewer7425 CLOSEDexit0; typed in-chat dispatch refused agent-thread limit. No tests, edits, empirical artifacts/readers, native execution, allocation or Match. ROOT additionally inspected the original plan, active lean outline and concrete fresh pipeline. Existing installation/workflows are reused; no dependency, external custody or new numbered plan.
+
+## Implementation-ready route
+
+Add one prospective fresh-baseline namespace/commands to the existing baseline entry. Reuse executeLeanCurrentPipeline (not its learned-reuse branch), existing canonical scenario/metrics/solver, and unchanged V8 native supervisor/session. The correction entry executeLeanCorrectionBaselinePipeline requires owned reuse and accepted diagnostic custody; it is not this cold restart. Allocation version labels do not identify wire V8: the old correction mode v15-5 actually selects V8. Private V3 is one ordinal/two fixed sources/charge43 and omits training observations; never broaden its constants/schema to36.
+
+Existing full fresh sequence:8initial training→4initial matrix→8response training→8response pairings→4probe→4exact repeats;4holdout slots remain reserved. Freeze opponent/probe/nonlearned procedure before initial candidate output; fresh corpus/proposals/selected sources and response use no prior incomplete fitness/source selections. Retain actual node receipts, legal observations, selected proposals, matrices, solver distributions, source publication and semantic repeats. Preserve old functions/defaults/readers.
+
+Small additive ownership units (max4 paths each): allocation/43-charge bounded carry and own prospective window; fresh-source V8 issuer/composer observations/construction guards; new entry/fresh pipeline/persistence; new complete reader/boundary proof. Concrete exports suggested: createLeanBaselineContinuationAllocation/authenticateLeanBaselineContinuationCarry/issueLeanBaselineContinuationRuntimeAuthority/runLeanBaselineContinuation/verifyLeanBaselineContinuationRetained. Exact paths/API names must be fixed by the checked supplement before edits.
+
+## Frozen budget and custody
+
+Approval00:08:08→08:08:08UTC, carry415746903/cap444546903ms; all research/planning/source/gates/wait/idle/verification counts.43prior charges→79 only if all36 new cells execute. No replacements/refunds;300 ceiling is not extra schedule authority.15GB total/12GBretained/2GBscratch/1GBterminal, RAM3GB, guest1000/startup2500/host5000/Match600000ms,31minreserve unchanged.
+
+Build new carry from exact immutable private V3 canonical allocation/direct-parent source/entry/debit/pair/ledger/terminal/result plus existing bounded predecessor custody and surviving-file inventory; preserve both failed/qualified reader outcomes, no manufactured accepted old diagnostic join. Stream hashes/read bounded metadata instead of materializing historical streams. Count canonical/source/planning/scratch survivors and physical blocks without duplicate file debits; historical peaks stay unknown. Existing fresh reader hardcodes9charges/3305606ms and cannot accept43 via copied constants; own new admission is required.
+
+Before each charge and provider, require fresh same-process resources, actual HEAD/request/source/planning manifest and ledger prefix, complete next600000ms plus1860000msreserve, cumulative charges/time/disk/memory/scratch and liveness. Guard after expensive authentication and at factory/planner/session construction, no spent-seat refund. Pin ALL manifest files including planning notes through terminal+unique IPC-free ordinary reader; write no pinned STATE/PLAN progress during that hold. Prior retrospective live-prefix gap was post-terminal documentation drift, not an executable mismatch; the new route must not repeat it.
+
+At maximum Match durations,36cells+reserve require6h31m; latest whole-schedule start01:37:08UTC before additional overhead, versus isolated next-Match frontier07:27:08. Source/gates should target at most~60minutes. Assess the exact applicable forecast/admission policy before preparation; one111-second game is not proof all36 will fit. No run if admission cannot satisfy frozen bounds.
+
+## Correctness pitfalls to address before results
+
+- Allocated response opportunities total128, while actual planner expansions can be lower. Preserve equal128cap/320allocated channel vector64+64+64+128; report actual node receipts/spent/unused separately. Never claim128expanded or320executed from grants/8receipt roots, invent padding work, change caps or silently mutate old manifest semantics.
+- analyseLeanResponseAdmission currently returns admitted:false because no strongest-pure fresh self-comparator exists in the frozen distinct-pair schedule. Preserve unsupported positive-admission disposition; no extra self-play, floor substitution or weakened threshold. A legal weak/unaccepted response should retain its scheduled evaluation/graph under the active outline; invalid/clone outputs still stop honestly. Existing pipeline's rejection path can prevent completion; the checked new branch must distinguish scientific rejection from process failure without changing old defaults.
+- Probe and response share planner mechanism; retain explicit no independent-strength claim. Tactical beam selection is one Match per variation/condition-confounded, not inferred superiority.
+- Fresh pipeline retains response node receipts only on its reuse branch; new prospective route must preserve real receipts for reader reconstruction.
+- Existing metrics explicitly lack evacuation/reserve-selection/push-cause/entropy/formation classifiers. Report missing; a valid current baseline is not formation acceptance or robust certification. Further classifiers must be fixed before any affected profile outcomes, in dependency order.
+- Complete distinct-pair matrices/repeats/resources/source/ledger needed before baseline/freeze. Preserve legitimate weak/no-counter findings, missing/system-failed cells, all unused slots and explicit no_robust_pure_claimed. No old LEAG-06/08 gate credit, holdout opening, formation, public/counting/production.
+
+## Gates
+
+Independent checked existing-plan supplement→owned additive TDD implementation→independent source review/fix→ROOT focused types/tests/privacy boundary→distinct source verifier→fresh immutable committed allocation/real empty0700store→unique ROOT entry/fresh same-process capacity→one ordinary IPC-free retained reader with all cells/pairs/debits/source publications/training decisions/work receipts/matrices/probes/repeats/inventory/resource checks. No repeated consumed reader, clock overrides or weakened legacy validators. If a genuine scope/resource change is needed, stop for that choice; otherwise proceed autonomously under this approved window.

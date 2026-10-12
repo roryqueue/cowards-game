@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Eight-hour lean baseline continuation approved; bounded research and checked Plan16 supplement next
+stopped_at: Baseline continuation research and independent plan check closed; serial source execution next
 last_updated: "2026-10-12"
 last_activity: 2026-10-12
-last_activity_desc: Human approved baseline continuation00:08:08–08:08:08UTC;43 charges carried; research first, no new run
+last_activity_desc: Research and15-path/four-task plan PASS; actual strict baseline8 inherited; no allocation or Match
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION — BASELINE PLAN CHECKED (ROOT2026-10-12T00:28:25UTC). Genericresearch7425/planner29381/checker25837 CLOSED; PASS_PLAN_ONLY/issues[]/fourserialsource tasks15paths<=4pertask. Typeddispatch threadlimitrefused; actualgenericidentitiesrecorded, no fakeagent/custody/signature. Newown freshbaseline namespace connects existingcoldpipeline+V8 with43cost-onlyhistory/36newcells+4reserved/no oldlearning. Actualscopedstrictbefore96429 CLOSED2/eightinherited(notassumedprior13), zeroNEW allowed. Nextsingleownedsourceexecution→independentreview/fix→ROOTvalidation→distinctsourceverifier beforeNEWallocation/uniqueentry/freshsameprocesscapacity/ordinaryIPC-freereader. Sourcegate target01:20/latestfullscheduleentry01:37:08minusofflineoverhead; hard08:08:08/carry415746903/cap444546903/all15GB300/runtime/rules/privacybounds. No newallocation/Match yet. NoLEAG/baseline/phase/freeze/formation/holdout/public/counting/production/archive/tagcredit. Earlier checkpoints history.
 
 CURRENT APPROVED CONTINUATION — EIGHT-HOUR BASELINE (ROOT2026-10-12T00:08:08UTC). Human approved8hourceiling/existingcurrentrulesleanbaseline,15GB/allotherbounds unchanged. Anchor1791763688000/hard1791792488000/08:08:08UTC; continuouscarry415746903ms/cap444546903ms includesalloldclosure/read-only/wait/idle/no reset. All43charges/oldroutes/failedreaders/evidence immutable. Initialtrackedcheckoutclean/HEAD8ab53da2/no matching active entry/verifier/test. Nextboundedresearch→checkedexistingPlan16supplement→sourceexecute/review-fix/validate/sourceverify→NEWcommittedallocation/uniqueROOTentry/freshsameprocesscapacity→uniqueactualretainedcheck; no extra numberedplan/workstream. Reduced36preholdout schedule/workvectors/4reservedholdout unchanged; actualroute boundbycheckedplanbeforeexecution. KeepallpinnedsourceANDplanningprefix/HEADfixedduringrun+check, IPC-freeloader; no competingheavywork. No newallocation/Match yet; currentbaseline/Phase265/LEAG remainincomplete. Currentrulesbaseline/evaluation/freeze BEFOREformation, holdoutunopened, no public/counting/production/archive/tag. Earlier checkpoints history.
 
