@@ -12,6 +12,7 @@ import type { runLeanBaselineMatch } from "./v1-38-lean-baseline-match.js"
 import { inspectLeanSealMetadata } from "./v1-38-lean-seal-metadata.js"
 import { validateLeanColdReuse, readLeanOwnedReuse, type LeanOwnedReuseAdmission, type LeanOwnedReuseScope, type LeanColdReuse } from "./v1-38-lean-baseline-reuse.js"
 import { validateLeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { validateLeanBaselineContinuationAllocationV2, type LeanBaselineContinuationAllocationV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import type { LeanResponseNodeReceipt, LeanResponseWork } from "../../packages/strategy-lab/src/league/lean-training.js"
 
 type Observed = Awaited<ReturnType<typeof runLeanBaselineMatch>>
@@ -59,11 +60,22 @@ export type LeanBaselineContinuationPipelineInput = Omit<LeanCurrentPipelineInpu
 export const executeLeanBaselineContinuationPipeline = async (input: LeanBaselineContinuationPipelineInput) => {
   input.checkpoint()
   const allocation = validateLeanBaselineContinuationAllocation(input.allocation)
-  const result = await executeCurrentPipeline({ ...input, allocation }, undefined, true)
+  const result = await executeCurrentPipeline({ ...input, allocation }, undefined, "v1")
   const { root: _root, ...content } = result
   const body = { ...content, unusedOrdinals: allocation.slots.slice(result.cells.length).map(slot => slot.ordinal), holdoutReservations: allocation.holdoutReservations }
   input.checkpoint()
   return { ...body, root: labRoot("lean-baseline-continuation-pipeline-v1", body) }
+}
+export type LeanBaselineContinuationPipelineInputV2 = Omit<LeanCurrentPipelineInput, "allocation"> & { allocation: LeanBaselineContinuationAllocationV2; heldHead: string }
+export const executeLeanBaselineContinuationPipelineV2 = async (input: LeanBaselineContinuationPipelineInputV2) => {
+  input.checkpoint()
+  const allocation = validateLeanBaselineContinuationAllocationV2(input.allocation)
+  if (!/^[a-f0-9]{40}$/u.test(input.heldHead) || input.heldHead === allocation.sourceHead) return fail("V2_HELD_HEAD")
+  const result = await executeCurrentPipeline({ ...input, allocation }, undefined, "v2")
+  const { root: _root, ...content } = result
+  const body = { ...content, schemaVersion: "lean-baseline-continuation-pipeline-v2" as const, allocationRoot: allocation.root, windowRoot: allocation.window.root, requestBytesRoot: allocation.requestBytesRoot, implementationRoot: allocation.sourceRoot, coldRoot: allocation.coldRoot, sourceHead: allocation.sourceHead, head: input.heldHead, unusedOrdinals: allocation.slots.slice(result.cells.length).map(slot => slot.ordinal), holdoutReservations: allocation.holdoutReservations }
+  input.checkpoint()
+  return { ...body, root: labRoot(body.schemaVersion, body) }
 }
 /** Counts executed operations from retained inputs/receipts; grants are a
  * separate vector. A node receipt can represent zero or many expansions. */
@@ -89,9 +101,10 @@ export const executeLeanOwnedReusedCurrentPipeline = async (input: LeanCurrentPi
   if (input.allocation.root !== input.reuseScope.allocationRoot || input.allocation.sourceRoot !== input.reuseScope.sourceRoot || input.allocation.seed !== reuse.grant.seed || input.allocation.coldRoot !== reuse.grant.coldRoot || !("reuseGrantRoot" in input.allocation) || input.allocation.reuseGrantRoot !== reuse.grant.root) return fail("REUSE_ALLOCATION")
   return executeCurrentPipeline(input, reuse)
 }
-const executeCurrentPipeline = async (input: LeanCurrentPipelineInput | LeanBaselineContinuationPipelineInput, reuse?: LeanColdReuse, continuation = false) => {
+const executeCurrentPipeline = async (input: LeanCurrentPipelineInput | LeanBaselineContinuationPipelineInput | LeanBaselineContinuationPipelineInputV2, reuse?: LeanColdReuse, continuation?: "v1" | "v2") => {
   const allocation = input.allocation
-  if (continuation !== (allocation.schemaVersion === "lean-baseline-continuation-allocation-v1") || continuation && reuse !== undefined) return fail("CONTINUATION_NAMESPACE")
+  const version = allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" ? "v2" : allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" ? "v1" : undefined
+  if (continuation !== version || continuation && reuse !== undefined) return fail("CONTINUATION_NAMESPACE")
   if (allocation.coldRoot !== leanColdProcedureRoot(allocation.seed) || allocation.slots.length !== 36) return fail("ALLOCATION")
   const sources = new Map<string, LeanBaselineSource>(), cells: LeanBaselineObservedCell[] = []
   // Metadata inventory and an explicit deferral precede all learned outputs;

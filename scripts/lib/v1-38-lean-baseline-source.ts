@@ -76,6 +76,27 @@ export const publishLeanBaselineSource = (ledger: LeanExperimentLedger, value: L
 }
 
 import { validateLeanBaselineContinuationAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { validateLeanBaselineContinuationAllocationV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+export const publishLeanBaselineContinuationSourceV2 = (ledger: LeanExperimentLedger, value: LeanBaselineSource, guard: (additionalBytes?: number) => void): void => {
+  guard()
+  const a = validateLeanBaselineContinuationAllocationV2(ledger.allocation), source = validateLeanBaselineSource(value), entry = readLeanChildEntry(ledger)
+  guard()
+  if (source.coldRoot !== a.coldRoot || source.implementationRoot !== a.sourceRoot || entry.sourceRoot !== a.sourceRoot || entry.allocationRoot !== a.root || entry.requestBytesRoot !== a.requestBytesRoot || !/^[a-f0-9]{40}$/u.test(entry.head) || entry.head === a.sourceHead) return fail()
+  const body = { schemaVersion: "lean-baseline-continuation-source-publication-v2", allocationRoot: a.root, sourceHead: a.sourceHead, head: entry.head, implementationRoot: a.sourceRoot, coldRoot: a.coldRoot, role: source.role, snapshotRoot: source.root, sourceRoot: source.sourceRoot, windowRoot: a.window.root, windowBytesRoot: a.windowBytesRoot, requestBytesRoot: a.requestBytesRoot, dataReviewRoot: a.dataReviewRoot }
+  guard(3 * (262144 + 16384))
+  const publication = { ...body, root: labRoot(body.schemaVersion, body) }, sourceBytes = leanCanonicalBytes(source), proofBytes = leanCanonicalBytes(publication)
+  if (sourceBytes.length > 262144 || proofBytes.length > 16384) return fail()
+  guard(); assertLeanPublicationCapacity(ledger, sourceBytes.length + proofBytes.length)
+  for (const [name, bytes] of [[`source-${source.role}.json`, sourceBytes], [`publication-${source.role}-continuation-v2.json`, proofBytes]] as const) {
+    guard(bytes.length)
+    const fd = openSync(join(ledger.directory, name), constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
+    try { writeLeanAll(fd, bytes); fsyncSync(fd) } finally { closeSync(fd) }
+    guard()
+  }
+  const fd = openSync(ledger.directory, constants.O_RDONLY | constants.O_NOFOLLOW)
+  try { fsyncSync(fd) } finally { closeSync(fd) }
+  guard()
+}
 /** The new publication binds current implementation and held allocation HEAD.
  * Old publication predicates and schemas remain exact. */
 export const publishLeanBaselineContinuationSource = (ledger: LeanExperimentLedger, value: LeanBaselineSource, guard: () => void): void => {
