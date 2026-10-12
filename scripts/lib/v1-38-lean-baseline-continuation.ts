@@ -22,7 +22,7 @@ export interface LeanContinuationFrontier {
  * use. This pure predicate never turns a serialized capacity into authority. */
 export const assertLeanBaselineContinuationFrontier = (allocation: LeanBaselineContinuationAllocation, s: LeanContinuationFrontier): number => {
   const a = validateLeanBaselineContinuationAllocation(allocation)
-  if (Object.entries(s).some(([key, value]) => key !== "live" && !integer(value)) || !s.live || s.nowMs < WINDOW.anchorMs || s.remainingSlots > 36 || s.charged < 43 || s.charged > 79 || s.charged + s.remainingSlots < 79 || s.charged + s.remainingSlots > 80) return fail("FRONTIER")
+  if (Object.entries(s).some(([key, value]) => key !== "live" && !integer(value)) || !s.live || s.nowMs < WINDOW.anchorMs || s.remainingSlots > 36 || s.charged < 43 || s.charged > 79 || s.remainingSlots !== 0 && (s.charged + s.remainingSlots < 79 || s.charged + s.remainingSlots > 80)) return fail("FRONTIER")
   const elapsed = WINDOW.carryMs + Math.max(s.nowMs - WINDOW.anchorMs, s.monotonicElapsedMs)
   const reserve = s.remainingSlots * LEAN_CAPS.matchMs + WINDOW.reserveMs + a.offlineOverheadMs
   // Native heaps, host serialization and decompression remain reserved; an
