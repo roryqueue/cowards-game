@@ -107,6 +107,78 @@ describe("distinct continuation reader admission", () => {
     expect(() => continuationReader.auditLeanBaselineContinuationRetained(forged)).toThrow()
   })
 })
+
+describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
+  const v2Allocation = () => {
+    const old = continuationFixtureBase().allocation
+    const policy = continuationLedger.LEAN_BASELINE_CONTINUATION_POLICY_V2
+    const anchorMs = policy.globalAnchorMs, carryMs = Math.max(policy.oldCheckElapsedMs, continuationLedger.leanContinuationGlobalFloorV2(anchorMs))
+    const windowBody = {
+      schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const,
+      grantId: "synthetic-no-authority", approvalEvidence: { humanDecisionId: "synthetic-only", recordedBy: "fixture" },
+      approvedAtMs: anchorMs, anchorMs, deadlineMs: anchorMs + policy.durationMs, carryMs, capMs: carryMs + policy.durationMs,
+      durationMs: policy.durationMs, closureMs: policy.closureMs, offlineOverheadMs: policy.offlineOverheadMs,
+      routeNamespace: "20261012-v3" as const, reviewedSourceHead: "c".repeat(40), sourceRoot: old.sourceRoot,
+      sourceGateRoot: root("source-gate"), planRoot: old.planRoot, runOperator: "fixture-run", readerOperator: "fixture-reader",
+    }
+    const window = { ...windowBody, root: labRoot(windowBody.schemaVersion, windowBody) }
+    const carryBody = {
+      schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const,
+      elapsedUpperBoundMs: policy.oldCheckElapsedMs, allocatedDiskBytes: policy.physicalFloorBytes, residualDiskBytes: 0,
+      historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const,
+      originalCarryRoot: root("original-carry"), closedCapsuleRoot: root("closed-capsule"), custodyRoot: root("custody"), inventoryRoot: root("inventory"), qualifiedReaderAuthority: "cost_only" as const,
+    }
+    const predecessor = { ...carryBody, root: labRoot(carryBody.schemaVersion, carryBody) }
+    const input = {
+      sourceRoot: old.sourceRoot, reviewRoot: root("review-v2"), coldRoot: old.coldRoot, planRoot: old.planRoot,
+      candidateRoots: continuationEntry.deriveLeanBaselineCandidateRoots(old.coldRoot),
+      requestRoots: continuationEntry.deriveLeanBaselineRequestRoots({ seed: old.seed, coldRoot: old.coldRoot, planRoot: old.planRoot, sourceRoot: old.sourceRoot }),
+      seed: old.seed, sourceHead: window.reviewedSourceHead, planningRoot: root("planning-v2"), manifestRoot: root("manifest-v2"),
+      requestBytesRoot: root("request-placeholder"), window, windowBytesRoot: leanBytesRoot(leanCanonicalBytes(window)),
+      sourceGateRoot: window.sourceGateRoot, dataReviewRoot: root("data-review"), predecessor,
+    }
+    const request = {
+      schemaVersion: "lean-baseline-continuation-request-v2", seed: input.seed, sourceHead: input.sourceHead,
+      sourceRoot: input.sourceRoot, planningRoot: input.planningRoot, planRoot: input.planRoot, reviewRoot: input.reviewRoot,
+      coldRoot: input.coldRoot, candidateRoots: input.candidateRoots, requestRoots: input.requestRoots,
+      offlineOverheadMs: policy.offlineOverheadMs, sourceAuthor: "fixture-author", runOperator: "fixture-run", readerOperator: "fixture-reader",
+      windowRoot: window.root, windowBytesRoot: input.windowBytesRoot, sourceGateRoot: input.sourceGateRoot, dataReviewRoot: input.dataReviewRoot, manifestRoot: input.manifestRoot,
+    }
+    const allocation = continuationLedger.createLeanBaselineContinuationAllocationV2({ ...input, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)) })
+    return { allocation, request }
+  }
+
+  it("[continuation-v2] uses the separate schema and preserves the exact 50 + n ledger arithmetic and 36 cold slots", () => {
+    const { allocation } = v2Allocation()
+    expect(continuationLedger.validateLeanBaselineContinuationAllocationV2(allocation)).toEqual(allocation)
+    expect(allocation.predecessor.chargedMatches).toBe(50)
+    expect(allocation.slots).toHaveLength(36)
+    expect(allocation.holdoutReservations).toHaveLength(4)
+    expect(continuationReader.assertLeanBaselineContinuationV2ClosedCount(50, 0)).toEqual({ cumulative: 50, current: 0, unused: 36, complete: false })
+    expect(continuationReader.assertLeanBaselineContinuationV2ClosedCount(51, 1)).toEqual({ cumulative: 51, current: 1, unused: 35, complete: false })
+    expect(continuationReader.assertLeanBaselineContinuationV2ClosedCount(86, 36)).toEqual({ cumulative: 86, current: 36, unused: 0, complete: true })
+    for (const [cumulative, current] of [[43, 0], [49, 0], [51, 0], [86, 35], [87, 37]] as const) expect(() => continuationReader.assertLeanBaselineContinuationV2ClosedCount(cumulative, current)).toThrow(/V2_CHARGE_COUNT/)
+    const frontier = { nowMs: 1, monotonicElapsedMs: 1, remainingSlots: 36, charged: 50, retainedBytes: 1, scratchBytes: 1, parentRssBytes: 1, childRssBytes: 1, arrayBuffersBytes: 1, availableMemoryBytes: 1, freeBytes: 1, live: true }
+    expect(() => continuationReader.assertLeanBaselineContinuationResourceReceiptShapeV2(frontier)).not.toThrow()
+    const { availableMemoryBytes: _removed, ...incomplete } = frontier
+    expect(() => continuationReader.assertLeanBaselineContinuationResourceReceiptShapeV2(incomplete as never)).toThrow(/V2_RESOURCE_SHAPE/)
+  })
+
+  it("[continuation-v2] rejects V1-retagged or incomplete V2 snapshots before any reader capability exists", () => {
+    const { allocation, request } = v2Allocation()
+    const snapshot = { allocation, request, requestBytesRoot: root("wrong-request-bytes"), head: allocation.sourceHead, window: allocation.window, windowBytesRoot: allocation.windowBytesRoot, sourceGateRoot: allocation.sourceGateRoot, dataReviewRoot: allocation.dataReviewRoot, manifestRoot: allocation.manifestRoot } as unknown as continuationReader.LeanBaselineContinuationRetainedSnapshotV2
+    expect(() => continuationReader.auditLeanBaselineContinuationRetainedV2(snapshot)).toThrow(/V2_REQUEST/)
+    expect(() => continuationReader.auditLeanBaselineContinuationRetainedV2({ ...snapshot, allocation: { ...allocation, schemaVersion: "lean-baseline-continuation-allocation-v1" } as never })).toThrow()
+    expect(continuationReader.verifyLeanContinuationEvidence).toBeDefined()
+  })
+  it("[continuation-v2] accepts only an authentic legacy parent envelope joined to the exact reader terminal", () => {
+    const actual = { allocationRoot: root("allocation"), sourceRoot: root("source"), requestBytesRoot: root("request"), entryBytesRoot: root("entry"), head: "a".repeat(40), parentPid: 100, childPid: 101, exitCode: 0, signal: null, status: "child_exited" as const }
+    const body = { schemaVersion: "lean-parent-supervisor-reasons-v1" as const, allocationRoot: actual.allocationRoot, sourceRoot: actual.sourceRoot, requestBytesRoot: actual.requestBytesRoot, entryBytesRoot: actual.entryBytesRoot, head: actual.head, parentPid: actual.parentPid, childPid: actual.childPid, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published" as const, childReady: "observed" as const, resourceSampling: "observed" as const, finalIdentity: "matched" as const, failureReceipt: "absent" as const, cleanup: "child_exit_observed" as const, terminalization: "unobserved" as const, initiatingCause: "unknown" as const } }
+    const bytes = leanCanonicalBytes({ ...body, root: labRoot(body.schemaVersion, body) })
+    expect(continuationReader.assertLeanContinuationSupervisorCustodyV2(bytes, actual)).toMatchObject({ schemaVersion: "lean-parent-supervisor-reasons-v1" })
+    expect(() => continuationReader.assertLeanContinuationSupervisorCustodyV2(bytes, { ...actual, head: "b".repeat(40) })).toThrow(/SUPERVISOR_CUSTODY_V2/)
+  })
+})
 describe("strict v12 finite attribution custody join", () => {
   const fixture = () => {
     const actual = { allocationRoot: root("allocation"), sourceRoot: root("source"), requestBytesRoot: root("request"), entryBytesRoot: root("entry"), head: "a".repeat(40), parentPid: 100, childPid: 101, exitCode: 0, signal: null, status: "child_failed" as const }

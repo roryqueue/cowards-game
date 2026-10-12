@@ -11,10 +11,22 @@ import { admitsLeanBaselineReviewAgents, assertLeanBaselineWritableScope, derive
 import { leanBaselineMatchSeed } from "./lib/v1-38-lean-baseline-match.js"
 import { validateLeanPreparationContinuationReasonJoinV13 } from "./lib/v1-38-lean-correction-retained.js"
 import { assertLeanSupervisorReasonCustodyV2 } from "./lib/v1-38-lean-baseline-retained.js"
+import * as continuationRetainedReader from "./lib/v1-38-lean-baseline-retained.js"
 
 const root = (name: string) => labRoot("baseline-cli-test", name)
 import * as continuationGit from "./lib/v1-38-lean-container-match-session.js"
 describe("continuation CLI and narrow metadata", () => {
+  it("[continuation-v2] dispatches the exact verify request to the distinct retained reader", async () => {
+    const request = lean.LEAN_BASELINE_CONTINUATION_PATHS_V2.request
+    const reader = vi.spyOn(continuationRetainedReader, "verifyLeanBaselineContinuationRetainedV2").mockReturnValue({ root: root("inert-check") } as never)
+    try {
+      expect(parseLeanBaselineCommand(["verify-continuation-v2", "--request", request])).toEqual({ mode: "verify-continuation-v2", request })
+      await parentApi.leanBaselineMain(["verify-continuation-v2", "--request", request])
+      expect(reader).toHaveBeenCalledTimes(1)
+      expect(reader).toHaveBeenCalledWith(request)
+      expect(() => parseLeanBaselineCommand(["verify-continuation-v2", "--request", lean.LEAN_BASELINE_CONTINUATION_PATHS.request])).toThrow()
+    } finally { reader.mockRestore() }
+  })
   it("observes one fresh complete parent manifest per callback and pins only the reviewed debug document", () => {
     const observe = vi.fn(() => ({ root: root("source"), planningRoot: root("planning") }))
     expect(parentApi.readLeanBaselineContinuationManifestRoot(root("planning"), observe)).toBe(root("source"))
