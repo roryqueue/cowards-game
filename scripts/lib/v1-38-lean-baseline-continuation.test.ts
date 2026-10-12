@@ -141,3 +141,27 @@ describe("continuation OID metadata predicate", () => {
     } finally { exec.mockReset(); manifest.mockRestore() }
   })
 })
+
+
+describe("authenticated historical cost scope", () => {
+  const paths = [".planning/debug/supervisor-sampling-repair.md", ".planning/debug/v9-baseline-prepare.md"]
+  it("accepts only the two exact historical debug identities", () => {
+    for (const path of paths) expect(continuation.isLeanContinuationAuthenticatedCostPath(path)).toBe(true)
+    for (const path of [".planning/debug/third.md", ".planning/debug", ".planning/debug/", ...paths.flatMap(path => [`/${path}`, `../${path}`, `${path}/extra`, path.replace("debug/", "debug/../debug/"), path.replace("debug/", "debug/./"), path.replace("debug/", "debug//")]), "unrelated/file.md", ".planning/STATE.md"])
+      expect(continuation.isLeanContinuationAuthenticatedCostPath(path)).toBe(false)
+  })
+  it("preserves existing authenticated cost scope", () => {
+    for (const path of ["package.json", "scripts/inert.ts", "packages/inert.ts", ".strategy-lab/sealed-inert/file", ".planning/artifacts/inert.json"])
+      expect(continuation.isLeanContinuationAuthenticatedCostPath(path)).toBe(true)
+    for (const path of ["scripts/../other", "/scripts/inert.ts"])
+      expect(continuation.isLeanContinuationAuthenticatedCostPath(path)).toBe(false)
+  })
+  it("counts both survivors without refunding their existing debit", () => {
+    const survivors = paths.map((identity, i) => ({ identity, allocatedBytes: [12288, 8192][i]! }))
+    const prior = { allocatedDiskBytes: 24576, survivors }
+    const current = survivors.map(row => ({ path: row.identity, allocatedBytes: row.allocatedBytes }))
+    expect(continuation.reconcileLeanContinuationDiskDebit(prior, current)).toBe(24576)
+    for (const rows of [current.slice(0, 1), current.map(row => ({ ...row, allocatedBytes: row.allocatedBytes - 4096 }))])
+      expect(() => continuation.reconcileLeanContinuationDiskDebit(prior, rows)).toThrow(/OLD_COST/)
+  })
+})

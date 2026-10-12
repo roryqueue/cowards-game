@@ -90,11 +90,17 @@ export const readLeanContinuationJson = (name: string, maximum = 8388608, mode?:
   return value
 }
 export interface LeanContinuationInventoryRow { path: string; kind: "file" | "directory" | "sealed_metadata"; bytes: number; allocatedBytes: number; dev: number; ino: number; mode: number; mtimeMs: number; ctimeMs: number; rawRoot: LabRoot | null }
+const rootFiles = ["AGENTS.md", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.json", "tsconfig.base.json"]
+/** Scope only: the caller must authenticate frozen cost bytes and root first.
+ * These historical identities confer no pinned/source authority. */
+export const isLeanContinuationAuthenticatedCostPath = (p: string): boolean =>
+  p === ".planning/debug/supervisor-sampling-repair.md" || p === ".planning/debug/v9-baseline-prepare.md" ||
+  !(!rootFiles.includes(p) && !/^(?:scripts|packages|\.strategy-lab|\.planning\/(?:artifacts|phases\/265-serious-current-rules-league-and-development-red-team|milestone-proposals\/v1\.38-competitive-strategy-factory-and-adversarial-league))\/[A-Za-z0-9_./-]+$/u.test(p) || p.split("/").includes(".."))
+
 /** Explicit experiment scope. Enumerate names/stats, stream ordinary content,
  * and never open/hash/decode anything within a sealed or preimage subtree. */
 export const inventoryLeanContinuationSurvivors = (pinnedPaths: readonly string[], guard: () => void, authenticatedCostPaths: readonly string[] = []): readonly LeanContinuationInventoryRow[] => {
-  const rootFiles = ["AGENTS.md", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.json", "tsconfig.base.json"]
-  if (pinnedPaths.length > 1024 || authenticatedCostPaths.length > 2048 || new Set(pinnedPaths).size !== pinnedPaths.length || pinnedPaths.some(p => !rootFiles.includes(p) && !/^(?:scripts|packages|\.planning)\/[A-Za-z0-9_./-]+$/u.test(p) || p.split("/").includes("..") || /preimage|secret/iu.test(p)) || authenticatedCostPaths.some(p => !rootFiles.includes(p) && !/^(?:scripts|packages|\.strategy-lab|\.planning\/(?:artifacts|phases\/265-serious-current-rules-league-and-development-red-team|milestone-proposals\/v1\.38-competitive-strategy-factory-and-adversarial-league))\/[A-Za-z0-9_./-]+$/u.test(p) || p.split("/").includes(".."))) return fail("INVENTORY_SCOPE")
+  if (pinnedPaths.length > 1024 || authenticatedCostPaths.length > 2048 || new Set(pinnedPaths).size !== pinnedPaths.length || pinnedPaths.some(p => !rootFiles.includes(p) && !/^(?:scripts|packages|\.planning)\/[A-Za-z0-9_./-]+$/u.test(p) || p.split("/").includes("..") || /preimage|secret/iu.test(p)) || authenticatedCostPaths.some(p => !isLeanContinuationAuthenticatedCostPath(p))) return fail("INVENTORY_SCOPE")
   const names = new Set([...pinnedPaths, ...authenticatedCostPaths])
   for (const directory of [".strategy-lab", ".planning/artifacts"]) {
     for (const name of readdirSync(resolve(directory))) {
