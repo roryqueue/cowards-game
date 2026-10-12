@@ -1,5 +1,15 @@
 # Baseline continuation gates
 
+## V4 Task A author closure, Task B active
+
+TaskA actualauthor `/root/execute_265_permission_repair` CLOSED/ownerreleased at3d8fb6d8390afd4ae4ec427f74469b7896de8d1b, exactlyfourplannedsourcefiles, no deletions/newsourcefile. ReportedRED72834 foursemanticfailures, finalV4GREEN45022 fivepassed/46skipped, full29276 51passed7.10s; strict25149 sameeightFULLinherited/noNEW/no shifts, diff0. ROOTreadactualcommit/delta and API signatures, not a duplicateauthor suite or independentfinalreview. NewfixedV4pathset/validatedwindow/exactrequestselectors; optional LASTwindow parameter on inventory/reconcile/carry/debit/Git metadata defaultsV3. SpentV3request/window require actualbounded0600/exactsizes/rawanchors forV4; syntheticfakebytes tests DENY, do not invent successfulanchor authentication. Cost arithmetic fixtures showgrowthonce/no refund but are not livecapacity/admission.
+
+TaskBactualsameauthor nowexclusivelyownsdriver/testONLY; C/Dstillunstarted. Full36frontier22:42:47 elapsed, no newdata/prepare/Matchmaystartunderthiswindow. Continuecheckedsourceworkuntil05:23:47; no automatictimeextension. Independentreview/fix/ROOTcombinedinertchecks/distinctsourceverify/newactualsourceRoot/data gates remainpending. All15GB/3GBRAM/runtime/rules/history/holdout/privacy/currentfreeze-beforeformation bounds remain unchanged.
+
+### Aborted source-fixer marker retained outside prospective inventory
+
+ROOT2026-10-12T22:46UTC: exact newly generated untracked `.review-fix-recovery-permission-pending.json` was checked as the five-field source-fixer marker for the removed permission checkout, not an empirical authority/artifact. Its bytes were moved without overwrite to `/private/tmp/265-permission-aborted-recovery-20261012.json`, recoverable there; generated test remains recoverable stash8aa44c4b. This avoids introducing an unrelated temporary file into historical-directory membership. No existing marker, consumed route or private evidence moved/edited/deleted; no fix completion inferred. Earlier 'sentinel preserved' now refers to that exact external location.
+
 ## Current V4 Task A source owner and aborted-checkout cleanup
 
 ROOT2026-10-12T22:41UTC: actual `/root/execute_265_permission_repair` exclusively owns checked V4 TaskA's four original files; B/C/D remain unstarted. Permission-source closure is complete, new-route source/data admission is not. ROOT10445 ten-file strict baseline CLOSED2: eight inherited FULL diagnostic blocks captured, not assumed globalgreen. All permission proofs and checked plans committed/pushed6e35279d before TaskA handoff; source-only edits may continue under the unchanged05:23:47 deadline, with full36entryfrontier22:42:47 still binding.
