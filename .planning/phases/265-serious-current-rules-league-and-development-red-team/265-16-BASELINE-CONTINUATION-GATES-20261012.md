@@ -1,5 +1,19 @@
 # Baseline continuation gates
 
+## Source repair VERIFIED — no empirical admission
+
+Distinct verifier84726/actual01a130b1-79ba-7bd3-975a-74095e70a3aa CLOSED0/PASS_SOURCE_ONLY/gaps[]/commands_closed overf8b56b347326483007cfa9b8328f98fcc484c670/base1d7ac633/all10paths. Completeguards/freshmergedobservations, singlemanifest/exactdebugpin, opt-inreservation/descriptorreads, authenticatedfinitebranch+genuinefailedinvocation/versionedaccountingcommitment/frozenchargedterminal binding/mandatoryconsumerdenials verified; success/allothermodes/legacydefaults andallrules/caps unchanged. No newrawpayload/evidenceexplosion/nativeABI/window/tier. ROOTinertmetadata60648 CLOSED0/source8e750607272b6cca0f51492d2457bd4ca9a87923a4277de9c95f416bbb75459c/697implementation+15planningrows. Authors/reviews/ROOTtests/types/scanners/verifier ALLclosed. Sourcefieldsbelow describe finalrepair, notnewrouteadmission. All50/v2data/ONEcheckgaps immutablecostonly; nativecauseUNKNOWN. Worktimefrontiermissed/hard20:15 unchanged; anyfullnewrun requiresprospectivewindow, freshversioned50chargecarry/namespace, source/data gates andactualSAMEPROCESScapacity. No request/allocation/Match iscreatedbythisclosure.
+
+## Final repair review/fix/ROOT closure — source verification next
+
+Four-path fixer14782/actual01a130a4-ebc0-76e1-be5d-cdff4fd408bf CLOSED0/f8b56b347326483007cfa9b8328f98fcc484c670/ownershipreleased. Producer requires exact uniquelyfailed actual accounting evidence+provider verification; explicit lean-continuation-failure-accounting-v1 commitment binds originalcanonicalaccountingRoot+executionRoot+FULLdiagnosticroot, becomesprivate compactaccountingRoot withoutcircularity; consumerchecksagainstfrozenchargedterminal. Newcontinuationfailures requireversion, prepolicycontinuationfailures rejectexplicitly(no silentlegacyfallback); success/allothermodes unchanged. Oldrealv2data unchanged; no actual newR3data. Fixer97owned+13focusedpass; recomputedrootattackRED→GREEN. Actualre-review98954/01a130ac-c720-7a41-9d96-b8fff2491e08 CLOSED0/PASS_SOURCE_REVIEW/findings[]/commands_closed overf8/all10paths. EarlierP2retained asrealfinding, closedbybinding/removal/recomputed-root regressions, notmerelyformatchecks.
+
+ROOTfinal91763 CLOSED0/fouraffectedsuites152pass/oneexplicitoldempiricallauncherprobeomitted/73.24s. Strict59704 CLOSED2/exact13inherited fulloutput byte-for-byte matchpre-edit1541 afterONLYMatch291→393292→394; entry194/314same; zeroNEW/NOTglobaltypegreen. Configuredproject+factory97488 CLOSED0/1443files/violations[]. Imports/public12840 CLOSED0/strict0/ownership0/19existingreportonly observations/publicpassed; these import-graph checks retained forfourpath metadata-only fix, notnewglobalgreenclaim. Allauthors/fixer/review/test/type/boundarycommandsCLOSED; no dataentry/readeractive. Distinct sourceverification next. Current20:15:17UTCworkdeadline/no full36admissionafter13:34/allotherbounds/no dataauthority unchanged. NativecauseUNKNOWN; sourcefixes doNOTcompletePhase265.
+
+## Repair implementation and first actual review / fix pending
+
+Author96641/actual01a13089-aa4f-7d31-9e06-3c5d8f39ce11 CLOSED0/ownershipreleased; exact10paths; e1d213a5 R1,0929780d R2,385fc0fe R3,28a1ad4e strictfix,e760fefc232eaa935b5a5b4d7e573fa94580711a finaltests. Author152pass/oneexplicitoldempiricallauncherprobeomitted/13inheritedafterMatch291→382292→383(entry194/314same). ROOT99652 independently152pass/oneomission/70.65s;93005 strictCLOSED2 fulltext equalsactualpre-edit1541 byte-for-byte afterONLYspecifiedMatchlines/zeroNEW/notglobalgreen;14230 configuredprojectexit0+factory1443zero. Import/privacy12840 pending. First reviewattempt73078/01a13099 CLOSED NO_REVIEW/noshellcommands: ROOTambiguous inspection wording, not a sourcepass/finding. Corrected READONLYinspectionpermissions; actualreview84397/01a1309c-43a5-7503-b3dd-031f8b66034e CLOSED0/oneP2: extension invocation/request/input/executable roots formatcheckedbutnotindependentlyboundtofrozenchargedMatch accounting/execution; cross-calltestretainsstalehash. Actualsourcee760fefc; noadditionalfindings, noempiricalcommands. Fix4paths(match/match.test/retained/retained.test): boundedversionedprivateaccounting/invocation commitment rootedinthechargedrecord, honestunknown/legacydefaults, recomputed-root substitution/removal/crosscalltests. Nofullprivateaccounting/inputsneeded unlessexplicitboundedindispensabilityshown; avoidevidenceexplosion. Code-only/source-only/no newMatch/time/rules/resources. Re-review/ROOTaffectedchecks/distinctsourceverify required; old50/v2result/checkstillimmutable. NativecauseUNKNOWN; repair doesnotcompletebaseline.
+
 ## Active source-only repair after closed v2 partial
 
 V2 uniqueROOT28008 and actualreader73777/01a13039 CLOSED0/gaps_found/sourceHoldFailure=null/failure=null/complete=false;7new/6success/1system/50cumulative/29unused. Alloldartifacts/checke1711e16 immutable, holdreleased13:55:18UTC. Research85308/01a1304d CLOSED/nativecauseUNKNOWN. Plancheck-v1 20430/01a13074 CLOSED NONPASS/tworealfindings(growthescapescheapchecks;missingcompressedguardedreadhook), preserved. Revisedplan KEEPcompleteguardEVERYcallback; mergeonlyduplicateexpectedpathroles inONEfreshstat; ONEfreshparentmanifest; exactdebugplanningpin; original-ownedledger boundeddescriptorhook/reservationforwarding; authenticfiniteopt-inexecutor extension/legacydefaults preserved. Plancheck-v2 8042/01a13083-1118-7702-8515-35f62c3f6fcd CLOSED0/PASS_PLAN_ONLY/issues[]/commands_closed. Tenuniqueoriginalpaths/serial4+3+4shared/<=4task/no newnamespace/window/Matchauthority/rules/resource/sourceallowance. ROOTbeforestrict1541actualexact13inherited atunchanged170e8219 is baseline, NOTglobaltypegreen. Sourceauthornext; newreview/ROOTchecks/distinctsourceverify pending. Deadline20:15:17UTC/allprior elapsed binding/full36frontier13:34:17MISSED; source-onlyworkno lateexecution/newrequest/allocation/Match. Existingadmissionfields suspended untilnewsourceproof; historicalsource/empiricalfacts belowretained.
@@ -54,14 +68,14 @@ Distinct source verifier11632/local-codex:01a12da9-d4c1-7ec3-9911-490c45d2e284 C
 ## Closed source admission fields
 
 plan_check: passed
-source_review: pending_source_repair
-root_validation: pending_source_repair
-source_verification: pending_source_repair
-commands_closed: false
-source_root: sha256:298b1d2bd6df240866f60972a00c0dbaa15d712f7adf824685f196b770a71123
-source_author: local-codex:01a1300d-c5db-7d81-8aff-0e326c1f1418
-source_reviewer: local-codex:01a13010-8e6c-7572-a7b9-7c4f4aab8760
-source_verifier: local-codex:01a13012-7db9-7932-a9ad-38326c96f69c
+source_review: passed
+root_validation: passed
+source_verification: passed
+commands_closed: true
+source_root: sha256:8e750607272b6cca0f51492d2457bd4ca9a87923a4277de9c95f416bbb75459c
+source_author: local-codex:01a130a4-ebc0-76e1-be5d-cdff4fd408bf
+source_reviewer: local-codex:01a130ac-c720-7a41-9d96-b8fff2491e08
+source_verifier: local-codex:01a130b1-79ba-7bd3-975a-74095e70a3aa
 run_operator: main-orchestrator:/root
 reader_operator: generic-cli:265-baseline-continuation-reader-20261012-v1
 

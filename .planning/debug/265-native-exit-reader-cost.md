@@ -21,7 +21,7 @@ Retained reader physical88924160B; current store+scratch2453504B/46rows; reader 
 hypothesis: Diagnostic projection loses issued reason; complete identity scans multiply per inner read callback; reader wrapper drops additionalBytes reservation. These are source findings, not proven native-exit cause.
 test: Targeted inert provenance/branch/legacy tests, callback counts, capacity forwarding and mid-read identity denial; no empirical invocations.
 expecting: Prospective source-only correction with unchanged runtime/rules/resource limits and old evidence.
-next_action: Execute checked revision2 of existing Plan16, then independent review/fix, ROOT validation and distinct source verification.
+next_action: Prepare non-authorizing fresh V2 carry/namespace scaffolding within existing Plan16; no full run without a genuine new human work-time grant.
 
 ## Evidence and uncertainty
 
@@ -36,8 +36,8 @@ next_action: Execute checked revision2 of existing Plan16, then independent revi
 ## Resolution
 
 native_root_cause: UNKNOWN
-source_fix: pending prospective checked repair
-verification: pending source-only review/validation/verification; empirical baseline incomplete
-files_changed: none by diagnosis
+source_fix: f8b56b347326483007cfa9b8328f98fcc484c670; full fresh guard cadence retained, duplicate observations removed, bounded replay reservations/descriptors added, authentic finite dispositions/versioned charged-accounting commitment added
+verification: independent re-review98954 clean; ROOT152passed/one disclosed omission/13inherited zeroNEW/project/factory/import/privacyqualified; distinct84726 PASS_SOURCE_ONLY gaps[]; no new empirical proof
+files_changed: ten original owned source/test paths, no engine/rules/native ABI or resource-window changes
 
 Manual GSD orchestration/generic local CLI fallback, not typed session-manager dispatch or external custody. Known symptoms were supplied by actual safe records; no repeat human symptom questions. No test, native probe, provider, Strategy or Match was executed by this diagnosis.

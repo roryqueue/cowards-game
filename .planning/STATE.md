@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Baseline v2 and unique retained reader closed gaps_found; source-only diagnostic and efficiency repair next
+stopped_at: Source repair independently verified; non-authorizing fresh versioned route scaffolding next, new work-time needed before full run
 last_updated: "2026-10-12"
 last_activity: 2026-10-12
-last_activity_desc: Seven new cells/sixsuccess/one SUBPROCESS_EXIT; reader verified partial/sourceholdnull, fifty cumulative charges; sourcehold released
+last_activity_desc: Sourcef8b56b34/cleanreview/152ROOTtests/exact13inherited/distinctverifyclosed; nativecauseunknown, no new Match
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,8 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+CURRENT CONTINUATION — SOURCE REPAIR VERIFIED / NONADMITTING ROUTE PREPARATION NEXT (ROOT2026-10-12T15:21UTC). Finalsourcef8b56b347326483007cfa9b8328f98fcc484c670/implementation8e750607; all10originalpaths/engine+rules+nativeABI+capsunchanged. Author96641/fixer14782/re-review98954 clean/ROOT91763 152passoneexplicitoldprobeomission/59704exact13inherited fulltext afterMatch291→393292→394(noNEW/notglobalgreen)/97488project0factory1443zero/import+privacy12840qualified0strict0ownership19oldreportonly/distinct84726 PASS_SOURCE_ONLY/gaps[] ALLCLOSED. Everyfullguard callback retained/freshall-survivorgrowth; duplicated observations/parenthash removed, replaypreadreservation+descriptorchecks added, privatefiniteexitdispositions+genuinefailedinvocation/versionedcharged-accounting commitment boundtothefrozenrecord. No actualnativecauseproven; originalv2failureSUBPROCESS_EXITstillUNKNOWN. Old50charges/v2result/ONEcheckgaps immutable/costonly/no recredit. No liveowner/entry/reader/sourcehold. Current20:15:17UTC workdeadline/allpriorcosts/15GB/36+fourunopened/300/1000+2500+5000+600000 bounds unchanged; full36frontier13:34MISSED, NOnewfullrununderexistingwindow. Safe non-authorizing V2allocation/v3namespace/fiftychargecarry/source-gate scaffolding maycontinuebeforeaskinggenuinehumanwork-timewindow; leavegrantUNSET/nonadmitting, no realrequest/allocation/prepare/Match. ExistingPlan16 only/no newphase/plan-number/workstream; Phase265incomplete/266freeze+formation+holdout/public/counting/production unstarted. Earliercheckpoints history.
 
 CURRENT SOURCE-ONLY EXECUTION — REPAIR PLAN V2 CHECKED (ROOT2026-10-12T14:30:41UTC). Research85308 CLOSED; firstchecker20430 nonpass2realissues retained; revised8042/actual01a13083 CLOSED PASS_PLAN_ONLY/issues[]. ExistingPlan16 serial4+3+4shared/10uniqueoriginalpaths: COMPLETEguardEVERYcallback/freshsurvivorgrowth, mergeonlyduplicate expectedpathroles/ONEfreshstat, ONEfreshparentmanifest/exactdebugplanningpin; opt-incompressedread preallocationreservation+descriptorhook/forwardadditionalBytes; authenticfinitecontinuation-onlyexecutor extension/legacydefaults unchanged. Sourceauthornext; newreview/ROOTchecks/distinctsourceverify pending/no empiricaladmission. All50charges/v2result/ONEreadergaps_found immutable; nativecauseUNKNOWN. Deadline20:15:17UTC/whole36frontier13:34:17MISSED/allpriorcosts/15GB/36+fourunopened/300/guest1000startup2500host5000Match600000/allbounds unchanged; no newrequest/allocation/Match/formation/holdout/public/counting/production. Holdreleased/no otheractiveowner/entry/reader. Earliercheckpointshistory.
 
