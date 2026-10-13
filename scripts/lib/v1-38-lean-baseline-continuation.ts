@@ -4,7 +4,7 @@ import { constants, openSync, closeSync, fstatSync, readSync, lstatSync, realpat
 import { resolve, join, relative } from "node:path"
 import { labRoot, freezeLabValue, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_CAPS, LEAN_BASELINE_CONTINUATION_WINDOW as WINDOW, LEAN_BASELINE_CONTINUATION_PATHS, leanBytesRoot, leanCanonicalBytes, validateLeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocation, type LeanBaselineContinuationCarry } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { LEAN_BASELINE_CONTINUATION_PATHS_V2, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationAllocationV2, leanBaselineContinuationElapsedFloorV2, leanBaselineContinuationPathsForWindowV2, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2, type LeanBaselineContinuationCarryV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V2, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationAllocationV2, readLeanAdmittedContinuationAllocationV2, leanContinuationGlobalFloorV2, leanBaselineContinuationElapsedFloorV2, leanBaselineContinuationPathsForWindowV2, type LeanExperimentLedger, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2, type LeanBaselineContinuationCarryV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { exactLabKeys } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_PRIVATE_MATCH_CARRY_V3, LEAN_PRIVATE_MATCH_CARRY_V2, LEAN_PRIVATE_MATCH_ARTIFACT_V3, LEAN_PRIVATE_PROBE_COST_ROOT, validateLeanPrivateMatchAllocationV3, validateLeanPrivateMatchAllocationV2, validateLeanPrivateMatchAllocationV1, authenticateLeanPrivateMatchProbeCarryV1 } from "./v1-38-lean-experiment-authority.js"
 
@@ -37,12 +37,17 @@ export const readLeanContinuationJsonV2 = (path: string, maximum: number, mode: 
   if (!bytes.equals(Buffer.from(leanCanonicalBytes(value)))) return fail("V2_CANONICAL")
   guard(); return value
 }
-export const assertLeanBaselineContinuationFrontierV2 = (allocation: LeanBaselineContinuationAllocationV2, s: LeanContinuationFrontier): number => {
-  const a = validateLeanBaselineContinuationAllocationV2(allocation), w = a.window
+export const assertLeanBaselineContinuationFrontierV2 = (allocation: LeanBaselineContinuationAllocationV2, s: LeanContinuationFrontier, ledger?: LeanExperimentLedger): number => {
+  const a = ledger === undefined ? validateLeanBaselineContinuationAllocationV2(allocation) : readLeanAdmittedContinuationAllocationV2(ledger), w = a.window
+  if (ledger !== undefined && a !== allocation) return fail("V2_LEDGER_ALLOCATION")
   const required = ["nowMs", "monotonicElapsedMs", "remainingSlots", "charged", "retainedBytes", "scratchBytes", "parentRssBytes", "childRssBytes", "arrayBuffersBytes", "availableMemoryBytes", "freeBytes", "live"]
   const keys = Object.keys(s), optional = keys.includes("remainingClosureMs") || keys.includes("remainingOfflineMs")
   if (!exactLabKeys(s, optional ? [...required, "remainingClosureMs", "remainingOfflineMs"] : required) || keys.some(key => key !== "live" && !integer((s as any)[key])) || s.live !== true || s.remainingSlots > 36 || s.charged < 50 || s.charged > 86 || s.remainingSlots !== 0 && (s.charged + s.remainingSlots < 86 || s.charged + s.remainingSlots > 87) || optional && s.remainingSlots !== 0 || (s.remainingClosureMs ?? w.closureMs) > w.closureMs || (s.remainingOfflineMs ?? w.offlineOverheadMs) > w.offlineOverheadMs) return fail("V2_FRONTIER")
-  const elapsed = leanBaselineContinuationElapsedFloorV2(w, s.nowMs, a.predecessor.elapsedUpperBoundMs, s.monotonicElapsedMs)
+  // Same global/grant/journal/monotonic floors as the public strict path. Only
+  // its already-admitted immutable window validation is redundant here.
+  if (ledger !== undefined && s.nowMs < w.anchorMs) return fail("V2_CLOCK")
+  const elapsed = ledger === undefined ? leanBaselineContinuationElapsedFloorV2(w, s.nowMs, a.predecessor.elapsedUpperBoundMs, s.monotonicElapsedMs) : Math.max(leanContinuationGlobalFloorV2(s.nowMs), w.carryMs + Math.max(s.nowMs - w.anchorMs, s.monotonicElapsedMs), a.predecessor.elapsedUpperBoundMs)
+  if (!integer(elapsed)) return fail("V2_CLOCK")
   const reserve = s.remainingSlots * LEAN_CAPS.matchMs + (s.remainingClosureMs ?? w.closureMs) + (s.remainingOfflineMs ?? w.offlineOverheadMs), native = 2 * 268435456 + 512000000 + 335544320
   if (!integer(s.nowMs + reserve) || !integer(elapsed + reserve) || s.nowMs + reserve > w.deadlineMs || elapsed + reserve > w.capMs || s.retainedBytes < a.predecessor.allocatedDiskBytes || s.retainedBytes > LEAN_CAPS.retainedBytes || s.scratchBytes > LEAN_CAPS.scratchBytes || s.retainedBytes + s.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || s.parentRssBytes + s.childRssBytes + s.arrayBuffersBytes + native > LEAN_BASELINE_CONTINUATION_POLICY_V2.memoryBytes || s.availableMemoryBytes < native || s.freeBytes < LEAN_CAPS.totalBytes - s.retainedBytes) return fail("V2_CAPACITY")
   return elapsed

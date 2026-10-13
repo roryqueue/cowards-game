@@ -184,6 +184,17 @@ describe("[continuation-overhead] admitted ledger pure policy", () => {
     fs.renameSync(path, `${path}.old`); writeFileSync(path, ledger.leanCanonicalBytes({ ...a, window: { ...a.window, grantId: "wrong" } }), { mode: 0o600 }); expect(() => ledger.readLeanLedger(l)).toThrow()
     writeFileSync(path, bytes); writeFileSync(join(l.directory, "ledger.ndjson"), "{}"); expect(() => ledger.readLeanLedger(l)).toThrow(/PUBLICATION/)
   }))
+  it("reobserves physical growth and preserves every branded frontier resource, time and shape denial", () => fixture(l => {
+    const a = ledger.readLeanAdmittedContinuationAllocationV2(l), s = sample(a), before = ledger.cumulativeLeanPhysicalBytes(l)
+    writeFileSync(join(l.directory, "synthetic-growth.json"), Buffer.alloc(65536, 97), { mode: 0o600 })
+    expect(ledger.cumulativeLeanPhysicalBytes(l)).toBeGreaterThan(before)
+    const cases = [{ retainedBytes: a.predecessor.allocatedDiskBytes - 1 }, { retainedBytes: ledger.LEAN_CAPS.retainedBytes + 1 }, { scratchBytes: ledger.LEAN_CAPS.scratchBytes + 1 }, { parentRssBytes: 3000000000 }, { childRssBytes: 3000000000 }, { arrayBuffersBytes: 3000000000 }, { availableMemoryBytes: 0 }, { freeBytes: 0 }, { nowMs: a.window.deadlineMs }, { nowMs: a.window.anchorMs - 1 }, { monotonicElapsedMs: a.window.durationMs }, { live: false }, { charged: 49 }, { charged: 87 }, { remainingSlots: 35 }, { remainingSlots: 37 }, { monotonicElapsedMs: -1 }, { scratchBytes: NaN }, { nowMs: Number.MAX_SAFE_INTEGER }, { remainingClosureMs: 1 }, { extra: 1 }]
+    for (const change of cases) expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, { ...s, ...change } as never, l)).toThrow()
+    for (const key of Object.keys(s)) { const missing = { ...s } as Record<string, unknown>; delete missing[key]; expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, missing as never, l)).toThrow() }
+    const closing = { ...s, remainingSlots: 0, remainingClosureMs: 0, remainingOfflineMs: 0 }
+    expect(continuation.assertLeanBaselineContinuationFrontierV2(a, closing, l)).toBe(a.window.carryMs + 2000)
+    for (const change of [{ remainingClosureMs: a.window.closureMs + 1 }, { remainingOfflineMs: a.window.offlineOverheadMs + 1 }]) expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, { ...closing, ...change }, l)).toThrow()
+  }))
 })
 describe("[continuation-v4] finite namespace and spent-cost isolation", () => {
   const window = () => { const { root: _, ...body } = { ...continuationWindowFixtureV2(), routeNamespace: "20261012-v4" as const }; return { ...body, root: labRoot(body.schemaVersion, body) } }

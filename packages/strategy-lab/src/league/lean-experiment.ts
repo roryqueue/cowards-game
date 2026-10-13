@@ -1446,6 +1446,28 @@ export interface LeanCompactMatchRecord { classification: "success" | "player_vi
 export interface LeanCharge { schemaVersion: "lean-slot-charge-v1"; allocationRoot: LabRoot; slotRoot: LabRoot; ordinal: number; root: LabRoot }
 type Event = { kind: "charge"; charge: LeanCharge } | { kind: "terminal"; chargeRoot: LabRoot; record: LeanCompactMatchRecord; replay: LeanReplayContainer | null } | { kind: "resource"; elapsedMs: number; physicalBytes: number; bufferBytes: number; scratchBytes: number } | { kind: "resource-v15"; elapsedMs: number; physicalBytes: number; bufferBytes: number; scratchBytes: number; memoryPolicyRoot: LabRoot; memoryHighWaterBytes: number } | { kind: "stop"; reason: string }
 export interface LeanExperimentLedger { directory: string; allocation: Readonly<AnyLeanAllocation> }
+/** Pure derivations only, issued privately after strict admission. A root or a
+ * frozen caller-shaped ledger is never a capability; observations stay fresh. */
+interface LeanAllocationPolicyV2 {
+  readonly directory: string
+  readonly allocation: Readonly<LeanBaselineContinuationAllocationV2>
+  readonly canonicalText: string
+  readonly writablePaths: readonly string[]
+}
+const admittedLedgerPoliciesV2 = new WeakMap<LeanExperimentLedger, Readonly<LeanAllocationPolicyV2>>()
+const compileLeanAllocationPolicyV2 = (directory: string, allocation: Readonly<AnyLeanAllocation>): LeanExperimentLedger => {
+  if (allocation.schemaVersion !== "lean-baseline-continuation-allocation-v2") return { directory, allocation }
+  const a = freezeLabValue(allocation), ledger = Object.freeze({ directory, allocation: a })
+  const paths = a.window.routeNamespace === "20261012-v4" ? LEAN_BASELINE_CONTINUATION_PATHS_V4 : LEAN_BASELINE_CONTINUATION_PATHS_V2
+  admittedLedgerPoliciesV2.set(ledger, freezeLabValue({ directory, allocation: a, canonicalText: Buffer.from(leanCanonicalBytes(a)).toString("utf8"), writablePaths: [paths.temp, paths.allocation, paths.request, paths.window].map(path => resolve(path)) }))
+  return ledger
+}
+const policyForAdmittedLedgerV2 = (ledger: LeanExperimentLedger) => {
+  const policy = admittedLedgerPoliciesV2.get(ledger)
+  return policy && ledger.directory === policy.directory && ledger.allocation === policy.allocation && ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" ? policy : undefined
+}
+/** Allocation identity only: no transferable structural policy or capacity. */
+export const readLeanAdmittedContinuationAllocationV2 = (ledger: LeanExperimentLedger): Readonly<LeanBaselineContinuationAllocationV2> => policyForAdmittedLedgerV2(ledger)?.allocation ?? fail("CONTINUATION_V2_LEDGER")
 const safeDirectory = (directory: string): string => { const p = resolve(directory), s = lstatSync(p); if (!s.isDirectory() || s.isSymbolicLink() || realpathSync(p) !== p || (s.mode & 0o777) !== 0o700) return fail("STORE"); return p }
 /** Exact old files and independent report are required on every v2 reopening.
  * The old route is read-only here and its v1 open-time interpretation is intact. */
@@ -1609,9 +1631,9 @@ export const createLeanLedger = (directory: string, allocation: AnyLeanAllocatio
   writeExclusive(join(p, "ledger.ndjson"), new Uint8Array())
   if (leanProspective(a)) assertLeanProspectiveStoreCapacity(p, a, a.predecessor.allocatedDiskBytes, 0)
   writeExclusive(join(p, "time.ndjson"), new Uint8Array())
-  return { directory: p, allocation: a }
+  return compileLeanAllocationPolicyV2(p, a)
 }
-export const openLeanLedger = (directory: string): LeanExperimentLedger => { const p = safeDirectory(directory), allocation = admitLeanAllocation(parse(readSafe(join(p, "allocation.json")))); if (allocation.schemaVersion === "lean-experiment-allocation-v2") inspectLeanProspectiveDiskBasis(); return { directory: p, allocation } }
+export const openLeanLedger = (directory: string): LeanExperimentLedger => { const p = safeDirectory(directory), allocation = admitLeanAllocation(parse(readSafe(join(p, "allocation.json")))); if (allocation.schemaVersion === "lean-experiment-allocation-v2") inspectLeanProspectiveDiskBasis(); return compileLeanAllocationPolicyV2(p, allocation) }
 export const measureLeanPhysicalBytes = (directory: string): number => {
   const p = safeDirectory(directory)
   return readdirSync(p).reduce((n, name) => { const s = lstatSync(join(p, name)); if (s.isSymbolicLink() || !s.isFile()) return fail("FILE"); return n + s.blocks * 512 }, statSync(p).blocks * 512)
@@ -1627,7 +1649,7 @@ const assertLeanProspectiveStoreCapacity = (store: string, allocation: AnyLeanAl
   const filesystem = statfsSync(dirname(store), { bigint: true })
   if (filesystem.bavail * filesystem.bsize < BigInt(LEAN_CAPS.totalBytes - current)) return fail("RESOURCE")
 }
-export const leanProspectiveOwnedBytes = (ledger: LeanExperimentLedger): number => measureLeanPhysicalBytes(ledger.directory) + leanWritablePaths(ledger.allocation).reduce((bytes, path) => bytes + measuredDestinationBlocks(path), 0) + leanTwentySixReportDeltaBytes(ledger.allocation)
+export const leanProspectiveOwnedBytes = (ledger: LeanExperimentLedger): number => measureLeanPhysicalBytes(ledger.directory) + (policyForAdmittedLedgerV2(ledger)?.writablePaths ?? leanWritablePaths(ledger.allocation)).reduce((bytes, path) => bytes + measuredDestinationBlocks(path), 0) + leanTwentySixReportDeltaBytes(ledger.allocation)
 export const cumulativeLeanPhysicalBytes = (ledger: LeanExperimentLedger): number => leanProspectiveOwnedBytes(ledger) + leanPriorBytes(ledger.allocation)
 export interface LeanChildEntryV2 { schemaVersion: "lean-child-entry-v2"; allocationRoot: LabRoot; sourceRoot: LabRoot; requestBytesRoot: LabRoot; head: string; parentPid: number; childPid: number; handshakeRoot: LabRoot; wallStartMs: number; monotonicStartNs: string }
 export interface LeanChildTerminalV2 { schemaVersion: "lean-child-terminal-v2"; entryBytesRoot: LabRoot; allocationRoot: LabRoot; sourceRoot: LabRoot; head: string; parentPid: number; childPid: number; exitCode: number | null; signal: string | null; wallObservedMs: number; monotonicObservedNs: string; elapsedUpperBoundMs: number; status: "child_exited" | "child_failed"; parentRssBytes: number; childRssObservedBytes: number | null; physicalBytes: number; freeBytes: number | null }
@@ -1833,8 +1855,16 @@ export const inspectLeanClosedV6Predecessor = (): Readonly<LeanClosedV6Predecess
   })
 }
 export const readLeanLedger = (ledger: LeanExperimentLedger) => {
-  const retained = openLeanLedger(ledger.directory)
-  if (retained.allocation.root !== ledger.allocation.root) return fail("ALLOCATION")
+  const policy = policyForAdmittedLedgerV2(ledger)
+  if (policy) {
+    // Retain the exact existing fresh readSafe path. The driver's scoped
+    // descriptor/reservation protocol still surrounds this call; no extra load.
+    const bytes = readSafe(join(safeDirectory(ledger.directory), "allocation.json"))
+    if (!Buffer.from(bytes).equals(Buffer.from(policy.canonicalText, "utf8"))) return fail("ALLOCATION")
+  } else {
+    const retained = openLeanLedger(ledger.directory)
+    if (retained.allocation.root !== ledger.allocation.root) return fail("ALLOCATION")
+  }
   const text = Buffer.from(readSafe(join(ledger.directory, "ledger.ndjson"))).toString("utf8")
   if (text.length && !text.endsWith("\n")) return fail("PUBLICATION")
   const events = text ? text.slice(0, -1).split("\n").map(line => parse(Buffer.from(line)) as Event) : []
