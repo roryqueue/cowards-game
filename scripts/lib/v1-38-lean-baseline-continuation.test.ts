@@ -143,6 +143,34 @@ describe("[continuation-overhead] admitted ledger pure policy", () => {
     } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
   }
   const sample = (a: ledger.LeanBaselineContinuationAllocationV2): continuation.LeanContinuationFrontier => ({ nowMs: a.window.anchorMs + 1000, monotonicElapsedMs: 2000, remainingSlots: 36, charged: 50, retainedBytes: a.predecessor.allocatedDiskBytes, scratchBytes: 0, parentRssBytes: 100000000, childRssBytes: 0, arrayBuffersBytes: 0, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true })
+  it("[continuation-remaining-overhead] reuses admitted window pure work through create/open accounting, frontier and capacity", () => fixture(created => {
+    for (const l of [created, ledger.openLeanLedger(created.directory)]) {
+      const a = ledger.readLeanAdmittedContinuationAllocationV2(l), clock = vi.spyOn(Date, "now").mockReturnValue(a.window.anchorMs + 1000)
+      try {
+        vi.mocked(labRoot).mockClear()
+        for (let i = 0; i < 3; i++) {
+          expect(ledger.currentLeanElapsedMs(l)).toBe(a.window.carryMs + 1000)
+          expect(continuation.assertLeanBaselineContinuationFrontierV2(a, sample(a), l)).toBe(a.window.carryMs + 2000)
+          expect(ledger.leanAdmittedContinuationCapacityBasisV2(l, a.window, Date.now())).toEqual({ elapsedMs: a.window.carryMs + 1000, tempPath: ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.temp })
+        }
+        expect(vi.mocked(labRoot).mock.calls.filter(([domain]) => domain === "lean-baseline-continuation-window-v2")).toHaveLength(0)
+        for (const args of [[a.window.anchorMs - 1, 0, 0], [NaN, 0, 0], [a.window.anchorMs, -1, 0], [a.window.anchorMs, 0, Number.MAX_SAFE_INTEGER]]) expect(() => ledger.leanAdmittedContinuationElapsedFloorV2(l, ...args as [number, number, number])).toThrow()
+        expect(ledger.leanAdmittedContinuationElapsedFloorV2(l, a.window.anchorMs, a.window.carryMs + 20, 10)).toBe(a.window.carryMs + 20)
+        clock.mockReturnValue(a.window.anchorMs - 1); expect(() => ledger.currentLeanElapsedMs(l)).toThrow()
+      } finally { clock.mockRestore() }
+    }
+  }))
+  it("[continuation-remaining-overhead] refuses transferable context/ledger policies and keeps public fallback strict", () => fixture(l => {
+    const a = ledger.readLeanAdmittedContinuationAllocationV2(l), clone = JSON.parse(Buffer.from(ledger.leanCanonicalBytes(a)).toString())
+    for (const forged of [{ ...l }, Object.freeze({ ...l }), { directory: `${l.directory}/changed`, allocation: a }, new Proxy(l, { get() { throw new Error("hostile getter") } })]) expect(() => ledger.leanAdmittedContinuationCapacityBasisV2(forged, a.window, a.window.anchorMs)).toThrow()
+    for (const w of [clone.window, { ...a.window, approvalEvidence: { ...a.window.approvalEvidence, recordedBy: "mutated" } }, new Proxy(a.window, { get() { throw new Error("hostile window") } })]) expect(() => ledger.leanAdmittedContinuationCapacityBasisV2(l, w, a.window.anchorMs)).toThrow()
+    const clock = vi.spyOn(Date, "now").mockReturnValue(a.window.anchorMs)
+    try {
+      vi.mocked(labRoot).mockClear(); ledger.currentLeanElapsedMs({ directory: l.directory, allocation: clone })
+      expect(vi.mocked(labRoot).mock.calls.filter(([domain]) => domain === "lean-baseline-continuation-window-v2").length).toBeGreaterThan(0)
+      clone.window.approvalEvidence.recordedBy = "deep-mutation"; expect(() => ledger.currentLeanElapsedMs({ directory: l.directory, allocation: clone })).toThrow()
+    } finally { clock.mockRestore() }
+  }))
   it("uses the exact recursively frozen admitted allocation through actual accounting, reads and frontier", () => fixture((created, original) => {
     for (const l of [created, ledger.openLeanLedger(created.directory)]) {
       const a = ledger.readLeanAdmittedContinuationAllocationV2(l), before = ledger.leanCanonicalBytes(original)
@@ -217,6 +245,22 @@ describe("[continuation-overhead] same-pass V2 identities", () => {
       run(paths, rows)
     } finally { rmSync(dir, { recursive: true }) }
   }
+  it("[continuation-remaining-overhead] defensively captures members and compares every fresh observed member", () => fixture((paths, rows) => {
+    const directory = paths[3]!, row = rows[3]!, members = [...row.members!], expected = { ...row, members }
+    const guard = continuation.createLeanContinuationIdentityGuardV2([], [expected]), before = fs.lstatSync(directory)
+    members.push("forged"); expected.mode = 0; guard()
+    writeFileSync(join(directory, "forged"), "x")
+    const stat = vi.mocked(fs.lstatSync), actual = stat.getMockImplementation()!
+    try { stat.mockImplementation((...args) => String(args[0]) === directory ? before as never : actual(...args)); expect(guard).toThrow(/V2_IDENTITY_CHANGED/) } finally { stat.mockImplementation(actual) }
+  }))
+  it("[continuation-remaining-overhead] rejects malformed, accessor and proxy expected membership without executing traps", () => fixture((_paths, rows) => {
+    const row = rows[3]!, trap = vi.fn(() => { throw new Error("trap") }), getter = { ...row }
+    Object.defineProperty(getter, "members", { enumerable: true, get: trap })
+    for (const hostile of [getter, new Proxy(row, { ownKeys: trap }), { ...row, members: new Proxy([...row.members!], { get: trap }) }, { ...row, members: ["../escape"] }, { ...row, members: ["x", "x"] }, { ...row, members: Array(4097).fill("x") }, { ...row, bytes: NaN }]) expect(() => continuation.createLeanContinuationIdentityGuardV2([], [hostile])).toThrow()
+    expect(trap).not.toHaveBeenCalled()
+    const stat = fs.lstatSync(rows[0]!.path), pin = { path: rows[0]!.path, stat }
+    continuation.createLeanContinuationIdentityGuardV2([pin], []); expect(Object.isFrozen(stat)).toBe(false)
+  }))
   it("observes one unique absolute stat per pass for all pin/survivor roles, and observes the next pass anew", () => fixture((paths, rows) => {
     const pins = paths.slice(0, 3).map(path => ({ path, stat: fs.lstatSync(path) })), alias = { ...rows[0]!, path: join(paths[3]!, ".", "source") }
     const guard = continuation.createLeanContinuationIdentityGuardV2(pins, [...rows, alias])
