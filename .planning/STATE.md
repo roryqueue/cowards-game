@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V4 unique run closed before retained entry; terminal check closed; source-only overhead diagnosis
+stopped_at: Overhead source A/B closed; checked finite V5 C/D source support next; no empirical admission
 last_updated: "2026-10-13"
 last_activity: 2026-10-13
-last_activity_desc: V4 pre-entry failure checked independently; source hold released, no new Match credit
+last_activity_desc: Predicate-preserving overhead tests passed; fresh-route source plan checked, combined final gates pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,14 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — overhead A/B closed; checked finite V5 source support
+
+ROOT2026-10-13T01:55UTC. Actual `/root/execute_265_v4_overhead_repair` source A/B and narrow same-scope A resource-event follow-up CLOSED/released at5b56507b, six atomic commits. Connected inert tests found/fixed repeated immutable allocation reconstruction in actual accounting/frontier/resource reads and duplicate same-pass identity checks. Author overhead20passes/compatibility51passes, finite filters/omissions disclosed in GATES; full exact15scope strict13inherited blocks byte-identical/zeroNEW/no offsets reported. ROOT final independent combined review/validation/distinctsourceverify remain pending, no source projection/empirical admission or speed claim. All fresh guards/BOTH identity passes/chunk/reservation/bytes/descriptors/physical/RAM/time/liveness/membership preserved; V1 behavior unchanged.
+
+Actual read-only finite-V5 research CLOSED (corrected six required original source/test paths, not seven). ONE ROOT bounded opaque ten-file V4 hash observation01:42:34.349UTC CLOSED0; exact roots/descriptors recorded in existing Plan16, no history parse/reader/capacity or private-data output. These normal source-preservation anchors do not establish external custody or historical directory identity. Actual same typed planner appended C/D supplement to existing Plan16; independent `/root/check_265_v4_overhead_plan` PASS/noissues/CLOSED. C/D add exact finite20261013-v5 selected paths and fixed spent-V4 file/member checks, preserve oldV3/V4/compiled-policy/alllivebounds; no V5 window/grant/request/allocation/store materialized. B closure and independentcheck prerequisites now satisfied; same source executor may own C thenD serially within originalsixfiles. Combined A/B+C/D final gates once, not duplicate repair ceremonies. Source-only until07:47:16UTC/allcontinuouscosts; full36 entry frontierelapsed. NEW genuine prospective work-time decision only after source-ready; standing route consent is not a time extension.
+
+V4 remains closed/spent with zero retained new charge/entry/result, unique terminal-only check closed; old50cost-only/no refund/reuse/recredit. Original failure point/cause UNKNOWN. Plan16/Phase265 incomplete; current-rules freeze-before-formation, unopenedholdout/no public/counting/production unchanged. Earlier checkpoints below are history.
 
 ## Current continuation — V4 pre-entry terminal checked; diagnose overhead
 
