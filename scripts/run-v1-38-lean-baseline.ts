@@ -24,7 +24,7 @@ import { publishLeanBaselineContinuationSource } from "./lib/v1-38-lean-baseline
 import { runLeanBaselineContinuationMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { readLeanBaselineContinuationGit } from "./lib/v1-38-lean-container-match-session.js"
 import { closeLeanInterval } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { LEAN_BASELINE_CONTINUATION_PATHS_V2 as CONTINUATION_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, leanBaselineContinuationPathsForWindowV2, leanBaselineContinuationPathsForRequestV2, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationWindowV2, validateLeanBaselineContinuationAllocationV2, createLeanBaselineContinuationAllocationV2, leanBaselineContinuationElapsedFloorV2, leanContinuationIdentityV2, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2 } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V2 as CONTINUATION_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, leanBaselineContinuationPathsForWindowV2, leanBaselineContinuationPathsForRequestV2, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationWindowV2, validateLeanBaselineContinuationAllocationV2, createLeanBaselineContinuationAllocationV2, leanBaselineContinuationElapsedFloorV2, leanContinuationIdentityV2, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { readLeanContinuationBoundedBytesV2, readLeanContinuationJsonV2, authenticateLeanBaselineContinuationCarryV2, assertLeanBaselineContinuationFrontierV2, createLeanContinuationIdentityGuardV2, type LeanContinuationInventoryRowV2, type LeanContinuationReviewedRowV2 } from "./lib/v1-38-lean-baseline-continuation.js"
 import { readLeanBaselineContinuationGitV2 } from "./lib/v1-38-lean-container-match-session.js"
 import { executeLeanBaselineContinuationPipelineV2 } from "./lib/v1-38-lean-baseline-pipeline.js"
@@ -190,7 +190,7 @@ export const deriveLeanBaselineCandidateRoots = (coldRoot: LabRoot): readonly [L
 }
 export interface LeanBaselineRequest { schemaVersion: "lean-current-baseline-request-v1"; seed: string; reviewPath: string; reviewRoot: LabRoot; sourceRoot: LabRoot; planRoot: LabRoot; coldRoot: LabRoot; candidateRoots: readonly LabRoot[]; requestRoots: readonly LabRoot[] }
 export const parseLeanBaselineCommand = (args: readonly string[]) => {
-  if (args.length === 3 && ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"].includes(args[0]!) && args[1] === "--request" && (args[2] === CONTINUATION_V2.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request)) return { mode: args[0] as "prepare-continuation-v2" | "run-continuation-v2" | "verify-continuation-v2", request: args[2] }
+  if (args.length === 3 && ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"].includes(args[0]!) && args[1] === "--request" && (args[2] === CONTINUATION_V2.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V5.request)) return { mode: args[0] as "prepare-continuation-v2" | "run-continuation-v2" | "verify-continuation-v2", request: args[2] }
   if (args.length !== 3 || !["prepare-current", "run-current", "verify-retained", "prepare-continuation", "run-continuation", "verify-continuation"].includes(args[0]!) || args[1] !== "--request" || !args[2] || args[2].startsWith("--") || args[0]!.endsWith("-continuation") && args[2] !== CONTINUATION.request) return fail("ARGUMENTS")
   return { mode: args[0] as "prepare-current" | "run-current" | "verify-retained" | "prepare-continuation" | "run-continuation" | "verify-continuation", request: args[2]! }
 }
@@ -940,7 +940,7 @@ export const prepareLeanBaselineContinuationV2 = (requestPath: string) => {
   c.guard(); createLeanContinuationIdentityGuardV2([], rows)(); continuationCapacityV2(c.window, cumulativeLeanPhysicalBytes(ledger), 0, true)
   return { schemaVersion: "lean-baseline-continuation-prepared-v2", allocationRoot: allocation.root, allocationPath: c.paths.allocation, sourceHead: allocation.sourceHead, store: c.paths.store, grantId: c.window.grantId, claimRoot: claim.root, charged: 50, plannedCurrentCells: 36, holdoutReservations: allocation.holdoutReservations, issued: false }
   } catch (error) {
-    if (requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V4.request && error !== null && typeof error === "object") continuationPreparationFailuresV4.set(error, { stage, code: leanContinuationPreparationCodeV4(error) })
+    if ((requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V4.request || requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V5.request) && error !== null && typeof error === "object") continuationPreparationFailuresV4.set(error, { stage, code: leanContinuationPreparationCodeV4(error) })
     throw error
   }
 }
@@ -1084,5 +1084,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const childMode = args.length === 3 && ["child-current", "child-continuation", "child-continuation-v2"].includes(args[0]!) && args[1] === "--request"
   const action = childMode ? args[0] === "child-continuation-v2" ? runLeanBaselineContinuationChildV2(args[2]!) : args[0] === "child-continuation" ? runLeanBaselineContinuationChild(args[2]!) : runLeanCurrentChild(args[2]!) : leanBaselineMain(args)
   if (childMode) void resolveLeanChildCliTerminal(action)
-  else void action.then(value => { process.stdout.write(`${JSON.stringify(value)}\n`) }).catch(error => { if (args.length === 3 && args[0] === "prepare-continuation-v2" && args[1] === "--request" && args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request) process.stderr.write(leanBaselineContinuationPreparationFailureV4(error)); process.stderr.write("LEAN_BASELINE_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
+  else void action.then(value => { process.stdout.write(`${JSON.stringify(value)}\n`) }).catch(error => { if (args.length === 3 && args[0] === "prepare-continuation-v2" && args[1] === "--request" && (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V5.request)) process.stderr.write(leanBaselineContinuationPreparationFailureV4(error)); process.stderr.write("LEAN_BASELINE_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
 }

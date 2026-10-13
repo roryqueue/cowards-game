@@ -134,15 +134,16 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
     expect(f.hashes.mock.calls.filter(([domain]) => domain === "lean-baseline-continuation-allocation-v2")).toHaveLength(0)
   }, "20261013-v5"))
   it.each(["valid", "claim", "entry", "pair", "journal"] as const)("[continuation-v5] real issuer joins through pair/journal before inert source sentinel: %s", mode => fixture((c) => {
+    // Real admitted context, full guards and synthetic ledger/pair descriptors;
+    // the external source boundary throws before any capability is issued.
     const slot = c.allocation.slots[0]!, body = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: c.allocation.root, slotRoot: slot.root, ordinal: 0 }, charge = { ...body, root: labRoot(body.schemaVersion, body) }
     const journal = Buffer.concat([leanCanonicalBytes({ kind: "charge", charge }), Buffer.from("\n")])
     fs.writeFileSync(join(c.ledger.directory, "ledger.ndjson"), journal)
     const entry = { allocationRoot: c.allocation.root, sourceRoot: c.allocation.sourceRoot, requestBytesRoot: mode === "entry" ? root("crossed-request") : c.allocation.requestBytesRoot, head: c.fixedHead }
-    const pairBody = { schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: mode === "pair" ? root("crossed-pair") : slot.requestRoot, priorCharged: 50, priorLedgerByteLength: 0, priorLedgerBytesRoot: leanBytesRoot(Buffer.alloc(0)), bottomRole: "final-response", topRole: "final-response", bottomSourceRoot: root("source"), topSourceRoot: root("source"), bottomSnapshotRoot: root("snapshot"), topSnapshotRoot: root("snapshot") }
+    const pairBody = { schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: mode === "pair" ? root("crossed-pair") : slot.requestRoot, priorCharged: 50, priorLedgerByteLength: 0, priorLedgerBytesRoot: mode === "journal" ? root("crossed-journal-prefix") : leanBytesRoot(Buffer.alloc(0)), bottomRole: "final-response", topRole: "final-response", bottomSourceRoot: root("source"), topSourceRoot: root("source"), bottomSnapshotRoot: root("snapshot"), topSnapshotRoot: root("snapshot") }
     fs.writeFileSync(join(c.ledger.directory, "pair-0.json"), leanCanonicalBytes({ ...pairBody, root: labRoot("lean-baseline-pair-v1", pairBody) }), { mode: 0o600 })
     fs.writeFileSync(join(c.ledger.directory, "source-final-response.json"), "{}", { mode: 0o600 })
-    if (mode === "journal") fs.writeFileSync(join(c.ledger.directory, "ledger.ndjson"), Buffer.alloc(0))
-    const state = lean.readLeanLedger(c.ledger), retained = vi.spyOn(lean, "readLeanLedger").mockReturnValue({ ...state, charges: new Map([[slot.root, charge]]) }), receipt = vi.spyOn(lean, "readLeanChildEntry").mockReturnValue(entry as never)
+    const receipt = vi.spyOn(lean, "readLeanChildEntry").mockReturnValue(entry as never)
     const actualRead = continuationHelper.readLeanContinuationJsonV2, claimRead = vi.spyOn(continuationHelper, "readLeanContinuationJsonV2").mockImplementation((path, cap, permissions, guard) => {
       const value = actualRead(path, cap, permissions, guard)
       return path === c.paths.claim && mode === "claim" ? { ...value, routeNamespace: "20261012-v4" } : value
@@ -152,26 +153,31 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       const invoke = () => continuationAuthority.issueLeanBaselineContinuationRuntimeAuthorityV2(c.ledger, charge, {} as never, { budgetRoot: c.allocation.root, seat: "bottom" } as never, c.guard)
       if (mode === "valid") { expect(invoke).toThrow(sentinel); expect(source).toHaveBeenCalledOnce() }
       else { expect(invoke).toThrow(); expect(source).not.toHaveBeenCalled() }
-      expect(claimRead.mock.calls.some(([path]) => path === c.paths.claim)).toBe(true)
+      expect(claimRead.mock.calls.some(([path]) => path === c.paths.claim)).toBe(mode !== "entry")
       expect(claimRead.mock.calls.some(([path]) => path === lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.claim)).toBe(false)
       expect(provider).not.toHaveBeenCalled()
-    } finally { provider.mockRestore(); source.mockRestore(); claimRead.mockRestore(); receipt.mockRestore(); retained.mockRestore() }
-  }, "20261013-v5"))
+    } finally { provider.mockRestore(); source.mockRestore(); claimRead.mockRestore(); receipt.mockRestore() }
+  }, "20261013-v5"), 15000)
   it.each(["valid", "window", "context-paths", "context-window", "context-allocation", "context-ledger"] as const)("[continuation-v5] real retained scope before inert publication boundary: %s", mode => fixture((c) => {
-    const before = { ...lean.readLeanTimeAccounting(c.ledger), active: null, closed: new Set(["continuation-run-admission", "pilot-entry"]), closes: new Map([["pilot-entry", c.window.anchorMs]]) }
+    // Direct inert consumer invocation, not an ordinary reader process. External
+    // receipt/context/time hooks are mocked; scope joins and c.guard stay real.
+    // Claim and interval-close sentinels prevent all journal/publication writes.
+    const send = Object.getOwnPropertyDescriptor(process, "send"); Object.defineProperty(process, "send", { value: undefined, configurable: true, writable: true })
+    const before = { ...lean.readLeanTimeAccounting(c.ledger), active: false, closed: new Set(["continuation-run-admission", "pilot-entry"]), closes: new Map([["pilot-entry", c.window.anchorMs]]) }
     const time = vi.spyOn(lean, "readLeanTimeAccounting").mockReturnValue(before), terminal = vi.spyOn(lean, "readLeanChildTerminal").mockReturnValue({} as never), entry = vi.spyOn(lean, "readLeanChildEntry").mockReturnValue({ parentPid: 999991, childPid: 999992 } as never)
     const start = vi.spyOn(lean, "beginLeanInterval").mockImplementation(() => undefined as never), close = vi.spyOn(lean, "closeLeanInterval").mockImplementation(() => { throw new Error("INERT_NO_PUBLICATION") })
     const metadata = vi.spyOn(parentApi, "withLeanContinuationReaderMetadataV2").mockImplementation((_w, parse) => parse())
-    const window = vi.spyOn(parentApi, "readLeanBaselineContinuationWindowV2").mockReturnValue(mode === "window" ? { ...c.window, routeNamespace: "20261012-v4" } : c.window)
+    const { root: _windowRoot, ...crossedWindowBody } = { ...c.window, routeNamespace: "20261012-v4" as const }, crossedWindow = { ...crossedWindowBody, root: labRoot(crossedWindowBody.schemaVersion, crossedWindowBody) }
+    const window = vi.spyOn(parentApi, "readLeanBaselineContinuationWindowV2").mockReturnValue(mode === "window" ? crossedWindow : c.window)
     const context = vi.spyOn(parentApi, "openLeanBaselineContinuationContextV2").mockReturnValue({ ...c, ...(mode === "context-paths" ? { paths: lean.LEAN_BASELINE_CONTINUATION_PATHS_V4 } : {}), ...(mode === "context-window" ? { window: { ...c.window, root: root("crossed-window") } } : {}), ...(mode === "context-allocation" ? { allocation: { ...c.allocation, root: root("crossed-allocation") } } : {}), ...(mode === "context-ledger" ? { ledger: { ...c.ledger, directory: "/inert-crossed-ledger" } } : {}) } as never)
     const kill = vi.spyOn(process, "kill").mockImplementation(() => { throw Object.assign(new Error("inert absent pid"), { code: "ESRCH" }) })
     const publication = vi.spyOn(parentApi, "writeLeanContinuationArtifact").mockImplementation(() => { throw new Error("INERT_CLAIM_BOUNDARY") }), dispatch = vi.spyOn(childProcess, "fork")
     try {
-      expect(() => continuationRetainedReader.verifyLeanBaselineContinuationRetainedV2(c.paths.request)).toThrow()
-      if (mode === "valid") { expect(publication).toHaveBeenCalledOnce(); expect(publication.mock.calls[0]?.[1]).toBe("reader-claim.json"); expect(context).toHaveBeenCalledWith(c.paths.request, true) }
+      expect(() => continuationRetainedReader.verifyLeanBaselineContinuationRetainedV2(c.paths.request)).toThrow(mode === "window" ? /V2_READER_WINDOW_BINDING/ : /V2_TERMINAL_REFUSAL/)
+      if (mode === "valid") { expect(start, "reader interval admitted").toHaveBeenCalledOnce(); expect(context, "context join reached").toHaveBeenCalledWith(c.paths.request, true); expect(publication).toHaveBeenCalledOnce(); expect(publication.mock.calls[0]?.[1]).toBe("reader-claim.json") }
       else expect(publication).not.toHaveBeenCalled()
       expect(publication.mock.calls.some(([, name]) => name === "retained-check.json")).toBe(false); expect(dispatch).not.toHaveBeenCalled()
-    } finally { dispatch.mockRestore(); publication.mockRestore(); kill.mockRestore(); context.mockRestore(); window.mockRestore(); metadata.mockRestore(); close.mockRestore(); start.mockRestore(); entry.mockRestore(); terminal.mockRestore(); time.mockRestore() }
+    } finally { if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send"); dispatch.mockRestore(); publication.mockRestore(); kill.mockRestore(); context.mockRestore(); window.mockRestore(); metadata.mockRestore(); close.mockRestore(); start.mockRestore(); entry.mockRestore(); terminal.mockRestore(); time.mockRestore() }
   }, "20261013-v5"))
 })
 describe.each(["20261012-v4", "20261013-v5"] as const)("[continuation-v4] [continuation-v5] real driver namespace and mutation-free refusal %s", selectedNamespace => {
@@ -213,6 +219,7 @@ describe.each(["20261012-v4", "20261013-v5"] as const)("[continuation-v4] [conti
     try {
       expect(continuationGit.readLeanBaselineContinuationGitV2(["show", `${head}:${selected.allocation}`], manifest, window())).toEqual(Buffer.from("{}"))
       expect(git.mock.calls[0]?.[2]).toMatchObject({ maxBuffer: 262144, timeout: 1500, stdio: ["ignore", "pipe", "ignore"] })
+      expect(continuationGit.readLeanBaselineContinuationGitV2(["show", `${head}:${lean.LEAN_BASELINE_CONTINUATION_PATHS_V2.allocation}`], manifest)).toEqual(Buffer.from("{}"))
       git.mockClear()
       for (const p of paths.filter(p => p !== selected)) for (const operation of ["show", "rev-parse"]) expect(() => continuationGit.readLeanBaselineContinuationGitV2([operation, `${head}:${p.allocation}`], manifest, window())).toThrow(/GIT_V2_METADATA/)
       expect(() => continuationGit.readLeanBaselineContinuationGitV2(["show", `${head}:${lean.LEAN_BASELINE_CONTINUATION_PATHS_V5.allocation}`], manifest)).toThrow(/GIT_V2_METADATA/)
@@ -317,6 +324,11 @@ describe.each(["20261012-v4", "20261013-v5"] as const)("[continuation-v4] [conti
     try { parentApi.prepareLeanBaselineContinuationV2(selected.request) } catch (caught) { error = caught }
     expect(parentApi.leanBaselineContinuationPreparationFailureV4(error)).toBe("LEAN_BASELINE_PREPARATION_V4 stage=WINDOW code=WINDOW_EXPIRED\n")
     expect(parentApi.leanBaselineContinuationPreparationFailureV4(new Error("PRIVATE path source stack"))).toBe("LEAN_BASELINE_PREPARATION_V4 stage=UNKNOWN code=DETAILS_WITHHELD\n")
+    const { root: _root, ...body } = { ...w, routeNamespace: "20261012-v3" as const }, v3 = { ...body, root: labRoot(body.schemaVersion, body) }
+    fs.writeFileSync(resolve(lean.LEAN_BASELINE_CONTINUATION_PATHS_V2.window), leanCanonicalBytes(v3), { mode: 0o600 })
+    let legacyError: unknown
+    try { parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V2.request) } catch (caught) { legacyError = caught }
+    expect(parentApi.leanBaselineContinuationPreparationFailureV4(legacyError)).toBe("LEAN_BASELINE_PREPARATION_V4 stage=UNKNOWN code=DETAILS_WITHHELD\n")
     absent()
   }))
 })

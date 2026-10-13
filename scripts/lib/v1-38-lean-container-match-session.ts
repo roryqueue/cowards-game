@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 export { superviseLeanStartupV5 } from "./v1-38-lean-startup-supervisor.mjs"
 export { superviseLeanStartupV8 } from "./v1-38-lean-startup-supervisor-v8.mjs"
 import { LEAN_STARTUP_POLICY_V5, leanBytesRoot, validateLeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocation } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { LEAN_BASELINE_CONTINUATION_PATHS_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, leanBaselineContinuationPathsForWindowV2, validateLeanBaselineContinuationAllocationV2, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, leanBaselineContinuationPathsForWindowV2, validateLeanBaselineContinuationAllocationV2, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { claimLeanRuntimeAuthority, claimLeanStartupAuthorityV8, leanStartupAuthorityDescriptorV8, isLeanCorrectionRuntimeAuthority, claimLeanPrivateProbeRuntimeAuthority, type LeanRuntimeAuthority, type LeanStartupGrantV5, type LeanStartupGrantV8, type LeanPrivateProbeBindingV1, type LeanPrivateProbeRuntimeAuthority, type LeanPrivateProbeStartupGrantV1 } from "./v1-38-lean-experiment-authority.js"
@@ -101,7 +101,7 @@ export const readLeanBaselineContinuationGitV2 = (args: readonly string[], exact
   if (args.length === 4 && args[0] === "diff" && args[1] === "--name-only" && commit.test(args[2]!) && commit.test(args[3]!)) maximum = 65536
   if (args.length === 2 && (args[0] === "show" || args[0] === "rev-parse")) {
     const [revision, path, extra] = args[1]!.split(":")
-    if ((path === LEAN_BASELINE_CONTINUATION_PATHS_V2.allocation || path === LEAN_BASELINE_CONTINUATION_PATHS_V4.allocation) && path !== selected.allocation) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_V2_METADATA")
+    if ((path === LEAN_BASELINE_CONTINUATION_PATHS_V2.allocation || path === LEAN_BASELINE_CONTINUATION_PATHS_V4.allocation || path === LEAN_BASELINE_CONTINUATION_PATHS_V5.allocation) && path !== selected.allocation) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_V2_METADATA")
     if (revision && commit.test(revision) && path && extra === undefined && (paths.has(path) || path === LEAN_BASELINE_CONTINUATION_PATHS.allocation || path === selected.allocation)) maximum = args[0] === "rev-parse" ? 128 : path === LEAN_BASELINE_CONTINUATION_PATHS.allocation || path === selected.allocation ? 262144 : 4194304
   }
   if (maximum === undefined) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_V2_METADATA")
