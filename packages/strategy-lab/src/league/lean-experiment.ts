@@ -1882,13 +1882,13 @@ export const readLeanLedger = (ledger: LeanExperimentLedger) => {
       if (!exactLabKeys(e, ["kind", "chargeRoot", "record", "replay"]) || ![...charges.values()].some(c => c.root === e.chargeRoot) || terminals.has(e.chargeRoot)) return fail("TERMINAL")
       admitCompactRecord(e.record); terminals.set(e.chargeRoot, e)
     } else if (e.kind === "resource" || e.kind === "resource-v15") {
-      const prospective = leanResourcePolicyForAllocationV15(ledger.allocation)
+      const prospective = policy ? null : leanResourcePolicyForAllocationV15(ledger.allocation)
       if (prospective ? e.kind !== "resource-v15" : e.kind !== "resource") return fail("RESOURCE_POLICY")
       if (e.kind === "resource-v15") {
         if (!prospective || e.memoryPolicyRoot !== prospective.root || !natural(e.memoryHighWaterBytes) || e.memoryHighWaterBytes < prospective.externalReserveBytes + prospective.guardBytes || e.memoryHighWaterBytes > prospective.memoryBytes || !exactLabKeys(e, ["kind", "elapsedMs", "physicalBytes", "bufferBytes", "scratchBytes", "memoryPolicyRoot", "memoryHighWaterBytes"])) return fail("RESOURCE_POLICY")
         memoryHighWaterBytes = Math.max(memoryHighWaterBytes, e.memoryHighWaterBytes)
       }
-      if (e.kind === "resource" && !exactLabKeys(e, ["kind", "elapsedMs", "physicalBytes", "bufferBytes", "scratchBytes"]) || ![e.elapsedMs, e.physicalBytes, e.bufferBytes, e.scratchBytes].every(natural) || e.elapsedMs < elapsedMs || e.elapsedMs > leanCapsForAllocation(ledger.allocation).elapsedMs || e.physicalBytes + (previous?.allocatedDiskBytes ?? 0) > LEAN_CAPS.retainedBytes || e.scratchBytes + e.bufferBytes > LEAN_CAPS.scratchBytes || e.physicalBytes + (previous?.allocatedDiskBytes ?? 0) + e.bufferBytes + e.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes) return fail("RESOURCE")
+      if (e.kind === "resource" && !exactLabKeys(e, ["kind", "elapsedMs", "physicalBytes", "bufferBytes", "scratchBytes"]) || ![e.elapsedMs, e.physicalBytes, e.bufferBytes, e.scratchBytes].every(natural) || e.elapsedMs < elapsedMs || e.elapsedMs > (policy?.allocation.caps ?? leanCapsForAllocation(ledger.allocation)).elapsedMs || e.physicalBytes + (previous?.allocatedDiskBytes ?? 0) > LEAN_CAPS.retainedBytes || e.scratchBytes + e.bufferBytes > LEAN_CAPS.scratchBytes || e.physicalBytes + (previous?.allocatedDiskBytes ?? 0) + e.bufferBytes + e.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes) return fail("RESOURCE")
       elapsedMs = e.elapsedMs; physicalHighWaterBytes = Math.max(physicalHighWaterBytes, (previous?.allocatedDiskBytes ?? 0) + e.physicalBytes + e.bufferBytes + e.scratchBytes); scratchHighWaterBytes = Math.max(scratchHighWaterBytes, e.bufferBytes + e.scratchBytes)
     } else if (e.kind === "stop") { if (!exactLabKeys(e, ["kind", "reason"]) || !["complete", "failure", "capacity", "integrity"].includes(e.reason) || stopped) return fail("STOP"); stopped = true }
     else return fail("LEDGER")
