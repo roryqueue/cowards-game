@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V5 diagnosis closed; checked source-only overhead and diagnostic supplement in planning
+stopped_at: Remaining-overhead E/F supplement independently checked; source execution next
 last_updated: "2026-10-13"
 last_activity: 2026-10-13
-last_activity_desc: V5 source diagnosis closed; preserve live checks while planning pure-calculation repair and bounded cost assay
+last_activity_desc: E/F plan check passed; prior source gate archived before scoped repair, no new route authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,9 @@ total_plans_in_phase: 16
 
 # State: Coward's Game
 
-## Current continuation — V5 diagnosis closed; source-only repair planning
+## Current continuation — E/F checked; source-only repair execution next
+
+Actual independent typed `/root/check_265_v5_remaining_overhead` PASS_PLAN_SUPPLEMENT/issues[]/commandsCLOSED/ownershipRELEASED. Additive existingPlan16 E→F uses five original source/test files, no new numberedplan/scaffold/authority. ROOT archived9db SOURCE JSON body as unchanged TEXT before source edits; no active SOURCE/DATA proof for changed code. Exact pre-edit fifteen-path strict7051B/thirteen complete inherited blocks retained for comparison. E/F source execution, independent review/fix, ROOT bounded connected tests/assay and distinct source verification are NEXT, not completed. Source-work21:21:06UTC/allcontinuouscosts/full36elapsedfrontier/allcaps/history/privacy unchanged; no new route or downstream credit. Earlier planning/terminal checkpoints below remain history.
 
 Actual typed diagnosis manager `/root/diagnose_265_v5_overhead` and reused typed investigator `/root/diagnose_265_v4_overhead/static_v4_cost` CLOSED14:59:36UTC; all commands closed, debug-only append released. A/B allocation reconstruction repair is present; remaining completed-path source algebra is41pure window hashes/21fresh physical observations per complete guard plus at least2U(2N+1)explicit fresh realpaths. This is NOT an executed V5 count, measured dominant hot function or original failure attribution. One bounded PUBLIC-only2020-call sample134.446ms/default39.874ms/native29.218ms establishes sampled local equality only; general native equivalence and end-to-end benefit remain unproved. No native replacement adopted.
 

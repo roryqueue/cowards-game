@@ -1,5 +1,11 @@
 # Baseline continuation gates
 
+## Remaining-overhead source supplement checked — 2026-10-13
+
+Actual independent typed `/root/check_265_v5_remaining_overhead` PASS_PLAN_SUPPLEMENT/issues[] over the additive E/F section at actualHEADf891c8e90cec5f8cd885eb3064e04ccfa42f1e75; all inspection commands CLOSED/read-only/ownership RELEASED. Actual planner `/root/plan_265_v5_remaining_overhead` owns the97-line additive supplement only and is CLOSED. E→F, five original source/test files, strict private immutable pure-window reuse/expected-membership snapshots, all fresh callbacks/BOTH passes/descriptors/resources/time/bytes/reservations preserved. F adds dormant finite RUN provenance and bounded connected N/U sensitivity; no CLI emission/native/V6/data/admission. Current source-work21:21:06UTC/all continuous costs unchanged, full36 frontier elapsed; no blind new time grant or run.
+
+ROOT now archives the previous9db/4b7e/ee17 SOURCE projection as unchanged TEXT history BEFORE E source edits. No active SOURCE or DATA projection until actual new gates close. The body below and every consumed V5/older artifact remain immutable; prior review/validation/verification is actual historical source-only proof, not proof for changed code. ROOT retained exact original15-path strict7051B/thirteen-block baseline from9db for the future comparison, not globaltypegreen. E/F remain unexecuted at this checkpoint; independent source review/fix, ROOT validation/assay and distinct source verification remain pending. No Phase265/LEAG/baseline/freeze/formation/holdout/public/counting/production credit.
+
 ## Current V5 pre-entry terminal closure — 2026-10-13
 
 ONE ROOT prepare51005/PID32017 CLOSED0, public allocation17360B/root a0354ca26634c680de357b593429eddd63c6af2e4802e01c831dd59aed27bfa3/raw439ff997177d812aebc8194b77dd6dcc30353541b0f5061f3eea036f32c7c7c6. Sole allocation-only direct-child commit/push cf996d7c44bb38f854ebda9e490f44bdc4f6cc1c over14a1d1c42dc58173fd90b825e34d0ef70ad66ebe. ONE ROOT run76934/PID56009 launched13:40UTC, CLOSEDexit1 with ONLYLEAN_BASELINE_FAILED_DETAILS_WITHHELD; first terminal clock14:40:55UTC. Throw point/cause UNKNOWN. Approximately60min pre-entry activity is observed, not a measured hot function or speedup; correlation with14:40:06 full36 cutoff is NOT a causal finding.
@@ -28,7 +34,7 @@ ROOT pure source-gate validation/canonical calculation 99095 CLOSED0; gate root 
 
 Post-write ROOT parser/validator8774 CLOSED0 confirms exactly one canonical SOURCE projection with the same gate/source/head roots and DATA projection=null; diff-check0. It reads only this public planning carrier and executes pure projection validation, not a new manifest/history authentication or capacity/entry/reader.
 
-```json
+```text
 {"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"9db7eceaf894393936bb6b1a8a02f2558d1a5abf","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_v4_overhead_repair","sourceReviewer":"/root/review_265_combined_overhead_v5","sourceRoot":"sha256:4b7e052d1b69611fd208a979497a2265fc2c53617b90738917bebe4b070e92c8","sourceVerifier":"/root/verify_265_combined_overhead_v5","source_review":"passed","source_verification":"passed"}
 ```
 
