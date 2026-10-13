@@ -14,7 +14,8 @@ import * as ledger from "../../packages/strategy-lab/src/league/lean-experiment.
 import * as continuation from "./v1-38-lean-baseline-continuation.js"
 
 vi.mock("node:child_process", async importOriginal => ({ ...await importOriginal<typeof import("node:child_process")>(), execFileSync: vi.fn() }))
-vi.mock("node:fs", async original => ({ ...await original<typeof import("node:fs")>(), lstatSync: vi.fn((await original<typeof import("node:fs")>()).lstatSync) }))
+vi.mock("node:fs", async original => ({ ...await original<typeof import("node:fs")>(), lstatSync: vi.fn((await original<typeof import("node:fs")>()).lstatSync), readFileSync: vi.fn((await original<typeof import("node:fs")>()).readFileSync) }))
+vi.mock("../../packages/strategy-lab/src/contracts.js", async original => ({ ...await original<typeof import("../../packages/strategy-lab/src/contracts.js")>(), labRoot: vi.fn((await original<typeof import("../../packages/strategy-lab/src/contracts.js")>()).labRoot) }))
 
 describe("complete fresh identity guard", () => {
   it("merges normalized paths within one call, retaining both roles and every other identity", () => {
@@ -132,6 +133,58 @@ export const continuationAllocationFixtureV2 = () => {
   const body = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: 465187899, allocatedDiskBytes: 88924160, residualDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: r("original-carry"), closedCapsuleRoot: r("closed-capsule"), custodyRoot: r("custody"), inventoryRoot: r("inventory"), qualifiedReaderAuthority: "cost_only" as const }
   return ledger.createLeanBaselineContinuationAllocationV2({ sourceRoot: r("source"), reviewRoot: r("review"), coldRoot: r("cold"), planRoot: r("plan"), candidateRoots: [r("a"), r("b")], requestRoots: Array.from({ length: 36 }, (_, n) => r(n)), seed: "inert-continuation-v2", sourceHead: "b".repeat(40), planningRoot: r("planning"), manifestRoot: r("manifest"), requestBytesRoot: r("request"), window, windowBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(window)), sourceGateRoot: window.sourceGateRoot, dataReviewRoot: r("data-review"), predecessor: { ...body, root: labRoot(body.schemaVersion, body) } })
 }
+describe("[continuation-overhead] admitted ledger pure policy", () => {
+  const fixture = (run: (l: ledger.LeanExperimentLedger, a: ledger.LeanBaselineContinuationAllocationV2) => void) => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-policy-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    try {
+      fs.mkdirSync(join(dir, ".strategy-lab")); fs.mkdirSync(join(dir, ".planning/artifacts"), { recursive: true })
+      const a = continuationAllocationFixtureV2(), l = ledger.createLeanLedger(join(dir, "store"), a)
+      run(l, a)
+    } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+  }
+  const sample = (a: ledger.LeanBaselineContinuationAllocationV2): continuation.LeanContinuationFrontier => ({ nowMs: a.window.anchorMs + 1000, monotonicElapsedMs: 2000, remainingSlots: 36, charged: 50, retainedBytes: a.predecessor.allocatedDiskBytes, scratchBytes: 0, parentRssBytes: 100000000, childRssBytes: 0, arrayBuffersBytes: 0, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true })
+  it("uses the exact recursively frozen admitted allocation through actual accounting, reads and frontier", () => fixture((created, original) => {
+    for (const l of [created, ledger.openLeanLedger(created.directory)]) {
+      const a = ledger.readLeanAdmittedContinuationAllocationV2(l), before = ledger.leanCanonicalBytes(original)
+      expect(a).toBe(l.allocation); expect(a).not.toBe(original); expect(ledger.leanCanonicalBytes(a)).toEqual(before)
+      const frozen = (value: unknown): void => { if (value !== null && typeof value === "object") { expect(Object.isFrozen(value)).toBe(true); Object.values(value).forEach(frozen) } }
+      frozen(l); expect(a.slots).toHaveLength(36); expect(a.holdoutReservations).toHaveLength(4)
+      expect(() => { a.slots[0]!.ordinal = 99 }).toThrow(); expect(() => { a.window.approvalEvidence.recordedBy = "forged" }).toThrow()
+      vi.mocked(labRoot).mockClear(); vi.mocked(fs.lstatSync).mockClear(); vi.mocked(fs.readFileSync).mockClear()
+      for (let i = 0; i < 3; i++) {
+        expect(ledger.cumulativeLeanPhysicalBytes(l)).toBeGreaterThanOrEqual(a.predecessor.allocatedDiskBytes)
+        expect(ledger.readLeanLedger(l).charged).toBe(50)
+        expect(continuation.assertLeanBaselineContinuationFrontierV2(a, sample(a), l)).toBe(a.window.carryMs + 2000)
+      }
+      expect(vi.mocked(labRoot).mock.calls.filter(([domain]) => domain === "lean-slot-v1" || domain.includes("allocation") || domain.includes("admission"))).toHaveLength(0)
+      expect(vi.mocked(fs.readFileSync).mock.calls).toHaveLength(6)
+      expect(vi.mocked(fs.lstatSync).mock.calls.length).toBeGreaterThanOrEqual(21)
+      expect(ledger.leanCanonicalBytes(a)).toEqual(before)
+    }
+  }))
+  it("rejects structural, root-matching, mutable and cross-version ledger capabilities", () => fixture((l, original) => {
+    const a = ledger.readLeanAdmittedContinuationAllocationV2(l), clone = JSON.parse(Buffer.from(ledger.leanCanonicalBytes(a)).toString()) as ledger.LeanBaselineContinuationAllocationV2
+    for (const forged of [{ ...l }, Object.freeze({ ...l }), { directory: l.directory, allocation: clone }, { directory: l.directory, allocation: continuationAllocationFixture() }]) {
+      expect(() => ledger.readLeanAdmittedContinuationAllocationV2(forged)).toThrow()
+      expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, sample(a), forged)).toThrow()
+    }
+    expect(() => continuation.assertLeanBaselineContinuationFrontierV2(clone, sample(a), l)).toThrow()
+    vi.mocked(labRoot).mockClear(); ledger.cumulativeLeanPhysicalBytes({ directory: l.directory, allocation: original })
+    expect(vi.mocked(labRoot).mock.calls.filter(([domain]) => domain === "lean-slot-v1")).toHaveLength(36)
+    expect(continuation.assertLeanBaselineContinuationFrontierV2(clone, sample(a))).toBe(a.window.carryMs + 2000)
+    for (const change of [{ sourceRoot: r("wrong") }, { requestBytesRoot: r("wrong") }, { window: { ...clone.window, routeNamespace: "20261012-v4" } }, { schemaVersion: "lean-baseline-continuation-allocation-v1" }]) expect(() => continuation.assertLeanBaselineContinuationFrontierV2({ ...clone, ...change } as never, sample(a))).toThrow()
+    const accessor = { ...clone }; Object.defineProperty(accessor, "sourceRoot", { enumerable: true, get: () => clone.sourceRoot })
+    for (const hostile of [accessor, Object.assign(Object.create({ extra: true }), clone)]) expect(() => ledger.admitLeanAllocation(hostile)).toThrow()
+  }))
+  it("freshly refuses canonical allocation drift and journal changes, even after policy issuance", () => fixture((l) => {
+    const a = ledger.readLeanAdmittedContinuationAllocationV2(l), path = join(l.directory, "allocation.json"), bytes = fs.readFileSync(path)
+    for (const mutation of [Buffer.from(` ${bytes.toString()}`), ledger.leanCanonicalBytes({ ...a, requestBytesRoot: r("wrong") })]) {
+      writeFileSync(path, mutation); expect(() => ledger.readLeanLedger(l)).toThrow(); writeFileSync(path, bytes); expect(ledger.readLeanLedger(l).charged).toBe(50)
+    }
+    fs.renameSync(path, `${path}.old`); writeFileSync(path, ledger.leanCanonicalBytes({ ...a, window: { ...a.window, grantId: "wrong" } }), { mode: 0o600 }); expect(() => ledger.readLeanLedger(l)).toThrow()
+    writeFileSync(path, bytes); writeFileSync(join(l.directory, "ledger.ndjson"), "{}"); expect(() => ledger.readLeanLedger(l)).toThrow(/PUBLICATION/)
+  }))
+})
 describe("[continuation-v4] finite namespace and spent-cost isolation", () => {
   const window = () => { const { root: _, ...body } = { ...continuationWindowFixtureV2(), routeNamespace: "20261012-v4" as const }; return { ...body, root: labRoot(body.schemaVersion, body) } }
   it("selects only exact fixed requests and whole validated windows, preserving V3 bytes", () => {
