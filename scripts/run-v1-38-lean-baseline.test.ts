@@ -26,6 +26,17 @@ import * as contracts from "../packages/strategy-lab/src/contracts.js"
 import * as continuationAuthority from "./lib/v1-38-lean-experiment-authority.js"
 import * as continuationSource from "./lib/v1-38-lean-baseline-source.js"
 import { leanColdProcedureRoot } from "./lib/v1-38-lean-baseline-pipeline.js"
+import { checkFactoryBoundaries } from "./check-v1-38-factory-boundaries.js"
+it("[continuation-remaining-overhead] [VF-REM-BUILTIN-01] preserves the actual audited factory reachability boundary without direct consumer util imports", () => {
+  const result = checkFactoryBoundaries()
+  expect(result).toMatchObject({ ok: true, violations: [] }); expect(result.scannedFiles).toBeGreaterThan(1000)
+  for (const path of ["scripts/lib/v1-38-lean-baseline-continuation.ts", "scripts/run-v1-38-lean-baseline.ts"]) expect(fs.readFileSync(resolve(path), "utf8")).not.toMatch(/from ["']node:util["']/u)
+  const trap = vi.fn(() => { throw new Error("HOSTILE_INSPECTION") }), proxy = new Proxy({}, { get: trap, getPrototypeOf: trap, ownKeys: trap }), revoked = Proxy.revocable({}, {})
+  revoked.revoke()
+  expect(lean.leanHostIsProxy(proxy)).toBe(true); expect(lean.leanHostIsProxy(revoked.proxy)).toBe(true); expect(lean.leanHostIsProxy({})).toBe(false)
+  expect(lean.leanHostIsNativeError(new Error("inert"))).toBe(true); expect(lean.leanHostIsNativeError(proxy)).toBe(false); expect(lean.leanHostIsNativeError(revoked.proxy)).toBe(false)
+  expect(trap).not.toHaveBeenCalled()
+})
 describe("[continuation-overhead] actual V2 context complete guard", () => {
   const invokeRun = async (request: string) => {
     const send = Object.getOwnPropertyDescriptor(process, "send")
