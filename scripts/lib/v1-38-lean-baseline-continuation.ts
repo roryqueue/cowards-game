@@ -2,9 +2,10 @@
 import { createHash } from "node:crypto"
 import { constants, openSync, closeSync, fstatSync, readSync, lstatSync, realpathSync, readdirSync, type Stats } from "node:fs"
 import { resolve, join, relative } from "node:path"
+import { types as nodeTypes } from "node:util"
 import { labRoot, freezeLabValue, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_CAPS, LEAN_BASELINE_CONTINUATION_WINDOW as WINDOW, LEAN_BASELINE_CONTINUATION_PATHS, leanBytesRoot, leanCanonicalBytes, validateLeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocation, type LeanBaselineContinuationCarry } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { LEAN_BASELINE_CONTINUATION_PATHS_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationAllocationV2, readLeanAdmittedContinuationAllocationV2, leanContinuationGlobalFloorV2, leanBaselineContinuationElapsedFloorV2, leanBaselineContinuationPathsForWindowV2, type LeanExperimentLedger, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2, type LeanBaselineContinuationCarryV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationAllocationV2, readLeanAdmittedContinuationAllocationV2, leanAdmittedContinuationElapsedFloorV2, leanBaselineContinuationElapsedFloorV2, leanBaselineContinuationPathsForWindowV2, type LeanExperimentLedger, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2, type LeanBaselineContinuationCarryV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { exactLabKeys } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_PRIVATE_MATCH_CARRY_V3, LEAN_PRIVATE_MATCH_CARRY_V2, LEAN_PRIVATE_MATCH_ARTIFACT_V3, LEAN_PRIVATE_PROBE_COST_ROOT, validateLeanPrivateMatchAllocationV3, validateLeanPrivateMatchAllocationV2, validateLeanPrivateMatchAllocationV1, authenticateLeanPrivateMatchProbeCarryV1 } from "./v1-38-lean-experiment-authority.js"
 
@@ -45,8 +46,7 @@ export const assertLeanBaselineContinuationFrontierV2 = (allocation: LeanBaselin
   if (!exactLabKeys(s, optional ? [...required, "remainingClosureMs", "remainingOfflineMs"] : required) || keys.some(key => key !== "live" && !integer((s as any)[key])) || s.live !== true || s.remainingSlots > 36 || s.charged < 50 || s.charged > 86 || s.remainingSlots !== 0 && (s.charged + s.remainingSlots < 86 || s.charged + s.remainingSlots > 87) || optional && s.remainingSlots !== 0 || (s.remainingClosureMs ?? w.closureMs) > w.closureMs || (s.remainingOfflineMs ?? w.offlineOverheadMs) > w.offlineOverheadMs) return fail("V2_FRONTIER")
   // Same global/grant/journal/monotonic floors as the public strict path. Only
   // its already-admitted immutable window validation is redundant here.
-  if (ledger !== undefined && s.nowMs < w.anchorMs) return fail("V2_CLOCK")
-  const elapsed = ledger === undefined ? leanBaselineContinuationElapsedFloorV2(w, s.nowMs, a.predecessor.elapsedUpperBoundMs, s.monotonicElapsedMs) : Math.max(leanContinuationGlobalFloorV2(s.nowMs), w.carryMs + Math.max(s.nowMs - w.anchorMs, s.monotonicElapsedMs), a.predecessor.elapsedUpperBoundMs)
+  const elapsed = ledger === undefined ? leanBaselineContinuationElapsedFloorV2(w, s.nowMs, a.predecessor.elapsedUpperBoundMs, s.monotonicElapsedMs) : leanAdmittedContinuationElapsedFloorV2(ledger, s.nowMs, a.predecessor.elapsedUpperBoundMs, s.monotonicElapsedMs)
   if (!integer(elapsed)) return fail("V2_CLOCK")
   const reserve = s.remainingSlots * LEAN_CAPS.matchMs + (s.remainingClosureMs ?? w.closureMs) + (s.remainingOfflineMs ?? w.offlineOverheadMs), native = 2 * 268435456 + 512000000 + 335544320
   if (!integer(s.nowMs + reserve) || !integer(elapsed + reserve) || s.nowMs + reserve > w.deadlineMs || elapsed + reserve > w.capMs || s.retainedBytes < a.predecessor.allocatedDiskBytes || s.retainedBytes > LEAN_CAPS.retainedBytes || s.scratchBytes > LEAN_CAPS.scratchBytes || s.retainedBytes + s.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || s.parentRssBytes + s.childRssBytes + s.arrayBuffersBytes + native > LEAN_BASELINE_CONTINUATION_POLICY_V2.memoryBytes || s.availableMemoryBytes < native || s.freeBytes < LEAN_CAPS.totalBytes - s.retainedBytes) return fail("V2_CAPACITY")
@@ -303,8 +303,39 @@ export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinu
   rows.sort((a, b) => a.path.localeCompare(b.path)); reconcileLeanContinuationInventoryV2(prior, rows, reviewed, window)
   guard(); return freezeLabValue(rows)
 }
+/** Reject executable expected data before reading fields; never freeze a caller
+ * Stats object. These snapshots compile expectations only, not observations. */
+const assertContinuationExpectedDataV2 = (value: unknown, required: readonly string[] = []): void => {
+  if (value === null || typeof value !== "object" || nodeTypes.isProxy(value) || required.some(key => !Object.hasOwn(value, key)) || Reflect.ownKeys(value).some(key => typeof key !== "string" || !("value" in Object.getOwnPropertyDescriptor(value, key)!))) return fail("V2_EXPECTED_IDENTITY")
+}
+const validateContinuationMembersV2 = (members: readonly string[]): void => {
+  assertContinuationExpectedDataV2(members)
+  if (!Array.isArray(members) || Object.getPrototypeOf(members) !== Array.prototype || members.length > 4096 || Object.keys(members).length !== members.length || members.some(name => typeof name !== "string" || !name || name.includes("/") || name.includes("\0") || name === "." || name === "..") || new Set(members).size !== members.length) return fail("V2_EXPECTED_MEMBERS")
+}
+const continuationMembersTextV2 = (members: readonly string[]): string => {
+  validateContinuationMembersV2(members)
+  return Buffer.from(leanCanonicalBytes(members)).toString("utf8")
+}
 export const createLeanContinuationIdentityGuardV2 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[]): (() => void) => {
+  assertContinuationExpectedDataV2(pins); assertContinuationExpectedDataV2(survivors)
+  if (!Array.isArray(pins) || !Array.isArray(survivors) || pins.length > 4096 || survivors.length > 4096) return fail("V2_EXPECTED_IDENTITY")
+  for (const pin of pins) {
+    assertContinuationExpectedDataV2(pin, ["path", "stat"]); assertContinuationExpectedDataV2(pin.stat, ["dev", "ino", "size", "uid", "mode", "blocks", "mtimeMs", "ctimeMs"])
+    if (Object.getPrototypeOf(pin) !== Object.prototype && Object.getPrototypeOf(pin) !== null) return fail("V2_EXPECTED_IDENTITY")
+    if (typeof pin.path !== "string" || !pin.path || ![pin.stat.dev, pin.stat.ino, pin.stat.size, pin.stat.uid, pin.stat.mode, pin.stat.blocks].every(integer) || ![pin.stat.mtimeMs, pin.stat.ctimeMs].every(n => Number.isFinite(n) && n >= 0)) return fail("V2_EXPECTED_IDENTITY")
+  }
+  for (const row of survivors) {
+    assertContinuationExpectedDataV2(row, ["path", "kind", "bytes", "allocatedBytes", "dev", "ino", "mode", "mtimeMs", "ctimeMs"])
+    if (Object.getPrototypeOf(row) !== Object.prototype && Object.getPrototypeOf(row) !== null) return fail("V2_EXPECTED_IDENTITY")
+    if (typeof row.path !== "string" || !row.path || !["file", "directory", "sealed_metadata"].includes(row.kind) || ![row.bytes, row.allocatedBytes, row.dev, row.ino, row.mode].every(integer) || row.mode > 0o7777 || ![row.mtimeMs, row.ctimeMs].every(n => Number.isFinite(n) && n >= 0)) return fail("V2_EXPECTED_IDENTITY")
+    if (row.members !== undefined) {
+      validateContinuationMembersV2(row.members)
+      if (row.kind !== "directory" || row.members.some((name, i) => i > 0 && row.members![i - 1]! >= name)) return fail("V2_EXPECTED_MEMBERS")
+    }
+  }
   const predicates = leanContinuationIdentityPredicates(pins, survivors)
+  const expectedMembers = new Map<LeanContinuationInventoryRowV2, string>()
+  for (const expected of predicates.values()) for (const row of expected.survivors) if (row.members !== undefined) expectedMembers.set(row, continuationMembersTextV2(row.members))
   return () => {
     for (const [path, expected] of predicates) {
       const s = lstatSync(path)
@@ -312,7 +343,7 @@ export const createLeanContinuationIdentityGuardV2 = (pins: readonly { path: str
       for (const pin of expected.pins) if (!s.isFile() || s.nlink !== 1 || s.dev !== pin.dev || s.ino !== pin.ino || s.size !== pin.size || s.mtimeMs !== pin.mtimeMs || s.ctimeMs !== pin.ctimeMs || s.uid !== pin.uid || s.mode !== pin.mode || s.blocks !== pin.blocks) return fail("CONTINUATION_PIN_CHANGED")
       for (const row of expected.survivors) {
         if (s.dev !== row.dev || s.ino !== row.ino || s.blocks * 512 !== row.allocatedBytes || s.size !== row.bytes || s.mtimeMs !== row.mtimeMs || s.ctimeMs !== row.ctimeMs || s.isFile() && s.nlink !== 1) return fail("CONTINUATION_SURVIVOR_CHANGED")
-        if (!(row.kind === "directory" ? s.isDirectory() : (row.kind === "file" || row.kind === "sealed_metadata") && s.isFile()) || (s.mode & 0o7777) !== row.mode || row.members && !equal(readdirSync(path).sort(), row.members)) return fail("V2_IDENTITY_CHANGED")
+        if (!(row.kind === "directory" ? s.isDirectory() : (row.kind === "file" || row.kind === "sealed_metadata") && s.isFile()) || (s.mode & 0o7777) !== row.mode || row.members && continuationMembersTextV2(readdirSync(path).sort()) !== expectedMembers.get(row)) return fail("V2_IDENTITY_CHANGED")
       }
     }
   }

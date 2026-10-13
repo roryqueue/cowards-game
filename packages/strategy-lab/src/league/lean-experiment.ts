@@ -851,6 +851,9 @@ export const validateLeanBaselineContinuationWindowV2 = (value: unknown): Readon
 }
 export const leanBaselineContinuationElapsedFloorV2 = (window: LeanBaselineContinuationWindowV2, nowMs: number, journalMs = 0, monotonicSinceAnchorMs = 0): number => {
   const w = validateLeanBaselineContinuationWindowV2(window)
+  return continuationElapsedForValidatedWindowV2(w, nowMs, journalMs, monotonicSinceAnchorMs)
+}
+const continuationElapsedForValidatedWindowV2 = (w: Readonly<LeanBaselineContinuationWindowV2>, nowMs: number, journalMs: number, monotonicSinceAnchorMs: number): number => {
   if (!natural(nowMs) || nowMs < w.anchorMs || !natural(journalMs) || !natural(monotonicSinceAnchorMs)) return fail("CONTINUATION_V2_CLOCK")
   const elapsed = Math.max(leanContinuationGlobalFloorV2(nowMs), w.carryMs + Math.max(nowMs - w.anchorMs, monotonicSinceAnchorMs), journalMs)
   return natural(elapsed) ? elapsed : fail("CONTINUATION_V2_CLOCK")
@@ -1457,13 +1460,15 @@ interface LeanAllocationPolicyV2 {
   readonly allocation: Readonly<LeanBaselineContinuationAllocationV2>
   readonly canonicalText: string
   readonly writablePaths: readonly string[]
+  readonly window: Readonly<LeanBaselineContinuationWindowV2>
+  readonly tempPath: string
 }
 const admittedLedgerPoliciesV2 = new WeakMap<LeanExperimentLedger, Readonly<LeanAllocationPolicyV2>>()
 const compileLeanAllocationPolicyV2 = (directory: string, allocation: Readonly<AnyLeanAllocation>): LeanExperimentLedger => {
   if (allocation.schemaVersion !== "lean-baseline-continuation-allocation-v2") return { directory, allocation }
   const a = freezeLabValue(allocation), ledger = Object.freeze({ directory, allocation: a })
   const paths = leanBaselineContinuationPathsForWindowV2(a.window)
-  admittedLedgerPoliciesV2.set(ledger, freezeLabValue({ directory, allocation: a, canonicalText: Buffer.from(leanCanonicalBytes(a)).toString("utf8"), writablePaths: [paths.temp, paths.allocation, paths.request, paths.window].map(path => resolve(path)) }))
+  admittedLedgerPoliciesV2.set(ledger, freezeLabValue({ directory, allocation: a, window: a.window, tempPath: paths.temp, canonicalText: Buffer.from(leanCanonicalBytes(a)).toString("utf8"), writablePaths: [paths.temp, paths.allocation, paths.request, paths.window].map(path => resolve(path)) }))
   return ledger
 }
 const policyForAdmittedLedgerV2 = (ledger: LeanExperimentLedger) => {
@@ -1472,6 +1477,17 @@ const policyForAdmittedLedgerV2 = (ledger: LeanExperimentLedger) => {
 }
 /** Allocation identity only: no transferable structural policy or capacity. */
 export const readLeanAdmittedContinuationAllocationV2 = (ledger: LeanExperimentLedger): Readonly<LeanBaselineContinuationAllocationV2> => policyForAdmittedLedgerV2(ledger)?.allocation ?? fail("CONTINUATION_V2_LEDGER")
+/** Pure derivation, not a grant: callers still authenticate live context bytes.
+ * Only the privately admitted ledger owns the exact recursively frozen window. */
+export const leanAdmittedContinuationElapsedFloorV2 = (ledger: LeanExperimentLedger, nowMs: number, journalMs = 0, monotonicSinceAnchorMs = 0): number => {
+  const policy = policyForAdmittedLedgerV2(ledger) ?? fail("CONTINUATION_V2_LEDGER")
+  return continuationElapsedForValidatedWindowV2(policy.window, nowMs, journalMs, monotonicSinceAnchorMs)
+}
+export const leanAdmittedContinuationCapacityBasisV2 = (ledger: LeanExperimentLedger, contextWindow: LeanBaselineContinuationWindowV2, nowMs: number): { elapsedMs: number; tempPath: string } => {
+  const policy = policyForAdmittedLedgerV2(ledger) ?? fail("CONTINUATION_V2_LEDGER")
+  if (contextWindow !== policy.window) return fail("CONTINUATION_V2_LEDGER_WINDOW")
+  return { elapsedMs: continuationElapsedForValidatedWindowV2(policy.window, nowMs, 0, 0), tempPath: policy.tempPath }
+}
 const safeDirectory = (directory: string): string => { const p = resolve(directory), s = lstatSync(p); if (!s.isDirectory() || s.isSymbolicLink() || realpathSync(p) !== p || (s.mode & 0o777) !== 0o700) return fail("STORE"); return p }
 /** Exact old files and independent report are required on every v2 reopening.
  * The old route is read-only here and its v1 open-time interpretation is intact. */
@@ -1615,7 +1631,7 @@ export const leanBaselineContinuationElapsedFloor = (nowMs: number): number => {
   if (!natural(nowMs) || nowMs < LEAN_BASELINE_CONTINUATION_WINDOW.anchorMs) return fail("CONTINUATION_CLOCK")
   return LEAN_BASELINE_CONTINUATION_WINDOW.carryMs + nowMs - LEAN_BASELINE_CONTINUATION_WINDOW.anchorMs
 }
-export const currentLeanElapsedMs = (ledger: LeanExperimentLedger, notYetImportedGapMs = 0) => Math.max(currentLeanJournalElapsedMs(ledger) + notYetImportedGapMs, ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" ? leanBaselineContinuationElapsedFloorV2(ledger.allocation.window, Date.now()) : ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" ? leanBaselineContinuationElapsedFloor(Date.now()) : ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v8" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v8" ? leanRetryRootElapsedFloorV8(Date.now(), ledger.allocation.timeboxExtension) : 0)
+export const currentLeanElapsedMs = (ledger: LeanExperimentLedger, notYetImportedGapMs = 0) => Math.max(currentLeanJournalElapsedMs(ledger) + notYetImportedGapMs, ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" ? policyForAdmittedLedgerV2(ledger) ? leanAdmittedContinuationElapsedFloorV2(ledger, Date.now()) : leanBaselineContinuationElapsedFloorV2(ledger.allocation.window, Date.now()) : ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v1" ? leanBaselineContinuationElapsedFloor(Date.now()) : ledger.allocation.schemaVersion === "lean-correction-supervisor-diagnostic-allocation-v8" || ledger.allocation.schemaVersion === "lean-correction-supervisor-baseline-allocation-v8" ? leanRetryRootElapsedFloorV8(Date.now(), ledger.allocation.timeboxExtension) : 0)
 export const createLeanLedger = (directory: string, allocation: AnyLeanAllocation): LeanExperimentLedger => {
   const p = resolve(directory)
   if (realpathSync(dirname(p)) !== dirname(p)) return fail("STORE")
