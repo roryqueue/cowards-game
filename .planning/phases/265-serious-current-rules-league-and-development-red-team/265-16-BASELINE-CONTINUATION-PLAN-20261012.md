@@ -28,6 +28,14 @@ files_modified:
 
 # Plan 265-16 supplement: fresh current-rules baseline continuation
 
+## Approved V5 DATA-only time amendment — 2026-10-13
+
+ROOT first observed the latest human `yes, approved` at2026-10-13T13:21:06UTC, approving the requested ONE fresh eight-hour PRIVATE window, same15GB and ALL prior costs carried. Provenance label `human-approval-observed-20261013T132106Z` denotes this actual observation, not external custody or a fabricated message UUID. ApprovedAt/anchor1791897666000; carry549724903 from uninterrupted F(t)=459375903+(t-1791807317000); cap578524903; deadline1791926466000=21:21:06UTC/17:21:06Eastern; full36 latest entry1791902406000=14:40:06UTC/10:40:06Eastern. Duration28800000/closure1860000/offline600000 and whole36 reservation24060000ms unchanged; every subsequent source/review/idle/preparation/run/reader cost continues.
+
+This is DATA-only over verified source9db7ecea/root4b7e/sourceGateee17, no source changes or repeated production gates. Select only reviewed finite `20261013-v5` paths. ROOT is prospective runOperator `/root`; prospective readerOperator `/root/verify_265_v5_retained` will be a distinct actual agent dispatched ONLY after real terminal, not a verifier verdict invented here. Independent narrow amendment check and actual fresh owner-only window/DATA review precede sole active DATA projection, final committed planning pins and canonical request. Exactly ONE ROOT preparation, NEWimmutableallocation-only direct-child commit before unique ROOT entry, fresh passing SAME-PROCESS capacity before charge, source AND all pinned planning/HEAD held through terminal and ONE actual retained verifier only if actual entry/head exist. On pre-entry failure use ONE bounded terminal-only check, never fabricate ordinary reader inputs or retry consumed artifacts.
+
+Same15GB/3GBRAM/global300/new36/four unopened reservations, guest1000/startup2500/host5000/Match600000ms and every other engine/rules/runtime/semantic/privacy/accounting bound. Every V4/older authority/window/request/allocation/setup/result/reader stays immutable/spent; old50cost-only/no refund/reuse/recredit. No baseline/LEAG/Phase265/freeze/formation/holdout/public/counting/production/archive/tag credit. Earlier pending-time paragraphs are historical, superseded prospectively only by this explicit approval.
+
 ## Prospective SOURCE-ONLY V4 overhead repair — 2026-10-13
 
 Existing incomplete Plan16 only; no new numbered plan, workstream, module or proof tree. Independent checked supplement BEFORE source edits. This author owns only this Markdown; ROOT owns STATE/GATES/debug/validation/push. Subsequent executor owns the five original paths below exclusively, serial A→B, preserving others' edits. Earlier headings and all spent evidence remain unchanged history; this top supplement is the current source-work directive, not DATA/admission authority.

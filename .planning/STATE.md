@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Source repair verified and ready; new prospective eight-hour resource decision pending
+stopped_at: V5 DATA gates closed; final planning pin and unique ROOT preparation next
 last_updated: "2026-10-13"
 last_activity: 2026-10-13
-last_activity_desc: Combined source verification PASS_SOURCE_ONLY; source projection activated, no new empirical route
+last_activity_desc: Narrow amendment and owner-only DATA review passed; no charge, final pins before unique preparation
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,20 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V5 DATA gates closed; unique preparation next
+
+ROOT2026-10-13T13:28UTC. Actual narrow checker `/root/check_265_v5_time_amendment` PASS_PLAN_AMENDMENT/issues[]/CLOSED; independent `/root/review_265_combined_overhead_v5` PASS_DATA_REVIEW/findings[]/CLOSED, observed actual929B exact0600/owner501/singlelink/canonical window/schema/arithmetic/sourceGate/plan/ancestor joins and all five V5setup targets absent. Sole active DATA projection4a52826b now in existing GATES; SOURCE9db/4b7e/gateee17/allSOURCEgatesCLOSED unchanged. No source edits/repeated production gate or Match/reader. Windowraw989dc498/domaindc8d757f/plan7c9b actual approval carries ALLcosts.
+
+Next commit/push final planning pins→fresh exactV5canonical request→ONE ROOT preparation under cachesoff/core0/exact prospective TMPDIR; no legacy wrapper/probe or precreated scratch/store. NEWimmutableallocation-only direct-child commit BEFORE unique ROOT entry; fresh passing SAME-PROCESS capacity BEFOREcharge/dispatch. Hold exact source/all planning/window/request/HEAD from preparation through terminal plus ONE distinct actual retained verifier using real entry/head. No docs/commits/heavy competing work during hold except required allocation-only commit. Failure spends route/partialbytes; one terminal-only check without fakehead when no actual entry, no retry/refund/reuse/recredit. All operators/reviewers CLOSED before ROOT entry; prospective reader `/root/verify_265_v5_retained` not yet dispatched.
+
+Actual approved anchor1791897666000/carry549724903/cap578524903/deadline21:21:06UTC/latestfullentry14:40:06UTC; all subsequent idle/preparation/run/reader costs continue. Same15GB/3GBRAM/36new/fourunopened/global300/old50cost-only/guest1000startup2500host5000Match600000/rules/privacy. Plan16/Phase265 empiric incomplete; no freeze/formation/holdout/public/counting/production/archive/tag credit. Earlier checkpoints history; actual markers govern after final pins.
+
+## Current continuation — fresh V5 time decision approved
+
+ROOT first observation2026-10-13T13:21:06UTC: latest human `yes, approved` accepts ONE fresh eight-hour PRIVATE remaining-baseline window, same15GB/ALLprior costs. Actual observation label human-approval-observed-20261013T132106Z, not external custody/UUID. ApprovedAt/anchor1791897666000/carry549724903/cap578524903/deadline1791926466000=21:21:06UTC/17:21:06Eastern. Full36 latest-entry1791902406000=14:40:06UTC/10:40:06Eastern; unchanged24060000ms whole-schedule/closure/offline. Every later idle/review/preparation/run/reader cost continues. Earlier missing-time checkpoint resolved prospectively only; old records stay immutable.
+
+Verified source9db7ecea/4b7e052d/sourceGateee17c91d unchanged, all scoped source gates CLOSED. Existing Plan16 DATA-only amendment records approval; independent narrow amendment check and fresh owner-only window/DATA review next before DATA projection/request/preparation. Prospective ROOTrun `/root`, distinct future actual reader `/root/verify_265_v5_retained`; no reader dispatched/verdict claimed yet. At this checkpoint V5window/request/allocation/store/temp absent, no active process/agent/run/reader/source hold. Same15GB/3GBRAM/global300/new36/four unopened/guest1000startup2500host5000Match600000/all rules/privacy. No requirement/baseline/freeze/formation/holdout/public/counting/production credit. Earlier continuations are history; actual markers govern after admission.
 
 ## Current continuation — source repair verified; prospective time decision pending
 
