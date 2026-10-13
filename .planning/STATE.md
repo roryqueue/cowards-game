@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Combined source review/fix and qualified ROOT validation closed; distinct source verifier next
+stopped_at: Source repair verified and ready; new prospective eight-hour resource decision pending
 last_updated: "2026-10-13"
 last_activity: 2026-10-13
-last_activity_desc: Fixed six-file source validated with207unique passes and inherited qualifications; no new empirical route
+last_activity_desc: Combined source verification PASS_SOURCE_ONLY; source projection activated, no new empirical route
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,16 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — source repair verified; prospective time decision pending
+
+ROOT 2026-10-13T03:02UTC. Fixed source `9db7eceaf894393936bb6b1a8a02f2558d1a5abf` and actual implementation root `sha256:4b7e052d1b69611fd208a979497a2265fc2c53617b90738917bebe4b070e92c8` now have all scoped SOURCE gates closed: checked existing Plan16 A/B+C/D; independent combined review/fix/re-review clean; ROOT 207 unique passing tests with the explicitly retained inherited qualifications; distinct typed verifier `/root/verify_265_combined_overhead_v5` PASS_SOURCE_ONLY, four scoped truths verified, gaps `[]`, commands CLOSED and ownership released. Actual A/B/C/test-fix producer `/root/execute_265_v4_overhead_repair`, D coauthor `/root/execute_265_v5_transport`, independent reviewer `/root/review_265_combined_overhead_v5`. No test/scan/manifest was rerun by the verifier. No globally green test/type or empirical performance claim.
+
+The sole active SOURCE projection in existing GATES has root `sha256:ee17c91dc0d5a2209cf10e6f698967791f07a8adc8ce2e068d0a6b4c0014fc07`; ROOT pure validator/canonical calculation 99095 CLOSED0. Prior projections remain unchanged text HISTORY. No active DATA projection or V5 grant/window/request/allocation/store, capacity observation, preparation, Match or retained reader. The source is ready, but Plan16/Phase265 and the baseline remain incomplete.
+
+Genuinely new human resource choice: approve one prospective eight-hour PRIVATE remaining-baseline window at the next explicit approval, keeping the same 15GB limit and carrying ALL prior costs continuously. Current approved window still ends `2026-10-13T07:47:16UTC`; its full36 latest-entry frontier `01:06:16UTC` elapsed. Full schedule plus closure/offline requires 24,060,000ms, not a late-run exception. No preparation/run under the old window, no automatic time extension. At actual new approval A, carry `459375903+(A-1791807317000)`, cap=carry+28,800,000ms, deadline=A+28,800,000ms; actual owner-only DATA/window review and final pinned request precede a distinct fresh allocation-only direct-child commit, unique ROOT entry and fresh passing SAME-PROCESS capacity. Source and HEAD then stay fixed through terminal and ONE distinct actual retained verification, only with a real entry/head.
+
+Every spent V4/older artifact remains immutable; old50charges are cost-only, zero retained V4 new entry/charge/result/ordinary reader and initiating causes UNKNOWN. No reuse/refund/recredit. All fresh callbacks/BOTH identity passes, descriptor/byte/resource/time/lineage/privacy bounds remain intact; guest1000/startup2500/host5000/Match600000ms, 3GBRAM/global300/new36/four unopened reservations unchanged. Current-rules baseline/evaluation/freeze BEFORE formation; holdout unopened; no public/counting/production/archive/tag. Earlier continuations below are history.
 
 ## Current continuation — combined source gates closed except distinct verification
 
