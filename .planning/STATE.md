@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Source repair independently verified; new assurance/cadence decision required before continuation
+stopped_at: Major-stage assurance amendment approved; prior source-work window expired, new prospective time window required
 last_updated: "2026-10-13"
 last_activity: 2026-10-13
-last_activity_desc: Distinct source verifier passed six scoped truths with no gaps; historical-check cadence amendment pending human approval
+last_activity_desc: Human approved major-stage archive/source checks; ROOT clock21:50:36UTC confirms prior21:21:06UTC hard stop elapsed; no implementation or new route
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,14 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — cadence approved; time authority expired
+
+Latest direct human `approved, do it` approves the immediately preceding recommendation: check immutable historical archive and fixed source at major stage boundaries instead of rebuilding their complete identity inventory during every read; retain fresh active inputs/results, budgets and safety checks. This is prospective assurance/cadence authority, not implementation, empirical admission, a budget reset or a time extension. Research, exact independently checked barrier/invalidation contract, source implementation/review/fix/validation/verification remain unstarted for this amendment.
+
+First ROOT clock observation in this turn is2026-10-13T21:50:36UTC, after the unchanged source-work hard stop21:21:06UTC. The old window cannot authorize this repair or a fresh experiment; no source edit, test, research-agent dispatch, new window/request/allocation/store, preparation, runtime/Strategy/Match or empirical reader was started. Initial workflow/context/process inspection occurred before the elapsed-clock observation; it confers no renewed time authority. Only this safe approval/stop record is being saved. Existing verified source9a277876/root9ba87678 and consumed histories remain unchanged.
+
+Human-only next decision: ONE new prospective eight-hour window covering checked cadence repair, review/testing and any admitted private baseline execution, with ALL prior cumulative costs carried forward and unchanged15GB/3GBRAM/global300/36new/fourunopened/runtime/rules/privacy bounds. Start only at the actual next approval observation; do not move the old anchor or silently grant a later run eight additional hours. No blind unchanged run; source readiness and fresh same-process capacity remain prerequisites. No LEAG/baseline/freeze/formation/holdout/public/counting/production credit. Earlier checkpoints are history.
 
 ## Current continuation — source repair closed; assurance decision pending
 

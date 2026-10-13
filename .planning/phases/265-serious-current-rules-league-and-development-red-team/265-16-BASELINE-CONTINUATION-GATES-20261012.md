@@ -1,5 +1,11 @@
 # Baseline continuation gates
 
+## Human cadence approval — prospective only; expired time stop
+
+Direct human `approved, do it` accepts the prior recommendation for major-stage immutable archive/fixed-source authentication in place of full every-read inventory rebuilding, while live inputs/results/budgets/safety checks stay fresh. Exact barriers/invalidation and connected adversarial tests require research and independent plan check before implementation. This resolves the assurance choice, not resource-time authority; no new source contract is implemented or claimed verified.
+
+ROOT first actual current clock2026-10-13T21:50:36UTC is later than unchanged21:21:06UTC source-work hard stop. No research-agent dispatch, source edit/test, new prospective window/request/allocation/store/prepare, Strategy/Match or empirical reader began. Initial workflow/context/process inspection preceded the clock check, not a renewed resource grant. Safe approval/stop metadata only. Fixed9a277876 and existing source-only verification remain; all consumed costs/artifacts unchanged. A separately approved prospective eight-hour window covering repair through any admitted run is needed, carrying ALL prior costs and every unchanged cap; never shift/reuse/reset old window, nor infer fresh time from this cadence approval. No active SOURCE/DATA admission/new route/downstream credit.
+
 ## Final distinct source verification — closed; assurance decision pending
 
 ROOT observed actual `/root/verify_265_v5_remaining_overhead_source` final verdict on2026-10-13: `PASS_SOURCE_ONLY_REQUIREMENTS_PENDING`, scoped6/6, gaps `[]`. Fixed source `9a277876d92a2dd9cba853e4dc72e58184808ef8`; independently observed documentation HEAD `a87254971cc173d6cc2065e034948452f524828c`; ROOT-derived implementation identity `sha256:9ba876789ef8809e4380737e17c00ff9c4fdfc458a30cffe63e34287efdea942`. Distinct from actual author and reviewer. All inspection commands CLOSED, ownership RELEASED; no files written, tests/scanners/manifest/history authentication/capacity/prepare/Strategy/Match/ordinary reader rerun by verifier.
