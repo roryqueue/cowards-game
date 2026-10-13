@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Remaining-overhead E/F supplement independently checked; source execution next
+stopped_at: CR-REM-01 source correction closed; independent re-review next
 last_updated: "2026-10-13"
 last_activity: 2026-10-13
-last_activity_desc: E/F plan check passed; prior source gate archived before scoped repair, no new route authority
+last_activity_desc: RED reproduced blocker then GREEN fixed snapshots; author83helper tests pass, independent re-review pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,17 @@ total_plans_in_phase: 16
 
 # State: Coward's Game
 
-## Current continuation — E/F checked; source-only repair execution next
+## Current continuation — source correction closed; re-review next
+
+Actual original typed executor closed/released helper+test CR-REM-01 correction4eec8d3a after RED1b664655 reproduced allthree reportedforms. Author focused7passes/fullhelper83of83pass10.17s/diff0/allcommandsCLOSED; package/F unchanged. ROOT preserves actual review finding and author closure; independent same-reviewer re-review, ROOT affected union/sensitivity/exact original15 strict comparison and distinct source verification stillpending. No activeSOURCE/DATA/newroute/admission or empiricalcredit. Fullcadence feasibility remains unestablished; sourcework21:21:06UTC/allcontinuouscosts/allbounds/history/privacy unchanged. Earlier correction-active headers below history.
+
+E/F actualsourceauthor CLOSED at6939e6ff/pushed; actual independent typed `/root/review_265_v5_remaining_overhead` completed five-file deep cross-call review:1critical/0warning/0info, commandsCLOSED/ownershipRELEASED. CR-REM-01: caller-controlled custom-array iterators/hidden some/inherited members may omit predicates or execute during expected snapshot capture. Static branch proof, not executed Strategy exploit. Original typed executor nowexclusivelyre-owns ONLYhelper+helpertest for checkedEscope descriptor-only clean snapshot correction RED→GREEN; package/driver untouched. Re-review/ROOTvalidation/exactstrictcomparison/distinctsourceverify remainpending. No activeSOURCE/DATA or empiricalauthority.
+
+Author bounded real-guard/synthetic-inventory assay completed only32/64sample1785ms. Larger128/256,512/1024,2280/2352 samples correctlyCENSORED at101/36/15rows under8s inclsetup+cleanup; everycompletedguard retained2Uidentity/21physical/twochunks,0repeatedwindowDOMAINhashes (not0rawhashes). Dummyresources/Git/factorymocked, REALcarryauthenticationdenied missingdummy descriptor, contextneverauthenticated; categorytimingsoverlap. No full-inventory/run-fit claim; currentfullcadence stillfeasibilityconstraint. Do not launchanotherblindroute/timewindow. Alloldartifactsimmutable/no refund/newcharge/downstreamcredit; same21:21:06UTCsourcehardstop/allcontinuouscosts/full36frontierelapsed/frozenbounds/privacy. Earlier checkpoints history.
+
+Actual `/root/execute_265_v5_remaining_overhead` E RED3c199e0f→GREENd4397fd4 CLOSED/three ownedfilesclean/released; ROOT pushedd4397fd4. Author reports4tagged passes/49affected unionpasses and14finaloverheadpasses under direct installedVitest/oneworker/heap768, all commandsclosed, not wholehelper/sourcegates. Earlier package-manager hookabort was pretest, not semanticRED or dependency-install proof. F nowexclusivelyowns driver/test ONLY; E released, no competingheavywork/sourceauthor. Final combined independent review/fix, ROOTvalidation/sensitivity/strictcomparison and distinctsourceverify pending. No activeprojection/newroute/admission/empiricalcredit; all continuouscosts/hardstop21:21:06UTC/history/frozenbounds unchanged.
+
+Actual typed `/root/execute_265_v5_remaining_overhead` exclusively owns E's package/helper/helpertest, then F's driver/drivertest after E closes/releases. Checked supplement and archival records committed/pusheded4b81cb before dispatch. No competing source author; ROOT owns documentation only. Source tasks/review/validation/assay/verification remain incomplete, no new empirical route/data/admission. Source-work21:21:06UTC/allcontinuouscosts/allfixedbounds unchanged. Actual owner/command closures govern; earlier snapshots are history.
 
 Actual independent typed `/root/check_265_v5_remaining_overhead` PASS_PLAN_SUPPLEMENT/issues[]/commandsCLOSED/ownershipRELEASED. Additive existingPlan16 E→F uses five original source/test files, no new numberedplan/scaffold/authority. ROOT archived9db SOURCE JSON body as unchanged TEXT before source edits; no active SOURCE/DATA proof for changed code. Exact pre-edit fifteen-path strict7051B/thirteen complete inherited blocks retained for comparison. E/F source execution, independent review/fix, ROOT bounded connected tests/assay and distinct source verification are NEXT, not completed. Source-work21:21:06UTC/allcontinuouscosts/full36elapsedfrontier/allcaps/history/privacy unchanged; no new route or downstream credit. Earlier planning/terminal checkpoints below remain history.
 

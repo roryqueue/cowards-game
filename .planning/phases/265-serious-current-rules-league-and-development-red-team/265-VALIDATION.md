@@ -7,11 +7,17 @@ wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-13
 source_reviewed: 9db7eceaf894393936bb6b1a8a02f2558d1a5abf
-source_gate: overhead-v5-source-only-verified-qualified-root-validation
-empirical_validation: v4-pre-entry-failure-unique-terminal-only-check-no-new-retained-charge
+source_gate: historical-overhead-v5-proof-archived-new-remaining-overhead-source-validation-pending
+empirical_validation: v5-pre-entry-failure-unique-terminal-only-check-no-new-retained-charge
 ---
 
 # Phase265 — Validation Strategy
+
+## Current E/F repair — validation pending
+
+Checked remaining-overhead E/F supplement independently passed actual `/root/check_265_v5_remaining_overhead`, issues[]/commandsCLOSED. Actual `/root/execute_265_v5_remaining_overhead` owns five original source/test files serially, source-only. Previous9db/4b7e/ee17 projection is unchanged TEXT history, NOT active proof for new source. No active SOURCE/DATA projection or new route. E/F connected hostile-input/live-guard/pure-reuse coverage, dormant diagnostic privacy and bounded N/U sensitivity assay are pending actual execution; subsequent independent review/fix, ROOT affected union/exact fifteen-path strict comparison and distinct source verification remain mandatory. No test outcome is asserted here.
+
+Latest actual V5 run/unique terminal-only check CLOSED with no retained entry/result/new charge; ordinary empirical reader was NEVER invoked, initiating cause UNKNOWN. Old50charges and all consumed bytes remain cost-only/immutable/no refund. Missing retained records are not proof of absence of every transient observation. Source-work hardstop21:21:06UTC/all continuous costs/full36 frontier elapsed remain binding. Whole-phase partial/nyquist=false/wave0=false; no baseline/freeze/formation/holdout/public/counting/production credit. Earlier validation headers below are historical snapshots.
 
 ## Current scoped source validation — overhead repair / finite V5
 
