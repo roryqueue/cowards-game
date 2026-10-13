@@ -307,7 +307,7 @@ export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinu
  * Stats object. These snapshots compile expectations only, not observations. */
 const captureContinuationArrayV2 = (value: unknown): readonly unknown[] => {
   if (value === null || typeof value !== "object" || nodeTypes.isProxy(value) || !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) return fail("V2_EXPECTED_IDENTITY")
-  const fields = Object.getOwnPropertyDescriptors(value), length = fields.length!.value as unknown
+  const fields: PropertyDescriptorMap = Object.getOwnPropertyDescriptors(value as object), length = fields.length!.value as unknown
   if (!integer(length) || length > 4096 || Reflect.ownKeys(fields).length !== length + 1) return fail("V2_EXPECTED_IDENTITY")
   const captured: unknown[] = []
   for (let i = 0; i < length; i++) {

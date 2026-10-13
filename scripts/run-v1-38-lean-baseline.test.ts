@@ -59,7 +59,7 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
     const actualCarry = continuationHelper.authenticateLeanBaselineContinuationCarryV2
     const carry = vi.spyOn(continuationHelper, "authenticateLeanBaselineContinuationCarryV2").mockImplementation((git, rows, guard, window) => {
       if (assay) {
-        authBoundary.guard = guard as typeof authBoundary.guard; authBoundary.attempts++
+        authBoundary.guard = guard as (additional?: number) => continuationHelper.LeanContinuationFrontier; authBoundary.attempts++
         // Execute the REAL authenticator, denying at an absent old descriptor
         // resolved inside this fixture. No historical content is read, and no
         // context/authentication is represented as completed or admitted.
