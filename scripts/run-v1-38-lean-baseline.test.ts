@@ -23,10 +23,12 @@ import * as leagueHost from "./run-v1-38-serious-league.js"
 import * as continuationHelper from "./lib/v1-38-lean-baseline-continuation.js"
 import * as factoryImplementation from "./v1-38-factory-implementation.js"
 import * as contracts from "../packages/strategy-lab/src/contracts.js"
+import * as continuationAuthority from "./lib/v1-38-lean-experiment-authority.js"
+import * as continuationSource from "./lib/v1-38-lean-baseline-source.js"
 import { leanColdProcedureRoot } from "./lib/v1-38-lean-baseline-pipeline.js"
 describe("[continuation-overhead] actual V2 context complete guard", () => {
-  const fixture = (run: (c: ReturnType<typeof parentApi.openLeanBaselineContinuationContextV2>, f: { passes: string[][]; reservations: number[]; hashes: { mockClear: () => unknown; mock: { calls: Parameters<typeof contracts.labRoot>[] } }; head: { value: string }; w: lean.LeanBaselineContinuationWindowV2; clearObservations: () => void; observationCounts: () => { physical: number; chunks: number } }) => void) => {
-    const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-context-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V2, head = { value: "c".repeat(40) }, sourceHead = "b".repeat(40), reviewedHead = "a".repeat(40)
+  const fixture = (run: (c: ReturnType<typeof parentApi.openLeanBaselineContinuationContextV2>, f: { passes: string[][]; reservations: number[]; hashes: { mockClear: () => unknown; mock: { calls: Parameters<typeof contracts.labRoot>[] } }; head: { value: string }; w: lean.LeanBaselineContinuationWindowV2; clearObservations: () => void; observationCounts: () => { physical: number; chunks: number } }) => void, namespace: lean.LeanBaselineContinuationWindowV2["routeNamespace"] = "20261012-v3") => {
+    const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-context-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = namespace === "20261013-v5" ? lean.LEAN_BASELINE_CONTINUATION_PATHS_V5 : lean.LEAN_BASELINE_CONTINUATION_PATHS_V2, head = { value: "c".repeat(40) }, sourceHead = "b".repeat(40), reviewedHead = "a".repeat(40)
     const sourcePaths = [...parentApi.LEAN_BASELINE_CONTINUATION_OWNED_PATHS, "scripts/run-v1-38-lean-baseline.sh", "scripts/lib/v1-38-lean-baseline-analysis.ts", "scripts/lib/v1-38-lean-baseline-metrics.ts", "scripts/lib/v1-38-lean-cold-corpus.ts", "scripts/lib/v1-38-lean-seal-metadata.ts", "scripts/lib/v1-38-lean-training-adapter.ts", "scripts/lib/v1-38-lean-baseline.ts", "packages/strategy-lab/src/league/lean-training.ts", "scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-lean-child-cli-terminal.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts", "packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"]
     const write = (path: string, bytes: string | Uint8Array, mode = 0o644) => { const absolute = resolve(path); fs.mkdirSync(resolve(absolute, ".."), { recursive: true }); fs.writeFileSync(absolute, bytes, { mode }); fs.chmodSync(absolute, mode) }
     const actualStat = fs.lstatSync, actualExists = fs.existsSync, stat = vi.spyOn(fs, "lstatSync").mockImplementation(((path: string, ...args: unknown[]) => (actualStat as any)(resolve(String(path)), ...args)) as typeof fs.lstatSync), exists = vi.spyOn(fs, "existsSync").mockImplementation(path => actualExists(resolve(String(path))))
@@ -52,7 +54,7 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       for (const path of new Set([...sourcePaths, ...parentApi.LEAN_BASELINE_CONTINUATION_PLANNING_PATHS])) write(path, "synthetic public fixture", path.endsWith(".sh") ? 0o755 : 0o644)
       const base = parentApi.leanBaselineContinuationSourceManifestV2(), planRoot = base.planningEntries.find(row => row.path.endsWith("265-16-BASELINE-CONTINUATION-PLAN-20261012.md"))!.root
       const sg: parentApi.LeanContinuationSourceGateV2 = { schemaVersion: "lean-baseline-continuation-source-gate-v2", plan_check: "passed", source_review: "passed", root_validation: "passed", source_verification: "passed", commands_closed: true, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceAuthor: "inert-author", sourceReviewer: "inert-reviewer", sourceVerifier: "inert-verifier" }
-      const wb = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-overhead", approvalEvidence: { humanDecisionId: "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1791840227000, anchorMs: 1791840227000, carryMs: 492285903, capMs: 521085903, deadlineMs: 1791869027000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261012-v3" as const, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: labRoot(sg.schemaVersion, sg), planRoot, runOperator: "inert-runner", readerOperator: "inert-reader" }, w = { ...wb, root: labRoot(wb.schemaVersion, wb) }
+      const wb = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-overhead", approvalEvidence: { humanDecisionId: "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1791840227000, anchorMs: 1791840227000, carryMs: 492285903, capMs: 521085903, deadlineMs: 1791869027000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: namespace, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: labRoot(sg.schemaVersion, sg), planRoot, runOperator: "inert-runner", readerOperator: "inert-reader" }, w = { ...wb, root: labRoot(wb.schemaVersion, wb) }
       const dg: parentApi.LeanContinuationDataGateV2 = { schemaVersion: "lean-baseline-continuation-data-gate-v2", status: "passed", grantId: w.grantId, windowRoot: w.root, windowBytesRoot: leanBytesRoot(leanCanonicalBytes(w)), reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: w.sourceGateRoot, planRoot, approvalEvidence: w.approvalEvidence, runOperator: w.runOperator, readerOperator: w.readerOperator, dataReviewer: "inert-data-reviewer", commands_closed: true }
       write(p.gates, `\`\`\`json\n${Buffer.from(leanCanonicalBytes(sg))}\n\`\`\`\n\`\`\`json\n${Buffer.from(leanCanonicalBytes(dg))}\n\`\`\`\n`); write(p.window, leanCanonicalBytes(w), 0o600)
       clock = vi.spyOn(Date, "now").mockReturnValue(w.anchorMs); process.execArgv = ["--import", "tsx"]
@@ -122,8 +124,58 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
     const actualRead = lean.readLeanChildEntry, read = vi.spyOn(lean, "readLeanChildEntry").mockImplementation(l => { const result = actualRead(l); Object.defineProperty(process, "connected", { value: false, writable: true, configurable: true }); return result })
     try { f.clearObservations(); expect(() => c.guard()).toThrow(/V2_FRONTIER/); expect(read).toHaveBeenCalledOnce(); expect(f.observationCounts()).toEqual({ physical: 26, chunks: 3 }) } finally { read.mockRestore() }
   }))
+  it("[continuation-v5] opens the selected V5 context with both fresh identity passes and bounded reservations", () => fixture((c, f) => {
+    expect(c.paths).toEqual(lean.LEAN_BASELINE_CONTINUATION_PATHS_V5)
+    expect(c.claim.routeNamespace).toBe("20261013-v5")
+    expect(c.allocation.window).toEqual(c.window)
+    f.clearObservations(); f.passes.length = 0; f.hashes.mockClear(); c.guard()
+    expect(f.passes).toHaveLength(2)
+    expect(f.observationCounts()).toEqual({ physical: 21, chunks: 2 })
+    expect(f.hashes.mock.calls.filter(([domain]) => domain === "lean-baseline-continuation-allocation-v2")).toHaveLength(0)
+  }, "20261013-v5"))
+  it.each(["valid", "claim", "entry", "pair", "journal"] as const)("[continuation-v5] real issuer joins through pair/journal before inert source sentinel: %s", mode => fixture((c) => {
+    const slot = c.allocation.slots[0]!, body = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: c.allocation.root, slotRoot: slot.root, ordinal: 0 }, charge = { ...body, root: labRoot(body.schemaVersion, body) }
+    const journal = Buffer.concat([leanCanonicalBytes({ kind: "charge", charge }), Buffer.from("\n")])
+    fs.writeFileSync(join(c.ledger.directory, "ledger.ndjson"), journal)
+    const entry = { allocationRoot: c.allocation.root, sourceRoot: c.allocation.sourceRoot, requestBytesRoot: mode === "entry" ? root("crossed-request") : c.allocation.requestBytesRoot, head: c.fixedHead }
+    const pairBody = { schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: mode === "pair" ? root("crossed-pair") : slot.requestRoot, priorCharged: 50, priorLedgerByteLength: 0, priorLedgerBytesRoot: leanBytesRoot(Buffer.alloc(0)), bottomRole: "final-response", topRole: "final-response", bottomSourceRoot: root("source"), topSourceRoot: root("source"), bottomSnapshotRoot: root("snapshot"), topSnapshotRoot: root("snapshot") }
+    fs.writeFileSync(join(c.ledger.directory, "pair-0.json"), leanCanonicalBytes({ ...pairBody, root: labRoot("lean-baseline-pair-v1", pairBody) }), { mode: 0o600 })
+    fs.writeFileSync(join(c.ledger.directory, "source-final-response.json"), "{}", { mode: 0o600 })
+    if (mode === "journal") fs.writeFileSync(join(c.ledger.directory, "ledger.ndjson"), Buffer.alloc(0))
+    const state = lean.readLeanLedger(c.ledger), retained = vi.spyOn(lean, "readLeanLedger").mockReturnValue({ ...state, charges: new Map([[slot.root, charge]]) }), receipt = vi.spyOn(lean, "readLeanChildEntry").mockReturnValue(entry as never)
+    const actualRead = continuationHelper.readLeanContinuationJsonV2, claimRead = vi.spyOn(continuationHelper, "readLeanContinuationJsonV2").mockImplementation((path, cap, permissions, guard) => {
+      const value = actualRead(path, cap, permissions, guard)
+      return path === c.paths.claim && mode === "claim" ? { ...value, routeNamespace: "20261012-v4" } : value
+    })
+    const sentinel = new Error("INERT_EXTERNAL_SOURCE_BOUNDARY"), source = vi.spyOn(continuationSource, "validateLeanBaselineSource").mockImplementation(() => { throw sentinel }), provider = vi.spyOn(childProcess, "fork")
+    try {
+      const invoke = () => continuationAuthority.issueLeanBaselineContinuationRuntimeAuthorityV2(c.ledger, charge, {} as never, { budgetRoot: c.allocation.root, seat: "bottom" } as never, c.guard)
+      if (mode === "valid") { expect(invoke).toThrow(sentinel); expect(source).toHaveBeenCalledOnce() }
+      else { expect(invoke).toThrow(); expect(source).not.toHaveBeenCalled() }
+      expect(claimRead.mock.calls.some(([path]) => path === c.paths.claim)).toBe(true)
+      expect(claimRead.mock.calls.some(([path]) => path === lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.claim)).toBe(false)
+      expect(provider).not.toHaveBeenCalled()
+    } finally { provider.mockRestore(); source.mockRestore(); claimRead.mockRestore(); receipt.mockRestore(); retained.mockRestore() }
+  }, "20261013-v5"))
+  it.each(["valid", "window", "context-paths", "context-window", "context-allocation", "context-ledger"] as const)("[continuation-v5] real retained scope before inert publication boundary: %s", mode => fixture((c) => {
+    const before = { ...lean.readLeanTimeAccounting(c.ledger), active: null, closed: new Set(["continuation-run-admission", "pilot-entry"]), closes: new Map([["pilot-entry", c.window.anchorMs]]) }
+    const time = vi.spyOn(lean, "readLeanTimeAccounting").mockReturnValue(before), terminal = vi.spyOn(lean, "readLeanChildTerminal").mockReturnValue({} as never), entry = vi.spyOn(lean, "readLeanChildEntry").mockReturnValue({ parentPid: 999991, childPid: 999992 } as never)
+    const start = vi.spyOn(lean, "beginLeanInterval").mockImplementation(() => undefined as never), close = vi.spyOn(lean, "closeLeanInterval").mockImplementation(() => { throw new Error("INERT_NO_PUBLICATION") })
+    const metadata = vi.spyOn(parentApi, "withLeanContinuationReaderMetadataV2").mockImplementation((_w, parse) => parse())
+    const window = vi.spyOn(parentApi, "readLeanBaselineContinuationWindowV2").mockReturnValue(mode === "window" ? { ...c.window, routeNamespace: "20261012-v4" } : c.window)
+    const context = vi.spyOn(parentApi, "openLeanBaselineContinuationContextV2").mockReturnValue({ ...c, ...(mode === "context-paths" ? { paths: lean.LEAN_BASELINE_CONTINUATION_PATHS_V4 } : {}), ...(mode === "context-window" ? { window: { ...c.window, root: root("crossed-window") } } : {}), ...(mode === "context-allocation" ? { allocation: { ...c.allocation, root: root("crossed-allocation") } } : {}), ...(mode === "context-ledger" ? { ledger: { ...c.ledger, directory: "/inert-crossed-ledger" } } : {}) } as never)
+    const kill = vi.spyOn(process, "kill").mockImplementation(() => { throw Object.assign(new Error("inert absent pid"), { code: "ESRCH" }) })
+    const publication = vi.spyOn(parentApi, "writeLeanContinuationArtifact").mockImplementation(() => { throw new Error("INERT_CLAIM_BOUNDARY") }), dispatch = vi.spyOn(childProcess, "fork")
+    try {
+      expect(() => continuationRetainedReader.verifyLeanBaselineContinuationRetainedV2(c.paths.request)).toThrow()
+      if (mode === "valid") { expect(publication).toHaveBeenCalledOnce(); expect(publication.mock.calls[0]?.[1]).toBe("reader-claim.json"); expect(context).toHaveBeenCalledWith(c.paths.request, true) }
+      else expect(publication).not.toHaveBeenCalled()
+      expect(publication.mock.calls.some(([, name]) => name === "retained-check.json")).toBe(false); expect(dispatch).not.toHaveBeenCalled()
+    } finally { dispatch.mockRestore(); publication.mockRestore(); kill.mockRestore(); context.mockRestore(); window.mockRestore(); metadata.mockRestore(); close.mockRestore(); start.mockRestore(); entry.mockRestore(); terminal.mockRestore(); time.mockRestore() }
+  }, "20261013-v5"))
 })
-describe("[continuation-v4] real driver namespace and mutation-free refusal", () => {
+describe.each(["20261012-v4", "20261013-v5"] as const)("[continuation-v4] [continuation-v5] real driver namespace and mutation-free refusal %s", selectedNamespace => {
+  const selected = selectedNamespace === "20261013-v5" ? lean.LEAN_BASELINE_CONTINUATION_PATHS_V5 : lean.LEAN_BASELINE_CONTINUATION_PATHS_V4
   it.each(["revoked", "throwing-prototype"] as const)("withholds hostile Proxy classifier details: %s", kind => {
     const privateDetail = "PRIVATE prototype payload /private/source"
     const prototype = vi.fn(() => { throw new Error(privateDetail) })
@@ -137,48 +189,61 @@ describe("[continuation-v4] real driver namespace and mutation-free refusal", ()
     expect(formatted).not.toContain(privateDetail)
     if (kind === "throwing-prototype") expect(prototype).toHaveBeenCalledTimes(1)
   })
-  const window = (namespace: "20261012-v3" | "20261012-v4" = "20261012-v4") => {
+  const window = (namespace: "20261012-v3" | "20261012-v4" | "20261013-v5" = selectedNamespace) => {
     const body = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-v4", approvalEvidence: { humanDecisionId: "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1791840227000, anchorMs: 1791840227000, carryMs: 492285903, capMs: 521085903, deadlineMs: 1791869027000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: namespace, reviewedSourceHead: "a".repeat(40), sourceRoot: root("source"), sourceGateRoot: root("source-gate"), planRoot: root("plan"), runOperator: "inert-runner", readerOperator: "inert-reader" }
     return { ...body, root: labRoot(body.schemaVersion, body) }
   }
-  const fixture = (run: (dir: string, w: lean.LeanBaselineContinuationWindowV2) => void, namespace: "20261012-v3" | "20261012-v4" = "20261012-v4") => {
+  const fixture = (run: (dir: string, w: lean.LeanBaselineContinuationWindowV2) => void, namespace: "20261012-v3" | "20261012-v4" | "20261013-v5" = selectedNamespace) => {
     const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-v4-driver-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), w = window(namespace)
     const clock = vi.spyOn(Date, "now").mockReturnValue(w.anchorMs), actualExists = fs.existsSync
     const exists = vi.spyOn(fs, "existsSync").mockImplementation(path => actualExists(resolve(String(path))))
     try {
       fs.mkdirSync(resolve(".strategy-lab")); fs.mkdirSync(resolve(".planning/artifacts"), { recursive: true })
-      fs.writeFileSync(resolve(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.window), leanCanonicalBytes(w), { mode: 0o600 })
+      fs.writeFileSync(resolve(selected.window), leanCanonicalBytes(w), { mode: 0o600 })
       run(dir, w)
     } finally { exists.mockRestore(); clock.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
   }
   const absent = () => {
-    const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V4
+    const p = selected
     for (const path of [p.claim, p.store, p.allocation, p.temp]) expect(fs.existsSync(resolve(path))).toBe(false)
   }
+  it("denies every unselected finite allocation even if advertised by the manifest, keeping selected metadata bounded", () => {
+    const paths = [lean.LEAN_BASELINE_CONTINUATION_PATHS_V2, lean.LEAN_BASELINE_CONTINUATION_PATHS_V4, lean.LEAN_BASELINE_CONTINUATION_PATHS_V5], head = "a".repeat(40), manifest = paths.map(p => ({ path: p.allocation, root: root(p.allocation) }))
+    const git = vi.spyOn(childProcess, "execFileSync").mockReturnValue(Buffer.from("{}"))
+    try {
+      expect(continuationGit.readLeanBaselineContinuationGitV2(["show", `${head}:${selected.allocation}`], manifest, window())).toEqual(Buffer.from("{}"))
+      expect(git.mock.calls[0]?.[2]).toMatchObject({ maxBuffer: 262144, timeout: 1500, stdio: ["ignore", "pipe", "ignore"] })
+      git.mockClear()
+      for (const p of paths.filter(p => p !== selected)) for (const operation of ["show", "rev-parse"]) expect(() => continuationGit.readLeanBaselineContinuationGitV2([operation, `${head}:${p.allocation}`], manifest, window())).toThrow(/GIT_V2_METADATA/)
+      expect(() => continuationGit.readLeanBaselineContinuationGitV2(["show", `${head}:${lean.LEAN_BASELINE_CONTINUATION_PATHS_V5.allocation}`], manifest)).toThrow(/GIT_V2_METADATA/)
+      expect(git).not.toHaveBeenCalled()
+      for (const request of [selected.request.replace("-v", "-unknown-v"), `${selected.request}/extra`, selected.request.replace("202610", "202611")]) expect(() => parseLeanBaselineCommand(["prepare-continuation-v2", "--request", request])).toThrow()
+    } finally { git.mockRestore() }
+  })
   it("accepts only both exact public request strings, keeping hidden child syntax private", () => {
-    for (const request of [lean.LEAN_BASELINE_CONTINUATION_PATHS_V2.request, lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.request]) for (const mode of ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"]) expect(parseLeanBaselineCommand([mode, "--request", request])).toEqual({ mode, request })
-    expect(() => parseLeanBaselineCommand(["child-continuation-v2", "--request", lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.request])).toThrow()
+    for (const request of [lean.LEAN_BASELINE_CONTINUATION_PATHS_V2.request, lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.request, lean.LEAN_BASELINE_CONTINUATION_PATHS_V5.request]) for (const mode of ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"]) expect(parseLeanBaselineCommand([mode, "--request", request])).toEqual({ mode, request })
+    expect(() => parseLeanBaselineCommand(["child-continuation-v2", "--request", selected.request])).toThrow()
   })
   it("reads the selected real bounded window first and denies crossed namespace before mutation", () => {
-    fixture((_dir, w) => { expect(parentApi.readLeanBaselineContinuationWindowV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.request)).toEqual(w); absent() })
-    fixture(() => { expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.request)).toThrow(/WINDOW_NAMESPACE/); absent() }, "20261012-v3")
+    fixture((_dir, w) => { expect(parentApi.readLeanBaselineContinuationWindowV2(selected.request)).toEqual(w); absent() })
+    fixture(() => { expect(() => parentApi.prepareLeanBaselineContinuationV2(selected.request)).toThrow(/WINDOW_NAMESPACE/); absent() }, "20261012-v3")
   })
   it("refuses missing window, consumed claim and missed full36 frontier with setup absent", () => {
     fixture((_dir, w) => {
       vi.mocked(Date.now).mockReturnValue(w.deadlineMs - 36 * LEAN_CAPS.matchMs - w.closureMs - w.offlineOverheadMs + 1)
-      expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.request)).toThrow(/WINDOW_EXPIRED/); absent()
-      fs.unlinkSync(resolve(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.window)); expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.request)).toThrow(); absent()
+      expect(() => parentApi.prepareLeanBaselineContinuationV2(selected.request)).toThrow(/WINDOW_EXPIRED/); absent()
+      fs.unlinkSync(resolve(selected.window)); expect(() => parentApi.prepareLeanBaselineContinuationV2(selected.request)).toThrow(); absent()
     })
     fixture(() => {
-      fs.mkdirSync(resolve(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.temp), { mode: 0o700 })
-      expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.request)).toThrow(/GRANT_CLAIMED/)
-      for (const path of [lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.claim, lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.store, lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.allocation]) expect(fs.existsSync(resolve(path))).toBe(false)
+      fs.mkdirSync(resolve(selected.temp), { mode: 0o700 })
+      expect(() => parentApi.prepareLeanBaselineContinuationV2(selected.request)).toThrow(/GRANT_CLAIMED/)
+      for (const path of [selected.claim, selected.store, selected.allocation]) expect(fs.existsSync(resolve(path))).toBe(false)
     })
   })
   it("selects setup ancestor membership without accepting V3 additions under V4", () => {
     const row = { path: ".strategy-lab", kind: "directory" as const, bytes: 1, allocatedBytes: 4096, dev: 1, ino: 2, mode: 0o755, mtimeMs: 1, ctimeMs: 1, rawRoot: null, members: [] }
-    const additions = (p: typeof lean.LEAN_BASELINE_CONTINUATION_PATHS_V2 | typeof lean.LEAN_BASELINE_CONTINUATION_PATHS_V4) => [p.store, p.temp].map(path => path.split("/").at(-1)!).sort()
-    expect(() => parentApi.validateLeanContinuationSetupDirectoriesV2([row], [{ ...row, members: additions(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4) }], window())).not.toThrow()
+    const additions = (p: typeof lean.LEAN_BASELINE_CONTINUATION_PATHS_V2 | typeof lean.LEAN_BASELINE_CONTINUATION_PATHS_V4 | typeof lean.LEAN_BASELINE_CONTINUATION_PATHS_V5) => [p.store, p.temp].map(path => path.split("/").at(-1)!).sort()
+    expect(() => parentApi.validateLeanContinuationSetupDirectoriesV2([row], [{ ...row, members: additions(selected) }], window())).not.toThrow()
     expect(() => parentApi.validateLeanContinuationSetupDirectoriesV2([row], [{ ...row, members: additions(lean.LEAN_BASELINE_CONTINUATION_PATHS_V2) }], window())).toThrow(/SETUP_DIRECTORIES/)
   })
   it("rejects crossed TMPDIR and capacity before source/carry/setup, with no provider", () => fixture((_dir, w) => {
@@ -189,12 +254,12 @@ describe("[continuation-v4] real driver namespace and mutation-free refusal", ()
       vi.stubEnv("TSX_DISABLE_CACHE", "1"); vi.stubEnv("NODE_DISABLE_COMPILE_CACHE", "1")
       for (const key of ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"]) vi.stubEnv(key, undefined)
       vi.stubEnv("TMPDIR", resolve(lean.LEAN_BASELINE_CONTINUATION_PATHS_V2.temp))
-      expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.request)).toThrow(/SCOPE/); absent()
-      vi.stubEnv("TMPDIR", resolve(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.temp))
+      expect(() => parentApi.prepareLeanBaselineContinuationV2(selected.request)).toThrow(/SCOPE/); absent()
+      vi.stubEnv("TMPDIR", resolve(selected.temp))
       expect(() => parentApi.assertLeanBaselineContinuationScopeV2(true, w)).not.toThrow()
       const usage = process.memoryUsage(), memory = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...usage, rss: 4000000000 })
       try {
-        expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.request)).toThrow(/CAPACITY/); absent(); expect(fork).not.toHaveBeenCalled()
+        expect(() => parentApi.prepareLeanBaselineContinuationV2(selected.request)).toThrow(/CAPACITY/); absent(); expect(fork).not.toHaveBeenCalled()
         const error = new TypeError(), getter = vi.fn(() => { throw new Error("PRIVATE getter") }); Object.defineProperty(error, "stack", { value: "PRIVATE static stack" }); Object.defineProperty(error, "message", { get: getter })
         expect(parentApi.leanContinuationPreparationCodeV4(error)).toBe("DETAILS_WITHHELD")
         expect(parentApi.leanBaselineContinuationPreparationFailureV4(error)).toBe("LEAN_BASELINE_PREPARATION_V4 stage=UNKNOWN code=DETAILS_WITHHELD\n"); expect(getter).not.toHaveBeenCalled(); absent()
@@ -207,7 +272,7 @@ describe("[continuation-v4] real driver namespace and mutation-free refusal", ()
     absent()
   }))
   it("builds the real selected manifest from canonical synthetic gates and denies crossed grant roots", () => fixture((_dir, originalWindow) => {
-    const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V4, implementationEntries = [{ path: "scripts/inert.ts", root: leanBytesRoot(Buffer.from("inert source")) }]
+    const p = selected, implementationEntries = [{ path: "scripts/inert.ts", root: leanBytesRoot(Buffer.from("inert source")) }]
     const sourceRoot = labRoot("lean-baseline-continuation-implementation-v2", implementationEntries), planPath = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-16-BASELINE-CONTINUATION-PLAN-20261012.md", planRoot = leanBytesRoot(Buffer.from("inert plan"))
     const sourceGate: parentApi.LeanContinuationSourceGateV2 = { schemaVersion: "lean-baseline-continuation-source-gate-v2", plan_check: "passed", source_review: "passed", root_validation: "passed", source_verification: "passed", commands_closed: true, reviewedSourceHead: originalWindow.reviewedSourceHead, sourceRoot, sourceAuthor: "inert-author", sourceReviewer: "inert-reviewer", sourceVerifier: "inert-verifier" }
     const { root: _, ...windowBody } = { ...originalWindow, sourceRoot, planRoot, sourceGateRoot: labRoot(sourceGate.schemaVersion, sourceGate) }, w = { ...windowBody, root: labRoot(windowBody.schemaVersion, windowBody) }
@@ -228,7 +293,7 @@ describe("[continuation-v4] real driver namespace and mutation-free refusal", ()
     absent()
   }))
   it("reads only selected V4 descriptor metadata with reservations before the inert parser", () => fixture((_dir, w) => {
-    const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V4
+    const p = selected
     fs.mkdirSync(resolve(p.temp), { mode: 0o700 }); fs.mkdirSync(resolve(p.store), { mode: 0o700 })
     fs.writeFileSync(resolve(p.allocation), "{}", { mode: 0o644 })
     for (const name of ["allocation.json", "ledger.ndjson", "time.ndjson"]) fs.writeFileSync(resolve(join(p.store, name)), "{}", { mode: 0o600 })
@@ -249,7 +314,7 @@ describe("[continuation-v4] real driver namespace and mutation-free refusal", ()
   it("withholds raw private failure details and reports only finite V4 prepare stage/code", () => fixture((_dir, w) => {
     vi.mocked(Date.now).mockReturnValue(w.deadlineMs)
     let error: unknown
-    try { parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.request) } catch (caught) { error = caught }
+    try { parentApi.prepareLeanBaselineContinuationV2(selected.request) } catch (caught) { error = caught }
     expect(parentApi.leanBaselineContinuationPreparationFailureV4(error)).toBe("LEAN_BASELINE_PREPARATION_V4 stage=WINDOW code=WINDOW_EXPIRED\n")
     expect(parentApi.leanBaselineContinuationPreparationFailureV4(new Error("PRIVATE path source stack"))).toBe("LEAN_BASELINE_PREPARATION_V4 stage=UNKNOWN code=DETAILS_WITHHELD\n")
     absent()
