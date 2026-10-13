@@ -329,7 +329,16 @@ describe("[continuation-v5] finite selection and spent V4 preservation", () => {
   it("denies foreign owners and in-flight file/directory replacement with all descriptor guards retained", () => {
     fixture(f => { const stat = vi.mocked(fs.lstatSync), actual = stat.getMockImplementation()!; try { stat.mockImplementation((...args) => { const s = actual(...args); return String(args[0]) === resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.window) ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { uid: Number(s!.uid) + 1 }) : s }); expect(() => f.inventory()).toThrow() } finally { stat.mockImplementation(actual) } })
     fixture(f => { let changed = false; expect(() => f.inventory(additional => { if (!changed && additional === 746080) { changed = true; const path = resolve(join(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.store, "carry.json")); fs.renameSync(path, `${path}.old`); writeFileSync(path, Buffer.alloc(746080, 69), { mode: 0o600 }) } })).toThrow() })
-    fixture(f => { let changed = false; expect(() => f.inventory(() => { if (!changed && f.guard.mock.calls.length === 0) { changed = true; writeFileSync(resolve(join(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.temp, "extra.json")), "{}") } })).toThrow() })
+    fixture(f => {
+      const path = resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.temp), stat = vi.mocked(fs.lstatSync), actualStat = stat.getMockImplementation()!, actualRead = fs.readdirSync
+      let captured = false, initialMembers = 0, changed = false, changedAfterCapture = false
+      const read = vi.spyOn(fs, "readdirSync").mockImplementation(((...args: Parameters<typeof fs.readdirSync>) => { if (String(args[0]) === path) initialMembers++; return actualRead(...args) }) as typeof fs.readdirSync)
+      stat.mockImplementation((...args) => { const s = actualStat(...args); if (String(args[0]) === path) captured = true; return s })
+      try {
+        expect(() => f.inventory(() => { if (!changed && f.guard.mock.calls.length === 0) { changedAfterCapture = captured && initialMembers >= 2; changed = true; writeFileSync(join(path, "extra.json"), "{}") } })).toThrow()
+        expect(changedAfterCapture).toBe(true); expect(f.guard.mock.calls.length).toBeGreaterThan(0)
+      } finally { read.mockRestore(); stat.mockImplementation(actualStat) }
+    })
   })
   it("keeps sealed directories metadata-only with the real producer kind and fresh guard", () => {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-v5-sealed-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
