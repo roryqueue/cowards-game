@@ -308,7 +308,7 @@ describe("[continuation-v5] finite selection and spent V4 preservation", () => {
     expect(new Set(rows.map(row => row.path)).size).toBe(rows.length); expect(f.guard.mock.calls.length).toBeGreaterThan(2 * rows.length + 1)
     expect(f.guard).toHaveBeenCalledWith(746080); expect(f.guard).toHaveBeenCalledWith(17366); expect(rows.find(row => row.path === join(p.store, "ledger.ndjson"))?.bytes).toBe(0)
     const sum = rows.reduce((n, row) => n + row.allocatedBytes, 0), old = ledger.LEAN_BASELINE_CONTINUATION_PATHS, consumed = [old.request, old.allocation, old.store, old.temp].map(path => ({ path, allocatedBytes: 0 }))
-    const original = rows.filter(row => [ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request, ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.window].includes(row.path)), originalDebit = original.reduce((n, row) => n + row.allocatedBytes, 0) + 4096
+    const original = rows.filter(row => row.path === ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request || row.path === ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.window), originalDebit = original.reduce((n, row) => n + row.allocatedBytes, 0) + 4096
     const debit = continuation.reconcileLeanContinuationV2DiskDebit(originalDebit, original, originalDebit, [...rows, ...consumed], window())
     expect(debit.allocatedDiskBytes).toBe(sum + 4096); expect(debit.residualDiskBytes).toBe(4096)
     const growth = rows.map((row, i) => i === 0 ? { ...row, allocatedBytes: row.allocatedBytes + 4096 } : row)
