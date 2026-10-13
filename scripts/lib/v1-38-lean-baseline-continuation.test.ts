@@ -195,6 +195,18 @@ describe("[continuation-overhead] admitted ledger pure policy", () => {
     expect(continuation.assertLeanBaselineContinuationFrontierV2(a, closing, l)).toBe(a.window.carryMs + 2000)
     for (const change of [{ remainingClosureMs: a.window.closureMs + 1 }, { remainingOfflineMs: a.window.offlineOverheadMs + 1 }]) expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, { ...closing, ...change }, l)).toThrow()
   }))
+  it("reuses only admitted caps for actual resource-event accounting, preserving fresh bytes and every resource denial", () => fixture(l => {
+    const a = ledger.readLeanAdmittedContinuationAllocationV2(l), path = join(l.directory, "ledger.ndjson"), event = { kind: "resource", elapsedMs: a.window.carryMs + 1, physicalBytes: 4096, bufferBytes: 1024, scratchBytes: 0 }
+    writeFileSync(path, Buffer.concat([ledger.leanCanonicalBytes(event), Buffer.from("\n")]))
+    vi.mocked(labRoot).mockClear(); vi.mocked(fs.readFileSync).mockClear()
+    expect(ledger.readLeanLedger(l).elapsedMs).toBe(event.elapsedMs); expect(ledger.readLeanLedger(l).physicalHighWaterBytes).toBe(a.predecessor.allocatedDiskBytes + event.physicalBytes + event.bufferBytes)
+    expect(vi.mocked(labRoot).mock.calls.filter(([domain]) => domain === "lean-slot-v1" || domain.includes("allocation") || domain.includes("admission"))).toHaveLength(0)
+    expect(vi.mocked(fs.readFileSync).mock.calls).toHaveLength(4)
+    for (const change of [{ elapsedMs: a.window.carryMs - 1 }, { elapsedMs: a.caps.elapsedMs + 1 }, { physicalBytes: ledger.LEAN_CAPS.retainedBytes }, { scratchBytes: ledger.LEAN_CAPS.scratchBytes + 1 }, { bufferBytes: ledger.LEAN_CAPS.scratchBytes + 1 }, { physicalBytes: -1 }, { extra: 1 }]) {
+      writeFileSync(path, Buffer.concat([ledger.leanCanonicalBytes({ ...event, ...change }), Buffer.from("\n")]))
+      expect(() => ledger.readLeanLedger(l)).toThrow(/RESOURCE/)
+    }
+  }))
 })
 describe("[continuation-overhead] same-pass V2 identities", () => {
   const fixture = (run: (paths: string[], rows: continuation.LeanContinuationInventoryRowV2[]) => void) => {
