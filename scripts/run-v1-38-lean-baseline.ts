@@ -4,11 +4,10 @@ import { fork, execFileSync } from "node:child_process"
 import { randomBytes } from "node:crypto"
 import { dirname, join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
-import { types as nodeTypes } from "node:util"
 import { isLeanPostV13FivePairMode, isLeanPreparationContinuationMode, isLeanSupervisorRetestMode, isLeanResourceWindowModeV15, leanCapsForAllocation, leanSupervisorAllocationMode, type AnyLeanAllocation } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { exactLabKeys, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
-import { createLeanCurrentBaselineAllocation, createLeanLedger, openLeanLedger, readLeanAdmittedContinuationAllocationV2, leanAdmittedContinuationCapacityBasisV2, readLeanLedger, readLeanTimeAccounting, readLeanChildEntry, publishLeanChildEntry, beginLeanInterval, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, stopLeanLedger, verifyLeanEvidence, deriveLeanChildTerminal, publishLeanChildTerminal, cumulativeLeanPhysicalBytes, assertLeanPublicationCapacity, currentLeanElapsedMs, currentBaselineSlotKind, leanCanonicalBytes, leanBytesRoot, writeLeanAll, LEAN_BASELINE_REQUEST, LEAN_BASELINE_STORE, LEAN_BASELINE_WRITABLE_PATHS, LEAN_CAPS, LEAN_EXTERNAL_SCRATCH_RESERVE, type LeanExperimentLedger, type LeanChildEntryV2, type LeanSlot } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { createLeanCurrentBaselineAllocation, createLeanLedger, openLeanLedger, readLeanAdmittedContinuationAllocationV2, leanAdmittedContinuationCapacityBasisV2, leanHostIsProxy, leanHostIsNativeError, readLeanLedger, readLeanTimeAccounting, readLeanChildEntry, publishLeanChildEntry, beginLeanInterval, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, stopLeanLedger, verifyLeanEvidence, deriveLeanChildTerminal, publishLeanChildTerminal, cumulativeLeanPhysicalBytes, assertLeanPublicationCapacity, currentLeanElapsedMs, currentBaselineSlotKind, leanCanonicalBytes, leanBytesRoot, writeLeanAll, LEAN_BASELINE_REQUEST, LEAN_BASELINE_STORE, LEAN_BASELINE_WRITABLE_PATHS, LEAN_CAPS, LEAN_EXTERNAL_SCRATCH_RESERVE, type LeanExperimentLedger, type LeanChildEntryV2, type LeanSlot } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { observeLeagueAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
 import { factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
 import { assessLeanPrefixCapacity, createLeanParentObservationGuard, admitLeanChildRelease, assertLeanEntryBinding, readLeanSafeFile } from "./run-v1-38-lean-experiment.js"
@@ -861,7 +860,7 @@ const continuationNativeStackV2 = Object.getOwnPropertyDescriptor(new Error(), "
 const continuationRunCountV2 = (d: ContinuationRunDiagnosticV2 | undefined, name: ContinuationRunCounterV2) => { if (d?.active) d.counts[name] = Math.min(1000000000, d.counts[name] + 1) }
 const continuationRunStageV2 = (d: ContinuationRunDiagnosticV2 | undefined, stage: ContinuationRunStageV2, completed = false) => { if (d?.active) { d.stage = stage; d.completed = completed } }
 const issueContinuationRunFailureV2 = (error: unknown, d: ContinuationRunDiagnosticV2): void => {
-  if (error === null || typeof error !== "object" || nodeTypes.isProxy(error) || !nodeTypes.isNativeError(error)) return
+  if (error === null || typeof error !== "object" || leanHostIsProxy(error) || !leanHostIsNativeError(error)) return
   if (continuationRunUsedErrorsV2.has(error)) { continuationRunFailuresV2.delete(error); return }
   continuationRunUsedErrorsV2.add(error)
   const descriptors = Object.getOwnPropertyDescriptors(error)

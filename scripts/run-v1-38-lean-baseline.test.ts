@@ -36,7 +36,8 @@ it("[continuation-remaining-overhead] [VF-REM-BUILTIN-01] preserves the actual a
   expect(lean.leanHostIsProxy(proxy)).toBe(true); expect(lean.leanHostIsProxy(revoked.proxy)).toBe(true); expect(lean.leanHostIsProxy({})).toBe(false)
   expect(lean.leanHostIsNativeError(new Error("inert"))).toBe(true); expect(lean.leanHostIsNativeError(proxy)).toBe(false); expect(lean.leanHostIsNativeError(revoked.proxy)).toBe(false)
   expect(trap).not.toHaveBeenCalled()
-})
+  process.stdout.write(`AUDITED_FACTORY_BOUNDARY_REGRESSION ${JSON.stringify(result)}\n`)
+}, 30000)
 describe("[continuation-overhead] actual V2 context complete guard", () => {
   const invokeRun = async (request: string) => {
     const send = Object.getOwnPropertyDescriptor(process, "send")

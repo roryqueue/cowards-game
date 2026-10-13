@@ -2,10 +2,9 @@
 import { createHash } from "node:crypto"
 import { constants, openSync, closeSync, fstatSync, readSync, lstatSync, realpathSync, readdirSync, type Stats } from "node:fs"
 import { resolve, join, relative } from "node:path"
-import { types as nodeTypes } from "node:util"
 import { labRoot, freezeLabValue, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_CAPS, LEAN_BASELINE_CONTINUATION_WINDOW as WINDOW, LEAN_BASELINE_CONTINUATION_PATHS, leanBytesRoot, leanCanonicalBytes, validateLeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocation, type LeanBaselineContinuationCarry } from "../../packages/strategy-lab/src/league/lean-experiment.js"
-import { LEAN_BASELINE_CONTINUATION_PATHS_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationAllocationV2, readLeanAdmittedContinuationAllocationV2, leanAdmittedContinuationElapsedFloorV2, leanBaselineContinuationElapsedFloorV2, leanBaselineContinuationPathsForWindowV2, type LeanExperimentLedger, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2, type LeanBaselineContinuationCarryV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationAllocationV2, readLeanAdmittedContinuationAllocationV2, leanAdmittedContinuationElapsedFloorV2, leanHostIsProxy, leanBaselineContinuationElapsedFloorV2, leanBaselineContinuationPathsForWindowV2, type LeanExperimentLedger, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2, type LeanBaselineContinuationCarryV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { exactLabKeys } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_PRIVATE_MATCH_CARRY_V3, LEAN_PRIVATE_MATCH_CARRY_V2, LEAN_PRIVATE_MATCH_ARTIFACT_V3, LEAN_PRIVATE_PROBE_COST_ROOT, validateLeanPrivateMatchAllocationV3, validateLeanPrivateMatchAllocationV2, validateLeanPrivateMatchAllocationV1, authenticateLeanPrivateMatchProbeCarryV1 } from "./v1-38-lean-experiment-authority.js"
 
@@ -306,7 +305,7 @@ export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinu
 /** Reject executable expected data before reading fields; never freeze a caller
  * Stats object. These snapshots compile expectations only, not observations. */
 const captureContinuationArrayV2 = (value: unknown): readonly unknown[] => {
-  if (value === null || typeof value !== "object" || nodeTypes.isProxy(value) || !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) return fail("V2_EXPECTED_IDENTITY")
+  if (value === null || typeof value !== "object" || leanHostIsProxy(value) || !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) return fail("V2_EXPECTED_IDENTITY")
   const fields: PropertyDescriptorMap = Object.getOwnPropertyDescriptors(value as object), length = fields.length!.value as unknown
   if (!integer(length) || length > 4096 || Reflect.ownKeys(fields).length !== length + 1) return fail("V2_EXPECTED_IDENTITY")
   const captured: unknown[] = []
@@ -318,7 +317,7 @@ const captureContinuationArrayV2 = (value: unknown): readonly unknown[] => {
   return Object.freeze(captured)
 }
 const captureContinuationRecordV2 = (value: unknown, required: readonly string[], plain = true, membership = false): Readonly<Record<string, unknown>> => {
-  if (value === null || typeof value !== "object" || nodeTypes.isProxy(value) || plain && Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) return fail("V2_EXPECTED_IDENTITY")
+  if (value === null || typeof value !== "object" || leanHostIsProxy(value) || plain && Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) return fail("V2_EXPECTED_IDENTITY")
   const fields = Object.getOwnPropertyDescriptors(value), captured: Record<string, unknown> = Object.create(null)
   for (const key of Reflect.ownKeys(fields)) {
     if (typeof key !== "string" || !("value" in fields[key]!)) return fail("V2_EXPECTED_IDENTITY")

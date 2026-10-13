@@ -8,6 +8,10 @@ import { types as nodeTypes } from "node:util"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { LAB_ADMITTED_ROOTS, labRoot, exactLabKeys, freezeLabValue, type LabRoot } from "../contracts.js"
 
+/** Pure host metadata inspections at the existing audited builtin owner. These
+ * booleans confer no ledger policy, capability, grant or diagnostic provenance. */
+export const leanHostIsProxy = (value: unknown): boolean => nodeTypes.isProxy(value)
+export const leanHostIsNativeError = (value: unknown): boolean => nodeTypes.isNativeError(value)
 export const LEAN_CAPS = Object.freeze({ totalBytes: 15_000_000_000, retainedBytes: 12_000_000_000, scratchBytes: 2_000_000_000, terminalBytes: 1_000_000_000, elapsedMs: 28_800_000, matches: 300, matchMs: 600_000, guestMs: 1000, hostMs: 5000 })
 export const LEAN_SUPERVISOR_V5_CAPS = Object.freeze({ ...LEAN_CAPS, elapsedMs: 43_200_000 })
 /** A prospective namespace, never a retagged correction or private diagnostic. */
