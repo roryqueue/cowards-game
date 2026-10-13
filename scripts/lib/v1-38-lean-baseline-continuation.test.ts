@@ -284,7 +284,7 @@ describe("[continuation-v5] finite selection and spent V4 preservation", () => {
   // Fixed historical raw roots cannot be generated from public synthetic bytes.
   // This digest-only fixture mapping is private to the test; all real descriptor,
   // directory, chunk, size/mode and root comparisons remain the production code.
-  const fixture = (run: (f: { inventory: (guard?: (additional?: number) => void) => readonly continuation.LeanContinuationInventoryRowV2[]; files: { path: string; size: number; mode: number; raw: string }[]; guard: ReturnType<typeof vi.fn>; dir: string }) => void) => {
+  const fixture = (run: (f: { inventory: (guard?: (additional?: number) => void) => readonly continuation.LeanContinuationInventoryRowV2[]; files: { path: string; size: number; mode: number; raw: string }[]; guard: ReturnType<typeof vi.fn<(additional?: number) => void>>; dir: string }) => void) => {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-v5-spent-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4, v3 = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2
     const files = [
       { path: p.window, size: 935, mode: 0o600, raw: "98b0cd906323554e3c0cefb96700c317a9bd2e346135c7560d715b87eb303ba6" }, { path: p.request, size: 4056, mode: 0o600, raw: "bd17509fee8d2138b89b4a114224f1ee1ee009217475e924d6dd7cdfd90466c7" },
@@ -294,7 +294,7 @@ describe("[continuation-v5] finite selection and spent V4 preservation", () => {
       { path: join(p.store, "time.ndjson"), size: 0, mode: 0o600, raw: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }, { path: p.claim, size: 1002, mode: 0o600, raw: "14cc57d66661a98c8f9150842b441310c8a70d29fef5186b5c58a49e62c9e45c" },
       { path: v3.request, size: 4041, mode: 0o600, raw: "900e97e973ac31c596d1f5f1b8b89e1b8e532310e0b2d6e67053fbe9a8321065" }, { path: v3.window, size: 935, mode: 0o600, raw: "2c0c2905fea2e4a264aac99df251e5aa89d0b2c44588453d3c41586f4b3a881d" },
     ]
-    const actualDigest = ledger.leanBytesRoot, roots = new Map<string, `sha256:${string}`>(), digest = vi.spyOn(ledger, "leanBytesRoot"), guard = vi.fn()
+    const actualDigest = ledger.leanBytesRoot, roots = new Map<string, `sha256:${string}`>(), digest = vi.spyOn(ledger, "leanBytesRoot"), guard = vi.fn<(additional?: number) => void>()
     try {
       fs.mkdirSync(resolve(".planning/artifacts"), { recursive: true }); fs.mkdirSync(resolve(p.store), { recursive: true, mode: 0o700 }); fs.mkdirSync(resolve(p.temp), { mode: 0o700 })
       files.forEach((row, i) => { const bytes = Buffer.alloc(row.size, 65 + i); writeFileSync(resolve(row.path), bytes, { mode: row.mode }); fs.chmodSync(resolve(row.path), row.mode); roots.set(actualDigest(bytes), `sha256:${row.raw}`) })
@@ -326,19 +326,50 @@ describe("[continuation-v5] finite selection and spent V4 preservation", () => {
     if (mutation === "symlink" || mutation === "hardlink") { fs.renameSync(path, `${path}.old`); if (mutation === "symlink") symlinkSync(`${path}.old`, path); else fs.linkSync(`${path}.old`, path) }
     expect(() => f.inventory()).toThrow()
   }))
-  it("denies foreign owners and in-flight file/directory replacement with all descriptor guards retained", () => {
+  it("denies foreign owners and in-flight file replacement with all descriptor guards retained", () => {
     fixture(f => { const stat = vi.mocked(fs.lstatSync), actual = stat.getMockImplementation()!; try { stat.mockImplementation((...args) => { const s = actual(...args); return String(args[0]) === resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.window) ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { uid: Number(s!.uid) + 1 }) : s }); expect(() => f.inventory()).toThrow() } finally { stat.mockImplementation(actual) } })
     fixture(f => { let changed = false; expect(() => f.inventory(additional => { if (!changed && additional === 746080) { changed = true; const path = resolve(join(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.store, "carry.json")); fs.renameSync(path, `${path}.old`); writeFileSync(path, Buffer.alloc(746080, 69), { mode: 0o600 }) } })).toThrow() })
-    fixture(f => {
+  })
+  it.each(["replacement", "members-only"] as const)("denies spent directory %s specifically after opening capture at the closing phase", mutation => {
+    const probe = (maskClosingMembers = false) => fixture(f => {
       const path = resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.temp), stat = vi.mocked(fs.lstatSync), actualStat = stat.getMockImplementation()!, actualRead = fs.readdirSync
-      let captured = false, initialMembers = 0, changed = false, changedAfterCapture = false
-      const read = vi.spyOn(fs, "readdirSync").mockImplementation(((...args: Parameters<typeof fs.readdirSync>) => { if (String(args[0]) === path) initialMembers++; return actualRead(...args) }) as typeof fs.readdirSync)
-      stat.mockImplementation((...args) => { const s = actualStat(...args); if (String(args[0]) === path) captured = true; return s })
+      const expectedMembers = ["window-claim.json"], phases: string[] = []
+      let opening: fs.Stats | undefined, memberReads = 0, guardCalls = 0, lastChildStatGuardCount = 0, closingStat = false, closingMembers = false, changed = false
+      const read = vi.spyOn(fs, "readdirSync").mockImplementation(((name: fs.PathLike, ...args: unknown[]) => {
+        const result = (actualRead as any)(name, ...args)
+        if (String(name) !== path) return result
+        if (!closingStat) { expect(result).toEqual(expectedMembers); memberReads++; phases.push("opening.members") }
+        else { closingMembers = true; phases.push("closing.members"); if (maskClosingMembers) return expectedMembers }
+        return result
+      }) as typeof fs.readdirSync)
+      stat.mockImplementation((...args) => {
+        if (String(args[0]) !== path) { const s = actualStat(...args); if (String(args[0]) === join(path, "window-claim.json")) lastChildStatGuardCount = guardCalls; return s }
+        if (!opening) { opening = actualStat(...args) as fs.Stats; phases.push("opening.stat"); return opening as never }
+        expect(memberReads).toBe(2); expect(lastChildStatGuardCount).toBeGreaterThan(0); expect(guardCalls).toBeGreaterThan(lastChildStatGuardCount); expect(f.guard).toHaveBeenCalledTimes(guardCalls)
+        closingStat = true; phases.push("closing.stat"); changed = true
+        if (mutation === "replacement") {
+          fs.renameSync(path, `${path}.replaced`); fs.mkdirSync(path, { mode: 0o700 }); fs.copyFileSync(join(`${path}.replaced`, "window-claim.json"), join(path, "window-claim.json"))
+          return actualStat(...args)
+        }
+        writeFileSync(join(path, "extra.json"), "{}")
+        // Deliberately stable synthetic metadata isolates the closing member
+        // observation: dev/ino/size/blocks/timestamps cannot mask its removal.
+        return opening as never
+      })
+      const observe = (additional?: number) => { guardCalls++; f.guard(additional) }
       try {
-        expect(() => f.inventory(() => { if (!changed && f.guard.mock.calls.length === 0) { changedAfterCapture = captured && initialMembers >= 2; changed = true; writeFileSync(join(path, "extra.json"), "{}") } })).toThrow()
-        expect(changedAfterCapture).toBe(true); expect(f.guard.mock.calls.length).toBeGreaterThan(0)
+        if (maskClosingMembers) expect(() => f.inventory(observe)).not.toThrow()
+        else expect(() => f.inventory(observe)).toThrow(mutation === "replacement" ? "LEAN_BASELINE_CONTINUATION_V2_INVENTORY_CHANGED" : "LEAN_BASELINE_CONTINUATION_V4_SPENT_CHANGED")
+        expect(changed).toBe(true); expect(phases.slice(0, 3)).toEqual(["opening.stat", "opening.members", "opening.members"])
+        expect(phases).toContain("closing.stat"); expect(closingMembers).toBe(mutation === "members-only")
+        expect(f.guard).toHaveBeenCalledTimes(guardCalls); expect(guardCalls).toBeGreaterThan(10)
       } finally { read.mockRestore(); stat.mockImplementation(actualStat) }
     })
+    probe()
+    // Sensitivity witness, not weakened production: masking only this closing
+    // observation makes the stable-stat fixture erroneously acceptable, so the
+    // real refusal assertion above would fail if the closing check disappeared.
+    if (mutation === "members-only") probe(true)
   })
   it("keeps sealed directories metadata-only with the real producer kind and fresh guard", () => {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-v5-sealed-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
