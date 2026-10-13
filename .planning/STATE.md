@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V4 source and DATA gates closed; final pins and unique ROOT preparation next
-last_updated: "2026-10-12"
-last_activity: 2026-10-12
-last_activity_desc: V4 actual approval DATA independently reviewed; source unchanged, no Match yet
+stopped_at: V4 unique run closed before retained entry; terminal check closed; source-only overhead diagnosis
+last_updated: "2026-10-13"
+last_activity: 2026-10-13
+last_activity_desc: V4 pre-entry failure checked independently; source hold released, no new Match credit
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,16 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V4 pre-entry terminal checked; diagnose overhead
+
+ROOT terminal observation 2026-10-13T01:07:33UTC. Unique V4 preparation87768/PID28902 closed exit0; immutable allocation2a94a2b9/raw19aeee9f committed and pushed as the sole direct-child delta6ff10e772f5cc40453e31b496f5daba217b8259f over98a63eff. Unique ROOT run41295/PID52133 closed exit1 with LEAN_BASELINE_FAILED_DETAILS_WITHHELD. Original throw point/cause UNKNOWN. No retained run-claim, entry, child-terminal, result, reader-claim or retained-check; ledger/time zero bytes. Absence of records does not prove absence of all transient construction or unrecorded observations. Allocation epoch HEAD is not an empirical entry receipt; ordinary retained reader was NOT invoked and must not be fabricated.
+
+ONE actual independent `/root/verify_265_permission_repair` PRE-ENTRY_TERMINAL_CHECKED, commands CLOSED and ownership released: PID absent, held source/planning unchanged, sole allocation commit delta, canonical matching published/store allocation17366B, window935B/raw98b0cd90, request4056B/rawbd17509f, exact descriptor and root joins, zero ledgers and absent six markers. Source/HEAD hold now RELEASED. All V4 attempt/window/request/allocation/setup bytes remain spent and immutable; no retry, resume, refund, reuse or recredit. Old50 charges cost-only; no new retained charge or Phase265/LEAG/freeze/formation/holdout/public/counting/production credit.
+
+Next: existing debug session diagnoses source-only pre-entry overhead, not an unchanged launch. Preparation took about9min and run spent about60min before terminal; finite root observation showed CPU-active processing, not a proven hot function or original cause. Bounded metadata only: carry746080B/2280rows; source-hold146345B/72rows. Preserve complete fresh guard cadence, every resource/identity/time/lineage predicate and privacy. No cross-call observation cache, cheap inner guard, historical replay or Match. Existing Plan16 supplement/check/source repair/review/ROOT validation/distinct source verification precede any future route.
+
+Current approved window remains anchored1791848836000, carry500894903, cap529694903, hardstop07:47:16UTC. Full36 latest entry01:06:16UTC has elapsed; no fresh full36 admission under this window. All diagnosis/source/review/idle time continues to count. Safe source work may continue before hardstop; only after source is ready, a genuine prospective time decision may be needed. Same15GB/3GBRAM/global300/new36/four unopened holdouts and all runtime/rules/privacy bounds. Phase265/Plan16 incomplete;266 freeze unstarted. Earlier checkpoints below are history.
 
 ## Current continuation — V4 actual DATA gates closed; preparation next
 

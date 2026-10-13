@@ -2,7 +2,7 @@
 status: investigating
 trigger: Continue v1.38 autonomously after the approved baseline window
 created: 2026-10-12
-updated: 2026-10-12
+updated: 2026-10-13
 mode: source_only
 ---
 
@@ -18,10 +18,16 @@ Retained reader physical88924160B; current store+scratch2453504B/46rows; reader 
 
 ## Current Focus
 
-hypothesis: The independently reviewed V2 preparation reached a source/cost/capacity predicate refusal before setup; exact suppressed original throw is UNKNOWN. Earlier native-exit findings below remain separate history.
-test: Read-only source/interface analysis of preflight and bounded closed-cost joins; at most one indispensable nonadmitting bounded predicate diagnostic, no prepare retry, Matches, probes or old readers.
-expecting: A finite reproducible current predicate or honest unknown, with no retroactive causal attribution or resource/rule change.
-next_action: Diagnosis-only cycles closed with original V3 throw UNKNOWN but current reviewed-source executable-mode incompatibility confirmed; ROOT may narrow a source/planning mode-policy repair and inert tests within existing Plan16 owned paths, preserving V3 bytes and never reusing its attempt/grant/request/window.
+hypothesis: V4 pre-entry guard work may repeat expensive immutable metadata derivation or whole-inventory observations at superlinear frequency. Exact suppressed throw point/cause and measured hot function remain UNKNOWN.
+test: Static source/call-count analysis and, only if indispensable, bounded inert synthetic reproduction; no actual history authentication, capacity admission, preparation, retained reader, runtime, Strategy or Match.
+expecting: A demonstrable current overhead mechanism and minimal prospective repair that preserves complete fresh guard cadence and every identity/resource predicate, or honest uncertainty. No retroactive causal claim.
+next_action: Typed diagnosis-only session manager owns this debug file; ROOT retains STATE/GATES. No production edits until checked existing Plan16 supplement. Preserve spent V4 and older evidence, all continuous costs and the07:47:16UTC hardstop; full36 admission frontier has elapsed.
+
+### V4 pre-entry overhead — actual closed observations
+
+Unique preparation87768/PID28902 closed exit0 after about9min; allocation2a94a2b9/raw19aeee9f17366B committed/pushed6ff10e77, sole child delta over98a63eff. Unique ROOT run41295/PID52133 closed exit1, first observed terminal2026-10-13T01:07:33UTC after about60min; finite public output only LEAN_BASELINE_FAILED_DETAILS_WITHHELD. Original throw/cause UNKNOWN. Ledger/time zero bytes, run-claim/entry/child-terminal/result/reader-claim/retained-check absent. No ordinary reader or retained new Match charge; record absence does not prove absence of all unrecorded/transient activity. ONE actual independent verifier `/root/verify_265_permission_repair` PRE-ENTRY_TERMINAL_CHECKED/CLOSED confirmed pinned source/HEAD, exact roots/descriptors, PID absence and markers; source hold released. V4 window/request/allocation/setup and attempt remain immutable/spent, never retry/reuse/refund/recredit.
+
+One bounded metadata inspection (not history authentication): carry746080B/2280inventory rows, source-hold146345B/72rows. Root PID observed CPU-active at19:44elapsed,17:54.57CPU,104.6%,RSS322232KiB. This is not proof of the hot function. Current source reviewed4908ee0e/rootb41b/gate7b1f unchanged through closure; current trackingHEAD6ff10e77 is not an empirical entry receipt. Candidate hypotheses include per-row full guards, repeated pure allocation validation/hash inside physical accounting, and redundant path-prefix resolution. Preserve complete fresh observations at every guard, no cross-call observation cache or lowered limits. Original native and V3 failures remain separately UNKNOWN.
 
 ## Evidence and uncertainty
 
