@@ -20,6 +20,74 @@ import * as childProcess from "node:child_process"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import * as leagueHost from "./run-v1-38-serious-league.js"
+import * as continuationHelper from "./lib/v1-38-lean-baseline-continuation.js"
+import * as factoryImplementation from "./v1-38-factory-implementation.js"
+import * as contracts from "../packages/strategy-lab/src/contracts.js"
+import { leanColdProcedureRoot } from "./lib/v1-38-lean-baseline-pipeline.js"
+describe("[continuation-overhead] actual V2 context complete guard", () => {
+  const fixture = (run: (c: ReturnType<typeof parentApi.openLeanBaselineContinuationContextV2>, f: { passes: string[][]; reservations: number[]; hashes: ReturnType<typeof vi.spyOn>; head: { value: string }; w: lean.LeanBaselineContinuationWindowV2 }) => void) => {
+    const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-context-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V2, head = { value: "c".repeat(40) }, sourceHead = "b".repeat(40), reviewedHead = "a".repeat(40)
+    const sourcePaths = [...parentApi.LEAN_BASELINE_CONTINUATION_OWNED_PATHS, "scripts/run-v1-38-lean-baseline.sh", "scripts/lib/v1-38-lean-baseline-analysis.ts", "scripts/lib/v1-38-lean-baseline-metrics.ts", "scripts/lib/v1-38-lean-cold-corpus.ts", "scripts/lib/v1-38-lean-seal-metadata.ts", "scripts/lib/v1-38-lean-training-adapter.ts", "scripts/lib/v1-38-lean-baseline.ts", "packages/strategy-lab/src/league/lean-training.ts", "scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-lean-child-cli-terminal.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts", "packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"]
+    const write = (path: string, bytes: string | Uint8Array, mode = 0o644) => { const absolute = resolve(path); fs.mkdirSync(resolve(absolute, ".."), { recursive: true }); fs.writeFileSync(absolute, bytes, { mode }); fs.chmodSync(absolute, mode) }
+    const actualStat = fs.lstatSync, actualExists = fs.existsSync, stat = vi.spyOn(fs, "lstatSync").mockImplementation(((path: string, ...args: unknown[]) => (actualStat as any)(resolve(String(path)), ...args)) as typeof fs.lstatSync), exists = vi.spyOn(fs, "existsSync").mockImplementation(path => actualExists(resolve(String(path))))
+    const factory = vi.spyOn(factoryImplementation, "factoryAssessmentImplementationManifest").mockReturnValue({ entries: [], root: root("bounded-factory") })
+    const disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000)
+    const core = vi.spyOn(childProcess, "execFileSync").mockReturnValue("0\n" as never), originalArgs = process.execArgv, connected = Object.getOwnPropertyDescriptor(process, "connected")
+    Object.defineProperty(process, "connected", { value: false, writable: true, configurable: true })
+    const passes: string[][] = [], reservations: number[] = [], actualIdentity = continuationHelper.createLeanContinuationIdentityGuardV2, identity = vi.spyOn(continuationHelper, "createLeanContinuationIdentityGuardV2")
+    identity.mockImplementation((pins, rows) => { const guard = actualIdentity(pins, rows); return () => { const before = stat.mock.calls.length; guard(); passes.push(stat.mock.calls.slice(before).map(([path]) => String(path))) } })
+    let carried: any
+    const carry = vi.spyOn(continuationHelper, "authenticateLeanBaselineContinuationCarryV2").mockImplementation((_git, _rows, guard) => { for (const additional of [0, 65536, 0]) { reservations.push(additional); guard(additional) }; return carried })
+    const hashes = vi.spyOn(contracts, "labRoot"), git = vi.spyOn(continuationGit, "readLeanBaselineContinuationGitV2").mockImplementation(args => {
+      if (args[0] === "rev-parse") return Buffer.from(`${head.value}\n`)
+      if (args[0] === "merge-base") return Buffer.alloc(0)
+      if (args[0] === "rev-list") return Buffer.from(`${head.value} ${sourceHead}\n`)
+      if (args[0] === "diff") return Buffer.from(`${p.allocation}\n`)
+      if (args[0] === "show") { const colon = args[1]!.indexOf(":"); expect([reviewedHead, sourceHead, head.value]).toContain(args[1]!.slice(0, colon)); return fs.readFileSync(resolve(args[1]!.slice(colon + 1))) }
+      throw new Error("unexpected inert Git operation")
+    })
+    let clock: ReturnType<typeof vi.spyOn> | undefined
+    try {
+      for (const path of new Set([...sourcePaths, ...parentApi.LEAN_BASELINE_CONTINUATION_PLANNING_PATHS])) write(path, "synthetic public fixture", path.endsWith(".sh") ? 0o755 : 0o644)
+      const base = parentApi.leanBaselineContinuationSourceManifestV2(), planRoot = base.planningEntries.find(row => row.path.endsWith("265-16-BASELINE-CONTINUATION-PLAN-20261012.md"))!.root
+      const sg: parentApi.LeanContinuationSourceGateV2 = { schemaVersion: "lean-baseline-continuation-source-gate-v2", plan_check: "passed", source_review: "passed", root_validation: "passed", source_verification: "passed", commands_closed: true, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceAuthor: "inert-author", sourceReviewer: "inert-reviewer", sourceVerifier: "inert-verifier" }
+      const wb = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-overhead", approvalEvidence: { humanDecisionId: "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1791840227000, anchorMs: 1791840227000, carryMs: 492285903, capMs: 521085903, deadlineMs: 1791869027000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261012-v3" as const, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: labRoot(sg.schemaVersion, sg), planRoot, runOperator: "inert-runner", readerOperator: "inert-reader" }, w = { ...wb, root: labRoot(wb.schemaVersion, wb) }
+      const dg: parentApi.LeanContinuationDataGateV2 = { schemaVersion: "lean-baseline-continuation-data-gate-v2", status: "passed", grantId: w.grantId, windowRoot: w.root, windowBytesRoot: leanBytesRoot(leanCanonicalBytes(w)), reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: w.sourceGateRoot, planRoot, approvalEvidence: w.approvalEvidence, runOperator: w.runOperator, readerOperator: w.readerOperator, dataReviewer: "inert-data-reviewer", commands_closed: true }
+      write(p.gates, `\`\`\`json\n${Buffer.from(leanCanonicalBytes(sg))}\n\`\`\`\n\`\`\`json\n${Buffer.from(leanCanonicalBytes(dg))}\n\`\`\`\n`); write(p.window, leanCanonicalBytes(w), 0o600)
+      clock = vi.spyOn(Date, "now").mockReturnValue(w.anchorMs); process.execArgv = ["--import", "tsx"]
+      vi.stubEnv("TSX_DISABLE_CACHE", "1"); vi.stubEnv("NODE_DISABLE_COMPILE_CACHE", "1"); vi.stubEnv("TMPDIR", resolve(p.temp)); for (const key of ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"]) vi.stubEnv(key, undefined)
+      const manifest = parentApi.leanBaselineContinuationDataManifestV2(w, parentApi.leanBaselineContinuationSourceManifestV2()), seed = "inert-overhead", coldRoot = leanColdProcedureRoot(seed)
+      const request: parentApi.LeanBaselineContinuationRequestV2 = { schemaVersion: "lean-baseline-continuation-request-v2", seed, sourceHead, sourceRoot: base.root, planningRoot: manifest.planningRoot, planRoot, reviewRoot: w.sourceGateRoot, coldRoot, candidateRoots: parentApi.deriveLeanBaselineCandidateRoots(coldRoot), requestRoots: parentApi.deriveLeanBaselineRequestRoots({ seed, coldRoot, planRoot, sourceRoot: base.root }), offlineOverheadMs: w.offlineOverheadMs, sourceAuthor: sg.sourceAuthor, runOperator: w.runOperator, readerOperator: w.readerOperator, windowRoot: w.root, windowBytesRoot: manifest.windowBytesRoot, sourceGateRoot: w.sourceGateRoot, dataReviewRoot: manifest.dataReviewRoot, manifestRoot: manifest.manifestRoot }
+      write(p.request, leanCanonicalBytes(request), 0o600); fs.mkdirSync(resolve(p.temp), { mode: 0o700 })
+      const watched = sourcePaths[0]!, s = fs.lstatSync(resolve(watched)), inventory: continuationHelper.LeanContinuationInventoryRowV2[] = [{ path: watched, kind: "file", bytes: s.size, allocatedBytes: s.blocks * 512, dev: s.dev, ino: s.ino, mode: s.mode & 0o777, mtimeMs: s.mtimeMs, ctimeMs: s.ctimeMs, rawRoot: leanBytesRoot(fs.readFileSync(resolve(watched))) }], custody = { synthetic: true }
+      const pb = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: 465187899, allocatedDiskBytes: 88924160, residualDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: root("old-cost"), closedCapsuleRoot: labRoot("lean-baseline-continuation-closed-capsule-v2", custody), custodyRoot: labRoot("lean-baseline-continuation-custody-v2", custody), inventoryRoot: labRoot("lean-baseline-continuation-inventory-v2", inventory), qualifiedReaderAuthority: "cost_only" as const }, predecessor = { ...pb, root: labRoot(pb.schemaVersion, pb) }
+      carried = { carry: predecessor, inventory, custody }
+      const allocation = lean.createLeanBaselineContinuationAllocationV2({ ...Object.fromEntries(["sourceRoot", "reviewRoot", "coldRoot", "planRoot", "candidateRoots", "requestRoots", "seed", "sourceHead", "planningRoot", "manifestRoot", "sourceGateRoot", "dataReviewRoot", "windowBytesRoot"].map(key => [key, (request as any)[key]])) as lean.LeanBaselineContinuationInputV2, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), predecessor, window: w })
+      const l = lean.createLeanLedger(resolve(p.store), allocation)
+      write(p.allocation, leanCanonicalBytes(allocation)); write(join(p.store, "carry.json"), leanCanonicalBytes(carried), 0o600); write(join(p.store, "source-manifest.json"), leanCanonicalBytes(manifest), 0o600)
+      const cb = { schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: w.grantId, routeNamespace: w.routeNamespace, windowRoot: w.root, windowBytesRoot: request.windowBytesRoot, requestBytesRoot: allocation.requestBytesRoot, sourceHead, sourceRoot: request.sourceRoot, sourceGateRoot: request.sourceGateRoot, dataReviewRoot: request.dataReviewRoot, planningRoot: request.planningRoot, manifestRoot: request.manifestRoot }, claim = { ...cb, root: labRoot(cb.schemaVersion, cb) }
+      write(p.claim, leanCanonicalBytes(claim), 0o600)
+      const hb = { schemaVersion: "lean-baseline-continuation-source-hold-v2", allocationRoot: allocation.root, sourceHead, manifestRoot: allocation.manifestRoot, claimRoot: claim.root, rows: inventory }, hold = { ...hb, root: labRoot(hb.schemaVersion, hb) }
+      write(join(l.directory, "source-hold.json"), leanCanonicalBytes(hold), 0o600)
+      const c = parentApi.openLeanBaselineContinuationContextV2(p.request)
+      run(c, { passes, reservations, hashes, head, w })
+    } finally { if (connected) Object.defineProperty(process, "connected", connected); else delete process.connected; clock?.mockRestore(); git.mockRestore(); hashes.mockRestore(); carry.mockRestore(); identity.mockRestore(); process.execArgv = originalArgs; vi.unstubAllEnvs(); core.mockRestore(); available.mockRestore(); usage.mockRestore(); disk.mockRestore(); factory.mockRestore(); exists.mockRestore(); stat.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
+  }
+  it("uses the opened ledger exact allocation and fresh opening/closing passes for every callback", () => fixture((c, f) => {
+    expect(c.allocation).toBe(c.ledger.allocation); expect(lean.readLeanAdmittedContinuationAllocationV2(c.ledger)).toBe(c.allocation)
+    expect(f.reservations).toEqual([0, 65536, 0]); expect(f.passes).toHaveLength(10)
+    for (const pass of f.passes) expect(new Set(pass).size).toBe(pass.length)
+    f.hashes.mockClear(); const before = f.passes.length; c.guard(1234); c.guard(5678)
+    expect(f.passes.length - before).toBe(4)
+    expect(f.hashes.mock.calls.filter(([domain]) => domain === "lean-slot-v1" || domain === "lean-baseline-continuation-admission-v2" || domain === "lean-baseline-continuation-allocation-v2")).toHaveLength(0)
+    expect(f.hashes.mock.calls.length).toBeGreaterThan(0)
+  }))
+  it("denies live HEAD, resource and allocation-byte drift through the actual complete guard", () => fixture((c, f) => {
+    c.guard(); f.head.value = "d".repeat(40); expect(() => c.guard()).toThrow(/HOLD/); f.head.value = c.fixedHead
+    for (const additional of [-1, NaN, Number.MAX_SAFE_INTEGER, LEAN_CAPS.scratchBytes]) expect(() => c.guard(additional)).toThrow()
+    const p = c.paths.allocation, bytes = fs.readFileSync(resolve(p)); fs.writeFileSync(resolve(p), "not canonical"); expect(() => c.guard()).toThrow(); fs.writeFileSync(resolve(p), bytes); expect(() => c.guard()).toThrow()
+  }))
+})
 describe("[continuation-v4] real driver namespace and mutation-free refusal", () => {
   it.each(["revoked", "throwing-prototype"] as const)("withholds hostile Proxy classifier details: %s", kind => {
     const privateDetail = "PRIVATE prototype payload /private/source"

@@ -196,6 +196,44 @@ describe("[continuation-overhead] admitted ledger pure policy", () => {
     for (const change of [{ remainingClosureMs: a.window.closureMs + 1 }, { remainingOfflineMs: a.window.offlineOverheadMs + 1 }]) expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, { ...closing, ...change }, l)).toThrow()
   }))
 })
+describe("[continuation-overhead] same-pass V2 identities", () => {
+  const fixture = (run: (paths: string[], rows: continuation.LeanContinuationInventoryRowV2[]) => void) => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-identities-"))), paths = [join(dir, "source"), join(dir, "planning"), join(dir, "private"), dir]
+    try {
+      for (let i = 0; i < 3; i++) { writeFileSync(paths[i]!, "fixture", { mode: [0o755, 0o644, 0o600][i]! }); fs.chmodSync(paths[i]!, [0o755, 0o644, 0o600][i]!) }
+      const rows = paths.map(path => { const s = fs.lstatSync(path); return { path, kind: s.isDirectory() ? "directory" as const : "file" as const, bytes: s.size, allocatedBytes: s.blocks * 512, dev: s.dev, ino: s.ino, mode: s.mode & 0o777, mtimeMs: s.mtimeMs, ctimeMs: s.ctimeMs, rawRoot: null, ...(s.isDirectory() ? { members: fs.readdirSync(path).sort() } : {}) } })
+      run(paths, rows)
+    } finally { rmSync(dir, { recursive: true }) }
+  }
+  it("observes one unique absolute stat per pass for all pin/survivor roles, and observes the next pass anew", () => fixture((paths, rows) => {
+    const pins = paths.slice(0, 3).map(path => ({ path, stat: fs.lstatSync(path) })), alias = { ...rows[0]!, path: join(paths[3]!, ".", "source") }
+    const guard = continuation.createLeanContinuationIdentityGuardV2(pins, [...rows, alias])
+    vi.mocked(fs.lstatSync).mockClear(); guard(); expect(vi.mocked(fs.lstatSync).mock.calls.map(([path]) => path)).toEqual(paths)
+    guard(); expect(vi.mocked(fs.lstatSync).mock.calls.map(([path]) => path)).toEqual([...paths, ...paths])
+    expect(() => continuation.createLeanContinuationIdentityGuardV2(pins, rows.map((row, i) => i ? row : { ...row, allocatedBytes: row.allocatedBytes + 512 }))()).toThrow()
+    expect(() => continuation.createLeanContinuationIdentityGuardV2(pins, rows.map((row, i) => i ? row : { ...row, mode: 0o644 }))()).toThrow()
+    expect(() => continuation.createLeanContinuationIdentityGuardV2(pins, rows.map((row, i) => i ? row : { ...row, kind: "directory" }))()).toThrow()
+  }))
+  it("freshly refuses replacement, growth, mode changes and restored bytes without reusing a prior observation", () => fixture((paths, rows) => {
+    const guard = continuation.createLeanContinuationIdentityGuardV2([], rows), path = paths[0]!
+    guard(); writeFileSync(path, "fixture grows"); expect(guard).toThrow(); writeFileSync(path, "fixture"); expect(guard).toThrow()
+    fs.renameSync(path, `${path}.old`); writeFileSync(path, "fixture", { mode: 0o755 }); expect(guard).toThrow()
+  }))
+  it("retains per-role source0755/planning0644/private0600 and denies special bits, owners, aliases, links and members", () => fixture((paths, rows) => {
+    const guard = continuation.createLeanContinuationIdentityGuardV2([], rows), stat = vi.mocked(fs.lstatSync), actual = stat.getMockImplementation()!
+    guard()
+    try {
+      for (const changes of [{ uid: Number(process.getuid?.()) + 1 }, { nlink: 2 }, { mode: fs.lstatSync(paths[0]!).mode | 0o4000 }, { isFile: () => false, isDirectory: () => true }]) {
+        stat.mockImplementation((...args) => { const s = actual(...args); return String(args[0]) === paths[0] ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, changes) : s }); expect(guard).toThrow()
+      }
+    } finally { stat.mockImplementation(actual) }
+    for (const [index, mode] of [[0, 0o644], [1, 0o755], [2, 0o644]]) { fs.chmodSync(paths[index!]!, mode!); expect(guard).toThrow(); fs.chmodSync(paths[index!]!, rows[index!]!.mode) }
+    const old = fs.lstatSync(paths[0]!), pinnedOnly = continuation.createLeanContinuationIdentityGuardV2([{ path: paths[0]!, stat: old }], [])
+    try { stat.mockImplementation((...args) => { const s = actual(...args); return String(args[0]) === paths[0] ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { uid: Number(s.uid) + 1 }) : s }); expect(pinnedOnly).toThrow() } finally { stat.mockImplementation(actual) }
+    fs.renameSync(paths[2]!, `${paths[2]}.old`); symlinkSync(`${paths[2]}.old`, paths[2]!); expect(guard).toThrow()
+    const directoryGuard = continuation.createLeanContinuationIdentityGuardV2([], [rows[3]!]); writeFileSync(join(paths[3]!, "unknown"), "x"); expect(directoryGuard).toThrow()
+  }))
+})
 describe("[continuation-v4] finite namespace and spent-cost isolation", () => {
   const window = () => { const { root: _, ...body } = { ...continuationWindowFixtureV2(), routeNamespace: "20261012-v4" as const }; return { ...body, root: labRoot(body.schemaVersion, body) } }
   it("selects only exact fixed requests and whole validated windows, preserving V3 bytes", () => {
