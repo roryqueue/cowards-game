@@ -307,16 +307,17 @@ describe("[continuation-v5] finite selection and spent V4 preservation", () => {
     expect(rows.map(row => row.path)).toEqual([...f.files.map(row => row.path), p.store, p.temp].sort((a, b) => a.localeCompare(b)))
     expect(new Set(rows.map(row => row.path)).size).toBe(rows.length); expect(f.guard.mock.calls.length).toBeGreaterThan(2 * rows.length + 1)
     expect(f.guard).toHaveBeenCalledWith(746080); expect(f.guard).toHaveBeenCalledWith(17366); expect(rows.find(row => row.path === join(p.store, "ledger.ndjson"))?.bytes).toBe(0)
-    const sum = rows.reduce((n, row) => n + row.allocatedBytes, 0), originalDebit = sum + 4096
-    const debit = continuation.reconcileLeanContinuationV2DiskDebit(originalDebit, rows, originalDebit, rows, window())
-    expect(debit.allocatedDiskBytes).toBe(originalDebit); expect(debit.residualDiskBytes).toBe(4096)
+    const sum = rows.reduce((n, row) => n + row.allocatedBytes, 0), old = ledger.LEAN_BASELINE_CONTINUATION_PATHS, consumed = [old.request, old.allocation, old.store, old.temp].map(path => ({ path, allocatedBytes: 0 }))
+    const original = rows.filter(row => [ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request, ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.window].includes(row.path)), originalDebit = original.reduce((n, row) => n + row.allocatedBytes, 0) + 4096
+    const debit = continuation.reconcileLeanContinuationV2DiskDebit(originalDebit, original, originalDebit, [...rows, ...consumed], window())
+    expect(debit.allocatedDiskBytes).toBe(sum + 4096); expect(debit.residualDiskBytes).toBe(4096)
     const growth = rows.map((row, i) => i === 0 ? { ...row, allocatedBytes: row.allocatedBytes + 4096 } : row)
-    expect(continuation.reconcileLeanContinuationV2DiskDebit(originalDebit, rows, originalDebit, growth, window()).allocatedDiskBytes).toBe(originalDebit + 4096)
+    expect(continuation.reconcileLeanContinuationV2DiskDebit(originalDebit, original, originalDebit, [...growth, ...consumed], window()).allocatedDiskBytes).toBe(sum + 8192)
   }))
   it.each(["missing", "bytes", "mode", "nonempty-journal", "extra-store", "extra-temp", "directory-mode", "symlink", "hardlink"] as const)("denies spent V4 %s before cost use", mutation => fixture(f => {
     const p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4, path = resolve(p.window)
     if (mutation === "missing") fs.unlinkSync(path)
-    if (mutation === "bytes") { const bytes = fs.readFileSync(path); bytes[0] ^= 1; writeFileSync(path, bytes) }
+    if (mutation === "bytes") { const bytes = fs.readFileSync(path); bytes[0] = bytes[0]! ^ 1; writeFileSync(path, bytes) }
     if (mutation === "mode") fs.chmodSync(resolve(p.allocation), 0o600)
     if (mutation === "nonempty-journal") writeFileSync(resolve(join(p.store, "ledger.ndjson")), "x")
     if (mutation === "extra-store") writeFileSync(resolve(join(p.store, "result.json")), "{}")

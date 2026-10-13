@@ -830,10 +830,11 @@ export const validateLeanBaselineContinuationAllocation = (value: unknown): Read
 export const LEAN_BASELINE_CONTINUATION_POLICY_V2 = Object.freeze({ durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, memoryBytes: 3000000000, physicalFloorBytes: 88924160, oldCheckElapsedMs: 465187899, globalCarryMs: 459375903, globalAnchorMs: 1791807317000 })
 export const LEAN_BASELINE_CONTINUATION_PATHS_V2 = Object.freeze({ request: ".strategy-lab/lean-baseline-continuation-request-20261012-v3.json", allocation: ".planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261012-v3.json", store: ".strategy-lab/lean-baseline-continuation-20261012-v3", temp: ".strategy-lab/lean-baseline-continuation-20261012-v3-tmp", window: ".strategy-lab/lean-baseline-continuation-window-20261012-v3.json", claim: ".strategy-lab/lean-baseline-continuation-20261012-v3-tmp/window-claim.json", gates: LEAN_BASELINE_CONTINUATION_PATHS.gates })
 export const LEAN_BASELINE_CONTINUATION_PATHS_V4 = Object.freeze({ request: ".strategy-lab/lean-baseline-continuation-request-20261012-v4.json", allocation: ".planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261012-v4.json", store: ".strategy-lab/lean-baseline-continuation-20261012-v4", temp: ".strategy-lab/lean-baseline-continuation-20261012-v4-tmp", window: ".strategy-lab/lean-baseline-continuation-window-20261012-v4.json", claim: ".strategy-lab/lean-baseline-continuation-20261012-v4-tmp/window-claim.json", gates: LEAN_BASELINE_CONTINUATION_PATHS.gates })
+export const LEAN_BASELINE_CONTINUATION_PATHS_V5 = Object.freeze({ request: ".strategy-lab/lean-baseline-continuation-request-20261013-v5.json", allocation: ".planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261013-v5.json", store: ".strategy-lab/lean-baseline-continuation-20261013-v5", temp: ".strategy-lab/lean-baseline-continuation-20261013-v5-tmp", window: ".strategy-lab/lean-baseline-continuation-window-20261013-v5.json", claim: ".strategy-lab/lean-baseline-continuation-20261013-v5-tmp/window-claim.json", gates: LEAN_BASELINE_CONTINUATION_PATHS.gates })
 export interface LeanBaselineContinuationWindowV2 {
   schemaVersion: "lean-baseline-continuation-window-v2"; status: "approved"; grantId: string
   approvalEvidence: { humanDecisionId: string; recordedBy: string }; approvedAtMs: number; anchorMs: number; deadlineMs: number; carryMs: number; capMs: number; durationMs: number; closureMs: number; offlineOverheadMs: number
-  routeNamespace: "20261012-v3" | "20261012-v4"; reviewedSourceHead: string; sourceRoot: LabRoot; sourceGateRoot: LabRoot; planRoot: LabRoot; runOperator: string; readerOperator: string; root: LabRoot
+  routeNamespace: "20261012-v3" | "20261012-v4" | "20261013-v5"; reviewedSourceHead: string; sourceRoot: LabRoot; sourceGateRoot: LabRoot; planRoot: LabRoot; runOperator: string; readerOperator: string; root: LabRoot
 }
 export const leanContinuationIdentityV2 = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_./:-]{1,120}$/u.test(v)
 export const leanContinuationGlobalFloorV2 = (nowMs: number): number => {
@@ -844,7 +845,7 @@ export const leanContinuationGlobalFloorV2 = (nowMs: number): number => {
 export const validateLeanBaselineContinuationWindowV2 = (value: unknown): Readonly<LeanBaselineContinuationWindowV2> => {
   if (!exactLabKeys(value, ["schemaVersion", "status", "grantId", "approvalEvidence", "approvedAtMs", "anchorMs", "deadlineMs", "carryMs", "capMs", "durationMs", "closureMs", "offlineOverheadMs", "routeNamespace", "reviewedSourceHead", "sourceRoot", "sourceGateRoot", "planRoot", "runOperator", "readerOperator", "root"])) return fail("CONTINUATION_V2_WINDOW")
   const w = value as unknown as LeanBaselineContinuationWindowV2, { root: claimed, ...body } = w, p = LEAN_BASELINE_CONTINUATION_POLICY_V2
-  if (w.schemaVersion !== "lean-baseline-continuation-window-v2" || w.status !== "approved" || !["20261012-v3", "20261012-v4"].includes(w.routeNamespace) || !exactLabKeys(w.approvalEvidence, ["humanDecisionId", "recordedBy"]) || ![w.grantId, w.approvalEvidence.humanDecisionId, w.approvalEvidence.recordedBy, w.runOperator, w.readerOperator].every(leanContinuationIdentityV2) || w.runOperator === w.readerOperator || !/^[a-f0-9]{40}$/u.test(w.reviewedSourceHead) || ![w.sourceRoot, w.sourceGateRoot, w.planRoot, w.root].every(root)) return fail("CONTINUATION_V2_WINDOW")
+  if (w.schemaVersion !== "lean-baseline-continuation-window-v2" || w.status !== "approved" || !["20261012-v3", "20261012-v4", "20261013-v5"].includes(w.routeNamespace) || !exactLabKeys(w.approvalEvidence, ["humanDecisionId", "recordedBy"]) || ![w.grantId, w.approvalEvidence.humanDecisionId, w.approvalEvidence.recordedBy, w.runOperator, w.readerOperator].every(leanContinuationIdentityV2) || w.runOperator === w.readerOperator || !/^[a-f0-9]{40}$/u.test(w.reviewedSourceHead) || ![w.sourceRoot, w.sourceGateRoot, w.planRoot, w.root].every(root)) return fail("CONTINUATION_V2_WINDOW")
   if (![w.approvedAtMs, w.anchorMs, w.deadlineMs, w.carryMs, w.capMs, w.durationMs, w.closureMs, w.offlineOverheadMs, w.anchorMs + w.durationMs, w.carryMs + w.durationMs].every(natural) || w.durationMs !== p.durationMs || w.closureMs !== p.closureMs || w.offlineOverheadMs !== p.offlineOverheadMs || w.approvedAtMs !== w.anchorMs || w.deadlineMs !== w.anchorMs + w.durationMs || w.capMs !== w.carryMs + w.durationMs || w.carryMs < Math.max(p.oldCheckElapsedMs, leanContinuationGlobalFloorV2(w.anchorMs)) || claimed !== labRoot(w.schemaVersion, body)) return fail("CONTINUATION_V2_WINDOW")
   return freezeLabValue({ ...w, approvalEvidence: { ...w.approvalEvidence } })
 }
@@ -855,8 +856,11 @@ export const leanBaselineContinuationElapsedFloorV2 = (window: LeanBaselineConti
   return natural(elapsed) ? elapsed : fail("CONTINUATION_V2_CLOCK")
 }
 /** Exact discovery only; a request path never confers grant authority. */
-export const leanBaselineContinuationPathsForRequestV2 = (requestPath: string) => requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V2.request ? LEAN_BASELINE_CONTINUATION_PATHS_V2 : requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V4.request ? LEAN_BASELINE_CONTINUATION_PATHS_V4 : fail("CONTINUATION_V2_REQUEST_PATH")
-export const leanBaselineContinuationPathsForWindowV2 = (window: LeanBaselineContinuationWindowV2) => validateLeanBaselineContinuationWindowV2(window).routeNamespace === "20261012-v4" ? LEAN_BASELINE_CONTINUATION_PATHS_V4 : LEAN_BASELINE_CONTINUATION_PATHS_V2
+export const leanBaselineContinuationPathsForRequestV2 = (requestPath: string) => requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V2.request ? LEAN_BASELINE_CONTINUATION_PATHS_V2 : requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V4.request ? LEAN_BASELINE_CONTINUATION_PATHS_V4 : requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V5.request ? LEAN_BASELINE_CONTINUATION_PATHS_V5 : fail("CONTINUATION_V2_REQUEST_PATH")
+export const leanBaselineContinuationPathsForWindowV2 = (window: LeanBaselineContinuationWindowV2) => {
+  const namespace = validateLeanBaselineContinuationWindowV2(window).routeNamespace
+  return namespace === "20261012-v3" ? LEAN_BASELINE_CONTINUATION_PATHS_V2 : namespace === "20261012-v4" ? LEAN_BASELINE_CONTINUATION_PATHS_V4 : namespace === "20261013-v5" ? LEAN_BASELINE_CONTINUATION_PATHS_V5 : fail("CONTINUATION_V2_WINDOW")
+}
 export interface LeanBaselineContinuationCarryV2 extends Omit<LeanBaselineContinuationCarry, "schemaVersion" | "chargedMatches" | "elapsedUpperBoundMs"> {
   schemaVersion: "lean-baseline-continuation-carry-v2"; chargedMatches: 50; elapsedUpperBoundMs: number; originalCarryRoot: LabRoot; closedCapsuleRoot: LabRoot; residualDiskBytes: number
 }
@@ -1458,7 +1462,7 @@ const admittedLedgerPoliciesV2 = new WeakMap<LeanExperimentLedger, Readonly<Lean
 const compileLeanAllocationPolicyV2 = (directory: string, allocation: Readonly<AnyLeanAllocation>): LeanExperimentLedger => {
   if (allocation.schemaVersion !== "lean-baseline-continuation-allocation-v2") return { directory, allocation }
   const a = freezeLabValue(allocation), ledger = Object.freeze({ directory, allocation: a })
-  const paths = a.window.routeNamespace === "20261012-v4" ? LEAN_BASELINE_CONTINUATION_PATHS_V4 : LEAN_BASELINE_CONTINUATION_PATHS_V2
+  const paths = leanBaselineContinuationPathsForWindowV2(a.window)
   admittedLedgerPoliciesV2.set(ledger, freezeLabValue({ directory, allocation: a, canonicalText: Buffer.from(leanCanonicalBytes(a)).toString("utf8"), writablePaths: [paths.temp, paths.allocation, paths.request, paths.window].map(path => resolve(path)) }))
   return ledger
 }
