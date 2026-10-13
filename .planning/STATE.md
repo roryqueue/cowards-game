@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fixed source reviewed and ROOT validated; distinct source verification pending, cadence fit unestablished
+stopped_at: Source repair independently verified; new assurance/cadence decision required before continuation
 last_updated: "2026-10-13"
 last_activity: 2026-10-13
-last_activity_desc: Builtin routing fix reviewed, ROOT213unique passes and exact13old diagnostic match; no route authority
+last_activity_desc: Distinct source verifier passed six scoped truths with no gaps; historical-check cadence amendment pending human approval
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,14 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — source repair closed; assurance decision pending
+
+ROOT observed final independent `/root/verify_265_v5_remaining_overhead_source` verdict on 2026-10-13: `PASS_SOURCE_ONLY_REQUIREMENTS_PENDING`, six of six scoped source truths verified, gaps `[]`, all inspection commands CLOSED and ownership RELEASED. Fixed production source `9a277876d92a2dd9cba853e4dc72e58184808ef8`, ROOT implementation root `sha256:9ba876789ef8809e4380737e17c00ff9c4fdfc458a30cffe63e34287efdea942`; verifier inspected source/tests/planning/Git only and did not repeat tests, scanners, manifest derivation or empirical operations. Existing qualified ROOT validation and actual independent review/fix closures stand. No active SOURCE/DATA admission or new route is created.
+
+The remaining human-only decision is a prospective assurance/cadence amendment, NOT another unchanged eight-hour run. Recommendation: authenticate immutable historical evidence and fixed source at explicit major stage boundaries instead of rebuilding their full identity inventory inside every read callback; retain fresh checks for active input/output descriptors and bytes, ledger/journal prefixes, HEAD, time, memory/disk, one-use charging and all runtime/privacy bounds. Exact barriers, invalidation rules and connected drift tests must be researched and independently plan-checked before implementation. This recommendation is NOT approved or applied. Existing full-every-callback behavior stays unchanged until that decision; no guarantee of speedup or full-run fit is made.
+
+Near-scale assay remains CENSORED 12/2280 rows in 7645ms, unauthenticated context and mocked resources; original V5 cause UNKNOWN. Plan16/Phase265/all nine LEAG requirements remain incomplete, no baseline/freeze/formation/holdout/public/counting/production credit. Old50 cost-only charges and consumed route bytes remain immutable. Current source-work hard stop21:21:06UTC/all continuous costs and all frozen resource/gameplay/privacy bounds remain; full36 entry frontier elapsed. Any later empirical window needs its own prospective time decision, not a shifted old anchor. Earlier sections are historical checkpoints.
 
 ## Current continuation — source ROOT closure; distinct verification pending
 
