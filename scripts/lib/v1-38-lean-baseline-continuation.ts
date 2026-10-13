@@ -305,35 +305,65 @@ export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinu
 }
 /** Reject executable expected data before reading fields; never freeze a caller
  * Stats object. These snapshots compile expectations only, not observations. */
-const assertContinuationExpectedDataV2 = (value: unknown, required: readonly string[] = []): void => {
-  if (value === null || typeof value !== "object" || nodeTypes.isProxy(value) || required.some(key => !Object.hasOwn(value, key)) || Reflect.ownKeys(value).some(key => typeof key !== "string" || !("value" in Object.getOwnPropertyDescriptor(value, key)!))) return fail("V2_EXPECTED_IDENTITY")
+const captureContinuationArrayV2 = (value: unknown): readonly unknown[] => {
+  if (value === null || typeof value !== "object" || nodeTypes.isProxy(value) || !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) return fail("V2_EXPECTED_IDENTITY")
+  const fields = Object.getOwnPropertyDescriptors(value), length = fields.length!.value as unknown
+  if (!integer(length) || length > 4096 || Reflect.ownKeys(fields).length !== length + 1) return fail("V2_EXPECTED_IDENTITY")
+  const captured: unknown[] = []
+  for (let i = 0; i < length; i++) {
+    const key = String(i)
+    if (!Object.hasOwn(fields, key) || !("value" in fields[key]!)) return fail("V2_EXPECTED_IDENTITY")
+    captured[i] = fields[key]!.value
+  }
+  return Object.freeze(captured)
 }
-const validateContinuationMembersV2 = (members: readonly string[]): void => {
-  assertContinuationExpectedDataV2(members)
-  if (!Array.isArray(members) || Object.getPrototypeOf(members) !== Array.prototype || members.length > 4096 || Object.keys(members).length !== members.length || members.some(name => typeof name !== "string" || !name || name.includes("/") || name.includes("\0") || name === "." || name === "..") || new Set(members).size !== members.length) return fail("V2_EXPECTED_MEMBERS")
+const captureContinuationRecordV2 = (value: unknown, required: readonly string[], plain = true, membership = false): Readonly<Record<string, unknown>> => {
+  if (value === null || typeof value !== "object" || nodeTypes.isProxy(value) || plain && Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) return fail("V2_EXPECTED_IDENTITY")
+  const fields = Object.getOwnPropertyDescriptors(value), captured: Record<string, unknown> = Object.create(null)
+  for (const key of Reflect.ownKeys(fields)) {
+    if (typeof key !== "string" || !("value" in fields[key]!)) return fail("V2_EXPECTED_IDENTITY")
+  }
+  for (const key of required) { if (!Object.hasOwn(fields, key)) return fail("V2_EXPECTED_IDENTITY"); captured[key] = fields[key]!.value }
+  // Optional means own DATA only, never inherited lookup. Retain a sentinel for
+  // explicit undefined while rejecting inherited accessors without evaluation.
+  if (membership) {
+    if (Object.hasOwn(fields, "members")) captured.members = fields.members!.value
+    else if ("members" in value) return fail("V2_EXPECTED_IDENTITY")
+  }
+  return Object.freeze(captured)
 }
-const continuationMembersTextV2 = (members: readonly string[]): string => {
-  validateContinuationMembersV2(members)
-  return Buffer.from(leanCanonicalBytes(members)).toString("utf8")
+const captureContinuationMembersV2 = (value: unknown): readonly string[] => {
+  const data = captureContinuationArrayV2(value), captured: string[] = [], names = new Set<string>()
+  for (let i = 0; i < data.length; i++) {
+    const name = data[i]
+    if (typeof name !== "string" || !name || name.includes("/") || name.includes("\0") || name === "." || name === ".." || names.has(name)) return fail("V2_EXPECTED_MEMBERS")
+    captured[i] = name; names.add(name)
+  }
+  return Object.freeze(captured)
 }
+const continuationMembersTextV2 = (members: readonly string[]): string => Buffer.from(leanCanonicalBytes(captureContinuationMembersV2(members))).toString("utf8")
 export const createLeanContinuationIdentityGuardV2 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[]): (() => void) => {
-  assertContinuationExpectedDataV2(pins); assertContinuationExpectedDataV2(survivors)
-  if (!Array.isArray(pins) || !Array.isArray(survivors) || pins.length > 4096 || survivors.length > 4096) return fail("V2_EXPECTED_IDENTITY")
-  for (const pin of pins) {
-    assertContinuationExpectedDataV2(pin, ["path", "stat"]); assertContinuationExpectedDataV2(pin.stat, ["dev", "ino", "size", "uid", "mode", "blocks", "mtimeMs", "ctimeMs"])
-    if (Object.getPrototypeOf(pin) !== Object.prototype && Object.getPrototypeOf(pin) !== null) return fail("V2_EXPECTED_IDENTITY")
-    if (typeof pin.path !== "string" || !pin.path || ![pin.stat.dev, pin.stat.ino, pin.stat.size, pin.stat.uid, pin.stat.mode, pin.stat.blocks].every(integer) || ![pin.stat.mtimeMs, pin.stat.ctimeMs].every(n => Number.isFinite(n) && n >= 0)) return fail("V2_EXPECTED_IDENTITY")
+  type Pin = Pick<Stats, "dev" | "ino" | "size" | "mtimeMs" | "ctimeMs" | "uid" | "mode" | "blocks">
+  const predicates = new Map<string, { pins: Readonly<Pin>[]; survivors: Readonly<LeanContinuationInventoryRowV2>[] }>()
+  const at = (path: string) => { const absolute = resolve(path); let expected = predicates.get(absolute); if (!expected) { expected = { pins: [], survivors: [] }; predicates.set(absolute, expected) }; return expected }
+  const pinValues = captureContinuationArrayV2(pins), survivorValues = captureContinuationArrayV2(survivors)
+  for (let i = 0; i < pinValues.length; i++) {
+    const pin = captureContinuationRecordV2(pinValues[i], ["path", "stat"]), s = captureContinuationRecordV2(pin.stat, ["dev", "ino", "size", "uid", "mode", "blocks", "mtimeMs", "ctimeMs"], false)
+    if (typeof pin.path !== "string" || !pin.path || ![s.dev, s.ino, s.size, s.uid, s.mode, s.blocks].every(integer) || ![s.mtimeMs, s.ctimeMs].every(n => typeof n === "number" && Number.isFinite(n) && n >= 0)) return fail("V2_EXPECTED_IDENTITY")
+    at(pin.path).pins.push(s as Readonly<Pin>)
   }
-  for (const row of survivors) {
-    assertContinuationExpectedDataV2(row, ["path", "kind", "bytes", "allocatedBytes", "dev", "ino", "mode", "mtimeMs", "ctimeMs"])
-    if (Object.getPrototypeOf(row) !== Object.prototype && Object.getPrototypeOf(row) !== null) return fail("V2_EXPECTED_IDENTITY")
-    if (typeof row.path !== "string" || !row.path || !["file", "directory", "sealed_metadata"].includes(row.kind) || ![row.bytes, row.allocatedBytes, row.dev, row.ino, row.mode].every(integer) || row.mode > 0o7777 || ![row.mtimeMs, row.ctimeMs].every(n => Number.isFinite(n) && n >= 0)) return fail("V2_EXPECTED_IDENTITY")
-    if (row.members !== undefined) {
-      validateContinuationMembersV2(row.members)
-      if (row.kind !== "directory" || row.members.some((name, i) => i > 0 && row.members![i - 1]! >= name)) return fail("V2_EXPECTED_MEMBERS")
+  for (let i = 0; i < survivorValues.length; i++) {
+    const row = captureContinuationRecordV2(survivorValues[i], ["path", "kind", "bytes", "allocatedBytes", "dev", "ino", "mode", "mtimeMs", "ctimeMs", "rawRoot"], true, true)
+    if (typeof row.path !== "string" || !row.path || typeof row.kind !== "string" || !["file", "directory", "sealed_metadata"].includes(row.kind) || ![row.bytes, row.allocatedBytes, row.dev, row.ino, row.mode].every(integer) || (row.mode as number) > 0o7777 || ![row.mtimeMs, row.ctimeMs].every(n => typeof n === "number" && Number.isFinite(n) && n >= 0) || row.rawRoot !== null && typeof row.rawRoot !== "string") return fail("V2_EXPECTED_IDENTITY")
+    const snapshot = Object.assign(Object.create(null), row) as LeanContinuationInventoryRowV2
+    if (Object.hasOwn(row, "members") && row.members !== undefined) {
+      const members = captureContinuationMembersV2(row.members)
+      if (row.kind !== "directory") return fail("V2_EXPECTED_MEMBERS")
+      for (let j = 1; j < members.length; j++) if (members[j - 1]! >= members[j]!) return fail("V2_EXPECTED_MEMBERS")
+      snapshot.members = members
     }
+    at(row.path).survivors.push(Object.freeze(snapshot))
   }
-  const predicates = leanContinuationIdentityPredicates(pins, survivors)
   const expectedMembers = new Map<LeanContinuationInventoryRowV2, string>()
   for (const expected of predicates.values()) for (const row of expected.survivors) if (row.members !== undefined) expectedMembers.set(row, continuationMembersTextV2(row.members))
   return () => {
