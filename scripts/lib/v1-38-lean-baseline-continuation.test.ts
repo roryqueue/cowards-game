@@ -261,6 +261,32 @@ describe("[continuation-overhead] same-pass V2 identities", () => {
     const stat = fs.lstatSync(rows[0]!.path), pin = { path: rows[0]!.path, stat }
     continuation.createLeanContinuationIdentityGuardV2([pin], []); expect(Object.isFrozen(stat)).toBe(false)
   }))
+  it("[continuation-remaining-overhead] [CR-REM-01] rejects custom top-level traversal, sparse arrays and extra methods without invoking them", () => fixture((paths, rows) => {
+    const trap = vi.fn(function* () { /* Omits every supplied identity. */ }), stateful = vi.fn(function* () { if (stateful.mock.calls.length === 1) yield rows[0]! })
+    const inheritedEmpty = [rows[0]!], inheritedStateful = [rows[0]!], customMethod = [rows[0]!], sparse = new Array<continuation.LeanContinuationInventoryRowV2>(2)
+    Object.setPrototypeOf(inheritedEmpty, Object.create(Array.prototype, { [Symbol.iterator]: { value: trap } }))
+    Object.setPrototypeOf(inheritedStateful, Object.create(Array.prototype, { [Symbol.iterator]: { value: stateful } }))
+    Object.defineProperty(customMethod, "some", { value: trap }); sparse[1] = rows[0]!
+    for (const hostile of [inheritedEmpty, inheritedStateful, customMethod, sparse]) expect(() => continuation.createLeanContinuationIdentityGuardV2([], hostile)).toThrow(/V2_EXPECTED/)
+    const pins = [{ path: paths[0]!, stat: fs.lstatSync(paths[0]!) }]
+    Object.setPrototypeOf(pins, Object.create(Array.prototype, { [Symbol.iterator]: { value: trap } }))
+    expect(() => continuation.createLeanContinuationIdentityGuardV2(pins, [])).toThrow(/V2_EXPECTED/)
+    expect(trap).not.toHaveBeenCalled(); expect(stateful).not.toHaveBeenCalled()
+  }))
+  it("[continuation-remaining-overhead] [CR-REM-01] captures optional membership only as own data and never invokes caller methods", () => fixture((_paths, rows) => {
+    const trap = vi.fn(() => false), members = [...rows[3]!.members!]
+    Object.defineProperty(members, "some", { value: trap })
+    expect(() => continuation.createLeanContinuationIdentityGuardV2([], [{ ...rows[3]!, members }])).toThrow(/V2_EXPECTED/)
+    expect(trap).not.toHaveBeenCalled()
+  }))
+  it("[continuation-remaining-overhead] [CR-REM-01] rejects inherited optional members without evaluating its accessor", () => fixture((_paths, rows) => {
+    const getter = vi.fn(() => [...rows[3]!.members!]), previous = Object.getOwnPropertyDescriptor(Object.prototype, "members")
+    try {
+      Object.defineProperty(Object.prototype, "members", { configurable: true, get: getter })
+      expect(() => continuation.createLeanContinuationIdentityGuardV2([], [rows[0]!])).toThrow(/V2_EXPECTED/)
+      expect(getter).not.toHaveBeenCalled()
+    } finally { if (previous) Object.defineProperty(Object.prototype, "members", previous); else Reflect.deleteProperty(Object.prototype, "members") }
+  }))
   it("observes one unique absolute stat per pass for all pin/survivor roles, and observes the next pass anew", () => fixture((paths, rows) => {
     const pins = paths.slice(0, 3).map(path => ({ path, stat: fs.lstatSync(path) })), alias = { ...rows[0]!, path: join(paths[3]!, ".", "source") }
     const guard = continuation.createLeanContinuationIdentityGuardV2(pins, [...rows, alias])
