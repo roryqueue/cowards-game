@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V5 DATA gates closed; final planning pin and unique ROOT preparation next
+stopped_at: V5 pre-entry failure independently checked; source-only overhead diagnosis next
 last_updated: "2026-10-13"
 last_activity: 2026-10-13
-last_activity_desc: Narrow amendment and owner-only DATA review passed; no charge, final pins before unique preparation
+last_activity_desc: Unique V5 run and terminal-only verifier closed; zero new retained charges, diagnose remaining overhead
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,16 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V5 pre-entry terminal checked; remaining overhead diagnosis
+
+ROOT first terminal clock2026-10-13T14:40:55UTC. ONE preparation51005/PID32017 CLOSED0; allocation a0354ca26634c680de357b593429eddd63c6af2e4802e01c831dd59aed27bfa3/raw439ff997/17360B was the sole direct-child delta cf996d7c44bb38f854ebda9e490f44bdc4f6cc1c over request.sourceHead14a1d1c42dc58173fd90b825e34d0ef70ad66ebe, committed/pushed. ONE ROOT run76934/PID56009 started13:40UTC, CLOSEDexit1/public output ONLYLEAN_BASELINE_FAILED_DETAILS_WITHHELD after about60min. Initiating throw/point/cause UNKNOWN; cutoff14:40:06 correlation is NOT causal proof. CPU-active snapshots establish activity, not the hot function. No measured end-to-end speedup established.
+
+ONE distinct actual `/root/verify_265_v5_retained` PRE_ENTRY_TERMINAL_CHECKED at14:45:39.717UTC, bounded metadata/public-Git command CLOSED0/4.47s, all commands CLOSED/ownership RELEASED/no writes. Actual pinnedHEAD/source and canonical window/request/allocation/claim descriptors/roots/pair/joins passed; exact0700 store six preparation members, temp only claim; both0600 journals0B; run-claim/entry/child-entry/child-terminal/entry-failure/result/reader-claim/retained-check/supervisor-reasons absent; PID/children/PGID56009 absent. No actual empirical entry/head or result: ordinary retained reader was NEVER invoked; allocation epoch HEAD is not an entry receipt. Missing records do not prove absence of all transient/unrecorded activity. Source/HEAD hold now RELEASED after both actual closures.
+
+All V5/older attempts/windows/requests/allocations/setup/authority/ledgers/results/checks stay immutable/spent, no retry/reuse/refund/recredit. Old50cost-only/zeroNEWretainedcharges; no baseline/LEAG/Phase265/freeze/formation/holdout/public/counting/production credit. Current SOURCE proof9db/4b7e/gateee17 remains source-only, not admission; V5 DATA projection archived as unchanged text history. Prospective code changes require a new checked source supplement and all independent gates, not reuse of this route.
+
+Next existing debug session diagnoses remaining pre-entry overhead/source-only. Preserve EVERY full fresh callback, BOTH identity passes, all descriptors/bytes/resources/time/lineage/membership and no live-observation cache. A native realpath substitution remains UNPROVEN until independent identity/error/alias/mode equivalence checks; no blind patch or claimed original cause. Safe bounded PUBLIC-only filesystem/API diagnosis may inform an existing Plan16 repair; no history replay, old reader, capacity probe, Strategy/provider/Match or new route. Current approved source-work hardstop21:21:06UTC and all continuous costs remain; full36 frontier elapsed. Same15GB/3GBRAM/global300/36new/four unopened/guest1000startup2500host5000Match600000/all rules/privacy. Only after source-ready may a genuinely new prospective resource decision be needed. Earlier checkpoints history.
 
 ## Current continuation — V5 DATA gates closed; unique preparation next
 
