@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V5 pre-entry failure independently checked; source-only overhead diagnosis next
+stopped_at: V5 diagnosis closed; checked source-only overhead and diagnostic supplement in planning
 last_updated: "2026-10-13"
 last_activity: 2026-10-13
-last_activity_desc: Unique V5 run and terminal-only verifier closed; zero new retained charges, diagnose remaining overhead
+last_activity_desc: V5 source diagnosis closed; preserve live checks while planning pure-calculation repair and bounded cost assay
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,11 @@ total_plans_in_phase: 16
 
 # State: Coward's Game
 
-## Current continuation — V5 pre-entry terminal checked; remaining overhead diagnosis
+## Current continuation — V5 diagnosis closed; source-only repair planning
+
+Actual typed diagnosis manager `/root/diagnose_265_v5_overhead` and reused typed investigator `/root/diagnose_265_v4_overhead/static_v4_cost` CLOSED14:59:36UTC; all commands closed, debug-only append released. A/B allocation reconstruction repair is present; remaining completed-path source algebra is41pure window hashes/21fresh physical observations per complete guard plus at least2U(2N+1)explicit fresh realpaths. This is NOT an executed V5 count, measured dominant hot function or original failure attribution. One bounded PUBLIC-only2020-call sample134.446ms/default39.874ms/native29.218ms establishes sampled local equality only; general native equivalence and end-to-end benefit remain unproved. No native replacement adopted.
+
+Actual typed planner `/root/plan_265_v5_remaining_overhead` owns ONLY the existing Plan16 additive source supplement. Minimal direction: legitimate ledger-owned frozen window derivations and immutable EXPECTED membership compilation; all actual callbacks/BOTH identity passes/chunk checks/descriptors/bytes/resources/HEAD/time/members/reservations remain fresh. Finite future RUN-preentry diagnostics and a bounded inert connected cost-sensitivity assay precede any readiness claim. Pure-calculation savings alone may not resolve the quadratic file-check cost; no blind new window/run promised. No new numbered plan/workstream or prospective allocation/window/request/Match/reader. Existing21:21:06UTC source hardstop/all continuous costs unchanged; full36 frontier elapsed. Independent plan check must pass before source edits; source review/ROOT validation/distinct verification remain mandatory. Original V5/native/V3/V4 causes UNKNOWN, prior evidence immutable, zero new retained V5 charges, no downstream credit.
 
 ROOT first terminal clock2026-10-13T14:40:55UTC. ONE preparation51005/PID32017 CLOSED0; allocation a0354ca26634c680de357b593429eddd63c6af2e4802e01c831dd59aed27bfa3/raw439ff997/17360B was the sole direct-child delta cf996d7c44bb38f854ebda9e490f44bdc4f6cc1c over request.sourceHead14a1d1c42dc58173fd90b825e34d0ef70ad66ebe, committed/pushed. ONE ROOT run76934/PID56009 started13:40UTC, CLOSEDexit1/public output ONLYLEAN_BASELINE_FAILED_DETAILS_WITHHELD after about60min. Initiating throw/point/cause UNKNOWN; cutoff14:40:06 correlation is NOT causal proof. CPU-active snapshots establish activity, not the hot function. No measured end-to-end speedup established.
 
