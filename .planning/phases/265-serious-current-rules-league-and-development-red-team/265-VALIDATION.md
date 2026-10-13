@@ -6,12 +6,28 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-13
-source_reviewed: 9db7eceaf894393936bb6b1a8a02f2558d1a5abf
-source_gate: historical-overhead-v5-proof-archived-new-remaining-overhead-source-validation-pending
+source_reviewed: 9a277876d92a2dd9cba853e4dc72e58184808ef8
+source_gate: remaining-overhead-reviewed-root-qualified-validation-distinct-source-verification-pending
 empirical_validation: v5-pre-entry-failure-unique-terminal-only-check-no-new-retained-charge
 ---
 
 # Phase265 — Validation Strategy
+
+## Current State-A source validation — E/F and integration fixes
+
+Fixed9a277876/root9ba87678: checkedE/F, actualindependentreview found/fixed/re-reviewed CR-REM-01 plus ROOTvalidationtype andbuiltin-owner integrationgaps. Finalreviewclean; no scanner/permission changes. ROOT qualified213unique passing cases/oneexistingwrapper.skip: prior83helper/39legacy+50newdriver/4censoredassays, final48casecurrentbatch addsnewactualgraphregression+all36unchangedpolicycases. Every affectednewcase executed onfixedsource; unchangedpriorruntimeproof qualified by independent erased-type/purepassthrough comparison, not a fabricated full-suite rerun. ROOT original15strict7051B/13FULLblocks wholebyteeq actual9dbbaseline/zeroNEW/nooffsets; configuredprojects/publicpass, service0strict/0ownership/19oldreport-only. Currentgraph1443files/0violations. Exact commands/actual roles/failures/closures in existingGATES.
+
+| E/F behavior / threat | Actual coverage | Source disposition |
+|---|---|---|
+|Exact admitted frozen ledger/window pure reuse; hostile clone/proxy fallback|Helper remaining/overhead cases and actual driver completeguard|COVERED source-only|
+|Dense own descriptor snapshots; custom iterator/sparse/method/inherited getter denial|CR-REM-01 actualRED→GREEN plus full83helper/currentfocused|COVERED source-only|
+|Every fresh callback/BOTH identity passes/bytes/resources/time; closing mutation denial|Actual driver/context cases; counters retain2U/21physical/twochunks per completedfixtureguard|COVERED source-only|
+|Private finite RUN provenance; forged/proxy/reusederrors denied; CLI dormant|Actualdriverdiagnostic cases plus independent unchangedCLI proof|COVERED source-only|
+|Builtin ownership/private/public/oracle boundaries|Currentactual1443graph0 andall36unchangedpolicytests|COVERED source-only|
+|Realistic full cadence/runtime feasibility|Larger N/U samples honestlyCENSORED; actualauthenticatedcontext/complete near-scale work NOTestablished|PARTIAL; human assurance choice needed aftersourceverify|
+|Actual current-rules Match/replay/baseline/freeze|No retained V5entry/newcharge/result; unique terminal-only checkclosed, initiatingcauseUNKNOWN|MISSING empirical|
+
+Distinctsourceverification pending, no activeSOURCE/DATA projection or executionauthority. Wholephase remains partial/nyquist=false/wave0=false, not UAT/LEAGcompletion or a globallygreen compiler. NoUIchanged/UIgatesnotapplicable; actualboard/replay realism pending empirical work. No cadence/resource/rules change, no newroute; hard21:21:06UTC/allcontinuouscosts/frozenbounds/currentfreeze-beforeformation/holdoutprivacy/spenthistory unchanged. Earlier sections below historical snapshots.
 
 ## Current E/F repair — validation pending
 
