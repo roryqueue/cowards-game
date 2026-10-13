@@ -25,14 +25,15 @@ import * as factoryImplementation from "./v1-38-factory-implementation.js"
 import * as contracts from "../packages/strategy-lab/src/contracts.js"
 import { leanColdProcedureRoot } from "./lib/v1-38-lean-baseline-pipeline.js"
 describe("[continuation-overhead] actual V2 context complete guard", () => {
-  const fixture = (run: (c: ReturnType<typeof parentApi.openLeanBaselineContinuationContextV2>, f: { passes: string[][]; reservations: number[]; hashes: ReturnType<typeof vi.spyOn>; head: { value: string }; w: lean.LeanBaselineContinuationWindowV2 }) => void) => {
+  const fixture = (run: (c: ReturnType<typeof parentApi.openLeanBaselineContinuationContextV2>, f: { passes: string[][]; reservations: number[]; hashes: { mockClear: () => unknown; mock: { calls: Parameters<typeof contracts.labRoot>[] } }; head: { value: string }; w: lean.LeanBaselineContinuationWindowV2; clearObservations: () => void; observationCounts: () => { physical: number; chunks: number } }) => void) => {
     const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-context-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V2, head = { value: "c".repeat(40) }, sourceHead = "b".repeat(40), reviewedHead = "a".repeat(40)
     const sourcePaths = [...parentApi.LEAN_BASELINE_CONTINUATION_OWNED_PATHS, "scripts/run-v1-38-lean-baseline.sh", "scripts/lib/v1-38-lean-baseline-analysis.ts", "scripts/lib/v1-38-lean-baseline-metrics.ts", "scripts/lib/v1-38-lean-cold-corpus.ts", "scripts/lib/v1-38-lean-seal-metadata.ts", "scripts/lib/v1-38-lean-training-adapter.ts", "scripts/lib/v1-38-lean-baseline.ts", "packages/strategy-lab/src/league/lean-training.ts", "scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-lean-child-cli-terminal.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts", "packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"]
     const write = (path: string, bytes: string | Uint8Array, mode = 0o644) => { const absolute = resolve(path); fs.mkdirSync(resolve(absolute, ".."), { recursive: true }); fs.writeFileSync(absolute, bytes, { mode }); fs.chmodSync(absolute, mode) }
     const actualStat = fs.lstatSync, actualExists = fs.existsSync, stat = vi.spyOn(fs, "lstatSync").mockImplementation(((path: string, ...args: unknown[]) => (actualStat as any)(resolve(String(path)), ...args)) as typeof fs.lstatSync), exists = vi.spyOn(fs, "existsSync").mockImplementation(path => actualExists(resolve(String(path))))
     const factory = vi.spyOn(factoryImplementation, "factoryAssessmentImplementationManifest").mockReturnValue({ entries: [], root: root("bounded-factory") })
     const disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000)
-    const core = vi.spyOn(childProcess, "execFileSync").mockReturnValue("0\n" as never), originalArgs = process.execArgv, connected = Object.getOwnPropertyDescriptor(process, "connected")
+    const actualPhysical = lean.cumulativeLeanPhysicalBytes, physical = vi.spyOn(lean, "cumulativeLeanPhysicalBytes").mockImplementation(actualPhysical), chunks = vi.spyOn(fs, "readSync")
+    const core = vi.spyOn(childProcess, "execFileSync").mockImplementation(((command: string) => command === "ps" ? "100\n" : "0\n") as typeof childProcess.execFileSync), originalArgs = process.execArgv, connected = Object.getOwnPropertyDescriptor(process, "connected")
     Object.defineProperty(process, "connected", { value: false, writable: true, configurable: true })
     const passes: string[][] = [], reservations: number[] = [], actualIdentity = continuationHelper.createLeanContinuationIdentityGuardV2, identity = vi.spyOn(continuationHelper, "createLeanContinuationIdentityGuardV2")
     identity.mockImplementation((pins, rows) => { const guard = actualIdentity(pins, rows); return () => { const before = stat.mock.calls.length; guard(); passes.push(stat.mock.calls.slice(before).map(([path]) => String(path))) } })
@@ -70,14 +71,16 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       const hb = { schemaVersion: "lean-baseline-continuation-source-hold-v2", allocationRoot: allocation.root, sourceHead, manifestRoot: allocation.manifestRoot, claimRoot: claim.root, rows: inventory }, hold = { ...hb, root: labRoot(hb.schemaVersion, hb) }
       write(join(l.directory, "source-hold.json"), leanCanonicalBytes(hold), 0o600)
       const c = parentApi.openLeanBaselineContinuationContextV2(p.request)
-      run(c, { passes, reservations, hashes, head, w })
-    } finally { if (connected) Object.defineProperty(process, "connected", connected); else delete process.connected; clock?.mockRestore(); git.mockRestore(); hashes.mockRestore(); carry.mockRestore(); identity.mockRestore(); process.execArgv = originalArgs; vi.unstubAllEnvs(); core.mockRestore(); available.mockRestore(); usage.mockRestore(); disk.mockRestore(); factory.mockRestore(); exists.mockRestore(); stat.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
+      run(c, { passes, reservations, hashes, head, w, clearObservations: () => { physical.mockClear(); chunks.mockClear() }, observationCounts: () => ({ physical: physical.mock.calls.length, chunks: chunks.mock.calls.length }) })
+    } finally { if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); clock?.mockRestore(); git.mockRestore(); hashes.mockRestore(); carry.mockRestore(); identity.mockRestore(); chunks.mockRestore(); physical.mockRestore(); process.execArgv = originalArgs; vi.unstubAllEnvs(); core.mockRestore(); available.mockRestore(); usage.mockRestore(); disk.mockRestore(); factory.mockRestore(); exists.mockRestore(); stat.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
   }
   it("uses the opened ledger exact allocation and fresh opening/closing passes for every callback", () => fixture((c, f) => {
     expect(c.allocation).toBe(c.ledger.allocation); expect(lean.readLeanAdmittedContinuationAllocationV2(c.ledger)).toBe(c.allocation)
     expect(f.reservations).toEqual([0, 65536, 0]); expect(f.passes).toHaveLength(10)
     for (const pass of f.passes) expect(new Set(pass).size).toBe(pass.length)
-    f.hashes.mockClear(); const before = f.passes.length; c.guard(1234); c.guard(5678)
+    f.hashes.mockClear(); f.clearObservations(); const before = f.passes.length; c.guard(1234)
+    expect(f.observationCounts()).toEqual({ physical: 21, chunks: 2 }); c.guard(5678)
+    expect(f.observationCounts()).toEqual({ physical: 42, chunks: 4 })
     expect(f.passes.length - before).toBe(4)
     expect(f.hashes.mock.calls.filter(([domain]) => domain === "lean-slot-v1" || domain === "lean-baseline-continuation-admission-v2" || domain === "lean-baseline-continuation-allocation-v2")).toHaveLength(0)
     expect(f.hashes.mock.calls.length).toBeGreaterThan(0)
@@ -86,6 +89,38 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
     c.guard(); f.head.value = "d".repeat(40); expect(() => c.guard()).toThrow(/HOLD/); f.head.value = c.fixedHead
     for (const additional of [-1, NaN, Number.MAX_SAFE_INTEGER, LEAN_CAPS.scratchBytes]) expect(() => c.guard(additional)).toThrow()
     const p = c.paths.allocation, bytes = fs.readFileSync(resolve(p)); fs.writeFileSync(resolve(p), "not canonical"); expect(() => c.guard()).toThrow(); fs.writeFileSync(resolve(p), bytes); expect(() => c.guard()).toThrow()
+  }))
+  it.each(["source", "planning", "request", "window", "store-allocation"] as const)("reobserves %s bytes and rejects replacement/restore on the next actual callback", kind => fixture(c => {
+    const path = kind === "source" ? c.manifest.implementationEntries[0]!.path : kind === "planning" ? ".planning/STATE.md" : kind === "request" ? c.paths.request : kind === "window" ? c.paths.window : join(c.ledger.directory, "allocation.json")
+    const absolute = resolve(path), original = fs.readFileSync(absolute)
+    fs.renameSync(absolute, `${absolute}.old`); fs.writeFileSync(absolute, original, { mode: kind === "source" || kind === "planning" ? 0o644 : 0o600 })
+    expect(() => c.guard()).toThrow(); fs.unlinkSync(absolute); fs.renameSync(`${absolute}.old`, absolute); expect(() => c.guard()).toThrow()
+  }))
+  it("uses fresh availableRAM/freebytes/RSS/arrayBuffers and rejects deadline/monotonic drift before use", () => fixture((c, f) => {
+    const usage = process.memoryUsage(), disk = fs.statfsSync(resolve("."), { bigint: true })
+    for (const change of [{ rss: 3000000000 }, { arrayBuffers: LEAN_CAPS.scratchBytes + 1 }]) { vi.mocked(process.memoryUsage).mockReturnValue({ ...usage, ...change }); expect(() => c.guard()).toThrow(/CAPACITY/); vi.mocked(process.memoryUsage).mockReturnValue(usage) }
+    vi.mocked(leagueHost.observeLeagueAvailableMemoryBytes).mockReturnValue(0); expect(() => c.guard()).toThrow(/CAPACITY/); vi.mocked(leagueHost.observeLeagueAvailableMemoryBytes).mockReturnValue(4000000000)
+    vi.mocked(fs.statfsSync).mockReturnValue({ bavail: 0n, bsize: 1n } as never); expect(() => c.guard()).toThrow(/CAPACITY/); vi.mocked(fs.statfsSync).mockReturnValue(disk as never)
+    const mono = vi.spyOn(process.hrtime, "bigint").mockReturnValue(0n); try { expect(() => c.guard()).toThrow(/LIVENESS/) } finally { mono.mockRestore() }
+    vi.mocked(Date.now).mockReturnValue(f.w.deadlineMs - 36 * LEAN_CAPS.matchMs - f.w.closureMs - f.w.offlineOverheadMs + 1); expect(() => c.guard()).toThrow(/CAPACITY/)
+    vi.mocked(Date.now).mockReturnValue(f.w.anchorMs - 1); expect(() => c.guard()).toThrow(/HOLD/)
+  }))
+  it("retains actual journal-prefix binding, active-cell reserve and fresh membership refusal", () => fixture((c, f) => {
+    const slot = c.allocation.slots[0]!, cb = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: c.allocation.root, slotRoot: slot.root, ordinal: 0 }, charge = { ...cb, root: labRoot(cb.schemaVersion, cb) }, path = join(c.ledger.directory, "ledger.ndjson")
+    fs.writeFileSync(path, Buffer.concat([leanCanonicalBytes({ kind: "charge", charge }), Buffer.from("\n")]))
+    c.startCell(); expect(c.guard().remainingSlots).toBe(36); expect(c.guard().charged).toBe(51)
+    const before = fs.readFileSync(path), resource = { kind: "resource", elapsedMs: f.w.carryMs + 1, physicalBytes: 4096, bufferBytes: 0, scratchBytes: 0 }
+    fs.writeFileSync(path, Buffer.concat([before, leanCanonicalBytes(resource), Buffer.from("\n")])); expect(() => c.guard()).toThrow(/LEDGER_CHANGED/); fs.writeFileSync(path, before); expect(c.guard().charged).toBe(51)
+    c.finishCell(); expect(c.guard().remainingSlots).toBe(35); c.closeRun(); expect(c.guard().remainingSlots).toBe(0)
+    fs.writeFileSync(join(c.ledger.directory, "unknown.json"), "{}", { mode: 0o600 }); expect(() => c.guard()).toThrow(/STORE_MEMBERS/)
+    expect(f.passes.every(pass => pass.length === new Set(pass).size)).toBe(true)
+  }))
+  it("keeps optional descriptor chunks and denies loss of child liveness in the actual frontier caller", () => fixture((c, f) => {
+    const entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: c.allocation.root, sourceRoot: c.allocation.sourceRoot, requestBytesRoot: c.allocation.requestBytesRoot, head: c.fixedHead, parentPid: process.ppid, childPid: process.pid, handshakeRoot: root("inert-handshake"), wallStartMs: c.window.anchorMs, monotonicStartNs: process.hrtime.bigint().toString() }
+    fs.writeFileSync(join(c.ledger.directory, "entry.json"), leanCanonicalBytes(entry), { mode: 0o600 })
+    Object.defineProperty(process, "connected", { value: true, writable: true, configurable: true })
+    const actualRead = lean.readLeanChildEntry, read = vi.spyOn(lean, "readLeanChildEntry").mockImplementation(l => { const result = actualRead(l); Object.defineProperty(process, "connected", { value: false, writable: true, configurable: true }); return result })
+    try { f.clearObservations(); expect(() => c.guard()).toThrow(/V2_FRONTIER/); expect(read).toHaveBeenCalledOnce(); expect(f.observationCounts()).toEqual({ physical: 26, chunks: 3 }) } finally { read.mockRestore() }
   }))
 })
 describe("[continuation-v4] real driver namespace and mutation-free refusal", () => {

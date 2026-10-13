@@ -94,9 +94,9 @@ export const readLeanContinuationBytes = (name: string, maximum: number, mode?: 
 }
 /** Authenticate all pinned bytes without requesting a large Git blob. The caller
  * supplies the exact manifest and a live resource/time guard, not a source scan. */
-export const authenticateLeanContinuationPinnedSource = (row: { path: string; root: string }, head: string, pinnedPaths: readonly string[], git: LeanContinuationGit, guard: () => void): void => {
+export const authenticateLeanContinuationPinnedSource = (row: { path: string; root: string }, head: string, pinnedPaths: readonly string[] | ReadonlySet<string>, git: LeanContinuationGit, guard: () => void): void => {
   const name = row.path
-  if (!/^sha256:[a-f0-9]{64}$/u.test(row.root) || !/^[a-f0-9]{40}$/u.test(head) || !pinnedPaths.includes(name) || name.startsWith("/") || name.split("/").some(p => !p || p === "." || p === "..") || !/^[A-Za-z0-9_./-]+$/u.test(name) || /preimage|secret/iu.test(name)) return fail("SOURCE_SCOPE")
+  if (!/^sha256:[a-f0-9]{64}$/u.test(row.root) || !/^[a-f0-9]{40}$/u.test(head) || !("has" in pinnedPaths ? pinnedPaths.has(name) : pinnedPaths.includes(name)) || name.startsWith("/") || name.split("/").some(p => !p || p === "." || p === "..") || !/^[A-Za-z0-9_./-]+$/u.test(name) || /preimage|secret/iu.test(name)) return fail("SOURCE_SCOPE")
   guard()
   const path = resolve(name), stat = lstatSync(path)
   if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== process.getuid?.() || realpathSync(path) !== path || !integer(stat.size) || stat.size > LEAN_CAPS.totalBytes) return fail("SOURCE_FILE")
@@ -132,11 +132,15 @@ export const readLeanContinuationJson = (name: string, maximum = 8388608, mode?:
 export interface LeanContinuationInventoryRow { path: string; kind: "file" | "directory" | "sealed_metadata"; bytes: number; allocatedBytes: number; dev: number; ino: number; mode: number; mtimeMs: number; ctimeMs: number; rawRoot: LabRoot | null }
 /** Merge immutable predicates, never observations. Every invocation stats every
  * unique absolute path afresh, including directories and non-pinned survivors. */
-export const createLeanContinuationIdentityGuard = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRow[]): (() => void) => {
-  const predicates = new Map<string, { pins: Pick<Stats, "dev" | "ino" | "size" | "mtimeMs" | "ctimeMs">[]; survivors: LeanContinuationInventoryRow[] }>()
+const leanContinuationIdentityPredicates = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[]) => {
+  const predicates = new Map<string, { pins: Pick<Stats, "dev" | "ino" | "size" | "mtimeMs" | "ctimeMs" | "uid" | "mode" | "blocks">[]; survivors: LeanContinuationInventoryRowV2[] }>()
   const at = (path: string) => { const absolute = resolve(path); let row = predicates.get(absolute); if (!row) { row = { pins: [], survivors: [] }; predicates.set(absolute, row) }; return row }
-  for (const { path, stat } of pins) at(path).pins.push({ dev: stat.dev, ino: stat.ino, size: stat.size, mtimeMs: stat.mtimeMs, ctimeMs: stat.ctimeMs })
-  for (const row of survivors) at(row.path).survivors.push({ ...row })
+  for (const { path, stat } of pins) at(path).pins.push({ dev: stat.dev, ino: stat.ino, size: stat.size, mtimeMs: stat.mtimeMs, ctimeMs: stat.ctimeMs, uid: stat.uid, mode: stat.mode, blocks: stat.blocks })
+  for (const row of survivors) at(row.path).survivors.push({ ...row, ...(row.members ? { members: [...row.members] } : {}) })
+  return predicates
+}
+export const createLeanContinuationIdentityGuard = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRow[]): (() => void) => {
+  const predicates = leanContinuationIdentityPredicates(pins, survivors)
   return () => {
     for (const [path, expected] of predicates) {
       const s = lstatSync(path)
@@ -230,7 +234,7 @@ if (prior.length > 4096 || current.length > 4096 || reviewed.length > 1024 || ne
 /** Enumerate bounded metadata. Historical contents are never reopened here. */
 export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinuationInventoryRow[], reviewed: readonly LeanContinuationReviewedRowV2[], git: LeanContinuationGit, guard: (additionalBytes?: number) => void, window?: LeanBaselineContinuationWindowV2): readonly LeanContinuationInventoryRowV2[] => {
   const selected = pathsForV2(window), retainV3 = selected !== LEAN_BASELINE_CONTINUATION_PATHS_V2
-  const old = new Map(prior.map(row => [row.path, row])), review = new Map(reviewed.map(row => [row.path, row])), names = new Set([...old.keys(), ...review.keys()])
+  const old = new Map(prior.map(row => [row.path, row])), review = new Map(reviewed.map(row => [row.path, row])), reviewedPaths = new Set(review.keys()), names = new Set([...old.keys(), ...review.keys()])
   if (old.size !== prior.length || review.size !== reviewed.length || prior.length > 4096 || reviewed.length > 1024) return fail("V2_INVENTORY_BOUND")
   if (retainV3) for (const row of spentV3Metadata) names.add(row.path)
   for (const dir of [".strategy-lab", ".planning/artifacts"]) {
@@ -256,7 +260,7 @@ export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinu
       const mode = s.mode & 0o7777
       const permitted = reviewedRow.kind === "reviewed_source" ? mode === 0o644 || mode === 0o755 : reviewedRow.kind === "active_planning" && mode === 0o644
       if (!s.isFile() || sealed || !permitted) return fail("V2_REVIEWED_FILE")
-      guard(65536); authenticateLeanContinuationPinnedSource(reviewedRow, reviewedRow.commit, [...review.keys()], git, guard)
+      guard(65536); authenticateLeanContinuationPinnedSource(reviewedRow, reviewedRow.commit, reviewedPaths, git, guard)
       rawRoot = s.size > 4194304 ? reviewedRow.root : leanBytesRoot(readLeanContinuationBoundedBytesV2(name, 4194304, mode, guard))
       if (rawRoot !== reviewedRow.root) return fail("V2_UNREVIEWED_BYTES")
     }
@@ -273,12 +277,16 @@ export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinu
   guard(); return freezeLabValue(rows)
 }
 export const createLeanContinuationIdentityGuardV2 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[]): (() => void) => {
-  const base = createLeanContinuationIdentityGuard(pins, survivors)
+  const predicates = leanContinuationIdentityPredicates(pins, survivors)
   return () => {
-    base()
-    for (const row of survivors) {
-      const path = resolve(row.path), s = lstatSync(path)
-      if (s.uid !== process.getuid?.() || realpathSync(path) !== path || (s.mode & 0o777) !== row.mode || row.members && !equal(readdirSync(path).sort(), row.members)) return fail("V2_IDENTITY_CHANGED")
+    for (const [path, expected] of predicates) {
+      const s = lstatSync(path)
+      if (s.isSymbolicLink() || s.uid !== process.getuid?.() || realpathSync(path) !== path) return fail("V2_IDENTITY_CHANGED")
+      for (const pin of expected.pins) if (!s.isFile() || s.nlink !== 1 || s.dev !== pin.dev || s.ino !== pin.ino || s.size !== pin.size || s.mtimeMs !== pin.mtimeMs || s.ctimeMs !== pin.ctimeMs || s.uid !== pin.uid || s.mode !== pin.mode || s.blocks !== pin.blocks) return fail("CONTINUATION_PIN_CHANGED")
+      for (const row of expected.survivors) {
+        if (s.dev !== row.dev || s.ino !== row.ino || s.blocks * 512 !== row.allocatedBytes || s.size !== row.bytes || s.mtimeMs !== row.mtimeMs || s.ctimeMs !== row.ctimeMs || s.isFile() && s.nlink !== 1) return fail("CONTINUATION_SURVIVOR_CHANGED")
+        if (!(row.kind === "directory" ? s.isDirectory() : (row.kind === "file" || row.kind === "sealed_metadata") && s.isFile()) || (s.mode & 0o7777) !== row.mode || row.members && !equal(readdirSync(path).sort(), row.members)) return fail("V2_IDENTITY_CHANGED")
+      }
     }
   }
 }

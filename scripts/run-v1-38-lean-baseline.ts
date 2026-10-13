@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url"
 import { isLeanPostV13FivePairMode, isLeanPreparationContinuationMode, isLeanSupervisorRetestMode, isLeanResourceWindowModeV15, leanCapsForAllocation, leanSupervisorAllocationMode, type AnyLeanAllocation } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { exactLabKeys, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
-import { createLeanCurrentBaselineAllocation, createLeanLedger, openLeanLedger, readLeanLedger, readLeanTimeAccounting, readLeanChildEntry, publishLeanChildEntry, beginLeanInterval, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, stopLeanLedger, verifyLeanEvidence, deriveLeanChildTerminal, publishLeanChildTerminal, cumulativeLeanPhysicalBytes, assertLeanPublicationCapacity, currentLeanElapsedMs, currentBaselineSlotKind, leanCanonicalBytes, leanBytesRoot, writeLeanAll, LEAN_BASELINE_REQUEST, LEAN_BASELINE_STORE, LEAN_BASELINE_WRITABLE_PATHS, LEAN_CAPS, LEAN_EXTERNAL_SCRATCH_RESERVE, type LeanExperimentLedger, type LeanChildEntryV2, type LeanSlot } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { createLeanCurrentBaselineAllocation, createLeanLedger, openLeanLedger, readLeanAdmittedContinuationAllocationV2, readLeanLedger, readLeanTimeAccounting, readLeanChildEntry, publishLeanChildEntry, beginLeanInterval, chargeLeanSlot, retainLeanMatch, checkpointLeanResources, stopLeanLedger, verifyLeanEvidence, deriveLeanChildTerminal, publishLeanChildTerminal, cumulativeLeanPhysicalBytes, assertLeanPublicationCapacity, currentLeanElapsedMs, currentBaselineSlotKind, leanCanonicalBytes, leanBytesRoot, writeLeanAll, LEAN_BASELINE_REQUEST, LEAN_BASELINE_STORE, LEAN_BASELINE_WRITABLE_PATHS, LEAN_CAPS, LEAN_EXTERNAL_SCRATCH_RESERVE, type LeanExperimentLedger, type LeanChildEntryV2, type LeanSlot } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { observeLeagueAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
 import { factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
 import { assessLeanPrefixCapacity, createLeanParentObservationGuard, admitLeanChildRelease, assertLeanEntryBinding, readLeanSafeFile } from "./run-v1-38-lean-experiment.js"
@@ -863,8 +863,9 @@ const continuationPreflightV2 = (requestPath: string, consumed: boolean, reader:
     if (git(["rev-parse", "HEAD"]).toString("utf8").trim() !== fixedHead) return fail("V2_HEAD_CHANGED")
     identity()
   }
-  for (const row of manifest.implementationEntries) { guard(65536); authenticateLeanContinuationPinnedSource(row, window.reviewedSourceHead, manifest.implementationEntries.map(r => r.path), git, guard) }
-  for (const row of manifest.entries.filter(row => row.path !== paths.window)) { guard(65536); authenticateLeanContinuationPinnedSource(row, request.sourceHead, manifest.entries.map(r => r.path), git, guard) }
+  const implementationPaths = new Set(manifest.implementationEntries.map(row => row.path)), committedPaths = new Set(manifest.entries.map(row => row.path))
+  for (const row of manifest.implementationEntries) { guard(65536); authenticateLeanContinuationPinnedSource(row, window.reviewedSourceHead, implementationPaths, git, guard) }
+  for (const row of manifest.entries.filter(row => row.path !== paths.window)) { guard(65536); authenticateLeanContinuationPinnedSource(row, request.sourceHead, committedPaths, git, guard) }
   guard()
   return { paths, window, source, manifest, request, requestBytesRoot, git, fixedHead, guard }
 }
@@ -956,7 +957,7 @@ const continuationStoreMembershipV2 = (ledger: LeanExperimentLedger): void => {
 }
 export const openLeanBaselineContinuationContextV2 = (requestPath: string, reader = false) => {
   const c = continuationPreflightV2(requestPath, true, reader)
-  const { ledger, allocation } = withLeanContinuationStoreMetadataV2(c.window, () => { const ledger = openLeanLedger(c.paths.store); return { ledger, allocation: validateLeanBaselineContinuationAllocationV2(ledger.allocation) } })
+  const { ledger, allocation } = withLeanContinuationStoreMetadataV2(c.window, () => { const ledger = openLeanLedger(c.paths.store); return { ledger, allocation: readLeanAdmittedContinuationAllocationV2(ledger) } })
   const expectedClaimBody = continuationClaimBodyV2(c.request, c.window, c.requestBytesRoot), expectedClaim = { ...expectedClaimBody, root: labRoot(expectedClaimBody.schemaVersion, expectedClaimBody) }
   const claim = readLeanContinuationJsonV2(c.paths.claim, 65536, 0o600, c.guard)
   if (!exact(claim, expectedClaim) || allocation.requestBytesRoot !== c.requestBytesRoot || allocation.sourceHead !== c.request.sourceHead || allocation.sourceRoot !== c.manifest.root || allocation.planningRoot !== c.manifest.planningRoot || allocation.manifestRoot !== c.manifest.manifestRoot || allocation.window.root !== c.window.root || allocation.windowBytesRoot !== c.manifest.windowBytesRoot || allocation.sourceGateRoot !== c.manifest.sourceGateRoot || allocation.dataReviewRoot !== c.manifest.dataReviewRoot || allocation.reviewRoot !== c.request.reviewRoot || allocation.coldRoot !== c.request.coldRoot || allocation.seed !== c.request.seed || !exact(allocation.requestRoots, c.request.requestRoots) || !exact([...allocation.candidateRoots].sort(), [...c.request.candidateRoots].sort())) return fail("V2_ALLOCATION_JOIN")
@@ -991,7 +992,7 @@ export const openLeanBaselineContinuationContextV2 = (requestPath: string, reade
     const elapsedMono = process.hrtime.bigint() - startMono
     if (elapsedMono < 0n || elapsedMono > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n || child && process.ppid !== readLeanChildEntry(ledger).parentPid) return fail("V2_LIVENESS")
     const sample = { nowMs, monotonicElapsedMs: Math.max(0, startWall - c.window.anchorMs) + Number((elapsedMono + 999999n) / 1000000n), remainingSlots: closure ? 0 : 36 - state.charges.size + (active ? 1 : 0), ...(closure ? { remainingClosureMs: Math.max(0, c.window.closureMs - Math.max(0, nowMs - closureBegan)), remainingOfflineMs: 0 } : {}), charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger), scratchBytes: measureLeanPhysicalBytes(c.paths.temp) + metadataReserveBytes, parentRssBytes: child ? rssOf(parent) : usage.rss, childRssBytes: child ? usage.rss : 0, arrayBuffersBytes: usage.arrayBuffers + metadataReserveBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(fs.bavail * fs.bsize), live: !child || process.connected === true }
-    assertLeanBaselineContinuationFrontierV2(allocation, sample)
+    assertLeanBaselineContinuationFrontierV2(allocation, sample, ledger)
     if (currentLeanElapsedMs(ledger) + sample.remainingSlots * LEAN_CAPS.matchMs + (sample.remainingClosureMs ?? c.window.closureMs) + (sample.remainingOfflineMs ?? c.window.offlineOverheadMs) > allocation.caps.elapsedMs) return fail("V2_JOURNAL_FRONTIER")
     identities(); return sample
     }, additionalBytes, optionalExecutionReceiptPaths)

@@ -241,9 +241,24 @@ describe("[continuation-overhead] same-pass V2 identities", () => {
     } finally { stat.mockImplementation(actual) }
     for (const [index, mode] of [[0, 0o644], [1, 0o755], [2, 0o644]]) { fs.chmodSync(paths[index!]!, mode!); expect(guard).toThrow(); fs.chmodSync(paths[index!]!, rows[index!]!.mode) }
     const old = fs.lstatSync(paths[0]!), pinnedOnly = continuation.createLeanContinuationIdentityGuardV2([{ path: paths[0]!, stat: old }], [])
-    try { stat.mockImplementation((...args) => { const s = actual(...args); return String(args[0]) === paths[0] ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { uid: Number(s.uid) + 1 }) : s }); expect(pinnedOnly).toThrow() } finally { stat.mockImplementation(actual) }
+    try { stat.mockImplementation((...args) => { const s = actual(...args); return String(args[0]) === paths[0] ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { uid: Number(s!.uid) + 1 }) : s }); expect(pinnedOnly).toThrow() } finally { stat.mockImplementation(actual) }
     fs.renameSync(paths[2]!, `${paths[2]}.old`); symlinkSync(`${paths[2]}.old`, paths[2]!); expect(guard).toThrow()
     const directoryGuard = continuation.createLeanContinuationIdentityGuardV2([], [rows[3]!]); writeFileSync(join(paths[3]!, "unknown"), "x"); expect(directoryGuard).toThrow()
+  }))
+  it("reobserves canonical realpath and directory members even with an unchanged synthetic stat", () => fixture((paths, rows) => {
+    const guard = continuation.createLeanContinuationIdentityGuardV2([], rows), real = vi.spyOn(fs, "realpathSync").mockReturnValue(`${paths[0]}/alias` as never)
+    try { expect(guard).toThrow(/V2_IDENTITY_CHANGED/) } finally { real.mockRestore() }
+    const directory = paths[3]!, before = fs.lstatSync(directory), directoryGuard = continuation.createLeanContinuationIdentityGuardV2([], [rows[3]!])
+    writeFileSync(join(directory, "unknown"), "x")
+    const stat = vi.mocked(fs.lstatSync), actual = stat.getMockImplementation()!
+    try { stat.mockImplementation((...args) => String(args[0]) === directory ? before as never : actual(...args)); expect(directoryGuard).toThrow(/V2_IDENTITY_CHANGED/) } finally { stat.mockImplementation(actual) }
+  }))
+  it("retains the array caller seam and exact denial semantics when precomputed Sets are supplied", () => fixture((paths) => {
+    const path = paths[0]!, row = { path, root: ledger.leanBytesRoot(fs.readFileSync(path)) }, git = vi.fn(() => fs.readFileSync(path)), guard = vi.fn()
+    // Source scopes are relative, so this absolute fixture must deny identically
+    // before any read/guard, irrespective of the membership representation.
+    for (const scope of [[path], new Set([path]), [], new Set<string>()]) expect(() => continuation.authenticateLeanContinuationPinnedSource(row, "a".repeat(40), scope, git, guard)).toThrow(/SOURCE_SCOPE/)
+    expect(git).not.toHaveBeenCalled(); expect(guard).not.toHaveBeenCalled()
   }))
 })
 describe("[continuation-v4] finite namespace and spent-cost isolation", () => {
