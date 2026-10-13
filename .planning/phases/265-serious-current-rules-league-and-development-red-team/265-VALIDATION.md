@@ -5,13 +5,19 @@ status: partial
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
-updated: 2026-10-04
-source_reviewed: 005650cdae79673dc4321c4c0fbabd63c1ec023a
-source_gate: lean-final-source-review-v7-verification-v4-67-focused-tests-types-shell-boundaries-pass
-empirical_validation: lean-v6-one-charged-zero-success-unique-retained-reader-closed-feasibility-not-established
+updated: 2026-10-13
+source_reviewed: 9db7eceaf894393936bb6b1a8a02f2558d1a5abf
+source_gate: overhead-v5-clean-review-qualified-root-validation-source-verifier-pending
+empirical_validation: v4-pre-entry-failure-unique-terminal-only-check-no-new-retained-charge
 ---
 
 # Phase265 — Validation Strategy
+
+## Current scoped source validation — overhead repair / finite V5
+
+Actual fixed9db7ecea/sourceRoot4b7e052d: checked existing Plan16 A/B+C/D, independent combined review/fix/re-review clean. ROOT actual helper76/76 plus disjoint driver39+46=85/86 (one existing wrapper.skip); full new callback/policy/descriptor/directory-closing/finite namespace/Git/CLI/generic-consumer coverage passed. Package compatibility has46unique passing cases, two deliberately omitted real-history reopening cases and two actual unchanged stale V15 assertions; one5000ms harness timeout passed under test-only30000ms. Total207unique passes, NOTall-suite green. Independent static pre-source comparison qualifies stale assertions; no fabricated pre-edit test execution. Exact original15-path strict output7051bytes/13complete inherited blocks is WHOLE-byte-identical to ROOTpre17192, zeroNEW/no offsets, not global type-green. Configured project types/factory1443zero/public discovery pass; service strict0/ownership0 with19inherited report-only entries. Actual records/roles/commands in existing GATES; distinct source verifier pending, no active source projection yet.
+
+This is scoped State-A validation of SOURCE subgoals, not whole-phase Nyquist compliance, UAT, actual capacity, native feasibility or league evidence. Phase status remains partial/nyquist_compliant=false/wave_0_complete=false. LastV4 unique run and independent terminal-only check closed before retained entry/new charge/result; ordinary reader was not invoked. All50oldcharges cost-only/history immutable. Full36 current-window admission frontier elapsed; future prospectively approved work-time window remains necessary after source-ready. Current-rules baseline/evaluation/freeze BEFORE formation and unopenedholdout/no public/counting/production remain. Earlier validation snapshots below are history.
 
 ## Current bounded terminal — final lean v6
 

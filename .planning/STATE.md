@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Overhead source A/B closed; checked finite V5 C/D source support next; no empirical admission
+stopped_at: Combined source review/fix and qualified ROOT validation closed; distinct source verifier next
 last_updated: "2026-10-13"
 last_activity: 2026-10-13
-last_activity_desc: Predicate-preserving overhead tests passed; fresh-route source plan checked, combined final gates pending
+last_activity_desc: Fixed six-file source validated with207unique passes and inherited qualifications; no new empirical route
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — combined source gates closed except distinct verification
+
+ROOT2026-10-13T02:50UTC. Fixed9db7eceaf894393936bb6b1a8a02f2558d1a5abf, six originalsource/test paths; actualA/B/C/testfixauthor `/root/execute_265_v4_overhead_repair`, Dcoauthor `/root/execute_265_v5_transport`. Independent combinedreview/fix/re-review `/root/review_265_combined_overhead_v5` PASS/findings[]/CLOSED; warning WR-OV5-01 corrected test-only post-capture closing-directory coverage, production unchanged. Actual ROOT207unique passes: helper76all/driver85of86oneexisting wrapper.skip/package46, with2intentional historical-authentication omissions and2actual unchanged stale V15assertions qualified by independent byte comparison; NOTall-suite green. One legacy5000ms fixturetimeout passed under TEST-only30000ms, runtimebounds unchanged. ROOT20483 exactoriginal15strict13fullblocks/7051B WHOLE-byte-equal pre17192/zeroNEW/no offsets, not globaltypegreen; configuredprojects/factory1443zero/publicboundary pass; service strict0ownership0/19inheritedreport-only. All commands/owners CLOSED.
+
+ROOT6442 actual inertsourceRoot sha256:4b7e052d1b69611fd208a979497a2265fc2c53617b90738917bebe4b070e92c8/697implementation/15planning/admittingfalse/sourceGateNULL. Distinct SOURCE-only verifier NEXT; no active projection yet. No V5 private grant/window/request/allocation/store, runtime or actualcapacity. V4/older records immutable/spent, old50cost-only, zero retained V4entry/newcharge/result/ordinaryreader; originalcausesUNKNOWN. Fullfreshguards/callbacks/BOTHpasses/chunk/bytes/resources/time/lineage/privacy unchanged, no measured speedclaim or empiricalcredit. Sourceonly until07:47:16UTC/allcontinuouscosts; full36 currentwindowfrontierelapsed. After source-ready only, human NEWprospective work-time decision remains needed; standing distinct-route consent is not timeapproval. Plan16/Phase265 incomplete; no freeze/formation/holdout/public/counting/production/archive/tag. Earliercontinuations below history.
 
 ## Current continuation — overhead A/B closed; checked finite V5 source support
 

@@ -1,5 +1,28 @@
 # Baseline continuation gates
 
+## Current combined overhead / finite V5 ROOT validation — 2026-10-13
+
+Fixed source9db7eceaf894393936bb6b1a8a02f2558d1a5abf, six original source/test paths over4908ee0e. Actual A/B/C/test-fix producer `/root/execute_265_v4_overhead_repair`, D coauthor `/root/execute_265_v5_transport`; independent reviewer `/root/review_265_combined_overhead_v5`. Checked existing Plan16 A/B+C/D; actual combined review14c found WR-OV5-01 test-coverage warning, test-only291b4eaa→9db7ecea correction independently re-reviewed PASS/findings[]/CLOSED. No production blocker or old-failure causal inference. ROOT now owns actual validation records below; author/reviewer execution claims are not substituted for these commands.
+
+| ROOT actual command | Closed outcome | Scope / qualification |
+|---|---|---|
+| helper93993 | exit0,76/76 passed,8.31s | Full installed helper suite, all old/new/closing cases |
+| driver legacy45692 | exit0,39passed/47skipped,10.41s | Disjoint negative filter excluding overhead/V5;46filtered new cases and1existing wrapper.skip |
+| driver new76436 | exit0,46passed/40filtered,35.90s | Overhead/V5 positive/negative cases; together85/86 driver cases, only existing wrapper.skip not executed; BOTH real source-manifest cases passed |
+| package legacy68071 | exit1,45passed/3failed/2excluded,39.95s | Two deliberately excluded tests reopen real historical evidence; no such authentication rerun. Two actual stale V15 assertions and one5000ms fixture timeout below |
+| inert timeout55060 | exit0,1passed/16filtered,21.28s | Same previously timed-out17-path accounting case with TEST-HARNESS-only30000ms; runtime/guest/host/Match bounds untouched |
+| strict20483 | exit2,13full inherited blocks | WHOLE7051-byte output exactly equals ROOT pre-edit17192 output,13→13/zeroNEW/no offsets; NOT global script type-green |
+| configured projects34670 | exit0 | strategy-lab/runtime-js configured build/type checks |
+| factory48776 | exit0,1443files,violations[] | Existing factory reachability/boundary scanner |
+| service8300 | exit0,strict0/ownership0 |19inherited report-only observations, not a zero-report global claim |
+| public discovery | exit0 | Public discovery boundary passed |
+| diff check | exit0 | No whitespace errors |
+| inert manifest6442 | exit0 | SourceRoot sha256:4b7e052d1b69611fd208a979497a2265fc2c53617b90738917bebe4b070e92c8;697implementation/15planning;admitting=false/sourceGate=null |
+
+Actual unique passed cases207 =76helper+85driver+46package compatibility. Across212 registered cases there are1existing wrapper.skip,2intentional historical-authentication exclusions, and2actual stale legacy assertion failures; not an all-suite-green claim. The failed timeout is now independently passed by ROOT under a larger test-only allowance, not a runtime-bound change. Actual readonly independent reviewer qualification confirms unchanged V15 test blob and selector/constants/cache/state/contracts against4908; tests81/101 incorrectly expect already-supportedv15-5 to throw while the same unchanged file asserts ordinal5 support. No pre-edit execution of those two tests is claimed. They are inherited/unrelated and remain recorded, not fixed outside six-file scope or silently normalized. Zero demonstrated NEW source regression; qualified scoped ROOT validation only.
+
+All ROOT test/compiler/scanner/manifest commands CLOSED, no active producer/test/reader/runtime or source owner. No new private grant/window/request/allocation/store/Match/history reader; V4/older artifacts remain immutable/spent, old50cost-only, originalthrowUNKNOWN. Full fresh guard cadence/passes/metadata bytes/resources/time/lineage/privacy unchanged; no whole-run speed claim. Distinct SOURCE-only goal verification NEXT before any active source projection. Plan16/Phase265 empiric incomplete, no current freeze/formation/holdout/public/counting/production/archive/tag credit. Current07:47:16UTC/allcontinuouscosts/full36frontierelapsed remain binding; future work-time approval still missing.
+
 ## V4 Task D author closure — combined source review pending
 
 Actualauthor `/root/execute_265_permission_repair` closedDfc32d00b8719c369b2162fda9af32dbb7abf7427/exactretainedhelper/test, allcommandsCLOSED/ownedclean/released. Reportedfourdisjointfixturebatches10/12/3/9=34passed, zeroactualomissions, durations5.79/27.10/24.61/36.46s; filteredskips coveredbyotherbatches, notsingleunfilteredfullsuite. ExactsameeightFULLinheritedstrict/noNEW/no shifts/diff0. V4partial51 andV3/V4full86 syntheticpipeline/stubdispatch fixtures, realboundedselectedwindow-before-scope andmetadata/ctx/ledger/pathagreement; crossrequest/window/store/claim/head/costroot/spentreader deny. No actualordinaryreader orhistoricalinput replay.
@@ -420,3 +443,94 @@ Exact bounded owner0600/single-link oldV3window935/request4041 reads independent
 All reviewer inspection/pure validation/append commands CLOSED, `commands_closed=true`; append-only GATES ownership released to ROOT. Existing uncommitted ROOT planning/STATE changes were preserved; no source/STATE/window/projection edit, commit or push. SAME15GB total/12GBretained/2GBscratch/1GBterminal/3GBRAM/global300/new36/four unopened/guest1000/startup2500/host5000/Match600000 and all rules/runtime/privacy/current-freeze-before-formation restrictions remain binding. No test rerun, source/capacity/carry authenticator/prepare/ordinaryreader/native/provider/Strategy/Match or empirical credit.
 
 Next controlled gates remain mandatory: ROOT's one active DATA projection and final source/planning/request pins; ONE unique preparation; new immutable allocation-only sole-parent direct-child commit before unique ROOTentry; fresh genuine SAMEPROCESS whole-schedule capacity before charge/dispatch; exact source AND HEAD held through actual terminal and ONE distinct actual ordinary retained verifier only with a real allocation epoch. A failure stays spent and requires honest terminal closure, not same-window/request reuse or a fabricated reader head. Phase265/baseline/freeze/formation/holdout/public/counting/production completion remains unestablished, original V3 throwUNKNOWN.
+
+## Combined overhead A/B + finite V5 C/D scoped SOURCE review — 2026-10-13
+
+Reviewed2026-10-13T02:23:12Z by independent `/root/review_265_combined_overhead_v5` (GSD code-reviewer role), distinct from actual source authors `/root/execute_265_v4_overhead_repair` and `/root/execute_265_v5_transport`. Fixed source HEAD `14c58fc380a6fbda2911a511d6f17650c9eae1e2`; combined SOURCE base `4908ee0e219436216f19f274adb139c65d25a000`. Standard scoped adversarial source review, not canonical whole-Phase265 review, empirical admission, external custody or an ordinary retained-reader run. Existing Plan16 single gate carrier only; no new REVIEW/proof tree or replacement of earlier qualified findings/projections.
+
+```yaml
+review_scope: combined_overhead_A_B_finite_V5_C_D_source_only
+depth: standard
+reviewed: 2026-10-13T02:23:12Z
+source_head: 14c58fc380a6fbda2911a511d6f17650c9eae1e2
+diff_base: 4908ee0e219436216f19f274adb139c65d25a000
+files_reviewed: 6
+files_reviewed_list:
+  - packages/strategy-lab/src/league/lean-experiment.ts
+  - scripts/lib/v1-38-lean-baseline-continuation.ts
+  - scripts/lib/v1-38-lean-baseline-continuation.test.ts
+  - scripts/lib/v1-38-lean-container-match-session.ts
+  - scripts/run-v1-38-lean-baseline.ts
+  - scripts/run-v1-38-lean-baseline.test.ts
+findings:
+  critical: 0
+  warning: 1
+  info: 0
+  total: 1
+status: issues_found
+source_disposition: PASS_WITH_WARNINGS
+commands_closed: true
+empirical_admission: false
+```
+
+### Narrative Findings (AI reviewer)
+
+#### WR-OV5-01 — WARNING: alleged in-flight directory regression mutates before directory capture
+
+**File:** `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-lean-baseline-continuation.test.ts:329-332` (faulty directory branch at332).
+
+**Issue:** The custom callback checks `f.guard.mock.calls.length === 0`, but supplying that callback replaces the default `f.guard`; it never invokes `f.guard`. Therefore the mutation runs at the first inventory guard, before any initial directory stat/member capture, and merely adds an already-invalid temp member. It does not replace a directory or exercise the newly added closing directory identity/member predicates. This test would still pass if the post-capture `V4_SPENT_CHANGED` directory checks were removed. The file-replacement and owner branches are separate and do not close this directory coverage gap. This is a test-reliability/false-boundary-coverage warning, not proof that production directory enforcement is broken.
+
+**Fix:** Replace this branch with a connected post-capture regression. Wrap and still invoke `f.guard(additional)` on every callback; instrument real lstat/readdir phases for the exact spent V4 store/temp to prove initial identity and exact membership were captured before arming the mutation. Inject replacement or an added member only during the subsequent closing phase, assert the armed phase actually ran and require the specific closing refusal before inventory/debit use. Include a stable-synthetic-stat member-change case if asserting closing `readdir` independently, so an earlier timestamp failure cannot mask removal of that member check. Assert the original guard remains invoked throughout, and preserve production guard/descriptors/reservations. Use only the existing inert fixture/original helper test path; no history/capacity/provider/reader run is necessary. Re-review the actual corrected source and assertion delta after author closure.
+
+### Static boundary assessment and limits
+
+No demonstrated production BLOCKER in this combined delta. Inspected strict allocation admission→recursive freeze→private exact-ledger WeakMap at experiment1453-1475, legitimate create/open issuance1636-1640, fresh physical scans1656 and readSafe canonical allocation-byte comparison1861-1872. Same-root/clone/unbranded/proxy objects cannot access the private issued policy; getter/frontier exact allocation-reference checks do not mint capacity. Resource-event selection1890-1898 uses known-null V15 policy only for privately admitted V2, retaining exact event/record/resource predicates and fresh journal bytes. External strict admission remains distinct.
+
+Helper41-54 and driver960-1004 retain sample/deadline/journal/liveness/resource/reservation checks and opening+closing identities around the actual scoped descriptor protocol. Helper135-159/307-319 merges expected roles by normalized path only within each pass, checks every pin and survivor against one fresh stat, retains realpath/owner/mode/kind/singlelink/membership, and keeps V1's original evaluation predicates. Sets at helper254/driver866 are expected-scope membership only, not observed-path or capacity caches. Sealed producer directories remain `directory`, sealed files `sealed_metadata`; no private content is opened by these additions.
+
+Finite V5 paths/window/request selectors at experiment833-864 and compiled policy selector1466 are exact and still require complete validated window identity. Helper213-304 adds exactly ten spent-V4 size/hash/mode anchors and two real-owner0700 exact-member directories for selected V5 only, retaining guarded bounded descriptor reads and fresh post-observations. Old carry/manifest/hold are opaque raw-hash anchors, not authenticated V4 run custody. Selected-only future exclusion and existing reconcile/debit helper418-433 preserve V3/V4 surviving costs, once-only path accounting, residual/growth and no-refund floor. Git101-106 explicitly denies all unselected finite allocations even if a manifest advertises them; driver193/943/1087 adds only exact V5 CLI/finite private preparation branding. Raw hostile errors remain withheld.
+
+Read relevant unchanged real issuer393-414/inner pair-journal consumer and retained706-745 scope consumers, plus their changed connected driver fixtures134-183. Issuer reaches a source-validation sentinel only after real admitted context/claim/pair/journal joins; retained tests exercise the real consumer window/context/allocation/ledger joins before inert publication sentinels. Those fixtures mock external boundaries, not the whole issuer/retained consumer. Their synthetic roots, approved windows and guard observations are not real grants, history proofs, source gates or SAMEPROCESS capacity certificates. Fixed-real raw-hash positive helper fixtures expressly map private synthetic digests only inside tests; no production anchor injection is added. The warning above remains a specific missing closing-directory regression despite those other connected cases.
+
+Reviewer read AGENTS.md, current top Plan16 overhead and checked finite-V5 directives, latest STATE/debug-safe closure context and original base/current diffs; neither local project skills directory exists and none of the six scoped paths is Git-ignored. GSD code-review instructions informed adversarial classification; no source/test modification or test execution occurred. Author reports (A/B20focused+51compatibility; C13V5+42helpercompatibility; D final filteredunion69passed/91skipped/160total42.46s) are author evidence only, not reviewer-run or ROOT-final validation. Exact15-path strict thirteen inherited blocks/zeroNEW/no offsets are reported author results, NOT global type-green or independently executed validation here. ROOT's final validation and distinct source verification remain pending; warning repair needs no human-only scope decision.
+
+All source/Git/read/append commands CLOSED; append-only GATES ownership released to ROOT. Only this scoped section appended; no source/STATE/projection/private history/resource observation/carry authenticator/manifest/preparation/window/request/allocation/store/provider/native/Strategy/Match/probe/ordinary reader/commit/push. Current hardstop2026-10-13T07:47:16UTC, elapsed full36 frontier and all uninterrupted research/source/review/idle costs remain binding. Old V4 closed/spent,50charges cost-only/no refund/recredit/reuse; initiating throw/cause UNKNOWN. No speed, causal, Phase265/LEAG/baseline/freeze/formation/holdout/public/counting/production credit or empirical admission follows.
+
+## WR-OV5-01 scoped source re-review closure — 2026-10-13
+
+2026-10-13T02:35:22Z — independent `/root/review_265_combined_overhead_v5`, `PASS_SOURCE_RE_REVIEW`, new findings `[]`, BLOCKER0/WARNING0; **WR-OV5-01 WARNING CLOSED**. Fixed HEAD `9db7eceaf894393936bb6b1a8a02f2558d1a5abf`; re-review base `14c58fc380a6fbda2911a511d6f17650c9eae1e2`. Actual correction author `/root/execute_265_v4_overhead_repair` CLOSED/released; RED commit `291b4eaac9fb9686fbac99d846dfd4840d75ee5a`, GREEN `9db7ecea`. Earlier warning record and original production assessment remain unchanged history. No production delta since the six-file combined SOURCE review; only the original helper test changed44insertions/4deletions. Combined scoped SOURCE disposition now PASS with no open findings from this review; unrelated inherited gaps and ROOT final validation/distinct source verification remain pending.
+
+```yaml
+review_scope: WR-OV5-01_test_only_closure
+depth: standard
+reviewed: 2026-10-13T02:35:22Z
+files_reviewed: 1
+files_reviewed_list:
+  - scripts/lib/v1-38-lean-baseline-continuation.test.ts
+findings: { critical: 0, warning: 0, info: 0, total: 0 }
+closed_findings: [WR-OV5-01]
+status: clean
+commands_closed: true
+empirical_admission: false
+```
+
+### Narrative Findings (AI reviewer)
+
+No new findings in the actual test-only delta. At helper.test333-372 the corrected fixture captures the exact spent temp's opening lstat and BOTH exact initial member reads, then visits its claim child. Before injection it asserts those captures occurred, the child was observed under a guard, a further fresh guard occurred, and the original `f.guard` was invoked for every observed callback. `observe(additional)` at359 forwards every optional additional-byte argument unchanged. Injection happens when the subsequent closing lstat is reached, after the fresh closing callback, not before inventory's opening capture. Exact phase assertions and `changed=true` prevent a missed/mis-timed injection from yielding a false pass.
+
+Real directory replacement changes inode and requires `LEAN_BASELINE_CONTINUATION_V2_INVENTORY_CHANGED` at362. The members-only case deliberately returns the captured stable synthetic stat so identity/timestamp drift cannot mask the closing fresh member predicate; it requires `LEAN_BASELINE_CONTINUATION_V4_SPENT_CHANGED` and records the closing member read. Its separate sensitivity witness masks ONLY that closing readdir result; the otherwise identical member drift then becomes accepted, demonstrating the real refusal assertion fails if that closing observation disappears. No production check, guard, descriptor or reservation was removed/mocked by the correction. The existing fixed-root synthetic digest mapping remains test-private and is not an authentic-history, grant or capacity certificate. Narrow typed `vi.fn<(additional?: number) => void>` at287/297 corrects the reported MockConstructable inference error without changing tested behavior.
+
+Execution evidence below is AUTHOR-reported, not reviewer-run: targeted GREEN3passed/73filtered5.75s; fullV5-tag15passed/61filtered5.93s. Author final original15-scope strict output retains13complete7051B blocks, raw `51ffa198070a0ad8699f925a7d899cb02f3b98e2cefa7f83d38c74717ec2dbfe`; the author qualified current-turn comparison eliminated the sole known added type-error line. ROOT still owns the fresh full-output comparison to actual pre-edit17192 and all final validation. No strict/type-global-green inference here. Original RED exposed the prior test's false coverage assertion, not a production directory bug or the old V4 initiating cause.
+
+All re-review source/Git/context/append commands CLOSED, GATES append-only ownership released to ROOT. No tests/types/manifest/private plaintext/history/resource/capacity/authenticator/preparation/provider/native/Strategy/Match/probe/ordinary reader, source/STATE/projection edits, new artifact tree, commit or push. Same07:47:16UTC hardstop, elapsed full36frontier/all uninterrupted costs/caps/rules/privacy/unopenedholdout/current-freeze-before-formation unchanged; oldV4 closed/spent/50cost-only/no refund/reuse/recredit, original cause UNKNOWN. This closes only the scoped source warning, not empirical admission or Phase265/baseline/freeze/formation/public/counting/production completion.
+
+## Inherited V15 compatibility qualification — 2026-10-13
+
+2026-10-13T02:45:33Z — independent `/root/review_265_combined_overhead_v5`, `PASS_INHERITED_QUALIFICATION`, no new scoped source findings. Read-only public-source/Git comparison at actual9db7ecea against4908ee0e, not executed pre-edit tests or a new source review tree. `packages/strategy-lab/src/league/lean-resource-window-v15.test.ts` is whole-file byte-identical at both commits (Git blob `d5cb08299c8c0d6243fa9a73382f93343afdd1ff`). Its lines81/101 require `leanResourceWindowPolicyForModeV15("v15-5")` to throw, while the same file's first `[startup-origin-v8]` case10-21 explicitly admits ordinal5 and selects its policy. Current public selector `lean-experiment.ts:2192` already selects V15 startup-attribution policy for `v15-5` at4908. These two failures are inherited contradictory/stale expectations, not introduced by the overhead/V5 source delta; this qualification does NOT claim those tests were actually executed at4908.
+
+Bounded Git byte comparisons CLOSED0 confirm identical shared source1-829 (LEAN_CAPS/finite V15 modes/supervisorRetestBody and inherited extension constants), complete region `admittedRetryCaps` through `LeanExperimentLedger` (V15 immutable-key predicates, cache state/counters and strict admission), and `leanCapsForAllocation` through EOF (all V15 bodies/selector/types/roots/caps/routes/report tables/public APIs). The entire contracts.ts dependency is also identical (blob `e8899613b26a50df548796a16a12b8b584106407`). An initial deliberately broader comparison crossed into the NEW V2 policy region and differed; the correctly bounded comparisons above distinguish those intentional V2 additions from unchanged V15 state. The new ledger policy registers ONLY `lean-baseline-continuation-allocation-v2`; non-V2 creation/open still returns the prior ledger shape, physical accounting falls back to legacy writable paths, retained reads fall back to legacy open admission and resource-event selection calls the unchanged V15 selector. No V15 policy API/state/table change was found.
+
+ROOT-reported execution, not reviewer-run: new helper76 + disjoint driver39+46 =161passed/1existing wrapper.skip. Extra unmodified package compatibility check50cases gave45passed/2excluded historical-reopening cases/3failed. Third failure is the inert successor seventeen-physical-path fixture at helper package test151: reported5000ms harness timeout/19.936s, no demonstrated semantic failure and no measured pre-edit execution/cause claim. ROOT may rerun that SAME inert case with harness-only `--testTimeout30000`; this changes no frozen guest1000/host5000/Match600000 or resource/time authority. No out-of-original-scope test cleanup, source fix or plan expansion is requested.
+
+All qualification comparison/read/append commands CLOSED, existing GATES ownership released to ROOT; no tests/private plaintext/history/constructor/manifest/resource/capacity/provider/ordinary reader/probe or source/STATE/projection edit/commit/push. ROOT whole pre17192 strict-output comparison/configured types/boundaries/distinct source verification remain pending. No all-suite/globalgreen, empirical admission or completion credit; all continuous costs and current hardstop remain unchanged.
