@@ -261,6 +261,85 @@ describe("[continuation-overhead] same-pass V2 identities", () => {
     expect(git).not.toHaveBeenCalled(); expect(guard).not.toHaveBeenCalled()
   }))
 })
+describe("[continuation-v5] finite selection and spent V4 preservation", () => {
+  const window = () => { const { root: _, ...body } = { ...continuationWindowFixtureV2(), routeNamespace: "20261013-v5" as const }; return { ...body, root: labRoot(body.schemaVersion, body) } }
+  const allocation = () => { const w = window(), { root: _, ...body } = { ...continuationAllocationFixtureV2(), window: w, windowBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(w)) }; return ledger.validateLeanBaselineContinuationAllocationV2({ ...body, root: labRoot(body.schemaVersion, body) }) }
+  it("selects only six finite V5 paths and compiles exact V5 policy without changing old bytes", () => {
+    const old = [continuationAllocationFixture(), continuationAllocationFixtureV2()].map(a => ledger.leanCanonicalBytes(a))
+    const paths = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V5
+    expect(ledger.leanBaselineContinuationPathsForWindowV2(window())).toBe(paths); expect(ledger.leanBaselineContinuationPathsForRequestV2(paths.request)).toBe(paths)
+    expect(paths).toEqual({ request: ".strategy-lab/lean-baseline-continuation-request-20261013-v5.json", window: ".strategy-lab/lean-baseline-continuation-window-20261013-v5.json", allocation: ".planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261013-v5.json", store: ".strategy-lab/lean-baseline-continuation-20261013-v5", temp: ".strategy-lab/lean-baseline-continuation-20261013-v5-tmp", claim: ".strategy-lab/lean-baseline-continuation-20261013-v5-tmp/window-claim.json", gates: ledger.LEAN_BASELINE_CONTINUATION_PATHS.gates })
+    for (const change of [{ routeNamespace: "20261013-v6" }, { routeNamespace: "20261012-v4" }]) expect(() => ledger.leanBaselineContinuationPathsForWindowV2({ ...window(), ...change } as never)).toThrow()
+    for (const path of [paths.request + "/extra", "future", ".strategy-lab/lean-baseline-continuation-request-20261013-v6.json"]) expect(() => ledger.leanBaselineContinuationPathsForRequestV2(path)).toThrow()
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-v5-policy-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    try {
+      const a = allocation(), l = ledger.createLeanLedger(join(dir, "store"), a), trusted = ledger.readLeanAdmittedContinuationAllocationV2(l)
+      expect(ledger.leanWritablePaths(a)).toEqual([paths.temp, paths.allocation, paths.request, paths.window])
+      vi.mocked(labRoot).mockClear(); vi.mocked(fs.lstatSync).mockClear(); ledger.cumulativeLeanPhysicalBytes(l)
+      for (const path of [paths.temp, paths.allocation, paths.request, paths.window]) expect(vi.mocked(fs.lstatSync).mock.calls.map(([p]) => p)).toContain(resolve(path))
+      expect(vi.mocked(labRoot).mock.calls.filter(([d]) => d === "lean-slot-v1" || d.includes("allocation"))).toHaveLength(0); expect(trusted).toBe(l.allocation)
+    } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+    expect([continuationAllocationFixture(), continuationAllocationFixtureV2()].map(a => ledger.leanCanonicalBytes(a))).toEqual(old)
+  })
+  // Fixed historical raw roots cannot be generated from public synthetic bytes.
+  // This digest-only fixture mapping is private to the test; all real descriptor,
+  // directory, chunk, size/mode and root comparisons remain the production code.
+  const fixture = (run: (f: { inventory: (guard?: (additional?: number) => void) => readonly continuation.LeanContinuationInventoryRowV2[]; files: { path: string; size: number; mode: number; raw: string }[]; guard: ReturnType<typeof vi.fn>; dir: string }) => void) => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-v5-spent-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4, v3 = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2
+    const files = [
+      { path: p.window, size: 935, mode: 0o600, raw: "98b0cd906323554e3c0cefb96700c317a9bd2e346135c7560d715b87eb303ba6" }, { path: p.request, size: 4056, mode: 0o600, raw: "bd17509fee8d2138b89b4a114224f1ee1ee009217475e924d6dd7cdfd90466c7" },
+      { path: p.allocation, size: 17366, mode: 0o644, raw: "19aeee9f9416849b4e7bb214afa7d470349f36e302b09bda700c7a50e717938f" }, { path: join(p.store, "allocation.json"), size: 17366, mode: 0o600, raw: "19aeee9f9416849b4e7bb214afa7d470349f36e302b09bda700c7a50e717938f" },
+      { path: join(p.store, "carry.json"), size: 746080, mode: 0o600, raw: "7bb1e101e0938ab8497311444e81ad30578f41d372a3c7999e61dfddad90f5a7" }, { path: join(p.store, "source-manifest.json"), size: 208491, mode: 0o600, raw: "35c507b2a0fd12b3d131671ba6596f8e4dcfcafa62676fcfa703c672d9dee508" },
+      { path: join(p.store, "source-hold.json"), size: 146345, mode: 0o600, raw: "744be76efaaaeca29076208f2da70a5f755569b93c6a47d0622b3aa1f4525911" }, { path: join(p.store, "ledger.ndjson"), size: 0, mode: 0o600, raw: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
+      { path: join(p.store, "time.ndjson"), size: 0, mode: 0o600, raw: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }, { path: p.claim, size: 1002, mode: 0o600, raw: "14cc57d66661a98c8f9150842b441310c8a70d29fef5186b5c58a49e62c9e45c" },
+      { path: v3.request, size: 4041, mode: 0o600, raw: "900e97e973ac31c596d1f5f1b8b89e1b8e532310e0b2d6e67053fbe9a8321065" }, { path: v3.window, size: 935, mode: 0o600, raw: "2c0c2905fea2e4a264aac99df251e5aa89d0b2c44588453d3c41586f4b3a881d" },
+    ]
+    const actualDigest = ledger.leanBytesRoot, roots = new Map<string, `sha256:${string}`>(), digest = vi.spyOn(ledger, "leanBytesRoot"), guard = vi.fn()
+    try {
+      fs.mkdirSync(resolve(".planning/artifacts"), { recursive: true }); fs.mkdirSync(resolve(p.store), { recursive: true, mode: 0o700 }); fs.mkdirSync(resolve(p.temp), { mode: 0o700 })
+      files.forEach((row, i) => { const bytes = Buffer.alloc(row.size, 65 + i); writeFileSync(resolve(row.path), bytes, { mode: row.mode }); fs.chmodSync(resolve(row.path), row.mode); roots.set(actualDigest(bytes), `sha256:${row.raw}`) })
+      digest.mockImplementation(bytes => roots.get(actualDigest(bytes)) ?? actualDigest(bytes))
+      run({ files, dir, guard, inventory: (observe = guard) => continuation.inventoryLeanContinuationSurvivorsV2([], [], () => { throw new Error("unexpected Git/history") }, observe, window()) })
+    } finally { digest.mockRestore(); cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+  }
+  it("authenticates ten opaque V4 files/two exact directories once and preserves residual/growth debit", () => fixture(f => {
+    const rows = f.inventory(), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4
+    expect(rows.map(row => row.path)).toEqual([...f.files.map(row => row.path), p.store, p.temp].sort((a, b) => a.localeCompare(b)))
+    expect(new Set(rows.map(row => row.path)).size).toBe(rows.length); expect(f.guard.mock.calls.length).toBeGreaterThan(2 * rows.length + 1)
+    expect(f.guard).toHaveBeenCalledWith(746080); expect(f.guard).toHaveBeenCalledWith(17366); expect(rows.find(row => row.path === join(p.store, "ledger.ndjson"))?.bytes).toBe(0)
+    const sum = rows.reduce((n, row) => n + row.allocatedBytes, 0), originalDebit = sum + 4096
+    const debit = continuation.reconcileLeanContinuationV2DiskDebit(originalDebit, rows, originalDebit, rows, window())
+    expect(debit.allocatedDiskBytes).toBe(originalDebit); expect(debit.residualDiskBytes).toBe(4096)
+    const growth = rows.map((row, i) => i === 0 ? { ...row, allocatedBytes: row.allocatedBytes + 4096 } : row)
+    expect(continuation.reconcileLeanContinuationV2DiskDebit(originalDebit, rows, originalDebit, growth, window()).allocatedDiskBytes).toBe(originalDebit + 4096)
+  }))
+  it.each(["missing", "bytes", "mode", "nonempty-journal", "extra-store", "extra-temp", "directory-mode", "symlink", "hardlink"] as const)("denies spent V4 %s before cost use", mutation => fixture(f => {
+    const p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4, path = resolve(p.window)
+    if (mutation === "missing") fs.unlinkSync(path)
+    if (mutation === "bytes") { const bytes = fs.readFileSync(path); bytes[0] ^= 1; writeFileSync(path, bytes) }
+    if (mutation === "mode") fs.chmodSync(resolve(p.allocation), 0o600)
+    if (mutation === "nonempty-journal") writeFileSync(resolve(join(p.store, "ledger.ndjson")), "x")
+    if (mutation === "extra-store") writeFileSync(resolve(join(p.store, "result.json")), "{}")
+    if (mutation === "extra-temp") writeFileSync(resolve(join(p.temp, "other.json")), "{}")
+    if (mutation === "directory-mode") fs.chmodSync(resolve(p.store), 0o755)
+    if (mutation === "symlink" || mutation === "hardlink") { fs.renameSync(path, `${path}.old`); if (mutation === "symlink") symlinkSync(`${path}.old`, path); else fs.linkSync(`${path}.old`, path) }
+    expect(() => f.inventory()).toThrow()
+  }))
+  it("denies foreign owners and in-flight file/directory replacement with all descriptor guards retained", () => {
+    fixture(f => { const stat = vi.mocked(fs.lstatSync), actual = stat.getMockImplementation()!; try { stat.mockImplementation((...args) => { const s = actual(...args); return String(args[0]) === resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.window) ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { uid: Number(s!.uid) + 1 }) : s }); expect(() => f.inventory()).toThrow() } finally { stat.mockImplementation(actual) } })
+    fixture(f => { let changed = false; expect(() => f.inventory(additional => { if (!changed && additional === 746080) { changed = true; const path = resolve(join(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.store, "carry.json")); fs.renameSync(path, `${path}.old`); writeFileSync(path, Buffer.alloc(746080, 69), { mode: 0o600 }) } })).toThrow() })
+    fixture(f => { let changed = false; expect(() => f.inventory(() => { if (!changed && f.guard.mock.calls.length === 0) { changed = true; writeFileSync(resolve(join(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.temp, "extra.json")), "{}") } })).toThrow() })
+  })
+  it("keeps sealed directories metadata-only with the real producer kind and fresh guard", () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-v5-sealed-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    try {
+      fs.mkdirSync(resolve(".planning/artifacts"), { recursive: true }); fs.mkdirSync(resolve(".strategy-lab/sealed-inert"), { recursive: true }); writeFileSync(resolve(".strategy-lab/sealed-inert/payload"), "private fixture")
+      vi.mocked(fs.readFileSync).mockClear(); const rows = continuation.inventoryLeanContinuationSurvivorsV2([], [], () => { throw new Error("unexpected Git") }, () => {})
+      expect(rows.find(row => row.path === ".strategy-lab/sealed-inert")?.kind).toBe("directory"); expect(vi.mocked(fs.readFileSync)).not.toHaveBeenCalled()
+      const guard = continuation.createLeanContinuationIdentityGuardV2([], rows); guard(); writeFileSync(resolve(".strategy-lab/sealed-inert/new"), "unopened fixture"); expect(guard).toThrow(); expect(vi.mocked(fs.readFileSync)).not.toHaveBeenCalled()
+    } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+  })
+})
 describe("[continuation-v4] finite namespace and spent-cost isolation", () => {
   const window = () => { const { root: _, ...body } = { ...continuationWindowFixtureV2(), routeNamespace: "20261012-v4" as const }; return { ...body, root: labRoot(body.schemaVersion, body) } }
   it("selects only exact fixed requests and whole validated windows, preserving V3 bytes", () => {
