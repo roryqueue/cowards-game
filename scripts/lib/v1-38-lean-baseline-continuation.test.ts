@@ -85,6 +85,19 @@ describe("[continuation-stage-cadence-G] invocation stages", () => {
       const changed = { ...body, ...delta }; expect(() => ledger.validateLeanBaselineContinuationWindowV2({ ...changed, root: labRoot(changed.schemaVersion, changed) })).toThrow()
     }
   })
+  it("allows only approved active-directory growth, preserving stable identity and baseline members", () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "cadence-directory-"))), context = {}
+    writeFileSync(join(dir, "anchor"), "x")
+    const s = fs.lstatSync(dir), row: continuation.LeanContinuationInventoryRowV2 = { path: dir, kind: "directory", bytes: s.size, allocatedBytes: s.blocks * 512, dev: s.dev, ino: s.ino, mode: s.mode & 0o7777, mtimeMs: s.mtimeMs, ctimeMs: s.ctimeMs, rawRoot: null, members: ["anchor"] }
+    try {
+      const c = continuation.createLeanContinuationStageControllerV6([], [row], [{ path: dir, role: "active_directory" }], context, () => {}, (_path, members) => { if (members.some(name => !["anchor", "lawful"].includes(name))) throw new Error("DENIED_MEMBER") })
+      c.withStage(context, "prepare", () => writeFileSync(join(dir, "lawful"), "x"))
+      c.live(context, () => {})
+      writeFileSync(join(dir, "unknown"), "x")
+      expect(() => c.live(context, () => {})).toThrow()
+      expect(() => c.withStage(context, "terminal", () => {})).toThrow()
+    } finally { rmSync(dir, { recursive: true }) }
+  })
 })
 
 vi.mock("node:child_process", async importOriginal => ({ ...await importOriginal<typeof import("node:child_process")>(), execFileSync: vi.fn() }))
