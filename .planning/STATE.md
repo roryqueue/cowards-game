@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Pre-ledger repair source cycle verified; prospective window-timing decision pending
+stopped_at: Clock-after-source-checks approved; checked distinct V7 source/route amendment next
 last_updated: "2026-10-14"
 last_activity: 2026-10-14
-last_activity_desc: Distinct source verifier passed4/4 scoped truths with no gaps; next eight-hour clock-after-source-checks proposal pending, not applied
+last_activity_desc: Human approved delayed initialization of ONE next eight-hour private window; no window/anchor/route started at approval
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — delayed experiment clock approved
+
+Latest direct human `approved` accepts the prospective NEXT-window timing amendment. First ROOT approval observation2026-10-14T22:33:07UTC/approvedAtMs1792017187000, observationlabelhuman-approval-observed-20261014T223307Z/notexternalUUID/custody. ONE distinct NEXT8hPRIVATEwindow initializes AFTER its prospectiveSOURCEchanges/checksclose andBEFORE DATAreview/request/preparation. Approval time is NOT its experiment anchor. AtfutureactualinitializationA, anchor=A/carry=unchangedF(A)/cap=F(A)+28800000/deadline=A+28800000; allprior/source/idle/preparation/run/reader costs remainrecorded, no reset/refund/exclusion. No actualwindow/anchor/cap/deadline/grant/request/allocation/store/entry/Match createdbythisapproval.
+
+Same15GB/3GB/global300/new36/fourunopened/guest1000/startup2500/host5000/Match600000/gameplay/privacy/currentfreeze-beforeformation bounds. SpentV6andolderbytes/attempts remainimmutable, no retry/reuse/recredit. Distinct prospective20261014-v7source/route contract must carryoldV6metadata as cost/history only, preserve earlierbranchsemantics andactualfreshchecks, and pass research/plancheck/execute/review-fix/ROOTvalidation/distinctverification beforewindowinitialization/DATA/allocation/capacity/charge. Source-workcurrenthardstop02:30:07UTC remains beforethen; do not start8hclockatapproval orhideearliercosts. ExistingPlan16 supplement only/no numberedplan or proof tree; actor/proof closures and userapproval recordedhere. Currentverifiede86e624d/root3ab7f032/SOURCEb1058c4d remains source-only untilnewedits requirearchival. Baseline/Plan16/Phase265/all9LEAG pending; holdout/formation/public/counting/production untouched. Earlierpending-time paragraphsbelowhistory.
 
 ## Current continuation — V6 preparation closed; diagnose before another run
 
