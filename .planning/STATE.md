@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V6 preparation terminal checked; source-only setup-cost diagnosis next
+stopped_at: V6 setup-cost diagnosis closed; checked pre-ledger pure-policy repair planning next
 last_updated: "2026-10-14"
 last_activity: 2026-10-14
-last_activity_desc: Unique V6 preparation refused CARRY/WINDOW_EXPIRED; independent terminal verification closed; no retained allocation or Match charge
+last_activity_desc: Static diagnosis distinguishes 33 capacity checks and 72 pure window hashes per setup callback from zero recursive physical scans; no fit claim
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V6 preparation closed; diagnose before another run
+
+Actual typed diagnosis manager `/root/diagnose_265_v6_carry` and debugger CLOSED/released, existing debugfile append only. Real preparation CARRY uses survivor-empty preflight guard before archive capture: each completed callback THREEcurrent timings/33freshcapacity/3HEAD/6freshinputreads+rawSHA/72purewindowdomainhashes/BOTHlivepasses; zero recursive physical/journal scans. HEAD is bounded rev-parse, but wrapper rebuilds EXPECTED manifest scope. Conditional counts are source algebra, not actual executed counts/hot-function proof. Old consumed-RUN reviewed=[] censored assay does not cover actual preparation. Existing Plan16 narrow checked source direction: private strict-derived invocation-scoped frozen PRE-ledger pure expectations plus connected inert PREPARE/CARRY sensitivity coverage; preserve THREEcurrent timings/ALLfreshchecks/BOTHpasses/legacy defaults, no live cache/native shortcut. No production fix applied or runtimefit established. All costs/bounds/deadline and spent V6 remain unchanged; planning next, no new time request or empirical entry.
 
 Unique ROOT preparation session62237/PID83376 closed exit1 with finite `LEAN_BASELINE_PREPARATION_V4 stage=CARRY code=WINDOW_EXPIRED` then details withheld. V4 is shared formatter text, not a second route. First ROOT terminal observation2026-10-14T19:50:04UTC; exact initiating timestamp and dominant hot function were not retained. Preparation spent about45min before allocation. No allocation, store/temp/claim, ledger/time, entry/head, result/child-terminal or reader receipt retained. Absence does not establish absence of every unrecorded observation or transient construction.
 
