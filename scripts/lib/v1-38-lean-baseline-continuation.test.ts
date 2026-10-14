@@ -13,6 +13,70 @@ import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import * as ledger from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as continuation from "./v1-38-lean-baseline-continuation.js"
 
+describe("[continuation-stage-cadence-G] invocation stages", () => {
+  const fixture = () => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "cadence-g-")))
+    const archive = join(dir, "archive"), live = join(dir, "live")
+    writeFileSync(archive, "archive"); writeFileSync(live, "live")
+    const pins = [archive, live].map(path => ({ path, stat: fs.lstatSync(path) }))
+    const context = Object.freeze({ head: "a".repeat(40) })
+    const roles = [{ path: archive, role: "closed_history" }, { path: live, role: "active_input" }]
+    return { dir, archive, live, pins, context, roles }
+  }
+  it("observes TWO union passes only at barriers and TWO live passes at every callback", () => {
+    const f = fixture()
+    try {
+      const c = continuation.createLeanContinuationStageControllerV6(f.pins, [], f.roles, f.context, () => {})
+      vi.mocked(fs.lstatSync).mockClear()
+      c.withStage(f.context, "archive", () => { for (let i = 0; i < 3; i++) c.live(f.context, () => {}) })
+      expect(vi.mocked(fs.lstatSync).mock.calls.filter(row => row[0] === f.archive)).toHaveLength(2)
+      expect(vi.mocked(fs.lstatSync).mock.calls.filter(row => row[0] === f.live)).toHaveLength(8)
+    } finally { rmSync(f.dir, { recursive: true }) }
+  })
+  it("retains ALL alias predicates and promotes overlapping historical roles to live", () => {
+    const f = fixture()
+    try {
+      const c = continuation.createLeanContinuationStageControllerV6(f.pins, [], [...f.roles, { path: join(f.dir, ".", "archive"), role: "active_input" }], f.context, () => {})
+      writeFileSync(f.archive, "changed")
+      expect(() => c.live(f.context, () => {})).toThrow()
+      expect(() => c.withStage(f.context, "terminal", () => {})).toThrow()
+    } finally { rmSync(f.dir, { recursive: true }) }
+  })
+  it("closing drift irreversibly denies dependent effects, foreign contexts and reentrancy", () => {
+    for (const kind of ["closing", "foreign", "nested", "callback"] as const) {
+      const f = fixture()
+      try {
+        const c = continuation.createLeanContinuationStageControllerV6(f.pins, [], f.roles, f.context, () => {})
+        expect(() => c.withStage(f.context, "archive", () => {
+          if (kind === "closing") writeFileSync(f.archive, "replacement")
+          if (kind === "foreign") c.live({ ...f.context }, () => {})
+          if (kind === "nested") c.withStage(f.context, "source", () => {})
+          if (kind === "callback") c.live(f.context, () => c.withStage(f.context, "source", () => {}))
+        })).toThrow()
+        expect(() => c.live(f.context, () => {})).toThrow()
+      } finally { rmSync(f.dir, { recursive: true }) }
+    }
+  })
+  it("rejects unknown, omitted and hostile role capture without calling hooks", () => {
+    const f = fixture(), hook = vi.fn()
+    try {
+      const create = (roles: unknown) => continuation.createLeanContinuationStageControllerV6(f.pins, [], roles as typeof f.roles, f.context, () => {})
+      expect(() => create([{ path: f.archive, role: "unknown" }, f.roles[1]])).toThrow()
+      expect(() => create([f.roles[0]])).toThrow()
+      expect(() => create(new Proxy(f.roles, { get: hook }))).toThrow()
+      const hostile = { path: f.archive, get role() { hook(); return "closed_history" } }
+      expect(() => create([hostile, f.roles[1]])).toThrow(); expect(hook).not.toHaveBeenCalled()
+    } finally { rmSync(f.dir, { recursive: true }) }
+  })
+  it("selects exact finite V6 only without changing old selectors", () => {
+    const p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V6
+    expect(p.request).toBe(".strategy-lab/lean-baseline-continuation-request-20261014-v6.json")
+    expect(ledger.leanBaselineContinuationPathsForRequestV2(p.request)).toBe(p)
+    expect(ledger.leanBaselineContinuationPathsForRequestV2(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V5.request)).toBe(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V5)
+    expect(() => ledger.leanBaselineContinuationPathsForRequestV2(p.request + ".other")).toThrow()
+  })
+})
+
 vi.mock("node:child_process", async importOriginal => ({ ...await importOriginal<typeof import("node:child_process")>(), execFileSync: vi.fn() }))
 vi.mock("node:fs", async original => ({ ...await original<typeof import("node:fs")>(), lstatSync: vi.fn((await original<typeof import("node:fs")>()).lstatSync), readFileSync: vi.fn((await original<typeof import("node:fs")>()).readFileSync) }))
 vi.mock("../../packages/strategy-lab/src/contracts.js", async original => ({ ...await original<typeof import("../../packages/strategy-lab/src/contracts.js")>(), labRoot: vi.fn((await original<typeof import("../../packages/strategy-lab/src/contracts.js")>()).labRoot) }))
