@@ -1,5 +1,17 @@
 # Baseline continuation gates
 
+## J/K SOURCE goal verification — closed, no empirical authority
+
+Actual distinct typed `/root/verify_265_preflight_policy` PASS_SOURCE_ONLY_REQUIREMENTS_PENDING/4of4scopedtruths/gaps[]/allinspectioncommandsCLOSED/ownershipRELEASED. ObservedHEAD e66ec1cf/threeownedfiles exactproductione86e624dcf9dd47974e69c53b596030e5e3773c6. ROOTimplementation3ab7f032 and172closedtestoutcomes remain qualified ROOT evidence, notverifierreruns. Verified private strictderived descriptor capture/frozenwindow/scope/exactinvocation issuance; allfreshresource/rawbytes/HEAD/time/THREEcurrent/BOTHfull-live checks andCR01cwd/CR02relativeprivacy repair; genuineanchorrefusal+separaterealinventory/returnedrows/controller qualifiedsplit; unchangedlegacy/consumedroute/holdout/privacy/empiricalboundaries. No exportedmint/rootcache/livecache/serializedpolicy/newcustody claim. Fullhistoricalcapsule/exactV6spent-success/postcustodydriverbindArchive/actualcapacity/wholefit remainuncovered; extractedjournal/monotonicparity supplemental andstatic-restoration-between-barrier limitation preserved.
+
+ROOTpure actualSOURCEschema/domainvalidation5717 CLOSED0/rootsha256:b1058c4d61aea26d6d144874a6f9da19641a49f11cde4548ff788eef70b75c44; canonical498B. Output formatter initially represented Uint8Array ascomma-codedASCII, convertedexactASCII/canonicalJSON/field-identity beforeanygatewrite; no source/change/authority. ExactlyoneactiveSOURCE follows; oldcanonicalSOURCE/DATA bodies unchangedTEXT. Sourcecycleclosedonly, noDATAornewrouteexecution. ActualinitialV6failednamespace remainsimmutable/spent; no replay/reuse/refund/phase/freeze/formation/holdout/public/counting/productioncredit.
+
+```json
+{"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"e86e624dcf9dd47974e69c53b596030e5e3773c6","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_preflight_policy","sourceReviewer":"/root/review_265_preflight_policy","sourceRoot":"sha256:3ab7f032d7a76ee3b2d3eca01a0ba65767602e63be8beace952e30f4a62c42e1","sourceVerifier":"/root/verify_265_preflight_policy","source_review":"passed","source_verification":"passed"}
+```
+
+NEXT prospectivewindowtiming decision is PENDING/unapplied:8hclock startsafterSOURCEchanges/checksclose andbeforeDATA/preparation, allpriorcontinuouscosts carried, same15GB/3GB/Match/rules/privacy bounds. Currentfull36frontierelapsed and02:30:07UTC hardstopunchanged; no futurewindow/grant/route/authority orblindrun followsfromthisSOURCEprojection. Proposal detailedinexistingPlan16 only; sourcefitnotclaimed.
+
 ## J/K State-A coverage audit — scoped tasks covered, phase partial
 
 Actual typed `/root/validate_265_preflight_policy` PARTIAL/2of2source tasksCOVERED/newscopedsourcegaps0/BLOCKER0/allcommandsCLOSED/ownershipRELEASED. Actualread-only inspection currentPlanJ/K, source/test/validation/GATES/config; no tests or writes. Driveractualcaller114+ and202+ plus helper178+ supportqualifiedsplit. ROOT67555/69pass and42981/103pass remain ROOTexecution evidence, notauditorreruns. Warningqualificationsrequired, NOT unaddressedcodefindings: source-extractedarithmeticnotactualjournal/monotonicbranch; mockedGit/resource/clock/catalog/nocapacity/wholefit; genuinehistoricalcapsule/exactV6spent/postcustodydriverbindArchive UNDONE; all9LEAGnon-green. Existinglabelsappropriatelyqualified. Distinctsourceverification remainsseparate NEXT; no activeSOURCE/DATA/runtime/phase/freezecredit.

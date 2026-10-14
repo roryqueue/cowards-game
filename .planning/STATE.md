@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: J/K scoped validation audit closed with zero source gaps; distinct source verification next
+stopped_at: Pre-ledger repair source cycle verified; prospective window-timing decision pending
 last_updated: "2026-10-14"
 last_activity: 2026-10-14
-last_activity_desc: Actual Nyquist audit PARTIAL whole-phase, 2/2 scoped tasks covered and zero new source gaps; distinct verifier pending
+last_activity_desc: Distinct source verifier passed4/4 scoped truths with no gaps; next eight-hour clock-after-source-checks proposal pending, not applied
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V6 preparation closed; diagnose before another run
+
+Actual distinct typed `/root/verify_265_preflight_policy` PASS_SOURCE_ONLY_REQUIREMENTS_PENDING/4of4scopedtruths/gaps[]/allcommandsCLOSED/ownershipRELEASED atproductione86e624d/docs e66ec1cf. Source/test/planning/Git inspectiononly; ROOT172execution/root3ab7f032 notindependentlyrerun/regenerated. Verified strictprivateimmutablePREledgerissuance, allfreshchecks/THREEcurrent/BOTHpasses andcwd/relativeprivacy fixes, honest qualifiedsplit coverage, unchangedspentroute/empirical/privacy boundaries. Source repair→review/fix→ROOTvalidation→scopedNyquist→distinctsourceverification cycle CLOSED; wholephase265/Plan16/all9LEAG remain incomplete. ROOTpureSOURCEprojection5717 validated schema/domain; canonical498B/rootsha256:b1058c4d61aea26d6d144874a6f9da19641a49f11cde4548ff788eef70b75c44, Uint8Arrayformat output converted ASCII exactly before writing. Sole activeSOURCE belowexistingGATES is SOURCE-only; noDATA/window/allocation/entry/Match orordinaryreader created.
+
+Genuinely NEW human resource decision asked: allow NEXT distinct eight-hour PRIVATE window to begin after its source changes/source checks close, BEFORE DATA review/preparation, instead of atapproval. All prior/time costs remain recorded viaF(t), same15GB/3GB/global300/new36/runtime/rules/privacy bounds; no failedroute reuse orrefund. Proposal ONLY/notapplied, currenthardstop02:30:07UTC andfull36frontier19:49:07UTC unchanged. Atfutureactualinitialization A, proposedanchor=A/carry=F(A)/cap=F(A)+28800000/deadline=A+28800000; nofuturetimestamp/authoritymaterialized. This avoids anotherblindunchanged eight-hour cycle; boundedtestsdoNOTproveactualwholeprepfit. Furtherfull36execution cannot fitcurrentwindow; noimplicitclockslide/extension/retry. Sourcecyclecomplete, nextnonconsumingroute/timingcontract needs explicitdecision beforechange. Freeze/current-rules league BEFOREformation; holdoutunopened/no public/counting/production unchanged. Earlierpendingverifier/activeownertextbelowhistorical.
 
 Actual distinct typed `/root/validate_265_preflight_policy` State-Aaudit PARTIAL/2of2source tasksCOVERED/newsourcegaps0/BLOCKER0/CLOSED/released. ReadonlycurrentJ/Ksource/test/planning/coverage inspection; ROOT172tests notrerunbyauditor. Existing labels appropriatelyqualified: extractedarithmetic supplemental, mockedinputs/noactualcapacity/wholefit, historicalcapsule/exactV6spent/postcustodydriverbindArchive UNCOVERED, all9LEAGpending/wholephasepartial. No newtests/source/docs/privatehistory/empiricaloperations byauditor. Distinctactualsource-goalverifier next; noSOURCE/DATA or routeauthority. Samehardstop/frontier/bounds/spenthistory/privacy.
 
