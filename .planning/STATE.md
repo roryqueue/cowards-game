@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Cadence source repair verified; fresh prospective baseline time decision required
+stopped_at: Fresh baseline window approved; narrow checked time binding and source/data admission next
 last_updated: "2026-10-14"
 last_activity: 2026-10-14
-last_activity_desc: Distinct source verifier passed6of6 goals gaps[]; no late baseline admission or new empirical route
+last_activity_desc: Actual approval18:30:07UTC grants fresh8h through02:30:07UTC; all prior costs carried and V6 targets absent
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,11 @@ total_plans_in_phase: 16
 
 # State: Coward's Game
 
-## Current continuation — fresh time approved; cadence research next
+## Current continuation — fresh baseline time approved; narrow binding next
+
+Latest direct human `approved!` accepts ONE fresh eight-hour PRIVATE baseline window, same15GB/ALLpriorcosts. First ROOT approval observation2026-10-14T18:30:07UTC (14:30:07Eastern); deadline2026-10-15T02:30:07UTC (22:30:07Eastern). Actual anchor1792002607000/carry654665903/cap683465903/deadline1792031407000; unchangedF(t)=459375903+(t−1791807317000) counts every prior/current minute. Whole36reserve24060000ms gives latestfullentry1792007347000=2026-10-14T19:49:07UTC. This is one shared freshwindow, no sliding/reset/refund/anotherimplicit8h. All15GB/3GB/global300/new36/fourunopened/guest1000/startup2500/host5000/Match600000/rules/privacy bounds unchanged.
+
+Actual active-agent/process check finds no earlier rootentry/reader/test; fixedsource75bb8c09/root18a4da48 remains source-verified only. Read-only lstat confirms all five prospective V6 canonical request/window/allocation/store/temp targets absent; no route authority or artifact was consumed. Reuse existing research/checkedPlan16 for narrow prospective time binding, preserve old source/history in Git and every consumed artifact. No new algorithm/rules/resource-assurance repair or numberedplan. Independently checked amendment→minimal timebinding/test→review/qualifiedsourceverification→SOURCE/DATA/window/request/newimmutableallocation/direct-childcommit→freshsame-processcapacity BEFOREcharge/dispatch still mandatory. SOURCE/DATA projections absent and no preparation/entry/Match/ordinaryreader yet. No LEAG/baseline/freeze/formation/holdout/public/counting/production credit; previous pending-time paragraphs below history.
 
 Actual distinct typed `/root/verify_265_cadence_source` CLOSED PASS_SOURCE_ONLY_REQUIREMENTS_PENDING:6/6scopedtruths/gaps[]/ownershipRELEASED; fixedsource75bb8c09/docs91a643d2/ROOTimplementationroot18a4da48. Independent source/test/planning/Git inspection only, no rerun/regeneratedmanifest/privatehistory/capacity/empiricaloperations. ROOT188 qualified outcomes remain ROOT evidence. Verified finiteV6/legacyimmutability, approvedfull/livecadence/overlap/invalidation, actualbootstrap/stage/charge-before-provider, enteredfailurecleanup/independentnonacceptingterminal/no retry/refund, pendingdurable/nonportableclosedprivatehandoff, honesttype/privacy/censoredperformance disposition. Source repair/review/fix/validation/goalverification now closed; no activeSOURCE/DATA projection/empiricalauthority/Plan16orPhase265completion/LEAGcredit.
 
