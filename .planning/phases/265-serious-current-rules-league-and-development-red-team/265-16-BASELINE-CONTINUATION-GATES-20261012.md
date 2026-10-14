@@ -1,5 +1,11 @@
 # Baseline continuation gates
 
+## Fresh repair-through-experiment time and stage-cadence research — 2026-10-14
+
+Human `yes, approved` accepts ONE fresh8h window for approved cadence repair/testing/review plus any admitted private baseline, first ROOT observation11:50:43UTC. Anchor1791978643000/carry630701903/cap659501903/deadline1792007443000=19:50:43UTC/15:50:43Eastern; F(t)=459375903+(t−1791807317000) carries ALL prior and continuing costs. Unchanged whole36reserve24060000 yields latestentry13:09:43UTC. No reset/refund/second8h or slide of old anchors. All other science/resource/runtime/privacy bounds unchanged.
+
+Actual typed `/root/research_265_stage_cadence` RESEARCH COMPLETE, append ONLY existing BASELINE-CONTINUATION-RESEARCH; all commandsCLOSED/ownershipRELEASED. Public local source/planning/Git inspections, no tests/scans/manifest/private auth/capacity/prepare/Match/reader or artifacts. Located two full identities per inventory/source callback and concrete retained/parent seams; recommends V6-only full major-stage versus always-fresh live partition, aliases/overlapping roles live, independent terminal barriers, bootstrap raw/custody/source integrity retained. Transient static mutation fully restored between barriers is an explicit lower-assurance limitation, not old-predicate equivalence. Source repair/review/plancheck and actual near-scale assay pending; originalV5causeUNKNOWN/fullruntimefitunestablished. No new DATA/route or LEAG/freeze credit. Existing Plan16 additive amendment is next; no numbered-plan/proof-tree proliferation.
+
 ## Human cadence approval — prospective only; expired time stop
 
 Direct human `approved, do it` accepts the prior recommendation for major-stage immutable archive/fixed-source authentication in place of full every-read inventory rebuilding, while live inputs/results/budgets/safety checks stay fresh. Exact barriers/invalidation and connected adversarial tests require research and independent plan check before implementation. This resolves the assurance choice, not resource-time authority; no new source contract is implemented or claimed verified.
