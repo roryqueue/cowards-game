@@ -1,12 +1,18 @@
 # Baseline continuation gates
 
+## Ready-time V7 checked plan — source execution next
+
+Actual independent typed `/root/check_265_ready_window_v7` returned PASS/issues[]/zero BLOCKER or WARNING, all inspection commands CLOSED and ownership RELEASED. Checked the final80-line existing Plan16 L/M/N/O amendment against closed research and current finite domain/helper/driver/Git/retained seams. Four serial units/eight original-owned paths/max3 per task; no new file or numbered plan. Separate approval T and future actual A mathematics, legacy predicates, exact spent-V6 rows/absence/no-refund, all fresh cadence/private issuance/cwd/privacy, stage and closing publication joins and honest inert coverage are planned. Mathematical validation does not establish actual SOURCE-before-A chronology; ROOT actual closures/clock and independent DATA remain required. Source-work hard stop2026-10-15T02:30:07Z unchanged before proper next initialization. No future window/anchor/request/allocation/entry/Match, capacity or empirical credit created.
+
+The prior b1058c4d SOURCE body below is archived as unchanged TEXT before any new source edit; no active SOURCE or DATA now. Historical narration below remains historical.
+
 ## J/K SOURCE goal verification — closed, no empirical authority
 
 Actual distinct typed `/root/verify_265_preflight_policy` PASS_SOURCE_ONLY_REQUIREMENTS_PENDING/4of4scopedtruths/gaps[]/allinspectioncommandsCLOSED/ownershipRELEASED. ObservedHEAD e66ec1cf/threeownedfiles exactproductione86e624dcf9dd47974e69c53b596030e5e3773c6. ROOTimplementation3ab7f032 and172closedtestoutcomes remain qualified ROOT evidence, notverifierreruns. Verified private strictderived descriptor capture/frozenwindow/scope/exactinvocation issuance; allfreshresource/rawbytes/HEAD/time/THREEcurrent/BOTHfull-live checks andCR01cwd/CR02relativeprivacy repair; genuineanchorrefusal+separaterealinventory/returnedrows/controller qualifiedsplit; unchangedlegacy/consumedroute/holdout/privacy/empiricalboundaries. No exportedmint/rootcache/livecache/serializedpolicy/newcustody claim. Fullhistoricalcapsule/exactV6spent-success/postcustodydriverbindArchive/actualcapacity/wholefit remainuncovered; extractedjournal/monotonicparity supplemental andstatic-restoration-between-barrier limitation preserved.
 
 ROOTpure actualSOURCEschema/domainvalidation5717 CLOSED0/rootsha256:b1058c4d61aea26d6d144874a6f9da19641a49f11cde4548ff788eef70b75c44; canonical498B. Output formatter initially represented Uint8Array ascomma-codedASCII, convertedexactASCII/canonicalJSON/field-identity beforeanygatewrite; no source/change/authority. ExactlyoneactiveSOURCE follows; oldcanonicalSOURCE/DATA bodies unchangedTEXT. Sourcecycleclosedonly, noDATAornewrouteexecution. ActualinitialV6failednamespace remainsimmutable/spent; no replay/reuse/refund/phase/freeze/formation/holdout/public/counting/productioncredit.
 
-```json
+```text
 {"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"e86e624dcf9dd47974e69c53b596030e5e3773c6","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_preflight_policy","sourceReviewer":"/root/review_265_preflight_policy","sourceRoot":"sha256:3ab7f032d7a76ee3b2d3eca01a0ba65767602e63be8beace952e30f4a62c42e1","sourceVerifier":"/root/verify_265_preflight_policy","source_review":"passed","source_verification":"passed"}
 ```
 
