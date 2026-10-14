@@ -72,6 +72,61 @@ describe("[continuation-ready-v7-L] delayed initialization policy (synthetic A o
   })
 })
 
+describe("[continuation-ready-v7-M] spent metadata refusals, never historical success", () => {
+  const window = () => {
+    const { root: _, ...old } = continuationWindowFixtureV2(), anchor = 1792017187001, carry = 459375903 + (anchor - 1791807317000)
+    const body = { ...old, routeNamespace: "20261014-v7" as const, approvalEvidence: { ...old.approvalEvidence, humanDecisionId: "human-approval-observed-20261014T223307Z" }, approvedAtMs: 1792017187000, anchorMs: anchor, carryMs: carry, capMs: carry + 28800000, deadlineMs: anchor + 28800000 }
+    return { ...body, root: labRoot(body.schemaVersion, body) }
+  }
+  const fixture = (run: (f: { dir: string; p: typeof ledger.LEAN_BASELINE_CONTINUATION_PATHS_V6; inventory: () => unknown; guard: ReturnType<typeof vi.fn> }) => void) => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "ready-v7-spent-denial-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V6, guard = vi.fn()
+    try {
+      fs.mkdirSync(resolve(".strategy-lab")); fs.mkdirSync(resolve(".planning/artifacts"), { recursive: true })
+      writeFileSync(resolve(p.window), Buffer.alloc(929, 65), { mode: 0o600 }); writeFileSync(resolve(p.request), Buffer.alloc(4047, 66), { mode: 0o600 })
+      run({ dir, p, guard, inventory: () => continuation.inventoryLeanContinuationSurvivorsV2([], [], () => { throw new Error("UNEXPECTED_GIT") }, guard, window()) })
+    } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+  }
+  it("binds ONLY the two supplied raw roots/sizes; synthetic bytes actually refuse, no digest substitution", () => fixture(f => {
+    const source = fs.readFileSync(resolve(import.meta.dirname, "v1-38-lean-baseline-continuation.ts"), "utf8"), anchors = source.match(/const spentV6Metadata = freezeLabValue\(\[([\s\S]*?)\n\]\)/u)?.[1]
+    expect(anchors).toContain("bytes: 929"); expect(anchors).toContain("bytes: 4047")
+    expect(anchors).toContain("sha256:1311fadb75d16b9e6eaa299f7e961034cc941ecbb8db4dbe28121724b98459ec")
+    expect(anchors).toContain("sha256:0c9c7559f42a08901ede3627d257cdf0efcfd6a98e8893dbf5df4c7c52f4361d")
+    expect(anchors?.match(/rawRoot:/gu)).toHaveLength(2)
+    expect(() => f.inventory()).toThrow(/V6_SPENT_METADATA/); expect(f.guard).toHaveBeenCalledWith(929)
+  }))
+  it.each(["missing", "size", "mode", "symlink", "hardlink", "owner"] as const)("denies actual V6 %s before historical cost use", mutation => fixture(f => {
+    const path = resolve(f.p.window), stat = vi.mocked(fs.lstatSync), actual = stat.getMockImplementation()!
+    try {
+      if (mutation === "missing") fs.unlinkSync(path)
+      if (mutation === "size") writeFileSync(path, "short")
+      if (mutation === "mode") fs.chmodSync(path, 0o644)
+      if (mutation === "symlink" || mutation === "hardlink") { fs.renameSync(path, path + ".old"); if (mutation === "symlink") symlinkSync(path + ".old", path); else fs.linkSync(path + ".old", path) }
+      if (mutation === "owner") stat.mockImplementation((...args) => { const s = actual(...args); return String(args[0]) === path ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { uid: Number(s!.uid) + 1 }) : s })
+      expect(() => f.inventory()).toThrow(mutation === "missing" ? /ENOENT/ : mutation === "size" || mutation === "mode" ? /V6_SPENT_METADATA/ : /ALIAS/)
+    } finally { stat.mockImplementation(actual) }
+  }))
+  it.each(["allocation", "store", "temp"] as const)("denies invented V6 %s", key => fixture(f => {
+    if (key === "allocation") writeFileSync(resolve(f.p[key]), "{}"); else fs.mkdirSync(resolve(f.p[key]))
+    expect(() => f.inventory()).toThrow(/V6_SPENT_ABSENCE/)
+  }))
+  it.each(["request", "window", "allocation", "store", "temp"] as const)("excludes selected future V7 %s from carried inventory", key => fixture(f => {
+    const p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V7
+    const row = { path: p[key], kind: "file" as const, bytes: 1, allocatedBytes: 4096, dev: 1, ino: 1, mode: 0o600, mtimeMs: 1, ctimeMs: 1, rawRoot: r("future") }
+    expect(() => continuation.reconcileLeanContinuationInventoryV2([], [row], [], window())).toThrow(/TRANSITION_SCOPE/)
+    expect(() => continuation.reconcileLeanContinuationV2DiskDebit(0, [], 0, [row], window())).toThrow(/DISK_SCOPE/)
+    expect(f.guard).not.toHaveBeenCalled()
+  }))
+  it("preserves all V3-V6 synthetic inventory identities and debit floor, without treating them as authenticated", () => {
+    const old = ledger.LEAN_BASELINE_CONTINUATION_PATHS, paths = [ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2, ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4, ledger.LEAN_BASELINE_CONTINUATION_PATHS_V5, ledger.LEAN_BASELINE_CONTINUATION_PATHS_V6]
+    const rows = paths.flatMap(p => [p.request, p.window]).map((path, i) => ({ path, kind: "file" as const, bytes: 1, allocatedBytes: 4096, dev: 1, ino: i + 1, mode: 0o600, mtimeMs: 1, ctimeMs: 1, rawRoot: r(path) }))
+    expect(() => continuation.reconcileLeanContinuationInventoryV2(rows, rows, [], window())).not.toThrow()
+    for (const changed of [rows.slice(1), rows.map((row, i) => i ? row : { ...row, allocatedBytes: 0 }), rows.map((row, i) => i ? row : { ...row, rawRoot: r("mutation") })]) expect(() => continuation.reconcileLeanContinuationInventoryV2(rows, changed, [], window())).toThrow()
+    const consumed = [old.request, old.allocation, old.store, old.temp].map(path => ({ path, allocatedBytes: 4096 })), debit = continuation.reconcileLeanContinuationV2DiskDebit(49152, rows, 81920, [...rows, ...consumed], window())
+    expect(debit.allocatedDiskBytes).toBe(81920); expect(debit.residualDiskBytes).toBe(32768)
+    expect(() => continuation.reconcileLeanContinuationV2DiskDebit(49152, rows, 81920, [...rows, ...consumed, { path: ledger.LEAN_BASELINE_CONTINUATION_PATHS_V7.window, allocatedBytes: 4096 }], window())).toThrow(/SCOPE/)
+  })
+})
+
 describe("[continuation-stage-cadence-G] invocation stages", () => {
   const fixture = () => {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), "cadence-g-")))
