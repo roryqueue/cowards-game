@@ -24,7 +24,7 @@ import { publishLeanBaselineContinuationSource } from "./lib/v1-38-lean-baseline
 import { runLeanBaselineContinuationMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { readLeanBaselineContinuationGit } from "./lib/v1-38-lean-container-match-session.js"
 import { closeLeanInterval } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { LEAN_BASELINE_CONTINUATION_PATHS_V2 as CONTINUATION_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, LEAN_BASELINE_CONTINUATION_PATHS_V6, leanBaselineContinuationPathsForWindowV2, leanBaselineContinuationPathsForRequestV2, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationWindowV2, validateLeanBaselineContinuationAllocationV2, createLeanBaselineContinuationAllocationV2, leanBaselineContinuationElapsedFloorV2, leanContinuationGlobalFloorV2, leanContinuationIdentityV2, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2 } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V2 as CONTINUATION_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, LEAN_BASELINE_CONTINUATION_PATHS_V6, LEAN_BASELINE_CONTINUATION_PATHS_V7, leanBaselineContinuationPathsForWindowV2, leanBaselineContinuationPathsForRequestV2, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationWindowV2, validateLeanBaselineContinuationAllocationV2, createLeanBaselineContinuationAllocationV2, leanBaselineContinuationElapsedFloorV2, leanContinuationGlobalFloorV2, leanContinuationIdentityV2, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { readLeanContinuationBoundedBytesV2, readLeanContinuationJsonV2, authenticateLeanBaselineContinuationCarryV2, assertLeanBaselineContinuationFrontierV2, createLeanContinuationIdentityGuardV2, createLeanContinuationStageControllerV6, type LeanContinuationStageV6, type LeanContinuationInventoryRowV2, type LeanContinuationReviewedRowV2 } from "./lib/v1-38-lean-baseline-continuation.js"
 import { readLeanBaselineContinuationGitV2 } from "./lib/v1-38-lean-container-match-session.js"
 import { executeLeanBaselineContinuationPipelineV2 } from "./lib/v1-38-lean-baseline-pipeline.js"
@@ -190,7 +190,7 @@ export const deriveLeanBaselineCandidateRoots = (coldRoot: LabRoot): readonly [L
 }
 export interface LeanBaselineRequest { schemaVersion: "lean-current-baseline-request-v1"; seed: string; reviewPath: string; reviewRoot: LabRoot; sourceRoot: LabRoot; planRoot: LabRoot; coldRoot: LabRoot; candidateRoots: readonly LabRoot[]; requestRoots: readonly LabRoot[] }
 export const parseLeanBaselineCommand = (args: readonly string[]) => {
-  if (args.length === 3 && ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"].includes(args[0]!) && args[1] === "--request" && (args[2] === CONTINUATION_V2.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V5.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V6.request)) return { mode: args[0] as "prepare-continuation-v2" | "run-continuation-v2" | "verify-continuation-v2", request: args[2] }
+  if (args.length === 3 && ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"].includes(args[0]!) && args[1] === "--request" && (args[2] === CONTINUATION_V2.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V5.request || (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V6.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V7.request))) return { mode: args[0] as "prepare-continuation-v2" | "run-continuation-v2" | "verify-continuation-v2", request: args[2] }
   if (args.length !== 3 || !["prepare-current", "run-current", "verify-retained", "prepare-continuation", "run-continuation", "verify-continuation"].includes(args[0]!) || args[1] !== "--request" || !args[2] || args[2].startsWith("--") || args[0]!.endsWith("-continuation") && args[2] !== CONTINUATION.request) return fail("ARGUMENTS")
   return { mode: args[0] as "prepare-current" | "run-current" | "verify-retained" | "prepare-continuation" | "run-continuation" | "verify-continuation", request: args[2]! }
 }
@@ -441,7 +441,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     return value
   }
   let finalIdentity: LeanSupervisorReasonEnvelope["observations"]["finalIdentity"] = "matched"
-  const v6 = allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && allocation.window.routeNamespace === "20261014-v6"
+  const v6 = allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && (allocation.window.routeNamespace === "20261014-v6" || allocation.window.routeNamespace === "20261014-v7")
   let publishedEntry: LeanChildEntryV2 | undefined, observedExit: { code: number | null; signal: NodeJS.Signals | null } | undefined
   let terminalPublicationBegan = false, failureTerminalAttempted = false, terminalCallbackBegan = false
   let period: ReturnType<typeof setInterval> | undefined, timeout: ReturnType<typeof setTimeout> | undefined
@@ -557,7 +557,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
  * resurrection. Called solely after this parent's actual child-exit observation. */
 const continuationFailureTerminalGuardV6 = (ledger: LeanExperimentLedger, entry: LeanChildEntryV2) => {
   const allocation = readLeanAdmittedContinuationAllocationV2(ledger), paths = leanBaselineContinuationPathsForWindowV2(allocation.window)
-  if (paths !== LEAN_BASELINE_CONTINUATION_PATHS_V6 || entry.allocationRoot !== allocation.root) return fail("V6_FAILURE_TERMINAL_SCOPE")
+  if ((paths !== LEAN_BASELINE_CONTINUATION_PATHS_V6 && paths !== LEAN_BASELINE_CONTINUATION_PATHS_V7) || entry.allocationRoot !== allocation.root) return fail("V6_FAILURE_TERMINAL_SCOPE")
   const reserve = (bytes = 0) => continuationCapacityV2(allocation.window, cumulativeLeanPhysicalBytes(ledger), CONTINUATION_V2_METADATA_PARSE_RESERVE + bytes + 16777216, true, ledger)
   const read = (path: string, maximum = 4194304, mode = 0o600) => readLeanContinuationBoundedBytesV2(path, maximum, mode, bytes => reserve(bytes ?? 0))
   const journal = read(join(ledger.directory, "ledger.ndjson")), timePrefix = read(join(ledger.directory, "time.ndjson"))
@@ -999,17 +999,17 @@ const continuationPreflightElapsedV6 = (w: Readonly<LeanBaselineContinuationWind
   if (!natural(elapsed)) throw new TypeError("LEAN_EXPERIMENT_CONTINUATION_V2_CLOCK")
   return elapsed
 }
-/** Issued only by the actual unconsumed V6 preflight after all strict joins and
+/** Issued only by the actual unconsumed V6/V7 preflight after all strict joins and
  * real Git scope/ancestry checks. The exact window/context references stay in
  * this closure, never a root cache, ledger brand, serialized or exported mint. */
-const compileContinuationPreflightExpectationsV6 = (window: LeanBaselineContinuationWindowV2, paths: typeof LEAN_BASELINE_CONTINUATION_PATHS_V6, manifest: ReturnType<typeof leanBaselineContinuationDataManifestV2>, request: LeanBaselineContinuationRequestV2, requestBytesRoot: LabRoot, binding: object, fixedHead: string) => {
+const compileContinuationPreflightExpectationsV6 = (window: LeanBaselineContinuationWindowV2, paths: typeof LEAN_BASELINE_CONTINUATION_PATHS_V6 | typeof LEAN_BASELINE_CONTINUATION_PATHS_V7, manifest: ReturnType<typeof leanBaselineContinuationDataManifestV2>, request: LeanBaselineContinuationRequestV2, requestBytesRoot: LabRoot, binding: object, fixedHead: string) => {
   const issuanceCwd = process.cwd()
   const w = validateLeanBaselineContinuationWindowV2(captureContinuationPreflightValueV6(window)), capturedPaths = captureContinuationPreflightValueV6(paths), rows = captureContinuationPreflightValueV6(manifest.entries), r = captureContinuationPreflightValueV6(request), scope = captureContinuationPreflightValueV6(binding)
-  if (paths !== LEAN_BASELINE_CONTINUATION_PATHS_V6 || leanBaselineContinuationPathsForWindowV2(w) !== paths || !Object.isFrozen(window) || !Object.isFrozen(window.approvalEvidence) || !Object.isFrozen(binding) || fixedHead !== r.sourceHead || !/^[a-f0-9]{40}$/u.test(fixedHead) || r.windowRoot !== w.root || r.windowBytesRoot !== leanBytesRoot(leanCanonicalBytes(w)) || r.sourceRoot !== w.sourceRoot || r.sourceGateRoot !== w.sourceGateRoot || r.planRoot !== w.planRoot || !ROOT(requestBytesRoot) || !exact(scope, binding)) return fail("V6_PREFLIGHT_EXPECTATIONS")
+  if ((paths !== LEAN_BASELINE_CONTINUATION_PATHS_V6 && paths !== LEAN_BASELINE_CONTINUATION_PATHS_V7) || leanBaselineContinuationPathsForWindowV2(w) !== paths || !Object.isFrozen(window) || !Object.isFrozen(window.approvalEvidence) || !Object.isFrozen(binding) || fixedHead !== r.sourceHead || !/^[a-f0-9]{40}$/u.test(fixedHead) || r.windowRoot !== w.root || r.windowBytesRoot !== leanBytesRoot(leanCanonicalBytes(w)) || r.sourceRoot !== w.sourceRoot || r.sourceGateRoot !== w.sourceGateRoot || r.planRoot !== w.planRoot || !ROOT(requestBytesRoot) || !exact(scope, binding)) return fail("V6_PREFLIGHT_EXPECTATIONS")
   const names = new Set(rows.map(row => row.path))
   // Complete wrapper scope predicates captured once. The literal HEAD branch
   // never uses allocation/show/rev-list/diff authority; those keep the wrapper.
-  if (names.size !== rows.length || names.size > 1024 || rows.some(row => !/^sha256:[a-f0-9]{64}$/u.test(row.root) || !/^[A-Za-z0-9_./-]+$/u.test(row.path) || row.path.startsWith("/") || row.path.split("/").some(p => !p || p === "." || p === "..") || /preimage|secret/iu.test(row.path)) || labRoot("lean-baseline-continuation-data-manifest-v2", rows) !== r.manifestRoot || !exact(capturedPaths, LEAN_BASELINE_CONTINUATION_PATHS_V6)) return fail("V6_PREFLIGHT_EXPECTATIONS")
+  if (names.size !== rows.length || names.size > 1024 || rows.some(row => !/^sha256:[a-f0-9]{64}$/u.test(row.root) || !/^[A-Za-z0-9_./-]+$/u.test(row.path) || row.path.startsWith("/") || row.path.split("/").some(p => !p || p === "." || p === "..") || /preimage|secret/iu.test(row.path)) || labRoot("lean-baseline-continuation-data-manifest-v2", rows) !== r.manifestRoot || !exact(capturedPaths, paths)) return fail("V6_PREFLIGHT_EXPECTATIONS")
   const normalized = Object.freeze(Object.fromEntries(Object.entries(capturedPaths).map(([key, path]) => [key, resolve(issuanceCwd, path)])))
   // Readers retain their registered relative-name privacy predicates. CWD is
   // independently held before every current/admission/resource/HEAD/read hook,
@@ -1051,7 +1051,7 @@ const continuationPreflightV2 = (requestPath: string, consumed: boolean, reader:
   const requestBytesRoot = leanBytesRoot(requestBytes)
   const pins = [...manifest.entries, { path: requestPath, root: requestBytesRoot }].map(row => ({ ...row, stat: lstatSync(resolve(row.path)) }))
   const identity = createLeanContinuationIdentityGuard(pins, [])
-  const v6 = paths === LEAN_BASELINE_CONTINUATION_PATHS_V6
+  const v6 = (paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || paths === LEAN_BASELINE_CONTINUATION_PATHS_V7)
   const binding = Object.freeze({ pid: process.pid, fixedHead, reviewedSourceHead: window.reviewedSourceHead, sourceHead: request.sourceHead, sourceRoot: request.sourceRoot, planningRoot: request.planningRoot, manifestRoot: request.manifestRoot, requestBytesRoot, windowRoot: window.root, windowBytesRoot: request.windowBytesRoot, sourceGateRoot: request.sourceGateRoot, dataReviewRoot: request.dataReviewRoot, route: window.routeNamespace, grant: window.grantId })
   const preflightExpectations = v6 && !consumed ? compileContinuationPreflightExpectationsV6(window, paths, manifest, request, requestBytesRoot, binding, fixedHead) : undefined
   const current = (additionalBytes = 0) => {
@@ -1138,7 +1138,7 @@ export const prepareLeanBaselineContinuationV2 = (requestPath: string) => {
   const carried = c.stage("archive", () => authenticateLeanBaselineContinuationCarryV2(c.git, continuationReviewRowsV2(c.manifest, c.request.sourceHead, c.window), c.guard, c.window))
   if (carried.carry.elapsedUpperBoundMs > c.window.carryMs) return fail("V2_CARRY_TIME")
   c.bindArchive(carried.inventory)
-  const priorGuard = c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 ? () => {} : createLeanContinuationIdentityGuardV2([], carried.inventory)
+  const priorGuard = (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7) ? () => {} : createLeanContinuationIdentityGuardV2([], carried.inventory)
   stage = "SETUP"
   const ancestors = continuationAncestorsV2([...c.manifest.entries.map(row => row.path), requestPath, c.paths.allocation, c.paths.store]), before = ancestors.map(continuationStatRowV2)
   c.guard(); priorGuard(); continuationCapacityV2(c.window, carried.carry.allocatedDiskBytes)
@@ -1169,7 +1169,7 @@ export const prepareLeanBaselineContinuationV2 = (requestPath: string) => {
   return { schemaVersion: "lean-baseline-continuation-prepared-v2", allocationRoot: allocation.root, allocationPath: c.paths.allocation, sourceHead: allocation.sourceHead, store: c.paths.store, grantId: c.window.grantId, claimRoot: claim.root, charged: 50, plannedCurrentCells: 36, holdoutReservations: allocation.holdoutReservations, issued: false }
   })
   } catch (error) {
-    if ((requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V4.request || requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V5.request || requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V6.request) && error !== null && typeof error === "object") continuationPreparationFailuresV4.set(error, { stage, code: leanContinuationPreparationCodeV4(error) })
+    if ((requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V4.request || requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V5.request || requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V6.request || requestPath === LEAN_BASELINE_CONTINUATION_PATHS_V7.request) && error !== null && typeof error === "object") continuationPreparationFailuresV4.set(error, { stage, code: leanContinuationPreparationCodeV4(error) })
     throw error
   }
 }
@@ -1206,7 +1206,7 @@ const openContinuationContextV2 = (requestPath: string, reader: boolean, diagnos
   const hold = readLeanContinuationJsonV2(join(ledger.directory, "source-hold.json"), 4194304, 0o600, c.guard), { root: holdRoot, ...holdBody } = hold
   if (!exactLabKeys(hold, ["schemaVersion", "allocationRoot", "sourceHead", "manifestRoot", "claimRoot", "rows", "root"]) || hold.schemaVersion !== "lean-baseline-continuation-source-hold-v2" || holdRoot !== labRoot(hold.schemaVersion, holdBody) || hold.allocationRoot !== allocation.root || hold.sourceHead !== allocation.sourceHead || hold.manifestRoot !== allocation.manifestRoot || hold.claimRoot !== claim.root || !Array.isArray(hold.rows) || hold.rows.length > 1024) return fail("V2_SOURCE_HOLD")
   const pinned = [...c.manifest.entries.map(row => row.path), requestPath, c.paths.claim, c.paths.allocation, ...["allocation.json", "carry.json", "source-manifest.json", "source-hold.json"].map(name => join(ledger.directory, name))].map(path => ({ path, stat: lstatSync(resolve(path)) }))
-  const v6 = c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6
+  const v6 = (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7)
   const survivors = [...carry.inventory as LeanContinuationInventoryRowV2[], ...hold.rows as LeanContinuationInventoryRowV2[]]
   const identities = v6 ? () => {} : createLeanContinuationIdentityGuardV2(pinned, survivors)
   let controller: ReturnType<typeof createLeanContinuationStageControllerV6> | undefined
@@ -1305,8 +1305,8 @@ export const runLeanBaselineContinuationV2 = async (requestPath: string) => {
     continuationRunStageV2(diagnostic, "PRE_ENTRY_BARRIER", true)
   } catch (error) { issueContinuationRunFailureV2(error, diagnostic); throw error } finally { diagnostic.active = false }
   const { ledger } = c
-  if (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6) { c.authenticateSource(); c.stage("import", () => c.guard()) }
-  return runLeanBoundedParent({ ledger, requestPath, allocationPath: c.paths.allocation, store: c.paths.store, sourceRoot: c.allocation.sourceRoot, manifestRoot: () => { if (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6) return c.authenticateSource(); c.guard(); const manifest = leanBaselineContinuationDataManifestV2(c.window, leanBaselineContinuationSourceManifestV2()); if (manifest.manifestRoot !== c.allocation.manifestRoot || manifest.planningRoot !== c.allocation.planningRoot) return fail("V2_MANIFEST_HOLD"); return manifest.root }, childMode: "child-continuation-v2", prospectiveStart: { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, beforeRelease: c.guard, ...(c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 ? { stage: c.stage, beforeTerminal: c.closeRun, onFailure: c.invalidate } : {}), terminalReserveMs: c.window.closureMs, supervisorObservation: true })
+  if ((c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7)) { c.authenticateSource(); c.stage("import", () => c.guard()) }
+  return runLeanBoundedParent({ ledger, requestPath, allocationPath: c.paths.allocation, store: c.paths.store, sourceRoot: c.allocation.sourceRoot, manifestRoot: () => { if ((c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7)) return c.authenticateSource(); c.guard(); const manifest = leanBaselineContinuationDataManifestV2(c.window, leanBaselineContinuationSourceManifestV2()); if (manifest.manifestRoot !== c.allocation.manifestRoot || manifest.planningRoot !== c.allocation.planningRoot) return fail("V2_MANIFEST_HOLD"); return manifest.root }, childMode: "child-continuation-v2", prospectiveStart: { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, beforeRelease: c.guard, ...((c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7) ? { stage: c.stage, beforeTerminal: c.closeRun, onFailure: c.invalidate } : {}), terminalReserveMs: c.window.closureMs, supervisorObservation: true })
 }
 
 /** Connected charge/provider seam. Closing charge denial never calls provider;
@@ -1332,7 +1332,7 @@ export const runLeanBaselineContinuationChildV2 = async (requestPath: string) =>
   const resourceReceipts: Array<{ ordinal: number; chargeRoot: LabRoot; before: ReturnType<typeof checkpoint>; after: ReturnType<typeof checkpoint> }> = []
   let pipeline: unknown = null, failed = false
   try {
-    if (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6) { c.authenticateSource(); c.stage("import", () => checkpoint()) }
+    if ((c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7)) { c.authenticateSource(); c.stage("import", () => checkpoint()) }
     pipeline = await executeLeanBaselineContinuationPipelineV2({ allocation: c.allocation, heldHead: c.fixedHead, checkpoint, freezeSource: source => publishLeanBaselineContinuationSourceV2(ledger, source, checkpoint), retainArtifact(name, value) { if (!/^(?:seal-metadata|cold-corpus|initial-proposals|initial-selection|initial-training|initial-analysis|response-work|response-node-receipts|response-training|work-accounting|current-analysis)\.json$/u.test(name)) return fail("CONTINUATION_ARTIFACT_NAME"); checkpoint(3 * 4194304); writeLeanContinuationArtifact(ledger, name, value, 4194304); checkpoint() }, async dispatch(slot, bottom, top, observedRole) {
       checkpoint()
       const before = readLeanContinuationBoundedBytesV2(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600, checkpoint)
@@ -1340,7 +1340,7 @@ export const runLeanBaselineContinuationChildV2 = async (requestPath: string) =>
       writeLeanContinuationArtifact(ledger, `pair-${slot.ordinal}.json`, pair, 16384); const resourceBefore = checkpoint()
       const chargeCell = () => { checkpoint(); const fs = statfsSync(ledger.directory, { bigint: true }); return chargeLeanSlot(ledger, slot, { freeBytes: Number(fs.bavail * fs.bsize), availableMemoryBytes: observeLeagueAvailableMemoryBytes() }) }
       const provider = (charge: ReturnType<typeof chargeCell>) => runLeanBaselineContinuationMatchV2({ ledger, charge, slot, seed: c.allocation.seed, bottom, top, ...(observedRole === undefined ? {} : { observedRole }), checkpoint, register: parent.register, unregister: parent.unregister })
-      const { charge, execution } = c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 ? await dispatchLeanContinuationChargedCellV6(c.stage, chargeCell, c.startCell, provider) : await (async () => { const charge = chargeCell(); c.startCell(); return { charge, execution: await provider(charge) } })()
+      const { charge, execution } = (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7) ? await dispatchLeanContinuationChargedCellV6(c.stage, chargeCell, c.startCell, provider) : await (async () => { const charge = chargeCell(); c.startCell(); return { charge, execution: await provider(charge) } })()
       c.finishCell(); checkpoint()
       retainLeanMatch(ledger, charge, execution.compact, execution.replayFrames, undefined, checkpoint)
       const { replayFrames: _frames, ...content } = execution
@@ -1387,5 +1387,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const childMode = args.length === 3 && ["child-current", "child-continuation", "child-continuation-v2"].includes(args[0]!) && args[1] === "--request"
   const action = childMode ? args[0] === "child-continuation-v2" ? runLeanBaselineContinuationChildV2(args[2]!) : args[0] === "child-continuation" ? runLeanBaselineContinuationChild(args[2]!) : runLeanCurrentChild(args[2]!) : leanBaselineMain(args)
   if (childMode) void resolveLeanChildCliTerminal(action)
-  else void action.then(value => { process.stdout.write(`${JSON.stringify(value)}\n`) }).catch(error => { if (args.length === 3 && args[0] === "prepare-continuation-v2" && args[1] === "--request" && (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V5.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V6.request)) process.stderr.write(leanBaselineContinuationPreparationFailureV4(error)); if (args.length === 3 && args[0] === "run-continuation-v2" && args[1] === "--request" && args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V6.request) process.stderr.write(leanBaselineContinuationRunFailureV2(error)); process.stderr.write("LEAN_BASELINE_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
+  else void action.then(value => { process.stdout.write(`${JSON.stringify(value)}\n`) }).catch(error => { if (args.length === 3 && args[0] === "prepare-continuation-v2" && args[1] === "--request" && (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V5.request || (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V6.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V7.request))) process.stderr.write(leanBaselineContinuationPreparationFailureV4(error)); if (args.length === 3 && args[0] === "run-continuation-v2" && args[1] === "--request" && (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V6.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V7.request)) process.stderr.write(leanBaselineContinuationRunFailureV2(error)); process.stderr.write("LEAN_BASELINE_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
 }

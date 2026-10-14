@@ -139,7 +139,7 @@ describe("[continuation-ready-v7-N] actual V7 callers (synthetic A / Git resourc
       if (mode === "unsafe") vi.mocked(Date.now).mockReturnValue(Number.MAX_SAFE_INTEGER + 1)
       if (mode === "cwd") f.moveCwd()
     }
-    expect(() => parentApi.prepareLeanBaselineContinuationV2(p.request)).toThrow(mode === "head" ? /V2_HEAD_CHANGED/ : mode.startsWith("head-") ? /GIT_V2_METADATA/ : mode === "window" || mode === "request" ? /V6_CONTEXT_BYTES/ : mode === "resource" ? /V2_CAPACITY/ : mode === "deadline" ? /V2_WINDOW_EXPIRED/ : mode === "backward" || mode === "unsafe" ? /CONTINUATION_V2_CLOCK/ : /V6_CONTEXT|IDENTITY/)
+    expect(() => parentApi.prepareLeanBaselineContinuationV2(p.request)).toThrow(mode === "head" ? /V2_HEAD_CHANGED/ : mode.startsWith("head-") ? /GIT_V2_METADATA/ : mode === "window" || mode === "request" ? /V6_CONTEXT_BYTES/ : mode === "resource" ? /V2_CAPACITY/ : mode === "deadline" ? /V2_WINDOW_EXPIRED/ : mode === "backward" || mode === "unsafe" ? /CONTINUATION_V2_CLOCK/ : mode === "source" ? /CONTINUATION_PIN_CHANGED/ : /V6_CONTEXT/)
     expect(injected).toBe(true); f.assertInvalid(); f.absent()
   }, 0, false, "20261014-v7"), 15000)
   it("registered relative input privacy survives sealed-named checkout ancestors", () => preledgerFixtureV6(f => {
@@ -164,6 +164,29 @@ describe("[continuation-ready-v7-N] actual V7 callers (synthetic A / Git resourc
     expect(() => continuationGit.readLeanBaselineContinuationGitV2(["show", `${head}:${p.allocation}`], scoped)).toThrow(/METADATA/)
     for (const old of [lean.LEAN_BASELINE_CONTINUATION_PATHS_V2, lean.LEAN_BASELINE_CONTINUATION_PATHS_V4, lean.LEAN_BASELINE_CONTINUATION_PATHS_V5, lean.LEAN_BASELINE_CONTINUATION_PATHS_V6]) expect(() => continuationGit.readLeanBaselineContinuationGitV2(["show", `${head}:${old.allocation}`], [{ path: old.allocation, root: root("old") }], f.window)).toThrow(/METADATA/)
   }, 0, false, "20261014-v7"), 15000)
+  it.each(["pass", "closing", "after-charge"] as const)("real V7 ledger+stage dispatcher keeps durable spent charge before inert provider: %s (not custody/Match)", async mode => {
+    let window!: lean.LeanBaselineContinuationWindowV2
+    preledgerFixtureV6(f => { window = f.window }, 0, false, "20261014-v7")
+    const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "ready-v7-charge-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), clock = vi.spyOn(Date, "now").mockReturnValue(window.anchorMs)
+    try {
+      const pb = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: 465187899, allocatedDiskBytes: 88924160, residualDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: root("synthetic-original"), closedCapsuleRoot: root("synthetic-capsule"), custodyRoot: root("synthetic-custody"), inventoryRoot: root("synthetic-inventory"), qualifiedReaderAuthority: "cost_only" as const }
+      const allocation = lean.createLeanBaselineContinuationAllocationV2({ sourceRoot: window.sourceRoot, reviewRoot: root("synthetic-review"), coldRoot: root("synthetic-cold"), planRoot: window.planRoot, candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, i) => root(String(i))), seed: "synthetic-ready-v7-charge", sourceHead: "b".repeat(40), planningRoot: root("synthetic-planning"), manifestRoot: root("synthetic-manifest"), requestBytesRoot: root("synthetic-request"), window, windowBytesRoot: leanBytesRoot(leanCanonicalBytes(window)), sourceGateRoot: window.sourceGateRoot, dataReviewRoot: root("synthetic-data"), predecessor: { ...pb, root: labRoot(pb.schemaVersion, pb) } })
+      const ledger = lean.createLeanLedger(join(dir, "store"), allocation), path = join(dir, "history"), binding = Object.freeze({ route: window.routeNamespace })
+      fs.writeFileSync(path, "fixed history")
+      const controller = continuationHelper.createLeanContinuationStageControllerV6([{ path, stat: fs.lstatSync(path) }], [], [{ path, role: "closed_history" }], binding, () => {})
+      const stage = <T>(kind: continuationHelper.LeanContinuationStageV6, body: () => T) => controller.withStage(binding, kind, body)
+      const entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, head: allocation.sourceHead, parentPid: process.ppid, childPid: process.pid, handshakeRoot: root("synthetic-handshake"), wallStartMs: window.anchorMs, monotonicStartNs: process.hrtime.bigint().toString() }
+      fs.writeFileSync(join(ledger.directory, "entry.json"), leanCanonicalBytes(entry), { mode: 0o600 }); lean.beginLeanInterval(ledger, "pilot-entry", window.anchorMs)
+      const slot = allocation.slots[0]!, order: string[] = [], provider = vi.fn(async (charge: lean.LeanCharge) => { expect(lean.readLeanLedger(ledger).charges.get(slot.root)?.root).toBe(charge.root); order.push("inert-provider"); return "inert-no-Match" })
+      const charge = () => { const value = lean.chargeLeanSlot(ledger, slot, { freeBytes: 100000000000, availableMemoryBytes: 4000000000 }); order.push("durable-charge"); if (mode === "closing") fs.writeFileSync(path, "drift"); return value }
+      const start = () => { if (mode === "after-charge") fs.writeFileSync(path, "drift") }
+      const action = parentApi.dispatchLeanContinuationChargedCellV6(stage, charge, start, provider)
+      if (mode === "pass") { await expect(action).resolves.toMatchObject({ execution: "inert-no-Match" }); expect(order).toEqual(["durable-charge", "inert-provider"]) }
+      else { await expect(action).rejects.toThrow(); expect(provider).not.toHaveBeenCalled(); expect(order).toEqual(["durable-charge"]); expect(() => controller.live(binding, () => {})).toThrow(/V6_CONTEXT/) }
+      expect(lean.readLeanLedger(ledger)).toMatchObject({ charged: 51 }); expect(lean.readLeanLedger(ledger).charges.size).toBe(1)
+      expect(() => lean.chargeLeanSlot(ledger, slot, { freeBytes: 100000000000, availableMemoryBytes: 4000000000 })).toThrow(/CHARGED/)
+    } finally { clock.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
+  }, 15000)
 })
 describe("[continuation-preledger-policy] actual unconsumed V6 caller", () => {
   it.each(["source", "archive"] as const)("[CR-PRE-01] rejects fresh CWD drift in actual %s callback before resource/Git/input effects (CWD/HEAD seams inert)", stage => preledgerFixtureV6(f => {
