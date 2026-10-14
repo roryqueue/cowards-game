@@ -1,5 +1,35 @@
 # Baseline continuation gates
 
+## Final cadence SOURCE ROOT validation — goal verification pending
+
+Fixed source75bb8c09116e6eb6bc0a5d6693cd8fd16b82cea6; actualROOTimplementationroot sha256:18a4da4888eb3b4f8e27bca344524740ba9f68d1e89adbfc9f6f1d54740a3be7. R2 RED565ed17c→GREEN75bb8c09 author34uniquechecks/commandsCLOSED/twofilesRELEASED. Existingactualtyped `/root/verify_265_v5_retained` distinct static SOURCE review PASS_SOURCE_RE_REVIEW/findings[]/0BLOCKER/0WARNING14:39:43UTC/CLOSED/released. Code-reviewer followup and freshdispatch hit threadlimit; fallback is explicitly existing typedverifier performing independent SOURCE review, not typedcode-reviewer dispatch/freshrole/ordinaryempiricalreader. Inspectedeightoriginalfiles/commonpublishedentry/earlyexit/cleanup/independentfailureterminal/permanentinvalidate/nopartialpublicationretry/forkcleanup; sixnon-R2files byte-unchangedfe5bb57f/WR remainsclosed. Author tests not reviewer-run evidence.
+
+ROOT selected commands use installed Node24/Vitest768MiB/oneworker, allCLOSED:
+
+|Actual ROOT entry|Selected check|Outcome|
+|---|---|---|
+|64581|Full continuation helper|90pass/9.04s|
+|45312|CR-R2 claim/claim-resource/timing/before-terminal/fork-closing|5pass/47.61s|
+|12624|CR live/final/resource plus preparation-parent|6pass/33.99s|
+|94621|Legacy conditional parent/timebox/supervisor|23pass/8.43s|
+|42949|WR/actualV6reader/legacy retained|12pass/7.83s|
+|83095|H context/drift/CLI/finite-Git|8pass/52.94s|
+|88164|H actual shared issuer|2pass/30.99s|
+|88443|H durable charge-before-provider|3pass/29.54s|
+|74958|Actualgraph plus unchanged boundarypolicy|37pass/30.83s;1443files/0violations|
+|9278|Bounded source sensitivity, NOT full inventory completion|2pass/19.35s; near sample CENSORED|
+|19340|Exactoriginal15-path strict|exit2/13FULLinherited/7051B WHOLE-byte-equal actualpre-edit;zeroNEW/no offsets|
+|53701|Configuredstrategy-lab/runtime-js projecttypes|exit0|
+|Publicdiscovery directNode/tsx|Public boundary check|exit0|
+|15279|Service boundary|exit0/strict0/ownership0/19inheritedreport-only|
+|25182|Inert actual source manifest|697implementation/15planning/admittingfalse/sourceGateNULL/sourceGateRootNULL|
+
+Total188unique selectedpassingcases, not a full-suite/globalcompiler pass or188Matches. Synthetic journals/real parent/controller seams with mocked resources/Git/factory/process/IPC, contextAuthenticatedfalse. Testheap768MiB is not an actualRSSbound. Currentgraphpolicy unchanged. Commandprefix `node --max-old-space-size=768 node_modules/vitest/vitest.mjs run --maxWorkers=1`; filters: CR-R2 after claim/timing/before-terminal/fork-closing; CR-R2 afterlive/final/resource OR actualauthenticatedpreparationparent; actualconditionalparenttimebox OR opt-infinitesupervisor; retained WR/I and fourlegacycontinuation-v2 cases; Hcontextobserves/refuses/CLIselects/deniesunselected; Hrealissuer; Hconnecteddurablecharge; VF-REM-BUILTIN-01 OR privatefactorydependencyboundary; continuation-stage-cadence-scale. Exact15-path strict remains original command recorded in approved supplement; no diagnostic filtering/suppression.
+
+ROOT finite assay: N26/U128 COMPLETE26rows224callbacks256full10848livevisits, setup2104/sample4535/cleanup19/total6658ms. N2280/U2352 CENSORED12rows118callbacks4704full5760livevisits, RAW5600(window243/journal2/source1), DOMAIN969, physical33867/chunks7559/HEAD363/descriptors6190/reservations33632/memberships620; setup4216/sample3143/cleanup240/total7599ms, extra44015616B≤64MiB. Categoriesoverlap; source/custody/resources/pureWindowDOMAIN mocked, actualmanifest notprojected. No fullruntimefit/perMatch/extrapolation/originalcause/oldpredicateequivalence claim. Staticedit-and-restore betweenbarriers mayevade by approved assurance tradeoff. Root originalstrict before/after output7051B equality actually performed, not author inference.
+
+Source-goal verification next; existingvalidationwholephase remainspartial/nyquistfalse/wave0false. No activeSOURCE/DATA proof or empiricalauthority. Current14:46:56UTC/full36entry13:09:43UTC elapsed, no new route/window/artifacts/prepare/provider/Match/ordinaryreader. Sharedsourcehard19:50:43UTC/allcontinuouscosts/all15GB/3GB/runtime/rules/privacy/history unchanged. No baseline/LEAG/freeze/formation/holdout/public/counting/production/archive/tagcredit. Earlier owner/checkpoint sections below history.
+
 ## Integrated re-review round2 — WR closed; claim-closing correction required
 
 Actual author CR RED77eadabb→GREEN0acd92ab and WR RED1b520c72→GREENfe5bb57f CLOSED/allownershipRELEASED. Final focused18/18/38.23s; exact15strict13FULL/7051B/unchangedearly201+321/zeroNEW, whole-byte comparison reserved for ROOT retained pre-edit output. Actual parent/controller tests use synthetic journals and mocked resources/Git/factory/process seams, contextAuthenticated:false. Independent resource denial refuses terminal honestly; no restored positive source authority/refund. WR durable pending_closing/report:null/issued:false versus actual closed frozen private return; exact in-process identity only, never a portable receipt.

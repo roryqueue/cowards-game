@@ -5,13 +5,29 @@ status: partial
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
-updated: 2026-10-13
-source_reviewed: 9a277876d92a2dd9cba853e4dc72e58184808ef8
-source_gate: remaining-overhead-independent-source-pass-requirements-pending
+updated: 2026-10-14
+source_reviewed: 75bb8c09116e6eb6bc0a5d6693cd8fd16b82cea6
+source_gate: cadence-qualified-root-checks-closed-goal-verification-pending
 empirical_validation: v5-pre-entry-failure-unique-terminal-only-check-no-new-retained-charge
 ---
 
 # Phase265 — Validation Strategy
+
+## Current State-A source validation — approved stage cadence G/H/I
+
+Nyquist enabled in actualconfig. Approved/independently checked existingPlan16 G→H→I eight-file source supplement, actualauthorRED→GREEN and normalreview fixes CR-CAD-01/WR-CAD-02/CR-CAD-01-R2. Final fixed75bb8c09/root18a4da48 source re-review findings[] by actual distinct existingtypedverifier acting source reviewer aftercode-reviewer toolthreadlimit; explicitfallbackqualification, not typedcode-reviewer dispatch or reusedordinaryreader. Allsourceowner/reviewer/ROOTcommands closed. ROOT actual188unique selectedpasses:90helper/34parent/13stage+issuer+charge/12retained/37boundary/2finiteassays. Whole exact15strict7051B/13FULLinherited output equals actualpre-edit BYTE-FOR-BYTE/zeroNEW; exit2 notglobalcompilerpass. Configuredprojects/publicpass, service0strict/0ownership/19oldreport-only, actual1443graph0. ExistingGATES recordsactualcommands/entries/roles/qualifications. Distinctsource-goal verification pending.
+
+|G/H/I behavior or threat|Actual automated coverage|Disposition|
+|---|---|---|
+|Private finite V6/controller; both unionpasses at stages and livepasses eachcallback; live-overlap/unknown-role denial|Full90helper plus actualHcontext/drift/CLI/finiteGit cases|COVERED source-only|
+|Raw/source/bootstrap/archive boundaries, exact shared issuer and spent charge BEFORE dependent provider|ActualH2issuer/3durablecharge and driftcases; inertproviders|COVERED source-only|
+|Entered source/claim-closing/timing/terminal failures, observedcleanup, independently checked failureterminal, no refund/revival/partialretry; unreleasedforkcleanup|Actual34parent cases including8V6failure variants pluslegacy; syntheticjournal/mockedresource/IPC seams|COVERED source-only|
+|Retainedopening/audit/terminal/publication; durablepending vs exactinprocesspositiveclosedreturn; no portableauthority|Actual12retained cases withmockcontext/resources and legacycontrols|COVERED source-only|
+|Private/public/oracle/builtin ownership remains fixed|Actual37graph/policy cases and public/servicechecks|COVERED source-only|
+|Reducedfullidentity cadence with freshlivework; realistic whole-run feasibility|N26/U128COMPLETE26rows6658ms;N2280/U2352CENSORED12rows7599ms/44,015,616Bextra;contextAuthenticatedfalse andsource/custody/resources/pureWindowDOMAIN mocked|PARTIAL: full authenticated runtimefit unestablished|
+|Actual current-rules Matches/replay/baseline/evaluation/freeze|No newactualwindow/allocation/entry/charge/result/reader; oldcosts/historyimmutable|MISSING empirical|
+
+No new scoped automatedsource gap remains after actualnormalfix/regressionchecks; coverage is not empirical admission. Root188 includes selectedtests, not a globallygreen full suite/compiler. Source/inertmanifest sourceGateNULL/admittingfalse; no activeSOURCE/DATA projection. Wholephase remainspartial/nyquist_compliantfalse/wave_0_completefalse/all9LEAGpending; UIgates notapplicable toprivatehost-only changes, actualMatch/replayrealism pending. Reducedcadence assurance tradeoff approved: staticrestorationbetweenbarriers mayevade; no equivalence/full-speed claim. Current8h window's full36entry13:09:43UTC elapsed; sourcehard19:50:43UTC/allcontinuouscosts remain. No lateentry/anchorreset/anotherimplicit8h. Freeze-beforeformation/unopenedholdout/no public/counting/production preserved. Earlier sections below are history.
 
 ## Current State-A source validation — E/F and integration fixes
 
