@@ -1003,15 +1003,19 @@ const continuationPreflightElapsedV6 = (w: Readonly<LeanBaselineContinuationWind
  * real Git scope/ancestry checks. The exact window/context references stay in
  * this closure, never a root cache, ledger brand, serialized or exported mint. */
 const compileContinuationPreflightExpectationsV6 = (window: LeanBaselineContinuationWindowV2, paths: typeof LEAN_BASELINE_CONTINUATION_PATHS_V6, manifest: ReturnType<typeof leanBaselineContinuationDataManifestV2>, request: LeanBaselineContinuationRequestV2, requestBytesRoot: LabRoot, binding: object, fixedHead: string) => {
+  const issuanceCwd = process.cwd()
   const w = validateLeanBaselineContinuationWindowV2(captureContinuationPreflightValueV6(window)), capturedPaths = captureContinuationPreflightValueV6(paths), rows = captureContinuationPreflightValueV6(manifest.entries), r = captureContinuationPreflightValueV6(request), scope = captureContinuationPreflightValueV6(binding)
   if (paths !== LEAN_BASELINE_CONTINUATION_PATHS_V6 || leanBaselineContinuationPathsForWindowV2(w) !== paths || !Object.isFrozen(window) || !Object.isFrozen(window.approvalEvidence) || !Object.isFrozen(binding) || fixedHead !== r.sourceHead || !/^[a-f0-9]{40}$/u.test(fixedHead) || r.windowRoot !== w.root || r.windowBytesRoot !== leanBytesRoot(leanCanonicalBytes(w)) || r.sourceRoot !== w.sourceRoot || r.sourceGateRoot !== w.sourceGateRoot || r.planRoot !== w.planRoot || !ROOT(requestBytesRoot) || !exact(scope, binding)) return fail("V6_PREFLIGHT_EXPECTATIONS")
   const names = new Set(rows.map(row => row.path))
   // Complete wrapper scope predicates captured once. The literal HEAD branch
   // never uses allocation/show/rev-list/diff authority; those keep the wrapper.
   if (names.size !== rows.length || names.size > 1024 || rows.some(row => !/^sha256:[a-f0-9]{64}$/u.test(row.root) || !/^[A-Za-z0-9_./-]+$/u.test(row.path) || row.path.startsWith("/") || row.path.split("/").some(p => !p || p === "." || p === "..") || /preimage|secret/iu.test(row.path)) || labRoot("lean-baseline-continuation-data-manifest-v2", rows) !== r.manifestRoot || !exact(capturedPaths, LEAN_BASELINE_CONTINUATION_PATHS_V6)) return fail("V6_PREFLIGHT_EXPECTATIONS")
-  const normalized = Object.freeze(Object.fromEntries(Object.entries(capturedPaths).map(([key, path]) => [key, resolve(path)])))
-  const expectedInputs = Object.freeze([Object.freeze({ path: normalized.window!, root: r.windowBytesRoot }), Object.freeze({ path: normalized.request!, root: requestBytesRoot })])
-  const assert = (candidate: object, exactWindow: LeanBaselineContinuationWindowV2) => { if (candidate !== binding || exactWindow !== window || process.pid !== (scope as { pid: number }).pid) return fail("V6_CONTEXT") }
+  const normalized = Object.freeze(Object.fromEntries(Object.entries(capturedPaths).map(([key, path]) => [key, resolve(issuanceCwd, path)])))
+  // Readers retain their registered relative-name privacy predicates. CWD is
+  // independently held before every current/admission/resource/HEAD/read hook,
+  // so no absolute ancestor spelling widens or narrows the old lexical scope.
+  const expectedInputs = Object.freeze([Object.freeze({ path: capturedPaths.window, root: r.windowBytesRoot }), Object.freeze({ path: capturedPaths.request, root: requestBytesRoot })])
+  const assert = (candidate: object, exactWindow: LeanBaselineContinuationWindowV2) => { if (candidate !== binding || exactWindow !== window || process.pid !== (scope as { pid: number }).pid || process.cwd() !== issuanceCwd) return fail("V6_CONTEXT") }
   const admit = (candidate: object, exactWindow: LeanBaselineContinuationWindowV2, remainingSlots: number, journalMs = 0) => {
     assert(candidate, exactWindow)
     const now = Date.now(), elapsed = continuationPreflightElapsedV6(w, now, journalMs), reserve = remainingSlots === 0 ? 0 : remainingSlots * LEAN_CAPS.matchMs + w.closureMs + w.offlineOverheadMs

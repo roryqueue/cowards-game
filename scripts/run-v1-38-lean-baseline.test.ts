@@ -30,8 +30,8 @@ import { checkFactoryBoundaries } from "./check-v1-38-factory-boundaries.js"
 // Separate unconsumed PREPARE fixture. Git/resources/clock are inert; source,
 // raw/domain hashes, descriptors, controller and CARRY importer remain real.
 const preledgerDetailV6 = () => ({ currents: 0, sourceClosed: 0, archiveOpened: 0, archiveClosed: 0, fullVisits: 0, liveVisits: 0, fullOpeningVisits: 0, fullClosingVisits: 0, liveOpeningVisits: 0, liveClosingVisits: 0, union: 0, liveUnion: 0, capturedSurvivors: 0, exportedDescriptorReads: 0, reserveCallbacks: 0, chunks: 0, opens: 0, lstats: 0, realpaths: 0, fstats: 0, rawHashes: 0, inputRawHashes: 0, liveInputRawHashes: 0, sourceRawHashes: 0, carryRawHashes: 0, manifestScopes: 0, physicalScans: 0, journalReads: 0 })
-const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWindowV2; counts: { windowHashes: number; heads: number; capacities: number; inputReads: number; liveCompleted: number }; detail: ReturnType<typeof preledgerDetailV6>; initialization: ReturnType<typeof preledgerDetailV6> & { windowHashes: number; heads: number; capacities: number; inputReads: number; liveCompleted: number }; callbacks: { windowHashes: number; heads: number; capacities: number; inputReads: number }[]; onCurrent: { value?: () => void }; absent: () => void; assertInvalid: () => void }) => void, sourceExtra = 0) => {
-  const began = performance.now(), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-preledger-"))), originalArgs = process.execArgv, connected = Object.getOwnPropertyDescriptor(process, "connected"), p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V6
+const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWindowV2; counts: { windowHashes: number; heads: number; capacities: number; inputReads: number; liveCompleted: number }; detail: ReturnType<typeof preledgerDetailV6>; initialization: ReturnType<typeof preledgerDetailV6> & { windowHashes: number; heads: number; capacities: number; inputReads: number; liveCompleted: number }; callbacks: { windowHashes: number; heads: number; capacities: number; inputReads: number }[]; onCurrent: { value?: () => void }; absent: () => void; assertInvalid: () => void; moveCwd: () => void }) => void, sourceExtra = 0, ancestorContainsSealed = false) => {
+  const began = performance.now(), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), ancestorContainsSealed ? "continuation-preledger-sealed-" : "continuation-preledger-"))), originalArgs = process.execArgv, connected = Object.getOwnPropertyDescriptor(process, "connected"), p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V6
   const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), actualExists = fs.existsSync, exists = vi.spyOn(fs, "existsSync").mockImplementation(path => actualExists(resolve(String(path))))
   const counts = { windowHashes: 0, heads: 0, capacities: 0, inputReads: 0, liveCompleted: 0 }, callbacks: { windowHashes: number; heads: number; capacities: number; inputReads: number }[] = [], onCurrent: { value?: () => void } = {}
   expect(sourceExtra * 1024 + 8 * 1024 * 1024).toBeLessThanOrEqual(64 * 1024 * 1024)
@@ -60,7 +60,7 @@ const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWind
   const disk = vi.spyOn(fs, "statfsSync").mockImplementation(() => { counts.capacities++; return { bavail: 100000000000n, bsize: 1n } as never })
   const actualHash = contracts.labRoot, hashes = vi.spyOn(contracts, "labRoot").mockImplementation((domain, value) => { if (domain === "lean-baseline-continuation-window-v2") counts.windowHashes++; return actualHash(domain, value) })
   const actualRead = continuationHelper.readLeanContinuationBoundedBytesV2, descriptors = vi.spyOn(continuationHelper, "readLeanContinuationBoundedBytesV2").mockImplementation((path, maximum, mode, guard) => {
-    detail.exportedDescriptorReads++; const input = resolve(path) === resolve(p.window) || resolve(path) === resolve(p.request)
+    detail.exportedDescriptorReads++; const input = resolve(path) === join(dir, p.window) || resolve(path) === join(dir, p.request)
     if (input) counts.inputReads++; if (path.endsWith("/ledger.ndjson") || path.endsWith("/time.ndjson")) detail.journalReads++
     const bytes = actualRead(path, maximum, mode, additional => { bounded(); detail.reserveCallbacks++; guard(additional) })
     rawOwners.set(bytes, input ? "input" : path === lean.LEAN_BASELINE_CONTINUATION_PATHS.allocation ? "carry" : "other"); return bytes
@@ -105,12 +105,28 @@ const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWind
     const manifest = parentApi.leanBaselineContinuationDataManifestV2(window, parentApi.leanBaselineContinuationSourceManifestV2()), seed = "inert-preledger", coldRoot = leanColdProcedureRoot(seed)
     const request: parentApi.LeanBaselineContinuationRequestV2 = { schemaVersion: "lean-baseline-continuation-request-v2", seed, sourceHead: head, sourceRoot: base.root, planningRoot: manifest.planningRoot, planRoot, reviewRoot: window.sourceGateRoot, coldRoot, candidateRoots: parentApi.deriveLeanBaselineCandidateRoots(coldRoot), requestRoots: parentApi.deriveLeanBaselineRequestRoots({ seed, coldRoot, planRoot, sourceRoot: base.root }), offlineOverheadMs: window.offlineOverheadMs, sourceAuthor: sg.sourceAuthor, runOperator: window.runOperator, readerOperator: window.readerOperator, windowRoot: window.root, windowBytesRoot: manifest.windowBytesRoot, sourceGateRoot: window.sourceGateRoot, dataReviewRoot: manifest.dataReviewRoot, manifestRoot: manifest.manifestRoot }
     write(p.request, leanCanonicalBytes(request), 0o600); write(lean.LEAN_BASELINE_CONTINUATION_PATHS.allocation, "{}")
-    const absent = () => { for (const path of [p.temp, p.store, p.claim, p.allocation]) expect(fs.existsSync(resolve(path))).toBe(false) }
+    const absent = () => { for (const path of [p.temp, p.store, p.claim, p.allocation]) expect(fs.existsSync(join(dir, path))).toBe(false) }
+    const moveCwd = () => { const nested = join(dir, "nested-repository-directory"); fs.mkdirSync(nested, { recursive: true }); cwd.mockReturnValue(nested) }
     const initialization = { ...detail, ...counts }
-    run({ window, counts, detail, initialization, callbacks, onCurrent, absent, assertInvalid: () => assertInvalid() }); absent()
+    run({ window, counts, detail, initialization, callbacks, onCurrent, absent, assertInvalid: () => assertInvalid(), moveCwd }); absent()
   } finally { clock?.mockRestore(); controllers.mockRestore(); git.mockRestore(); descriptors.mockRestore(); hashes.mockRestore(); disk.mockRestore(); available.mockRestore(); usage.mockRestore(); factory.mockRestore(); physical.mockRestore(); scopes.mockRestore(); raw.mockRestore(); chunks.mockRestore(); opens.mockRestore(); fstats.mockRestore(); realpaths.mockRestore(); stats.mockRestore(); exists.mockRestore(); vi.unstubAllEnvs(); process.execArgv = originalArgs; if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(15000) }
 }
 describe("[continuation-preledger-policy] actual unconsumed V6 caller", () => {
+  it.each(["source", "archive"] as const)("[CR-PRE-01] rejects fresh CWD drift in actual %s callback before resource/Git/input effects (CWD/HEAD seams inert)", stage => preledgerFixtureV6(f => {
+    let before: typeof f.counts | undefined
+    f.onCurrent.value = () => {
+      if (before || stage === "archive" && f.detail.archiveOpened === 0) return
+      before = { ...f.counts }; f.moveCwd()
+    }
+    expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request)).toThrow(/V6_CONTEXT/)
+    expect(before).toBeDefined(); expect(f.counts).toEqual(before)
+    f.assertInvalid(); f.absent()
+  }), 15000)
+  it("[CR-PRE-02] retains relative-name privacy semantics when fixture checkout ancestor contains sealed", () => preledgerFixtureV6(f => {
+    expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request)).toThrow(/V2_ALLOCATION_ANCHOR/)
+    for (const callback of f.callbacks) expect(callback).toEqual({ windowHashes: 0, heads: 3, capacities: 33, inputReads: 6 })
+    f.absent()
+  }, 0, true), 15000)
   it("captures pure scope/window once while every completed callback keeps THREE current/33capacity/3HEAD/6input reads", () => preledgerFixtureV6(f => {
     expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request)).toThrow(/V2_ALLOCATION_ANCHOR/)
     expect(f.callbacks.length).toBeGreaterThan(0)
