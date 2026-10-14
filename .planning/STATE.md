@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Major-stage assurance amendment approved; prior source-work window expired, new prospective time window required
-last_updated: "2026-10-13"
-last_activity: 2026-10-13
-last_activity_desc: Human approved major-stage archive/source checks; ROOT clock21:50:36UTC confirms prior21:21:06UTC hard stop elapsed; no implementation or new route
+stopped_at: Fresh eight-hour repair-through-experiment window approved; researching checked major-stage assurance amendment
+last_updated: "2026-10-14"
+last_activity: 2026-10-14
+last_activity_desc: Fresh eight-hour source-through-empirical window approved at11:50:43UTC; prior costs carried, cadence research next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — fresh time approved; cadence research next
+
+Latest direct human `yes, approved` accepts ONE fresh eight-hour window covering the approved major-stage checking repair, testing/review and any admitted private experiment. ROOT first approval observation2026-10-14T11:50:43UTC (07:50:43Eastern); deadline19:50:43UTC (15:50:43Eastern). ALL prior uninterrupted costs carry under unchanged `F(t)=459375903+(t−1791807317000)`; no old window/route/charge reset, refund, reuse or retrocredit. The previous21:21:06UTC source-work stop is historical, not moved. Current approved source-work and empirical window share this ONE deadline, not separate eight-hour allowances.
+
+Exact numeric anchor/carry/cap and prospective window binding will be checked in the existing Plan16 supplement before any new allocation/admission; no canonical window or route is created by this record. Major-stage immutable-history/fixed-source assurance amendment is approved in principle; exact barriers, active-check partition, invalidation and connected adversarial coverage require research and independent planning before source implementation. Existing fixed source9a277876/root9ba87678 remains independently source-verified only. No active SOURCE/DATA admission, preparation or Match/reader. Same15GB/3GBRAM/global300/36new/fourunopened/guest1000/startup2500/host5000/Match600000 and all gameplay/privacy bounds unchanged. No LEAG/baseline/freeze/formation/holdout/public/counting/production credit. Earlier checkpoints are history.
 
 ## Current continuation — cadence approved; time authority expired
 
