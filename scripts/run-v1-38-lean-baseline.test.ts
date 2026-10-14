@@ -30,8 +30,8 @@ import { checkFactoryBoundaries } from "./check-v1-38-factory-boundaries.js"
 // Separate unconsumed PREPARE fixture. Git/resources/clock are inert; source,
 // raw/domain hashes, descriptors, controller and CARRY importer remain real.
 const preledgerDetailV6 = () => ({ currents: 0, sourceClosed: 0, archiveOpened: 0, archiveClosed: 0, fullVisits: 0, liveVisits: 0, fullOpeningVisits: 0, fullClosingVisits: 0, liveOpeningVisits: 0, liveClosingVisits: 0, union: 0, liveUnion: 0, capturedSurvivors: 0, exportedDescriptorReads: 0, reserveCallbacks: 0, chunks: 0, opens: 0, lstats: 0, realpaths: 0, fstats: 0, rawHashes: 0, inputRawHashes: 0, liveInputRawHashes: 0, sourceRawHashes: 0, carryRawHashes: 0, manifestScopes: 0, physicalScans: 0, journalReads: 0 })
-const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWindowV2; counts: { windowHashes: number; heads: number; capacities: number; inputReads: number; liveCompleted: number }; detail: ReturnType<typeof preledgerDetailV6>; initialization: ReturnType<typeof preledgerDetailV6> & { windowHashes: number; heads: number; capacities: number; inputReads: number; liveCompleted: number }; callbacks: { windowHashes: number; heads: number; capacities: number; inputReads: number }[]; onCurrent: { value?: () => void }; absent: () => void; assertInvalid: () => void; moveCwd: () => void }) => void, sourceExtra = 0, ancestorContainsSealed = false) => {
-  const began = performance.now(), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), ancestorContainsSealed ? "continuation-preledger-sealed-" : "continuation-preledger-"))), originalArgs = process.execArgv, connected = Object.getOwnPropertyDescriptor(process, "connected"), p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V6
+const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWindowV2; counts: { windowHashes: number; heads: number; capacities: number; inputReads: number; liveCompleted: number }; detail: ReturnType<typeof preledgerDetailV6>; initialization: ReturnType<typeof preledgerDetailV6> & { windowHashes: number; heads: number; capacities: number; inputReads: number; liveCompleted: number }; callbacks: { windowHashes: number; heads: number; capacities: number; inputReads: number }[]; onCurrent: { value?: () => void }; absent: () => void; assertInvalid: () => void; moveCwd: () => void }) => void, sourceExtra = 0, ancestorContainsSealed = false, routeNamespace: "20261014-v6" | "20261014-v7" = "20261014-v6") => {
+  const began = performance.now(), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), ancestorContainsSealed ? "continuation-preledger-sealed-" : "continuation-preledger-"))), originalArgs = process.execArgv, connected = Object.getOwnPropertyDescriptor(process, "connected"), p = routeNamespace === "20261014-v7" ? lean.LEAN_BASELINE_CONTINUATION_PATHS_V7 : lean.LEAN_BASELINE_CONTINUATION_PATHS_V6
   const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), actualExists = fs.existsSync, exists = vi.spyOn(fs, "existsSync").mockImplementation(path => actualExists(resolve(String(path))))
   const counts = { windowHashes: 0, heads: 0, capacities: 0, inputReads: 0, liveCompleted: 0 }, callbacks: { windowHashes: number; heads: number; capacities: number; inputReads: number }[] = [], onCurrent: { value?: () => void } = {}
   expect(sourceExtra * 1024 + 8 * 1024 * 1024).toBeLessThanOrEqual(64 * 1024 * 1024)
@@ -98,7 +98,8 @@ const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWind
     for (const entry of extraEntries) { bounded(); write(entry.path, Buffer.alloc(1024, 97)) }
     const base = parentApi.leanBaselineContinuationSourceManifestV2(), planRoot = base.planningEntries.find(row => row.path.endsWith("265-16-BASELINE-CONTINUATION-PLAN-20261012.md"))!.root
     const sg: parentApi.LeanContinuationSourceGateV2 = { schemaVersion: "lean-baseline-continuation-source-gate-v2", plan_check: "passed", source_review: "passed", root_validation: "passed", source_verification: "passed", commands_closed: true, reviewedSourceHead: "a".repeat(40), sourceRoot: base.root, sourceAuthor: "inert-author", sourceReviewer: "inert-reviewer", sourceVerifier: "inert-verifier" }
-    const wb = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-preledger", approvalEvidence: { humanDecisionId: "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261014-v6" as const, reviewedSourceHead: sg.reviewedSourceHead, sourceRoot: base.root, sourceGateRoot: labRoot(sg.schemaVersion, sg), planRoot, runOperator: "inert-runner", readerOperator: "inert-reader" }, window = { ...wb, root: labRoot(wb.schemaVersion, wb) }
+    const syntheticA = 1792017187000 + 12345, syntheticCarry = 459375903 + (syntheticA - 1791807317000)
+    const wb = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-preledger", approvalEvidence: { humanDecisionId: routeNamespace === "20261014-v7" ? "human-approval-observed-20261014T223307Z" : "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000, ...(routeNamespace === "20261014-v7" ? { approvedAtMs: 1792017187000, anchorMs: syntheticA, carryMs: syntheticCarry, capMs: syntheticCarry + 28800000, deadlineMs: syntheticA + 28800000 } : {}), durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace, reviewedSourceHead: sg.reviewedSourceHead, sourceRoot: base.root, sourceGateRoot: labRoot(sg.schemaVersion, sg), planRoot, runOperator: "inert-runner", readerOperator: "inert-reader" }, window = { ...wb, root: labRoot(wb.schemaVersion, wb) }
     const dg: parentApi.LeanContinuationDataGateV2 = { schemaVersion: "lean-baseline-continuation-data-gate-v2", status: "passed", grantId: window.grantId, windowRoot: window.root, windowBytesRoot: leanBytesRoot(leanCanonicalBytes(window)), reviewedSourceHead: sg.reviewedSourceHead, sourceRoot: base.root, sourceGateRoot: window.sourceGateRoot, planRoot, approvalEvidence: window.approvalEvidence, runOperator: window.runOperator, readerOperator: window.readerOperator, dataReviewer: "inert-data", commands_closed: true }
     write(p.gates, `\`\`\`json\n${Buffer.from(leanCanonicalBytes(sg))}\n\`\`\`\n\`\`\`json\n${Buffer.from(leanCanonicalBytes(dg))}\n\`\`\`\n`); write(p.window, leanCanonicalBytes(window), 0o600)
     clock = vi.spyOn(Date, "now").mockReturnValue(window.anchorMs)
@@ -111,6 +112,59 @@ const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWind
     run({ window, counts, detail, initialization, callbacks, onCurrent, absent, assertInvalid: () => assertInvalid(), moveCwd }); absent()
   } finally { clock?.mockRestore(); controllers.mockRestore(); git.mockRestore(); descriptors.mockRestore(); hashes.mockRestore(); disk.mockRestore(); available.mockRestore(); usage.mockRestore(); factory.mockRestore(); physical.mockRestore(); scopes.mockRestore(); raw.mockRestore(); chunks.mockRestore(); opens.mockRestore(); fstats.mockRestore(); realpaths.mockRestore(); stats.mockRestore(); exists.mockRestore(); vi.unstubAllEnvs(); process.execArgv = originalArgs; if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(15000) }
 }
+describe("[continuation-ready-v7-N] actual V7 callers (synthetic A / Git resources clock catalog mocked)", () => {
+  const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V7
+  it.each([0, 32])("real prepare→source→real CARRY immutable anchor refusal; bounded sample %i", extra => preledgerFixtureV6(f => {
+    const began = performance.now(); let refusal: unknown
+    try { parentApi.prepareLeanBaselineContinuationV2(p.request) } catch (error) { refusal = error }
+    expect(refusal).toBeInstanceOf(TypeError); expect((refusal as Error).message).toMatch(/V2_ALLOCATION_ANCHOR/)
+    expect(parentApi.leanBaselineContinuationPreparationFailureV4(refusal)).toBe("LEAN_BASELINE_PREPARATION_V4 stage=CARRY code=DETAILS_WITHHELD\n")
+    expect(f.detail.sourceClosed).toBe(1); expect(f.detail.archiveOpened).toBe(1); expect(f.detail.archiveClosed).toBe(0); expect(f.detail.capturedSurvivors).toBe(0)
+    expect(f.detail.fullOpeningVisits).toBe(2 * f.detail.union); expect(f.detail.fullClosingVisits).toBe(f.detail.union)
+    expect(f.callbacks.length).toBeGreaterThan(0)
+    for (const callback of f.callbacks) expect(callback).toEqual({ windowHashes: 0, heads: 3, capacities: 33, inputReads: 6 })
+    expect(f.detail.physicalScans).toBe(0); expect(f.detail.journalReads).toBe(0); f.absent()
+    process.stdout.write(`FINITE_SYNTHETIC_V7_PRELEDGER ${JSON.stringify({ status: "COMPLETE", extra, sampleMs: Math.ceil(performance.now() - began), bytesBound: extra * 1024 + 8 * 1024 * 1024, initialization: f.initialization, total: f.detail, callbacks: f.callbacks.length, callback: f.callbacks[0], reached: ["SOURCE", "CARRY_OPEN", "FIXED_ANCHOR_REFUSAL"], custodyComplete: false, archiveClosingAccepted: false, setupCapturePublication: false, actualDriverBindArchiveCovered: false, historicalSuccessCovered: false, hashesDescriptorsControllerImporterReal: true, gitResourcesClockFactoryCatalogMocked: true, runtimeFitEstablished: false })}\n`)
+  }, extra, false, "20261014-v7"), 15000)
+  it.each(["head", "head-format", "head-length", "window", "request", "resource", "deadline", "backward", "unsafe", "cwd", "source"] as const)("fresh %s drift refuses and invalidates without setup", mode => preledgerFixtureV6(f => {
+    let injected = false
+    f.onCurrent.value = () => {
+      if (injected) return; injected = true
+      if (mode.startsWith("head")) { const original = vi.mocked(childProcess.execFileSync).getMockImplementation()!; vi.mocked(childProcess.execFileSync).mockImplementation(((...args: Parameters<typeof childProcess.execFileSync>) => args[0] === "git" && (args[1] as readonly string[])[0] === "rev-parse" ? Buffer.from(mode === "head" ? "c".repeat(40) : mode === "head-length" ? "b".repeat(129) : "b".repeat(40) + "\n\n") : Reflect.apply(original, childProcess, args)) as typeof childProcess.execFileSync) }
+      if (mode === "window" || mode === "request") fs.writeFileSync(resolve(p[mode]), "{}")
+      if (mode === "source") fs.writeFileSync(resolve("scripts/run-v1-38-lean-baseline.ts"), "changed source")
+      if (mode === "resource") vi.mocked(process.memoryUsage).mockReturnValue({ ...process.memoryUsage(), rss: 4000000000 })
+      if (mode === "deadline") vi.mocked(Date.now).mockReturnValue(f.window.deadlineMs - 36 * LEAN_CAPS.matchMs - f.window.closureMs - f.window.offlineOverheadMs + 1)
+      if (mode === "backward") vi.mocked(Date.now).mockReturnValue(f.window.anchorMs - 1)
+      if (mode === "unsafe") vi.mocked(Date.now).mockReturnValue(Number.MAX_SAFE_INTEGER + 1)
+      if (mode === "cwd") f.moveCwd()
+    }
+    expect(() => parentApi.prepareLeanBaselineContinuationV2(p.request)).toThrow(mode === "head" ? /V2_HEAD_CHANGED/ : mode.startsWith("head-") ? /GIT_V2_METADATA/ : mode === "window" || mode === "request" ? /V6_CONTEXT_BYTES/ : mode === "resource" ? /V2_CAPACITY/ : mode === "deadline" ? /V2_WINDOW_EXPIRED/ : mode === "backward" || mode === "unsafe" ? /CONTINUATION_V2_CLOCK/ : /V6_CONTEXT|IDENTITY/)
+    expect(injected).toBe(true); f.assertInvalid(); f.absent()
+  }, 0, false, "20261014-v7"), 15000)
+  it("registered relative input privacy survives sealed-named checkout ancestors", () => preledgerFixtureV6(f => {
+    expect(() => parentApi.prepareLeanBaselineContinuationV2(p.request)).toThrow(/V2_ALLOCATION_ANCHOR/); expect(f.callbacks.length).toBeGreaterThan(0)
+    for (const callback of f.callbacks) expect(callback).toEqual({ windowHashes: 0, heads: 3, capacities: 33, inputReads: 6 }); f.absent()
+  }, 0, true, "20261014-v7"), 15000)
+  it.each(["mutable", "deep-mutable"] as const)("private issuer rejects %s strict-window output (only validator-output seam mocked)", mode => preledgerFixtureV6(f => {
+    const actual = lean.validateLeanBaselineContinuationWindowV2, validate = vi.spyOn(lean, "validateLeanBaselineContinuationWindowV2").mockImplementation(value => { const w = actual(value), copy = { ...w, approvalEvidence: { ...w.approvalEvidence } }; return mode === "mutable" ? copy : Object.freeze(copy) })
+    try { expect(() => parentApi.prepareLeanBaselineContinuationV2(p.request)).toThrow(/V6_PREFLIGHT_EXPECTATIONS/); expect(f.callbacks).toEqual([]); f.absent() } finally { validate.mockRestore() }
+  }, 0, false, "20261014-v7"), 15000)
+  it.each(["temp", "store", "allocation", "claim"] as const)("actual unconsumed %s precreation refuses before source/controller", key => preledgerFixtureV6(f => {
+    const path = resolve(p[key]); fs.mkdirSync(resolve(path, ".."), { recursive: true }); fs.writeFileSync(path, "{}")
+    try { expect(() => parentApi.prepareLeanBaselineContinuationV2(p.request)).toThrow(/GRANT_CLAIMED/); expect(f.callbacks).toEqual([]) } finally { fs.unlinkSync(path); if (key === "claim") fs.rmdirSync(resolve(p.temp)) }
+    f.absent()
+  }, 0, false, "20261014-v7"), 15000)
+  it("all finite CLI modes and selected/unselected allocation Git predicates are connected", () => preledgerFixtureV6(f => {
+    for (const mode of ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"]) expect(parentApi.parseLeanBaselineCommand([mode, "--request", p.request])).toEqual({ mode, request: p.request })
+    for (const path of [p.request + "/extra", p.request.replace("v7", "v8")]) expect(() => parentApi.parseLeanBaselineCommand(["prepare-continuation-v2", "--request", path])).toThrow()
+    const head = "b".repeat(40), scoped = [{ path: p.allocation, root: root("allocation") }], actual = vi.mocked(childProcess.execFileSync).getMockImplementation()!
+    vi.mocked(childProcess.execFileSync).mockImplementation(((...args: Parameters<typeof childProcess.execFileSync>) => args[0] === "git" && (args[1] as string[])[0] === "show" ? Buffer.from("{}") : Reflect.apply(actual, childProcess, args)) as typeof childProcess.execFileSync)
+    expect(() => continuationGit.readLeanBaselineContinuationGitV2(["show", `${head}:${p.allocation}`], [], f.window)).not.toThrow()
+    expect(() => continuationGit.readLeanBaselineContinuationGitV2(["show", `${head}:${p.allocation}`], scoped)).toThrow(/METADATA/)
+    for (const old of [lean.LEAN_BASELINE_CONTINUATION_PATHS_V2, lean.LEAN_BASELINE_CONTINUATION_PATHS_V4, lean.LEAN_BASELINE_CONTINUATION_PATHS_V5, lean.LEAN_BASELINE_CONTINUATION_PATHS_V6]) expect(() => continuationGit.readLeanBaselineContinuationGitV2(["show", `${head}:${old.allocation}`], [{ path: old.allocation, root: root("old") }], f.window)).toThrow(/METADATA/)
+  }, 0, false, "20261014-v7"), 15000)
+})
 describe("[continuation-preledger-policy] actual unconsumed V6 caller", () => {
   it.each(["source", "archive"] as const)("[CR-PRE-01] rejects fresh CWD drift in actual %s callback before resource/Git/input effects (CWD/HEAD seams inert)", stage => preledgerFixtureV6(f => {
     let before: typeof f.counts | undefined
