@@ -32,6 +32,7 @@ import type { LeanResponseNodeReceipt, LeanResponseWork } from "../../packages/s
 import * as parentReaderContract from "../run-v1-38-lean-baseline.js"
 import { measureLeanPhysicalBytes } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { observeLeagueAvailableMemoryBytes } from "../run-v1-38-serious-league.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V6, readLeanAdmittedContinuationAllocationV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_RETAINED_${code}`) }
 /** Strict v12 custody join, shared by ordinary and terminal-only readers.
@@ -722,21 +723,33 @@ export const verifyLeanBaselineContinuationRetainedV2 = (requestPath: string) =>
   if (!before.closed.has("pilot-entry") || pilotCloseMs === undefined || admissionNow + remainingClosureMs > approvedWindow.deadlineMs ||
       leanContinuationGlobalFloorV2(admissionNow) + remainingClosureMs > approvedWindow.capMs || currentLeanElapsedMs(ledger) + remainingClosureMs > allocation.caps.elapsedMs) return fail("V2_READER_WINDOW")
   readLeanChildTerminal(ledger)
-  beginLeanInterval(ledger, "continuation-retained-verifier-v2")
+  const v6 = paths === LEAN_BASELINE_CONTINUATION_PATHS_V6
+  // A V6 reader owns a new independently authenticated invocation. Never import
+  // a parent's controller or mutate a one-use journal before this opening.
+  const opening = v6 ? openLeanBaselineContinuationContextV2(requestPath, true) : undefined
+  if (!v6) beginLeanInterval(ledger, "continuation-retained-verifier-v2")
   let report: ReturnType<typeof auditLeanBaselineContinuationRetainedV2> | undefined, failure: string | null = null
   let resourceGuard: ((additionalBytes?: number) => void) | undefined
+  let publicationStage: (<T>(body: () => T) => T) | undefined, readerBegan = !v6
   try {
     const entry = readLeanChildEntry(ledger), terminal = readLeanChildTerminal(ledger)
     for (const pid of [entry.parentPid, entry.childPid]) {
       try { process.kill(pid, 0) } catch (error) { if ((error as NodeJS.ErrnoException).code === "ESRCH") continue; throw error }
       return fail("V2_PROCESS_LIVE")
     }
-    const c = openLeanBaselineContinuationContextV2(requestPath, true), guard = (additionalBytes?: number) => c.guard(additionalBytes ?? 0)
+    const c = opening ?? openLeanBaselineContinuationContextV2(requestPath, true), guard = (additionalBytes?: number) => c.guard(additionalBytes ?? 0)
     if (!same(c.paths, paths) || !same(leanBaselineContinuationPathsForWindowV2(c.allocation.window), initialPaths) || !same(c.allocation.window, approvedWindow) || c.window.root !== approvedWindow.root || c.allocation.root !== allocation.root || c.ledger.directory !== ledger.directory) return fail("V2_READER_CONTEXT_BINDING")
     resourceGuard = guard
+    if (v6) {
+      publicationStage = body => c.stage("publication", body)
+      c.stage("reader", () => { beginLeanInterval(ledger, "continuation-retained-verifier-v2"); readerBegan = true })
+    }
+    const readAndAudit = () => {
+    if (!v6) {
     const claimBody = { schemaVersion: "lean-baseline-continuation-reader-claim-v2", allocationRoot: allocation.root, grantId: allocation.window.grantId, windowRoot: allocation.window.root, requestBytesRoot: allocation.requestBytesRoot, readerOperator: c.request.readerOperator, startedAtMs: Date.now() }
     const readerClaim = { ...claimBody, root: labRoot(claimBody.schemaVersion, claimBody) }
     c.guard(65536); writeLeanContinuationArtifact(ledger, "reader-claim.json", readerClaim, 65536); c.guard()
+    }
     const read = (name: string, maximum = 4194304): Record<string, any> => { c.guard(); const value = readLeanContinuationJsonV2(join(ledger.directory, name), maximum, 0o600, c.guard); c.guard(); return value }
     const evidence = verifyLeanContinuationEvidence(ledger, guard, "v2"), state = readLeanLedger(ledger), result = read("result.json", 4194304)
     const charged = evidence.records.filter(row => row.chargeRoot !== null).length
@@ -770,9 +783,15 @@ export const verifyLeanBaselineContinuationRetainedV2 = (requestPath: string) =>
     const time = { ...readLeanTimeAccounting(ledger), elapsedMs: currentLeanElapsedMs(ledger) }
     report = auditLeanBaselineContinuationRetainedV2({ allocation, window: c.window, windowBytesRoot: c.manifest.windowBytesRoot, sourceGateRoot: c.manifest.sourceGateRoot, dataReviewRoot: c.manifest.dataReviewRoot, manifestRoot: c.manifest.manifestRoot, claim: c.claim, carry, sourceHold, request: { ...c.request }, requestBytesRoot: c.requestBytesRoot, head: c.fixedHead, entry, terminal, evidence, ledgerEvents: state.events, time, result, pairs, observations, sources, artifacts }, guard)
     guard()
-  } catch (error) { failure = continuationReaderFailure(error) }
-  finally { try { closeLeanInterval(ledger, "continuation-retained-verifier-v2") } catch { return fail("V2_TERMINAL_REFUSAL") } }
-  return publishLeanContinuationRetainedCheckV2(ledger, report, failure, resourceGuard)
+    }
+    // Claim publication has its own barrier; the evidence/audit body must not
+    // recursively start a full barrier through an active read callback.
+    if (v6) { c.stage("claim", () => { c.guard(65536); const body = { schemaVersion: "lean-baseline-continuation-reader-claim-v2", allocationRoot: allocation.root, grantId: allocation.window.grantId, windowRoot: allocation.window.root, requestBytesRoot: allocation.requestBytesRoot, readerOperator: c.request.readerOperator, startedAtMs: Date.now() }; writeLeanContinuationArtifact(ledger, "reader-claim.json", { ...body, root: labRoot(body.schemaVersion, body) }, 65536); c.guard() }); c.stage("reader", readAndAudit) }
+    else readAndAudit()
+  } catch (error) { opening?.invalidate(); failure = v6 ? "CONTINUATION_READER_FAILURE" : continuationReaderFailure(error) }
+  finally { try { if (readerBegan) closeLeanInterval(ledger, "continuation-retained-verifier-v2") } catch { return fail("V2_TERMINAL_REFUSAL") } }
+  if (v6 && !failure) { try { opening!.stage("terminal", () => opening!.guard()) } catch { opening!.invalidate(); failure = "CONTINUATION_READER_FAILURE" } }
+  return publishLeanContinuationRetainedCheckV2(ledger, report, failure, resourceGuard, writeLeanContinuationArtifact, publicationStage, v6 ? bytes => continuationReaderFailurePublicationGuardV6(ledger, bytes ?? 0) : undefined)
 }
 
 const continuationReaderFailure = (error: unknown): string => error instanceof Error && /^LEAN_[A-Z0-9_]{1,160}$/u.test(error.message) ? error.message : "CONTINUATION_READER_FAILURE"
@@ -828,20 +847,48 @@ export const publishLeanContinuationRetainedCheck = (ledger: LeanExperimentLedge
 
 /** V2 retained check has its own discriminator and full human-window joins;
  * fixture callbacks are test-only seams and never supply a grant or clock. */
+/** Failed source authority is never revived to publish failure evidence. This
+ * independent resource-only guard keeps every old debit and refuses unknown
+ * directory growth rather than opening or enumerating historical contents. */
+const continuationReaderFailurePublicationGuardV6 = (ledger: LeanExperimentLedger, additional: number): void => {
+  const allocation = readLeanAdmittedContinuationAllocationV2(ledger), paths = leanBaselineContinuationPathsForWindowV2(allocation.window)
+  if (paths !== LEAN_BASELINE_CONTINUATION_PATHS_V6 || !Number.isSafeInteger(additional) || additional < 0) return fail("V6_FAILURE_RESOURCE_SCOPE")
+  let growth = 0
+  const capacity = (reserved = 0) => {
+    const usage = process.memoryUsage(), disk = statfsSync(ledger.directory, { bigint: true }), free = disk.bavail * disk.bsize, reserve = additional + reserved + 16777216
+    if (free > BigInt(Number.MAX_SAFE_INTEGER)) return fail("V6_FAILURE_RESOURCE_SCOPE")
+    assertLeanBaselineContinuationFrontierV2(allocation, { nowMs: Date.now(), monotonicElapsedMs: 0, remainingSlots: 0, remainingClosureMs: 0, remainingOfflineMs: 0, charged: readLeanLedger(ledger).charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger) + growth + reserve, scratchBytes: measureLeanPhysicalBytes(paths.temp) + reserve, parentRssBytes: Math.max(usage.rss, process.resourceUsage().maxRSS * 1024), childRssBytes: 0, arrayBuffersBytes: usage.arrayBuffers + reserve, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(free), live: true }, ledger)
+  }
+  capacity()
+  const carry = readLeanContinuationJsonV2(join(ledger.directory, "carry.json"), 4194304, 0o600, reserved => capacity(reserved ?? 0)), rows = carry.inventory as import("./v1-38-lean-baseline-continuation.js").LeanContinuationInventoryRowV2[]
+  if (!Array.isArray(rows) || rows.length > 4096 || labRoot("lean-baseline-continuation-inventory-v2", rows) !== allocation.predecessor.inventoryRoot) return fail("V6_FAILURE_RESOURCE_SCOPE")
+  for (const row of rows) {
+    const path = resolve(row.path), stat = lstatSync(path)
+    if (stat.isSymbolicLink() || stat.uid !== process.getuid?.() || realpathSync(path) !== path || stat.isFile() && stat.nlink !== 1 || !stat.isFile() && !stat.isDirectory() || stat.isDirectory() && (stat.dev !== row.dev || stat.ino !== row.ino || stat.size !== row.bytes || stat.mtimeMs !== row.mtimeMs || stat.ctimeMs !== row.ctimeMs)) return fail("V6_FAILURE_RESOURCE_SCOPE")
+    growth += Math.max(0, stat.blocks * 512 - row.allocatedBytes)
+  }
+  capacity()
+}
 export const publishLeanContinuationRetainedCheckV2 = (
   ledger: LeanExperimentLedger,
   report: ReturnType<typeof auditLeanBaselineContinuationRetainedV2> | undefined,
   failure: string | null,
   sourceGuard: ((additionalBytes?: number) => void) | undefined,
   publish: typeof writeLeanContinuationArtifact = writeLeanContinuationArtifact,
+  publicationStage?: <T>(body: () => T) => T,
+  failureGuard?: (additionalBytes?: number) => void,
 ) => {
+  const v6 = ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && ledger.allocation.window.routeNamespace === "20261014-v6"
   let sourceHoldFailure: string | null = null
-  try { sourceGuard?.() } catch (error) { sourceHoldFailure = continuationReaderFailure(error); failure ??= sourceHoldFailure }
+  try { sourceGuard?.() } catch (error) { sourceHoldFailure = v6 ? "CONTINUATION_READER_FAILURE" : continuationReaderFailure(error); failure ??= sourceHoldFailure }
   try {
-    if (!sourceGuard) return fail("V2_PUBLICATION_GUARD")
+    if (v6 && !failure && !publicationStage) return fail("V2_PUBLICATION_GUARD")
+    const guard = v6 && failure ? failureGuard : sourceGuard
+    if (!guard) return fail("V2_PUBLICATION_GUARD")
+    const publishCheck = () => {
     // Reserve for bounded body + canonical serialization/rooting + publish
     // buffering before constructing the report body (V1 keeps its old cap).
-    sourceGuard(16 * 1024 * 1024)
+    guard(16 * 1024 * 1024)
     const allocation = validateLeanBaselineContinuationAllocationV2(ledger.allocation), time = readLeanTimeAccounting(ledger)
     if (time.active || !time.starts.has("continuation-retained-verifier-v2") || !time.closed.has("continuation-retained-verifier-v2") || Date.now() >= allocation.window.deadlineMs) return fail("V2_READER_ADMISSION")
     const state = readLeanLedger(ledger), elapsedMs = currentLeanElapsedMs(ledger), physicalBytes = cumulativeLeanPhysicalBytes(ledger)
@@ -855,10 +902,13 @@ export const publishLeanContinuationRetainedCheckV2 = (
       currentCharged: state.charges.size, unusedOrdinals: allocation.slots.filter(slot => !state.charges.has(slot.root)).map(slot => slot.ordinal),
       elapsedMs, physicalBytes, readerPeakRssBytes: Math.max(process.memoryUsage().rss, process.resourceUsage().maxRSS * 1024),
       historicalPeakRssBytes: "unknown", holdoutOpened: false, formationMaterialized: false,
+      ...(v6 ? { issued: false as const } : {}),
     }
     const check = { ...body, root: labRoot(body.schemaVersion, body) }
-    sourceGuard(4 * 1024 * 1024); publish(ledger, "retained-check.json", check, 4194304); sourceGuard()
-    if (!failure) sourceGuard()
+    guard(4 * 1024 * 1024); publish(ledger, "retained-check.json", check, 4194304); guard()
+    if (!failure) guard()
     return check
+    }
+    return v6 && !failure ? publicationStage!(publishCheck) : publishCheck()
   } catch { return fail("V2_TERMINAL_REFUSAL") }
 }

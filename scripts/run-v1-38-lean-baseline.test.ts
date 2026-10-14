@@ -39,29 +39,78 @@ it("[continuation-remaining-overhead] [VF-REM-BUILTIN-01] preserves the actual a
   process.stdout.write(`AUDITED_FACTORY_BOUNDARY_REGRESSION ${JSON.stringify(result)}\n`)
 }, 30000)
 describe("[continuation-overhead] actual V2 context complete guard", () => {
+  const constructionCensored = Symbol("bounded-construction-censor")
+  const cadenceCounts = () => ({ fullVisits: 0, liveVisits: 0, fullPasses: 0, livePasses: 0, rawHashes: 0, windowRawHashes: 0, journalBytesRawHashes: 0, sourceRawHashes: 0, domainHashes: 0, windowDomainHashes: 0, physicalSamples: 0, chunks: 0, headChecks: 0, descriptorReads: 0, reservations: 0, memberships: 0 })
   const invokeRun = async (request: string) => {
     const send = Object.getOwnPropertyDescriptor(process, "send")
     Object.defineProperty(process, "send", { value: undefined, configurable: true, writable: true })
     try { return await parentApi.runLeanBaselineContinuationV2(request) }
     finally { if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send") }
   }
-  const fixture = async (run: (c: ReturnType<typeof parentApi.openLeanBaselineContinuationContextV2>, f: { passes: string[][]; reservations: number[]; hashes: { mockClear: () => unknown; mock: { calls: Parameters<typeof contracts.labRoot>[] } }; head: { value: string }; w: lean.LeanBaselineContinuationWindowV2; clearObservations: () => void; observationCounts: () => { physical: number; chunks: number }; timing: { identityMs: number; physicalMs: number; readMs: number; realpathMs: number }; assayRows: continuationHelper.LeanContinuationInventoryRowV2[]; fixtureStartMs: number; fixtureExtraBound: number; authBoundary: { guard?: (additional?: number) => continuationHelper.LeanContinuationFrontier; error?: unknown; attempts: number; completed: number }; realpaths: ReturnType<typeof vi.spyOn> }) => void | Promise<void>, namespace: lean.LeanBaselineContinuationWindowV2["routeNamespace"] = "20261012-v3", assay?: { n: number; u: number }) => {
+  it.each([{ n: 26, u: 128 }, { n: 2280, u: 2352 }])("[continuation-stage-cadence-scale] bounded actual V6 visitor N$n/U$u with TWO full barrier passes or construction censor", async ({ n, u }) => {
+    const totalStart = performance.now()
+    let report: Record<string, any> = {}
+    try { await fixture((c, f) => {
+      const setupMs = performance.now() - f.fixtureStartMs, stopAt = totalStart + 8000, censored = Symbol("bounded-source-assay")
+      let callbacks = 0, rowsCompleted = 0, maximumGuardMs = 0, status: "COMPLETE" | "CENSORED" = "COMPLETE", guardMs = 0
+      f.clearObservations(); f.hashes.mockClear()
+      const callback = () => {
+        if (performance.now() + Math.max(800, maximumGuardMs * 3) >= stopAt) throw censored
+        const began = performance.now(); c.guard(); const elapsed = performance.now() - began
+        guardMs += elapsed; maximumGuardMs = Math.max(maximumGuardMs, elapsed); callbacks++
+      }
+      c.stage("archive", () => {
+        try {
+          // Exercise a real source chunk owner with the same active caller,
+          // followed by the ACTUAL selected-V6 inventory visitor, not a loop.
+          const source = c.manifest.implementationEntries[0]!
+          const sourceBytes = continuationHelper.readLeanContinuationBoundedBytesV2(source.path, 4194304, 0o644, callback)
+          lean.leanBytesRoot(sourceBytes)
+          f.visitor.active = true
+          const rows = continuationHelper.inventoryLeanContinuationSurvivorsV2(f.assayRows, [], () => { throw new Error("NO_GIT_FOR_SYNTHETIC_CLOSED_ROWS") }, callback, c.window)
+          rowsCompleted = rows.length; expect(rows).toHaveLength(n)
+        } catch (error) { if (error !== censored) throw error; status = "CENSORED" }
+        finally { f.visitor.active = false }
+      })
+      const counts = { ...f.cadence }
+      if (n === 26) { expect(status).toBe("COMPLETE"); expect(f.visitor.completed).toBe(n); expect(rowsCompleted).toBe(n) }
+      expect(counts.fullPasses).toBe(2); expect(counts.fullVisits).toBe(2 * u)
+      expect(counts.livePasses).toBeGreaterThan(0); expect(counts.liveVisits).toBeGreaterThan(0)
+      for (const key of ["rawHashes", "windowRawHashes", "journalBytesRawHashes", "sourceRawHashes", "physicalSamples", "chunks", "headChecks", "descriptorReads", "reservations", "memberships"] as const) expect(counts[key], key).toBeGreaterThan(0)
+      expect(performance.now() - totalStart).toBeLessThan(8000)
+      report = { n, u, status, rowsCompleted: f.visitor.completed, callbacks, counts, setupMs: Math.ceil(setupMs), sampleMs: Math.ceil(performance.now() - f.fixtureStartMs - setupMs), guardMs: Math.ceil(guardMs), overlappingControllerMs: Math.ceil(f.timing.identityMs), overlappingPhysicalMs: Math.ceil(f.timing.physicalMs), overlappingReadMs: Math.ceil(f.timing.readMs), timingsOverlap: true, addedFixtureBytesBound: f.fixtureExtraBound, contextAuthenticated: false, sourceAndCustodyInputsMocked: true, resourceInputsMocked: true, sourceManifestProjected: false, legacyInventoryOnlyFullVisitAlgebra: 2 * u * (2 * n + 1), assuranceEquivalent: false, staticEditAndRestoreBetweenBarriersMayEvade: true, runtimeFitEstablished: false }
+    }, "20261014-v6", { n, u, constructionStopAt: totalStart + 6500, onConstructionCensor: (counts, setupMs) => { report = { n, u, status: "CENSORED-before-visitor", rowsCompleted: 0, callbacks: 0, counts, setupMs: Math.ceil(setupMs), sampleMs: 0, inventoryCoverage: 0, fullBarrierCoverage: 0, addedFixtureBytesBound: u * 16384 + n * 1024, contextAuthenticated: false, sourceAndCustodyInputsMocked: true, resourceInputsMocked: true, sourceManifestProjected: false, runtimeFitEstablished: false, assuranceEquivalent: false, staticEditAndRestoreBetweenBarriersMayEvade: true } } }) }
+    catch (error) { if (error !== constructionCensored) throw error }
+    report.totalMs = Math.ceil(performance.now() - totalStart); report.cleanupIncluded = true
+    report.cleanupMs = Math.max(0, report.totalMs - report.setupMs - report.sampleMs)
+    report.pureWindowDomainHashInputsMocked = true
+    report.journalRawCategoryIncludesEmptySyntheticBuffers = true
+    report.addedFixtureBytesBound = u * 16384 + n * 1024 + 3 * 1024 * 1024
+    expect(report.totalMs).toBeLessThan(8000); expect(report.addedFixtureBytesBound).toBeLessThanOrEqual(67108864)
+    process.stdout.write(`FINITE_SYNTHETIC_STAGE_CADENCE_ASSAY ${JSON.stringify(report)}\n`)
+  }, 15000)
+  const fixture = async (run: (c: ReturnType<typeof parentApi.openLeanBaselineContinuationContextV2>, f: { passes: string[][]; reservations: number[]; hashes: { mockClear: () => unknown; mock: { calls: Parameters<typeof contracts.labRoot>[] } }; head: { value: string }; w: lean.LeanBaselineContinuationWindowV2; clearObservations: () => void; observationCounts: () => { physical: number; chunks: number }; timing: { identityMs: number; physicalMs: number; readMs: number; realpathMs: number }; assayRows: continuationHelper.LeanContinuationInventoryRowV2[]; fixtureStartMs: number; fixtureExtraBound: number; authBoundary: { guard?: (additional?: number) => continuationHelper.LeanContinuationFrontier; error?: unknown; attempts: number; completed: number }; realpaths: ReturnType<typeof vi.spyOn>; cadence: ReturnType<typeof cadenceCounts>; visitor: { active: boolean; completed: number } }) => void | Promise<void>, namespace: lean.LeanBaselineContinuationWindowV2["routeNamespace"] = "20261012-v3", assay?: { n: number; u: number; constructionStopAt?: number; onConstructionCensor?: (counts: ReturnType<typeof cadenceCounts>, setupMs: number) => void }) => {
     const fixtureStartMs = performance.now()
+    const cadence = cadenceCounts()
+    const constructionDeadline = () => { if (assay?.constructionStopAt !== undefined && performance.now() >= assay.constructionStopAt) { assay.onConstructionCensor?.({ ...cadence }, performance.now() - fixtureStartMs); throw constructionCensored } }
+    const frames: { mode: "full" | "live"; body: boolean; current: boolean }[] = []
+    const visitor = { active: false, completed: 0, observations: new Map<string, number>(), terminalObservation: new Map<string, number>() }
     // Bounded SOURCE fixture only: no statfs/capacity probe before construction.
-    const fixtureExtraBound = assay ? assay.u * 16384 + assay.n * 1024 : 0
+    const fixtureExtraBound = assay ? assay.u * 16384 + assay.n * 1024 + 3 * 1024 * 1024 : 0
     expect(fixtureExtraBound).toBeLessThanOrEqual(64 * 1024 * 1024)
     expect(process.memoryUsage().heapUsed + fixtureExtraBound).toBeLessThan(768 * 1024 * 1024)
     const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-context-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = namespace === "20261014-v6" ? lean.LEAN_BASELINE_CONTINUATION_PATHS_V6 : namespace === "20261013-v5" ? lean.LEAN_BASELINE_CONTINUATION_PATHS_V5 : lean.LEAN_BASELINE_CONTINUATION_PATHS_V2, head = { value: "c".repeat(40) }, sourceHead = "b".repeat(40), reviewedHead = "a".repeat(40)
     const sourcePaths = [...parentApi.LEAN_BASELINE_CONTINUATION_OWNED_PATHS, "scripts/run-v1-38-lean-baseline.sh", "scripts/lib/v1-38-lean-baseline-analysis.ts", "scripts/lib/v1-38-lean-baseline-metrics.ts", "scripts/lib/v1-38-lean-cold-corpus.ts", "scripts/lib/v1-38-lean-seal-metadata.ts", "scripts/lib/v1-38-lean-training-adapter.ts", "scripts/lib/v1-38-lean-baseline.ts", "packages/strategy-lab/src/league/lean-training.ts", "scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-lean-child-cli-terminal.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts", "packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"]
     const write = (path: string, bytes: string | Uint8Array, mode = 0o644) => { const absolute = resolve(path); fs.mkdirSync(resolve(absolute, ".."), { recursive: true }); fs.writeFileSync(absolute, bytes, { mode }); fs.chmodSync(absolute, mode) }
-    const actualStat = fs.lstatSync, actualExists = fs.existsSync, stat = vi.spyOn(fs, "lstatSync").mockImplementation(((path: string, ...args: unknown[]) => (actualStat as any)(resolve(String(path)), ...args)) as typeof fs.lstatSync), exists = vi.spyOn(fs, "existsSync").mockImplementation(path => actualExists(resolve(String(path))))
+    const actualStat = fs.lstatSync, actualExists = fs.existsSync, stat = vi.spyOn(fs, "lstatSync").mockImplementation(((path: string, ...args: unknown[]) => { const frame = frames.at(-1), absolute = resolve(String(path)); if (frame && !frame.body && !frame.current) cadence[frame.mode === "full" ? "fullVisits" : "liveVisits"]++; const result = (actualStat as any)(absolute, ...args); if (visitor.active && frame?.mode === "full" && frame.body && !frame.current && visitor.terminalObservation.has(absolute)) { const count = (visitor.observations.get(absolute) ?? 0) + 1; visitor.observations.set(absolute, count); if (count === visitor.terminalObservation.get(absolute)) visitor.completed++ } return result }) as typeof fs.lstatSync), exists = vi.spyOn(fs, "existsSync").mockImplementation(path => actualExists(resolve(String(path))))
     const factory = vi.spyOn(factoryImplementation, "factoryAssessmentImplementationManifest").mockReturnValue({ entries: [], root: root("bounded-factory") })
     const disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000)
     const timing = { identityMs: 0, physicalMs: 0, readMs: 0, realpathMs: 0 }
     const actualPhysical = lean.cumulativeLeanPhysicalBytes, actualRead = fs.readSync, actualRealpath = fs.realpathSync
-    const physical = vi.spyOn(lean, "cumulativeLeanPhysicalBytes").mockImplementation(l => { const at = performance.now(); try { return namespace === "20261014-v6" && !assay ? 88924160 : actualPhysical(l) } finally { timing.physicalMs += performance.now() - at } })
+    const physical = vi.spyOn(lean, "cumulativeLeanPhysicalBytes").mockImplementation(l => { cadence.physicalSamples++; const at = performance.now(); try { return namespace === "20261014-v6" ? 88924160 : actualPhysical(l) } finally { timing.physicalMs += performance.now() - at } })
+    const scratch = namespace === "20261014-v6" && assay ? vi.spyOn(lean, "measureLeanPhysicalBytes").mockReturnValue(0) : undefined
     let compactV6Spies = () => {}
-    const chunks = vi.spyOn(fs, "readSync").mockImplementation(((...args: any[]) => { const at = performance.now(); try { return Reflect.apply(actualRead, fs, args) } finally { timing.readMs += performance.now() - at; compactV6Spies() } }) as typeof fs.readSync)
+    const chunks = vi.spyOn(fs, "readSync").mockImplementation(((...args: any[]) => { cadence.chunks++; const at = performance.now(); try { return Reflect.apply(actualRead, fs, args) } finally { timing.readMs += performance.now() - at; compactV6Spies() } }) as typeof fs.readSync)
     const realpaths = vi.spyOn(fs, "realpathSync").mockImplementation(((...args: any[]) => { const at = performance.now(); try { return Reflect.apply(actualRealpath, fs, args) } finally { timing.realpathMs += performance.now() - at } }) as typeof fs.realpathSync)
     const core = vi.spyOn(childProcess, "execFileSync").mockImplementation(((command: string) => command === "ps" ? "100\n" : "0\n") as typeof childProcess.execFileSync), originalArgs = process.execArgv, connected = Object.getOwnPropertyDescriptor(process, "connected")
     Object.defineProperty(process, "connected", { value: false, writable: true, configurable: true })
@@ -71,7 +120,7 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
     const authBoundary: { guard?: (additional?: number) => continuationHelper.LeanContinuationFrontier; error?: unknown; attempts: number; completed: number } = { attempts: 0, completed: 0 }
     const actualCarry = continuationHelper.authenticateLeanBaselineContinuationCarryV2
     const carry = vi.spyOn(continuationHelper, "authenticateLeanBaselineContinuationCarryV2").mockImplementation((git, rows, guard, window) => {
-      if (assay) {
+      if (assay && namespace !== "20261014-v6") {
         authBoundary.guard = guard as (additional?: number) => continuationHelper.LeanContinuationFrontier; authBoundary.attempts++
         // Execute the REAL authenticator, denying at an absent old descriptor
         // resolved inside this fixture. No historical content is read, and no
@@ -82,7 +131,9 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       // Older isolated context unit fixture: mocked closed-history seam only.
       for (const additional of [0, 65536, 0]) { reservations.push(additional); guard(additional) }; return carried
     })
+    const actualDomain = contracts.labRoot
     const hashes = vi.spyOn(contracts, "labRoot"), git = vi.spyOn(continuationGit, "readLeanBaselineContinuationGitV2").mockImplementation(args => {
+      if (args[0] === "rev-parse" && args[1] === "HEAD") cadence.headChecks++
       if (args[0] === "rev-parse") return Buffer.from(`${head.value}\n`)
       if (args[0] === "merge-base") return Buffer.alloc(0)
       if (args[0] === "rev-list") return Buffer.from(`${head.value} ${sourceHead}\n`)
@@ -90,12 +141,28 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       if (args[0] === "show") { const colon = args[1]!.indexOf(":"); expect([reviewedHead, sourceHead, head.value]).toContain(args[1]!.slice(0, colon)); return fs.readFileSync(resolve(args[1]!.slice(colon + 1))) }
       throw new Error("unexpected inert Git operation")
     })
+    // Capture only finite counters; clearing Vitest call history cannot erase
+    // the measured visits/hashes/resources. No production hooks are suppressed.
+    const originalDomain = hashes.getMockImplementation() ?? actualDomain
+    const fixtureWindowDomainRoots = new Map<string, ReturnType<typeof contracts.labRoot>>()
+    hashes.mockImplementation((domain, value) => { cadence.domainHashes++; if (domain === "lean-baseline-continuation-window-v2") { cadence.windowDomainHashes++; if (assay && namespace === "20261014-v6") { const key = JSON.stringify(value), previous = fixtureWindowDomainRoots.get(key); if (previous) return previous; const result = originalDomain(domain, value); if (fixtureWindowDomainRoots.size < 8) fixtureWindowDomainRoots.set(key, result); return result } } return originalDomain(domain, value) })
+    const rawOwners = new WeakMap<Uint8Array, string>()
+    const actualRaw = lean.leanBytesRoot, mappedRoots = new Map<string, `sha256:${string}`>(), raw = namespace === "20261014-v6" ? vi.spyOn(lean, "leanBytesRoot").mockImplementation(bytes => { cadence.rawHashes++; const owner = rawOwners.get(bytes); if (owner === p.window) cadence.windowRawHashes++; if (owner?.endsWith("/ledger.ndjson") || owner?.endsWith("/time.ndjson") || bytes.byteLength === 0) cadence.journalBytesRawHashes++; if (owner && sourcePaths.includes(owner)) cadence.sourceRawHashes++; const digest = actualRaw(bytes); return mappedRoots.get(digest) ?? digest }) : undefined
+    const actualController = continuationHelper.createLeanContinuationStageControllerV6, controllers = namespace === "20261014-v6" ? vi.spyOn(continuationHelper, "createLeanContinuationStageControllerV6").mockImplementation((pins, rows, roles, binding, current, policy) => {
+      const c = actualController(pins, rows, roles, binding, () => { constructionDeadline(); const frame = frames.at(-1); if (frame) frame.current = true; try { current() } finally { if (frame) frame.current = false } }, policy)
+      return Object.freeze({ ...c,
+        live<T>(context: object, body: () => T): T { const frame = { mode: "live" as const, body: false, current: false }; frames.push(frame); const at = performance.now(); try { const result = c.live(context, () => { frame.body = true; try { return body() } finally { frame.body = false } }); cadence.livePasses += 2; return result } finally { frames.pop(); timing.identityMs += performance.now() - at } },
+        withStage<T>(context: object, kind: continuationHelper.LeanContinuationStageV6, body: () => T): T { const frame = { mode: "full" as const, body: false, current: false }; frames.push(frame); const at = performance.now(); try { const result = c.withStage(context, kind, () => { frame.body = true; try { return body() } finally { frame.body = false } }); cadence.fullPasses += 2; return result } finally { frames.pop(); timing.identityMs += performance.now() - at } },
+      })
+    }) : undefined
+    const actualDescriptor = continuationHelper.readLeanContinuationBoundedBytesV2, descriptors = namespace === "20261014-v6" ? vi.spyOn(continuationHelper, "readLeanContinuationBoundedBytesV2").mockImplementation((path, maximum, mode, guard) => { cadence.descriptorReads++; const bytes = actualDescriptor(path, maximum, mode, bytes => { cadence.reservations++; guard(bytes) }); rawOwners.set(bytes, path); return bytes }) : undefined
+    const actualMembers = fs.readdirSync, members = namespace === "20261014-v6" ? vi.spyOn(fs, "readdirSync").mockImplementation(((...args: any[]) => { cadence.memberships++; return Reflect.apply(actualMembers, fs, args) }) as typeof fs.readdirSync) : undefined
     // V6 does more always-fresh raw checks, not fewer. Bound mock call custody
     // rather than retaining every large resource/root argument during setup.
-    compactV6Spies = () => { if (namespace === "20261014-v6") { stat.mockClear(); realpaths.mockClear(); physical.mockClear(); chunks.mockClear(); hashes.mockClear(); usage.mockClear(); disk.mockClear(); available.mockClear(); core.mockClear(); git.mockClear() } }
+    compactV6Spies = () => { if (namespace === "20261014-v6") { stat.mockClear(); realpaths.mockClear(); physical.mockClear(); chunks.mockClear(); hashes.mockClear(); usage.mockClear(); disk.mockClear(); available.mockClear(); core.mockClear(); git.mockClear(); raw?.mockClear(); descriptors?.mockClear(); members?.mockClear(); controllers?.mockClear() } }
     let clock: ReturnType<typeof vi.spyOn> | undefined
     try {
-      for (const path of new Set([...sourcePaths, ...parentApi.LEAN_BASELINE_CONTINUATION_PLANNING_PATHS])) write(path, "synthetic public fixture", path.endsWith(".sh") ? 0o755 : 0o644)
+      for (const path of new Set([...sourcePaths, ...parentApi.LEAN_BASELINE_CONTINUATION_PLANNING_PATHS])) write(path, assay && namespace === "20261014-v6" && sourcePaths.includes(path) && path !== "AGENTS.md" && !parentApi.LEAN_BASELINE_CONTINUATION_PLANNING_PATHS.includes(path) ? "" : "synthetic public fixture", path.endsWith(".sh") ? 0o755 : 0o644)
       const base = parentApi.leanBaselineContinuationSourceManifestV2(), planRoot = base.planningEntries.find(row => row.path.endsWith("265-16-BASELINE-CONTINUATION-PLAN-20261012.md"))!.root
       const sg: parentApi.LeanContinuationSourceGateV2 = { schemaVersion: "lean-baseline-continuation-source-gate-v2", plan_check: "passed", source_review: "passed", root_validation: "passed", source_verification: "passed", commands_closed: true, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceAuthor: "inert-author", sourceReviewer: "inert-reviewer", sourceVerifier: "inert-verifier" }
       const wb = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-overhead", approvalEvidence: { humanDecisionId: "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1791840227000, anchorMs: 1791840227000, carryMs: 492285903, capMs: 521085903, deadlineMs: 1791869027000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: namespace, ...(namespace === "20261014-v6" ? { approvedAtMs: 1791978643000, anchorMs: 1791978643000, carryMs: 630701903, capMs: 659501903, deadlineMs: 1792007443000 } : {}), reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: labRoot(sg.schemaVersion, sg), planRoot, runOperator: "inert-runner", readerOperator: "inert-reader" }, w = { ...wb, root: labRoot(wb.schemaVersion, wb) }
@@ -106,14 +173,36 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       const manifest = parentApi.leanBaselineContinuationDataManifestV2(w, parentApi.leanBaselineContinuationSourceManifestV2()), seed = "inert-overhead", coldRoot = leanColdProcedureRoot(seed)
       const request: parentApi.LeanBaselineContinuationRequestV2 = { schemaVersion: "lean-baseline-continuation-request-v2", seed, sourceHead, sourceRoot: base.root, planningRoot: manifest.planningRoot, planRoot, reviewRoot: w.sourceGateRoot, coldRoot, candidateRoots: parentApi.deriveLeanBaselineCandidateRoots(coldRoot), requestRoots: parentApi.deriveLeanBaselineRequestRoots({ seed, coldRoot, planRoot, sourceRoot: base.root }), offlineOverheadMs: w.offlineOverheadMs, sourceAuthor: sg.sourceAuthor, runOperator: w.runOperator, readerOperator: w.readerOperator, windowRoot: w.root, windowBytesRoot: manifest.windowBytesRoot, sourceGateRoot: w.sourceGateRoot, dataReviewRoot: manifest.dataReviewRoot, manifestRoot: manifest.manifestRoot }
       write(p.request, leanCanonicalBytes(request), 0o600); fs.mkdirSync(resolve(p.temp), { mode: 0o700 })
-      const row = (path: string): continuationHelper.LeanContinuationInventoryRowV2 => { const s = fs.lstatSync(resolve(path)); return { path, kind: "file", bytes: s.size, allocatedBytes: s.blocks * 512, dev: s.dev, ino: s.ino, mode: s.mode & 0o7777, mtimeMs: s.mtimeMs, ctimeMs: s.ctimeMs, rawRoot: null } }
+      const spentNames: string[] = [], spentRoots = new Map<string, `sha256:${string}`>()
+      if (assay && namespace === "20261014-v6") {
+        // Public synthetic opaque bytes, digest-mapped ONLY in this fixture.
+        // G independently tests preservation; this measures real visitor cadence,
+        // never authenticates private history or supplies real custody.
+        const v3 = lean.LEAN_BASELINE_CONTINUATION_PATHS_V2, v4 = lean.LEAN_BASELINE_CONTINUATION_PATHS_V4, v5 = lean.LEAN_BASELINE_CONTINUATION_PATHS_V5
+        const opaque: [string, number, number, string][] = [
+          [v3.request, 4041, 0o600, "900e97e973ac31c596d1f5f1b8b89e1b8e532310e0b2d6e67053fbe9a8321065"], [v3.window, 935, 0o600, "2c0c2905fea2e4a264aac99df251e5aa89d0b2c44588453d3c41586f4b3a881d"],
+          [v4.window, 935, 0o600, "98b0cd906323554e3c0cefb96700c317a9bd2e346135c7560d715b87eb303ba6"], [v4.request, 4056, 0o600, "bd17509fee8d2138b89b4a114224f1ee1ee009217475e924d6dd7cdfd90466c7"],
+          [v4.allocation, 17366, 0o644, "19aeee9f9416849b4e7bb214afa7d470349f36e302b09bda700c7a50e717938f"], [join(v4.store, "allocation.json"), 17366, 0o600, "19aeee9f9416849b4e7bb214afa7d470349f36e302b09bda700c7a50e717938f"],
+          [join(v4.store, "carry.json"), 746080, 0o600, "7bb1e101e0938ab8497311444e81ad30578f41d372a3c7999e61dfddad90f5a7"], [join(v4.store, "source-manifest.json"), 208491, 0o600, "35c507b2a0fd12b3d131671ba6596f8e4dcfcafa62676fcfa703c672d9dee508"], [join(v4.store, "source-hold.json"), 146345, 0o600, "744be76efaaaeca29076208f2da70a5f755569b93c6a47d0622b3aa1f4525911"], [v4.claim, 1002, 0o600, "14cc57d66661a98c8f9150842b441310c8a70d29fef5186b5c58a49e62c9e45c"],
+          [v5.window, 929, 0o600, "989dc4984483ac4ebcecb154e2c8b9256657d0cbb21258b50fb4cdaa99481faa"], [v5.request, 4051, 0o600, "386e72a26e326d7f09c9c93a6f087c481a7ff0117be284fcb72aeb0aa692e6b1"], [v5.allocation, 17360, 0o644, "439ff997177d812aebc8194b77dd6dcc30353541b0f5061f3eea036f32c7c7c6"], [join(v5.store, "allocation.json"), 17360, 0o600, "439ff997177d812aebc8194b77dd6dcc30353541b0f5061f3eea036f32c7c7c6"],
+          [join(v5.store, "carry.json"), 749813, 0o600, "a6168503f6bee69d22688a003c7acb1c0d850647cdc447f81d10747150eca348"], [join(v5.store, "source-manifest.json"), 208495, 0o600, "e01c2cc7f6fd49185f92ded151ddc0b4bc6c26347cd3e3b597a76b099943388a"], [join(v5.store, "source-hold.json"), 146600, 0o600, "e0ff6a1879e9cfb90f5303097a2a1e20a130be0ada3f3b42bfe63949ec79cb55"], [v5.claim, 1011, 0o600, "e2e94f1a122f3c994a09c4ccfb028d630fae52abb0c0aaacce733e4dd57cb13c"],
+          ...[v4, v5].flatMap(paths => ["ledger.ndjson", "time.ndjson"].map(name => [join(paths.store, name), 0, 0o600, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"] as [string, number, number, string])),
+        ]
+        for (const paths of [v4, v5]) for (const path of [paths.store, paths.temp]) { fs.mkdirSync(resolve(path), { recursive: true, mode: 0o700 }); fs.chmodSync(resolve(path), 0o700); spentNames.push(path) }
+        opaque.forEach(([path, size, mode, expected], i) => { const bytes = Buffer.alloc(size, 65 + i); write(path, bytes, mode); const root = `sha256:${expected}` as const; mappedRoots.set(actualRaw(bytes), root); spentRoots.set(path, root); spentNames.push(path) })
+      }
+      const row = (path: string): continuationHelper.LeanContinuationInventoryRowV2 => { const s = fs.lstatSync(resolve(path)); return { path, kind: s.isDirectory() ? "directory" : "file", bytes: s.size, allocatedBytes: s.blocks * 512, dev: s.dev, ino: s.ino, mode: s.mode & 0o7777, mtimeMs: s.mtimeMs, ctimeMs: s.ctimeMs, rawRoot: spentRoots.get(path) ?? null, ...(s.isDirectory() ? { members: fs.readdirSync(resolve(path)).sort() } : {}) } }
       const watched = sourcePaths[0]!, inventory: continuationHelper.LeanContinuationInventoryRowV2[] = [row(watched)], assayRows: continuationHelper.LeanContinuationInventoryRowV2[] = [], custody = { synthetic: true }
       if (namespace === "20261014-v6") { write("scripts/closed-cost.txt", "closed history"); inventory.push(row("scripts/closed-cost.txt")) }
       if (assay) {
         const pinnedPaths = new Set([...manifest.entries.map(row => row.path), p.request, p.claim, p.allocation, ...["allocation.json", "carry.json", "source-manifest.json", "source-hold.json"].map(name => join(resolve(p.store), name))].map(path => resolve(path)))
-        const available = [...new Set(sourcePaths)].slice(0, assay.n)
+        const available = [...new Set([...spentNames, ...sourcePaths])].slice(0, assay.n)
         while (available.length < assay.n) { const path = `scripts/sensitivity-row-${available.length}.txt`; write(path, "x"); available.push(path) }
         assayRows.push(...available.map(row))
+        // Each unchanged ordinary/directory row ends at its second outer stat.
+        // Opaque spent files additionally execute the real bounded descriptor's
+        // initial stat + hold + TWO per chunk + final hold before the outer close.
+        for (const row of assayRows) visitor.terminalObservation.set(resolve(row.path), spentRoots.has(row.path) ? 5 + 2 * Math.ceil(row.bytes / 65536) : 2)
         inventory.splice(0, inventory.length, ...assayRows)
         for (const item of inventory) pinnedPaths.add(resolve(item.path))
         for (let i = 0; pinnedPaths.size < assay.u; i++) { const path = `scripts/sensitivity-identity-${i}.txt`; write(path, "x"); inventory.push(row(path)); pinnedPaths.add(resolve(path)) }
@@ -129,15 +218,18 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       const hb = { schemaVersion: "lean-baseline-continuation-source-hold-v2", allocationRoot: allocation.root, sourceHead, manifestRoot: allocation.manifestRoot, claimRoot: claim.root, rows: assay || namespace === "20261014-v6" ? inventory.slice(0, 1) : inventory }, hold = { ...hb, root: labRoot(hb.schemaVersion, hb) }
       write(join(l.directory, "source-hold.json"), leanCanonicalBytes(hold), 0o600)
       let c: ReturnType<typeof parentApi.openLeanBaselineContinuationContextV2>
-      if (assay) {
+      if (assay && namespace !== "20261014-v6") {
         expect(() => parentApi.openLeanBaselineContinuationContextV2(p.request)).toThrow(/ENOENT/)
         expect(authBoundary.completed).toBe(0); expect(authBoundary.guard).toBeTypeOf("function")
         // Test handle to the actual production guard captured at denial; NOT a
         // successfully opened/authenticated context or a reusable capability.
         c = { paths: p, window: w, ledger: l, allocation, manifest, fixedHead: head.value, guard: authBoundary.guard! } as typeof c
       } else c = parentApi.openLeanBaselineContinuationContextV2(p.request)
-      await run(c, { passes, reservations, hashes, head, w, timing, assayRows, fixtureStartMs, fixtureExtraBound, authBoundary, realpaths, clearObservations: () => { physical.mockClear(); chunks.mockClear(); realpaths.mockClear(); stat.mockClear(); for (const key of Object.keys(timing) as (keyof typeof timing)[]) timing[key] = 0 }, observationCounts: () => ({ physical: physical.mock.calls.length, chunks: chunks.mock.calls.length }) })
-    } finally { if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); clock?.mockRestore(); git.mockRestore(); hashes.mockRestore(); carry.mockRestore(); identity.mockRestore(); realpaths.mockRestore(); chunks.mockRestore(); physical.mockRestore(); process.execArgv = originalArgs; vi.unstubAllEnvs(); core.mockRestore(); available.mockRestore(); usage.mockRestore(); disk.mockRestore(); factory.mockRestore(); exists.mockRestore(); stat.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
+      // Construction censoring ends once the independently opened context is
+      // available; the sample owns its separate remaining-budget censor.
+      if (assay) delete assay.constructionStopAt
+      await run(c, { passes, reservations, hashes, head, w, timing, assayRows, fixtureStartMs, fixtureExtraBound, authBoundary, realpaths, cadence, visitor, clearObservations: () => { physical.mockClear(); chunks.mockClear(); realpaths.mockClear(); stat.mockClear(); for (const key of Object.keys(cadence) as (keyof typeof cadence)[]) cadence[key] = 0; for (const key of Object.keys(timing) as (keyof typeof timing)[]) timing[key] = 0 }, observationCounts: () => ({ physical: physical.mock.calls.length, chunks: chunks.mock.calls.length }) })
+    } finally { if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); clock?.mockRestore(); scratch?.mockRestore(); controllers?.mockRestore(); descriptors?.mockRestore(); members?.mockRestore(); raw?.mockRestore(); git.mockRestore(); hashes.mockRestore(); carry.mockRestore(); identity.mockRestore(); realpaths.mockRestore(); chunks.mockRestore(); physical.mockRestore(); process.execArgv = originalArgs; vi.unstubAllEnvs(); core.mockRestore(); available.mockRestore(); usage.mockRestore(); disk.mockRestore(); factory.mockRestore(); exists.mockRestore(); stat.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
   }
   it("[continuation-stage-cadence-H] actual V6 context observes live callbacks and full source/history stage barriers", () => fixture((c, f) => {
     expect(c.paths).toBe(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6)
@@ -355,8 +447,8 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
     const slot = c.allocation.slots[0]!, body = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: c.allocation.root, slotRoot: slot.root, ordinal: 0 }, charge = { ...body, root: labRoot(body.schemaVersion, body) }
     const journal = Buffer.concat([leanCanonicalBytes({ kind: "charge", charge }), Buffer.from("\n")])
     fs.writeFileSync(join(c.ledger.directory, "ledger.ndjson"), journal)
-    const entry = { allocationRoot: c.allocation.root, sourceRoot: c.allocation.sourceRoot, requestBytesRoot: mode === "entry" ? root("crossed-request") : c.allocation.requestBytesRoot, head: c.fixedHead }
-    const pairBody = { schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: mode === "pair" ? root("crossed-pair") : slot.requestRoot, priorCharged: 50, priorLedgerByteLength: 0, priorLedgerBytesRoot: mode === "journal" ? root("crossed-journal-prefix") : leanBytesRoot(Buffer.alloc(0)), bottomRole: "final-response", topRole: "final-response", bottomSourceRoot: root("source"), topSourceRoot: root("source"), bottomSnapshotRoot: root("snapshot"), topSnapshotRoot: root("snapshot") }
+    const entry = { allocationRoot: c.allocation.root, sourceRoot: c.allocation.sourceRoot, requestBytesRoot: c.allocation.requestBytesRoot, head: c.fixedHead }
+    const pairBody = { schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: slot.requestRoot, priorCharged: 50, priorLedgerByteLength: 0, priorLedgerBytesRoot: leanBytesRoot(Buffer.alloc(0)), bottomRole: "final-response", topRole: "final-response", bottomSourceRoot: root("source"), topSourceRoot: root("source"), bottomSnapshotRoot: root("snapshot"), topSnapshotRoot: root("snapshot") }
     fs.writeFileSync(join(c.ledger.directory, "pair-0.json"), leanCanonicalBytes({ ...pairBody, root: labRoot("lean-baseline-pair-v1", pairBody) }), { mode: 0o600 })
     fs.writeFileSync(join(c.ledger.directory, "source-final-response.json"), "{}", { mode: 0o600 })
     const receipt = vi.spyOn(lean, "readLeanChildEntry").mockReturnValue(entry as never)
@@ -369,7 +461,7 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       const invoke = () => continuationAuthority.issueLeanBaselineContinuationRuntimeAuthorityV2(c.ledger, charge, {} as never, { budgetRoot: c.allocation.root, seat: "bottom" } as never, c.guard)
       if (mode === "valid") { expect(invoke).toThrow(sentinel); expect(source).toHaveBeenCalledOnce() }
       else { expect(invoke).toThrow(); expect(source).not.toHaveBeenCalled() }
-      expect(claimRead.mock.calls.some(([path]) => path === c.paths.claim)).toBe(mode !== "entry")
+      expect(claimRead.mock.calls.some(([path]) => path === c.paths.claim)).toBe(true)
       expect(claimRead.mock.calls.some(([path]) => path === lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.claim)).toBe(false)
       expect(provider).not.toHaveBeenCalled()
     } finally { provider.mockRestore(); source.mockRestore(); claimRead.mockRestore(); receipt.mockRestore() }

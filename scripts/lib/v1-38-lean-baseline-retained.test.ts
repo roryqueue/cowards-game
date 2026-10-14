@@ -415,6 +415,84 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send")
     }
   }, 30000)
+  it.each(["pass", "history", "result", "publication"] as const)("[continuation-stage-cadence-I] actual V6 reader opening/audit/terminal/publication: %s (mock context/resources)", mode => {
+    const snapshot = partialV2Snapshot("20261014-v6"), ledger = { directory: "synthetic-only", allocation: snapshot.allocation } as continuationLedger.LeanExperimentLedger
+    const interval = "continuation-retained-verifier-v2", starts = new Map([["continuation-run-admission", snapshot.entry.wallStartMs - 10], ["pilot-entry", snapshot.entry.wallStartMs], [interval, snapshot.terminal.wallObservedMs + 1]]), closes = new Map([["continuation-run-admission", snapshot.entry.wallStartMs - 1], ["pilot-entry", snapshot.entry.wallStartMs + snapshot.terminal.elapsedUpperBoundMs], [interval, snapshot.terminal.wallObservedMs + 20]])
+    let timeReads = 0
+    const timeFixture = () => ({ ...snapshot.time, active: false, starts: timeReads++ === 0 ? new Map([...starts].filter(([key]) => key !== interval)) : starts, closes, closed: new Set(timeReads === 1 ? ["continuation-run-admission", "pilot-entry"] : ["continuation-run-admission", "pilot-entry", interval]) })
+    const state = { allocation: snapshot.allocation, events: snapshot.ledgerEvents, charged: 51, charges: new Map(snapshot.evidence.records.filter(r => r.chargeRoot).map(r => [r.chargeRoot, r])) } as unknown as ReturnType<typeof continuationLedger.readLeanLedger>
+    const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "cadence-reader-"))), closedPath = join(directory, "history"), resultPath = join(directory, "active-result"), marker = {}, stages: string[] = []
+    fs.writeFileSync(closedPath, "closed"); fs.writeFileSync(resultPath, "result")
+    const controller = continuationFiles.createLeanContinuationStageControllerV6([closedPath, resultPath].map(path => ({ path, stat: fs.lstatSync(path) })), [], [{ path: closedPath, role: "closed_history" }, { path: resultPath, role: "active_input" }], marker, () => {})
+    const stage = <T>(kind: import("./v1-38-lean-baseline-continuation.js").LeanContinuationStageV6, body: () => T): T => { stages.push(kind); return controller.withStage(marker, kind, () => { const value = body(); if (mode === "history" && kind === "reader" && stages.filter(s => s === "reader").length === 2) fs.writeFileSync(closedPath, "changed"); return value }) }
+    const ctx = { ...snapshot, ledger, paths: continuationLedger.leanBaselineContinuationPathsForWindowV2(snapshot.window), fixedHead: snapshot.head, manifest: { schemaVersion: "lean-baseline-continuation-data-manifest-v2", admitting: true, implementationEntries: [], planningEntries: [], entries: [], root: snapshot.allocation.sourceRoot, planningRoot: snapshot.allocation.planningRoot, manifestRoot: snapshot.manifestRoot, windowRoot: snapshot.allocation.window.root, windowBytesRoot: snapshot.windowBytesRoot, sourceGateRoot: snapshot.sourceGateRoot, dataReviewRoot: snapshot.dataReviewRoot, sourceGate: null, dataGate: null }, guard: vi.fn((_additional?: number) => controller.live(marker, () => {})), stage, invalidate: () => controller.invalidate() }
+    // Ten minutes into the approved window leaves 26 minutes. The closed pilot
+    // interval is already over five minutes old, so only its remaining closure
+    // reserve fits; the original full closure+offline reserve would not.
+    const fixtureClock = vi.spyOn(Date, "now").mockReturnValue(snapshot.allocation.window.deadlineMs - 26 * 60_000)
+    const connected = Object.getOwnPropertyDescriptor(process, "connected"), send = Object.getOwnPropertyDescriptor(process, "send")
+    Object.defineProperty(process, "connected", { configurable: true, value: false }); Object.defineProperty(process, "send", { configurable: true, value: undefined })
+    const scope = vi.spyOn(continuationEntry, "assertLeanBaselineContinuationScopeV2").mockImplementation(() => {})
+    const window = vi.spyOn(continuationEntry, "readLeanBaselineContinuationWindowV2").mockReturnValue(snapshot.allocation.window)
+    const sequence: string[] = []
+    const open = vi.spyOn(continuationLedger, "openLeanLedger").mockImplementation(() => { sequence.push("open"); return ledger })
+    const preflight = vi.spyOn(continuationEntry, "withLeanContinuationReaderMetadataV2").mockImplementation((_window, parse) => { sequence.push("preflight"); return parse() })
+    const time = vi.spyOn(continuationLedger, "readLeanTimeAccounting").mockImplementation(timeFixture as never)
+    const elapsed = vi.spyOn(continuationLedger, "currentLeanElapsedMs").mockReturnValue(snapshot.allocation.predecessor.elapsedUpperBoundMs + 5000)
+    const begin = vi.spyOn(continuationLedger, "beginLeanInterval").mockImplementation(() => {})
+    const close = vi.spyOn(continuationLedger, "closeLeanInterval").mockImplementation(() => timeFixture() as never)
+    const terminal = vi.spyOn(continuationLedger, "readLeanChildTerminal").mockReturnValue(snapshot.terminal as never)
+    const entry = vi.spyOn(continuationLedger, "readLeanChildEntry").mockReturnValue(snapshot.entry as never)
+    const readLedger = vi.spyOn(continuationLedger, "readLeanLedger").mockReturnValue(state)
+    const evidence = vi.spyOn(continuationLedger, "verifyLeanEvidence").mockReturnValue(snapshot.evidence as never)
+    const physical = vi.spyOn(continuationLedger, "cumulativeLeanPhysicalBytes").mockReturnValue(100000000)
+    const context = vi.spyOn(continuationEntry, "openLeanBaselineContinuationContextV2").mockReturnValue(ctx as never)
+    const write = vi.spyOn(continuationEntry, "writeLeanContinuationArtifact").mockImplementation((_ledger, name) => { if (mode === "publication" && name === "retained-check.json") fs.writeFileSync(closedPath, "changed"); return undefined as never })
+    const reads = vi.spyOn(continuationFiles, "readLeanContinuationJsonV2").mockImplementation((path: string) => {
+      const name = path.split("/").at(-1)
+      if (name === "result.json") { if (mode === "result") fs.writeFileSync(resultPath, "changed"); return snapshot.result as never }
+      if (name === "pair-0.json") return snapshot.pairs[0] as never
+      if (name === "observation-0.json") return snapshot.observations[0] as never
+      if (name === "carry.json") return snapshot.carry as never
+      if (name === "source-hold.json") return snapshot.sourceHold as never
+      if (name === "source-manifest.json") return ctx.manifest as never
+      if (name?.startsWith("source-") && name.endsWith(".json")) return snapshot.sources.find(source => name === `source-${source.role}.json`) as never
+      if (name === "seal-metadata.json") return snapshot.artifacts["seal-metadata.json"] as never
+      if (name === "parent-supervisor-reasons.json") {
+        const body = { schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: snapshot.allocation.root, sourceRoot: snapshot.allocation.sourceRoot, requestBytesRoot: snapshot.allocation.requestBytesRoot, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(snapshot.entry)), head: snapshot.head, parentPid: snapshot.entry.parentPid, childPid: snapshot.entry.childPid, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
+        return { ...body, root: labRoot(body.schemaVersion, body) } as never
+      }
+      if (name?.startsWith("publication-")) {
+        const source = snapshot.sources.find(s => name === `publication-${s.role}-continuation-v2.json`)!
+        const body = { schemaVersion: "lean-baseline-continuation-source-publication-v2", allocationRoot: snapshot.allocation.root, sourceHead: snapshot.allocation.sourceHead, head: snapshot.head, implementationRoot: snapshot.allocation.sourceRoot, coldRoot: snapshot.allocation.coldRoot, role: source.role, snapshotRoot: source.root, sourceRoot: source.sourceRoot, windowRoot: snapshot.allocation.window.root, windowBytesRoot: snapshot.allocation.windowBytesRoot, requestBytesRoot: snapshot.allocation.requestBytesRoot, dataReviewRoot: snapshot.allocation.dataReviewRoot }
+        return { ...body, root: labRoot(body.schemaVersion, body) } as never
+      }
+      throw new Error(`UNEXPECTED_SYNTHETIC_READ:${name}`)
+    })
+    const names = ["allocation.json", "ledger.ndjson", "time.ndjson", "carry.json", "source-manifest.json", "source-hold.json", "run-claim.json", "reader-claim.json", "entry.json", "child-terminal.json", "parent-supervisor-reasons.json", "result.json", "seal-metadata.json", "pair-0.json", "observation-0.json", ...snapshot.sources.flatMap(s => [`source-${s.role}.json`, `publication-${s.role}-continuation-v2.json`])]
+    let directoryReads = 0
+    const readdir = vi.spyOn(fs, "readdirSync").mockImplementation(() => (directoryReads++ === 0 ? names.filter(name => name !== "reader-claim.json") : names) as never)
+    const kill = vi.spyOn(process, "kill").mockImplementation(() => { throw Object.assign(new Error("gone"), { code: "ESRCH" }) })
+    try {
+      const invoke = () => continuationReader.verifyLeanBaselineContinuationRetainedV2(continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V6.request)
+      if (mode !== "pass") { expect(invoke).toThrow(/V2_TERMINAL_REFUSAL/); expect(() => ctx.guard()).toThrow(); expect(state.charged).toBe(51); if (mode === "publication") expect(write.mock.calls.some(call => call[1] === "retained-check.json" && (call[2] as any).issued === false)).toBe(true); return }
+      const report = invoke()
+      expect((report as any).failure).toBeNull()
+      expect(report).toMatchObject({ schemaVersion: "lean-baseline-continuation-retained-check-v2", disposition: "gaps_found", charged: 51 })
+      expect(reads.mock.calls.some(call => call[1] === 4194304)).toBe(true)
+      expect(stages).toEqual(["reader", "claim", "reader", "terminal", "publication"])
+      expect(report).toMatchObject({ issued: false })
+      expect(begin).toHaveBeenCalledTimes(1); expect(close).toHaveBeenCalledTimes(1); expect(ctx.guard).toHaveBeenCalledWith(65536)
+      expect(sequence.slice(0, 2)).toEqual(["preflight", "open"])
+      expect(write.mock.calls.map(call => call[1])).toContain("reader-claim.json")
+      expect(reads.mock.calls.some(call => String(call[0]).includes("/source-") && call[1] === 262144)).toBe(true)
+    } finally {
+      for (const spy of [scope, window, open, preflight, time, elapsed, begin, close, terminal, entry, readLedger, evidence, physical, context, write, reads, readdir, kill, fixtureClock]) spy.mockRestore()
+      if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected")
+      if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send")
+      fs.rmSync(directory, { recursive: true })
+    }
+  }, 30000)
 })
 describe("strict v12 finite attribution custody join", () => {
   const fixture = () => {
