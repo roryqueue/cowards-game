@@ -24,7 +24,7 @@ import { publishLeanBaselineContinuationSource } from "./lib/v1-38-lean-baseline
 import { runLeanBaselineContinuationMatch } from "./lib/v1-38-lean-baseline-match.js"
 import { readLeanBaselineContinuationGit } from "./lib/v1-38-lean-container-match-session.js"
 import { closeLeanInterval } from "../packages/strategy-lab/src/league/lean-experiment.js"
-import { LEAN_BASELINE_CONTINUATION_PATHS_V2 as CONTINUATION_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, LEAN_BASELINE_CONTINUATION_PATHS_V6, leanBaselineContinuationPathsForWindowV2, leanBaselineContinuationPathsForRequestV2, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationWindowV2, validateLeanBaselineContinuationAllocationV2, createLeanBaselineContinuationAllocationV2, leanBaselineContinuationElapsedFloorV2, leanContinuationIdentityV2, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2 } from "../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V2 as CONTINUATION_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, LEAN_BASELINE_CONTINUATION_PATHS_V6, leanBaselineContinuationPathsForWindowV2, leanBaselineContinuationPathsForRequestV2, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationWindowV2, validateLeanBaselineContinuationAllocationV2, createLeanBaselineContinuationAllocationV2, leanBaselineContinuationElapsedFloorV2, leanContinuationGlobalFloorV2, leanContinuationIdentityV2, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2 } from "../packages/strategy-lab/src/league/lean-experiment.js"
 import { readLeanContinuationBoundedBytesV2, readLeanContinuationJsonV2, authenticateLeanBaselineContinuationCarryV2, assertLeanBaselineContinuationFrontierV2, createLeanContinuationIdentityGuardV2, createLeanContinuationStageControllerV6, type LeanContinuationStageV6, type LeanContinuationInventoryRowV2, type LeanContinuationReviewedRowV2 } from "./lib/v1-38-lean-baseline-continuation.js"
 import { readLeanBaselineContinuationGitV2 } from "./lib/v1-38-lean-container-match-session.js"
 import { executeLeanBaselineContinuationPipelineV2 } from "./lib/v1-38-lean-baseline-pipeline.js"
@@ -892,6 +892,11 @@ const continuationCapacityV2 = (w: LeanBaselineContinuationWindowV2, retained = 
     if (now >= w.deadlineMs || basis.elapsedMs > w.capMs) return fail("V2_WINDOW_EXPIRED")
     tempPath = basis.tempPath
   }
+  continuationCapacityObservationV2(tempPath, retained, additional, scratchExists)
+}
+// Shared fresh observations: neither admitted-ledger nor preflight expectations
+// may cache, omit or independently reimplement these resource predicates.
+const continuationCapacityObservationV2 = (tempPath: string, retained: number, additional: number, scratchExists: boolean) => {
   const usage = process.memoryUsage(), fs = statfsSync(resolve("."), { bigint: true }), reserve = 2 * 268435456 + 512000000 + 335544320, scratch = scratchExists ? measureLeanPhysicalBytes(tempPath) : 0
   if (![retained, additional, scratch].every(n => Number.isSafeInteger(n) && n >= 0) || retained > LEAN_CAPS.retainedBytes || scratch + additional + usage.arrayBuffers > LEAN_CAPS.scratchBytes || usage.rss + (process.connected ? rssOf(process.ppid) : 0) + usage.arrayBuffers + additional + reserve > LEAN_BASELINE_CONTINUATION_POLICY_V2.memoryBytes || observeLeagueAvailableMemoryBytes() < reserve || fs.bavail * fs.bsize > BigInt(Number.MAX_SAFE_INTEGER) || fs.bavail * fs.bsize < BigInt(LEAN_CAPS.totalBytes - retained)) return fail("V2_CAPACITY")
 }
@@ -958,6 +963,72 @@ export const leanBaselineContinuationRunFailureV2 = (error: unknown): string => 
   const d = error !== null && typeof error === "object" ? continuationRunFailuresV2.get(error) : undefined
   return d ? `LEAN_BASELINE_RUN_PREENTRY stage=${d.stage} completed=${d.completed} code=DETAILS_WITHHELD ${continuationRunCounterNamesV2.map(name => `${name}=${d.counts[name]}`).join(" ")}\n` : "LEAN_BASELINE_RUN_PREENTRY stage=UNKNOWN code=DETAILS_WITHHELD\n"
 }
+/** Private own-DATA capture, using the same hostile-input primitives as the
+ * identity compiler. No getter/proxy is evaluated, no caller object frozen,
+ * and no aliased/sparse/executable scope becomes a reusable expectation. */
+const captureContinuationPreflightValueV6 = <T>(value: T): Readonly<T> => {
+  const seen = new WeakSet<object>(); let nodes = 0
+  const capture = (input: unknown): unknown => {
+    if (input === null || typeof input === "string" || typeof input === "number" || typeof input === "boolean") return input
+    if (typeof input !== "object" || leanHostIsProxy(input) || seen.has(input) || ++nodes > 4096) return fail("V6_PREFLIGHT_EXPECTATIONS")
+    seen.add(input)
+    const array = Array.isArray(input), prototype = Object.getPrototypeOf(input)
+    if (array ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null) return fail("V6_PREFLIGHT_EXPECTATIONS")
+    const fields = Object.getOwnPropertyDescriptors(input)
+    if (Reflect.ownKeys(fields).some(key => typeof key !== "string" || !("value" in fields[key]!))) return fail("V6_PREFLIGHT_EXPECTATIONS")
+    if (array) {
+      const length: unknown = fields.length?.value
+      if (!Number.isSafeInteger(length) || (length as number) < 0 || (length as number) > 1024 || Reflect.ownKeys(fields).length !== (length as number) + 1) return fail("V6_PREFLIGHT_EXPECTATIONS")
+      const copy: unknown[] = []
+      for (let i = 0; i < (length as number); i++) { if (!Object.hasOwn(fields, String(i))) return fail("V6_PREFLIGHT_EXPECTATIONS"); copy.push(capture(fields[String(i)]!.value)) }
+      return Object.freeze(copy)
+    }
+    const copy: Record<string, unknown> = Object.create(null)
+    for (const key of Object.keys(fields)) copy[key] = capture(fields[key]!.value)
+    return Object.freeze(copy)
+  }
+  return capture(value) as Readonly<T>
+}
+// Pure arithmetic over a privately captured strictly validated window. Keep
+// this body identical to continuationElapsedForValidatedWindowV2: public global
+// floor, natural inputs/sum, backward clock, journal and monotonic floors.
+const continuationPreflightElapsedV6 = (w: Readonly<LeanBaselineContinuationWindowV2>, nowMs: number, journalMs = 0, monotonicSinceAnchorMs = 0): number => {
+  const natural = (n: number) => Number.isSafeInteger(n) && n >= 0
+  if (!natural(nowMs) || nowMs < w.anchorMs || !natural(journalMs) || !natural(monotonicSinceAnchorMs)) throw new TypeError("LEAN_EXPERIMENT_CONTINUATION_V2_CLOCK")
+  const elapsed = Math.max(leanContinuationGlobalFloorV2(nowMs), w.carryMs + Math.max(nowMs - w.anchorMs, monotonicSinceAnchorMs), journalMs)
+  if (!natural(elapsed)) throw new TypeError("LEAN_EXPERIMENT_CONTINUATION_V2_CLOCK")
+  return elapsed
+}
+/** Issued only by the actual unconsumed V6 preflight after all strict joins and
+ * real Git scope/ancestry checks. The exact window/context references stay in
+ * this closure, never a root cache, ledger brand, serialized or exported mint. */
+const compileContinuationPreflightExpectationsV6 = (window: LeanBaselineContinuationWindowV2, paths: typeof LEAN_BASELINE_CONTINUATION_PATHS_V6, manifest: ReturnType<typeof leanBaselineContinuationDataManifestV2>, request: LeanBaselineContinuationRequestV2, requestBytesRoot: LabRoot, binding: object, fixedHead: string) => {
+  const w = validateLeanBaselineContinuationWindowV2(captureContinuationPreflightValueV6(window)), capturedPaths = captureContinuationPreflightValueV6(paths), rows = captureContinuationPreflightValueV6(manifest.entries), r = captureContinuationPreflightValueV6(request), scope = captureContinuationPreflightValueV6(binding)
+  if (paths !== LEAN_BASELINE_CONTINUATION_PATHS_V6 || leanBaselineContinuationPathsForWindowV2(w) !== paths || !Object.isFrozen(window) || !Object.isFrozen(window.approvalEvidence) || !Object.isFrozen(binding) || fixedHead !== r.sourceHead || !/^[a-f0-9]{40}$/u.test(fixedHead) || r.windowRoot !== w.root || r.windowBytesRoot !== leanBytesRoot(leanCanonicalBytes(w)) || r.sourceRoot !== w.sourceRoot || r.sourceGateRoot !== w.sourceGateRoot || r.planRoot !== w.planRoot || !ROOT(requestBytesRoot) || !exact(scope, binding)) return fail("V6_PREFLIGHT_EXPECTATIONS")
+  const names = new Set(rows.map(row => row.path))
+  // Complete wrapper scope predicates captured once. The literal HEAD branch
+  // never uses allocation/show/rev-list/diff authority; those keep the wrapper.
+  if (names.size !== rows.length || names.size > 1024 || rows.some(row => !/^sha256:[a-f0-9]{64}$/u.test(row.root) || !/^[A-Za-z0-9_./-]+$/u.test(row.path) || row.path.startsWith("/") || row.path.split("/").some(p => !p || p === "." || p === "..") || /preimage|secret/iu.test(row.path)) || labRoot("lean-baseline-continuation-data-manifest-v2", rows) !== r.manifestRoot || !exact(capturedPaths, LEAN_BASELINE_CONTINUATION_PATHS_V6)) return fail("V6_PREFLIGHT_EXPECTATIONS")
+  const normalized = Object.freeze(Object.fromEntries(Object.entries(capturedPaths).map(([key, path]) => [key, resolve(path)])))
+  const expectedInputs = Object.freeze([Object.freeze({ path: normalized.window!, root: r.windowBytesRoot }), Object.freeze({ path: normalized.request!, root: requestBytesRoot })])
+  const assert = (candidate: object, exactWindow: LeanBaselineContinuationWindowV2) => { if (candidate !== binding || exactWindow !== window || process.pid !== (scope as { pid: number }).pid) return fail("V6_CONTEXT") }
+  const admit = (candidate: object, exactWindow: LeanBaselineContinuationWindowV2, remainingSlots: number, journalMs = 0) => {
+    assert(candidate, exactWindow)
+    const now = Date.now(), elapsed = continuationPreflightElapsedV6(w, now, journalMs), reserve = remainingSlots === 0 ? 0 : remainingSlots * LEAN_CAPS.matchMs + w.closureMs + w.offlineOverheadMs
+    if (!Number.isSafeInteger(remainingSlots) || remainingSlots < 0 || remainingSlots > 36 || now >= w.deadlineMs || now + reserve > w.deadlineMs || elapsed + reserve > w.capMs) return fail("V2_WINDOW_EXPIRED")
+    return elapsed
+  }
+  const capacity = (candidate: object, exactWindow: LeanBaselineContinuationWindowV2, additional: number) => { admit(candidate, exactWindow, 0); continuationCapacityObservationV2(normalized.temp!, 88924160, additional, false) }
+  const readHead = (candidate: object, exactWindow: LeanBaselineContinuationWindowV2) => {
+    assert(candidate, exactWindow)
+    // Same inherited cwd/env, ignored stdin/stderr, fresh process and bounds as
+    // runLeanBoundedGitMetadata. No generic argv or native/read-result cache.
+    const bytes = execFileSync("git", ["rev-parse", "HEAD"], { stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 128 })
+    if (bytes.length > 128 || !/^[a-f0-9]{40}\n?$/u.test(bytes.toString("utf8"))) throw new TypeError("LEAN_BASELINE_CONTINUATION_GIT_V2_METADATA")
+    return bytes.toString("utf8").trim()
+  }
+  return Object.freeze({ admit, capacity, readHead, expectedInputs })
+}
 const continuationPreflightV2 = (requestPath: string, consumed: boolean, reader: boolean, stage?: (value: LeanContinuationPreparationStageV4) => void, diagnostic?: ContinuationRunDiagnosticV2) => {
   stage?.("WINDOW"); leanBaselineContinuationPathsForRequestV2(requestPath)
   // This is the first external read. No directory, claim, allocation or cost
@@ -978,12 +1049,14 @@ const continuationPreflightV2 = (requestPath: string, consumed: boolean, reader:
   const identity = createLeanContinuationIdentityGuard(pins, [])
   const v6 = paths === LEAN_BASELINE_CONTINUATION_PATHS_V6
   const binding = Object.freeze({ pid: process.pid, fixedHead, reviewedSourceHead: window.reviewedSourceHead, sourceHead: request.sourceHead, sourceRoot: request.sourceRoot, planningRoot: request.planningRoot, manifestRoot: request.manifestRoot, requestBytesRoot, windowRoot: window.root, windowBytesRoot: request.windowBytesRoot, sourceGateRoot: request.sourceGateRoot, dataReviewRoot: request.dataReviewRoot, route: window.routeNamespace, grant: window.grantId })
+  const preflightExpectations = v6 && !consumed ? compileContinuationPreflightExpectationsV6(window, paths, manifest, request, requestBytesRoot, binding, fixedHead) : undefined
   const current = (additionalBytes = 0) => {
-    continuationWindowAdmissionV2(window, reader ? 0 : 36)
-    continuationCapacityV2(window, 88924160, additionalBytes, consumed)
-    if (git(["rev-parse", "HEAD"]).toString("utf8").trim() !== fixedHead) return fail("V2_HEAD_CHANGED")
-    if (v6) for (const row of [{ path: paths.window, root: request.windowBytesRoot }, { path: requestPath, root: requestBytesRoot }]) {
-      const bytes = readLeanContinuationBoundedBytesV2(row.path, 65536, 0o600, reserve => continuationCapacityV2(window, 88924160, reserve ?? 0, consumed))
+    if (preflightExpectations) preflightExpectations.admit(binding, window, reader ? 0 : 36); else continuationWindowAdmissionV2(window, reader ? 0 : 36)
+    const reserveCapacity = (bytes: number) => preflightExpectations ? preflightExpectations.capacity(binding, window, bytes) : continuationCapacityV2(window, 88924160, bytes, consumed)
+    reserveCapacity(additionalBytes)
+    if ((preflightExpectations ? preflightExpectations.readHead(binding, window) : git(["rev-parse", "HEAD"]).toString("utf8").trim()) !== fixedHead) return fail("V2_HEAD_CHANGED")
+    if (v6) for (const row of preflightExpectations?.expectedInputs ?? [{ path: paths.window, root: request.windowBytesRoot }, { path: requestPath, root: requestBytesRoot }]) {
+      const bytes = readLeanContinuationBoundedBytesV2(row.path, 65536, 0o600, reserve => reserveCapacity(reserve ?? 0))
       if (leanBytesRoot(bytes) !== row.root) return fail("V6_CONTEXT_BYTES")
     }
   }

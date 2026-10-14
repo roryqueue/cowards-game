@@ -27,6 +27,122 @@ import * as continuationAuthority from "./lib/v1-38-lean-experiment-authority.js
 import * as continuationSource from "./lib/v1-38-lean-baseline-source.js"
 import { leanColdProcedureRoot } from "./lib/v1-38-lean-baseline-pipeline.js"
 import { checkFactoryBoundaries } from "./check-v1-38-factory-boundaries.js"
+// Separate unconsumed PREPARE fixture. Git/resources/clock are inert; source,
+// raw/domain hashes, descriptors, controller and CARRY importer remain real.
+const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWindowV2; counts: { windowHashes: number; heads: number; capacities: number; inputReads: number; liveCompleted: number }; callbacks: { windowHashes: number; heads: number; capacities: number; inputReads: number }[]; onCurrent: { value?: () => void }; absent: () => void }) => void) => {
+  const began = performance.now(), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-preledger-"))), originalArgs = process.execArgv, connected = Object.getOwnPropertyDescriptor(process, "connected"), p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V6
+  const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), actualExists = fs.existsSync, exists = vi.spyOn(fs, "existsSync").mockImplementation(path => actualExists(resolve(String(path))))
+  const counts = { windowHashes: 0, heads: 0, capacities: 0, inputReads: 0, liveCompleted: 0 }, callbacks: { windowHashes: number; heads: number; capacities: number; inputReads: number }[] = [], onCurrent: { value?: () => void } = {}
+  const write = (path: string, bytes: string | Uint8Array, mode = 0o644) => { fs.mkdirSync(resolve(path, ".."), { recursive: true }); fs.writeFileSync(resolve(path), bytes, { mode }); fs.chmodSync(resolve(path), mode) }
+  const factory = vi.spyOn(factoryImplementation, "factoryAssessmentImplementationManifest").mockReturnValue({ entries: [], root: root("inert-factory") })
+  const usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000)
+  const disk = vi.spyOn(fs, "statfsSync").mockImplementation(() => { counts.capacities++; return { bavail: 100000000000n, bsize: 1n } as never })
+  const actualHash = contracts.labRoot, hashes = vi.spyOn(contracts, "labRoot").mockImplementation((domain, value) => { if (domain === "lean-baseline-continuation-window-v2") counts.windowHashes++; return actualHash(domain, value) })
+  const actualRead = continuationHelper.readLeanContinuationBoundedBytesV2, descriptors = vi.spyOn(continuationHelper, "readLeanContinuationBoundedBytesV2").mockImplementation((path, maximum, mode, guard) => { if (resolve(path) === resolve(p.window) || resolve(path) === resolve(p.request)) counts.inputReads++; return actualRead(path, maximum, mode, guard) })
+  const head = "b".repeat(40), git = vi.spyOn(childProcess, "execFileSync").mockImplementation(((command: string, args: readonly string[], options: unknown) => {
+    if (command !== "git") return "0\n"
+    if (args[0] === "rev-parse" && args[1] === "HEAD") { counts.heads++; expect(options).toEqual({ stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 128 }); return Buffer.from(`${head}\n`) }
+    if (args[0] === "merge-base") return Buffer.alloc(0)
+    if (args[0] === "show") return fs.readFileSync(resolve(args[1]!.slice(41)))
+    throw new Error("UNEXPECTED_INERT_GIT")
+  }) as typeof childProcess.execFileSync)
+  const actualController = continuationHelper.createLeanContinuationStageControllerV6, controllers = vi.spyOn(continuationHelper, "createLeanContinuationStageControllerV6").mockImplementation((pins, rows, roles, binding, current, policy) => {
+    expect(rows).toEqual([])
+    const c = actualController(pins, rows, roles, binding, () => { onCurrent.value?.(); current() }, policy)
+    return Object.freeze({ ...c, live<T>(candidate: object, body: () => T): T { const before = { ...counts }, result = c.live(candidate, body); callbacks.push({ windowHashes: counts.windowHashes - before.windowHashes, heads: counts.heads - before.heads, capacities: counts.capacities - before.capacities, inputReads: counts.inputReads - before.inputReads }); counts.liveCompleted++; return result } })
+  })
+  let clock: ReturnType<typeof vi.spyOn> | undefined
+  try {
+    Object.defineProperty(process, "connected", { value: false, configurable: true }); process.execArgv = ["--import", "tsx"]
+    vi.stubEnv("TSX_DISABLE_CACHE", "1"); vi.stubEnv("NODE_DISABLE_COMPILE_CACHE", "1"); vi.stubEnv("TMPDIR", resolve(p.temp)); for (const key of ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"]) vi.stubEnv(key, undefined)
+    const sourcePaths = [...parentApi.LEAN_BASELINE_CONTINUATION_OWNED_PATHS, "scripts/run-v1-38-lean-baseline.sh", "scripts/lib/v1-38-lean-baseline-analysis.ts", "scripts/lib/v1-38-lean-baseline-metrics.ts", "scripts/lib/v1-38-lean-cold-corpus.ts", "scripts/lib/v1-38-lean-seal-metadata.ts", "scripts/lib/v1-38-lean-training-adapter.ts", "scripts/lib/v1-38-lean-baseline.ts", "packages/strategy-lab/src/league/lean-training.ts", "scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-lean-child-cli-terminal.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts", "packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"]
+    for (const path of new Set([...sourcePaths, ...parentApi.LEAN_BASELINE_CONTINUATION_PLANNING_PATHS])) write(path, "inert source", path.endsWith(".sh") ? 0o755 : 0o644)
+    const base = parentApi.leanBaselineContinuationSourceManifestV2(), planRoot = base.planningEntries.find(row => row.path.endsWith("265-16-BASELINE-CONTINUATION-PLAN-20261012.md"))!.root
+    const sg: parentApi.LeanContinuationSourceGateV2 = { schemaVersion: "lean-baseline-continuation-source-gate-v2", plan_check: "passed", source_review: "passed", root_validation: "passed", source_verification: "passed", commands_closed: true, reviewedSourceHead: "a".repeat(40), sourceRoot: base.root, sourceAuthor: "inert-author", sourceReviewer: "inert-reviewer", sourceVerifier: "inert-verifier" }
+    const wb = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-preledger", approvalEvidence: { humanDecisionId: "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261014-v6" as const, reviewedSourceHead: sg.reviewedSourceHead, sourceRoot: base.root, sourceGateRoot: labRoot(sg.schemaVersion, sg), planRoot, runOperator: "inert-runner", readerOperator: "inert-reader" }, window = { ...wb, root: labRoot(wb.schemaVersion, wb) }
+    const dg: parentApi.LeanContinuationDataGateV2 = { schemaVersion: "lean-baseline-continuation-data-gate-v2", status: "passed", grantId: window.grantId, windowRoot: window.root, windowBytesRoot: leanBytesRoot(leanCanonicalBytes(window)), reviewedSourceHead: sg.reviewedSourceHead, sourceRoot: base.root, sourceGateRoot: window.sourceGateRoot, planRoot, approvalEvidence: window.approvalEvidence, runOperator: window.runOperator, readerOperator: window.readerOperator, dataReviewer: "inert-data", commands_closed: true }
+    write(p.gates, `\`\`\`json\n${Buffer.from(leanCanonicalBytes(sg))}\n\`\`\`\n\`\`\`json\n${Buffer.from(leanCanonicalBytes(dg))}\n\`\`\`\n`); write(p.window, leanCanonicalBytes(window), 0o600)
+    clock = vi.spyOn(Date, "now").mockReturnValue(window.anchorMs)
+    const manifest = parentApi.leanBaselineContinuationDataManifestV2(window, parentApi.leanBaselineContinuationSourceManifestV2()), seed = "inert-preledger", coldRoot = leanColdProcedureRoot(seed)
+    const request: parentApi.LeanBaselineContinuationRequestV2 = { schemaVersion: "lean-baseline-continuation-request-v2", seed, sourceHead: head, sourceRoot: base.root, planningRoot: manifest.planningRoot, planRoot, reviewRoot: window.sourceGateRoot, coldRoot, candidateRoots: parentApi.deriveLeanBaselineCandidateRoots(coldRoot), requestRoots: parentApi.deriveLeanBaselineRequestRoots({ seed, coldRoot, planRoot, sourceRoot: base.root }), offlineOverheadMs: window.offlineOverheadMs, sourceAuthor: sg.sourceAuthor, runOperator: window.runOperator, readerOperator: window.readerOperator, windowRoot: window.root, windowBytesRoot: manifest.windowBytesRoot, sourceGateRoot: window.sourceGateRoot, dataReviewRoot: manifest.dataReviewRoot, manifestRoot: manifest.manifestRoot }
+    write(p.request, leanCanonicalBytes(request), 0o600); write(lean.LEAN_BASELINE_CONTINUATION_PATHS.allocation, "{}")
+    const absent = () => { for (const path of [p.temp, p.store, p.claim, p.allocation]) expect(fs.existsSync(resolve(path))).toBe(false) }
+    run({ window, counts, callbacks, onCurrent, absent }); absent()
+  } finally { clock?.mockRestore(); controllers.mockRestore(); git.mockRestore(); descriptors.mockRestore(); hashes.mockRestore(); disk.mockRestore(); available.mockRestore(); usage.mockRestore(); factory.mockRestore(); exists.mockRestore(); vi.unstubAllEnvs(); process.execArgv = originalArgs; if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(15000) }
+}
+describe("[continuation-preledger-policy] actual unconsumed V6 caller", () => {
+  it("captures pure scope/window once while every completed callback keeps THREE current/33capacity/3HEAD/6input reads", () => preledgerFixtureV6(f => {
+    expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request)).toThrow(/V2_ALLOCATION_ANCHOR/)
+    expect(f.callbacks.length).toBeGreaterThan(0)
+    for (const callback of f.callbacks) expect(callback).toEqual({ windowHashes: 0, heads: 3, capacities: 33, inputReads: 6 })
+    f.absent()
+  }), 15000)
+  it.each(["head", "head-format", "head-length", "window", "request", "resource", "deadline", "backward", "unsafe"] as const)("refuses fresh %s drift before setup, retaining real caller execution", mode => preledgerFixtureV6(f => {
+    let injected = false
+    f.onCurrent.value = () => {
+      if (injected) return
+      injected = true
+      if (mode.startsWith("head")) {
+        const original = vi.mocked(childProcess.execFileSync).getMockImplementation()!
+        vi.mocked(childProcess.execFileSync).mockImplementation(((...args: Parameters<typeof childProcess.execFileSync>) => args[0] === "git" && (args[1] as readonly string[])[0] === "rev-parse" ? Buffer.from(mode === "head" ? "c".repeat(40) : mode === "head-length" ? "b".repeat(129) : "b".repeat(40) + "\n\n") : Reflect.apply(original, childProcess, args)) as typeof childProcess.execFileSync)
+      }
+      if (mode === "window" || mode === "request") fs.writeFileSync(resolve(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6[mode]), "{}")
+      if (mode === "resource") vi.mocked(process.memoryUsage).mockReturnValue({ ...process.memoryUsage(), rss: 4000000000 })
+      if (mode === "deadline") vi.mocked(Date.now).mockReturnValue(f.window.deadlineMs - 36 * LEAN_CAPS.matchMs - f.window.closureMs - f.window.offlineOverheadMs + 1)
+      if (mode === "backward") vi.mocked(Date.now).mockReturnValue(f.window.anchorMs - 1)
+      if (mode === "unsafe") vi.mocked(Date.now).mockReturnValue(Number.MAX_SAFE_INTEGER + 1)
+    }
+    const error = mode === "head" ? /V2_HEAD_CHANGED/ : mode.startsWith("head-") ? /GIT_V2_METADATA/ : mode === "window" || mode === "request" ? /V6_CONTEXT_BYTES/ : mode === "resource" ? /V2_CAPACITY/ : mode === "deadline" ? /V2_WINDOW_EXPIRED/ : /LEAN_EXPERIMENT_CONTINUATION_V2_CLOCK/
+    expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request)).toThrow(error)
+    expect(injected).toBe(true); f.absent()
+  }), 15000)
+  it.each(["forged", "deep-mutation", "cross-window", "approval-array"] as const)("strict real window caller rejects %s before policy issuance", mode => preledgerFixtureV6(f => {
+    const w = JSON.parse(Buffer.from(leanCanonicalBytes(f.window)).toString()) as lean.LeanBaselineContinuationWindowV2
+    if (mode === "forged") w.root = root("forged")
+    if (mode === "deep-mutation") w.approvalEvidence.recordedBy = "changed"
+    if (mode === "cross-window") { w.routeNamespace = "20261013-v5"; const { root: _root, ...body } = w; w.root = labRoot(body.schemaVersion, body) }
+    if (mode === "approval-array") w.approvalEvidence = [] as never
+    fs.writeFileSync(resolve(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.window), leanCanonicalBytes(w))
+    expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request)).toThrow(/WINDOW/)
+    expect(f.callbacks).toEqual([]); f.absent()
+  }), 15000)
+  it.each(["mutable", "deep-mutable"] as const)("rejects a %s strict-validator output at private issuance (validator-output seam explicitly mocked)", mode => preledgerFixtureV6(f => {
+    const actual = lean.validateLeanBaselineContinuationWindowV2, validate = vi.spyOn(lean, "validateLeanBaselineContinuationWindowV2").mockImplementation(value => {
+      const w = actual(value), copy = { ...w, approvalEvidence: { ...w.approvalEvidence } }
+      return mode === "mutable" ? copy : Object.freeze(copy)
+    })
+    try { expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request)).toThrow(/V6_PREFLIGHT_EXPECTATIONS/); expect(f.callbacks).toEqual([]); f.absent() }
+    finally { validate.mockRestore() }
+  }), 15000)
+  it("actual default-zero caller admits exactly the whole36 cutoff and accepts fresh 40hex without newline", () => preledgerFixtureV6(f => {
+    const cutoff = f.window.deadlineMs - 36 * LEAN_CAPS.matchMs - f.window.closureMs - f.window.offlineOverheadMs
+    expect(lean.leanBaselineContinuationElapsedFloorV2(f.window, cutoff) + 36 * LEAN_CAPS.matchMs + f.window.closureMs + f.window.offlineOverheadMs).toBe(f.window.capMs)
+    const original = vi.mocked(childProcess.execFileSync).getMockImplementation()!
+    let heads = 0
+    vi.mocked(childProcess.execFileSync).mockImplementation(((...args: Parameters<typeof childProcess.execFileSync>) => {
+      const bytes = Reflect.apply(original, childProcess, args)
+      if (args[0] === "git" && (args[1] as readonly string[])[0] === "rev-parse") { heads++; return Buffer.from(String(bytes).trim()) }
+      return bytes
+    }) as typeof childProcess.execFileSync)
+    f.onCurrent.value = () => { vi.mocked(Date.now).mockReturnValue(cutoff) }
+    expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request)).toThrow(/V2_ALLOCATION_ANCHOR/)
+    expect(heads).toBeGreaterThan(3); expect(f.callbacks.length).toBeGreaterThan(0); f.absent()
+  }), 15000)
+  it("SOURCE-EXTRACTED synthetic arithmetic parity only: journal/monotonic inputs are not actual preflight branch coverage", () => {
+    // No exported policy/test mint. This executes only the isolated exact pure
+    // arithmetic source body, never the module/compiler or hostile Strategy.
+    const source = fs.readFileSync(resolve("scripts/run-v1-38-lean-baseline.ts"), "utf8"), match = source.match(/const continuationPreflightElapsedV6 = [^\n]+=> \{\n([\s\S]*?)\n\}/u)
+    expect(match).not.toBeNull()
+    const arithmetic = new Function("w", "nowMs", "journalMs", "monotonicSinceAnchorMs", "leanContinuationGlobalFloorV2", match![1]!.replace("(n: number)", "(n)")) as (w: lean.LeanBaselineContinuationWindowV2, now: number, journal: number, monotonic: number, global: typeof lean.leanContinuationGlobalFloorV2) => number
+    preledgerFixtureV6(f => {
+      const result = (body: () => number) => { try { return body() } catch (error) { return (error as Error).message } }
+      for (const [now, journal, monotonic] of [[f.window.anchorMs, 0, 0], [f.window.anchorMs + 1, 0, 0], [f.window.deadlineMs, f.window.capMs, 1], [f.window.anchorMs + 10, f.window.carryMs + 100, 20], [f.window.anchorMs - 1, 0, 0], [Number.MAX_SAFE_INTEGER + 1, 0, 0], [f.window.anchorMs, -1, 0], [f.window.anchorMs, 0, -1], [f.window.anchorMs, 0, Number.MAX_SAFE_INTEGER], [f.window.anchorMs, Number.MAX_SAFE_INTEGER, 0]]) {
+        expect(result(() => arithmetic(f.window, now!, journal!, monotonic!, lean.leanContinuationGlobalFloorV2))).toEqual(result(() => lean.leanBaselineContinuationElapsedFloorV2(f.window, now!, journal!, monotonic!)))
+      }
+    })
+    expect(source).not.toMatch(/export (?:const|function) (?:compileContinuationPreflight|captureContinuationPreflight|continuationPreflightElapsed)/u)
+  })
+})
 it("[continuation-remaining-overhead] [VF-REM-BUILTIN-01] preserves the actual audited factory reachability boundary without direct consumer util imports", () => {
   const result = checkFactoryBoundaries()
   expect(result).toMatchObject({ ok: true, violations: [] }); expect(result.scannedFiles).toBeGreaterThan(1000)
