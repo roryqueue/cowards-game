@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: J/K closed; independent review found two path blockers; narrow fix active
+stopped_at: J/K and path review fixes closed; ROOT validation passed; scoped validation and distinct source verification next
 last_updated: "2026-10-14"
 last_activity: 2026-10-14
-last_activity_desc: K31combined cases closed at6e2406a7; review CR01 cwd drift and CR02 lexical ancestor scope regressions; normal fix in driver/test
+last_activity_desc: Fixede86e624d clean re-review; ROOT172tests, exact inherited strict equality, configured types and boundaries passed; source-only
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V6 preparation closed; diagnose before another run
+
+Actual normalfix ROOTe86e624dcf9dd47974e69c53b596030e5e3773c6 afteroriginalexecutorCLOSED/released: privateissuancecwd assertedfresh, registeredrelativeinputnames retained; no readerprivacyAPIchange. RED55051 threeactualcallerfailures→GREEN18669/3→final77763/34pass19.41s/211skipped; author13FULL7051B/zeroNEW. Reused actual independenttyped `/root/review_265_preflight_policy` PASS/findings[]/0BLOCKER/0warnings/CLOSED/released. CR01/CR02 resolved, no bounded-delta regression; notcustody/runtimefit assurance.
+
+ROOTqualification CLOSED: driver67555 69pass/73skipped/39.97s; helper42981 all103pass/12.12s=172uniqueactualtests, not172Matches/all-suitegreen. Fourqualifiedsplit samples COMPLETE/actualhash+filesystem+controller, explicitGit/resource/clock/catalogmocks and uncoveredhistoricalsuccess unchanged. ROOTstrict22777 CLOSED2/13FULL7051B WHOLE-byte-equal actualpre-edit19539/original, zeroNEW/nooffset/suppression; configuredprojects0. pnpm boundary/public wrappers refused auto-install/removal due noTTY, NOT silentlypassed/retried withpurge; sameinstalledscripts directlyservice49859 CLOSED0/strict0ownership0/19oldreport-only, public0, factory20807 CLOSED0/1443files/0violations. No install/config/policy change. Actualinertmanifest27255 CLOSED0 implementationrootsha256:3ab7f032d7a76ee3b2d3eca01a0ba65767602e63be8beace952e30f4a62c42e1/697implementation/15planning/admittingfalse/SOURCE/DATA absent; initial39815 formatter wrongcountproperty failed afterpuremanifest call, correctedformatter only/no privateauth or admission. Scoped State-A validation/distinctsourceverification next; noSOURCE/DATAreadiness or empiricalcredit. Samehard02:30:07UTC/full36frontierelapsed/allcontinuouscosts/bounds/spentV6.
 
 Actual K CLOSED/allcommands/ownership RELEASED; ROOT6e2406a7 existingtwo testfiles. Finalcombined84525 31passes/15.39s/211skipped, author65799 SAME15strict13FULL7051B wholeequalJ/zeroNEW after fourfixturetypingerrors corrected. Qualifiedsplit fourbounded COMPLETEsamples: actualprepare extra0/32=243/435callbacks,U49/81,L17,946/1700ms, each33capacity3HEAD6rawreads/SHA6/purewindow0/scope0/physical0/journal0; archiveopening+expectedanchorrefusal/no capture, sourcefullbothpasses. Actualdefaultinventory n2/64 authenticates3/65reviewed incl>4MiB→6/68returnedrows→realV6helperbootstrap,8/162ms/<12.7MiB; Git/resources/clock/catalog mocked, no realcapacity/historicalcustody/fullprepfit. Earlier failedfixture batches/disclosures preserved.
 

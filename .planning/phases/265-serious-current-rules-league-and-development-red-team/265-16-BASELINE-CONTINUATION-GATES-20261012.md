@@ -1,5 +1,27 @@
 # Baseline continuation gates
 
+## J/K and CR01/CR02 — clean review and ROOT qualification closed
+
+Fixed production e86e624dcf9dd47974e69c53b596030e5e3773c6, inertimplementationrootsha256:3ab7f032d7a76ee3b2d3eca01a0ba65767602e63be8beace952e30f4a62c42e1. Originalexecutor normalfixdriver/test only/allcommandsCLOSED/released; ROOTcommit afterrelease. CleanRED55051/3fails6.43s actualsource/archivecwd drift laterENOENT andsealedancestorREAD_SCOPE; earlier24733 wrongobserverclassification failedfixture retained. GREEN18669/3pass7.78s→77763 FINAL34pass19.41s/211skipped/4COMPLETEsamples/finaltmp[]. Actualprivatecwdcheck beforeadmit/resource/HEAD/inputreserve, expectedInputs frozenrelative; no helperreader/publicwrapper/API/authority change. Author46558 SAME15strictCLOSED2/13FULL7051B/zeroNEW; authororiginalROOTtoolstore inaccessible innewturn, honestROOTcomparisonrequired notfalsecomparison.
+
+Actual same independenttyped `/root/review_265_preflight_policy` re-review e86e624d: PASS/findings[]/remainingBLOCKER0/warnings0/allcommandsCLOSED/ownershipRELEASED, no writes/tests/privateoperations. CR01/CR02 resolved, actualcaller fixtures inspect irreversible denialbeforefresh effects; remainingbounded delta no substantiatedregression. Review source-only, no historicalcustody/runtimefit assurance.
+
+|ROOT command|Actual closed outcome|
+|---|---|
+|67555 driver preledger policy/carry +affectedcontext/resource/legacy/Git/metadata filters|69pass/73skipped,39.97s|
+|42981 full existinghelper test file|103pass,12.12s|
+|22777 SAME exactoriginal15 strict|exit2/13FULL7051B WHOLE-byte-equal actualpre-edit19539/original;zeroNEW/nooffsets/suppression|
+|configured strategy-lab/runtime-js projects|exit0|
+|69379/8037 pnpm boundary/public wrappers|exit1 beforechecks:auto-install/removeMODULES refused noTTY; no purge/config/install workaround|
+|49859 installedservice checker direct|exit0/strict0/ownership0/19inheritedreport-only|
+|installedpublic checker direct|exit0|
+|20807 existingfactory checker direct|exit0/1443files/violations[]|
+|27255 inertsource manifest|exit0/697implementation/15planning/admittingfalse/sourceGateNULL/sourceGateRootNULL/root3ab7f032|
+
+ROOT172uniqueactualtests, not fullsuite/172Matches/type-global-green. Currentdriverfilter: continuation-preledger-(policy|carry), openedledger exactallocation, liveHEAD/resource/allocation drift, freshRAM, journalprefix, chunks/liveness, continuation-v5, CLI/narrowmetadata, selectedwindow/missingwindow/TMPDIR/source-data/manifest/V4descriptor/finitefailure cases. Fullhelper includes genuinepurecapsulefixtures previouslynotrerun byauthor. Existingunchangedparent/retained/ownership proof remains qualified only under inspectedpure/shared-body diff, notclaimedrerun. Sampleactualtimings branch1 1087/1984ms andbranch2 10/170ms, allCOMPLETE; percallback33capacity3HEAD6inputreads+rawSHA6/zero repeatedpolicyhashes/scoperebuild/BOTHfreshpasses, mocks/uncapturedsuccess limitations unchanged. OldnearconsumedRUN censoredproof notupgraded; wholeauthenticatedpreparation/45minfit UNKNOWN.
+
+InitialROOTmanifest39815 failed FORMAT count-property access afteractualpuremanifest computation; corrected output fields only in27255, notproductionrepair/retry/authority. AllcommandsCLOSED/trackedclean. UI notapplicable privatehost-onlycode. ExistingState-A scopedvalidation anddistinctsource-goalverification next; no activeSOURCE/DATA or empiricaladmission/newroute/LEAG/phase/freeze/formation/holdout/public/counting/productioncredit. Full36currentwindowfrontierelapsed; no blindnewtime request/run or slidingdeadline. Sameallcosts/hard02:30:07UTC/frozenbounds/spentV6/olderbytes.
+
 ## J/K integrated review — two source blockers, fix active
 
 Actual typed `/root/review_265_preflight_policy` source-trace review6e2406a7/baseb2d1b053 CLOSED/no writes/tests/privateoperations/ownershipRELEASED; ISSUESFOUND2BLOCKER0warnings. CR01 driver1012–1014/1026/900: normalizedabsolute input/controllerpins lackcwd binding, but freshHEAD/statfs/downstreamwork inheritcwd; nestedrepo change canpassPID+HEADwhiletargetingdifferentrelativetree. Captureissuancecwd/refusebeforeeachcurrent/resource/Git/input observation, actualcaller source/archive drift tests/noeffects. CR02 driver1013/1059/helper20: absolute suppliedinput names change unchanged bounded-reader lexical /preimage|secret|sealed/ rule to includecheckoutancestor. RetainregisteredrelativeexpectedInputs and freshcwd binding, no readerprivacyAPI widening. Remainingchangedmapping/instrumentation showed no additional substantiatedfinding, NOT fullcustody/runtimefit proof. Originalexecutor normalfixdriver/test only thenactualre-review/ROOTqualification/distinctverification. No newplan/authority/bounds.

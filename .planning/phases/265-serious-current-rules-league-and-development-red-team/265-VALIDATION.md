@@ -6,12 +6,28 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-14
-source_reviewed: db1d7011c04e6c544a93bacb4099ce4afb297625
-source_gate: fresh-time-binding-independent-source-pass-requirements-pending
-empirical_validation: v5-pre-entry-failure-unique-terminal-only-check-no-new-retained-charge
+source_reviewed: e86e624dcf9dd47974e69c53b596030e5e3773c6
+source_gate: preledger-policy-review-and-root-validation-closed-distinct-verification-pending
+empirical_validation: v6-preparation-window-expired-unique-terminal-only-check-zero-retained-charge
 ---
 
 # Phase265 — Validation Strategy
+
+## Current State-A J/K pre-ledger source validation
+
+Actual checked J/K supplement/revision, authorclosures Jfaca4006/K6e2406a7, normalCR01/CR02fixe86e624d and actualcleanindependentre-review. ROOT172unique actualtests (69driver/103fullhelper), exactoriginal15strict13FULL7051B WHOLE-byte-equalactualpre-edit/zeroNEW, configuredprojects0 andinstalledservice/public/factorychecks passed. Factory1443/0, service0strict/0ownership/19inheritedreport-only. pnpm wrapper precheck refused auto-install/removal andwasNOT countedaspass; directsameinstalledscripts ranwithoutinstall/config/policychange. Inertroot3ab7f032/697implementation/15planning/admittingfalse/noSOURCEgate. Exactcommand/role/fixture failures andclosedoutcomes inexistingGATES.
+
+|J/K behavior or boundary|Actual automated source coverage|Disposition|
+|---|---|---|
+|Private strict-derived frozen PRE-ledger expectations/realissuance, forged/deep/crossscope denial; publiclegacyunchanged|Actualcaller policy negatives/fullhelper andselectedlegacy/context/Git/metadata cases|COVERED source-only|
+|THREEcurrent/33freshcapacity/3HEAD/6freshrawreadSHA/BOTHlivepasses/fullbarriers, no repeatedpurework|Actualsmall/larger PREPARE→anchorrefusal fixtures; realhash/filesystem/controller, mockGit/resources/clock/catalog|COVERED scopedsource; notcapacity/fit|
+|Safe floor/cutoff/overflow; actual default-zero caller|Actualcutoff+clock/refusal fixtures; source-extracted journal/monotonic parity SUPPLEMENTAL only|COVERED actualcaller; unreachableparameterbranch notclaimed|
+|Working-directory drift rejects beforefreshobservations/effects; relativeprivacy semantics preserved|CR01source/archive actualcaller tests andCR02sealedancestor fixture RED→GREEN|COVERED source-only|
+|Reviewed small+>4MiBlarge authentication thenrealV6bootstrap usingactualreturnedrows|Actualdefaultinventory n2/64 (3/65reviewed→6/68rows) andrealcontroller, bounded<12.7MiB; syntheticresource/Git inputs|COVERED qualifiedsplit only|
+|Historicalcapsule/exactV6spentanchors/postcustodydriverbindArchive success; wholeauthenticatedprep runtimefit|ActualV6syntheticcaller refusesknownanchor; purecapsulefixture separate; oldernearRUN assaycensored|PARTIAL/explicitlyUNCOVERED genuinehistorysuccess andfit|
+|Actualcurrent-rules baseline/Matches/replays/evaluation/freeze andall9LEAG|ConsumedV6prepareWindowExpired/unique terminalonlycheck/no retainedallocation/head/Matchcharge; ordinaryreaderneverinvoked|MISSING empirical|
+
+All4bounded samples COMPLETE, not an extrapolatedfullpreparation certificate. Bothfull sourcepasses/archivestageopening verified inbranch1, archiveclosing/captureNOTaccepted; branch2helperbootstrap is not actualpostcustodydriverbindArchive. UIgates notapplicable; actualMatch/replayrealism remains pending. Wholephasepartial/nyquistfalse/wave0false/all9LEAGpending; no SOURCE/DATA/route/freeze/formation/holdout/public/counting/production authority. Independent scopedcoverage audit and distinctsourceverification next; sourcehard02:30:07UTC/allcontinuouscosts andspentV6immutability unchanged, full36frontierelapsed. Earlierheaders are historical.
 
 ## Current State-A narrow time binding — ROOT checks closed
 
