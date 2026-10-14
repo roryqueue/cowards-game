@@ -1,5 +1,11 @@
 # Baseline continuation gates
 
+## Cadence H author closure — I active
+
+Actual executor `/root/execute_265_stage_cadence` H RED63671b3b taggeddrivercommandCLOSED1/3expectednewfailures+4existingmutationdenialpasses9.60s; finalGREENcbdf43fd exactdriver/drivertest/containerGit committed/released/allcommandsCLOSED. Disjoint final new batches8coreconnectedcases51.43s +2actualsharedissuervalid/claim30.05s +3actualdurablecharge30.00s =13passes. Author priorSAME15strictCLOSED2/13FULLinherited/early201+321unchanged/zeroNEW after one actual reserve-callback typing fix, not globaltypegreen/no inherited fixes. Genericissuer spy-history heap and5s/15s harness failures were real SOURCE-test failures; bounded V6 mock-call compaction and TESTonly30s timeouts closed fixtures, no production callback/resource weakening or runtime/8sscale extension. These outcomes remain qualified AUTHOR checks, not final independentreview/ROOTexecution/readiness.
+
+Connected G/H lawful-directory gap fixed inside original G ownership while H parked: RED862153f9 actualfixed-timesdenial→GREEN638ac28c,14affectedcases5.76s/diff0/CLOSED/released. Stable dev/ino/owner/mode/links/realpath, requiredbaseline/no-shrink and mandatory fresh allowed-member callback; unknowngrowth permanentlydenies, legacyV2unchanged. No source-owner concurrency/otherpaths changed. I actualretained/retainedtest/driverfixture nowexclusive; no privatehistory/ordinaryreader/prepare/Match or activeSOURCE/DATA. Shared19:50:43UTCdeadline/full36frontier13:09:43UTC/allcontinuouscosts/oldspentbytes/rules/privacy unchanged.
+
 ## Cadence G author closure — H active
 
 Actual typed executor `/root/execute_265_stage_cadence` G RED930dbf33 directNode24/installedVitest taggedcommandCLOSED1:4expectedmissingcontroller/selectorfailures+1capturedenialpass5.13s. InitialGREEN5/5pass5.80s; finalGREENeffc6fe7 fullhelper89/89pass8.60s/diffcheck0/allcommandsCLOSED/no file deletions/GownedthreepathsRELEASED. Author reports privatefull/livecontroller and exactV6numericwindow/finitepolicy/selectors plus V3/V4/V5 cost-only preservation; unknown V5claimsize notinvented, bound65536/rawidentity checked before syntheticobservedsize. No private data/history/artifacts/docs/runtime operations by author. These are source AUTHOR results, not final independentreview/ROOTgates/readiness/empiricalcredit.

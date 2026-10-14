@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Cadence G source task closed; H driver/Git integration active, I retained closure pending
+stopped_at: Cadence G and H source tasks closed; I retained integration and bounded scale active
 last_updated: "2026-10-14"
 last_activity: 2026-10-14
-last_activity_desc: Actual executor G RED930dbf33 GREENeffc6fe7 closed89helpertests; H driver integration active, no empirical authority
+last_activity_desc: Actual executor H GREENcbdf43fd closed13connectedcases; I retained/scale active; all empirical gates pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — fresh time approved; cadence research next
+
+Actual executor H RED63671b3b→GREENcbdf43fd CLOSED/released exactthreepaths; disjoint new core8+actualsharedissuer2+actualdurablecharge3=13passing cases, latest charge3batch30.00s. Author SAME15strict13FULLinherited/zeroNEW/early201+321unchanged at its closing check, no inherited fixes. Source-only test failures retained: spies accumulated large call history and test harness timeouts; bounded V6 mock-history compaction and TESTonly30s timeout corrected those fixtures, no runtime/8sscale cap change. Connected G directory correction RED862153f9→GREEN638ac28c closed14affectedcases: stable identity/requiredbaseline/no-shrink plus mandatory fresh lawful-directory check, legacy V2 unchanged. H nowreleased; I exclusively owns actualretained/retainedtest/driverfixture. Source work continues; source review/ROOT qualified gates/distinctverifier and any DATA/admission remain pending. No new Match or empirical credit; same shareddeadline/frontier/allcontinuouscosts/all frozen bounds/history/privacy.
 
 Actual typed `/root/execute_265_stage_cadence` G RED930dbf33 had4expectedmissingcontroller/selectorfailures plus1pass5.13s; GREENeffc6fe7 fullhelper89/89pass8.60s/diffcheck0/allcommandsCLOSED/GthreepathsRELEASED. Author reports exactV6 numericpolicy/selectors/privatecontroller and opaqueV3/V4/V5 cost-preservation, unknownclaim bound65536 then rawauthentication beforeobservedsize. These are AUTHOR source-fixture checks, not independent final review/ROOT validation or empirical admission. H exclusively owns driver/drivertest/containerGit; I retained/retainedtest+driverfixture waits for H release. ROOT documentation only/no competing heavy work. Shared harddeadline19:50:43UTC/full36entry13:09:43UTC/all priorcontinuouscosts/frozenbounds/history/privacy unchanged. No activeSOURCE/DATA/window/prepare/Match/reader or LEAG/freezecredit. Earlier next-task text below is a historical checkpoint.
 
