@@ -1,5 +1,13 @@
 # Baseline continuation gates
 
+## Fresh V6 SOURCE projection — actual narrow verification closed
+
+Actualdistincttyped `/root/verify_265_v6_time_binding` PASS_NARROW_SOURCE_ONLY_REQUIREMENTS_PENDING/4of4truths/gaps[]/CLOSED/released; fixeddb1d7011c04e6c544a93bacb4099ce4afb297625/docs8fefb60b/ROOTimplementation80fcea8bb1372c25b6b5e9e0e3dd4c1f00bb4dbb5e217f53fd059c355aec303e. Source/planning/Git inspectiononly, recordedROOTqualificationnotrerun. ExactlegallyunusedV6timebinding/math/frontier/negativecontrols/oldrouteinvariance/qualified191sourceunion(107actuallyrerun) verified. No newcapacity/history/empiricalclaim. ROOTpureactualschema/canonical/domainvalidation5631 CLOSED0: sole activeSOURCEprojection495canonicalbytes/root sha256:afdb95940433717fa8558223d730d373a79a8606ae39a5605be7dfc402f0681d. Actualauthor/reviewer/verifierdistinct; historicalfences remainunchangedTEXT. SOURCE-only, no DATA/runtime/LEAG/phaseauthority. Freshwindow/DATAreview next, source/currentfullschedule/time/rules/privacy bounds unchanged.
+
+```json
+{"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"db1d7011c04e6c544a93bacb4099ce4afb297625","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_v6_time_binding","sourceReviewer":"/root/review_265_v6_time_binding","sourceRoot":"sha256:80fcea8bb1372c25b6b5e9e0e3dd4c1f00bb4dbb5e217f53fd059c355aec303e","sourceVerifier":"/root/verify_265_v6_time_binding","source_review":"passed","source_verification":"passed"}
+```
+
 ## Fresh approved V6 time binding — narrow SOURCE qualification closed
 
 Actual planner `/root/plan_265_v6_time_binding` existingPlan16append44lines/2ec79a47 and independentchecker `/root/check_265_v6_time_binding` VERIFICATIONPASSED/issues[] CLOSED/released. Actual sourceauthor `/root/execute_265_v6_time_binding` T1RED59279/5expectednewtuple/expiredtuple failures5.86s→GREEN66469/93helper8.72s+51803/CLI2/5.15s; ROOTsourcecommit713b4635 afterT1release. T2RED74185/8expiredV6fails+12inertlegacy pass28.06s→exactGREEN3447/12pass7.31s, ROOTdb1d7011c04e6c544a93bacb4099ce4afb297625 aftersolefileclosure. Intermediatedifferent12selection47196/7.85s is sourcefixture evidence, not exact qualifiedsame12 rerun. AllauthorcommandsCLOSED/all4originalfilesRELEASED, no privatehistory/runtime/data/Match operations.

@@ -7,13 +7,15 @@ wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-14
 source_reviewed: db1d7011c04e6c544a93bacb4099ce4afb297625
-source_gate: fresh-time-binding-root-qualified-narrow-verification-pending
+source_gate: fresh-time-binding-independent-source-pass-requirements-pending
 empirical_validation: v5-pre-entry-failure-unique-terminal-only-check-no-new-retained-charge
 ---
 
 # Phase265 — Validation Strategy
 
 ## Current State-A narrow time binding — ROOT checks closed
+
+Actualdistincttyped `/root/verify_265_v6_time_binding` PASS_NARROW_SOURCE_ONLY_REQUIREMENTS_PENDING/4of4truths/gaps[]/CLOSED/released, no rerun/manifest/privatehistory/capacity/empiricaloperation. AllnarrowSOURCEgates closed; sole activeSOURCEafdb9594inexistingGATES bindsfixeddb1d7011/current80fcea root and qualifiedsourceevidence. Freshwindow/DATAapprovalreview remainseparate mandatorynext; wholephasepartial/nyquistfalse/wave0false/all9LEAGpending, no Matches/freeze/formation/holdout/public/counting/productioncredit. Earlier pending-verificationtext is historicalROOTcheckpoint.
 
 Directfresh8happroved18:30:07UTC/unusedV6allfivetargetsabsent, independentlycheckedexistingPlan16last44lines; actualexecutorT1/T2closed/sourceROOTdb1d7011. Independenttypedsource-reviewPASS/findings[]: fourproductiontimestamp literals and V6numericfixtures+3newnumericassertions ONLY, olderselectors/algorithm/rules/resources/privacy unchanged. ROOT93helper+14retainedCLI=107affectedcases actuallyrerun/green; exact15strict7051B/13FULLinherited WHOLE-byte-equal retainedoriginal/zeroNEW/exit2, projecttypes0, actualinertimplementationroot80fcea8b. Prior188qualifiedunion+3new=191sourcecases;84unchangedpreviouschecks/graph/public/service/assay proof qualifyby actualnarrowdiffreview, NOT191rerun. Sourcegate/actualcommandentries in existingGATES. Expired/shiftedrerootedtuple controls andcontinuousfloor/full36reserve/latestinclusive+1denial covered. Distinctnarrowsourceverification pending; no activeSOURCE/DATA/window/prepare/Match/reader. Wholephasepartial/nyquistfalse/wave0false/all9LEAGpending; mocks/oldcensorednearassay doNOTprovefit/capacity/empiricalsuccess. Newdeadline02:30:07UTC/latestfull19:49:07UTC/ALLcosts/history/bounds unchanged. Earlier currentheaders belowhistory.
 
