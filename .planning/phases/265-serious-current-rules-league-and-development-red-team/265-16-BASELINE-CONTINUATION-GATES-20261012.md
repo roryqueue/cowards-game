@@ -1,6 +1,14 @@
 # Baseline continuation gates
 
-## Fresh V6 DATA projection — actual independent review closed
+## V6 preparation terminal — actual independent check closed
+
+ROOT session62237/PID83376 closed exit1: `LEAN_BASELINE_PREPARATION_V4 stage=CARRY code=WINDOW_EXPIRED`, then details withheld; shared V4 formatter, actual V6 invocation. First ROOT terminal clock19:50:04UTC; about45min preparation, exact failure time/hot function not retained. No actual allocation/head/store/temp/claim/ledger/time/entry/result/child-terminal or reader receipt; no ordinary retained reader invoked. Record absence does not prove absence of every unrecorded observation or transient construction.
+
+Distinct actual typed `/root/verify_265_v6_retained` PREPARATION_TERMINAL_CHECKED/CLOSED/released19:53:45UTC. Actual bounded stableNOFOLLOW/canonical regular0600/uid501/singlelink window929B/raw1311fadb/domain0aa8360d and request4047B/raw0c9c7559, SOURCEafdb9594/DATAb0cf0582, registeredPlan221276B/raw1d8eba2d joins independently checked; source db1d7011 ancestor of held95453088/trackedclean/nonplanningdeltaempty. Exact V6 output pathsENOENT/PID83376absent/V6process0. Historical ROOT closure supplied, not independently replayed. Static CARRY precedes SETUP/PUBLICATION; full36 cutoff19:49:07UTC before terminal observation. Initial generic STATE search emitted historical public STATE and was stopped; no private history read. No tests, manifest/capacity/probe/history/empirical operations or writes by verifier. ROOT acknowledged closure/released source+HEAD hold.
+
+DATA below is now spent unchanged TEXT history, not active authority; SOURCE remains source-only. No retry/reuse/refund/recredit/phase/LEAG/freeze credit. Source-only GSD diagnosis next under unchanged02:30:07UTC shared deadline/all continuous costs; no further full36 entry after elapsed frontier, no blind new time request. All frozen rules/resources/privacy/formation-absence bounds preserved.
+
+## Historical V6 DATA projection — spent after preparation refusal
 
 Actualindependenttyped `/root/review_265_v6_time_binding` PASS_DATA_REVIEW/findings[]/allcommandsCLOSED/ownershipRELEASED. Freshwindow929B/owner501gid20/exact0600/singlelink/dev16777222ino89357143/NOFOLLOWfd/pathstable/realpathexact/canonicalnoLF; domainsha256:0aa8360dba4dd7e7684de5484530b5a2fcd317dbc33c1b29e0275303b01c56f0/rawsha256:1311fadb75d16b9e6eaa299f7e961034cc941ecbb8db4dbe28121724b98459ec. ExactPlan16rawsha256:1d8eba2de99385addf11ef10fc954ca2f1c082bbb6e8632e5c5844b972798e0f/SOURCEafdb9594/fixeddb1d7011/root80fcea/publicGitsourceancestor/nonplanningdeltaempty/trackedclean joined; exactly1SOURCE/0DATA beforethisprojection, request/allocation/store/temp/claim actuallyABSENT. Directhumanapproved! firstROOT18:30:07UTC/observationlabelnotexternalUUID/custody; grantbaseline-continuation-20261014-v6-183007. Continuouscarry654665903/cap683465903/deadline1792031407000/reserve24060000/latest1792007347000 verified. Prospectiveordinaryreader `/root/verify_265_v6_retained` notdispatched/verdictnotclaimed, ROOTwindowauthor/runoperatordistinct.
 
@@ -8,7 +16,7 @@ Initializationdetailsnotempiricalattempt: applypatchaddedLF; firstnontruncatingc
 
 ROOTpure actualschema/canonical/domain DATAvalidation75675 CLOSED0: projection882canonicalbytes/root sha256:b0cf0582333bb511d6a9cf8b2ef9b05582f425319fa9c5db07692590fa47b1f8. ExactlyoneactiveDATA follows, oldhistoricalfences unchangedTEXT. DATAapproval doesnotreplacefreshSAMEPROCESS whole-schedulecapacity. Finalcommit/requestpins→ONEROOTprepare→newallocation-onlyDIRECTCHILDcommit→ONEROOTentry/freshcapacityBEFOREcharge; holdsource/allpinnedplanning/HEAD throughactualterminal+ONEactualdistinctretainedreader onlyrealentry/head elseboundedterminal-only. Alloperators/sourceownersclosed beforeentry; no competingheavywork/extrahelper/gate/reader. Failurepartialnamespace/spentbytes remainimmutable/no retry/refund/reuse/recredit. Same15GB3GB/global300/new36/fourunopened/runtime/rules/privacy/unopenedholdout/freeze-beforeformation; no LEAG/phase/freezecredit.
 
-```json
+```text
 {"approvalEvidence":{"humanDecisionId":"human-approval-observed-20261014T183007Z","recordedBy":"/root"},"commands_closed":true,"dataReviewer":"/root/review_265_v6_time_binding","grantId":"baseline-continuation-20261014-v6-183007","planRoot":"sha256:1d8eba2de99385addf11ef10fc954ca2f1c082bbb6e8632e5c5844b972798e0f","readerOperator":"/root/verify_265_v6_retained","reviewedSourceHead":"db1d7011c04e6c544a93bacb4099ce4afb297625","runOperator":"/root","schemaVersion":"lean-baseline-continuation-data-gate-v2","sourceGateRoot":"sha256:afdb95940433717fa8558223d730d373a79a8606ae39a5605be7dfc402f0681d","sourceRoot":"sha256:80fcea8bb1372c25b6b5e9e0e3dd4c1f00bb4dbb5e217f53fd059c355aec303e","status":"passed","windowBytesRoot":"sha256:1311fadb75d16b9e6eaa299f7e961034cc941ecbb8db4dbe28121724b98459ec","windowRoot":"sha256:0aa8360dba4dd7e7684de5484530b5a2fcd317dbc33c1b29e0275303b01c56f0"}
 ```
 

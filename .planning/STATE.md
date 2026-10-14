@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh V6 SOURCE and DATA gates closed; final request pins and unique ROOT preparation next
+stopped_at: V6 preparation terminal checked; source-only setup-cost diagnosis next
 last_updated: "2026-10-14"
 last_activity: 2026-10-14
-last_activity_desc: Actual DATA review passed fresh929B window; projectionb0cf0582 closed, no preparation or charge yet
+last_activity_desc: Unique V6 preparation refused CARRY/WINDOW_EXPIRED; independent terminal verification closed; no retained allocation or Match charge
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,14 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V6 preparation closed; diagnose before another run
+
+Unique ROOT preparation session62237/PID83376 closed exit1 with finite `LEAN_BASELINE_PREPARATION_V4 stage=CARRY code=WINDOW_EXPIRED` then details withheld. V4 is shared formatter text, not a second route. First ROOT terminal observation2026-10-14T19:50:04UTC; exact initiating timestamp and dominant hot function were not retained. Preparation spent about45min before allocation. No allocation, store/temp/claim, ledger/time, entry/head, result/child-terminal or reader receipt retained. Absence does not establish absence of every unrecorded observation or transient construction.
+
+ONE actual independent typed `/root/verify_265_v6_retained` PREPARATION_TERMINAL_CHECKED at19:53:45UTC; all commands CLOSED/ownership RELEASED, acknowledged by ROOT. Bounded NOFOLLOW/canonical0600-owner501-singlelink request/window joins, SOURCEafdb9594/DATAb0cf0582/registeredPlan1d8eba2d, HEAD95453088/productiondb1d7011 ancestry/nonplanningclean, exact output-path absence and PID/process absence passed. Verifier checked source CARRY-before-SETUP/PUBLICATION and recomputed full36 cutoff19:49:07UTC; ROOT's historical tool closure was supplied, not independently replayed. No ordinary reader was invoked; no fabricated head, empirical admission, Match or LEAG credit. V6 window/request/namespace are spent and immutable. Source/HEAD hold is now released; DATA projection archived as unchanged TEXT history, SOURCE remains source-only.
+
+Next: existing GSD debug session, source-only diagnosis of remaining preparation amplification; no unchanged run, private historical authenticator replay, allocation, Match or ordinary reader. Current window still ends2026-10-15T02:30:07UTC; all prior/current costs count continuously. Full36 admission frontier elapsed, so no further full36 empirical entry under this window. Do not request another blind eight-hour window before evidence-backed source readiness. Same15GB/3GB/global300/new36/four unopened/runtime/gameplay/privacy bounds; old50cost-only/zero retained V6 charges. Plan16/Phase265 and all9LEAG remain incomplete; Phase266 planning-only, no freeze/formation/holdout/public/counting/production authority. Earlier continuation paragraphs below are historical checkpoints.
 
 ## Current continuation — fresh baseline time approved; narrow binding next
 

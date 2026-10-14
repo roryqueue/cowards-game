@@ -2,7 +2,7 @@
 status: investigating
 trigger: Continue v1.38 autonomously after the approved baseline window
 created: 2026-10-12
-updated: 2026-10-13
+updated: 2026-10-14
 mode: source_only
 ---
 
@@ -18,10 +18,14 @@ Retained reader physical88924160B; current store+scratch2453504B/46rows; reader 
 
 ## Current Focus
 
-hypothesis: V5 still spent about60min pre-entry after the independently verified A/B policy/role-merge repair. Remaining repeated filesystem/path-resolution and other pure work may dominate full fresh guards; exact suppressed throw/hot function remains UNKNOWN.
-test: Next bounded PUBLIC-only static/API/readonly filesystem diagnosis; no history authentication/admission or replay. Investigate remaining call algebra and, only within bounded source-only resources, compare default/native realpath identity/error/alias semantics and cost before recommending any native substitution.
-expecting: Evidence-backed predicate-preserving implementation repair only, EVERY callback/BOTH fresh passes/live byte/resource/time/lineage/membership guards intact. No live-observation cache, blind native patch, original causal claim or measured whole-run speedup.
-next_action: ROOT owns STATE/GATES/post-closure records. Typed diagnosis manager may own ONLY this existing debug file, diagnosis-only/no source edits, one bounded investigation. Preserve all spent V5/older bytes, continuous costs and21:21:06UTC source-work hardstop; full36 admission frontier has elapsed.
+hypothesis: V6 major-stage static identity repair still spent about45min in CARRY before WINDOW_EXPIRED; remaining live resource/accounting inventory work may amplify each callback. Exact dominant hot function is not established.
+test: Static connected call algebra only at fixed db1d7011 production source; no private history authentication, prepare replay, reader, capacity or live experiment. Identify actual CARRY path, controller capture ordering and fresh physical/resource pass counts before recommending a bounded synthetic sensitivity test.
+expecting: Evidence-backed normal source repair within approved stage/live assurance, or an explicit genuinely new decision if required. Preserve fresh live predicates and both passes; no unsupported equivalence/performance/cause claim or blind native change.
+next_action: ROOT owns STATE/GATES; typed diagnosis manager owns ONLY this existing debug file, diagnosis-only one bounded investigation. V6 unique prepare62237/PID83376 and independent terminal-only verifier are CLOSED/released; zero retained allocation/head/Match charge. Spent V6/older bytes immutable. Source-only hardstop2026-10-15T02:30:07UTC/all costs continuous; full36 frontier19:49:07UTC elapsed. No new window, allocation, Match, ordinary reader or numbered plan.
+
+### V6 actual preparation terminal — 2026-10-14
+
+Expected one36-cell baseline after narrow checked time binding and SOURCE/DATA review. Actual unique ROOT prepare62237/PID83376 closed exit1 with finite CARRY/WINDOW_EXPIRED and details withheld, shared formatter V4 not a second route. First ROOT terminal observation19:50:04UTC after about45min setup; exact failure time and hot function not retained. ONE independent typed `/root/verify_265_v6_retained` PREPARATION_TERMINAL_CHECKED at19:53:45UTC/CLOSED/released. Exact metadata/Git/source/gates/absence checked, no ordinary reader. No allocation/store/temp/entry/head/result/retained charge; missing records not proof no transient or unrecorded work. Source/HEAD hold released. All old source/readiness observations remain source-only, no empirical success/phase/LEAG/freeze credit. SOURCE unchangeddb1d7011/root80fcea; spent DATA body retained as TEXT. Safe source-only diagnosis proceeds, not another unchanged launch/time request.
 
 ### V5 actual closed pre-entry observations — 2026-10-13
 
