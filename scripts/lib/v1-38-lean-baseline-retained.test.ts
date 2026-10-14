@@ -302,7 +302,7 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     expect(guard).toHaveBeenCalledWith(16 * 1024 * 1024)
     expect(publish).not.toHaveBeenCalled()
   })
-  it.each(["pass", "closing", "uncertain", "foreign"] as const)("[continuation-stage-cadence-I] actual V6 publisher closes full acceptance and never writes issued credit: %s", mode => {
+  it.each(["pass", "closing", "uncertain", "foreign"] as const)("[WR-CAD-02] [continuation-stage-cadence-I] actual V6 publisher closes full acceptance and never writes issued credit: %s", mode => {
     const { allocation } = v2Allocation("20261014-v6"), ledger = { directory: "inert", allocation } as continuationLedger.LeanExperimentLedger
     const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "cadence-publish-"))), path = join(directory, "closed-source"), context = {}
     fs.writeFileSync(path, "fixed source")
@@ -313,10 +313,10 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     const written: Record<string, any>[] = [], publish = vi.fn((_ledger, _name, value) => { written.push(value); if (mode === "closing") fs.writeFileSync(path, "drift"); if (mode === "uncertain") throw new Error("PRIVATE_UNCERTAINTY") })
     const run = () => continuationReader.publishLeanContinuationRetainedCheckV2(ledger, { complete: true } as never, null, () => {}, publish as never, stage)
     try {
-      if (mode === "pass") expect(run()).toMatchObject({ disposition: "passed", issued: false })
+      if (mode === "pass") { const accepted = run(); expect(accepted).toMatchObject({ disposition: "passed", report: { complete: true }, issued: false, verificationStatus: "closed_private_return" }); expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(accepted)).toBe(true); expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(JSON.parse(JSON.stringify(accepted)))).toBe(false); expect(Object.isFrozen(accepted)).toBe(true) }
       else expect(run).toThrow(/V2_TERMINAL_REFUSAL/)
       if (mode === "foreign") expect(written).toHaveLength(0)
-      for (const value of written) expect(value.issued).toBe(false)
+      for (const value of written) { expect(value).toMatchObject({ disposition: "pending_closing", verificationStatus: "pending_closing", failure: "PUBLICATION_PENDING_CLOSING", report: null, issued: false }); expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(value)).toBe(false) }
       if (mode !== "pass") expect(() => controller.live(context, () => {})).toThrow()
     } finally { for (const spy of [time, state, elapsed, physical, clock]) spy.mockRestore(); fs.rmSync(directory, { recursive: true }) }
   })
