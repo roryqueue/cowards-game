@@ -7,6 +7,8 @@ import { resolve } from "node:path"
 import * as baseline from "../run-v1-38-lean-baseline.js"
 import { readLeanBaselineContinuationGit } from "./v1-38-lean-container-match-session.js"
 import { createHash } from "node:crypto"
+import * as crypto from "node:crypto"
+import * as host from "../run-v1-38-serious-league.js"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
@@ -135,6 +137,9 @@ describe("[continuation-stage-cadence-G] invocation stages", () => {
 })
 
 vi.mock("node:child_process", async importOriginal => ({ ...await importOriginal<typeof import("node:child_process")>(), execFileSync: vi.fn() }))
+// Instrumentation facade only: always call the actual native hash constructor;
+// digest/update/streaming computations are never replaced or memoized.
+vi.mock("node:crypto", async original => { const actual = await original<typeof import("node:crypto")>(); return { ...actual, createHash: vi.fn(actual.createHash) } })
 vi.mock("node:fs", async original => ({ ...await original<typeof import("node:fs")>(), lstatSync: vi.fn((await original<typeof import("node:fs")>()).lstatSync), readFileSync: vi.fn((await original<typeof import("node:fs")>()).readFileSync) }))
 vi.mock("../../packages/strategy-lab/src/contracts.js", async original => ({ ...await original<typeof import("../../packages/strategy-lab/src/contracts.js")>(), labRoot: vi.fn((await original<typeof import("../../packages/strategy-lab/src/contracts.js")>()).labRoot) }))
 
@@ -170,6 +175,86 @@ describe("complete fresh identity guard", () => {
 })
 
 const r = (value: unknown) => labRoot("inert-continuation-fixture", value)
+describe("[continuation-preledger-carry] separate real default inventory to V6 helper bootstrap", () => {
+  const fixture = (n: number, run: (f: { rows: readonly continuation.LeanContinuationInventoryRowV2[]; reviewed: readonly continuation.LeanContinuationReviewedRowV2[]; context: object; controller: ReturnType<typeof continuation.createLeanContinuationStageControllerV6>; current: (additional?: number) => void; counts: Record<string, number>; initialization: Record<string, number>; bootstrap: (callbacks: number, body?: () => void) => void; mutate: (kind: string) => void; deny: () => void }) => void) => {
+    const began = performance.now(), byteBound = 4194305 + n * 1024 + 8 * 1024 * 1024
+    expect(n).toBeGreaterThanOrEqual(2); expect(n).toBeLessThanOrEqual(64); expect(byteBound).toBeLessThanOrEqual(64 * 1024 * 1024)
+    expect(process.memoryUsage().heapUsed + byteBound).toBeLessThan(768 * 1024 * 1024)
+    const stopAt = began + 12000, censor = () => { if (performance.now() >= stopAt) throw new Error("SOURCE_FIXTURE_CENSORED") }, dir = realpathSync(mkdtempSync(join(tmpdir(), "preledger-inventory-bootstrap-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    const counts: Record<string, number> = { guardCallbacks: 0, resourceObservations: 0, additionalReservations: 0, heads: 0, rawHashes: 0, sha256Factories: 0, sha1Factories: 0, lstats: 0, realpaths: 0, fstats: 0, chunks: 0, exportedDescriptorReads: 0, fullOpeningVisits: 0, fullClosingVisits: 0, liveOpeningVisits: 0, liveClosingVisits: 0, currentChecks: 0, captures: 0, authenticatedReviewedRows: 0, gitShow: 0, gitOid: 0 }
+    let inCurrent = false, frame: { kind: "full" | "live"; phase: "opening" | "body" | "closing" } | undefined, changedOwner = false, changedFd = false
+    const originalStat = vi.mocked(fs.lstatSync).getMockImplementation()!, stat = vi.spyOn(fs, "lstatSync").mockImplementation(((...args: Parameters<typeof fs.lstatSync>) => {
+      counts.lstats!++; if (frame && !inCurrent && frame.phase !== "body") counts[`${frame.kind}${frame.phase === "opening" ? "Opening" : "Closing"}Visits`]!++
+      const value = Reflect.apply(originalStat, fs, args); return changedOwner && value ? Object.assign(Object.create(Object.getPrototypeOf(value)), value, { uid: typeof value.uid === "bigint" ? value.uid + 1n : value.uid + 1 }) : value
+    }) as typeof fs.lstatSync)
+    const originalRealpath = fs.realpathSync, realpaths = vi.spyOn(fs, "realpathSync").mockImplementation(((...args: Parameters<typeof fs.realpathSync>) => { counts.realpaths!++; return Reflect.apply(originalRealpath, fs, args) }) as typeof fs.realpathSync)
+    const originalFstat = fs.fstatSync, fstats = vi.spyOn(fs, "fstatSync").mockImplementation(((...args: Parameters<typeof fs.fstatSync>) => { counts.fstats!++; const value = Reflect.apply(originalFstat, fs, args); return changedFd ? Object.assign(Object.create(Object.getPrototypeOf(value)), value, { ino: typeof value.ino === "bigint" ? value.ino + 1n : value.ino + 1 }) : value }) as typeof fs.fstatSync)
+    const originalRead = fs.readSync, chunks = vi.spyOn(fs, "readSync").mockImplementation(((...args: Parameters<typeof fs.readSync>) => { counts.chunks!++; return Reflect.apply(originalRead, fs, args) }) as typeof fs.readSync)
+    const originalRaw = ledger.leanBytesRoot, raw = vi.spyOn(ledger, "leanBytesRoot").mockImplementation(bytes => { counts.rawHashes!++; return originalRaw(bytes) })
+    const originalHash = vi.mocked(crypto.createHash).getMockImplementation()!, hashes = vi.spyOn(crypto, "createHash").mockImplementation(((...args: Parameters<typeof crypto.createHash>) => { if (args[0] === "sha256") counts.sha256Factories!++; if (args[0] === "sha1") counts.sha1Factories!++; return Reflect.apply(originalHash, crypto, args) }) as typeof crypto.createHash)
+    const originalDescriptor = continuation.readLeanContinuationBoundedBytesV2, descriptor = vi.spyOn(continuation, "readLeanContinuationBoundedBytesV2").mockImplementation((...args) => { counts.exportedDescriptorReads!++; return originalDescriptor(...args) })
+    const usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), available = vi.spyOn(host, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000), clock = vi.spyOn(Date, "now").mockReturnValue(1000)
+    const head = "a".repeat(40), contents = new Map<string, Buffer>(), reviewed: continuation.LeanContinuationReviewedRowV2[] = []
+    const plan = ".planning/active.md", input = ".strategy-lab/lean-fixture-input.json", folder = ".strategy-lab/lean-fixture-directory"
+    const write = (path: string, bytes: Buffer, mode = 0o644) => { censor(); fs.mkdirSync(resolve(path, ".."), { recursive: true }); writeFileSync(resolve(path), bytes, { mode }); contents.set(path, bytes) }
+    const git: continuation.LeanContinuationGit = vi.fn(args => {
+      if (args[0] === "rev-parse" && args[1] === "HEAD") { counts.heads!++; return Buffer.from(`${head}\n`) }
+      const path = args[1]!.slice(41), bytes = contents.get(path); expect(bytes).toBeDefined()
+      if (args[0] === "show") { counts.gitShow!++; return bytes! }
+      expect(args[0]).toBe("rev-parse"); counts.gitOid!++; return Buffer.from(createHash("sha1").update(`blob ${bytes!.length}\0`).update(bytes!).digest("hex") + "\n")
+    })
+    // Explicitly synthetic fresh-resource predicate, NOT the private driver
+    // capacity path or a passing live receipt. All filesystem/hash work is real.
+    const reserve = (additional = 0) => { censor(); counts.guardCallbacks!++; counts.resourceObservations!++; if (additional) counts.additionalReservations!++; const memory = process.memoryUsage(), free = fs.statfsSync(resolve("."), { bigint: true }); if (!Number.isSafeInteger(additional) || additional < 0 || memory.rss + memory.arrayBuffers + additional > 3000000000 || host.observeLeagueAvailableMemoryBytes() < 1000000000 || free.bavail * free.bsize < 15000000000n) throw new Error("SYNTHETIC_RESOURCE_REFUSAL") }
+    try {
+      for (const path of ["scripts", ".strategy-lab", ".planning/artifacts"]) fs.mkdirSync(resolve(path), { recursive: true })
+      for (let i = 0; i < n; i++) { const path = `scripts/reviewed-${i}.ts`, bytes = Buffer.alloc(i === 0 ? 4194305 : 1024, 97); write(path, bytes); reviewed.push({ path, root: ledger.leanBytesRoot(bytes), commit: head, kind: "reviewed_source" }) }
+      write(plan, Buffer.from("active planning")); reviewed.push({ path: plan, root: ledger.leanBytesRoot(contents.get(plan)!), commit: head, kind: "active_planning" }); write(input, Buffer.from("{}"), 0o600); write(`${folder}/closed.txt`, Buffer.from("closed synthetic bytes"), 0o600)
+      const inputRoots = [plan, input].map(path => ({ path, root: ledger.leanBytesRoot(contents.get(path)!) })), initialization = { ...counts }
+      const rows = continuation.inventoryLeanContinuationSurvivorsV2([], reviewed, git, reserve) // real DEFAULT/V3 branch, no V6 spent anchors
+      expect(rows.filter(row => reviewed.some(review => review.path === row.path))).toHaveLength(reviewed.length); expect(counts.gitShow).toBe(n); expect(counts.gitOid).toBe(1); counts.authenticatedReviewedRows = reviewed.length
+      for (const review of reviewed) expect(rows.find(row => row.path === review.path)?.rawRoot).toBe(review.root)
+      const pins = inputRoots.map(row => ({ path: row.path, stat: fs.lstatSync(resolve(row.path)) })), context = Object.freeze({ pid: process.pid, fixedHead: head, route: "20261014-v6", grant: "synthetic-only", windowRoot: r("synthetic-window") })
+      const current = (additional = 0) => { counts.currentChecks!++; inCurrent = true; try { reserve(additional); if (Date.now() >= 2000 || Date.now() < 1000 || git(["rev-parse", "HEAD"]).toString().trim() !== head) throw new Error("SYNTHETIC_CURRENT_REFUSAL"); for (const row of inputRoots) if (ledger.leanBytesRoot(continuation.readLeanContinuationBoundedBytesV2(row.path, 65536, row.path === input ? 0o600 : 0o644, reserve)) !== row.root) throw new Error("SYNTHETIC_INPUT_REFUSAL") } finally { inCurrent = false } }
+      const roles = rows.map(row => ({ path: row.path, role: row.path === plan ? "active_planning" : row.path === input ? "active_input" : row.kind === "directory" ? "closed_directory" : "closed_history" }))
+      counts.captures!++; const controller = continuation.createLeanContinuationStageControllerV6(pins, rows, roles, context, current)
+      const bootstrap = (callbacks: number, body?: () => void) => {
+        frame = { kind: "full", phase: "opening" }
+        try { controller.withStage(context, "bootstrap", () => {
+          frame = { kind: "full", phase: "body" }
+          for (let i = 0; i < callbacks; i++) { frame = { kind: "live", phase: "opening" }; controller.live(context, () => { frame = { kind: "live", phase: "body" }; current(); frame = { kind: "live", phase: "closing" } }); frame = { kind: "full", phase: "body" } }
+          body?.(); frame = { kind: "full", phase: "closing" }
+        }) } finally { frame = undefined }
+      }
+      const mutate = (kind: string) => {
+        if (kind === "mode") fs.chmodSync(resolve(input), 0o644)
+        if (kind === "link") { fs.renameSync(resolve(input), resolve(`${input}.old`)); symlinkSync(resolve(`${input}.old`), resolve(input)) }
+        if (kind === "membership") write(`${folder}/new.txt`, Buffer.from("added"), 0o600)
+        if (kind === "owner") changedOwner = true
+        if (kind === "fd") changedFd = true
+        if (kind === "resource") usage.mockReturnValue({ ...process.memoryUsage(), rss: 4000000000 })
+        if (kind === "deadline") clock.mockReturnValue(2000)
+      }
+      const deny = () => { expect(() => controller.live(context, () => {})).toThrow(/V6_CONTEXT/); expect(() => controller.withStage(context, "bootstrap", () => {})).toThrow(/V6_CONTEXT/) }
+      run({ rows, reviewed, context, controller, current, counts, initialization, bootstrap, mutate, deny })
+    } finally { clock.mockRestore(); available.mockRestore(); disk.mockRestore(); usage.mockRestore(); descriptor.mockRestore(); hashes.mockRestore(); raw.mockRestore(); chunks.mockRestore(); fstats.mockRestore(); realpaths.mockRestore(); stat.mockRestore(); cwd.mockRestore(); rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(15000) }
+  }
+  it.each([2, 64])("finite SOURCE sensitivity n=%i authenticates real small/large reviewed rows before actual helper bootstrap", n => fixture(n, f => {
+    const before = { ...f.counts }, began = performance.now(); f.bootstrap(n)
+    expect(f.counts.captures).toBe(1); expect(f.counts.authenticatedReviewedRows).toBe(n + 1)
+    expect(f.counts.fullOpeningVisits).toBe(f.rows.length); expect(f.counts.fullClosingVisits).toBe(f.rows.length)
+    expect(f.counts.liveOpeningVisits).toBe(n * 2); expect(f.counts.liveClosingVisits).toBe(n * 2)
+    expect(f.counts.currentChecks! - before.currentChecks!).toBe(3 * n + 3)
+    process.stdout.write(`FINITE_SYNTHETIC_PRELEDGER_BRANCH2 ${JSON.stringify({ status: "COMPLETE", n, bytesBound: 4194305 + n * 1024 + 8 * 1024 * 1024, sampleMs: Math.ceil(performance.now() - began), initialization: f.initialization, inventoryAndCapture: before, bootstrap: Object.fromEntries(Object.entries(f.counts).map(([key, value]) => [key, value - before[key]!])), authenticatedReviewedRows: n + 1, returnedRows: f.rows.length, inventoryBranch: "real-default-V3", helperController: "real-V6", smallCommittedAndLocalChecksReal: true, largeStreamingAndOidChecksReal: true, rawAndDomainHashesReal: true, gitResourcesClockMocked: true, actualDriverBindArchiveCovered: false, fullHistoricalCapsuleImportCovered: false, exactV6SpentSuccessCovered: false, runtimeFitEstablished: false })}\n`)
+  }), 15000)
+  it.each(["mode", "link", "membership", "owner", "fd", "resource", "deadline"])("actual helper bootstrap closing %s drift irreversibly denies after authenticated capture", kind => fixture(2, f => {
+    expect(() => f.bootstrap(1, () => f.mutate(kind))).toThrow(); f.deny()
+  }), 15000)
+  it("forged context and additional-byte refusal cannot revive a captured helper controller", () => {
+    fixture(2, f => { const effect = vi.fn(); expect(() => f.controller.withStage({ ...f.context }, "bootstrap", effect)).toThrow(/V6_CONTEXT/); expect(effect).not.toHaveBeenCalled(); f.deny() })
+    fixture(2, f => { expect(() => f.controller.live(f.context, () => f.current(Number.MAX_SAFE_INTEGER))).toThrow(/SYNTHETIC_RESOURCE_REFUSAL/); f.deny() })
+  }, 15000)
+})
 describe("[continuation-v2-permissions] actual isolated inventory", () => {
   const fixture = (run: (f: { paths: string[]; reviewed: continuation.LeanContinuationReviewedRowV2[]; git: continuation.LeanContinuationGit; inventory: (prior?: readonly continuation.LeanContinuationInventoryRow[], guard?: (additional?: number) => void) => readonly continuation.LeanContinuationInventoryRowV2[] }) => void, modes = [0o755, 0o644, 0o644], large = false) => {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-permissions-")))

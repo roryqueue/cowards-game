@@ -29,34 +29,73 @@ import { leanColdProcedureRoot } from "./lib/v1-38-lean-baseline-pipeline.js"
 import { checkFactoryBoundaries } from "./check-v1-38-factory-boundaries.js"
 // Separate unconsumed PREPARE fixture. Git/resources/clock are inert; source,
 // raw/domain hashes, descriptors, controller and CARRY importer remain real.
-const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWindowV2; counts: { windowHashes: number; heads: number; capacities: number; inputReads: number; liveCompleted: number }; callbacks: { windowHashes: number; heads: number; capacities: number; inputReads: number }[]; onCurrent: { value?: () => void }; absent: () => void }) => void) => {
+const preledgerDetailV6 = () => ({ currents: 0, sourceClosed: 0, archiveOpened: 0, archiveClosed: 0, fullVisits: 0, liveVisits: 0, fullOpeningVisits: 0, fullClosingVisits: 0, liveOpeningVisits: 0, liveClosingVisits: 0, union: 0, liveUnion: 0, capturedSurvivors: 0, exportedDescriptorReads: 0, reserveCallbacks: 0, chunks: 0, opens: 0, lstats: 0, realpaths: 0, fstats: 0, rawHashes: 0, inputRawHashes: 0, liveInputRawHashes: 0, sourceRawHashes: 0, carryRawHashes: 0, manifestScopes: 0, physicalScans: 0, journalReads: 0 })
+const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWindowV2; counts: { windowHashes: number; heads: number; capacities: number; inputReads: number; liveCompleted: number }; detail: ReturnType<typeof preledgerDetailV6>; initialization: ReturnType<typeof preledgerDetailV6> & { windowHashes: number; heads: number; capacities: number; inputReads: number; liveCompleted: number }; callbacks: { windowHashes: number; heads: number; capacities: number; inputReads: number }[]; onCurrent: { value?: () => void }; absent: () => void; assertInvalid: () => void }) => void, sourceExtra = 0) => {
   const began = performance.now(), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-preledger-"))), originalArgs = process.execArgv, connected = Object.getOwnPropertyDescriptor(process, "connected"), p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V6
   const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), actualExists = fs.existsSync, exists = vi.spyOn(fs, "existsSync").mockImplementation(path => actualExists(resolve(String(path))))
   const counts = { windowHashes: 0, heads: 0, capacities: 0, inputReads: 0, liveCompleted: 0 }, callbacks: { windowHashes: number; heads: number; capacities: number; inputReads: number }[] = [], onCurrent: { value?: () => void } = {}
+  expect(sourceExtra * 1024 + 8 * 1024 * 1024).toBeLessThanOrEqual(64 * 1024 * 1024)
+  const detail = preledgerDetailV6(), frames: { kind: "full" | "live"; phase: "opening" | "body" | "closing"; current: boolean }[] = [], deadline = began + 12000
+  const bounded = () => { if (performance.now() >= deadline) throw new Error("SOURCE_FIXTURE_CENSORED") }
+  const originalStat = fs.lstatSync, stats = vi.spyOn(fs, "lstatSync").mockImplementation(((...args: Parameters<typeof fs.lstatSync>) => {
+    detail.lstats++; const frame = frames.at(-1)
+    if (frame && !frame.current && frame.phase !== "body") { detail[frame.kind === "full" ? "fullVisits" : "liveVisits"]++; detail[frame.kind === "full" ? frame.phase === "opening" ? "fullOpeningVisits" : "fullClosingVisits" : frame.phase === "opening" ? "liveOpeningVisits" : "liveClosingVisits"]++ }
+    return Reflect.apply(originalStat, fs, args)
+  }) as typeof fs.lstatSync)
+  const originalRealpath = fs.realpathSync, realpaths = vi.spyOn(fs, "realpathSync").mockImplementation(((...args: Parameters<typeof fs.realpathSync>) => { detail.realpaths++; return Reflect.apply(originalRealpath, fs, args) }) as typeof fs.realpathSync)
+  const originalFstat = fs.fstatSync, fstats = vi.spyOn(fs, "fstatSync").mockImplementation(((...args: Parameters<typeof fs.fstatSync>) => { detail.fstats++; return Reflect.apply(originalFstat, fs, args) }) as typeof fs.fstatSync)
+  const rawOwners = new WeakMap<Uint8Array, string>(), descriptorsByFd = new Map<number, string>(), originalOpen = fs.openSync, opens = vi.spyOn(fs, "openSync").mockImplementation(((...args: Parameters<typeof fs.openSync>) => { detail.opens++; const fd = Reflect.apply(originalOpen, fs, args); descriptorsByFd.set(fd, resolve(String(args[0]))); return fd }) as typeof fs.openSync)
+  const originalChunk = fs.readSync, chunks = vi.spyOn(fs, "readSync").mockImplementation(((...args: Parameters<typeof fs.readSync>) => {
+    detail.chunks++; const owner = descriptorsByFd.get(args[0]), buffer = args[1]
+    if (owner === resolve(lean.LEAN_BASELINE_CONTINUATION_PATHS.allocation) && buffer instanceof Uint8Array) rawOwners.set(buffer, "carry")
+    return Reflect.apply(originalChunk, fs, args)
+  }) as typeof fs.readSync)
+  const originalRaw = lean.leanBytesRoot, raw = vi.spyOn(lean, "leanBytesRoot").mockImplementation(bytes => { detail.rawHashes++; const owner = rawOwners.get(bytes); if (owner === "input") detail.inputRawHashes++; if (owner === "source") detail.sourceRawHashes++; if (owner === "carry") detail.carryRawHashes++; return originalRaw(bytes) })
+  const originalScope = continuationGit.readLeanBaselineContinuationGitV2, scopes = vi.spyOn(continuationGit, "readLeanBaselineContinuationGitV2").mockImplementation((...args) => { detail.manifestScopes++; return originalScope(...args) })
+  const originalPhysical = lean.cumulativeLeanPhysicalBytes, physical = vi.spyOn(lean, "cumulativeLeanPhysicalBytes").mockImplementation(l => { detail.physicalScans++; return originalPhysical(l) })
   const write = (path: string, bytes: string | Uint8Array, mode = 0o644) => { fs.mkdirSync(resolve(path, ".."), { recursive: true }); fs.writeFileSync(resolve(path), bytes, { mode }); fs.chmodSync(resolve(path), mode) }
-  const factory = vi.spyOn(factoryImplementation, "factoryAssessmentImplementationManifest").mockReturnValue({ entries: [], root: root("inert-factory") })
+  const extraEntries = Array.from({ length: sourceExtra }, (_, i) => ({ path: `scripts/preledger-synthetic-${i}.ts`, root: originalRaw(Buffer.alloc(1024, 97)) }))
+  const factory = vi.spyOn(factoryImplementation, "factoryAssessmentImplementationManifest").mockReturnValue({ entries: extraEntries, root: root("inert-factory") })
   const usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000)
   const disk = vi.spyOn(fs, "statfsSync").mockImplementation(() => { counts.capacities++; return { bavail: 100000000000n, bsize: 1n } as never })
   const actualHash = contracts.labRoot, hashes = vi.spyOn(contracts, "labRoot").mockImplementation((domain, value) => { if (domain === "lean-baseline-continuation-window-v2") counts.windowHashes++; return actualHash(domain, value) })
-  const actualRead = continuationHelper.readLeanContinuationBoundedBytesV2, descriptors = vi.spyOn(continuationHelper, "readLeanContinuationBoundedBytesV2").mockImplementation((path, maximum, mode, guard) => { if (resolve(path) === resolve(p.window) || resolve(path) === resolve(p.request)) counts.inputReads++; return actualRead(path, maximum, mode, guard) })
+  const actualRead = continuationHelper.readLeanContinuationBoundedBytesV2, descriptors = vi.spyOn(continuationHelper, "readLeanContinuationBoundedBytesV2").mockImplementation((path, maximum, mode, guard) => {
+    detail.exportedDescriptorReads++; const input = resolve(path) === resolve(p.window) || resolve(path) === resolve(p.request)
+    if (input) counts.inputReads++; if (path.endsWith("/ledger.ndjson") || path.endsWith("/time.ndjson")) detail.journalReads++
+    const bytes = actualRead(path, maximum, mode, additional => { bounded(); detail.reserveCallbacks++; guard(additional) })
+    rawOwners.set(bytes, input ? "input" : path === lean.LEAN_BASELINE_CONTINUATION_PATHS.allocation ? "carry" : "other"); return bytes
+  })
   const head = "b".repeat(40), git = vi.spyOn(childProcess, "execFileSync").mockImplementation(((command: string, args: readonly string[], options: unknown) => {
     if (command !== "git") return "0\n"
     if (args[0] === "rev-parse" && args[1] === "HEAD") { counts.heads++; expect(options).toEqual({ stdio: ["ignore", "pipe", "ignore"], timeout: 1500, maxBuffer: 128 }); return Buffer.from(`${head}\n`) }
     if (args[0] === "merge-base") return Buffer.alloc(0)
-    if (args[0] === "show") return fs.readFileSync(resolve(args[1]!.slice(41)))
+    if (args[0] === "show") { const bytes = fs.readFileSync(resolve(args[1]!.slice(41))); rawOwners.set(bytes, "source"); return bytes }
     throw new Error("UNEXPECTED_INERT_GIT")
   }) as typeof childProcess.execFileSync)
+  let assertInvalid: () => void = () => { throw new Error("CONTROLLER_NOT_REACHED") }
   const actualController = continuationHelper.createLeanContinuationStageControllerV6, controllers = vi.spyOn(continuationHelper, "createLeanContinuationStageControllerV6").mockImplementation((pins, rows, roles, binding, current, policy) => {
     expect(rows).toEqual([])
-    const c = actualController(pins, rows, roles, binding, () => { onCurrent.value?.(); current() }, policy)
-    return Object.freeze({ ...c, live<T>(candidate: object, body: () => T): T { const before = { ...counts }, result = c.live(candidate, body); callbacks.push({ windowHashes: counts.windowHashes - before.windowHashes, heads: counts.heads - before.heads, capacities: counts.capacities - before.capacities, inputReads: counts.inputReads - before.inputReads }); counts.liveCompleted++; return result } })
+    detail.capturedSurvivors += rows.length; detail.union = new Set(pins.map(row => resolve(row.path))).size; detail.liveUnion = new Set(roles.filter(row => row.role !== "fixed_source").map(row => resolve(row.path))).size
+    const c = actualController(pins, rows, roles, binding, () => { bounded(); detail.currents++; const frame = frames.at(-1); if (frame) frame.current = true; try { onCurrent.value?.(); current() } finally { if (frame) frame.current = false } }, policy)
+    assertInvalid = () => { expect(() => c.live(binding, () => {})).toThrow(/V6_CONTEXT/); expect(() => c.withStage(binding, "bootstrap", () => {})).toThrow(/V6_CONTEXT/) }
+    return Object.freeze({ ...c,
+      live<T>(candidate: object, body: () => T): T {
+        const frame = { kind: "live" as const, phase: "opening" as "opening" | "body" | "closing", current: false }, before = { ...counts }, rawBefore = detail.inputRawHashes, scopesBefore = detail.manifestScopes; frames.push(frame)
+        try { const result = c.live(candidate, () => { frame.phase = "body"; detail.currents++; frame.current = true; try { return body() } finally { frame.current = false; frame.phase = "closing" } }); callbacks.push({ windowHashes: counts.windowHashes - before.windowHashes, heads: counts.heads - before.heads, capacities: counts.capacities - before.capacities, inputReads: counts.inputReads - before.inputReads }); expect(detail.inputRawHashes - rawBefore).toBe(6); expect(detail.manifestScopes - scopesBefore).toBe(0); detail.liveInputRawHashes += detail.inputRawHashes - rawBefore; counts.liveCompleted++; return result } finally { frames.pop() }
+      },
+      withStage<T>(candidate: object, stage: continuationHelper.LeanContinuationStageV6, body: () => T): T {
+        const frame = { kind: "full" as const, phase: "opening" as "opening" | "body" | "closing", current: false }; frames.push(frame); if (stage === "archive") detail.archiveOpened++
+        try { const result = c.withStage(candidate, stage, () => { frame.phase = "body"; try { return body() } finally { frame.phase = "closing" } }); if (stage === "source") detail.sourceClosed++; if (stage === "archive") detail.archiveClosed++; return result } finally { frames.pop() }
+      },
+    })
   })
   let clock: ReturnType<typeof vi.spyOn> | undefined
   try {
     Object.defineProperty(process, "connected", { value: false, configurable: true }); process.execArgv = ["--import", "tsx"]
     vi.stubEnv("TSX_DISABLE_CACHE", "1"); vi.stubEnv("NODE_DISABLE_COMPILE_CACHE", "1"); vi.stubEnv("TMPDIR", resolve(p.temp)); for (const key of ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"]) vi.stubEnv(key, undefined)
     const sourcePaths = [...parentApi.LEAN_BASELINE_CONTINUATION_OWNED_PATHS, "scripts/run-v1-38-lean-baseline.sh", "scripts/lib/v1-38-lean-baseline-analysis.ts", "scripts/lib/v1-38-lean-baseline-metrics.ts", "scripts/lib/v1-38-lean-cold-corpus.ts", "scripts/lib/v1-38-lean-seal-metadata.ts", "scripts/lib/v1-38-lean-training-adapter.ts", "scripts/lib/v1-38-lean-baseline.ts", "packages/strategy-lab/src/league/lean-training.ts", "scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-lean-child-cli-terminal.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts", "packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"]
-    for (const path of new Set([...sourcePaths, ...parentApi.LEAN_BASELINE_CONTINUATION_PLANNING_PATHS])) write(path, "inert source", path.endsWith(".sh") ? 0o755 : 0o644)
+    for (const path of new Set([...sourcePaths, ...parentApi.LEAN_BASELINE_CONTINUATION_PLANNING_PATHS])) { bounded(); write(path, "inert source", path.endsWith(".sh") ? 0o755 : 0o644) }
+    for (const entry of extraEntries) { bounded(); write(entry.path, Buffer.alloc(1024, 97)) }
     const base = parentApi.leanBaselineContinuationSourceManifestV2(), planRoot = base.planningEntries.find(row => row.path.endsWith("265-16-BASELINE-CONTINUATION-PLAN-20261012.md"))!.root
     const sg: parentApi.LeanContinuationSourceGateV2 = { schemaVersion: "lean-baseline-continuation-source-gate-v2", plan_check: "passed", source_review: "passed", root_validation: "passed", source_verification: "passed", commands_closed: true, reviewedSourceHead: "a".repeat(40), sourceRoot: base.root, sourceAuthor: "inert-author", sourceReviewer: "inert-reviewer", sourceVerifier: "inert-verifier" }
     const wb = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-preledger", approvalEvidence: { humanDecisionId: "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261014-v6" as const, reviewedSourceHead: sg.reviewedSourceHead, sourceRoot: base.root, sourceGateRoot: labRoot(sg.schemaVersion, sg), planRoot, runOperator: "inert-runner", readerOperator: "inert-reader" }, window = { ...wb, root: labRoot(wb.schemaVersion, wb) }
@@ -67,8 +106,9 @@ const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWind
     const request: parentApi.LeanBaselineContinuationRequestV2 = { schemaVersion: "lean-baseline-continuation-request-v2", seed, sourceHead: head, sourceRoot: base.root, planningRoot: manifest.planningRoot, planRoot, reviewRoot: window.sourceGateRoot, coldRoot, candidateRoots: parentApi.deriveLeanBaselineCandidateRoots(coldRoot), requestRoots: parentApi.deriveLeanBaselineRequestRoots({ seed, coldRoot, planRoot, sourceRoot: base.root }), offlineOverheadMs: window.offlineOverheadMs, sourceAuthor: sg.sourceAuthor, runOperator: window.runOperator, readerOperator: window.readerOperator, windowRoot: window.root, windowBytesRoot: manifest.windowBytesRoot, sourceGateRoot: window.sourceGateRoot, dataReviewRoot: manifest.dataReviewRoot, manifestRoot: manifest.manifestRoot }
     write(p.request, leanCanonicalBytes(request), 0o600); write(lean.LEAN_BASELINE_CONTINUATION_PATHS.allocation, "{}")
     const absent = () => { for (const path of [p.temp, p.store, p.claim, p.allocation]) expect(fs.existsSync(resolve(path))).toBe(false) }
-    run({ window, counts, callbacks, onCurrent, absent }); absent()
-  } finally { clock?.mockRestore(); controllers.mockRestore(); git.mockRestore(); descriptors.mockRestore(); hashes.mockRestore(); disk.mockRestore(); available.mockRestore(); usage.mockRestore(); factory.mockRestore(); exists.mockRestore(); vi.unstubAllEnvs(); process.execArgv = originalArgs; if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(15000) }
+    const initialization = { ...detail, ...counts }
+    run({ window, counts, detail, initialization, callbacks, onCurrent, absent, assertInvalid: () => assertInvalid() }); absent()
+  } finally { clock?.mockRestore(); controllers.mockRestore(); git.mockRestore(); descriptors.mockRestore(); hashes.mockRestore(); disk.mockRestore(); available.mockRestore(); usage.mockRestore(); factory.mockRestore(); physical.mockRestore(); scopes.mockRestore(); raw.mockRestore(); chunks.mockRestore(); opens.mockRestore(); fstats.mockRestore(); realpaths.mockRestore(); stats.mockRestore(); exists.mockRestore(); vi.unstubAllEnvs(); process.execArgv = originalArgs; if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(15000) }
 }
 describe("[continuation-preledger-policy] actual unconsumed V6 caller", () => {
   it("captures pure scope/window once while every completed callback keeps THREE current/33capacity/3HEAD/6input reads", () => preledgerFixtureV6(f => {
@@ -142,6 +182,33 @@ describe("[continuation-preledger-policy] actual unconsumed V6 caller", () => {
     })
     expect(source).not.toMatch(/export (?:const|function) (?:compileContinuationPreflight|captureContinuationPreflight|continuationPreflightElapsed)/u)
   })
+})
+describe("[continuation-preledger-carry] actual V6 PREPARE to immutable anchor refusal only", () => {
+  it("reports actual source/full/live observations separately; no archive closing/capture is credited", () => preledgerFixtureV6(f => {
+    expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request)).toThrow(/V2_ALLOCATION_ANCHOR/)
+    const observed = f.detail
+    expect(observed, "connected observation accounting must exist").toBeDefined()
+    expect(observed!.sourceClosed).toBe(1); expect(observed!.archiveOpened).toBe(1); expect(observed!.archiveClosed).toBe(0)
+    expect(observed!.fullVisits).toBeGreaterThan(0); expect(observed!.liveVisits).toBeGreaterThan(0)
+    f.absent()
+  }), 15000)
+  it.each([0, 32])("finite SOURCE sensitivity sample extra=%i is anchor-refusal coverage, not completed custody", extra => preledgerFixtureV6(f => {
+    const before = { ...f.detail, ...f.counts }, began = performance.now(); let status = "COMPLETE", refusal = ""
+    try { parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request) } catch (error) { refusal = (error as Error).message; if (refusal === "SOURCE_FIXTURE_CENSORED") status = "CENSORED" }
+    expect(refusal).toBe(status === "COMPLETE" ? "LEAN_BASELINE_CONTINUATION_V2_ALLOCATION_ANCHOR" : "SOURCE_FIXTURE_CENSORED")
+    const sample = Object.fromEntries(Object.entries({ ...f.detail, ...f.counts }).map(([key, value]) => [key, value - before[key as keyof typeof before]]))
+    for (const callback of f.callbacks) expect(callback).toEqual({ windowHashes: 0, heads: 3, capacities: 33, inputReads: 6 })
+    expect(f.detail.capturedSurvivors).toBe(0); expect(f.detail.liveUnion).toBe(17); expect(f.detail.physicalScans).toBe(0); expect(f.detail.journalReads).toBe(0); expect(f.detail.archiveClosed).toBe(0)
+    if (status === "COMPLETE") {
+      expect(f.detail.sourceClosed).toBe(1); expect(f.detail.archiveOpened).toBe(1)
+      expect(f.detail.fullOpeningVisits).toBe(2 * f.detail.union); expect(f.detail.fullClosingVisits).toBe(f.detail.union)
+      expect(f.detail.liveOpeningVisits).toBe(f.callbacks.length * f.detail.liveUnion); expect(f.detail.liveClosingVisits).toBe(f.callbacks.length * f.detail.liveUnion)
+      expect(f.detail.liveInputRawHashes).toBe(6 * f.callbacks.length)
+      expect(f.detail.inputRawHashes - before.inputRawHashes).toBe(6 * f.callbacks.length + 11) // four stage currents*2, plus strict manifest*2 and initial request*1
+    }
+    f.assertInvalid(); f.absent()
+    process.stdout.write(`FINITE_SYNTHETIC_PRELEDGER_BRANCH1 ${JSON.stringify({ status, extra, sampleMs: Math.ceil(performance.now() - began), initialization: f.initialization, sample, callbacksCompleted: f.callbacks.length, union: f.detail.union, liveUnion: f.detail.liveUnion, refusal, custodyComplete: false, archiveClosingAccepted: false, actualDriverBindArchiveCovered: false, fullHistoricalCapsuleImportCovered: false, exactV6SpentSuccessCovered: false, rawAndDomainHashesReal: true, gitResourcesClockFactoryCatalogMocked: true, runtimeFitEstablished: false })}\n`)
+  }, extra), 15000)
 })
 it("[continuation-remaining-overhead] [VF-REM-BUILTIN-01] preserves the actual audited factory reachability boundary without direct consumer util imports", () => {
   const result = checkFactoryBoundaries()
