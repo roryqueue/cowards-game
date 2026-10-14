@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V6 setup-cost diagnosis closed; checked pre-ledger pure-policy repair planning next
+stopped_at: Checked J/K pre-ledger policy repair ready for serial source execution
 last_updated: "2026-10-14"
 last_activity: 2026-10-14
-last_activity_desc: Static diagnosis distinguishes 33 capacity checks and 72 pure window hashes per setup callback from zero recursive physical scans; no fit claim
+last_activity_desc: Independent J/K plan check passed after impossible historical fixture requirement corrected; source-only execution next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V6 preparation closed; diagnose before another run
+
+Actual typed planner `/root/plan_265_preflight_policy` additiveJ/K55lines and narrowKrevision CLOSED/released; ROOTd3f54c00→d34c3309. Independent `/root/check_265_preflight_policy` initiallyISSUESFOUNDoneBLOCKER: synthetic fixed historical SHA success impossible. Revised feasible qualifiedsplit realV6prepare→realCARRY anchorrefusal/no capture/publication, separate realdefaultinventory small+large reviewed→realV6controllerbootstrap, existingpurecapsulefixtures; fullhistoricalcustody/exactV6spent-success/actualpostcustodydriverbindArchive explicitlyUNCOVERED. RecheckVERIFICATIONPASSED/issues[]/CLOSED/released. J private driver pre-ledger pureexpectations preserves all freshobservations/THREEcurrent/BOTHpasses; K honest bounded coverage. Two serialtasks/three originalpaths; no newproductionpackage/containerAPI/new numberedplan. Prior SOURCE body archived unchangedTEXT beforeedit, no activeSOURCE/DATA or empiricalauthority. ROOT exactoriginal15strict baseline captured beforeedit; sourceexecution next, review/qualification/distinctverification required. Allcontinuouscosts/sourcehardstop02:30:07UTC/full36frontierelapsed/frozenbounds/spentV6 unchanged.
 
 Actual typed diagnosis manager `/root/diagnose_265_v6_carry` and debugger CLOSED/released, existing debugfile append only. Real preparation CARRY uses survivor-empty preflight guard before archive capture: each completed callback THREEcurrent timings/33freshcapacity/3HEAD/6freshinputreads+rawSHA/72purewindowdomainhashes/BOTHlivepasses; zero recursive physical/journal scans. HEAD is bounded rev-parse, but wrapper rebuilds EXPECTED manifest scope. Conditional counts are source algebra, not actual executed counts/hot-function proof. Old consumed-RUN reviewed=[] censored assay does not cover actual preparation. Existing Plan16 narrow checked source direction: private strict-derived invocation-scoped frozen PRE-ledger pure expectations plus connected inert PREPARE/CARRY sensitivity coverage; preserve THREEcurrent timings/ALLfreshchecks/BOTHpasses/legacy defaults, no live cache/native shortcut. No production fix applied or runtimefit established. All costs/bounds/deadline and spent V6 remain unchanged; planning next, no new time request or empirical entry.
 

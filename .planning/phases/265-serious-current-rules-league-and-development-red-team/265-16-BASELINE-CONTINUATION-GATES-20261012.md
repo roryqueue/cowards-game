@@ -20,11 +20,11 @@ ROOTpure actualschema/canonical/domain DATAvalidation75675 CLOSED0: projection88
 {"approvalEvidence":{"humanDecisionId":"human-approval-observed-20261014T183007Z","recordedBy":"/root"},"commands_closed":true,"dataReviewer":"/root/review_265_v6_time_binding","grantId":"baseline-continuation-20261014-v6-183007","planRoot":"sha256:1d8eba2de99385addf11ef10fc954ca2f1c082bbb6e8632e5c5844b972798e0f","readerOperator":"/root/verify_265_v6_retained","reviewedSourceHead":"db1d7011c04e6c544a93bacb4099ce4afb297625","runOperator":"/root","schemaVersion":"lean-baseline-continuation-data-gate-v2","sourceGateRoot":"sha256:afdb95940433717fa8558223d730d373a79a8606ae39a5605be7dfc402f0681d","sourceRoot":"sha256:80fcea8bb1372c25b6b5e9e0e3dd4c1f00bb4dbb5e217f53fd059c355aec303e","status":"passed","windowBytesRoot":"sha256:1311fadb75d16b9e6eaa299f7e961034cc941ecbb8db4dbe28121724b98459ec","windowRoot":"sha256:0aa8360dba4dd7e7684de5484530b5a2fcd317dbc33c1b29e0275303b01c56f0"}
 ```
 
-## Fresh V6 SOURCE projection — actual narrow verification closed
+## Historical V6 SOURCE projection — source verified before preflight repair
 
 Actualdistincttyped `/root/verify_265_v6_time_binding` PASS_NARROW_SOURCE_ONLY_REQUIREMENTS_PENDING/4of4truths/gaps[]/CLOSED/released; fixeddb1d7011c04e6c544a93bacb4099ce4afb297625/docs8fefb60b/ROOTimplementation80fcea8bb1372c25b6b5e9e0e3dd4c1f00bb4dbb5e217f53fd059c355aec303e. Source/planning/Git inspectiononly, recordedROOTqualificationnotrerun. ExactlegallyunusedV6timebinding/math/frontier/negativecontrols/oldrouteinvariance/qualified191sourceunion(107actuallyrerun) verified. No newcapacity/history/empiricalclaim. ROOTpureactualschema/canonical/domainvalidation5631 CLOSED0: sole activeSOURCEprojection495canonicalbytes/root sha256:afdb95940433717fa8558223d730d373a79a8606ae39a5605be7dfc402f0681d. Actualauthor/reviewer/verifierdistinct; historicalfences remainunchangedTEXT. SOURCE-only, no DATA/runtime/LEAG/phaseauthority. Freshwindow/DATAreview next, source/currentfullschedule/time/rules/privacy bounds unchanged.
 
-```json
+```text
 {"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"db1d7011c04e6c544a93bacb4099ce4afb297625","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_v6_time_binding","sourceReviewer":"/root/review_265_v6_time_binding","sourceRoot":"sha256:80fcea8bb1372c25b6b5e9e0e3dd4c1f00bb4dbb5e217f53fd059c355aec303e","sourceVerifier":"/root/verify_265_v6_time_binding","source_review":"passed","source_verification":"passed"}
 ```
 
