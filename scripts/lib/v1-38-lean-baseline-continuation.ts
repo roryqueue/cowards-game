@@ -367,7 +367,7 @@ const captureContinuationMembersV2 = (value: unknown): readonly string[] => {
   return Object.freeze(captured)
 }
 const continuationMembersTextV2 = (members: readonly string[]): string => Buffer.from(leanCanonicalBytes(captureContinuationMembersV2(members))).toString("utf8")
-const compileContinuationIdentityV2 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[]) => {
+const compileContinuationIdentityV2 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[], growingDirectories?: ReadonlySet<string>, directoryPolicy?: (path: string, members: readonly string[]) => void) => {
   type Pin = Pick<Stats, "dev" | "ino" | "size" | "mtimeMs" | "ctimeMs" | "uid" | "mode" | "blocks">
   const predicates = new Map<string, { pins: Readonly<Pin>[]; survivors: Readonly<LeanContinuationInventoryRowV2>[] }>()
   const at = (path: string) => { const absolute = resolve(path); let expected = predicates.get(absolute); if (!expected) { expected = { pins: [], survivors: [] }; predicates.set(absolute, expected) }; return expected }
@@ -398,6 +398,11 @@ const compileContinuationIdentityV2 = (pins: readonly { path: string; stat: Stat
       if (s.isSymbolicLink() || s.uid !== process.getuid?.() || realpathSync(path) !== path) return fail("V2_IDENTITY_CHANGED")
       for (const pin of expected.pins) if (!s.isFile() || s.nlink !== 1 || s.dev !== pin.dev || s.ino !== pin.ino || s.size !== pin.size || s.mtimeMs !== pin.mtimeMs || s.ctimeMs !== pin.ctimeMs || s.uid !== pin.uid || s.mode !== pin.mode || s.blocks !== pin.blocks) return fail("CONTINUATION_PIN_CHANGED")
       for (const row of expected.survivors) {
+        if (row.kind === "directory" && growingDirectories?.has(path)) {
+          const members = readdirSync(path).sort()
+          if (!directoryPolicy || !s.isDirectory() || s.nlink < 2 || s.dev !== row.dev || s.ino !== row.ino || (s.mode & 0o7777) !== row.mode || s.size < row.bytes || s.blocks * 512 < row.allocatedBytes || members.length > 4096 || row.members?.some(name => !members.includes(name))) return fail("V6_DIRECTORY_CHANGED")
+          directoryPolicy(path, members); continue
+        }
         if (s.dev !== row.dev || s.ino !== row.ino || s.blocks * 512 !== row.allocatedBytes || s.size !== row.bytes || s.mtimeMs !== row.mtimeMs || s.ctimeMs !== row.ctimeMs || s.isFile() && s.nlink !== 1) return fail("CONTINUATION_SURVIVOR_CHANGED")
         if (!(row.kind === "directory" ? s.isDirectory() : (row.kind === "file" || row.kind === "sealed_metadata") && s.isFile()) || (s.mode & 0o7777) !== row.mode || row.members && continuationMembersTextV2(readdirSync(path).sort()) !== expectedMembers.get(row)) return fail("V2_IDENTITY_CHANGED")
       }
@@ -411,8 +416,9 @@ export type LeanContinuationStageV6 = "source" | "archive" | "bootstrap" | "prep
 export type LeanContinuationRoleV6 = "fixed_source" | "closed_history" | "closed_directory" | "active_planning" | "active_input" | "active_directory"
 /** Invocation-local checking state, never an authority token. Static mutations
  * restored between barriers are intentionally outside this approved assurance. */
-export const createLeanContinuationStageControllerV6 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[], roles: readonly { path: string; role: string }[], context: object, current: () => void) => {
+export const createLeanContinuationStageControllerV6 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[], roles: readonly { path: string; role: string }[], context: object, current: () => void, directoryPolicy?: (path: string, members: readonly string[]) => void) => {
   const identity = compileContinuationIdentityV2(pins, survivors), livePaths = new Set<string>(), classified = new Set<string>()
+  const growingDirectories = new Set<string>()
   const captured = captureContinuationArrayV2(roles), allowed = new Set<LeanContinuationRoleV6>(["fixed_source", "closed_history", "closed_directory", "active_planning", "active_input", "active_directory"])
   for (let i = 0; i < captured.length; i++) {
     const row = captureContinuationRecordV2(captured[i], ["path", "role"])
@@ -421,36 +427,40 @@ export const createLeanContinuationStageControllerV6 = (pins: readonly { path: s
     if (!identity.paths.has(path)) return fail("V6_ROLE_PATH")
     classified.add(path)
     if (row.role === "active_planning" || row.role === "active_input" || row.role === "active_directory") livePaths.add(path)
+    if (row.role === "active_directory") growingDirectories.add(path)
   }
+  const observation = growingDirectories.size ? compileContinuationIdentityV2(pins, survivors, growingDirectories, directoryPolicy) : identity
   if (!context || typeof context !== "object" || leanHostIsProxy(context) || typeof current !== "function" || classified.size !== identity.paths.size) return fail("V6_CONTEXT")
   const pid = process.pid, stages = new Set<LeanContinuationStageV6>(["source", "archive", "bootstrap", "prepare", "claim", "import", "charge", "dispatch", "terminal", "reader", "publication"])
-  let invalid = false, inStage = false, inLive = false, epoch = 0, accepted: LeanContinuationStageV6 | undefined
+  let invalid = false, inStage = false, inLive = false, inCurrent = false, epoch = 0, accepted: LeanContinuationStageV6 | undefined
   const assert = (candidate: object) => {
     if (invalid || candidate !== context || process.pid !== pid) { invalid = true; return fail("V6_CONTEXT") }
-    try { current() } catch (error) { invalid = true; throw error }
+    if (inCurrent) { invalid = true; return fail("V6_CONTEXT") }
+    inCurrent = true
+    try { current() } catch (error) { invalid = true; throw error } finally { inCurrent = false }
   }
   const denied = (): never => { invalid = true; return fail("V6_STAGE") }
   const begin = (candidate: object, stage: LeanContinuationStageV6) => {
     assert(candidate)
     if (inStage || inLive || !stages.has(stage) || accepted === "terminal" && stage !== "publication" || accepted === "publication") return denied()
     inStage = true; epoch++
-    try { identity.observe() } catch (error) { invalid = true; inStage = false; throw error }
+    try { observation.observe() } catch (error) { invalid = true; inStage = false; throw error }
     return epoch
   }
   const close = (candidate: object, stage: LeanContinuationStageV6, opened: number) => {
     assert(candidate)
     if (!inStage || inLive || epoch !== opened) return denied()
-    identity.observe(); assert(candidate); accepted = stage; inStage = false
+    observation.observe(); assert(candidate); accepted = stage; inStage = false
   }
   return Object.freeze({
     live<T>(candidate: object, body: () => T): T {
       assert(candidate); if (inLive) return denied(); inLive = true
-      try { identity.observe(livePaths); const result = body(); assert(candidate); identity.observe(livePaths); return result }
+      try { observation.observe(livePaths); const result = body(); assert(candidate); observation.observe(livePaths); return result }
       catch (error) { invalid = true; throw error } finally { inLive = false }
     },
     withStage<T>(candidate: object, stage: LeanContinuationStageV6, body: () => T): T {
       const opened = begin(candidate, stage)
-      try { const result = body(); close(candidate, stage, opened); return result }
+      try { const result = body(); if (result instanceof Promise) return denied(); close(candidate, stage, opened); return result }
       catch (error) { invalid = true; inStage = false; throw error }
     },
     async withStageAsync<T>(candidate: object, stage: LeanContinuationStageV6, body: () => Promise<T>): Promise<T> {
