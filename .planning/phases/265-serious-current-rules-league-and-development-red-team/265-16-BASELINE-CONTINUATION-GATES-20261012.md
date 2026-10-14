@@ -1,5 +1,9 @@
 # Baseline continuation gates
 
+## J/K State-A coverage audit — scoped tasks covered, phase partial
+
+Actual typed `/root/validate_265_preflight_policy` PARTIAL/2of2source tasksCOVERED/newscopedsourcegaps0/BLOCKER0/allcommandsCLOSED/ownershipRELEASED. Actualread-only inspection currentPlanJ/K, source/test/validation/GATES/config; no tests or writes. Driveractualcaller114+ and202+ plus helper178+ supportqualifiedsplit. ROOT67555/69pass and42981/103pass remain ROOTexecution evidence, notauditorreruns. Warningqualificationsrequired, NOT unaddressedcodefindings: source-extractedarithmeticnotactualjournal/monotonicbranch; mockedGit/resource/clock/catalog/nocapacity/wholefit; genuinehistoricalcapsule/exactV6spent/postcustodydriverbindArchive UNDONE; all9LEAGnon-green. Existinglabelsappropriatelyqualified. Distinctsourceverification remainsseparate NEXT; no activeSOURCE/DATA/runtime/phase/freezecredit.
+
 ## J/K and CR01/CR02 — clean review and ROOT qualification closed
 
 Fixed production e86e624dcf9dd47974e69c53b596030e5e3773c6, inertimplementationrootsha256:3ab7f032d7a76ee3b2d3eca01a0ba65767602e63be8beace952e30f4a62c42e1. Originalexecutor normalfixdriver/test only/allcommandsCLOSED/released; ROOTcommit afterrelease. CleanRED55051/3fails6.43s actualsource/archivecwd drift laterENOENT andsealedancestorREAD_SCOPE; earlier24733 wrongobserverclassification failedfixture retained. GREEN18669/3pass7.78s→77763 FINAL34pass19.41s/211skipped/4COMPLETEsamples/finaltmp[]. Actualprivatecwdcheck beforeadmit/resource/HEAD/inputreserve, expectedInputs frozenrelative; no helperreader/publicwrapper/API/authority change. Author46558 SAME15strictCLOSED2/13FULL7051B/zeroNEW; authororiginalROOTtoolstore inaccessible innewturn, honestROOTcomparisonrequired notfalsecomparison.

@@ -7,13 +7,15 @@ wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-14
 source_reviewed: e86e624dcf9dd47974e69c53b596030e5e3773c6
-source_gate: preledger-policy-review-and-root-validation-closed-distinct-verification-pending
+source_gate: preledger-policy-source-coverage-audit-closed-distinct-verification-pending
 empirical_validation: v6-preparation-window-expired-unique-terminal-only-check-zero-retained-charge
 ---
 
 # Phase265 — Validation Strategy
 
 ## Current State-A J/K pre-ledger source validation
+
+Actual independent typed `/root/validate_265_preflight_policy` PARTIAL/2of2scopedtasksCOVERED/newsourcegaps0/BLOCKER0/allcommandsCLOSED/ownershipRELEASED. Readonlyaudit; no newtests/sourcewrites/history/empiricalexecution. ROOT172passes remain ROOT evidence. Currenttable and explicituncovered/custody/capacity/fit/extracted-branch qualifications accepted ashonest. All9LEAGremainpending; wholephasepartial/nyquistfalse/wave0false. Distinctsourceverification next, notempiricaladmission.
 
 Actual checked J/K supplement/revision, authorclosures Jfaca4006/K6e2406a7, normalCR01/CR02fixe86e624d and actualcleanindependentre-review. ROOT172unique actualtests (69driver/103fullhelper), exactoriginal15strict13FULL7051B WHOLE-byte-equalactualpre-edit/zeroNEW, configuredprojects0 andinstalledservice/public/factorychecks passed. Factory1443/0, service0strict/0ownership/19inheritedreport-only. pnpm wrapper precheck refused auto-install/removal andwasNOT countedaspass; directsameinstalledscripts ranwithoutinstall/config/policychange. Inertroot3ab7f032/697implementation/15planning/admittingfalse/noSOURCEgate. Exactcommand/role/fixture failures andclosedoutcomes inexistingGATES.
 
