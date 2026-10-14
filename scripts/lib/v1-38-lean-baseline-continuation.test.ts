@@ -74,16 +74,50 @@ describe("[continuation-stage-cadence-G] invocation stages", () => {
     expect(ledger.leanBaselineContinuationPathsForRequestV2(p.request)).toBe(p)
     expect(ledger.leanBaselineContinuationPathsForRequestV2(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V5.request)).toBe(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V5)
     expect(() => ledger.leanBaselineContinuationPathsForRequestV2(p.request + ".other")).toThrow()
-    const { root: _, ...body } = { ...continuationWindowFixtureV2(), routeNamespace: "20261014-v6" as const, approvedAtMs: 1791978643000, anchorMs: 1791978643000, carryMs: 630701903, capMs: 659501903, deadlineMs: 1792007443000 }
+    const { root: _, ...body } = { ...continuationWindowFixtureV2(), routeNamespace: "20261014-v6" as const, approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 }
     const window = { ...body, root: labRoot(body.schemaVersion, body) }
     expect(ledger.leanBaselineContinuationPathsForWindowV2(window)).toBe(p)
     const prior = continuationAllocationFixtureV2()
     const { root: __, ...allocationBody } = { ...prior, caps: { ...prior.caps, elapsedMs: window.capMs }, window, windowBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(window)) }
     const allocation = ledger.validateLeanBaselineContinuationAllocationV2({ ...allocationBody, root: labRoot(allocationBody.schemaVersion, allocationBody) })
     expect(ledger.leanWritablePaths(allocation)).toEqual([p.temp, p.allocation, p.request, p.window])
-    for (const delta of [{ carryMs: 630701904, capMs: 659501904 }, { anchorMs: 1791978643001, approvedAtMs: 1791978643001, deadlineMs: 1792007443001 }]) {
+    for (const delta of [{ carryMs: 654665904, capMs: 683465904 }, { anchorMs: 1792002607001, approvedAtMs: 1792002607001, deadlineMs: 1792031407001 }]) {
       const changed = { ...body, ...delta }; expect(() => ledger.validateLeanBaselineContinuationWindowV2({ ...changed, root: labRoot(changed.schemaVersion, changed) })).toThrow()
     }
+  })
+  it("[continuation-v6-time-binding] admits the exact newly approved rerooted V6 tuple", () => {
+    const { root: _, ...body } = { ...continuationWindowFixtureV2(), routeNamespace: "20261014-v6" as const, approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 }
+    const window = { ...body, root: labRoot(body.schemaVersion, body) }
+    expect(ledger.validateLeanBaselineContinuationWindowV2(window)).toEqual(window)
+  })
+  it("[continuation-v6-time-binding] denies rerooted expired and internally coherent shifted V6 tuples", () => {
+    const { root: _, ...body } = { ...continuationWindowFixtureV2(), routeNamespace: "20261014-v6" as const, approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 }
+    for (const delta of [
+      { approvedAtMs: 1791978643000, anchorMs: 1791978643000, carryMs: 630701903, capMs: 659501903, deadlineMs: 1792007443000 },
+      { approvedAtMs: 1792002607001, anchorMs: 1792002607001, carryMs: 654665904, capMs: 683465904, deadlineMs: 1792031407001 },
+      { carryMs: 654665904, capMs: 683465904 },
+      { capMs: 683465904 }, { deadlineMs: 1792031407001 },
+    ]) {
+      const changed = { ...body, ...delta }
+      expect(() => ledger.validateLeanBaselineContinuationWindowV2({ ...changed, root: labRoot(changed.schemaVersion, changed) })).toThrow(/CONTINUATION_V2_WINDOW/)
+    }
+  })
+  it("[continuation-v6-time-binding] preserves the continuous floor and exact full36 admission frontier", () => {
+    const { root: _, ...body } = { ...continuationWindowFixtureV2(), routeNamespace: "20261014-v6" as const, approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 }
+    const window = { ...body, root: labRoot(body.schemaVersion, body) }, prior = continuationAllocationFixtureV2()
+    const { root: __, ...allocationBody } = { ...prior, caps: { ...prior.caps, elapsedMs: window.capMs }, window, windowBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(window)) }
+    const allocation = ledger.validateLeanBaselineContinuationAllocationV2({ ...allocationBody, root: labRoot(allocationBody.schemaVersion, allocationBody) })
+    expect(ledger.leanContinuationGlobalFloorV2(window.anchorMs)).toBe(654665903)
+    expect(ledger.leanBaselineContinuationElapsedFloorV2(window, window.anchorMs)).toBe(654665903)
+    const reserve = 36 * ledger.LEAN_CAPS.matchMs + window.closureMs + window.offlineOverheadMs
+    expect(reserve).toBe(24060000)
+    const frontier = window.deadlineMs - reserve
+    expect(frontier).toBe(1792007347000)
+    const sample = { nowMs: frontier, monotonicElapsedMs: frontier - window.anchorMs, remainingSlots: 36, charged: 50, retainedBytes: 88924160, scratchBytes: 0, parentRssBytes: 100000000, childRssBytes: 0, arrayBuffersBytes: 0, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true }
+    expect(continuation.assertLeanBaselineContinuationFrontierV2(allocation, sample)).toBe(window.capMs - reserve)
+    expect(() => continuation.assertLeanBaselineContinuationFrontierV2(allocation, { ...sample, nowMs: frontier + 1, monotonicElapsedMs: sample.monotonicElapsedMs + 1 })).toThrow(/V2_CAPACITY/)
+    expect(ledger.leanBaselineContinuationElapsedFloorV2(window, frontier + 1)).toBe(654665903 + sample.monotonicElapsedMs + 1)
+    for (const delta of [{ freeBytes: 0 }, { availableMemoryBytes: 0 }, { live: false }]) expect(() => continuation.assertLeanBaselineContinuationFrontierV2(allocation, { ...sample, ...delta })).toThrow()
   })
   it("allows only approved active-directory growth, preserving stable identity and baseline members", () => {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), "cadence-directory-"))), context = {}
@@ -468,7 +502,7 @@ describe("[continuation-v5] finite selection and spent V4 preservation", () => {
       if (v6) { fs.mkdirSync(resolve(p5.store), { mode: 0o700 }); fs.mkdirSync(resolve(p5.temp), { mode: 0o700 }) }
       files.forEach((row, i) => { const bytes = Buffer.alloc(row.size, 65 + i); writeFileSync(resolve(row.path), bytes, { mode: row.mode }); fs.chmodSync(resolve(row.path), row.mode); roots.set(actualDigest(bytes), `sha256:${row.raw}`) })
       digest.mockImplementation(bytes => roots.get(actualDigest(bytes)) ?? actualDigest(bytes))
-      const { root: _, ...body } = { ...window(), routeNamespace: v6 ? "20261014-v6" as const : "20261013-v5" as const, ...(v6 ? { approvedAtMs: 1791978643000, anchorMs: 1791978643000, carryMs: 630701903, capMs: 659501903, deadlineMs: 1792007443000 } : {}) }
+      const { root: _, ...body } = { ...window(), routeNamespace: v6 ? "20261014-v6" as const : "20261013-v5" as const, ...(v6 ? { approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 } : {}) }
       run({ files, dir, guard, inventory: (observe = guard) => continuation.inventoryLeanContinuationSurvivorsV2([], [], () => { throw new Error("unexpected Git/history") }, observe, { ...body, root: labRoot(body.schemaVersion, body) }) })
     } finally { digest.mockRestore(); cwd.mockRestore(); rmSync(dir, { recursive: true }) }
   }
