@@ -74,6 +74,16 @@ describe("[continuation-stage-cadence-G] invocation stages", () => {
     expect(ledger.leanBaselineContinuationPathsForRequestV2(p.request)).toBe(p)
     expect(ledger.leanBaselineContinuationPathsForRequestV2(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V5.request)).toBe(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V5)
     expect(() => ledger.leanBaselineContinuationPathsForRequestV2(p.request + ".other")).toThrow()
+    const { root: _, ...body } = { ...continuationWindowFixtureV2(), routeNamespace: "20261014-v6" as const, approvedAtMs: 1791978643000, anchorMs: 1791978643000, carryMs: 630701903, capMs: 659501903, deadlineMs: 1792007443000 }
+    const window = { ...body, root: labRoot(body.schemaVersion, body) }
+    expect(ledger.leanBaselineContinuationPathsForWindowV2(window)).toBe(p)
+    const prior = continuationAllocationFixtureV2()
+    const { root: __, ...allocationBody } = { ...prior, caps: { ...prior.caps, elapsedMs: window.capMs }, window, windowBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(window)) }
+    const allocation = ledger.validateLeanBaselineContinuationAllocationV2({ ...allocationBody, root: labRoot(allocationBody.schemaVersion, allocationBody) })
+    expect(ledger.leanWritablePaths(allocation)).toEqual([p.temp, p.allocation, p.request, p.window])
+    for (const delta of [{ carryMs: 630701904, capMs: 659501904 }, { anchorMs: 1791978643001, approvedAtMs: 1791978643001, deadlineMs: 1792007443001 }]) {
+      const changed = { ...body, ...delta }; expect(() => ledger.validateLeanBaselineContinuationWindowV2({ ...changed, root: labRoot(changed.schemaVersion, changed) })).toThrow()
+    }
   })
 })
 
@@ -418,7 +428,7 @@ describe("[continuation-v5] finite selection and spent V4 preservation", () => {
   // Fixed historical raw roots cannot be generated from public synthetic bytes.
   // This digest-only fixture mapping is private to the test; all real descriptor,
   // directory, chunk, size/mode and root comparisons remain the production code.
-  const fixture = (run: (f: { inventory: (guard?: (additional?: number) => void) => readonly continuation.LeanContinuationInventoryRowV2[]; files: { path: string; size: number; mode: number; raw: string }[]; guard: ReturnType<typeof vi.fn<(additional?: number) => void>>; dir: string }) => void) => {
+  const fixture = (run: (f: { inventory: (guard?: (additional?: number) => void) => readonly continuation.LeanContinuationInventoryRowV2[]; files: { path: string; size: number; mode: number; raw: string }[]; guard: ReturnType<typeof vi.fn<(additional?: number) => void>>; dir: string }) => void, v6 = false) => {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), "continuation-v5-spent-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4, v3 = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2
     const files = [
       { path: p.window, size: 935, mode: 0o600, raw: "98b0cd906323554e3c0cefb96700c317a9bd2e346135c7560d715b87eb303ba6" }, { path: p.request, size: 4056, mode: 0o600, raw: "bd17509fee8d2138b89b4a114224f1ee1ee009217475e924d6dd7cdfd90466c7" },
@@ -428,14 +438,37 @@ describe("[continuation-v5] finite selection and spent V4 preservation", () => {
       { path: join(p.store, "time.ndjson"), size: 0, mode: 0o600, raw: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }, { path: p.claim, size: 1002, mode: 0o600, raw: "14cc57d66661a98c8f9150842b441310c8a70d29fef5186b5c58a49e62c9e45c" },
       { path: v3.request, size: 4041, mode: 0o600, raw: "900e97e973ac31c596d1f5f1b8b89e1b8e532310e0b2d6e67053fbe9a8321065" }, { path: v3.window, size: 935, mode: 0o600, raw: "2c0c2905fea2e4a264aac99df251e5aa89d0b2c44588453d3c41586f4b3a881d" },
     ]
+    const p5 = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V5
+    if (v6) files.push(
+      { path: p5.window, size: 929, mode: 0o600, raw: "989dc4984483ac4ebcecb154e2c8b9256657d0cbb21258b50fb4cdaa99481faa" },
+      { path: p5.request, size: 4051, mode: 0o600, raw: "386e72a26e326d7f09c9c93a6f087c481a7ff0117be284fcb72aeb0aa692e6b1" },
+      ...[p5.allocation, join(p5.store, "allocation.json")].map((path, i) => ({ path, size: 17360, mode: i ? 0o600 : 0o644, raw: "439ff997177d812aebc8194b77dd6dcc30353541b0f5061f3eea036f32c7c7c6" })),
+      { path: join(p5.store, "carry.json"), size: 749813, mode: 0o600, raw: "a6168503f6bee69d22688a003c7acb1c0d850647cdc447f81d10747150eca348" },
+      { path: join(p5.store, "source-manifest.json"), size: 208495, mode: 0o600, raw: "e01c2cc7f6fd49185f92ded151ddc0b4bc6c26347cd3e3b597a76b099943388a" },
+      { path: join(p5.store, "source-hold.json"), size: 146600, mode: 0o600, raw: "e0ff6a1879e9cfb90f5303097a2a1e20a130be0ada3f3b42bfe63949ec79cb55" },
+      ...["ledger.ndjson", "time.ndjson"].map(name => ({ path: join(p5.store, name), size: 0, mode: 0o600, raw: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" })),
+      { path: p5.claim, size: 1011, mode: 0o600, raw: "e2e94f1a122f3c994a09c4ccfb028d630fae52abb0c0aaacce733e4dd57cb13c" },
+    )
     const actualDigest = ledger.leanBytesRoot, roots = new Map<string, `sha256:${string}`>(), digest = vi.spyOn(ledger, "leanBytesRoot"), guard = vi.fn<(additional?: number) => void>()
     try {
       fs.mkdirSync(resolve(".planning/artifacts"), { recursive: true }); fs.mkdirSync(resolve(p.store), { recursive: true, mode: 0o700 }); fs.mkdirSync(resolve(p.temp), { mode: 0o700 })
+      if (v6) { fs.mkdirSync(resolve(p5.store), { mode: 0o700 }); fs.mkdirSync(resolve(p5.temp), { mode: 0o700 }) }
       files.forEach((row, i) => { const bytes = Buffer.alloc(row.size, 65 + i); writeFileSync(resolve(row.path), bytes, { mode: row.mode }); fs.chmodSync(resolve(row.path), row.mode); roots.set(actualDigest(bytes), `sha256:${row.raw}`) })
       digest.mockImplementation(bytes => roots.get(actualDigest(bytes)) ?? actualDigest(bytes))
-      run({ files, dir, guard, inventory: (observe = guard) => continuation.inventoryLeanContinuationSurvivorsV2([], [], () => { throw new Error("unexpected Git/history") }, observe, window()) })
+      const { root: _, ...body } = { ...window(), routeNamespace: v6 ? "20261014-v6" as const : "20261013-v5" as const, ...(v6 ? { approvedAtMs: 1791978643000, anchorMs: 1791978643000, carryMs: 630701903, capMs: 659501903, deadlineMs: 1792007443000 } : {}) }
+      run({ files, dir, guard, inventory: (observe = guard) => continuation.inventoryLeanContinuationSurvivorsV2([], [], () => { throw new Error("unexpected Git/history") }, observe, { ...body, root: labRoot(body.schemaVersion, body) }) })
     } finally { digest.mockRestore(); cwd.mockRestore(); rmSync(dir, { recursive: true }) }
   }
+  it("[continuation-stage-cadence-G] preserves V3/V4/V5 once; authenticates UNKNOWN V5 claim size before expected rows", () => fixture(f => {
+    const rows = f.inventory(), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V5
+    expect(rows.find(row => row.path === p.claim)?.bytes).toBe(1011)
+    expect(rows.filter(row => row.path === p.allocation)).toHaveLength(1)
+    expect(rows.find(row => row.path === ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4.claim)).toBeDefined()
+    expect(rows.find(row => row.path === ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request)).toBeDefined()
+    expect(rows.filter(row => row.path.startsWith(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V6.store))).toHaveLength(0)
+    writeFileSync(resolve(p.claim), "changed", { mode: 0o600 })
+    expect(() => f.inventory()).toThrow(/V5_SPENT_METADATA/)
+  }, true))
   it("authenticates ten opaque V4 files/two exact directories once and preserves residual/growth debit", () => fixture(f => {
     const rows = f.inventory(), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4
     expect(rows.map(row => row.path)).toEqual([...f.files.map(row => row.path), p.store, p.temp].sort((a, b) => a.localeCompare(b)))

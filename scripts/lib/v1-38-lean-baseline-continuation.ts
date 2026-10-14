@@ -6,6 +6,7 @@ import { labRoot, freezeLabValue, type LabRoot } from "../../packages/strategy-l
 import { LEAN_CAPS, LEAN_BASELINE_CONTINUATION_WINDOW as WINDOW, LEAN_BASELINE_CONTINUATION_PATHS, leanBytesRoot, leanCanonicalBytes, validateLeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocation, type LeanBaselineContinuationCarry } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { LEAN_BASELINE_CONTINUATION_PATHS_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationAllocationV2, readLeanAdmittedContinuationAllocationV2, leanAdmittedContinuationElapsedFloorV2, leanHostIsProxy, leanBaselineContinuationElapsedFloorV2, leanBaselineContinuationPathsForWindowV2, type LeanExperimentLedger, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2, type LeanBaselineContinuationCarryV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { exactLabKeys } from "../../packages/strategy-lab/src/contracts.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V6 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { LEAN_PRIVATE_MATCH_CARRY_V3, LEAN_PRIVATE_MATCH_CARRY_V2, LEAN_PRIVATE_MATCH_ARTIFACT_V3, LEAN_PRIVATE_PROBE_COST_ROOT, validateLeanPrivateMatchAllocationV3, validateLeanPrivateMatchAllocationV2, validateLeanPrivateMatchAllocationV1, authenticateLeanPrivateMatchProbeCarryV1 } from "./v1-38-lean-experiment-authority.js"
 
 export { LEAN_BASELINE_CONTINUATION_PATHS }
@@ -226,6 +227,22 @@ const spentV4Directories = freezeLabValue([
   { path: LEAN_BASELINE_CONTINUATION_PATHS_V4.store, members: ["allocation.json", "carry.json", "ledger.ndjson", "source-hold.json", "source-manifest.json", "time.ndjson"] },
   { path: LEAN_BASELINE_CONTINUATION_PATHS_V4.temp, members: ["window-claim.json"] },
 ])
+/** Independent terminal-check raw anchors; unknown claim size is bounded,
+ * not invented. These bytes authenticate preservation, never run authority. */
+const spentV5Metadata = freezeLabValue([
+  { path: LEAN_BASELINE_CONTINUATION_PATHS_V5.window, bytes: 929, mode: 0o600, maximum: 65536, rawRoot: "sha256:989dc4984483ac4ebcecb154e2c8b9256657d0cbb21258b50fb4cdaa99481faa" },
+  { path: LEAN_BASELINE_CONTINUATION_PATHS_V5.request, bytes: 4051, mode: 0o600, maximum: 65536, rawRoot: "sha256:386e72a26e326d7f09c9c93a6f087c481a7ff0117be284fcb72aeb0aa692e6b1" },
+  ...[LEAN_BASELINE_CONTINUATION_PATHS_V5.allocation, join(LEAN_BASELINE_CONTINUATION_PATHS_V5.store, "allocation.json")].map((path, i) => ({ path, bytes: 17360, mode: i ? 0o600 : 0o644, maximum: 262144, rawRoot: "sha256:439ff997177d812aebc8194b77dd6dcc30353541b0f5061f3eea036f32c7c7c6" })),
+  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V5.store, "carry.json"), bytes: 749813, mode: 0o600, maximum: 4194304, rawRoot: "sha256:a6168503f6bee69d22688a003c7acb1c0d850647cdc447f81d10747150eca348" },
+  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V5.store, "source-manifest.json"), bytes: 208495, mode: 0o600, maximum: 4194304, rawRoot: "sha256:e01c2cc7f6fd49185f92ded151ddc0b4bc6c26347cd3e3b597a76b099943388a" },
+  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V5.store, "source-hold.json"), bytes: 146600, mode: 0o600, maximum: 4194304, rawRoot: "sha256:e0ff6a1879e9cfb90f5303097a2a1e20a130be0ada3f3b42bfe63949ec79cb55" },
+  ...["ledger.ndjson", "time.ndjson"].map(name => ({ path: join(LEAN_BASELINE_CONTINUATION_PATHS_V5.store, name), bytes: 0, mode: 0o600, maximum: 4194304, rawRoot: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" })),
+  { path: LEAN_BASELINE_CONTINUATION_PATHS_V5.claim, bytes: null, mode: 0o600, maximum: 65536, rawRoot: "sha256:e2e94f1a122f3c994a09c4ccfb028d630fae52abb0c0aaacce733e4dd57cb13c" },
+])
+const spentV5Directories = freezeLabValue([
+  { path: LEAN_BASELINE_CONTINUATION_PATHS_V5.store, members: ["allocation.json", "carry.json", "ledger.ndjson", "source-hold.json", "source-manifest.json", "time.ndjson"] },
+  { path: LEAN_BASELINE_CONTINUATION_PATHS_V5.temp, members: ["window-claim.json"] },
+])
 const sameIdentityV2 = (old: LeanContinuationInventoryRow, row: LeanContinuationInventoryRow) => ["path", "kind", "bytes", "allocatedBytes", "dev", "ino", "mode", "mtimeMs", "ctimeMs"].every(key => old[key as keyof LeanContinuationInventoryRow] === row[key as keyof LeanContinuationInventoryRow])
 /** Exact reviewed bytes may transition before freeze. Consumed evidence cannot. */
 export const reconcileLeanContinuationInventoryV2 = (prior: readonly LeanContinuationInventoryRow[], current: readonly LeanContinuationInventoryRowV2[], reviewed: readonly LeanContinuationReviewedRowV2[], window?: LeanBaselineContinuationWindowV2): void => {
@@ -253,8 +270,9 @@ export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinu
   const old = new Map(prior.map(row => [row.path, row])), review = new Map(reviewed.map(row => [row.path, row])), reviewedPaths = new Set(review.keys()), names = new Set([...old.keys(), ...review.keys()])
   if (old.size !== prior.length || review.size !== reviewed.length || prior.length > 4096 || reviewed.length > 1024) return fail("V2_INVENTORY_BOUND")
   if (retainV3) for (const row of spentV3Metadata) names.add(row.path)
-  const retainV4 = selected === LEAN_BASELINE_CONTINUATION_PATHS_V5
+  const retainV4 = selected === LEAN_BASELINE_CONTINUATION_PATHS_V5 || selected === LEAN_BASELINE_CONTINUATION_PATHS_V6, retainV5 = selected === LEAN_BASELINE_CONTINUATION_PATHS_V6
   if (retainV4) for (const row of [...spentV4Metadata, ...spentV4Directories]) names.add(row.path)
+  if (retainV5) for (const row of [...spentV5Metadata, ...spentV5Directories]) names.add(row.path)
   for (const dir of [".strategy-lab", ".planning/artifacts"]) {
     const members = readdirSync(resolve(dir)); if (members.length > 4096) return fail("V2_INVENTORY_BOUND")
     for (const name of members) if (dir === ".strategy-lab" ? /^(?:lean-|v1[.-]38|sealed-|holdout)/u.test(name) : /^v1\.38-/u.test(name)) names.add(`${dir}/${name}`)
@@ -270,6 +288,13 @@ export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinu
     let rawRoot = priorRow?.rawRoot ?? null
     const spent = retainV3 ? spentV3Metadata.find(row => row.path === name) : undefined
     const spentV4 = retainV4 ? spentV4Metadata.find(row => row.path === name) : undefined, spentDirectory = retainV4 ? spentV4Directories.find(row => row.path === name) : undefined
+    const spentV5 = retainV5 ? spentV5Metadata.find(row => row.path === name) : undefined, spentDirectoryV5 = retainV5 ? spentV5Directories.find(row => row.path === name) : undefined
+    if (spentV5) {
+      if (!s.isFile() || spentV5.bytes !== null && s.size !== spentV5.bytes || s.size > spentV5.maximum || (s.mode & 0o7777) !== spentV5.mode) return fail("V5_SPENT_METADATA")
+      rawRoot = leanBytesRoot(readLeanContinuationBoundedBytesV2(name, spentV5.maximum, spentV5.mode, guard))
+      if (rawRoot !== spentV5.rawRoot) return fail("V5_SPENT_METADATA")
+    }
+    if (spentDirectoryV5 && (!s.isDirectory() || (s.mode & 0o7777) !== 0o700 || !equal(readdirSync(path).sort(), spentDirectoryV5.members))) return fail("V5_SPENT_DIRECTORY")
     if (spentV4) {
       if (!s.isFile() || s.size !== spentV4.bytes || (s.mode & 0o7777) !== spentV4.mode) return fail("V4_SPENT_METADATA")
       rawRoot = leanBytesRoot(readLeanContinuationBoundedBytesV2(name, spentV4.maximum, spentV4.mode, guard))
@@ -297,6 +322,7 @@ export const inventoryLeanContinuationSurvivorsV2 = (prior: readonly LeanContinu
     guard(); const after = lstatSync(path)
     if (after.dev !== s.dev || after.ino !== s.ino || after.size !== s.size || after.blocks !== s.blocks || after.mtimeMs !== s.mtimeMs || after.ctimeMs !== s.ctimeMs || (reviewedRow || spent) && (after.mode !== s.mode || after.uid !== s.uid || !after.isFile() || after.nlink !== 1 || realpathSync(path) !== path)) return fail("V2_INVENTORY_CHANGED")
     if (spentV4 && (after.mode !== s.mode || after.uid !== s.uid || !after.isFile() || after.isSymbolicLink() || after.nlink !== 1 || realpathSync(path) !== path) || spentDirectory && (after.mode !== s.mode || after.uid !== s.uid || !after.isDirectory() || after.isSymbolicLink() || realpathSync(path) !== path || !equal(readdirSync(path).sort(), spentDirectory.members))) return fail("V4_SPENT_CHANGED")
+    if (spentV5 && (after.mode !== s.mode || after.uid !== s.uid || !after.isFile() || after.isSymbolicLink() || after.nlink !== 1 || realpathSync(path) !== path) || spentDirectoryV5 && (after.mode !== s.mode || after.uid !== s.uid || !after.isDirectory() || after.isSymbolicLink() || realpathSync(path) !== path || !equal(readdirSync(path).sort(), spentDirectoryV5.members))) return fail("V5_SPENT_CHANGED")
   }
   for (const name of [...names].sort()) visit(name, 0)
   rows.sort((a, b) => a.path.localeCompare(b.path)); reconcileLeanContinuationInventoryV2(prior, rows, reviewed, window)
@@ -341,7 +367,7 @@ const captureContinuationMembersV2 = (value: unknown): readonly string[] => {
   return Object.freeze(captured)
 }
 const continuationMembersTextV2 = (members: readonly string[]): string => Buffer.from(leanCanonicalBytes(captureContinuationMembersV2(members))).toString("utf8")
-export const createLeanContinuationIdentityGuardV2 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[]): (() => void) => {
+const compileContinuationIdentityV2 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[]) => {
   type Pin = Pick<Stats, "dev" | "ino" | "size" | "mtimeMs" | "ctimeMs" | "uid" | "mode" | "blocks">
   const predicates = new Map<string, { pins: Readonly<Pin>[]; survivors: Readonly<LeanContinuationInventoryRowV2>[] }>()
   const at = (path: string) => { const absolute = resolve(path); let expected = predicates.get(absolute); if (!expected) { expected = { pins: [], survivors: [] }; predicates.set(absolute, expected) }; return expected }
@@ -365,8 +391,9 @@ export const createLeanContinuationIdentityGuardV2 = (pins: readonly { path: str
   }
   const expectedMembers = new Map<LeanContinuationInventoryRowV2, string>()
   for (const expected of predicates.values()) for (const row of expected.survivors) if (row.members !== undefined) expectedMembers.set(row, continuationMembersTextV2(row.members))
-  return () => {
+  const observe = (selected?: ReadonlySet<string>) => {
     for (const [path, expected] of predicates) {
+      if (selected && !selected.has(path)) continue
       const s = lstatSync(path)
       if (s.isSymbolicLink() || s.uid !== process.getuid?.() || realpathSync(path) !== path) return fail("V2_IDENTITY_CHANGED")
       for (const pin of expected.pins) if (!s.isFile() || s.nlink !== 1 || s.dev !== pin.dev || s.ino !== pin.ino || s.size !== pin.size || s.mtimeMs !== pin.mtimeMs || s.ctimeMs !== pin.ctimeMs || s.uid !== pin.uid || s.mode !== pin.mode || s.blocks !== pin.blocks) return fail("CONTINUATION_PIN_CHANGED")
@@ -376,6 +403,64 @@ export const createLeanContinuationIdentityGuardV2 = (pins: readonly { path: str
       }
     }
   }
+  return { observe, paths: new Set(predicates.keys()) }
+}
+export const createLeanContinuationIdentityGuardV2 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[]): (() => void) => compileContinuationIdentityV2(pins, survivors).observe
+
+export type LeanContinuationStageV6 = "source" | "archive" | "bootstrap" | "prepare" | "claim" | "import" | "charge" | "dispatch" | "terminal" | "reader" | "publication"
+export type LeanContinuationRoleV6 = "fixed_source" | "closed_history" | "closed_directory" | "active_planning" | "active_input" | "active_directory"
+/** Invocation-local checking state, never an authority token. Static mutations
+ * restored between barriers are intentionally outside this approved assurance. */
+export const createLeanContinuationStageControllerV6 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[], roles: readonly { path: string; role: string }[], context: object, current: () => void) => {
+  const identity = compileContinuationIdentityV2(pins, survivors), livePaths = new Set<string>(), classified = new Set<string>()
+  const captured = captureContinuationArrayV2(roles), allowed = new Set<LeanContinuationRoleV6>(["fixed_source", "closed_history", "closed_directory", "active_planning", "active_input", "active_directory"])
+  for (let i = 0; i < captured.length; i++) {
+    const row = captureContinuationRecordV2(captured[i], ["path", "role"])
+    if (typeof row.path !== "string" || !row.path || typeof row.role !== "string" || !allowed.has(row.role as LeanContinuationRoleV6)) return fail("V6_ROLE")
+    const path = resolve(row.path)
+    if (!identity.paths.has(path)) return fail("V6_ROLE_PATH")
+    classified.add(path)
+    if (row.role === "active_planning" || row.role === "active_input" || row.role === "active_directory") livePaths.add(path)
+  }
+  if (!context || typeof context !== "object" || leanHostIsProxy(context) || typeof current !== "function" || classified.size !== identity.paths.size) return fail("V6_CONTEXT")
+  const pid = process.pid, stages = new Set<LeanContinuationStageV6>(["source", "archive", "bootstrap", "prepare", "claim", "import", "charge", "dispatch", "terminal", "reader", "publication"])
+  let invalid = false, inStage = false, inLive = false, epoch = 0, accepted: LeanContinuationStageV6 | undefined
+  const assert = (candidate: object) => {
+    if (invalid || candidate !== context || process.pid !== pid) { invalid = true; return fail("V6_CONTEXT") }
+    try { current() } catch (error) { invalid = true; throw error }
+  }
+  const denied = (): never => { invalid = true; return fail("V6_STAGE") }
+  const begin = (candidate: object, stage: LeanContinuationStageV6) => {
+    assert(candidate)
+    if (inStage || inLive || !stages.has(stage) || accepted === "terminal" && stage !== "publication" || accepted === "publication") return denied()
+    inStage = true; epoch++
+    try { identity.observe() } catch (error) { invalid = true; inStage = false; throw error }
+    return epoch
+  }
+  const close = (candidate: object, stage: LeanContinuationStageV6, opened: number) => {
+    assert(candidate)
+    if (!inStage || inLive || epoch !== opened) return denied()
+    identity.observe(); assert(candidate); accepted = stage; inStage = false
+  }
+  return Object.freeze({
+    live<T>(candidate: object, body: () => T): T {
+      assert(candidate); if (inLive) return denied(); inLive = true
+      try { identity.observe(livePaths); const result = body(); assert(candidate); identity.observe(livePaths); return result }
+      catch (error) { invalid = true; throw error } finally { inLive = false }
+    },
+    withStage<T>(candidate: object, stage: LeanContinuationStageV6, body: () => T): T {
+      const opened = begin(candidate, stage)
+      try { const result = body(); close(candidate, stage, opened); return result }
+      catch (error) { invalid = true; inStage = false; throw error }
+    },
+    async withStageAsync<T>(candidate: object, stage: LeanContinuationStageV6, body: () => Promise<T>): Promise<T> {
+      const opened = begin(candidate, stage)
+      try { const result = await body(); close(candidate, stage, opened); return result }
+      catch (error) { invalid = true; inStage = false; throw error }
+    },
+    assertStage(candidate: object, stage: LeanContinuationStageV6): void { assert(candidate); if (inStage || inLive || accepted !== stage) return denied() },
+    invalidate(): void { invalid = true },
+  })
 }
 
 export const LEAN_CONTINUATION_CLOSED_COST_V2 = Object.freeze({ sourceHead: "16db0fa0610e1a2378be8594b191d61f2f3c3baa", allocationCommit: "f6ff7ec36de7387feab7e4b4ad3695db480a4c1f", allocationBytesRoot: "sha256:3ea8c18d1a8a5b7816ed44f10572d4469870e75dcee8c7223895809830cd2c87", resultBytesRoot: "sha256:79ad5c21114afcec3b420b2f452db20cc29b2ca769c8ade317a343187b792796", checkBytesRoot: "sha256:64015d7c5e2c0ced02e0fa09f7c10f2cd7534a3f42b7f046af2a65d7bef17286", checkRoot: "sha256:e1711e16eafd3ded5d69988fe7617208fa7fcdc62b9681d45910ef2825f88838" })
