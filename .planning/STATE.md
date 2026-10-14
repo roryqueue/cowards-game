@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh baseline window approved; narrow checked time binding and source/data admission next
+stopped_at: Fresh time binding source-reviewed and ROOT-qualified; distinct narrow verifier next
 last_updated: "2026-10-14"
 last_activity: 2026-10-14
-last_activity_desc: Actual approval18:30:07UTC grants fresh8h through02:30:07UTC; all prior costs carried and V6 targets absent
+last_activity_desc: Fixeddb1d7011 narrow review clean; ROOT107 affected checks pass and strict7051B whole-byte equality
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — fresh baseline time approved; narrow binding next
+
+Actual timebindingexecution T1ROOT713b4635/T2ROOTdb1d7011c04e6c544a93bacb4099ce4afb297625 CLOSED/allownedpathsRELEASED. Independent typed `/root/review_265_v6_time_binding` PASS_NARROW_SOURCE_REVIEW/findings[]/0BLOCKER/0WARNING/CLOSED/released: onlyfour productiontimestamp literals changed, V6numericfixtures+3new assertions; allselectors/algorithms/oldroutes/consumedhistory unchanged. ROOT actual93helper29714/9.07s +14retained/CLI39448/9.88s=107affectedpasses; SAME15strict37656 CLOSED2/7051B/13FULLinherited WHOLE-byte-equal actual retainedpre-edit/zeroNEW/nooffsets. Configuredprojects40877 CLOSED0. Actualinertmanifest32007 rootsha256:80fcea8bb1372c25b6b5e9e0e3dd4c1f00bb4dbb5e217f53fd059c355aec303e/697implementation/15planning/admittingfalse/sourceGateNULL. Qualified old188 union plus3new=191sourcecases, NOT191rerun:84unchanged old behavior/policy/graph/assay cases reused under actualnarrowdiffreview; oldnearCENSORED/no runtimefitclaim unchanged. Distinctnarrow sourceverification next; no activeSOURCE/DATA/window/request/allocation/prepare/Match/reader or empiricalcredit. Actual18:49:07UTC/latestfull19:49:07UTC/deadline02:30:07UTC/ALLcontinuouscosts unchanged. Older T1-active text belowhistory.
 
 Latest direct human `approved!` accepts ONE fresh eight-hour PRIVATE baseline window, same15GB/ALLpriorcosts. First ROOT approval observation2026-10-14T18:30:07UTC (14:30:07Eastern); deadline2026-10-15T02:30:07UTC (22:30:07Eastern). Actual anchor1792002607000/carry654665903/cap683465903/deadline1792031407000; unchangedF(t)=459375903+(t−1791807317000) counts every prior/current minute. Whole36reserve24060000ms gives latestfullentry1792007347000=2026-10-14T19:49:07UTC. This is one shared freshwindow, no sliding/reset/refund/anotherimplicit8h. All15GB/3GB/global300/new36/fourunopened/guest1000/startup2500/host5000/Match600000/rules/privacy bounds unchanged.
 
