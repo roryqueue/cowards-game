@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Checked J/K pre-ledger policy repair ready for serial source execution
+stopped_at: J private pre-ledger policy committed; K qualified preparation tests active
 last_updated: "2026-10-14"
 last_activity: 2026-10-14
-last_activity_desc: Independent J/K plan check passed after impossible historical fixture requirement corrected; source-only execution next
+last_activity_desc: Author J RED-to-GREEN18 tests closed; ROOTfaca4006; K test-only work active, independent review still pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V6 preparation closed; diagnose before another run
+
+Actual typed executor `/root/execute_265_preflight_policy` J CLOSED/allcommands CLOSED/two-ownedpaths RELEASED; ROOTfaca4006 commits driver private pre-ledger expectations/shared fresh capacity body/HEAD-only bounded reader plus existing test. AuthorRED55398 CLOSED1/10.34s observed72purewindowhashesvs0 with exact33capacity/3HEAD/6rawinputreads; GREEN75491→62721→21523 FINAL18passes/8.72s. Connected realpreflight/CARRY reaches synthetic fixed-anchor refusal with no setup; Git/resources/clock/catalog mocked, actual hashes/descriptors; source-extracted arithmetic parity is supplemental synthetic only, not actual journal/monotonic coverage. AuthorSAME15strict42040 CLOSED2/13FULL7051B/early201+321unchanged/noNEWreported; ROOT pre-edit19539 actualwholebyteequalold. K nowexclusivelyowns existingdriver/helpertests, productionpaths released/no concurrentauthor. Independent integratedreview/fix/ROOTqualification/distinctverification remain pending, no SOURCE/DATA readiness or empiricalcredit. Same sourcehardstop02:30:07UTC/allcosts/full36elapsed/frozenbounds/spenthistory.
 
 Actual typed planner `/root/plan_265_preflight_policy` additiveJ/K55lines and narrowKrevision CLOSED/released; ROOTd3f54c00→d34c3309. Independent `/root/check_265_preflight_policy` initiallyISSUESFOUNDoneBLOCKER: synthetic fixed historical SHA success impossible. Revised feasible qualifiedsplit realV6prepare→realCARRY anchorrefusal/no capture/publication, separate realdefaultinventory small+large reviewed→realV6controllerbootstrap, existingpurecapsulefixtures; fullhistoricalcustody/exactV6spent-success/actualpostcustodydriverbindArchive explicitlyUNCOVERED. RecheckVERIFICATIONPASSED/issues[]/CLOSED/released. J private driver pre-ledger pureexpectations preserves all freshobservations/THREEcurrent/BOTHpasses; K honest bounded coverage. Two serialtasks/three originalpaths; no newproductionpackage/containerAPI/new numberedplan. Prior SOURCE body archived unchangedTEXT beforeedit, no activeSOURCE/DATA or empiricalauthority. ROOT exactoriginal15strict baseline captured beforeedit; sourceexecution next, review/qualification/distinctverification required. Allcontinuouscosts/sourcehardstop02:30:07UTC/full36frontierelapsed/frozenbounds/spentV6 unchanged.
 

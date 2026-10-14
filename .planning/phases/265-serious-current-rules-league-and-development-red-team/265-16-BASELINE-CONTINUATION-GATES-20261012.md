@@ -1,5 +1,11 @@
 # Baseline continuation gates
 
+## Pre-ledger repair J — author closure, independent gates pending
+
+Checked planner J/K55lineappend/d3f54c00, Krefinementd34c3309 after actualchecker BLOCKER impossiblefixedhistoricalSHA synthetic success; reusedchecker VERIFICATIONPASSED/issues[]/CLOSED/released. ROOTpre-editSAME15strict19539 CLOSED2/13FULL7051B WHOLE-byte-equal originalactualretained output, zeroNEW. No activeSOURCE/DATA projections.
+
+Actual typed executor `/root/execute_265_preflight_policy` J CLOSED/allcommandsCLOSED/twopathsRELEASED; ROOTcommitfaca4006 driver+test195insertions/6deletions. RED55398 CLOSED1/10.34s callback72purehashesvs0/exact33capacity3HEAD6reads; firstGREEN75491/1pass6.84s,62721/15pass8.00s,final21523/18pass8.72s. Includes9freshdrift,4strictforged/deep/crosswindow/scope,2mockedmutablevalidatoroutput, actualwhole36cutoff/noLF and supplemental source-extracted arithmetic parity; extractedjournal/monotonic notconnectedbranchproof. Actualrawhash/descriptors/controller/CARRYsyntheticanchorrefusal; Git/resource/clock/catalog mocks; no setup/history/empiricalproof. Authorstrict39063→42040 CLOSED2/13FULL7051B/early201+321unchanged/noNEWreported; ROOTpostsource comparator stillpending. Ktest-onlyqualifiedsplit/sensitivity next; independent integratedreview/ROOTqualification/distinctverification required. Runtimefit/hotfunction/capacity/phasecredit notestablished; all frozenbounds/deadline/spenthistory unchanged.
+
 ## V6 preparation terminal — actual independent check closed
 
 ROOT session62237/PID83376 closed exit1: `LEAN_BASELINE_PREPARATION_V4 stage=CARRY code=WINDOW_EXPIRED`, then details withheld; shared V4 formatter, actual V6 invocation. First ROOT terminal clock19:50:04UTC; about45min preparation, exact failure time/hot function not retained. No actual allocation/head/store/temp/claim/ledger/time/entry/result/child-terminal or reader receipt; no ordinary retained reader invoked. Record absence does not prove absence of every unrecorded observation or transient construction.
