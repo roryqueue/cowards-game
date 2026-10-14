@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Integrated review found parent failure-terminal blocker and persisted-check warning; source fixes next
+stopped_at: Independent re-review found claim-closing failure accounting gap; bounded source correction active
 last_updated: "2026-10-14"
 last_activity: 2026-10-14
-last_activity_desc: Actual independent review CR-CAD-01 blocker WR-CAD-02 warning closed ownership; source-owner corrections required
+last_activity_desc: CR/WR source fixes closed; independent re-review closed WR and found CR-CAD-01-R2 at child release
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — fresh time approved; cadence research next
+
+Actual author review fixes CLOSED/released: CR-CAD-01 RED77eadabb→GREEN0acd92ab, WR-CAD-02 RED1b520c72→GREENfe5bb57f; final two-file focused18/18/38.23s, original15-path strict13FULL/7051B/unchangedheaders/zeroNEW (ROOT whole-byte comparator stillpending). Connected parent/resources/Git/factory/process seams mocked and synthetic accounting; contextAuthenticated:false. Durable V6 output now pending_closing/report:null/issued:false; exact frozen successful in-process return alone supports private handoff, no portable authority. All consumed historical evidence unchanged.
+
+Actual fresh typed `/root/review_265_cadence_fixes` ISSUES_FOUND/1BLOCKER at fe5bb57fed63b686a57981e7ea552fc79487355d, static eight-file cross-call review/allcommandsCLOSED/ownershipRELEASED. Prior reviewer followup hit threadlimit; this is an actual fresh reviewer, not claimed reused role. WR-CAD-02 closed source-only. CR-CAD-01-R2: actualclaim body publishes entry, begins pilot-entry and releases child; real controller claim-closing denial throws before normal exit/terminal branch. Finally observes cleanup but enteredtrue bypasses pre-entry cleanup and leaves pilot interval active. Originaltypedexecutor re-owns ONLYdriver/test: retain actualentry/observedexit across exception and independently resource/accounting-check nonaccepting failureterminal after cleanup, no retrypartialpublication/controllerrestore/refund/success. Actual release-drift RED→GREEN regression and independent re-review remain required. No new rules/resources/approval/numberedplan; sourcehard19:50:43UTC/allcosts/full36elapsed unchanged. No source readiness, new empirical route or downstream credit.
 
 Actual independent typed `/root/review_265_stage_cadence` ISSUES_FOUND:1BLOCKER(CR-CAD-01)/1WARNING(WR-CAD-02), read-onlystaticreview9a277876..9e5307c9/allcommandsCLOSED/ownershipRELEASED. CR-CAD-01: parent source/live denial invalidates controller, then same c.stage terminal call prevents supervisor/child-terminal/pilot-interval closure; cleanup alone is insufficient. WR-CAD-02: passed-looking issued:false bytes are written beforeclosing and indistinguishable from closing-denied output; reviewer foundNO current V2 disposition-only machineconsumer, so not a claimed existingfreeze bypass. Fix genuine parent nonaccepting failure terminal under independent fresh resource/descriptor/accounting checks, preserve invalid positiveauthority/charges; durablepreclose check must be explicitlypending/nonaccepting, successfulprivatehandoff requires actualclosingaccepted invocation outcome. Originaltypedexecutor sequentially re-owns driver/test thenretained/test withinoriginalscope for RED→GREEN normalreviewfixes; no newrules/resources/plan/userliteral. Re-review/ROOTqualification/distinctverify pending; no empiricalcredit/newwindow/lateentry.
 
