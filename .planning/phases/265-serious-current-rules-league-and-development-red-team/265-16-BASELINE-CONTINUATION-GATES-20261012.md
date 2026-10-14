@@ -1,5 +1,13 @@
 # Baseline continuation gates
 
+## J/K integrated review — two source blockers, fix active
+
+Actual typed `/root/review_265_preflight_policy` source-trace review6e2406a7/baseb2d1b053 CLOSED/no writes/tests/privateoperations/ownershipRELEASED; ISSUESFOUND2BLOCKER0warnings. CR01 driver1012–1014/1026/900: normalizedabsolute input/controllerpins lackcwd binding, but freshHEAD/statfs/downstreamwork inheritcwd; nestedrepo change canpassPID+HEADwhiletargetingdifferentrelativetree. Captureissuancecwd/refusebeforeeachcurrent/resource/Git/input observation, actualcaller source/archive drift tests/noeffects. CR02 driver1013/1059/helper20: absolute suppliedinput names change unchanged bounded-reader lexical /preimage|secret|sealed/ rule to includecheckoutancestor. RetainregisteredrelativeexpectedInputs and freshcwd binding, no readerprivacyAPI widening. Remainingchangedmapping/instrumentation showed no additional substantiatedfinding, NOT fullcustody/runtimefit proof. Originalexecutor normalfixdriver/test only thenactualre-review/ROOTqualification/distinctverification. No newplan/authority/bounds.
+
+KauthorCLOSED/allfilesRELEASED/ROOT6e2406a7. Final84525 combined31pass15.39s/211skipped; strict65799 CLOSED2/13FULL7051B WHOLEequalJ/zeroNEW after36179 fourfixture-onlynew diagnostics corrected. Failed93952/58407 remainSOURCEfixture failures, not originalproductioncause. Call-throughactualcreateHashfacade correctedESMspy; no hashsubstitution. Finaltmp=[]; ten exactEMPTYfailedfixture-owned dirs removed, no private/user evidence touched.
+
+Qualified Kbranch1 extra0/32 COMPLETE243/435callbacks,U49/81,L17,946/1700ms: actualprepare/preflight/controller/CARRY toknownanchorrefusal,33capacity3HEAD6inputreads+actualSHA6/windowhash0/scoperebuild0/physical0/journal0 percompletedcallback; BOTHlive/sourcefullbothpasses/archiveopening only,no archiveclosing/capture. Branch2 n2/64 COMPLETE3/65realreviewed incl>4MiBstream→6/68ACTUALreturnedrows→realV6helperbootstrap;9/195currentchecks,BOTHfull6/68each,BOTHlive4/128each,8/162ms,<12.7MiB fixturebound. Hash/filesystem/controller real; Git/resources/clock/catalog mocked, helperresource predicate explicitlysynthetic/notactualcapacity. Fullhistoricalcapsule/exactV6spent-success/postcustodydriverbindArchive UNCOVERED; existingpurecapsulefixtures unchanged/notrerun. No fullprepfit/custody/capacity/empiricalcredit.
+
 ## Pre-ledger repair J — author closure, independent gates pending
 
 Checked planner J/K55lineappend/d3f54c00, Krefinementd34c3309 after actualchecker BLOCKER impossiblefixedhistoricalSHA synthetic success; reusedchecker VERIFICATIONPASSED/issues[]/CLOSED/released. ROOTpre-editSAME15strict19539 CLOSED2/13FULL7051B WHOLE-byte-equal originalactualretained output, zeroNEW. No activeSOURCE/DATA projections.

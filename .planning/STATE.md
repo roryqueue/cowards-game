@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: J private pre-ledger policy committed; K qualified preparation tests active
+stopped_at: J/K closed; independent review found two path blockers; narrow fix active
 last_updated: "2026-10-14"
 last_activity: 2026-10-14
-last_activity_desc: Author J RED-to-GREEN18 tests closed; ROOTfaca4006; K test-only work active, independent review still pending
+last_activity_desc: K31combined cases closed at6e2406a7; review CR01 cwd drift and CR02 lexical ancestor scope regressions; normal fix in driver/test
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V6 preparation closed; diagnose before another run
+
+Actual K CLOSED/allcommands/ownership RELEASED; ROOT6e2406a7 existingtwo testfiles. Finalcombined84525 31passes/15.39s/211skipped, author65799 SAME15strict13FULL7051B wholeequalJ/zeroNEW after fourfixturetypingerrors corrected. Qualifiedsplit fourbounded COMPLETEsamples: actualprepare extra0/32=243/435callbacks,U49/81,L17,946/1700ms, each33capacity3HEAD6rawreads/SHA6/purewindow0/scope0/physical0/journal0; archiveopening+expectedanchorrefusal/no capture, sourcefullbothpasses. Actualdefaultinventory n2/64 authenticates3/65reviewed incl>4MiB→6/68returnedrows→realV6helperbootstrap,8/162ms/<12.7MiB; Git/resources/clock/catalog mocked, no realcapacity/historicalcustody/fullprepfit. Earlier failedfixture batches/disclosures preserved.
+
+Actual independent typed `/root/review_265_preflight_policy` ISSUESFOUND2BLOCKER/0warnings, allcommands CLOSED/ownership RELEASED at6e2406a7. CR01 private absolute input/controller paths+PIDonly acceptcwd drift whileHEAD/statfs/downstream relativework usefreshcwd. CR02 absolute expectedinputnames alter existing reader lexical /preimage|secret|sealed/ rule and reject valid checkout ancestors. Normalfix ORIGINALexecutor exclusivelydriver/test: captureissuancecwd/refusebeforeeachfreshcheck, retainregisteredrelativeinputnames/privacyreaderunchanged, actualcaller drift+ancestorRED→GREEN. No newproduct/resource/assurance decision, numberedplan or empiricalauthority. Review/fix/re-review thenROOTqualification/distinctverification stillrequired; no positiveSOURCE/DATA gates. Samehardstop/full36elapsed/allcosts/frozenbounds/oldspenthistory.
 
 Actual typed executor `/root/execute_265_preflight_policy` J CLOSED/allcommands CLOSED/two-ownedpaths RELEASED; ROOTfaca4006 commits driver private pre-ledger expectations/shared fresh capacity body/HEAD-only bounded reader plus existing test. AuthorRED55398 CLOSED1/10.34s observed72purewindowhashesvs0 with exact33capacity/3HEAD/6rawinputreads; GREEN75491→62721→21523 FINAL18passes/8.72s. Connected realpreflight/CARRY reaches synthetic fixed-anchor refusal with no setup; Git/resources/clock/catalog mocked, actual hashes/descriptors; source-extracted arithmetic parity is supplemental synthetic only, not actual journal/monotonic coverage. AuthorSAME15strict42040 CLOSED2/13FULL7051B/early201+321unchanged/noNEWreported; ROOT pre-edit19539 actualwholebyteequalold. K nowexclusivelyowns existingdriver/helpertests, productionpaths released/no concurrentauthor. Independent integratedreview/fix/ROOTqualification/distinctverification remain pending, no SOURCE/DATA readiness or empiricalcredit. Same sourcehardstop02:30:07UTC/allcosts/full36elapsed/frozenbounds/spenthistory.
 
