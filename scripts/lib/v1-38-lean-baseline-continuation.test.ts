@@ -15,6 +15,56 @@ import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import * as ledger from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as continuation from "./v1-38-lean-baseline-continuation.js"
 
+describe("[continuation-ready-v7-L] delayed initialization policy (synthetic A only)", () => {
+  const approval = 1792017187000, decision = "human-approval-observed-20261014T223307Z"
+  const window = (anchor = approval + 12345, delta: Record<string, unknown> = {}) => {
+    const { root: _, ...old } = continuationWindowFixtureV2(), carry = 459375903 + (anchor - 1791807317000)
+    const body = { ...old, routeNamespace: "20261014-v7", approvalEvidence: { ...old.approvalEvidence, humanDecisionId: decision }, approvedAtMs: approval, anchorMs: anchor, carryMs: carry, capMs: carry + 28800000, deadlineMs: anchor + 28800000, ...delta }
+    return { ...body, root: labRoot(body.schemaVersion, body) }
+  }
+  it.each([0, 1, 12345, 100000000])("accepts finite synthetic delay %i without minting actual A", delay => {
+    const w = window(approval + delay), admitted = ledger.validateLeanBaselineContinuationWindowV2(w)
+    expect(admitted).toEqual(w); expect(Object.isFrozen(admitted)).toBe(true)
+    expect(ledger.leanBaselineContinuationElapsedFloorV2(admitted, admitted.anchorMs + 3)).toBe(admitted.carryMs + 3)
+    expect(ledger.leanBaselineContinuationElapsedFloorV2(admitted, admitted.anchorMs + 3, 0, 17)).toBe(admitted.carryMs + 17)
+    expect(() => ledger.leanBaselineContinuationElapsedFloorV2(admitted, admitted.anchorMs - 1)).toThrow(/CLOCK/)
+  })
+  it("joins exact frozen paths and admitted allocation policy without changing defaults", () => {
+    const p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V7, w = ledger.validateLeanBaselineContinuationWindowV2(window())
+    expect(p).toEqual({ request: ".strategy-lab/lean-baseline-continuation-request-20261014-v7.json", allocation: ".planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261014-v7.json", store: ".strategy-lab/lean-baseline-continuation-20261014-v7", temp: ".strategy-lab/lean-baseline-continuation-20261014-v7-tmp", window: ".strategy-lab/lean-baseline-continuation-window-20261014-v7.json", claim: ".strategy-lab/lean-baseline-continuation-20261014-v7-tmp/window-claim.json", gates: ledger.LEAN_BASELINE_CONTINUATION_PATHS.gates })
+    expect(Object.isFrozen(p)).toBe(true); expect(ledger.leanBaselineContinuationPathsForRequestV2(p.request)).toBe(p); expect(ledger.leanBaselineContinuationPathsForWindowV2(w)).toBe(p)
+    const prior = continuationAllocationFixtureV2(), { root: _, ...body } = { ...prior, window: w, windowBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(w)), caps: { ...prior.caps, elapsedMs: w.capMs } }
+    const allocation = ledger.validateLeanBaselineContinuationAllocationV2({ ...body, root: labRoot(body.schemaVersion, body) })
+    expect(ledger.leanWritablePaths(allocation)).toEqual([p.temp, p.allocation, p.request, p.window])
+    expect(allocation.window.routeNamespace).toBe("20261014-v7")
+    expect(ledger.leanBaselineContinuationPathsForRequestV2(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request)).toBe(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2)
+    for (const path of [p.request + ".other", p.request + "/extra", p.request.replace("v7", "v8")]) expect(() => ledger.leanBaselineContinuationPathsForRequestV2(path)).toThrow()
+  })
+  it("denies changed decision, early A, overflow, coherent carry inflation and changed bounds", () => {
+    const original = window(), deltas = [
+      { approvedAtMs: approval + 1 }, { approvalEvidence: { ...original.approvalEvidence, humanDecisionId: decision + "-other" } },
+      { carryMs: original.carryMs + 1, capMs: original.capMs + 1 }, { carryMs: original.carryMs - 1, capMs: original.capMs - 1 },
+      { capMs: original.capMs + 1 }, { deadlineMs: original.deadlineMs + 1 }, { durationMs: 28800001 }, { closureMs: 1860001 }, { offlineOverheadMs: 600001 },
+      { routeNamespace: "20261014-v8" }, { routeNamespace: "20261014-v7.other" }, { anchorMs: original.anchorMs + 0.5 },
+    ]
+    for (const delta of deltas) expect(() => ledger.validateLeanBaselineContinuationWindowV2(window(undefined, delta))).toThrow()
+    expect(() => ledger.validateLeanBaselineContinuationWindowV2(window(approval - 1))).toThrow()
+    expect(() => ledger.validateLeanBaselineContinuationWindowV2(window(Number.MAX_SAFE_INTEGER))).toThrow()
+  })
+  it("keeps V3-V5 equality and the exact V6 golden tuple", () => {
+    for (const routeNamespace of ["20261012-v3", "20261012-v4", "20261013-v5"] as const) {
+      const { root: _, ...old } = continuationWindowFixtureV2(), body = { ...old, routeNamespace }, good = { ...body, root: labRoot(body.schemaVersion, body) }
+      expect(ledger.validateLeanBaselineContinuationWindowV2(good)).toEqual(good)
+      const delayed = { ...body, anchorMs: body.anchorMs + 1, deadlineMs: body.deadlineMs + 1 }
+      expect(() => ledger.validateLeanBaselineContinuationWindowV2({ ...delayed, root: labRoot(body.schemaVersion, delayed) })).toThrow()
+    }
+    const { root: _, ...old } = continuationWindowFixtureV2(), body = { ...old, routeNamespace: "20261014-v6" as const, approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 }
+    expect(ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) }).anchorMs).toBe(1792002607000)
+    const shifted = { ...body, approvedAtMs: body.approvedAtMs + 1, anchorMs: body.anchorMs + 1, carryMs: body.carryMs + 1, capMs: body.capMs + 1, deadlineMs: body.deadlineMs + 1 }
+    expect(() => ledger.validateLeanBaselineContinuationWindowV2({ ...shifted, root: labRoot(body.schemaVersion, shifted) })).toThrow()
+  })
+})
+
 describe("[continuation-stage-cadence-G] invocation stages", () => {
   const fixture = () => {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), "cadence-g-")))
