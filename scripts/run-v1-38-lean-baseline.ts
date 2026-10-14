@@ -474,7 +474,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     options.beforeTerminal?.()
     try { if (head() !== fixedHead || options.manifestRoot() !== fixedManifest || requestBytesRoot(requestPath) !== fixedRequest) { uncertain = true; observe("final_identity_mismatch"); finalIdentity = "mismatch" } } catch { uncertain = true; observe("final_identity_exception"); finalIdentity = "exception" }
     const terminalFs = statfsSync(STORE, { bigint: true }), terminalFree = terminalFs.bavail * terminalFs.bsize
-    const terminal = effect("terminal", () => publishChildTerminalAfterOptionalReceipt(childFailure,
+    const publishTerminal = () => publishChildTerminalAfterOptionalReceipt(childFailure,
       receipt => exclusive(join(STORE, "entry-failure.json"), receipt, ledger),
       receiptUncertain => {
         if (receiptUncertain) { uncertain = true; observe("failure_receipt_publication_uncertain") }
@@ -498,7 +498,24 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
         const derived = deriveLeanChildTerminal(ledger, entry, { exitCode: exit.code, signal: exit.signal, wallObservedMs: Date.now(), monotonicObservedNs: process.hrtime.bigint().toString(), status: exit.code === 0 && !uncertain && childFailure === null ? "child_exited" : "child_failed", parentRssBytes: process.memoryUsage().rss, childRssObservedBytes, physicalBytes: cumulativeLeanPhysicalBytes(ledger) + 65_536, freeBytes: terminalFree <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(terminalFree) : null })
         publishLeanChildTerminal(ledger, derived)
         return derived
-      }))
+      })
+    let terminal: ReturnType<typeof publishTerminal>
+    const v6 = allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && allocation.window.routeNamespace === "20261014-v6"
+    if (v6 && uncertain) {
+      // Source authority remains invalid. Observed child exit permits only a
+      // nonaccepting terminal under independent current resource/accounting custody.
+      const guard = continuationFailureTerminalGuardV6(ledger, entry)
+      guard(); terminal = publishTerminal(); guard()
+    } else {
+      let began = false
+      try { terminal = effect("terminal", () => { began = true; return publishTerminal() }) }
+      catch (error) {
+        if (!v6 || began) throw error // Never retry/overwrite partial publication.
+        uncertain = true; observe("final_identity_exception"); finalIdentity = "exception"
+        const guard = continuationFailureTerminalGuardV6(ledger, entry)
+        guard(); terminal = publishTerminal(); guard()
+      }
+    }
     if (terminal.status !== "child_exited") return fail("CHILD_FAILED")
     return { issued: false, evidenceClass: "exploratory_current_only", status: "child_exited_pending_independent_verification", allocationRoot: allocation.root, terminalElapsedUpperBoundMs: terminal.elapsedUpperBoundMs }
   } finally {
@@ -513,6 +530,39 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
       await cleanup
     } else if (!entered && child.exitCode === null) child.kill("SIGKILL")
     if (!entered && options.onPreEntryCleanup && child.pid && (child.exitCode !== null || child.signalCode !== null)) options.onPreEntryCleanup({ childPid: child.pid, exitCode: child.exitCode, signal: child.signalCode })
+  }
+}
+/** Independent failure evidence only; no HEAD/source acceptance or controller
+ * resurrection. Called solely after this parent's actual child-exit observation. */
+const continuationFailureTerminalGuardV6 = (ledger: LeanExperimentLedger, entry: LeanChildEntryV2) => {
+  const allocation = readLeanAdmittedContinuationAllocationV2(ledger), paths = leanBaselineContinuationPathsForWindowV2(allocation.window)
+  if (paths !== LEAN_BASELINE_CONTINUATION_PATHS_V6 || entry.allocationRoot !== allocation.root) return fail("V6_FAILURE_TERMINAL_SCOPE")
+  const reserve = (bytes = 0) => continuationCapacityV2(allocation.window, cumulativeLeanPhysicalBytes(ledger), CONTINUATION_V2_METADATA_PARSE_RESERVE + bytes + 16777216, true, ledger)
+  const read = (path: string, maximum = 4194304, mode = 0o600) => readLeanContinuationBoundedBytesV2(path, maximum, mode, bytes => reserve(bytes ?? 0))
+  const journal = read(join(ledger.directory, "ledger.ndjson")), timePrefix = read(join(ledger.directory, "time.ndjson"))
+  return () => {
+    reserve(); continuationStoreMembershipV2(ledger)
+    for (const [path, mode] of [[paths.allocation, 0o644], [join(ledger.directory, "allocation.json"), 0o600]] as const) if (!read(path, 262144, mode).equals(Buffer.from(leanCanonicalBytes(allocation)))) return fail("V6_FAILURE_TERMINAL_ALLOCATION")
+    if (!read(join(ledger.directory, "entry.json"), 262144).equals(Buffer.from(leanCanonicalBytes(entry))) || !read(join(ledger.directory, "ledger.ndjson")).equals(journal) || !read(join(ledger.directory, "time.ndjson")).subarray(0, timePrefix.length).equals(timePrefix)) return fail("V6_FAILURE_TERMINAL_PREFIX")
+    const time = readLeanTimeAccounting(ledger), state = readLeanLedger(ledger)
+    if (time.starts.size !== 2 || time.starts.get("pilot-entry") !== entry.wallStartMs || !time.closed.has("continuation-run-admission") || time.active === time.closed.has("pilot-entry")) return fail("V6_FAILURE_TERMINAL_TIME")
+    const carry = readLeanContinuationJsonV2(join(ledger.directory, "carry.json"), 4194304, 0o600, bytes => reserve(bytes ?? 0)), rows = carry.inventory as LeanContinuationInventoryRowV2[]
+    if (!Array.isArray(rows) || rows.length > 4096 || labRoot("lean-baseline-continuation-inventory-v2", rows) !== allocation.predecessor.inventoryRoot) return fail("V6_FAILURE_TERMINAL_CARRY")
+    let growth = 0
+    for (const row of rows) {
+      reserve(); const path = resolve(row.path), stat = lstatSync(path)
+      if (stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.dev !== row.dev || stat.ino !== row.ino || (stat.mode & 0o777) !== row.mode || realpathSync(path) !== path || (row.kind === "directory" ? !stat.isDirectory() : !stat.isFile() || stat.nlink !== 1)) return fail("V6_FAILURE_TERMINAL_RESOURCE")
+      if (stat.isDirectory()) {
+        const allowed = new Set(row.members ?? [])
+        for (const selected of [paths.request, paths.window, paths.allocation, paths.store, paths.temp]) { const prefix = path + "/", selectedPath = resolve(selected); if (selectedPath.startsWith(prefix)) allowed.add(selectedPath.slice(prefix.length).split("/")[0]!) }
+        const members = readdirSync(path); if (members.some(name => !allowed.has(name)) || (row.members ?? []).some(name => !members.includes(name))) return fail("V6_FAILURE_TERMINAL_MEMBERS")
+      }
+      growth += Math.max(0, stat.blocks * 512 - row.allocatedBytes)
+    }
+    const usage = process.memoryUsage(), disk = statfsSync(ledger.directory, { bigint: true }), elapsed = process.hrtime.bigint() - BigInt(entry.monotonicStartNs)
+    if (elapsed < 0n || elapsed > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n || disk.bavail * disk.bsize > BigInt(Number.MAX_SAFE_INTEGER)) return fail("V6_FAILURE_TERMINAL_RESOURCE")
+    assertLeanBaselineContinuationFrontierV2(allocation, { nowMs: Date.now(), monotonicElapsedMs: Math.max(0, entry.wallStartMs - allocation.window.anchorMs) + Number((elapsed + 999999n) / 1000000n), remainingSlots: 0, remainingClosureMs: 0, remainingOfflineMs: 0, charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger) + growth + 16777216, scratchBytes: measureLeanPhysicalBytes(paths.temp) + 16777216, parentRssBytes: Math.max(usage.rss, process.resourceUsage().maxRSS * 1024), childRssBytes: 0, arrayBuffersBytes: usage.arrayBuffers + 16777216, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(disk.bavail * disk.bsize), live: true }, ledger)
+    reserve()
   }
 }
 const CONTINUATION_PHASE = ".planning/phases/265-serious-current-rules-league-and-development-red-team/"

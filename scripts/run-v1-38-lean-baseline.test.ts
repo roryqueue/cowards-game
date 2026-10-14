@@ -254,7 +254,7 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
     for (const mode of ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"]) expect(parentApi.parseLeanBaselineCommand([mode, "--request", lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request])).toEqual({ mode, request: lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request })
     expect(() => parentApi.parseLeanBaselineCommand(["run-continuation-v2", "--request", lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request + "/extra"])).toThrow()
   })
-  it.each(["live", "final"] as const)("[CR-CAD-01] actual V6 parent preserves spent charges and closes failed pilot after %s source denial", mode => fixture(async (c, f) => {
+  it.each(["live", "final", "resource"] as const)("[CR-CAD-01] actual V6 parent preserves spent charges and closes failed pilot after %s source denial", mode => fixture(async (c, f) => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] })
     lean.beginLeanInterval(c.ledger, "continuation-run-admission"); lean.closeLeanInterval(c.ledger, "continuation-run-admission")
     vi.mocked(Date.now).mockReturnValue(c.window.anchorMs + 1000)
@@ -263,7 +263,7 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
     Object.defineProperty(process, "connected", { value: true, configurable: true, writable: true })
     const hostObservation = <T>(body: () => T): T => { Object.defineProperty(process, "connected", { value: false, configurable: true, writable: true }); try { return body() } finally { Object.defineProperty(process, "connected", { value: true, configurable: true, writable: true }) } }
     const child = Object.assign(new EventEmitter(), { pid: process.pid + 1000, exitCode: null as number | null, signalCode: null as NodeJS.Signals | null,
-      kill: vi.fn((signal: NodeJS.Signals) => { queueMicrotask(() => { child.signalCode = signal; child.emit("exit", null, signal) }); return true }),
+      kill: vi.fn((signal: NodeJS.Signals) => { queueMicrotask(() => { if (mode === "resource") vi.mocked(process.memoryUsage).mockReturnValue({ ...process.memoryUsage(), rss: 3000000001 }); child.signalCode = signal; child.emit("exit", null, signal) }); return true }),
       send: () => { const slot = c.allocation.slots[0]!, body = { schemaVersion: "lean-slot-charge-v1", allocationRoot: c.allocation.root, slotRoot: slot.root, ordinal: slot.ordinal }; fs.appendFileSync(join(c.ledger.directory, "ledger.ndjson"), Buffer.concat([leanCanonicalBytes({ kind: "charge", charge: { ...body, root: labRoot(body.schemaVersion, body) } }), Buffer.from("\n")])); return true },
     })
     const fork = vi.spyOn(childProcess, "fork").mockReturnValue(child as never), core = vi.spyOn(childProcess, "execFileSync").mockImplementation(((command: string, args: string[]) => command === "ps" ? "100\n" : args[0] === "show" ? leanCanonicalBytes(c.allocation) : `${c.fixedHead}\n`) as typeof childProcess.execFileSync)
@@ -275,10 +275,11 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       if (lean.readLeanLedger(c.ledger).charged === 50) throw (await settled).error ?? new Error("INERT_PARENT_DID_NOT_ENTER")
       const charged = fs.readFileSync(join(c.ledger.directory, "ledger.ndjson"))
       expect(lean.readLeanLedger(c.ledger).charged).toBe(51)
-      if (mode === "live") { f.head.value = "d".repeat(40); await vi.advanceTimersByTimeAsync(250); expect(child.kill).toHaveBeenCalledWith("SIGKILL") }
+      if (mode !== "final") { f.head.value = "d".repeat(40); await vi.advanceTimersByTimeAsync(250); expect(child.kill).toHaveBeenCalledWith("SIGKILL") }
       else { fs.writeFileSync(resolve("scripts/closed-cost.txt"), "changed history"); child.exitCode = 0; child.emit("exit", 0, null) }
       expect((await settled).value).toBeNull()
       expect(fs.readFileSync(join(c.ledger.directory, "ledger.ndjson"))).toEqual(charged)
+      if (mode === "resource") { expect(fs.existsSync(join(c.ledger.directory, "child-terminal.json"))).toBe(false); expect(lean.readLeanTimeAccounting(c.ledger).active).toBe(true); return }
       expect(lean.readLeanChildTerminal(c.ledger).status).toBe("child_failed")
       expect(parentApi.validateLeanSupervisorReasonBytes(fs.readFileSync(join(c.ledger.directory, "parent-supervisor-reasons.json")))).toMatchObject({ uncertain: true, observations: { finalIdentity: "exception", cleanup: "child_exit_observed" } })
       const time = lean.readLeanTimeAccounting(c.ledger); expect(time.active).toBe(false); expect(time.closed.has("pilot-entry")).toBe(true)
