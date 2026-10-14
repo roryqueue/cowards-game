@@ -37,6 +37,13 @@ describe("[continuation-ready-v7-L] delayed initialization policy (synthetic A o
     const allocation = ledger.validateLeanBaselineContinuationAllocationV2({ ...body, root: labRoot(body.schemaVersion, body) })
     expect(ledger.leanWritablePaths(allocation)).toEqual([p.temp, p.allocation, p.request, p.window])
     expect(allocation.window.routeNamespace).toBe("20261014-v7")
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "ready-v7-policy-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    try {
+      const l = ledger.createLeanLedger(join(dir, "store"), allocation)
+      expect(ledger.readLeanAdmittedContinuationAllocationV2(l)).toBe(l.allocation)
+      vi.mocked(fs.lstatSync).mockClear(); ledger.cumulativeLeanPhysicalBytes(l)
+      for (const path of [p.temp, p.allocation, p.request, p.window]) expect(vi.mocked(fs.lstatSync).mock.calls.map(([name]) => name)).toContain(resolve(path))
+    } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
     expect(ledger.leanBaselineContinuationPathsForRequestV2(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2.request)).toBe(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2)
     for (const path of [p.request + ".other", p.request + "/extra", p.request.replace("v7", "v8")]) expect(() => ledger.leanBaselineContinuationPathsForRequestV2(path)).toThrow()
   })
