@@ -113,7 +113,7 @@ describe("distinct continuation reader admission", () => {
 })
 
 describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
-  const v2Allocation = (routeNamespace: "20261012-v3" | "20261012-v4" = "20261012-v3") => {
+  const v2Allocation = (routeNamespace: "20261012-v3" | "20261012-v4" | "20261014-v6" = "20261012-v3") => {
     const old = continuationFixtureBase().allocation
     const policy = continuationLedger.LEAN_BASELINE_CONTINUATION_POLICY_V2
     const anchorMs = policy.globalAnchorMs, carryMs = Math.max(policy.oldCheckElapsedMs, continuationLedger.leanContinuationGlobalFloorV2(anchorMs))
@@ -122,7 +122,7 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       grantId: "synthetic-no-authority", approvalEvidence: { humanDecisionId: "synthetic-only", recordedBy: "/root/cowards-game/reviewers/human" },
       approvedAtMs: anchorMs, anchorMs, deadlineMs: anchorMs + policy.durationMs, carryMs, capMs: carryMs + policy.durationMs,
       durationMs: policy.durationMs, closureMs: policy.closureMs, offlineOverheadMs: policy.offlineOverheadMs,
-      routeNamespace, reviewedSourceHead: "c".repeat(40), sourceRoot: old.sourceRoot,
+      routeNamespace, ...(routeNamespace === "20261014-v6" ? { approvedAtMs: 1791978643000, anchorMs: 1791978643000, carryMs: 630701903, capMs: 659501903, deadlineMs: 1792007443000 } : {}), reviewedSourceHead: "c".repeat(40), sourceRoot: old.sourceRoot,
       sourceGateRoot: root("source-gate"), planRoot: old.planRoot, runOperator: "/root/cowards-game/operators/runner", readerOperator: "/root/cowards-game/operators/retained-reader",
     }
     const window = { ...windowBody, root: labRoot(windowBody.schemaVersion, windowBody) }
@@ -151,7 +151,7 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     const allocation = continuationLedger.createLeanBaselineContinuationAllocationV2({ ...input, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)) })
     return { allocation, request }
   }
-  const partialV2Snapshot = (routeNamespace: "20261012-v3" | "20261012-v4" = "20261012-v3") => {
+  const partialV2Snapshot = (routeNamespace: "20261012-v3" | "20261012-v4" | "20261014-v6" = "20261012-v3") => {
     const old = fixture(), { allocation, request } = v2Allocation(routeNamespace), slot = allocation.slots[0]!, oldPair = old.pairs[0]!, sources = [buildLeanBaselineSource({ role: "cold-opponent", source: emitTacticalSource(), coldRoot: allocation.coldRoot, implementationRoot: allocation.sourceRoot }), buildLeanBaselineSource({ role: "tactical-0", source: emitTacticalSource(), coldRoot: allocation.coldRoot, implementationRoot: allocation.sourceRoot })], sourceByRole = new Map(sources.map(source => [source.role, source]))
     const pairBody = { ...oldPair, slotRoot: slot.root, requestRoot: slot.requestRoot, topSourceRoot: sourceByRole.get(oldPair.topRole)!.sourceRoot, topSnapshotRoot: sourceByRole.get(oldPair.topRole)!.root, bottomSourceRoot: sourceByRole.get(oldPair.bottomRole)!.sourceRoot, bottomSnapshotRoot: sourceByRole.get(oldPair.bottomRole)!.root, priorLedgerBytesRoot: leanBytesRoot(new Uint8Array()), priorLedgerByteLength: 0, priorCharged: 50 }
     const pair = { ...pairBody, root: labRoot("lean-baseline-pair-v1", Object.fromEntries(Object.entries(pairBody).filter(([key]) => key !== "root"))) }
@@ -301,6 +301,24 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     expect(() => continuationReader.publishLeanContinuationRetainedCheckV2(ledger, undefined, null, guard, publish as never)).toThrow(/V2_TERMINAL_REFUSAL/)
     expect(guard).toHaveBeenCalledWith(16 * 1024 * 1024)
     expect(publish).not.toHaveBeenCalled()
+  })
+  it.each(["pass", "closing", "uncertain", "foreign"] as const)("[continuation-stage-cadence-I] actual V6 publisher closes full acceptance and never writes issued credit: %s", mode => {
+    const { allocation } = v2Allocation("20261014-v6"), ledger = { directory: "inert", allocation } as continuationLedger.LeanExperimentLedger
+    const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "cadence-publish-"))), path = join(directory, "closed-source"), context = {}
+    fs.writeFileSync(path, "fixed source")
+    const controller = continuationFiles.createLeanContinuationStageControllerV6([{ path, stat: fs.lstatSync(path) }], [], [{ path, role: "closed_history" }], context, () => {})
+    const stage = <T>(body: () => T) => controller.withStage(mode === "foreign" ? { ...context } : context, "publication", body)
+    const time = vi.spyOn(continuationLedger, "readLeanTimeAccounting").mockReturnValue({ active: false, starts: new Map([["continuation-retained-verifier-v2", allocation.window.anchorMs]]), closed: new Set(["continuation-retained-verifier-v2"]) } as never)
+    const state = vi.spyOn(continuationLedger, "readLeanLedger").mockReturnValue({ charged: 51, charges: new Map() } as never), elapsed = vi.spyOn(continuationLedger, "currentLeanElapsedMs").mockReturnValue(allocation.window.carryMs), physical = vi.spyOn(continuationLedger, "cumulativeLeanPhysicalBytes").mockReturnValue(100000000), clock = vi.spyOn(Date, "now").mockReturnValue(allocation.window.anchorMs + 1000)
+    const written: Record<string, any>[] = [], publish = vi.fn((_ledger, _name, value) => { written.push(value); if (mode === "closing") fs.writeFileSync(path, "drift"); if (mode === "uncertain") throw new Error("PRIVATE_UNCERTAINTY") })
+    const run = () => continuationReader.publishLeanContinuationRetainedCheckV2(ledger, { complete: true } as never, null, () => {}, publish as never, stage)
+    try {
+      if (mode === "pass") expect(run()).toMatchObject({ disposition: "passed", issued: false })
+      else expect(run).toThrow(/V2_TERMINAL_REFUSAL/)
+      if (mode === "foreign") expect(written).toHaveLength(0)
+      for (const value of written) expect(value.issued).toBe(false)
+      if (mode !== "pass") expect(() => controller.live(context, () => {})).toThrow()
+    } finally { for (const spy of [time, state, elapsed, physical, clock]) spy.mockRestore(); fs.rmSync(directory, { recursive: true }) }
   })
   it("[continuation-v2] rejects wrong scope and expired window before interval or claim/check writes", () => {
     const { allocation } = v2Allocation(), begin = vi.spyOn(continuationLedger, "beginLeanInterval"), write = vi.spyOn(continuationEntry, "writeLeanContinuationArtifact")
