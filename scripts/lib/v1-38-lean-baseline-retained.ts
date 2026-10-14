@@ -3,7 +3,7 @@
 import { constants, closeSync, lstatSync, openSync, readFileSync, realpathSync, readdirSync, fstatSync, statfsSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { join, relative, resolve } from "node:path"
-import { exactLabKeys, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
+import { exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { auditLeanTrainingVector, trainLeanInitialCandidates, trainLeanResponse, LEAN_INITIAL_TRAINING_VECTOR, LEAN_TRAINING_VECTOR, type LeanColdTrainingManifest, type LeanColdTrainingInput, type LeanLegalExample } from "../../packages/strategy-lab/src/league/lean-training.js"
 import { LEAN_CAPS, LEAN_BASELINE_REQUEST, LEAN_BASELINE_STORE, LEAN_EXTERNAL_SCRATCH_RESERVE, beginLeanInterval, closeLeanInterval, currentBaselineSlotKind, currentLeanElapsedMs, cumulativeLeanPhysicalBytes, leanBytesRoot, leanCanonicalBytes, openLeanLedger, readLeanChildEntry, readLeanChildTerminal, readLeanLedger, readLeanTimeAccounting, verifyLeanEvidence, type LeanCurrentBaselineAllocation, type LeanExperimentLedger } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { analyseLeanDistinctPairs, analyseLeanResponseAdmission, selectLeanMixtureTarget, type LeanMeasuredPair } from "./v1-38-lean-baseline-analysis.js"
@@ -869,6 +869,10 @@ const continuationReaderFailurePublicationGuardV6 = (ledger: LeanExperimentLedge
   }
   capacity()
 }
+const acceptedPrivateChecksV6 = new WeakSet<object>()
+/** In-process private handoff only: never accept persisted/serialized fields as
+ * closing evidence. Not public/counting authority or a portable receipt. */
+export const isLeanContinuationAcceptedPrivateCheckV6 = (value: unknown): boolean => value !== null && typeof value === "object" && acceptedPrivateChecksV6.has(value)
 export const publishLeanContinuationRetainedCheckV2 = (
   ledger: LeanExperimentLedger,
   report: ReturnType<typeof auditLeanBaselineContinuationRetainedV2> | undefined,
@@ -885,6 +889,7 @@ export const publishLeanContinuationRetainedCheckV2 = (
     if (v6 && !failure && !publicationStage) return fail("V2_PUBLICATION_GUARD")
     const guard = v6 && failure ? failureGuard : sourceGuard
     if (!guard) return fail("V2_PUBLICATION_GUARD")
+    let privateCheck: object | undefined
     const publishCheck = () => {
     // Reserve for bounded body + canonical serialization/rooting + publish
     // buffering before constructing the report body (V1 keeps its old cap).
@@ -904,11 +909,22 @@ export const publishLeanContinuationRetainedCheckV2 = (
       historicalPeakRssBytes: "unknown", holdoutOpened: false, formationMaterialized: false,
       ...(v6 ? { issued: false as const } : {}),
     }
-    const check = { ...body, root: labRoot(body.schemaVersion, body) }
+    const durableBody = v6 && !failure ? { ...body, disposition: "pending_closing", verificationStatus: "pending_closing", failure: "PUBLICATION_PENDING_CLOSING", report: null } : body
+    const check = { ...durableBody, root: labRoot(body.schemaVersion, durableBody) }
+    if (v6 && !failure) {
+      const acceptedBody = { ...body, verificationStatus: "closed_private_return" }, accepted = { ...acceptedBody, root: labRoot(body.schemaVersion, acceptedBody) }, bytes = leanCanonicalBytes(accepted)
+      if (bytes.length > 4194304) return fail("V2_PUBLICATION_GUARD")
+      // Capture/freeze our own plain snapshot, never caller-owned report data.
+      privateCheck = freezeLabValue(JSON.parse(Buffer.from(bytes).toString("utf8"))) as typeof accepted
+    }
     guard(4 * 1024 * 1024); publish(ledger, "retained-check.json", check, 4194304); guard()
     if (!failure) guard()
     return check
     }
-    return v6 && !failure ? publicationStage!(publishCheck) : publishCheck()
+    if (!v6 || failure) return publishCheck()
+    publicationStage!(publishCheck) // BOTH full passes must accept before return.
+    if (!privateCheck) return fail("V2_PUBLICATION_GUARD")
+    if ((privateCheck as { disposition: string }).disposition === "passed") acceptedPrivateChecksV6.add(privateCheck)
+    return privateCheck as ReturnType<typeof publishCheck> & { verificationStatus: "closed_private_return" }
   } catch { return fail("V2_TERMINAL_REFUSAL") }
 }
