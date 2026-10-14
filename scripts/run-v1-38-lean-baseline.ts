@@ -399,7 +399,7 @@ export const leanBoundedParentTimeBudget = (ledger: LeanExperimentLedger, termin
   if (retry && elapsedMs + reserveMs >= caps.elapsedMs) return fail("PREFIX_CAPACITY")
   return { elapsedMs, capMs: caps.elapsedMs, timeoutMs: Math.max(1, caps.elapsedMs - elapsedMs - terminalReserveMs) }
 }
-export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string; prospectiveStart?: { wallStartMs: number; monotonicStartNs: string }; beforeRelease?: () => void; stage?: <T>(kind: LeanContinuationStageV6, body: () => T) => T; beforeTerminal?: () => void; terminalReserveMs?: number; supervisorObservation?: true; onChildCreated?: () => void; onPreEntryCleanup?: (value: { childPid: number; exitCode: number | null; signal: string | null }) => void }) => {
+export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string; prospectiveStart?: { wallStartMs: number; monotonicStartNs: string }; beforeRelease?: () => void; stage?: <T>(kind: LeanContinuationStageV6, body: () => T) => T; beforeTerminal?: () => void; onFailure?: () => void; terminalReserveMs?: number; supervisorObservation?: true; onChildCreated?: () => void; onPreEntryCleanup?: (value: { childPid: number; exitCode: number | null; signal: string | null }) => void }) => {
   const { ledger, requestPath, store: STORE } = options, allocation = ledger.allocation
   // Allocation family is authenticated by the same strict caps/mode admission;
   // a legacy caller's opt-in flag can never select reason-v2.
@@ -420,6 +420,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     // A rejected closing pass may follow a successful fork. Never lose the
     // unreleased child merely because the stage refused to return its handle.
     if (spawned && spawned.exitCode === null && spawned.signalCode === null) {
+      spawned.once("error", () => {}) // Cleanup must not become an unhandled IPC error.
       const pending = new Promise<void>((done, reject) => { const timer = setTimeout(() => reject(new TypeError("LEAN_BASELINE_CHILD_CLEANUP_UNCERTAIN")), 30000); spawned!.once("exit", () => { clearTimeout(timer); done() }) })
       spawned.kill("SIGKILL"); await pending
     }
@@ -440,41 +441,23 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     return value
   }
   let finalIdentity: LeanSupervisorReasonEnvelope["observations"]["finalIdentity"] = "matched"
-  child.on("error", () => { uncertain = true; observe("child_error") })
-  child.on("message", leanParentFailureReceiptHandler(ledger, child.pid, receipt => { childFailure = receipt }, reason => { uncertain = true; observe(reason) }))
-  try {
-    await waitLeanBoundedChildReady(child)
-    if (!child.pid) return fail("CHILD_PID")
-    childRssObservedBytes = rssOf(child.pid)
-    if (process.memoryUsage().rss + childRssObservedBytes + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > leanMemoryLimitForAllocation(allocation)) return fail("PREFIX_CAPACITY")
-    const fs = statfsSync(STORE, { bigint: true }), free = fs.bavail * fs.bsize
-    if (free > BigInt(Number.MAX_SAFE_INTEGER) || free < BigInt(LEAN_CAPS.totalBytes - cumulativeLeanPhysicalBytes(ledger))) return fail("PREFIX_CAPACITY")
-    options.beforeRelease?.()
-    const entry: LeanChildEntryV2 = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: options.sourceRoot, requestBytesRoot: fixedRequest, head: fixedHead, parentPid: process.pid, childPid: child.pid, handshakeRoot: leanBytesRoot(Buffer.from(token, "hex")), wallStartMs: options.prospectiveStart?.wallStartMs ?? Date.now(), monotonicStartNs: options.prospectiveStart?.monotonicStartNs ?? process.hrtime.bigint().toString() }
-    effect("claim", () => {
-    publishLeanChildEntry(ledger, entry)
-    beginLeanInterval(ledger, "pilot-entry", entry.wallStartMs)
-    entered = true
-    child.send({ release: token })
+  const v6 = allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && allocation.window.routeNamespace === "20261014-v6"
+  let publishedEntry: LeanChildEntryV2 | undefined, observedExit: { code: number | null; signal: NodeJS.Signals | null } | undefined
+  let terminalPublicationBegan = false, failureTerminalAttempted = false, terminalCallbackBegan = false
+  let period: ReturnType<typeof setInterval> | undefined, timeout: ReturnType<typeof setTimeout> | undefined
+  child.once("exit", (code: number | null, signal: NodeJS.Signals | null) => { exitEventObserved = true; observedExit = { code, signal } })
+  const cleanupChild = async () => {
+    if (observedExit) return observedExit
+    const pending = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((done, reject) => {
+      const timer = setTimeout(() => reject(new TypeError("LEAN_BASELINE_CHILD_CLEANUP_UNCERTAIN")), 30000)
+      child.once("exit", (code, signal) => { clearTimeout(timer); done({ code, signal }) })
     })
-    const period = setInterval(() => {
-      try {
-        if (allocation.schemaVersion === "lean-baseline-continuation-allocation-v2") options.beforeRelease?.()
-        const rss = sample("child_rss", () => rssOf(child.pid!))
-        childRssObservedBytes = Math.max(childRssObservedBytes ?? 0, rss)
-        if (sample("parent_rss", () => process.memoryUsage().rss) + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > leanMemoryLimitForAllocation(allocation) || sample("time_budget", () => leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).elapsedMs >= leanCapsForAllocation(allocation).elapsedMs)) { uncertain = true; observe("resource_threshold"); sample("threshold_kill", () => child.kill("SIGKILL")) }
-      } catch {
-        if (!firstSamplingException) firstSamplingException = { resourceSamplingOperation: samplingOperation, resourceSamplingSequence: Math.max(1, samplingSequence), resourceSamplingExitObserved: exitEventObserved }
-        uncertain = true; observe("resource_sampling_exception"); child.kill("SIGKILL")
-      }
-    }, 250)
-    const timeout = setTimeout(() => { uncertain = true; observe("deadline_timeout"); child.kill("SIGKILL") }, leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).timeoutMs)
-    const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => { exitEventObserved = true; resolveExit({ code, signal }) }))
-    clearInterval(period); clearTimeout(timeout)
-    options.beforeTerminal?.()
-    try { if (head() !== fixedHead || options.manifestRoot() !== fixedManifest || requestBytesRoot(requestPath) !== fixedRequest) { uncertain = true; observe("final_identity_mismatch"); finalIdentity = "mismatch" } } catch { uncertain = true; observe("final_identity_exception"); finalIdentity = "exception" }
+    child.kill("SIGKILL"); return pending
+  }
+  const publishTerminal = (entry: LeanChildEntryV2, exit: { code: number | null; signal: NodeJS.Signals | null }) => {
+    terminalPublicationBegan = true
     const terminalFs = statfsSync(STORE, { bigint: true }), terminalFree = terminalFs.bavail * terminalFs.bsize
-    const publishTerminal = () => publishChildTerminalAfterOptionalReceipt(childFailure,
+    return publishChildTerminalAfterOptionalReceipt(childFailure,
       receipt => exclusive(join(STORE, "entry-failure.json"), receipt, ledger),
       receiptUncertain => {
         if (receiptUncertain) { uncertain = true; observe("failure_receipt_publication_uncertain") }
@@ -489,45 +472,83 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
             }
             const envelope = deriveLeanParentSupervisorReason(allocation, body, firstSamplingException ?? undefined)
             exclusive(join(STORE, LEAN_SUPERVISOR_REASON_FILE), envelope, ledger)
-          } catch {
-            // No retry or success override: existing terminal/cleanup attempts
-            // still run, while missing reason custody remains non-accepting.
-            uncertain = true
-          }
+          } catch { uncertain = true } // No retry or success override.
         }
         const derived = deriveLeanChildTerminal(ledger, entry, { exitCode: exit.code, signal: exit.signal, wallObservedMs: Date.now(), monotonicObservedNs: process.hrtime.bigint().toString(), status: exit.code === 0 && !uncertain && childFailure === null ? "child_exited" : "child_failed", parentRssBytes: process.memoryUsage().rss, childRssObservedBytes, physicalBytes: cumulativeLeanPhysicalBytes(ledger) + 65_536, freeBytes: terminalFree <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(terminalFree) : null })
-        publishLeanChildTerminal(ledger, derived)
-        return derived
+        publishLeanChildTerminal(ledger, derived); return derived
       })
+  }
+  const publishFailureTerminal = (entry: LeanChildEntryV2, exit: { code: number | null; signal: NodeJS.Signals | null }) => {
+    failureTerminalAttempted = true
+    const guard = continuationFailureTerminalGuardV6(ledger, entry)
+    guard(); const terminal = publishTerminal(entry, exit); guard(); return terminal
+  }
+  child.on("error", () => { uncertain = true; observe("child_error") })
+  child.on("message", leanParentFailureReceiptHandler(ledger, child.pid, receipt => { childFailure = receipt }, reason => { uncertain = true; observe(reason) }))
+  try {
+    await waitLeanBoundedChildReady(child)
+    if (!child.pid) return fail("CHILD_PID")
+    childRssObservedBytes = rssOf(child.pid)
+    if (process.memoryUsage().rss + childRssObservedBytes + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > leanMemoryLimitForAllocation(allocation)) return fail("PREFIX_CAPACITY")
+    const fs = statfsSync(STORE, { bigint: true }), free = fs.bavail * fs.bsize
+    if (free > BigInt(Number.MAX_SAFE_INTEGER) || free < BigInt(LEAN_CAPS.totalBytes - cumulativeLeanPhysicalBytes(ledger))) return fail("PREFIX_CAPACITY")
+    options.beforeRelease?.()
+    const entry: LeanChildEntryV2 = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: options.sourceRoot, requestBytesRoot: fixedRequest, head: fixedHead, parentPid: process.pid, childPid: child.pid, handshakeRoot: leanBytesRoot(Buffer.from(token, "hex")), wallStartMs: options.prospectiveStart?.wallStartMs ?? Date.now(), monotonicStartNs: options.prospectiveStart?.monotonicStartNs ?? process.hrtime.bigint().toString() }
+    effect("claim", () => {
+    publishLeanChildEntry(ledger, entry)
+    publishedEntry = entry
+    beginLeanInterval(ledger, "pilot-entry", entry.wallStartMs)
+    entered = true
+    child.send({ release: token })
+    })
+    period = setInterval(() => {
+      try {
+        if (allocation.schemaVersion === "lean-baseline-continuation-allocation-v2") options.beforeRelease?.()
+        const rss = sample("child_rss", () => rssOf(child.pid!))
+        childRssObservedBytes = Math.max(childRssObservedBytes ?? 0, rss)
+        if (sample("parent_rss", () => process.memoryUsage().rss) + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > leanMemoryLimitForAllocation(allocation) || sample("time_budget", () => leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).elapsedMs >= leanCapsForAllocation(allocation).elapsedMs)) { uncertain = true; observe("resource_threshold"); sample("threshold_kill", () => child.kill("SIGKILL")) }
+      } catch {
+        if (!firstSamplingException) firstSamplingException = { resourceSamplingOperation: samplingOperation, resourceSamplingSequence: Math.max(1, samplingSequence), resourceSamplingExitObserved: exitEventObserved }
+        uncertain = true; observe("resource_sampling_exception"); child.kill("SIGKILL")
+      }
+    }, 250)
+    timeout = setTimeout(() => { uncertain = true; observe("deadline_timeout"); child.kill("SIGKILL") }, leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).timeoutMs)
+    const exit = observedExit ?? await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => resolveExit({ code, signal })))
+    clearInterval(period); clearTimeout(timeout)
+    terminalCallbackBegan = true; options.beforeTerminal?.()
+    try { if (head() !== fixedHead || options.manifestRoot() !== fixedManifest || requestBytesRoot(requestPath) !== fixedRequest) { uncertain = true; observe("final_identity_mismatch"); finalIdentity = "mismatch" } } catch { uncertain = true; observe("final_identity_exception"); finalIdentity = "exception" }
     let terminal: ReturnType<typeof publishTerminal>
-    const v6 = allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && allocation.window.routeNamespace === "20261014-v6"
     if (v6 && uncertain) {
       // Source authority remains invalid. Observed child exit permits only a
       // nonaccepting terminal under independent current resource/accounting custody.
-      const guard = continuationFailureTerminalGuardV6(ledger, entry)
-      guard(); terminal = publishTerminal(); guard()
+      terminal = publishFailureTerminal(entry, exit)
     } else {
       let began = false
-      try { terminal = effect("terminal", () => { began = true; return publishTerminal() }) }
+      try { terminal = effect("terminal", () => { began = true; return publishTerminal(entry, exit) }) }
       catch (error) {
         if (!v6 || began) throw error // Never retry/overwrite partial publication.
         uncertain = true; observe("final_identity_exception"); finalIdentity = "exception"
-        const guard = continuationFailureTerminalGuardV6(ledger, entry)
-        guard(); terminal = publishTerminal(); guard()
+        terminal = publishFailureTerminal(entry, exit)
       }
     }
     if (terminal.status !== "child_exited") return fail("CHILD_FAILED")
     return { issued: false, evidenceClass: "exploratory_current_only", status: "child_exited_pending_independent_verification", allocationRoot: allocation.root, terminalElapsedUpperBoundMs: terminal.elapsedUpperBoundMs }
+  } catch (error) {
+    if (v6) { try { options.onFailure?.() } catch { /* Failure remains nonaccepting. */ } }
+    if (v6 && entered && publishedEntry && !terminalPublicationBegan && !failureTerminalAttempted) {
+      const exit = await cleanupChild()
+      if (!terminalCallbackBegan) { terminalCallbackBegan = true; try { options.beforeTerminal?.() } catch { /* Independent failure accounting does not need source authority. */ } }
+      uncertain = true; observe("final_identity_exception"); finalIdentity = "exception"
+      publishFailureTerminal(publishedEntry, exit)
+    }
+    throw error
   } finally {
+    if (period !== undefined) clearInterval(period)
+    if (timeout !== undefined) clearTimeout(timeout)
     if (options.prospectiveStart && child.exitCode === null && child.signalCode === null) {
       // Accounting closes only after bounded child cleanup, including a ready
       // timeout or a failed post-ready admission. Old parent behavior is intact.
-      const cleanup = new Promise<void>((done, reject) => {
-        const timer = setTimeout(() => reject(new TypeError("LEAN_BASELINE_CHILD_CLEANUP_UNCERTAIN")), 30000)
-        child.once("exit", () => { clearTimeout(timer); done() })
-      })
-      child.kill("SIGKILL")
-      await cleanup
+      await cleanupChild()
     } else if (!entered && child.exitCode === null) child.kill("SIGKILL")
     if (!entered && options.onPreEntryCleanup && child.pid && (child.exitCode !== null || child.signalCode !== null)) options.onPreEntryCleanup({ childPid: child.pid, exitCode: child.exitCode, signal: child.signalCode })
   }
@@ -1208,7 +1229,7 @@ export const runLeanBaselineContinuationV2 = async (requestPath: string) => {
   } catch (error) { issueContinuationRunFailureV2(error, diagnostic); throw error } finally { diagnostic.active = false }
   const { ledger } = c
   if (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6) { c.authenticateSource(); c.stage("import", () => c.guard()) }
-  return runLeanBoundedParent({ ledger, requestPath, allocationPath: c.paths.allocation, store: c.paths.store, sourceRoot: c.allocation.sourceRoot, manifestRoot: () => { if (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6) return c.authenticateSource(); c.guard(); const manifest = leanBaselineContinuationDataManifestV2(c.window, leanBaselineContinuationSourceManifestV2()); if (manifest.manifestRoot !== c.allocation.manifestRoot || manifest.planningRoot !== c.allocation.planningRoot) return fail("V2_MANIFEST_HOLD"); return manifest.root }, childMode: "child-continuation-v2", prospectiveStart: { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, beforeRelease: c.guard, ...(c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 ? { stage: c.stage, beforeTerminal: c.closeRun } : {}), terminalReserveMs: c.window.closureMs, supervisorObservation: true })
+  return runLeanBoundedParent({ ledger, requestPath, allocationPath: c.paths.allocation, store: c.paths.store, sourceRoot: c.allocation.sourceRoot, manifestRoot: () => { if (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6) return c.authenticateSource(); c.guard(); const manifest = leanBaselineContinuationDataManifestV2(c.window, leanBaselineContinuationSourceManifestV2()); if (manifest.manifestRoot !== c.allocation.manifestRoot || manifest.planningRoot !== c.allocation.planningRoot) return fail("V2_MANIFEST_HOLD"); return manifest.root }, childMode: "child-continuation-v2", prospectiveStart: { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, beforeRelease: c.guard, ...(c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 ? { stage: c.stage, beforeTerminal: c.closeRun, onFailure: c.invalidate } : {}), terminalReserveMs: c.window.closureMs, supervisorObservation: true })
 }
 
 /** Connected charge/provider seam. Closing charge denial never calls provider;

@@ -254,7 +254,7 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
     for (const mode of ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"]) expect(parentApi.parseLeanBaselineCommand([mode, "--request", lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request])).toEqual({ mode, request: lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request })
     expect(() => parentApi.parseLeanBaselineCommand(["run-continuation-v2", "--request", lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request + "/extra"])).toThrow()
   })
-  it.each(["live", "final", "resource", "claim", "claim-resource"] as const)("[CR-CAD-01-R2] [CR-CAD-01] actual V6 parent preserves spent charges and closes failed pilot after %s source denial", mode => fixture(async (c, f) => {
+  it.each(["live", "final", "resource", "claim", "claim-resource", "timing", "before-terminal", "fork-closing"] as const)("[CR-CAD-01-R2] [CR-CAD-01] actual V6 parent preserves spent charges and closes failed pilot after %s source denial", mode => fixture(async (c, f) => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] })
     lean.beginLeanInterval(c.ledger, "continuation-run-admission"); lean.closeLeanInterval(c.ledger, "continuation-run-admission")
     vi.mocked(Date.now).mockReturnValue(c.window.anchorMs + 1000)
@@ -266,17 +266,19 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       kill: vi.fn((signal: NodeJS.Signals) => { queueMicrotask(() => { if (mode === "resource" || mode === "claim-resource") vi.mocked(process.memoryUsage).mockReturnValue({ ...process.memoryUsage(), rss: 3000000001 }); child.signalCode = signal; child.emit("exit", null, signal) }); return true }),
       send: () => { const slot = c.allocation.slots[0]!, body = { schemaVersion: "lean-slot-charge-v1", allocationRoot: c.allocation.root, slotRoot: slot.root, ordinal: slot.ordinal }; fs.appendFileSync(join(c.ledger.directory, "ledger.ndjson"), Buffer.concat([leanCanonicalBytes({ kind: "charge", charge: { ...body, root: labRoot(body.schemaVersion, body) } }), Buffer.from("\n")])); if (mode === "claim" || mode === "claim-resource") f.head.value = "d".repeat(40); return true },
     })
-    const fork = vi.spyOn(childProcess, "fork").mockReturnValue(child as never), core = vi.spyOn(childProcess, "execFileSync").mockImplementation(((command: string, args: string[]) => command === "ps" ? "100\n" : args[0] === "show" ? leanCanonicalBytes(c.allocation) : `${c.fixedHead}\n`) as typeof childProcess.execFileSync)
+    const fork = vi.spyOn(childProcess, "fork").mockImplementation(() => { if (mode === "fork-closing") f.head.value = "d".repeat(40); return child as never }), core = vi.spyOn(childProcess, "execFileSync").mockImplementation(((command: string, args: string[]) => command === "ps" ? "100\n" : args[0] === "show" ? leanCanonicalBytes(c.allocation) : `${c.fixedHead}\n`) as typeof childProcess.execFileSync)
+    const actualTimeout = globalThis.setTimeout, timeout = mode === "timing" ? vi.spyOn(globalThis, "setTimeout").mockImplementation(((...args: Parameters<typeof setTimeout>) => { if (typeof args[1] === "number" && args[1] > 30000) throw new Error("INERT_TIMING_SETUP"); return actualTimeout(...args) }) as typeof setTimeout) : undefined
     let manifests = 0
-    const action = parentApi.runLeanBoundedParent({ ledger: c.ledger, requestPath: c.paths.request, allocationPath: c.paths.allocation, store: c.ledger.directory, sourceRoot: c.allocation.sourceRoot, manifestRoot: () => ++manifests === 1 ? c.allocation.sourceRoot : hostObservation(c.authenticateSource), childMode: "inert", prospectiveStart: { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, beforeRelease: () => hostObservation(c.guard), stage: (kind, body) => hostObservation(() => c.stage(kind, body)), beforeTerminal: c.closeRun, supervisorObservation: true })
+    const action = parentApi.runLeanBoundedParent({ ledger: c.ledger, requestPath: c.paths.request, allocationPath: c.paths.allocation, store: c.ledger.directory, sourceRoot: c.allocation.sourceRoot, manifestRoot: () => ++manifests === 1 ? c.allocation.sourceRoot : hostObservation(c.authenticateSource), childMode: "inert", prospectiveStart: { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, beforeRelease: () => hostObservation(c.guard), stage: (kind, body) => hostObservation(() => c.stage(kind, body)), beforeTerminal: () => { c.closeRun(); if (mode === "before-terminal") throw new Error("INERT_BEFORE_TERMINAL") }, onFailure: c.invalidate, supervisorObservation: true })
     const settled = action.then(value => ({ value, error: null }), error => ({ value: null, error }))
     try {
       child.emit("message", { ready: child.pid }); await vi.advanceTimersByTimeAsync(0)
+      if (mode === "fork-closing") { expect((await settled).value).toBeNull(); expect(child.kill).toHaveBeenCalledWith("SIGKILL"); expect(child.signalCode).toBe("SIGKILL"); expect(fs.existsSync(join(c.ledger.directory, "entry.json"))).toBe(false); expect(lean.readLeanLedger(c.ledger).charged).toBe(50); expect(() => hostObservation(c.guard)).toThrow(); return }
       if (lean.readLeanLedger(c.ledger).charged === 50) throw (await settled).error ?? new Error("INERT_PARENT_DID_NOT_ENTER")
       const charged = fs.readFileSync(join(c.ledger.directory, "ledger.ndjson"))
       expect(lean.readLeanLedger(c.ledger).charged).toBe(51)
-      if (mode !== "final") { f.head.value = "d".repeat(40); await vi.advanceTimersByTimeAsync(250); expect(child.kill).toHaveBeenCalledWith("SIGKILL") }
-      else { fs.writeFileSync(resolve("scripts/closed-cost.txt"), "changed history"); child.exitCode = 0; child.emit("exit", 0, null) }
+      if (mode !== "final" && mode !== "before-terminal") { f.head.value = "d".repeat(40); await vi.advanceTimersByTimeAsync(250); expect(child.kill).toHaveBeenCalledWith("SIGKILL") }
+      else { if (mode === "final") fs.writeFileSync(resolve("scripts/closed-cost.txt"), "changed history"); child.exitCode = 0; child.emit("exit", 0, null) }
       expect((await settled).value).toBeNull()
       expect(fs.readFileSync(join(c.ledger.directory, "ledger.ndjson"))).toEqual(charged)
       if (mode === "resource" || mode === "claim-resource") { expect(fs.existsSync(join(c.ledger.directory, "child-terminal.json"))).toBe(false); expect(lean.readLeanTimeAccounting(c.ledger).active).toBe(true); return }
@@ -284,7 +286,7 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       expect(parentApi.validateLeanSupervisorReasonBytes(fs.readFileSync(join(c.ledger.directory, "parent-supervisor-reasons.json")))).toMatchObject({ uncertain: true, observations: { finalIdentity: "exception", cleanup: "child_exit_observed" } })
       const time = lean.readLeanTimeAccounting(c.ledger); expect(time.active).toBe(false); expect(time.closed.has("pilot-entry")).toBe(true)
       expect(() => hostObservation(c.guard)).toThrow()
-    } finally { fork.mockRestore(); core.mockRestore(); vi.useRealTimers() }
+    } finally { timeout?.mockRestore(); fork.mockRestore(); core.mockRestore(); vi.useRealTimers() }
   }, "20261014-v6"), 30000)
   it("[continuation-stage-cadence-H] denies unselected finite allocation Git reads even if caller includes them", () => {
     const body = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-v6", approvalEvidence: { humanDecisionId: "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1791978643000, anchorMs: 1791978643000, carryMs: 630701903, capMs: 659501903, deadlineMs: 1792007443000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261014-v6" as const, reviewedSourceHead: "a".repeat(40), sourceRoot: root("source"), sourceGateRoot: root("gate"), planRoot: root("plan"), runOperator: "inert-runner", readerOperator: "inert-reader" }, w = { ...body, root: labRoot(body.schemaVersion, body) }
