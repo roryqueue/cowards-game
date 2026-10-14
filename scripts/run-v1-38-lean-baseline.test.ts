@@ -59,8 +59,9 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
     const disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000)
     const timing = { identityMs: 0, physicalMs: 0, readMs: 0, realpathMs: 0 }
     const actualPhysical = lean.cumulativeLeanPhysicalBytes, actualRead = fs.readSync, actualRealpath = fs.realpathSync
-    const physical = vi.spyOn(lean, "cumulativeLeanPhysicalBytes").mockImplementation(l => { const at = performance.now(); try { return actualPhysical(l) } finally { timing.physicalMs += performance.now() - at } })
-    const chunks = vi.spyOn(fs, "readSync").mockImplementation(((...args: any[]) => { const at = performance.now(); try { return Reflect.apply(actualRead, fs, args) } finally { timing.readMs += performance.now() - at } }) as typeof fs.readSync)
+    const physical = vi.spyOn(lean, "cumulativeLeanPhysicalBytes").mockImplementation(l => { const at = performance.now(); try { return namespace === "20261014-v6" && !assay ? 88924160 : actualPhysical(l) } finally { timing.physicalMs += performance.now() - at } })
+    let compactV6Spies = () => {}
+    const chunks = vi.spyOn(fs, "readSync").mockImplementation(((...args: any[]) => { const at = performance.now(); try { return Reflect.apply(actualRead, fs, args) } finally { timing.readMs += performance.now() - at; compactV6Spies() } }) as typeof fs.readSync)
     const realpaths = vi.spyOn(fs, "realpathSync").mockImplementation(((...args: any[]) => { const at = performance.now(); try { return Reflect.apply(actualRealpath, fs, args) } finally { timing.realpathMs += performance.now() - at } }) as typeof fs.realpathSync)
     const core = vi.spyOn(childProcess, "execFileSync").mockImplementation(((command: string) => command === "ps" ? "100\n" : "0\n") as typeof childProcess.execFileSync), originalArgs = process.execArgv, connected = Object.getOwnPropertyDescriptor(process, "connected")
     Object.defineProperty(process, "connected", { value: false, writable: true, configurable: true })
@@ -89,6 +90,9 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       if (args[0] === "show") { const colon = args[1]!.indexOf(":"); expect([reviewedHead, sourceHead, head.value]).toContain(args[1]!.slice(0, colon)); return fs.readFileSync(resolve(args[1]!.slice(colon + 1))) }
       throw new Error("unexpected inert Git operation")
     })
+    // V6 does more always-fresh raw checks, not fewer. Bound mock call custody
+    // rather than retaining every large resource/root argument during setup.
+    compactV6Spies = () => { if (namespace === "20261014-v6") { stat.mockClear(); realpaths.mockClear(); physical.mockClear(); chunks.mockClear(); hashes.mockClear(); usage.mockClear(); disk.mockClear(); available.mockClear(); core.mockClear(); git.mockClear() } }
     let clock: ReturnType<typeof vi.spyOn> | undefined
     try {
       for (const path of new Set([...sourcePaths, ...parentApi.LEAN_BASELINE_CONTINUATION_PLANNING_PATHS])) write(path, "synthetic public fixture", path.endsWith(".sh") ? 0o755 : 0o644)
@@ -122,7 +126,7 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       write(p.allocation, leanCanonicalBytes(allocation)); write(join(p.store, "carry.json"), leanCanonicalBytes(carried), 0o600); write(join(p.store, "source-manifest.json"), leanCanonicalBytes(manifest), 0o600)
       const cb = { schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: w.grantId, routeNamespace: w.routeNamespace, windowRoot: w.root, windowBytesRoot: request.windowBytesRoot, requestBytesRoot: allocation.requestBytesRoot, sourceHead, sourceRoot: request.sourceRoot, sourceGateRoot: request.sourceGateRoot, dataReviewRoot: request.dataReviewRoot, planningRoot: request.planningRoot, manifestRoot: request.manifestRoot }, claim = { ...cb, root: labRoot(cb.schemaVersion, cb) }
       write(p.claim, leanCanonicalBytes(claim), 0o600)
-      const hb = { schemaVersion: "lean-baseline-continuation-source-hold-v2", allocationRoot: allocation.root, sourceHead, manifestRoot: allocation.manifestRoot, claimRoot: claim.root, rows: assay ? inventory.slice(0, 1) : inventory }, hold = { ...hb, root: labRoot(hb.schemaVersion, hb) }
+      const hb = { schemaVersion: "lean-baseline-continuation-source-hold-v2", allocationRoot: allocation.root, sourceHead, manifestRoot: allocation.manifestRoot, claimRoot: claim.root, rows: assay || namespace === "20261014-v6" ? inventory.slice(0, 1) : inventory }, hold = { ...hb, root: labRoot(hb.schemaVersion, hb) }
       write(join(l.directory, "source-hold.json"), leanCanonicalBytes(hold), 0o600)
       let c: ReturnType<typeof parentApi.openLeanBaselineContinuationContextV2>
       if (assay) {
@@ -143,7 +147,7 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
     expect(() => c.stage("charge", () => {})).toThrow()
     expect(() => c.guard()).toThrow() // Denial permanently invalidates invocation.
     expect(f.reservations).toEqual([0, 65536, 0])
-  }, "20261014-v6"))
+  }, "20261014-v6"), 30000)
   it.each(["closing", "planning", "request", "head", "capacity"] as const)("[continuation-stage-cadence-H] actual V6 refuses %s before dependent effects", mode => fixture((c, f) => {
     const effect = vi.fn()
     if (mode === "closing") expect(() => c.stage("archive", () => fs.writeFileSync(resolve("scripts/closed-cost.txt"), "changed history"))).toThrow()
@@ -153,11 +157,31 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
     if (mode === "capacity") vi.mocked(process.memoryUsage).mockReturnValue({ ...process.memoryUsage(), rss: 3000000001 })
     expect(() => c.stage("charge", effect)).toThrow(); expect(effect).not.toHaveBeenCalled()
     expect(() => c.guard()).toThrow()
-  }, "20261014-v6"))
+  }, "20261014-v6"), 30000)
   it("[continuation-stage-cadence-H] CLI selects V6 explicitly and rejects nonfinite variants", () => {
     for (const mode of ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"]) expect(parentApi.parseLeanBaselineCommand([mode, "--request", lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request])).toEqual({ mode, request: lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request })
     expect(() => parentApi.parseLeanBaselineCommand(["run-continuation-v2", "--request", lean.LEAN_BASELINE_CONTINUATION_PATHS_V6.request + "/extra"])).toThrow()
   })
+  it("[continuation-stage-cadence-H] denies unselected finite allocation Git reads even if caller includes them", () => {
+    const body = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-v6", approvalEvidence: { humanDecisionId: "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1791978643000, anchorMs: 1791978643000, carryMs: 630701903, capMs: 659501903, deadlineMs: 1792007443000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261014-v6" as const, reviewedSourceHead: "a".repeat(40), sourceRoot: root("source"), sourceGateRoot: root("gate"), planRoot: root("plan"), runOperator: "inert-runner", readerOperator: "inert-reader" }, w = { ...body, root: labRoot(body.schemaVersion, body) }
+    for (const p of [lean.LEAN_BASELINE_CONTINUATION_PATHS_V2, lean.LEAN_BASELINE_CONTINUATION_PATHS_V4, lean.LEAN_BASELINE_CONTINUATION_PATHS_V5]) expect(() => continuationGit.readLeanBaselineContinuationGitV2(["show", `${w.reviewedSourceHead}:${p.allocation}`], [{ path: p.allocation, root: root("inert") }], w)).toThrow(/GIT_V2_METADATA/)
+  })
+  it.each(["pass", "closing", "after-charge"] as const)("[continuation-stage-cadence-H] connected durable charge-before-provider with spent %s failure", mode => fixture(async c => {
+    const entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: c.allocation.root, sourceRoot: c.allocation.sourceRoot, requestBytesRoot: c.requestBytesRoot, head: c.fixedHead, parentPid: process.ppid, childPid: process.pid, handshakeRoot: root("inert-handshake"), wallStartMs: c.window.anchorMs, monotonicStartNs: process.hrtime.bigint().toString() }
+    fs.writeFileSync(join(c.ledger.directory, "entry.json"), leanCanonicalBytes(entry), { mode: 0o600 })
+    lean.beginLeanInterval(c.ledger, "pilot-entry", c.window.anchorMs)
+    const slot = c.allocation.slots[0]!, order: string[] = [], provider = vi.fn(async charge => { expect(lean.readLeanLedger(c.ledger).charges.get(slot.root)?.root).toBe(charge.root); order.push("provider"); return "inert" })
+    const charge = () => {
+      const value = lean.chargeLeanSlot(c.ledger, slot, { freeBytes: 100000000000, availableMemoryBytes: 4000000000 }); order.push("durable-charge")
+      if (mode === "closing") fs.writeFileSync(resolve("scripts/closed-cost.txt"), "drift")
+      return value
+    }
+    const start = () => { c.startCell(); if (mode === "after-charge") fs.writeFileSync(resolve("scripts/closed-cost.txt"), "drift") }
+    const action = parentApi.dispatchLeanContinuationChargedCellV6(c.stage, charge, start, provider)
+    if (mode === "pass") { await expect(action).resolves.toMatchObject({ execution: "inert" }); expect(order).toEqual(["durable-charge", "provider"]) }
+    else { await expect(action).rejects.toThrow(); expect(provider).not.toHaveBeenCalled(); expect(order).toEqual(["durable-charge"]) }
+    expect(lean.readLeanLedger(c.ledger).charges.size).toBe(1); expect(lean.readLeanLedger(c.ledger).charged).toBe(51)
+  }, "20261014-v6"), 30000)
   it("[continuation-remaining-overhead] actual complete guard removes pure window hashes but retains all live work", () => fixture((c, f) => {
     f.hashes.mockClear(); f.clearObservations(); f.passes.length = 0
     c.guard(1234)
@@ -325,6 +349,31 @@ describe("[continuation-overhead] actual V2 context complete guard", () => {
       expect(provider).not.toHaveBeenCalled()
     } finally { provider.mockRestore(); source.mockRestore(); claimRead.mockRestore(); receipt.mockRestore() }
   }, "20261013-v5"), 15000)
+  it.each(["valid", "claim"] as const)("[continuation-stage-cadence-H] V6 real issuer joins through pair/journal before inert source sentinel: %s", mode => fixture((c) => {
+    // Real admitted context, full guards and synthetic ledger/pair descriptors;
+    // the external source boundary throws before any capability is issued.
+    const slot = c.allocation.slots[0]!, body = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: c.allocation.root, slotRoot: slot.root, ordinal: 0 }, charge = { ...body, root: labRoot(body.schemaVersion, body) }
+    const journal = Buffer.concat([leanCanonicalBytes({ kind: "charge", charge }), Buffer.from("\n")])
+    fs.writeFileSync(join(c.ledger.directory, "ledger.ndjson"), journal)
+    const entry = { allocationRoot: c.allocation.root, sourceRoot: c.allocation.sourceRoot, requestBytesRoot: mode === "entry" ? root("crossed-request") : c.allocation.requestBytesRoot, head: c.fixedHead }
+    const pairBody = { schemaVersion: "lean-baseline-pair-v1", ordinal: 0, slotRoot: slot.root, requestRoot: mode === "pair" ? root("crossed-pair") : slot.requestRoot, priorCharged: 50, priorLedgerByteLength: 0, priorLedgerBytesRoot: mode === "journal" ? root("crossed-journal-prefix") : leanBytesRoot(Buffer.alloc(0)), bottomRole: "final-response", topRole: "final-response", bottomSourceRoot: root("source"), topSourceRoot: root("source"), bottomSnapshotRoot: root("snapshot"), topSnapshotRoot: root("snapshot") }
+    fs.writeFileSync(join(c.ledger.directory, "pair-0.json"), leanCanonicalBytes({ ...pairBody, root: labRoot("lean-baseline-pair-v1", pairBody) }), { mode: 0o600 })
+    fs.writeFileSync(join(c.ledger.directory, "source-final-response.json"), "{}", { mode: 0o600 })
+    const receipt = vi.spyOn(lean, "readLeanChildEntry").mockReturnValue(entry as never)
+    const actualRead = continuationHelper.readLeanContinuationJsonV2, claimRead = vi.spyOn(continuationHelper, "readLeanContinuationJsonV2").mockImplementation((path, cap, permissions, guard) => {
+      const value = actualRead(path, cap, permissions, guard)
+      return path === c.paths.claim && mode === "claim" ? { ...value, routeNamespace: "20261012-v4" } : value
+    })
+    const sentinel = new Error("INERT_EXTERNAL_SOURCE_BOUNDARY"), source = vi.spyOn(continuationSource, "validateLeanBaselineSource").mockImplementation(() => { throw sentinel }), provider = vi.spyOn(childProcess, "fork")
+    try {
+      const invoke = () => continuationAuthority.issueLeanBaselineContinuationRuntimeAuthorityV2(c.ledger, charge, {} as never, { budgetRoot: c.allocation.root, seat: "bottom" } as never, c.guard)
+      if (mode === "valid") { expect(invoke).toThrow(sentinel); expect(source).toHaveBeenCalledOnce() }
+      else { expect(invoke).toThrow(); expect(source).not.toHaveBeenCalled() }
+      expect(claimRead.mock.calls.some(([path]) => path === c.paths.claim)).toBe(mode !== "entry")
+      expect(claimRead.mock.calls.some(([path]) => path === lean.LEAN_BASELINE_CONTINUATION_PATHS_V4.claim)).toBe(false)
+      expect(provider).not.toHaveBeenCalled()
+    } finally { provider.mockRestore(); source.mockRestore(); claimRead.mockRestore(); receipt.mockRestore() }
+  }, "20261014-v6"), 30000)
   it.each(["valid", "window", "context-paths", "context-window", "context-allocation", "context-ledger"] as const)("[continuation-v5] real retained scope before inert publication boundary: %s", mode => fixture((c) => {
     // Direct inert consumer invocation, not an ordinary reader process. External
     // receipt/context/time hooks are mocked; scope joins and c.guard stay real.
