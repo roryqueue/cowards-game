@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Four-hour source extension approved; finish O and integrated source checks before experiment clock
+stopped_at: V7 implementation and clean review closed; ROOT targeted checks closed, scoped validation and distinct verification next
 last_updated: "2026-10-15"
 last_activity: 2026-10-15
-last_activity_desc: Human approved four more source-work hours observed17:09:46UTC, new cutoff21:09:46UTC; no experiment window initialized
+last_activity_desc: Fixed V7 source17acda11 reviewed clean; ROOT215 passing tests, exact inherited strict output and boundaries closed, no experiment window
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,14 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V7 source qualification closed; validation/verification next
+
+O normal source17acda11990ed258bb8ac7a4a130b70e7c312a54 CLOSED/all commands/ownership released; all four source units L/M/N/O implemented. Exact ignored @cowards/spec link restored to unchanged local packages/spec after incomplete temporary target caused import failure; no install/build/package/config/lock/golden change. Actual independent typed `/root/review_265_ready_window_v7` CLEAN/findings[]/0BLOCKER/0WARNING, existing GATES append only/all commands CLOSED/released. No source fix required by integrated review.
+
+ROOT targeted qualification CLOSED: helper5275 all126pass/10.86s; driver14472 N+preledger48pass/24.43s; retained50706 O+I+V4 29pass/30.09s; disjoint driver22350 CLI/metadata12pass/5.62s =215 unique actual tests, NOT Matches/global suite. Two additional legacy batches67775 and32101 exceeded command budget, were explicitly terminated143 with actual parent/worker absence checked, no pass count or source-failure attribution. Broad batch's far-scale assay CENSORED9rows/96callbacks,7609ms/44,015,616B extra with explicit source/custody/resource/pure-domain mocks, not runtime fit. All new63 L/M/N/O tests included in215; genuinely historical custody/postcustody driver binding/actualV7parentcleanup and whole-fit remain unproven.
+
+ROOT SAME15 strict43218 CLOSED2/full13FULL7051B WHOLE-byte-equal actual pre23557, zeroNEW/no suppression; configured projects99785 CLOSED0. Direct installed service64250 CLOSED0/strict0ownership0/19old report-only; actual public-discovery-boundary direct script CLOSED0 and factory78465 CLOSED0/1443files/0violations. Two initially mistyped public/factory script paths failed import before checks, corrected to observed package/script paths, not counted as passing. Inert manifest23896 CLOSED0 rootsha256:f40704d8f385d51db4e11495276ca65f60c352227f0f1062e6f7ac817184e93a/697implementation/15planning/admittingfalse/SOURCE-DATAnull. Diff check0. Scoped State-A audit then distinct actual source verifier next; no active SOURCE/DATA, futureA/window/request/allocation/entry/Match or empirical credit. Current SOURCE cutoff21:09:46UTC/all continuous F(t) costs/bounds/history unchanged. Phase265/Plan16/all9LEAG pending; UI gates not applicable to eight private host/domain/test files, actual Match/replay realism still pending.
 
 ## Current continuation — four-hour SOURCE extension approved
 

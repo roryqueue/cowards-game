@@ -1,5 +1,31 @@
 # Baseline continuation gates
 
+## Ready-time V7 ROOT qualification — all selected commands closed
+
+Fixed source17acda11990ed258bb8ac7a4a130b70e7c312a54, integrated actual independent review CLEAN/findings[] as appended below. O completion26617 author29pass33.70s/strict5963 inherited13FULL7051B; ROOT independently ran checks afterward. Dependency repair was ONLY ignored node_modules/@cowards/spec symlink from incomplete temporary snapshot to ../../packages/spec; old target contents preserved, no package/source/config/lock/install/build/golden change. Original import/strict-cascade failures remain recorded, not reclassified as successful tests or original empirical crash cause.
+
+| ROOT operation | Actual closed outcome |
+|---|---|
+|SAME exact original15-path strict43218|Exit2; complete13FULL/7051B output WHOLE-byte-equals actual retained pre23557, zeroNEW/no offsets/suppression; not global compiler green|
+|Configured strategy-lab/runtime-js project types99785|Exit0/no diagnostics|
+|Full existing continuation helper5275|126pass/0skip/10.86s|
+|Driver14472 filter ready-v7-N or preledger-policy/carry|48pass/118skip/24.43s|
+|Retained50706 ready-v7-O or stage-cadence-I or continuation-v4|29pass/29skip/30.09s|
+|Disjoint driver22350 CLI/narrowmetadata/current-onlyCLI/V6-CLI/unselectedGit|12pass/154skip/5.62s|
+|Direct installed service64250|Exit0/strict0ownership0/19 inherited report-only offenses|
+|Actual scripts/check-public-discovery-boundary.ts|Exit0/public discovery boundary checks passed|
+|Actual scripts/check-v1-38-factory-boundaries.ts78465|Exit0/1443files/violations[]|
+|Inert source manifest23896|Exit0/rootsha256:f40704d8f385d51db4e11495276ca65f60c352227f0f1062e6f7ac817184e93a/697implementation/15planning/admittingfalse/sourceGateNULL/sourceGateRootNULL|
+|git diff --check|Exit0|
+
+Selected test union is215 unique actual source cases across three existing files, all63new L7/M16/N24/O16 included. It is NOT215Matches, a global suite run, all historical runtime proof, actual capacity or whole-fit evidence. No overlapping author/ROOT pass counts added. Full helper covers the existing identity/cadence/permissions/inventory/pure-policy regressions; driver N includes new staged charge-before-inert-provider cases and old qualified preledger controls; retained subset covers actual verify/publisher seams with explicit external-context/resource mocks. Twelve final driver metadata tests are disjoint from selected N/preledger48. UI phase/review not applicable: no frontend changed; future actual Match/replay realism remains empirical work.
+
+Honest additional command outcomes: broad legacy driver67775 exceeded the source command budget, exact owned process95390/worker95393 identified, TERM95390→CLOSED143 and both absent. Narrower legacy context/stage/parent batch32101 likewise exceeded budget, exact parent95457 terminated→CLOSED143/absence checked. Neither batch returned a complete test report; neither contributes pass counts, establishes new source defect, or proves old regression absence. No unchanged third repetition. Broad batch emitted one finite far-scale fixture CENSORED N2280/U2352/9completedrows/96callbacks, total7609ms/44,015,616Bextra, explicit source/custody/resource/pure-window-domain mocks and no assurance-equivalence/fit. These censored old fixture batches do not replace the real new V7 actual-preflight and retained test results or establish actual consumed-parent coverage. Actual V7 parent cleanup/full historical custody/postcustody bindArchive/whole authenticated fit remain explicitly unproven.
+
+Qualified ROOT real V7 prepare→source closes→CARRY opens→immutable fixed-anchor REFUSAL samples extra0/32 COMPLETE at1246/2105ms,243/435callbacks. Every completed callback retains3HEAD/33capacity/6freshinput reads+rawSHA; no capture/setup/publication/archiveclosing or historicalsuccess. Separate real default/V3 small+streaming inventory→actual returned6/68rows→real V6 helper bootstrap COMPLETE n2/64 at12/166ms, under12.7MiB; mocked Git/resources/clock/catalog. Genuine historical byte success not synthesized. No private history authentication/runtime/provider/Strategy/Match/ordinary reader/capacity observation performed by these ROOT checks.
+
+Two initially incorrect direct public/factory script names returned ERR_MODULE_NOT_FOUND before executing any check; observed package/scripts paths corrected once, successful actual commands separately recorded above. No pnpm reinstall/purge/CI/config override. Source remains fixed; no window/anchor/DATA/request/allocation/run started. All commands CLOSED, no test worker retained. Distinct scoped State-A validation and actual source-goal verifier remain NEXT before any SOURCE projection or actual future A. Source cutoff21:09:46UTC under explicit four-hour extension and all continuous prior F(t)/resource/privacy/history limits unchanged; no Phase265/Plan16/LEAG/freeze/formation/holdout/public/counting/production credit.
+
 ## Ready-time V7 partial execution — deadline elapsed, no readiness
 
 Actual typed `/root/execute_265_ready_window_v7` executed L/M/N serially, all source-only. L RED20412 closed1/five expected missing-V7 failures/two denial-legacy passes; test7820f277→source1ea94962, GREEN84557 closed0/10passes/100skips/5.39s (new L7 plus old V6 time3). M test8d6fb835→source d26999ec; final83385 closed0/33passes/93skips/11.46s (L7/M16/existingcarry10). Exact old V6 descriptor/hash/absence negatives and constant sensitivity are not genuine historical-hash success. Default/V3 real small+streaming inventory returned rows reached real V6 helper bootstrap, COMPLETE n2/64 at18/266ms; Git/resources/clock/catalog mocked and custody gaps remain. Initial five-new-target absence belongs BEFORE creation; later inventory uses existing future exclusion/reconciliation and unconsumed setup/claim guards, not impossible ongoing absence after legitimate creation. Old V6 allocation/store/temp absence remains mandatory throughout; no refund/shrink.
@@ -858,3 +884,68 @@ Bounded public Plan16 bytes independently hash to window.planRoot `sha256:7c9b77
 ApprovedAt=anchor1791897666000; carry549724903=`459375903+(1791897666000−1791807317000)`; cap578524903=carry+28800000; deadline1791926466000=anchor+28800000=21:21:06UTC/17:21:06Eastern. Duration28800000/closure1860000/offline600000 unchanged;36×600000+closure+offline=24060000, latestfullentry1791902406000=14:40:06UTC/10:40:06Eastern. Every later idle/review/preparation/execution/reader cost remains continuously spent. Prospective runOperator `/root`, distinct future readerOperator `/root/verify_265_v5_retained`; no actual reader dispatched or verdict invented by this DATA review. Exact selected V5 request/allocation/store/temp/claim all absent by fresh lstat/ENOENT checks; window exists as approved DATA only.
 
 All inspection/Git/pure-schema/hash/append commands CLOSED; GATES append-only ownership released to ROOT. No source/STATE/projection/window/other private write, new artifact tree, commit/push, oldV3/V4 bytes, historical authenticator/constructor, heavy scan/manifest/test/capacity observation, provider/native/Strategy/Match/probe/ordinaryreader. This append does not change the window's planRoot or source projection/domain and is not a DATA projection or execution authority. ROOT sole active DATA projection, final planning/request pins, ONE preparation, new immutable allocation-only direct-child commit, unique ROOTentry/fresh SAMEPROCESS full capacity and held source/planning/HEAD through real terminal/ONE appropriate actual verifier remain prerequisites. OldV4/older50cost-only immutable/no retry/refund/reuse/recredit; causes UNKNOWN; same15GB/3GBRAM/global300/new36/four unopened/guest1000startup2500host5000Match600000/rules/privacy/currentfreeze-beforeformation unchanged. No empirical/LEAG/Phase265/baseline/freeze/formation/holdout/public/counting/production credit.
+
+## Ready-time V7 integrated source review — 2026-10-15
+
+Independent actual reviewer `/root/review_265_ready_window_v7`; actual source author `/root/execute_265_ready_window_v7`. Review observed 2026-10-15T17:16:44Z. `CLEAN`, findings `[]`, BLOCKER0/WARNING0/INFO0. This is the single integrated, change-focused standard source review with cross-file call joins for the approved existing Plan16 L/M/N/O amendment, not a historical 47-file Phase265 audit, source-verifier verdict, active SOURCE projection, DATA review, or empirical acceptance. The gsd-code-review guidance supplied adversarial classification and source/caller checks; the explicitly authorized existing carrier is used instead of creating or replacing canonical `265-REVIEW.md`.
+
+```yaml
+review: ready-time-v7-integrated-source
+status: clean
+depth: standard
+cross_file_call_joins: true
+source_base: e86e624dcf9dd47974e69c53b596030e5e3773c6
+reviewed_source_head: 17acda11990ed258bb8ac7a4a130b70e7c312a54
+actual_head: 17acda11990ed258bb8ac7a4a130b70e7c312a54
+files_reviewed: 8
+files_reviewed_list:
+  - packages/strategy-lab/src/league/lean-experiment.ts
+  - scripts/lib/v1-38-lean-baseline-continuation.ts
+  - scripts/lib/v1-38-lean-baseline-continuation.test.ts
+  - scripts/run-v1-38-lean-baseline.ts
+  - scripts/run-v1-38-lean-baseline.test.ts
+  - scripts/lib/v1-38-lean-container-match-session.ts
+  - scripts/lib/v1-38-lean-baseline-retained.ts
+  - scripts/lib/v1-38-lean-baseline-retained.test.ts
+findings:
+  critical: 0
+  warning: 0
+  info: 0
+  total: 0
+narrative_findings: []
+structural_prepass: not_supplied
+commands: CLOSED
+ownership: RELEASED_TO_ROOT
+qualification: SOURCE_ONLY_ROOT_VALIDATION_AND_DISTINCT_VERIFICATION_PENDING
+```
+
+### Narrative Findings (AI reviewer)
+
+No material defect was established in the scoped 299-insertion/46-deletion delta and its connected callers. This is an absence of substantiated findings within this review, not a claim that all historical code is defect-free. No test, typecheck, source manifest, private-history reader, historical authenticator, capacity observation, preparation, provider, Strategy, Match or ordinary retained verification was executed by this reviewer. No structural pre-pass was supplied.
+
+| Reviewed join | Direct source evidence and scope limit |
+|---|---|
+| Exact V7 delayed policy; old routes remain finite | `lean-experiment.ts:839-875` adds only exact `20261014-v7` paths/selectors. V7 binds approvedAt T1792017187000 and `human-approval-observed-20261014T223307Z`, requires A>=T and exact F(A)=459375903+(A−1791807317000), with safe-integer fixed duration/cap/deadline checks. V3–V5 retain approvedAt===anchor; V6 retains literal1792002607000/654665903/683465903/1792031407000. Global/journal/monotonic floors remain at846-869; allocation/writable-path/private-admission consumers stay generic. No default grant, arbitrary namespace or V8 route is added. |
+| All spent predecessors and only actual supplied V6 anchors | `continuation.ts:248-250,274-358` extends BOTH V4 and V5 retention, keeps V3, and adds precisely V6 window929B/raw1311fadb75d16b9e6eaa299f7e961034cc941ecbb8db4dbe28121724b98459ec and request4047B/raw0c9c7559f42a08901ede3627d257cdf0efcfd6a98e8893dbf5df4c7c52f4361d. UID501/exact0600/single-link/NOFOLLOW/raw hash and closing identity checks are connected. V6 allocation/store/temp absence is checked before and after inventory. File visitation is deduplicated. Reconciliation254-271 and593-616 preserve surviving identities/debits and reject selected-future rows; opaque bytes are not parsed into new authority. These are source comparisons to supplied anchors, not an independent rehash of private files. |
+| Absence applies at its approved stage | Driver1036-1045 and1143-1153 retain unconsumed setup/claim exclusivity; helper208/299 excludes selected future paths from carried inventory. The checked final clarification correctly makes five new V7 targets initially absent before creation, not perpetually absent after legitimate window/request creation. No V7-window absence check that would make real preflight impossible was added. |
+| Private strict preflight and full fresh cadence | Driver1002-1096 accepts only identity-selected frozen V6/V7 path objects, compares captured paths to that selected object, and issues the private expectations only when unconsumed. Own-DATA capture969-991 and exact invocation/window/pid/CWD binding1018 precede admission/resource/HEAD hooks; registered relative names preserve lexical privacy. Current1057-1065 remains fresh and guards1067-1094 retain both live observations, FULL opening/closing source/archive/bootstrap barriers and archive binding. No exported expectation mint, live resource cache or runtime-version fork was introduced. |
+| Actual parent, consumed context, child, finite CLI and Git selection | Every namespace/path V6-only branch in the five changed production files was inspected. Driver193/444/560/1054/1141/1172/1209/1308-1309/1335/1343/1390 extends applicable behavior to V7, including observed-exit failure terminal custody, consumed controller/finishCell, imports, manifest reauthentication, parent terminal callbacks, stage-before-charge/dispatch and finite redacted diagnostics. Container104 denies a known UNSELECTED V7 allocation even when manifest-listed. Unchanged generic pipeline70-107, source80-100, match163-218 and authority393-410/416+ consume strict AllocationV2/selectors rather than a stale literal namespace; their four files have no Git delta from source_base. |
+| Actual retained PATH and NAMESPACE publication branches | Retained707-794 selects independently opened V7 context before one-use reader mutation, then reader/claim/audit/terminal/publication stages. Failure-resource scope853-870 and namespace885 both include V7. Successful durable bytes remain pending_closing/report:null/issued:false until both publication passes close; only the separately frozen exact private returned object can enter the WeakSet872-875/914-928. Closing denial cannot add acceptance; clone/deserialized/equal-shaped/foreign objects do not inherit identity. Failed-source evidence uses the separate resource guard, redaction and nonpositive report. |
+
+### Test and execution qualifications
+
+New test bodies and their real/mocked seams were reviewed for reliability, not executed. L tests check delayed synthetic A, arithmetic/decision/bounds/unknown-route refusals and old equality/V6 tuple. M tests really refuse synthetic bytes against fixed V6 roots, plus metadata/alias/absence negatives and no-shrink reconciliation. Their static constant inspection is not executed historical-success coverage. The V7 inventory fixture intentionally stops before authentic predecessor success; it cannot prove closing success or post-custody behavior by its source-string assertions.
+
+Driver tests115-190 call real `prepareLeanBaselineContinuationV2` through strict source/DATA/request checks and real CARRY, then require genuine immutable allocation-anchor REFUSAL, no capture/setup/publication and closed source/opened-but-unclosed archive. Their actual callback counters assert THREEcurrent/33capacity/3HEAD/6 fresh input reads plus six real raw hashes, both live passes and FULL visitation; Git/resources/clock/catalog remain explicitly mocked. They do not substitute historical SHA values or mock the importer into success. The separately preserved default/V3 inventory small and >4MiB cases feed their actual returned rows into the real V6 helper/bootstrap; that is not V7 historical custody or actual driver `bindArchive` success. The new real V7 ledger/dispatcher tests are inert staged charge-before-provider tests, not Matches.
+
+Retained tests303-350/447-526 exercise the real V7 publisher and verify/claim/audit/terminal routing with disclosed mocked external/context/resource observations. Positive private identity plus clone/deserialization/foreign negatives and closing/source/HEAD/input/reservation/deadline/namespace/failure-resource negatives are substantive seam coverage. They do not prove a real issued V7 reader or whole-path runtime acceptance.
+
+AUTHOR-reported closed runs, not independently rerun here: initial L10; M combined33 comprising current L7+M16+oldcarry10; N48 comprising N24+oldpolicy/carry24; O29 comprising O16+legacyI8+V4five. Overlapping runs are not additive unique coverage. Genuine old custody, exact V7 spent-success inventory, postcustody driver bindArchive, actual V7 parent cleanup, actual capacity and whole36 runtime fit remain UNCOVERED. No static pattern/source comparison is promoted to executed coverage.
+
+AUTHOR reports strict5963 CLOSED2 with13FULL/7051B/raw51ffa198070a0ad8699f925a7d899cb02f3b98e2cefa7f83d38c74717ec2dbfe. ROOT actual pre23557 whole-output comparison, configured project types/boundaries and distinct actual source verification remain pending; this review claims no new-diagnostic or global-green conclusion. The authorized ignored `node_modules/@cowards/spec` symlink restoration to unchanged `../../packages/spec` is reported workspace resolution repair only, not a new dependency, attributed original failure cause or assurance result. It was not inspected or performed by this reviewer.
+
+### Closure, readiness chronology and ownership
+
+All review source/context/Git/clock/append checks are CLOSED, no background command or source owner retained. Git confirmed actual HEAD17acda11990ed258bb8ac7a4a130b70e7c312a54 and no working edits in the eight paths; scoped `git diff --check` closed0. The only reviewer write is this append to the existing GATES carrier; canonical `265-REVIEW.md`, preceding carrier bytes, source, STATE, projections, HEAD and all private artifacts remain untouched. No commit or push. Append-only ownership RELEASED to ROOT, the sole subsequent planning owner.
+
+ROOT source changes/review/qualification/distinct verifier must all close BEFORE actual future A; then ROOT records A/canonical V7 bytes, independent DATA checks actual chronology/bytes/current source, and only afterward request/preparation can occur. Mathematical schema agreement cannot self-certify readiness. This reviewer created no A/window/request/allocation and grants no downstream action. Current SOURCE-only cutoff21:09:46UTC/1792098586000 applies under the approved extension; original T and continuously carried F(t) are unchanged. Preserve every old route/charge as immutable cost-only, no retry/refund/reuse/shrink, all15GB/3GB/global300/new36/four unopened/guest1000/startup2500/host5000/Match600000 bounds, canonical rules/privacy and current-freeze-before-formation. No empirical/LEAG/Plan16/Phase265/baseline/freeze/formation/holdout/public/counting/production completion follows from CLEAN.
