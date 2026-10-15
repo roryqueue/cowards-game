@@ -15,6 +15,43 @@ import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import * as ledger from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as continuation from "./v1-38-lean-baseline-continuation.js"
 
+describe("continuation-boundary-v8-P", () => {
+  it("selects only the approved prospective route and preserves the legacy floor", () => {
+    const anchorMs = 1792093334001, { root: _, ...old } = continuationWindowFixtureV2()
+    const body = { ...old, routeNamespace: "20261015-v8", approvedAtMs: 1792093334000, approvalEvidence: { ...old.approvalEvidence, humanDecisionId: "human-approval-observed-20261015T194214Z" }, anchorMs, carryMs: ledger.leanContinuationGlobalFloorV2(anchorMs), capMs: ledger.leanContinuationGlobalFloorV2(anchorMs) + 28800000, deadlineMs: anchorMs + 28800000 }
+    const w = ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })
+    expect(ledger.leanBaselineContinuationPathsForWindowV2(w)).toBe(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V8)
+    expect(ledger.LEAN_BASELINE_CONTINUATION_POLICY_V2.physicalFloorBytes).toBe(88924160)
+    expect(continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V8).toBe(90091520)
+    for (const delta of [{ approvedAtMs: body.approvedAtMs + 1 }, { anchorMs: body.approvedAtMs - 1 }, { carryMs: body.carryMs + 1, capMs: body.capMs + 1 }, { approvalEvidence: { ...body.approvalEvidence, humanDecisionId: "wrong" } }]) {
+      const changed = { ...body, ...delta }; expect(() => ledger.validateLeanBaselineContinuationWindowV2({ ...changed, root: labRoot(body.schemaVersion, changed) })).toThrow()
+    }
+  })
+  it("pairs full boundaries but never invokes full current for interior reservations; denial is permanent", async () => {
+    const context = Object.freeze({}), full = vi.fn(), reserve = vi.fn()
+    const c = continuation.createLeanContinuationBoundaryControllerV8([], [], [], context, full, reserve)
+    c.withStage(context, "source", () => { for (let i = 0; i < 100; i++) c.reserve(context, i) })
+    expect(full).toHaveBeenCalledTimes(3); expect(reserve).toHaveBeenCalledTimes(100)
+    await c.withStageAsync(context, "archive", async () => { c.reserve(context, 1); await Promise.resolve() })
+    full.mockImplementationOnce(() => { throw new Error("denied") })
+    expect(() => c.withStage(context, "charge", () => {})).toThrow()
+    expect(() => c.reserve(context, 0)).toThrow()
+  })
+  it("rejects near-cap known costs before importer or allocation and keeps outstanding writes until measured", () => {
+    const state = continuation.createLeanContinuationReservationAccountingV8(100, 10)
+    expect(state.required(0, 0)).toBe(110)
+    expect(state.reserve(20, 0)).toBe(130)
+    expect(state.reserve(30, 0)).toBe(160)
+    expect(state.required(0, 16)).toBe(160)
+    expect(state.required(0, 50)).toBe(160)
+    expect(state.required(0, 60)).toBe(170)
+    expect(() => state.required(0, 59)).toThrow()
+    const importer = vi.fn(), allocate = vi.fn(), known = continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V8
+    expect(() => { const retained = continuation.createLeanContinuationReservationAccountingV8(known, 4096).reserve(100, 0); if (retained > 88924160 + 4096 + 100) throw new Error("capacity"); importer(); allocate() }).toThrow()
+    expect(importer).not.toHaveBeenCalled(); expect(allocate).not.toHaveBeenCalled()
+  })
+})
+
 describe("[continuation-ready-v7-L] delayed initialization policy (synthetic A only)", () => {
   const approval = 1792017187000, decision = "human-approval-observed-20261014T223307Z"
   const window = (anchor = approval + 12345, delta: Record<string, unknown> = {}) => {
