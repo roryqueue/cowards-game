@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: blocked
-stopped_at: V7 preparation passed; unique run failed pre-entry; independent terminal check closed; new resource/cadence decision pending
+status: in_progress
+stopped_at: Lean boundary cadence and fresh window approved; narrow existing Plan16 research and checked amendment next
 last_updated: "2026-10-15"
 last_activity: 2026-10-15
-last_activity_desc: V7 allocation sealed and pushed; zero new retained charges, no entry/head/result; full36 admission frontier elapsed
+last_activity_desc: Human approved two-hour source repair and one fresh eight-hour private window after source closure; V7 remains spent
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,14 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — lighter boundary cadence APPROVED, source clock running
+
+Latest direct human `approved` accepts the exact pending Plan16 lean-cadence/resource proposal. First ROOT approval observation2026-10-15T19:42:14UTC/1792093334000; SOURCE-only hardstop2026-10-15T21:42:14UTC/1792100534000. At most two hours for narrow research/checked existing-Plan16 amendment/implementation/review-fix/test/validation/distinct source verification, then ONE distinct eight-hour PRIVATE experiment window initialized AFTER those closures, BEFORE DATA/request/preparation. Future actual A/tuple/window/request/allocation remain UNKNOWN/uncreated; all prior and new costs carried continuously with no reset/refund/exclusion. No repeat route literal is needed within this approved scope; no automatic extension.
+
+Approved assurance tradeoff: complete setup/major-stage/pre-Match/post-Match/terminal boundaries replace complete evidence guards around every internal read. Local bounded streaming fd/path/owner/mode/link/schema/chunk checks and reserve-only fresh capacity/time remain inside boundaries, plus complete opening/closing checks, fixed source/HEAD hold, authentication before use, immutable identity/hash joins, charge-before-provider and irreversible failure. Wider between-boundary drift detection is accepted, NOT equivalent cadence. Existing safe defaults and every spent V7/older byte remain unchanged. V7 terminal and its ONE terminal-only verifier are CLOSED/released; tracked worktree clean at a85c3021, no actual prepare/run/reader or other active agent observed at approval resumption.
+
+Same15GB split12/2/1,3GBRAM/global300/new36/fourreservedunopened/guest1000/startup2500/host5000/Match600000, current-rules canonical engine/privacy/holdout/freeze-before-formation unchanged. New prospective finite route to be defined by checked source, not an implicit retry or an observation-cache grant. Fresh passing SAME-PROCESS capacity remains mandatory before charge. Plan16/Phase265/all9LEAG pending, Phase266 planning-only; no empirical/freeze/formation/public/counting/production credit. Existing Plan16/research/GATES carriers only, no numbered-plan proliferation. Earlier pending-decision paragraphs below are historical, now superseded only by this exact approval.
 
 ## Current continuation — V7 CLOSED pre-entry; prospective lean-cadence decision pending
 

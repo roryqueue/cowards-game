@@ -1,5 +1,26 @@
 # Baseline continuation gates
 
+## Approved boundary cadence — 2026-10-15T19:42:14Z
+
+Direct human `approved` accepts existing Plan16's exact prospective lean-cadence/resource proposal; D-29 now records it. ROOT first actual approval clock1792093334000, SOURCE hardstop1792100534000/21:42:14UTC. Exactly one future eight-hour PRIVATE window initializes after SOURCE closures; actual future A/tuple/namespace/artifacts remain uncreated. Wider between-boundary drift detection is explicitly accepted; no equivalent-cadence claim. Every other resource/runtime/rule/privacy bound and prior cost remains unchanged; all V7/older bytes spent/immutable. No actual preparation/entry/reader or other active agent observed on resumption; trackedclean a85c3021 before approval documentation. Real GSD init plan-phase265 CLOSED0/InProgress/16plans, research/check/validation enabled; selected existing Plan16 research carrier overrides stale generic init research pointer. No config changes, reinstalls or unsupported query retry.
+
+### ONE bounded opaque spent-V7 preparation metadata observation
+
+ROOT734f20 CLOSED0 at observed19:44:28UTC; actual elapsed15.187ms/1,150,279 logical bytes, ten exact files,15s/16MiB aggregate/4MiB per-file limits. Exact real0700/uid501 store members `allocation.json,carry.json,ledger.ndjson,source-hold.json,source-manifest.json,time.ndjson`; temp member only `window-claim.json`. Stable fd+path O_NOFOLLOW/realpath/currentowner/singlelink/mode/size/mtime/ctime checks,64KiB chunk hashes; no JSON/authority/source/IO parsed, no historical importer or other route visited, no writes. These are ROOT-observed opaque cost-only anchors for the next checked contract, not accepted prior execution or a replacement capsule.
+
+| Exact spent V7 path | Bytes / allocated bytes | Mode | Raw SHA256 |
+|---|---:|---|---|
+| `.strategy-lab/lean-baseline-continuation-window-20261014-v7.json` |929/4096|0600|f6c864c6483805035f19c40b1c9652225d302ef39457723a9be9973e764652e3|
+| `.strategy-lab/lean-baseline-continuation-request-20261014-v7.json` |4040/4096|0600|1fcba4e7945739e8ccdbfde70eb769a9fd581eb422a0a2333472d55fc1f6567d|
+| `.planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261014-v7.json` |17352/20480|0644|2d6a90d63a3f9e7af699046e1a6ddafcbf2eb0585844439b45233d7465129c96|
+| `.strategy-lab/lean-baseline-continuation-20261014-v7/allocation.json` |17352/20480|0600|2d6a90d63a3f9e7af699046e1a6ddafcbf2eb0585844439b45233d7465129c96|
+| `.strategy-lab/lean-baseline-continuation-20261014-v7/carry.json` |754167/757760|0600|9e6808767f3b5ba461c28457bdaf0781de8fbe9a56fdbcdbc6b6a7cdca20283e|
+| `.strategy-lab/lean-baseline-continuation-20261014-v7/ledger.ndjson` |0/0|0600|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855|
+| `.strategy-lab/lean-baseline-continuation-20261014-v7/source-hold.json` |146961/147456|0600|92bd96b0ab29518205f8583386dbcf4137733d5039656e9d33577ab538dd25a4|
+| `.strategy-lab/lean-baseline-continuation-20261014-v7/source-manifest.json` |208476/208896|0600|d720d3d51da9e16b63bf93a1548c1fbff28719cf14696aa3d763e235cc7f9ad7|
+| `.strategy-lab/lean-baseline-continuation-20261014-v7/time.ndjson` |0/0|0600|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855|
+| `.strategy-lab/lean-baseline-continuation-20261014-v7-tmp/window-claim.json` |1002/4096|0600|8f63b98b44d23de6aca4cae83ed61056f7e76ebb9351ce36773abba6aa257518|
+
 ## Actual V7 preparation and unique pre-entry terminal closure — 2026-10-15
 
 All actual source and DATA closures above their issuance order remain historical proof, not empirical completion. Final private canonical request4040B/0600/rawsha256:1fcba4e7945739e8ccdbfde70eb769a9fd581eb422a0a2333472d55fc1f6567d pins committed sourceHeadb68668f29d1955482a8175f3f49089309b360b84, implementation4accdb7e, planningRootsha256:f85be8f96d9780f9690fd01d5b22e554373295cd872285094eab07b0b772f937, manifestRootsha256:ad716eeb1968ee69e0754d4a3753e07463233c4337690adf1bfa4a3271f035a7, SOURCE26c69b7d, DATA3db052e7 and actual V7 window. Strict official request reader1748 CLOSED0 before preparation. ROOT used exact selected TMPDIR/core0/768MiB-old-space/cache-disabled environment, not the legacy shell wrapper. This is a host setting, not an RSS-bound claim.
