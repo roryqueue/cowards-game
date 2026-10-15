@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Approved bounded V8 source-only diagnosis through 2026-10-15T23:43:53UTC; no repair or new empirical authority
+status: awaiting_human_decision
+stopped_at: V8 diagnosis CLOSED; narrow startup ordering and finite diagnostics repair proposed, not applied or authorized
 last_updated: "2026-10-15"
 last_activity: 2026-10-15
-last_activity_desc: Additional 30-minute diagnosis approved at23:13:53UTC; V8 and its reader remain spent
+last_activity_desc: Confirmed startup-watchdog hazard and diagnostic gaps; original causes UNKNOWN, no source fixes or Matches
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,16 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V8 diagnosis CLOSED; source-only repair proposed
+
+Approved30-minute diagnosis began23:13:53UTC/hardstop23:43:53UTC. Actual typed manager/root/diagnose_265_v8_failure and explicitly reused typed debugger/root/diagnose_265_v4_overhead/static_v4_cost completed one investigation/zero fix cycles; fresh investigator spawn failedthreadlimit/nochild, reuse recorded honestly. Investigator CLOSED23:21:28UTC/managerfinalrelease23:24:12UTC. ROOT then inspected exact public source anchors. All production/source/test/config/private bytes unchanged; no spent context/authenticator/capacity/prepare/run/reader/provider/Strategy/Match replay.
+
+Findings: child arms30s release watchdog while parent still has synchronous complete staging before release; slow staging can cause false startup failure, but original V8cause remains UNKNOWN. Continuation handshake/parent-loss codes are reduced to UNKNOWN_INTERNAL_FAILURE. Reader context/early guards precede its main catch and lack finite CLI stage reporting; missingresult is read afterclaim and alone cannot explain absentclaim. No deterministic reader predicate or dominant elapsed cost established. IPC may queue readiness, so no lost-message claim. Exact anchors and limits in existingdebug/GATES.
+
+ROOT bounded PUBLIC formatter check7db13d CLOSED0/command0.124s/body1ms/observedRSS66179072B/notpeak/64MiBoldspace/5swatchdog/0scratch/0private reads/0sourceedits: actualformatter+syntheticerrors+fakechild maps continuationhandshake andparentloss toUNKNOWN, legacycontrol toHANDSHAKE, allstageunknown/exit1/disconnected. No realIPC/worker or originalthrow reproduction. Manager ran zero checks; this separate ROOT probe is not added to prior233testunion. Diagnosis and assessment CLOSED within30minutes; no code fix applied.
+
+Recommended next human choice, NOT authorized: one SOURCE-ONLY repair-and-check cycle up to60minutes from futureapproval. Correct startup coordination/order while preserving30s bound, complete guards/liveness/resources and authorization-before-release/charge; add trusted own-driver finite diagnostics and reader-preclaim catch-location reporting, plus connected inert timer/defaultreader tests. No timeout increase/reset/removal, arbitraryError.message promotion, rawprivateerrors or fabricatedclaim/report. Checked existingPlan16 scope first, including any existing sharedhelper outsideoriginalownership; no numberedplan proliferation. No newMatch/run/window/allocation/rule/resource expansion follows from this proposal. Currentdiagnosis-only approval does not authorize repair. Await explicit repair allowance; unchanged staysquiet. All prior/V8 evidence/costs immutable/spent/noreset; currentfreeze-first/unopenedholdout/no-public/no-counted/no-production and Phase265/Plan16/all9LEAGpending unchanged. Earlier continuation historical.
 
 ## Current continuation — additional30-minute SOURCE-ONLY diagnosis APPROVED
 
