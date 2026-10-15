@@ -10,6 +10,7 @@ import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import * as parentApi from "./run-v1-38-lean-baseline.js"
 import { admitsLeanBaselineReviewAgents, assertLeanBaselineWritableScope, deriveLeanBaselineCandidateRoots, deriveLeanBaselineRequestRoots, leanBaselinePair, leanBaselineSourceManifest, parseLeanBaselineCommand } from "./run-v1-38-lean-baseline.js"
 import { leanBaselineMatchSeed } from "./lib/v1-38-lean-baseline-match.js"
+import * as continuationMatch from "./lib/v1-38-lean-baseline-match.js"
 import { validateLeanPreparationContinuationReasonJoinV13 } from "./lib/v1-38-lean-correction-retained.js"
 import { assertLeanSupervisorReasonCustodyV2 } from "./lib/v1-38-lean-baseline-retained.js"
 import * as continuationRetainedReader from "./lib/v1-38-lean-baseline-retained.js"
@@ -72,6 +73,58 @@ it.each(["unrelated", "A", "B"] as const)("continuation-boundary-v8-P-cost real 
 }, 15000)
 
 describe("continuation-boundary-v8-Q", () => {
+  it.each(["pass", "pin", "closing"] as const)("continuation-boundary-v8-Q post-match actual child callback retains before closing: %s (synthetic context/resources and inert Match, not custody)", async mode => {
+    let window!: lean.LeanBaselineContinuationWindowV2
+    preledgerFixtureV6(f => { window = f.window }, 0, false, "20261015-v8")
+    const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "v8-post-match-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), clock = vi.spyOn(Date, "now").mockReturnValue(window.anchorMs), monotonic = vi.spyOn(process.hrtime, "bigint").mockReturnValue(process.hrtime.bigint())
+    const disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000), known = vi.spyOn(continuationHelper, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096)
+    const provider = vi.spyOn(continuationMatch, "runLeanBaselineContinuationMatchV2")
+    try {
+      const pb = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: 465187899, allocatedDiskBytes: 88924160, residualDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: root("synthetic-original"), closedCapsuleRoot: root("synthetic-capsule"), custodyRoot: root("synthetic-custody"), inventoryRoot: root("synthetic-inventory"), qualifiedReaderAuthority: "cost_only" as const }
+      const allocation = lean.createLeanBaselineContinuationAllocationV2({ sourceRoot: window.sourceRoot, reviewRoot: root("synthetic-review"), coldRoot: root("synthetic-cold"), planRoot: window.planRoot, candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, i) => root(String(i))), seed: "synthetic-post-match", sourceHead: "b".repeat(40), planningRoot: root("synthetic-planning"), manifestRoot: root("synthetic-manifest"), requestBytesRoot: root("synthetic-request"), window, windowBytesRoot: leanBytesRoot(leanCanonicalBytes(window)), sourceGateRoot: window.sourceGateRoot, dataReviewRoot: root("synthetic-data"), predecessor: { ...pb, root: labRoot(pb.schemaVersion, pb) } })
+      const paths = lean.LEAN_BASELINE_CONTINUATION_PATHS_V8
+      fs.mkdirSync(resolve(".strategy-lab"), { mode: 0o700 }); fs.mkdirSync(resolve(paths.temp), { mode: 0o700 })
+      const ledger = lean.createLeanLedger(resolve(paths.store), allocation), pin = join(dir, "fixed-source"), binding = Object.freeze({ synthetic: true }), order: string[] = []
+      fs.writeFileSync(pin, "fixed source")
+      const entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, head: allocation.sourceHead, parentPid: process.ppid, childPid: process.pid, handshakeRoot: root("synthetic-handshake"), wallStartMs: window.anchorMs, monotonicStartNs: process.hrtime.bigint().toString() }
+      fs.writeFileSync(join(ledger.directory, "entry.json"), leanCanonicalBytes(entry), { mode: 0o600 })
+      lean.beginLeanInterval(ledger, "pilot-entry", window.anchorMs)
+      const localReservation = parentApi.createLeanContinuationLocalReservationV8(window); localReservation.bindProgress(ledger)
+      let finished = false, postBody = false
+      const controller = continuationHelper.createLeanContinuationBoundaryControllerV8([{ path: pin, stat: fs.lstatSync(pin) }], [], [{ path: pin, role: "fixed_source" }], binding, () => { if (mode === "closing" && postBody) throw new Error("SYNTHETIC_POST_MATCH_CLOSING") }, bytes => { localReservation.reserve(bytes) })
+      const checkpoint = (bytes = 0) => controller.reserve(binding, bytes)
+      const assertRetained = () => {
+        const state = lean.readLeanLedger(ledger), charge = state.charges.get(allocation.slots[0]!.root)!
+        expect(state.charged).toBe(51); expect(state.terminals.has(charge.root)).toBe(true)
+        expect(fs.existsSync(join(ledger.directory, `${charge.root.slice(7)}.gz`))).toBe(true)
+        const observation = JSON.parse(fs.readFileSync(join(ledger.directory, "observation-0.json"), "utf8"))
+        expect(observation.cell.slotRoot).toBe(allocation.slots[0]!.root)
+        expect(JSON.parse(fs.readFileSync(join(ledger.directory, `diagnostic-${charge.root.slice(7)}.json`), "utf8"))).toEqual({ synthetic: "inert retained diagnostic" })
+        expect(state.events.at(-1)?.kind).toBe("resource")
+      }
+      const fullSample = () => { if (finished) { assertRetained(); order.push("post-match-body"); postBody = true; if (mode === "pin") fs.writeFileSync(pin, "changed source") }; return { synthetic: "external full sample" } as unknown as ReturnType<ReturnType<typeof parentApi.openLeanBaselineContinuationContextV2>["fullSample"]> }
+      const c = { allocation, paths, localReservation, fullSample, stage: <T>(kind: continuationHelper.LeanContinuationStageV6, body: () => T): T => { if (kind === "post_match") { assertRetained(); expect(finished).toBe(true); order.push("post-match-opening") }; return controller.withStage(binding, kind, body) }, startCell() { order.push("start-cell") }, finishCell() { assertRetained(); order.push("finish-cell"); finished = true } }
+      const compact = { classification: "success" as const, code: "OK" as const, outcome: "DRAW" as const, elapsedMs: 10, cleanupComplete: true, invocationCount: 0, accountingRoot: root("accounting"), executionRoot: root("execution"), telemetry: { transitions: 0, events: 0 } }
+      provider.mockImplementation(async input => { expect(lean.readLeanLedger(ledger).charges.get(input.slot.root)?.root).toBe(input.charge.root); order.push("inert-provider"); return { compact, replayFrames: [{ synthetic: "inert replay" }], diagnostic: { synthetic: "inert retained diagnostic" }, brainInputs: [], strategyInputs: [], trainingHalfPoints: 1, semanticRoot: root("semantic"), metrics: {}, decisionRoot: root("decision") } as never })
+      const receipts: Parameters<typeof parentApi.createLeanContinuationChildDispatchV2>[5] = [], register = vi.fn(), unregister = vi.fn(), dispatch = parentApi.createLeanContinuationChildDispatchV2(ledger, c, { register, unregister }, paths, checkpoint, receipts)
+      const source = { role: "synthetic", sourceRoot: root("source"), root: root("snapshot") } as Parameters<typeof dispatch>[1]
+      const accepted = vi.fn(), action = dispatch(allocation.slots[0]!, source, source).then(accepted)
+      if (mode === "pass") { await action; expect(accepted).toHaveBeenCalledOnce(); expect(receipts).toHaveLength(1) }
+      else {
+        await expect(action).rejects.toThrow(); expect(accepted).not.toHaveBeenCalled(); expect(receipts).toEqual([])
+        const spent = fs.readFileSync(join(ledger.directory, "ledger.ndjson"))
+        fs.writeFileSync(pin, "fixed source") // Restoring bytes cannot revive a failed controller.
+        await expect(dispatch(allocation.slots[1]!, source, source)).rejects.toThrow(/V8_CONTEXT/)
+        expect(() => checkpoint()).toThrow(/V8_CONTEXT/); expect(() => c.stage("charge", () => {})).toThrow(/V8_CONTEXT/)
+        expect(fs.readFileSync(join(ledger.directory, "ledger.ndjson"))).toEqual(spent)
+        expect(fs.existsSync(join(ledger.directory, "pair-1.json"))).toBe(false)
+      }
+      expect(provider).toHaveBeenCalledOnce(); expect(lean.readLeanLedger(ledger).charged).toBe(51); expect(lean.readLeanLedger(ledger).charges.size).toBe(1)
+      expect(order).toEqual(["start-cell", "inert-provider", "finish-cell", "post-match-opening", "post-match-body"])
+      expect(register).not.toHaveBeenCalled(); expect(unregister).not.toHaveBeenCalled()
+      expect(fs.existsSync(join(ledger.directory, "result.json"))).toBe(false)
+    } finally { for (const spy of [provider, known, available, usage, disk, monotonic, clock, cwd]) spy.mockRestore(); fs.rmSync(dir, { recursive: true }) }
+  }, 15000)
   it("actual V8 strict preflight reaches real immutable-history anchor refusal with no setup (public cost observations mocked, not custody)", () => {
     const known = vi.spyOn(continuationHelper, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096), send = Object.getOwnPropertyDescriptor(process, "send")
     Object.defineProperty(process, "send", { value: undefined, configurable: true })

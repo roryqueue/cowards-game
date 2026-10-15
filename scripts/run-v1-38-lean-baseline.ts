@@ -1466,26 +1466,9 @@ export const dispatchLeanContinuationChargedCellV6 = async <C, T>(stage: <R>(kin
   stage("dispatch", () => {})
   return { charge: charged, execution: await provider(charged) }
 }
-export const runLeanBaselineContinuationChildV2 = async (requestPath: string) => {
-  const approvedWindow = readLeanBaselineContinuationWindowV2(requestPath), paths = leanBaselineContinuationPathsForWindowV2(approvedWindow); continuationWindowAdmissionV2(approvedWindow, 36)
-  assertLeanBaselineContinuationScopeV2(false, approvedWindow)
-  if (requestPath !== paths.request || !process.send || !process.connected) return fail("CONTINUATION_CHILD_PARENT")
-  const token = await new Promise<string>((accept, reject) => { const timer = setTimeout(() => reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")), 30000); process.once("disconnect", () => { clearTimeout(timer); reject(new TypeError("LEAN_CONTINUATION_PARENT_LOST")) }); process.once("message", value => { clearTimeout(timer); if (!exactLabKeys(value, ["release"]) || typeof value.release !== "string") { reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")); return }; accept(value.release) }); process.send!({ ready: process.pid }) })
-  const ledger = openLeanLedger(paths.store), entry = readLeanChildEntry(ledger)
-  admitLeanChildRelease(entry, token, process.pid, process.ppid)
-  const c = openLeanBaselineContinuationContextV2(requestPath), parent = createLeanParentObservationGuard(entry.parentPid)
-  assertLeanEntryBinding(entry, { head: c.fixedHead, sourceRoot: c.allocation.sourceRoot, requestBytesRoot: c.allocation.requestBytesRoot, allocationRoot: c.allocation.root, parentPid: process.ppid, childPid: process.pid, intervalStartMs: readLeanTimeAccounting(ledger).starts.get("pilot-entry") ?? -1 })
-  const disconnect = () => { parent.disconnect(); process.exit(1) }
-  process.once("disconnect", disconnect)
-  const checkpoint = (additionalBytes = 0) => { parent.assert(); const sample = c.guard(additionalBytes); parent.assert(); return sample }
-  const resourceReceipts: Array<{ ordinal: number; chargeRoot: LabRoot; before: ReturnType<typeof c.fullSample>; after: ReturnType<typeof c.fullSample> }> = []
-  let pipeline: unknown = null, failed = false
-  try {
-    if ((c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V8)) { c.authenticateSource(); c.stage("import", () => checkpoint()) }
-    pipeline = await executeLeanBaselineContinuationPipelineV2({ allocation: c.allocation, heldHead: c.fixedHead, checkpoint, freezeSource: source => {
-      if (!c.localReservation) return publishLeanBaselineContinuationSourceV2(ledger, source, checkpoint)
-      c.stage("source", () => { const names = [`source-${source.role}.json`, `publication-${source.role}-continuation-v2.json`]; for (const name of names) c.localReservation!.reserveWrite(3 * 262144, join(ledger.directory, name)); publishLeanBaselineContinuationSourceV2(ledger, source, checkpoint); for (const name of names) c.localReservation!.completeWrite(join(ledger.directory, name)) })
-    }, retainArtifact(name, value) { if (!/^(?:seal-metadata|cold-corpus|initial-proposals|initial-selection|initial-training|initial-analysis|response-work|response-node-receipts|response-training|work-accounting|current-analysis)\.json$/u.test(name)) return fail("CONTINUATION_ARTIFACT_NAME"); const retain = () => { c.localReservation?.reserveWrite(3 * 4194304, join(ledger.directory, name)); checkpoint(3 * 4194304); writeLeanContinuationArtifact(ledger, name, value, 4194304); c.localReservation?.completeWrite(join(ledger.directory, name)); checkpoint() }; if (c.localReservation) c.stage("prepare", retain); else retain() }, async dispatch(slot, bottom, top, observedRole) {
+/** Existing child callback only: consumes its already-admitted ledger/context.
+ * Does not mint runtime authority, authenticate context, or enroll a reader. */
+export const createLeanContinuationChildDispatchV2 = (ledger: LeanExperimentLedger, c: Pick<ReturnType<typeof openLeanBaselineContinuationContextV2>, "allocation" | "paths" | "localReservation" | "stage" | "fullSample" | "startCell" | "finishCell">, parent: Pick<ReturnType<typeof createLeanParentObservationGuard>, "register" | "unregister">, paths: typeof c.paths, checkpoint: (additionalBytes?: number) => unknown, resourceReceipts: Array<{ ordinal: number; chargeRoot: LabRoot; before: ReturnType<typeof c.fullSample>; after: ReturnType<typeof c.fullSample> }>): Parameters<typeof executeLeanBaselineContinuationPipelineV2>[0]["dispatch"] => async (slot, bottom, top, observedRole) => {
       checkpoint()
       const before = readLeanContinuationBoundedBytesV2(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600, checkpoint)
       c.localReservation?.reserveWrite(3 * 16384, join(ledger.directory, `pair-${slot.ordinal}.json`))
@@ -1514,7 +1497,27 @@ export const runLeanBaselineContinuationChildV2 = async (requestPath: string) =>
       const resourceAfter = c.localReservation ? c.stage("post_match", c.fullSample) : checkpoint() as ReturnType<typeof c.fullSample>
       resourceReceipts.push({ ordinal: slot.ordinal, chargeRoot: charge.root, before: resourceBefore, after: resourceAfter })
       return cell
-    } })
+}
+export const runLeanBaselineContinuationChildV2 = async (requestPath: string) => {
+  const approvedWindow = readLeanBaselineContinuationWindowV2(requestPath), paths = leanBaselineContinuationPathsForWindowV2(approvedWindow); continuationWindowAdmissionV2(approvedWindow, 36)
+  assertLeanBaselineContinuationScopeV2(false, approvedWindow)
+  if (requestPath !== paths.request || !process.send || !process.connected) return fail("CONTINUATION_CHILD_PARENT")
+  const token = await new Promise<string>((accept, reject) => { const timer = setTimeout(() => reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")), 30000); process.once("disconnect", () => { clearTimeout(timer); reject(new TypeError("LEAN_CONTINUATION_PARENT_LOST")) }); process.once("message", value => { clearTimeout(timer); if (!exactLabKeys(value, ["release"]) || typeof value.release !== "string") { reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")); return }; accept(value.release) }); process.send!({ ready: process.pid }) })
+  const ledger = openLeanLedger(paths.store), entry = readLeanChildEntry(ledger)
+  admitLeanChildRelease(entry, token, process.pid, process.ppid)
+  const c = openLeanBaselineContinuationContextV2(requestPath), parent = createLeanParentObservationGuard(entry.parentPid)
+  assertLeanEntryBinding(entry, { head: c.fixedHead, sourceRoot: c.allocation.sourceRoot, requestBytesRoot: c.allocation.requestBytesRoot, allocationRoot: c.allocation.root, parentPid: process.ppid, childPid: process.pid, intervalStartMs: readLeanTimeAccounting(ledger).starts.get("pilot-entry") ?? -1 })
+  const disconnect = () => { parent.disconnect(); process.exit(1) }
+  process.once("disconnect", disconnect)
+  const checkpoint = (additionalBytes = 0) => { parent.assert(); const sample = c.guard(additionalBytes); parent.assert(); return sample }
+  const resourceReceipts: Array<{ ordinal: number; chargeRoot: LabRoot; before: ReturnType<typeof c.fullSample>; after: ReturnType<typeof c.fullSample> }> = []
+  let pipeline: unknown = null, failed = false
+  try {
+    if ((c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V8)) { c.authenticateSource(); c.stage("import", () => checkpoint()) }
+    pipeline = await executeLeanBaselineContinuationPipelineV2({ allocation: c.allocation, heldHead: c.fixedHead, checkpoint, freezeSource: source => {
+      if (!c.localReservation) return publishLeanBaselineContinuationSourceV2(ledger, source, checkpoint)
+      c.stage("source", () => { const names = [`source-${source.role}.json`, `publication-${source.role}-continuation-v2.json`]; for (const name of names) c.localReservation!.reserveWrite(3 * 262144, join(ledger.directory, name)); publishLeanBaselineContinuationSourceV2(ledger, source, checkpoint); for (const name of names) c.localReservation!.completeWrite(join(ledger.directory, name)) })
+    }, retainArtifact(name, value) { if (!/^(?:seal-metadata|cold-corpus|initial-proposals|initial-selection|initial-training|initial-analysis|response-work|response-node-receipts|response-training|work-accounting|current-analysis)\.json$/u.test(name)) return fail("CONTINUATION_ARTIFACT_NAME"); const retain = () => { c.localReservation?.reserveWrite(3 * 4194304, join(ledger.directory, name)); checkpoint(3 * 4194304); writeLeanContinuationArtifact(ledger, name, value, 4194304); c.localReservation?.completeWrite(join(ledger.directory, name)); checkpoint() }; if (c.localReservation) c.stage("prepare", retain); else retain() }, dispatch: createLeanContinuationChildDispatchV2(ledger, c, parent, paths, checkpoint, resourceReceipts) })
   } catch { failed = true; c.invalidate() }
   finally { c.closeRun(); process.off("disconnect", disconnect) }
   const complete = !failed && (pipeline as { status?: string } | null)?.status === "current_baseline_complete"
