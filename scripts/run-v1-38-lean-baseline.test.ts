@@ -188,6 +188,90 @@ describe("[continuation-ready-v7-N] actual V7 callers (synthetic A / Git resourc
     } finally { clock.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
   }, 15000)
 })
+describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (inert IPC/Git/resource/clock/PID observations)", () => {
+  it.each(["source", "resource", "fork-closing"] as const)("preserves spent bytes and nonaccepting observed-exit handling: %s", async mode => {
+    const began = performance.now(), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "ready-v7-parent-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V7, fixedHead = "b".repeat(40), sourcePath = join(dir, "fixed-source"), stages: string[] = [], seen: string[] = []
+    const syntheticA = 1792017187000 + 12345, carryMs = 459375903 + (syntheticA - 1791807317000)
+    const wb = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "synthetic-parent-no-custody", approvalEvidence: { humanDecisionId: "human-approval-observed-20261014T223307Z", recordedBy: "inert-root" }, approvedAtMs: 1792017187000, anchorMs: syntheticA, deadlineMs: syntheticA + 28800000, carryMs, capMs: carryMs + 28800000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261014-v7" as const, reviewedSourceHead: "a".repeat(40), sourceRoot: root("tiny-parent-source"), sourceGateRoot: root("tiny-parent-source-gate"), planRoot: root("tiny-parent-plan"), runOperator: "inert-parent", readerOperator: "inert-reader" }, window = { ...wb, root: labRoot(wb.schemaVersion, wb) }
+    const pb = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: 465187899, allocatedDiskBytes: 88924160, residualDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: root("synthetic-original"), closedCapsuleRoot: root("synthetic-capsule"), custodyRoot: root("synthetic-custody"), inventoryRoot: labRoot("lean-baseline-continuation-inventory-v2", []), qualifiedReaderAuthority: "cost_only" as const }
+    const requestBytes = Buffer.from("synthetic parent request, not an empirical request"), requestRoot = leanBytesRoot(requestBytes)
+    const allocation = lean.createLeanBaselineContinuationAllocationV2({ sourceRoot: window.sourceRoot, reviewRoot: root("tiny-review"), coldRoot: root("tiny-cold"), planRoot: window.planRoot, candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, i) => root(`tiny-${i}`)), seed: "synthetic-tiny-parent", sourceHead: fixedHead, planningRoot: root("tiny-planning"), manifestRoot: root("tiny-manifest"), requestBytesRoot: requestRoot, window, windowBytesRoot: leanBytesRoot(leanCanonicalBytes(window)), sourceGateRoot: window.sourceGateRoot, dataReviewRoot: root("tiny-data"), predecessor: { ...pb, root: labRoot(pb.schemaVersion, pb) } })
+    const actualPid = process.pid, pidDescriptor = Object.getOwnPropertyDescriptor(process, "pid")!, ppidDescriptor = Object.getOwnPropertyDescriptor(process, "ppid")!
+    const clock = vi.spyOn(Date, "now").mockReturnValue(syntheticA + 100), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), resource = vi.spyOn(process, "resourceUsage").mockReturnValue({ ...process.resourceUsage(), maxRSS: 100000 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000), disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never)
+    let ledger!: LeanExperimentLedger, spentBytes: Buffer | undefined, currentCalls = 0, resourceCalls = 0
+    const failureGuardReads: string[] = [], actualRead = continuationHelper.readLeanContinuationBoundedBytesV2
+    const descriptorReads = vi.spyOn(continuationHelper, "readLeanContinuationBoundedBytesV2").mockImplementation((...args) => { failureGuardReads.push(args[0]); return actualRead(...args) })
+    // The helper's JSON reader calls its own lexical descriptor function, so
+    // count that real forwarding seam separately, without replacing either body.
+    const failureGuardJsonReads: string[] = [], actualJsonRead = continuationHelper.readLeanContinuationJsonV2
+    const jsonReads = vi.spyOn(continuationHelper, "readLeanContinuationJsonV2").mockImplementation((...args) => { failureGuardJsonReads.push(args[0]); return actualJsonRead(...args) })
+    const actualUsage = usage.getMockImplementation()!; usage.mockImplementation(() => { resourceCalls++; return actualUsage() })
+    let controller: ReturnType<typeof continuationHelper.createLeanContinuationStageControllerV6> | undefined
+    const binding = Object.freeze({ namespace: window.routeNamespace, synthetic: true })
+    const child = Object.assign(new EventEmitter(), { pid: actualPid + 1000, exitCode: null as number | null, signalCode: null as NodeJS.Signals | null,
+      kill: vi.fn((signal: NodeJS.Signals) => { seen.push("kill"); queueMicrotask(() => { if (child.exitCode !== null || child.signalCode !== null) return; child.signalCode = signal; seen.push("observed-exit"); child.emit("exit", null, signal) }); return true }),
+      send: vi.fn(() => {
+        // Only the inert IPC callback observes child PID/PPID. Actual entry,
+        // admitted ledger, charge validation and durable append remain real.
+        Object.defineProperty(process, "pid", { ...pidDescriptor, value: child.pid }); Object.defineProperty(process, "ppid", { ...ppidDescriptor, value: actualPid })
+        try { lean.chargeLeanSlot(ledger, allocation.slots[0]!, { freeBytes: 100000000000, availableMemoryBytes: 4000000000 }) }
+        finally { Object.defineProperty(process, "pid", pidDescriptor); Object.defineProperty(process, "ppid", ppidDescriptor) }
+        spentBytes = fs.readFileSync(join(ledger.directory, "ledger.ndjson")); seen.push("durable-charge")
+        // A real child runs after release returns. Mutate only in the inert
+        // child-exit microtask, AFTER the parent's closing claim pass accepts.
+        queueMicrotask(() => { fs.writeFileSync(sourcePath, "changed source"); if (mode === "resource") usage.mockReturnValue({ ...actualUsage(), rss: 3000000001 }); child.exitCode = 0; seen.push("observed-exit"); child.emit("exit", 0, null) }); return true
+      }),
+    })
+    const fork = vi.spyOn(childProcess, "fork").mockImplementation(() => { seen.push("fork"); if (mode === "fork-closing") fs.writeFileSync(sourcePath, "changed source"); else queueMicrotask(() => child.emit("message", { ready: child.pid })); return child as never })
+    const git = vi.spyOn(childProcess, "execFileSync").mockImplementation(((command: string, args: readonly string[]) => {
+      if (command === "ps") return "100\n"
+      if (command === "git" && args[0] === "rev-parse" && args[1] === "HEAD") return fixedHead
+      if (command === "git" && args[0] === "show" && args[1] === `HEAD:${p.allocation}`) return Buffer.from(leanCanonicalBytes(allocation))
+      throw new Error("UNEXPECTED_TINY_PARENT_EXTERNAL_CALL")
+    }) as typeof childProcess.execFileSync)
+    const invalidated = vi.fn(() => controller!.invalidate()), beforeTerminal = vi.fn()
+    try {
+      fs.mkdirSync(resolve(".planning/artifacts"), { recursive: true }); fs.mkdirSync(resolve(p.temp), { recursive: true, mode: 0o700 }); fs.writeFileSync(resolve(p.request), requestBytes, { mode: 0o600 }); fs.writeFileSync(resolve(p.window), leanCanonicalBytes(window), { mode: 0o600 }); fs.writeFileSync(sourcePath, "fixed source")
+      ledger = lean.createLeanLedger(resolve(p.store), allocation); fs.writeFileSync(resolve(p.allocation), leanCanonicalBytes(allocation), { mode: 0o644 }); fs.chmodSync(resolve(p.allocation), 0o644)
+      fs.writeFileSync(join(ledger.directory, "carry.json"), leanCanonicalBytes({ inventory: [] }), { mode: 0o600 })
+      lean.beginLeanInterval(ledger, "continuation-run-admission"); lean.closeLeanInterval(ledger, "continuation-run-admission")
+      // The real monotonic close rounds up; start the later pilot beyond that
+      // synthetic admission close, rather than fabricating a backward journal.
+      clock.mockReturnValue(syntheticA + 1000)
+      controller = continuationHelper.createLeanContinuationStageControllerV6([{ path: sourcePath, stat: fs.lstatSync(sourcePath) }], [], [{ path: sourcePath, role: "fixed_source" }], binding, () => { currentCalls++; if (performance.now() - began > 12000) throw new Error("TINY_PARENT_CENSORED") })
+      const stage = <T>(kind: continuationHelper.LeanContinuationStageV6, body: () => T): T => { stages.push(kind); return controller!.withStage(binding, kind, body) }
+      const action = parentApi.runLeanBoundedParent({ ledger, requestPath: p.request, allocationPath: p.allocation, store: ledger.directory, sourceRoot: allocation.sourceRoot, manifestRoot: () => allocation.sourceRoot, childMode: "child-continuation-v2", prospectiveStart: { wallStartMs: syntheticA + 1000, monotonicStartNs: process.hrtime.bigint().toString() }, stage, beforeRelease: () => controller!.live(binding, () => {}), beforeTerminal, onFailure: invalidated, terminalReserveMs: window.closureMs, supervisorObservation: true })
+      await expect(action).rejects.toThrow(mode === "source" ? /CHILD_FAILED/ : mode === "resource" ? /V2_CAPACITY/ : /PIN_CHANGED/)
+      expect(fork).toHaveBeenCalledTimes(1); expect(seen).toContain("observed-exit"); expect(currentCalls).toBeGreaterThan(0)
+      expect(() => controller!.live(binding, () => {})).toThrow(/V6_CONTEXT/)
+      if (mode === "fork-closing") {
+        expect(child.kill).toHaveBeenCalledWith("SIGKILL"); expect(child.send).not.toHaveBeenCalled(); expect(lean.readLeanLedger(ledger).charged).toBe(50); expect(lean.readLeanTimeAccounting(ledger).starts.has("pilot-entry")).toBe(false)
+      } else {
+        expect(seen.indexOf("durable-charge")).toBeLessThan(seen.indexOf("observed-exit")); expect(fs.readFileSync(join(ledger.directory, "ledger.ndjson"))).toEqual(spentBytes)
+        expect(lean.readLeanLedger(ledger).charged).toBe(51); expect(lean.readLeanLedger(ledger).charges.size).toBe(1); expect(invalidated).toHaveBeenCalledTimes(1); expect(beforeTerminal).toHaveBeenCalledTimes(1)
+        if (mode === "source") {
+          const terminal = lean.readLeanChildTerminal(ledger), time = lean.readLeanTimeAccounting(ledger), reason = JSON.parse(fs.readFileSync(join(ledger.directory, "parent-supervisor-reasons.json"), "utf8"))
+          expect(terminal.status).toBe("child_failed"); expect(time.closed.has("pilot-entry")).toBe(true); expect(time.active).toBe(false)
+          expect(reason).toMatchObject({ uncertain: true, observations: { cleanup: "child_exit_observed", finalIdentity: "exception", initiatingCause: "unknown" } }); expect(resourceCalls).toBeGreaterThan(4)
+          expect(failureGuardJsonReads.filter(path => path === join(ledger.directory, "carry.json"))).toHaveLength(2)
+        } else {
+          expect(fs.existsSync(join(ledger.directory, "child-terminal.json"))).toBe(false); expect(fs.existsSync(join(ledger.directory, "parent-supervisor-reasons.json"))).toBe(false); expect(lean.readLeanTimeAccounting(ledger).closed.has("pilot-entry")).toBe(false)
+        }
+      }
+      expect(fs.existsSync(join(ledger.directory, "retained-check.json"))).toBe(false); expect(fs.existsSync(join(ledger.directory, "result.json"))).toBe(false)
+      const bytes = fs.readdirSync(ledger.directory).reduce((n, name) => n + fs.statSync(join(ledger.directory, name)).size, 0)
+      expect(bytes).toBeLessThan(64 * 1024 * 1024)
+      expect(seen.filter(event => event === "observed-exit")).toHaveLength(1)
+      process.stdout.write(`FINITE_SYNTHETIC_V7_PARENT ${JSON.stringify({ mode, status: "COMPLETE", sampleMs: Math.ceil(performance.now() - began), actualFileBytes: bytes, stages, seen, charged: lean.readLeanLedger(ledger).charged, resourceCalls, currentCalls, failureGuardDescriptorReads: failureGuardReads.length, failureGuardCarryReads: failureGuardJsonReads.length, realParentLedgerController: true, realDurableChargeAndFailureGuardReached: mode !== "fork-closing", gitResourceClockIpcPidObservationsMocked: true, historicalAuthenticationCovered: false, runtimeFitEstablished: false })}\n`)
+    } finally {
+      Object.defineProperty(process, "pid", pidDescriptor); Object.defineProperty(process, "ppid", ppidDescriptor)
+      const cleanupBegan = performance.now()
+      for (const spy of [git, fork, clock, usage, resource, available, disk, descriptorReads, jsonReads]) spy.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(15000)
+      process.stdout.write(`FINITE_SYNTHETIC_V7_PARENT_CLOSED ${JSON.stringify({ mode, endToEndMs: Math.ceil(performance.now() - began), cleanupMs: Math.ceil(performance.now() - cleanupBegan), constructionSampleCleanupBoundMs: 15000 })}\n`)
+    }
+  }, 15000)
+})
 describe("[continuation-preledger-policy] actual unconsumed V6 caller", () => {
   it.each(["source", "archive"] as const)("[CR-PRE-01] rejects fresh CWD drift in actual %s callback before resource/Git/input effects (CWD/HEAD seams inert)", stage => preledgerFixtureV6(f => {
     let before: typeof f.counts | undefined
