@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: V8 DATA review closed; final request pins then ONE ROOT preparation
+status: awaiting_human_decision
+stopped_at: V8 run and unique ordinary reader CLOSED without acceptance or new retained charges; additional 30-minute source-only diagnosis requested
 last_updated: "2026-10-15"
 last_activity: 2026-10-15
-last_activity_desc: Actual independent DATA review passed and canonical DATA projected; ONE preparation next
+last_activity_desc: V8 failed child exit1 UNKNOWN_INTERNAL_FAILURE and ordinary reader exit1 withheld; safe closure no empirical credit
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,18 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V8 CLOSED, no useful empirical result; new diagnostic allowance pending
+
+ONE ROOT preparation10046/PID75112 CLOSED0, canonicalallocationc2adb2b3141df01d7e84f87a546575458e31ef9be67d0046dcb985a45a521677/rawfbcd010d88de954894b9e9d97a4b81258e580721cfa9cc8498d91dd64e31389f/17350B0644 passed bounded strict/canonical/request/window/source/planning joins28456 CLOSED0. Allocation-only direct-child5ff7945877a5a9dae2e41b129dfaf9f2ee88b6e8 has parent5f1a480cd8dacfc45eb076d7d917be5661603b42 and was pushed BEFORE ONE ROOT run74064/PID12383. Request4036B0600/raw388cbe2d4e30f478a16f27e1fe657f4288a93a08074ec446c2b7b5700138e0ff; window927B0600/raw2d10cd37/domain8e66c909 unchanged. SOURCE2ceabd16/fixedc51651f7 and all source/test/planning/HEAD held unchanged through run plus unique actual reader closure. No competing heavy work/source fix or duplicate entry/reader.
+
+Run first post-issuance observation21:34:45UTC, CLOSED1 first post-terminalclock2026-10-15T22:10:15UTC: finite RUN_PREENTRY/stageUNKNOWN/codeDETAILS_WITHHELD. That label does NOT prove absence of entry: actualentry551B/head5ff/root/PIDs12383/86407 exists. Time/entry markers advanced during wait but no ledger charge. Actual terminal659B child_failed/exit1/signalnull, entryfailure121B finite stageunknown/codeUNKNOWN_INTERNAL_FAILURE; underlying thrown cause UNKNOWN. Roughly35-minute root observation span is not an exact elapsed/CPU/stage attribution; no claim about dominant old-history work or terminal causality. No successful Match, result or LEAG credit.
+
+ONE actual distinct typed `/root/verify_265_v8_retained` fresh precheck22:11:59.130UTC passed exact HEAD/directparent/allocation-only delta/trackedclean/root/mode/store/temp/entry joins and process absence. Ordinary reader92229/PID23327 issued once after that precheck and before22:12:12UTC, CLOSED1/sole DETAILS_WITHHELD, first post-terminalclock22:24:02UTC. Actual pilot close22:09:47.743UTC and unchanged31-minute closure cutoff22:40:47.743UTC were honored, no clock reset/retry. Final finite metadata check CLOSED0/released22:24:28.043UTC: run/child/reader PIDs absent, immutable request/window/allocation hashes and exact entry↔terminal↔allocation/source/head/PID joins pass, ledger0B/time258B unchanged, readerclaim/retainedcheck/result ENOENT, no reader interval recorded. SAFE NON-ACCEPTANCE/gaps_found/requirements incomplete is a closure disposition, not an accepted private report. Missing result is observable, NOT proven refusal cause. Zero new retained charges does not certify absence of all unrecorded observations/transient construction. Fifty prior charges remain spent; no import/recredit/refund.
+
+All actual run/ordinary-reader/closure commands CLOSED; unique verifier ownership RELEASED. Source/HEAD/planning hold now released ONLY after those closures. Every V8 window/request/allocation/claim/store/temp/entry/terminal/failure/time/ledger and attempted reader remains immutable/spent: no resume/retry/replacement/refund/reinterpretation/recredit, no filling missing results or fictional reader. Canonical SOURCE/DATA bodies archived as TEXT only, unchanged bytes, zero active projections. No new source correction or route launched. Same15GB/3GB/global300/new36/fourunopened/runtime/rules/privacy/current-rules-freeze-before-formation. Plan16/Phase265/all9LEAG remain pending; Phase266 planning-only; no freeze/formation/holdout/public/counting/production authority or useful baseline established.
+
+Genuinely NEW human-only resource choice: previous approved at-most-two-hour SOURCE-work window ended21:42:14UTC after proper source closure/actualA. Its ONE private route is now spent; standing route approval does not supply more source-work time. ROOT requested one additional30-minute SOURCE-ONLY diagnostic pass, no new Match/run/rule/budget change authorized by that choice. This new allowance is PENDING, not inferred from prior approvals. Do not start source diagnosis/tests/repair, a new window/namespace/allocation or repeat heavy old-history scan while pending; unchanged state stays quiet. Safe closure documentation/commit/push may finish. ActualA21:25:59UTC and all cumulative prior/new costs remain recorded/no reset. Earlier continuations below are historical.
 
 ## Current continuation — V8 DATA CLOSED, final request and ONE preparation next
 
