@@ -922,7 +922,7 @@ export const createLeanContinuationLocalReservationV8 = (window: LeanBaselineCon
   if (p !== LEAN_BASELINE_CONTINUATION_PATHS_V8) return fail("V8_RESERVATION_SCOPE")
   const pid = process.pid, cwd = process.cwd(), began = process.hrtime.bigint(), wall = Date.now(), measure = createLeanContinuationOwnedMeasurementV8(w)
   const otherKnownDisjointBytes = measureLeanContinuationKnownDisjointBytesV8()
-  let floor = LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V8 + otherKnownDisjointBytes, accounting = createLeanContinuationReservationAccountingV8(floor), journalPrefix: Buffer = Buffer.alloc(0), journalFloor = 0, observedGrowth = 0, closure = reader, remainingSlots = reader ? 0 : 36, invalid = false
+  let floor = LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V8 + otherKnownDisjointBytes, accounting = createLeanContinuationReservationAccountingV8(floor), journalPrefix: Buffer = Buffer.alloc(0), journalFloor = 0, observedGrowth = 0, closure = reader, closureStart: number | undefined, remainingSlots = reader ? 0 : 36, invalid = false
   const outstandingWrites = new Map<string, { bytes: number; previousBlocks: number; previousSize: number }>()
   const writePath = (name: string) => { const path = resolve(name); if (![p.allocation, p.request, p.window].map(name => resolve(name)).includes(path) && ![p.store, p.temp].some(name => path.startsWith(resolve(name) + "/") && !relative(resolve(name), path).includes("/"))) return fail("V8_WRITE_SCOPE"); return path }
   const fileBlocks = (path: string) => { try { const s = lstatSync(path); if (!s.isFile() || s.isSymbolicLink() || s.nlink !== 1 || s.uid !== process.getuid?.() || realpathSync(path) !== path) return fail("V8_WRITE_SCOPE"); return { blocks: s.blocks * 512, size: s.size } } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return { blocks: 0, size: -1 }; throw error } }
@@ -933,7 +933,9 @@ export const createLeanContinuationLocalReservationV8 = (window: LeanBaselineCon
     for (const [path, pending] of outstandingWrites) { const measured = fileBlocks(path); outstanding += Math.max(0, pending.bytes - Math.max(0, measured.blocks - pending.previousBlocks)) }
     const reserve = additional + CONTINUATION_V2_METADATA_PARSE_RESERVE + outstanding, retained = accounting.required(reserve + observedGrowth, owned.retainedBytes)
     const now = Date.now(), mono = process.hrtime.bigint() - began, usage = process.memoryUsage(), disk = statfsSync(cwd, { bigint: true }), free = disk.bavail * disk.bsize, native = 2 * 268435456 + 512000000 + 335544320
-    const remaining = closure ? 0 : remainingSlots * LEAN_CAPS.matchMs + w.closureMs + w.offlineOverheadMs
+    // Before the first bounded journal leaf is read, no dependent effect is
+    // admitted. reserve() rechecks after it obtains the fresh pilot close.
+    const remaining = closure ? closureStart === undefined ? 0 : Math.max(0, w.closureMs - Math.max(0, now - closureStart)) : remainingSlots * LEAN_CAPS.matchMs + w.closureMs + w.offlineOverheadMs
     if (mono < 0n || mono > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n || now < wall) return fail("V8_RESERVATION_CLOCK")
     const elapsed = Math.max(leanContinuationGlobalFloorV2(now), w.carryMs + Math.max(now - w.anchorMs, wall - w.anchorMs + Number((mono + 999999n) / 1000000n)), journalFloor)
     if (![retained, reserve, owned.scratchBytes + reserve, elapsed + remaining, now + remaining].every(n => Number.isSafeInteger(n) && n >= 0) || now + remaining > w.deadlineMs || elapsed + remaining > w.capMs || retained > LEAN_CAPS.retainedBytes || retained + LEAN_CAPS.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || owned.scratchBytes + reserve + usage.arrayBuffers > LEAN_CAPS.scratchBytes || usage.rss + (process.connected ? rssOf(process.ppid) : 0) + usage.arrayBuffers + reserve + native > LEAN_BASELINE_CONTINUATION_POLICY_V2.memoryBytes || observeLeagueAvailableMemoryBytes() < native || free > BigInt(Number.MAX_SAFE_INTEGER) || free < BigInt(LEAN_CAPS.totalBytes - floor - observedGrowth - owned.retainedBytes) || process.connected === false && process.send !== undefined) return fail("V8_RESERVATION_CAPACITY")
@@ -949,8 +951,16 @@ export const createLeanContinuationLocalReservationV8 = (window: LeanBaselineCon
         if (bytes.length < journalPrefix.length || !bytes.subarray(0, journalPrefix.length).equals(journalPrefix)) return fail("V8_JOURNAL_CHANGED")
         const text = bytes.toString("utf8"), rows = text ? text.slice(0, -1).split("\n") : []
         if (text && !text.endsWith("\n") || rows.length > 16) return fail("V8_JOURNAL_CHANGED")
-        let previous = w.anchorMs
-        for (const line of rows) { const row = JSON.parse(line) as Record<string, unknown>; if (!exactLabKeys(row, ["kind", "id", "atMs"]) || !["start", "close"].includes(String(row.kind)) || !["continuation-run-admission", "pilot-entry", "continuation-retained-verifier-v2"].includes(String(row.id)) || !Number.isSafeInteger(row.atMs) || Number(row.atMs) < previous || !Buffer.from(leanCanonicalBytes(row)).equals(Buffer.from(line))) return fail("V8_JOURNAL_CHANGED"); previous = Number(row.atMs) }
+        let previous = w.anchorMs, activeId: string | undefined
+        const started = new Set<string>()
+        for (const line of rows) {
+          const row = JSON.parse(line) as Record<string, unknown>
+          if (!exactLabKeys(row, ["kind", "id", "atMs"]) || !["start", "close"].includes(String(row.kind)) || !["continuation-run-admission", "pilot-entry", "continuation-retained-verifier-v2"].includes(String(row.id)) || !Number.isSafeInteger(row.atMs) || Number(row.atMs) < previous || !Buffer.from(leanCanonicalBytes(row)).equals(Buffer.from(line))) return fail("V8_JOURNAL_CHANGED")
+          const id = String(row.id)
+          if (row.kind === "start") { if (activeId !== undefined || started.has(id)) return fail("V8_JOURNAL_CHANGED"); started.add(id); activeId = id }
+          else { if (activeId !== id) return fail("V8_JOURNAL_CHANGED"); activeId = undefined }
+          previous = Number(row.atMs); if (closure && row.kind === "close" && row.id === "pilot-entry") closureStart = Number(row.atMs)
+        }
         journalFloor = Math.max(journalFloor, w.carryMs + previous - w.anchorMs); journalPrefix = bytes
         result = resource(additional)
       } else if (journalPrefix.length) return fail("V8_JOURNAL_CHANGED")
@@ -962,7 +972,7 @@ export const createLeanContinuationLocalReservationV8 = (window: LeanBaselineCon
     reconcileAuthenticated(carriedDebitFloor: number) { if (invalid || outstandingWrites.size || !Number.isSafeInteger(carriedDebitFloor) || carriedDebitFloor < floor) return fail("V8_CARRIED_DEBIT"); floor = carriedDebitFloor; accounting = createLeanContinuationReservationAccountingV8(floor); reserve() },
     setRemainingSlots(slots: number) { if (invalid || !Number.isSafeInteger(slots) || slots < 0 || slots > 36) return fail("V8_RESERVATION_SCOPE"); remainingSlots = slots },
     observeGrowth(bytes: number) { if (invalid || !Number.isSafeInteger(bytes) || bytes < observedGrowth) return fail("V8_SURVIVOR_SHRINK"); observedGrowth = bytes },
-    closeRun() { closure = true }, invalidate() { invalid = true },
+    closeRun() { closure = true; closureStart ??= Date.now() }, invalidate() { invalid = true },
   })
 }
 /** Testable seam for reserving all bounded journal/time metadata parsing before

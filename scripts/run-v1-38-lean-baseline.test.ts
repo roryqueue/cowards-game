@@ -51,6 +51,20 @@ describe("continuation-boundary-v8-Q", () => {
   it("reserves fresh local resources without re-entering source or admitted-ledger evidence", () => {
     expect(typeof parentApi.createLeanContinuationLocalReservationV8).toBe("function")
   })
+  it("reserves fresh remaining reader closure from a bounded journal leaf before dependent effects", () => preledgerFixtureV6(f => {
+    const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V8, known = vi.spyOn(continuationHelper, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096), send = Object.getOwnPropertyDescriptor(process, "send")
+    Object.defineProperty(process, "send", { value: undefined, configurable: true })
+    try {
+      fs.mkdirSync(resolve(p.store), { mode: 0o700 }); fs.mkdirSync(resolve(p.temp), { mode: 0o700 })
+      const close = f.window.deadlineMs - 20 * 60000, rows = [{ kind: "start", id: "continuation-run-admission", atMs: f.window.anchorMs }, { kind: "close", id: "continuation-run-admission", atMs: f.window.anchorMs + 1 }, { kind: "start", id: "pilot-entry", atMs: close - 10 }, { kind: "close", id: "pilot-entry", atMs: close }]
+      fs.writeFileSync(resolve(p.store, "time.ndjson"), rows.map(row => Buffer.from(leanCanonicalBytes(row)).toString() + "\n").join(""), { mode: 0o600 })
+      vi.mocked(Date.now).mockReturnValue(close + 60000)
+      const local = parentApi.createLeanContinuationLocalReservationV8(f.window, true)
+      expect(() => local.reserve()).toThrow(/V8_RESERVATION_CAPACITY/)
+      expect(() => local.reserve()).toThrow(/V8_RESERVATION_SCOPE/)
+      fs.unlinkSync(resolve(p.store, "time.ndjson")); fs.rmdirSync(resolve(p.store)); fs.rmdirSync(resolve(p.temp))
+    } finally { known.mockRestore(); if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send") }
+  }, 0, false, "20261015-v8"), 15000)
 })
 it("continuation-boundary-v8-assay public construction, real inventory/controller/local reservation, streaming and cleanup", () => {
   const began = performance.now(), deadline = began + 15000, reports: Record<string, unknown>[] = []
@@ -270,7 +284,7 @@ describe("[continuation-ready-v7-N] actual V7 callers (synthetic A / Git resourc
   }, 15000)
 })
 describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (inert IPC/Git/resource/clock/PID observations)", () => {
-  it.each([false, true].flatMap(v8 => (["source", "resource", "fork-closing"] as const).map(mode => ({ v8, mode, tag: v8 ? "continuation-boundary-v8-Q" : "continuation-ready-v7-N-parent" }))))("$tag preserves spent bytes and nonaccepting observed-exit handling: $mode", async ({ mode, v8 }) => {
+  it.each([false, true].flatMap(v8 => (v8 ? ["source", "resource", "fork-closing", "charge-closing"] as const : ["source", "resource", "fork-closing"] as const).map(mode => ({ v8, mode, tag: v8 ? "continuation-boundary-v8-Q" : "continuation-ready-v7-N-parent" }))))("$tag preserves spent bytes and nonaccepting observed-exit handling: $mode", async ({ mode, v8 }) => {
     const began = performance.now(), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "ready-v7-parent-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
     const p = v8 ? lean.LEAN_BASELINE_CONTINUATION_PATHS_V8 : lean.LEAN_BASELINE_CONTINUATION_PATHS_V7, fixedHead = "b".repeat(40), sourcePath = join(dir, "fixed-source"), stages: string[] = [], seen: string[] = []
     const syntheticApproval = v8 ? 1792093334000 : 1792017187000, syntheticA = syntheticApproval + 12345, carryMs = 459375903 + (syntheticA - 1791807317000)
@@ -280,7 +294,8 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
     const allocation = lean.createLeanBaselineContinuationAllocationV2({ sourceRoot: window.sourceRoot, reviewRoot: root("tiny-review"), coldRoot: root("tiny-cold"), planRoot: window.planRoot, candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, i) => root(`tiny-${i}`)), seed: "synthetic-tiny-parent", sourceHead: fixedHead, planningRoot: root("tiny-planning"), manifestRoot: root("tiny-manifest"), requestBytesRoot: requestRoot, window, windowBytesRoot: leanBytesRoot(leanCanonicalBytes(window)), sourceGateRoot: window.sourceGateRoot, dataReviewRoot: root("tiny-data"), predecessor: { ...pb, root: labRoot(pb.schemaVersion, pb) } })
     const actualPid = process.pid, pidDescriptor = Object.getOwnPropertyDescriptor(process, "pid")!, ppidDescriptor = Object.getOwnPropertyDescriptor(process, "ppid")!
     const clock = vi.spyOn(Date, "now").mockReturnValue(syntheticA + 100), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), resource = vi.spyOn(process, "resourceUsage").mockReturnValue({ ...process.resourceUsage(), maxRSS: 100000 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000), disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never)
-    let ledger!: LeanExperimentLedger, spentBytes: Buffer | undefined, currentCalls = 0, resourceCalls = 0
+    let ledger!: LeanExperimentLedger, spentBytes: Buffer | undefined, currentCalls = 0, resourceCalls = 0, chargeClosingRefused = false
+    const deniedProvider = vi.fn()
     const failureGuardReads: string[] = [], actualRead = continuationHelper.readLeanContinuationBoundedBytesV2
     const descriptorReads = vi.spyOn(continuationHelper, "readLeanContinuationBoundedBytesV2").mockImplementation((...args) => { failureGuardReads.push(args[0]); return actualRead(...args) })
     // The helper's JSON reader calls its own lexical descriptor function, so
@@ -296,7 +311,12 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
         // Only the inert IPC callback observes child PID/PPID. Actual entry,
         // admitted ledger, charge validation and durable append remain real.
         Object.defineProperty(process, "pid", { ...pidDescriptor, value: child.pid }); Object.defineProperty(process, "ppid", { ...ppidDescriptor, value: actualPid })
-        try { lean.chargeLeanSlot(ledger, allocation.slots[0]!, { freeBytes: 100000000000, availableMemoryBytes: 4000000000 }) }
+        try {
+          if (mode === "charge-closing") {
+            let charged = false; const childBinding = Object.freeze({ child: true }), childController = continuationHelper.createLeanContinuationBoundaryControllerV8([], [], [], childBinding, () => { if (charged) throw new Error("SYNTHETIC_CHARGE_CLOSING") }, () => {})
+            void parentApi.dispatchLeanContinuationChargedCellV6((kind, body) => childController.withStage(childBinding, kind, body), () => { const charge = lean.chargeLeanSlot(ledger, allocation.slots[0]!, { freeBytes: 100000000000, availableMemoryBytes: 4000000000 }); charged = true; return charge }, () => {}, deniedProvider).catch(error => { expect((error as Error).message).toBe("SYNTHETIC_CHARGE_CLOSING"); chargeClosingRefused = true })
+          } else lean.chargeLeanSlot(ledger, allocation.slots[0]!, { freeBytes: 100000000000, availableMemoryBytes: 4000000000 })
+        }
         finally { Object.defineProperty(process, "pid", pidDescriptor); Object.defineProperty(process, "ppid", ppidDescriptor) }
         spentBytes = fs.readFileSync(join(ledger.directory, "ledger.ndjson")); seen.push("durable-charge")
         // A real child runs after release returns. Mutate only in the inert
@@ -324,7 +344,7 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
       controller = v8 ? continuationHelper.createLeanContinuationBoundaryControllerV8(pins, [], roles, binding, current, () => { const usage = process.memoryUsage(); if (usage.rss > 3000000000) throw new Error("RESOURCE_DENIED") }) : continuationHelper.createLeanContinuationStageControllerV6(pins, [], roles, binding, current)
       const stage = <T>(kind: continuationHelper.LeanContinuationStageV6, body: () => T): T => { stages.push(kind); return controller!.withStage(binding, kind, body) }
       const action = parentApi.runLeanBoundedParent({ ledger, requestPath: p.request, allocationPath: p.allocation, store: ledger.directory, sourceRoot: allocation.sourceRoot, manifestRoot: () => allocation.sourceRoot, childMode: "child-continuation-v2", prospectiveStart: { wallStartMs: syntheticA + 1000, monotonicStartNs: process.hrtime.bigint().toString() }, stage, beforeRelease: () => controller!.live(binding, () => {}), beforeTerminal, onFailure: invalidated, terminalReserveMs: window.closureMs, supervisorObservation: true })
-      await expect(action).rejects.toThrow(mode === "source" ? /CHILD_FAILED/ : mode === "resource" ? /V2_CAPACITY/ : /PIN_CHANGED/)
+      await expect(action).rejects.toThrow(mode === "source" || mode === "charge-closing" ? /CHILD_FAILED/ : mode === "resource" ? /V2_CAPACITY/ : /PIN_CHANGED/)
       expect(fork).toHaveBeenCalledTimes(1); expect(seen).toContain("observed-exit"); expect(currentCalls).toBeGreaterThan(0)
       expect(() => controller!.live(binding, () => {})).toThrow(/V[68]_CONTEXT/)
       if (mode === "fork-closing") {
@@ -332,7 +352,7 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
       } else {
         expect(seen.indexOf("durable-charge")).toBeLessThan(seen.indexOf("observed-exit")); expect(fs.readFileSync(join(ledger.directory, "ledger.ndjson"))).toEqual(spentBytes)
         expect(lean.readLeanLedger(ledger).charged).toBe(51); expect(lean.readLeanLedger(ledger).charges.size).toBe(1); expect(invalidated).toHaveBeenCalledTimes(1); expect(beforeTerminal).toHaveBeenCalledTimes(1)
-        if (mode === "source") {
+        if (mode === "source" || mode === "charge-closing") {
           const terminal = lean.readLeanChildTerminal(ledger), time = lean.readLeanTimeAccounting(ledger), reason = JSON.parse(fs.readFileSync(join(ledger.directory, "parent-supervisor-reasons.json"), "utf8"))
           expect(terminal.status).toBe("child_failed"); expect(time.closed.has("pilot-entry")).toBe(true); expect(time.active).toBe(false)
           expect(reason).toMatchObject({ uncertain: true, observations: { cleanup: "child_exit_observed", finalIdentity: "exception", initiatingCause: "unknown" } }); expect(resourceCalls).toBeGreaterThan(4)
@@ -345,6 +365,7 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
       const bytes = fs.readdirSync(ledger.directory).reduce((n, name) => n + fs.statSync(join(ledger.directory, name)).size, 0)
       expect(bytes).toBeLessThan(64 * 1024 * 1024)
       expect(seen.filter(event => event === "observed-exit")).toHaveLength(1)
+      if (mode === "charge-closing") { expect(chargeClosingRefused).toBe(true); expect(deniedProvider).not.toHaveBeenCalled(); expect(lean.readLeanLedger(ledger).charged).toBe(51) }
       process.stdout.write(`FINITE_SYNTHETIC_${v8 ? "V8" : "V7"}_PARENT ${JSON.stringify({ mode, status: "COMPLETE", sampleMs: Math.ceil(performance.now() - began), actualFileBytes: bytes, stages, seen, charged: lean.readLeanLedger(ledger).charged, resourceCalls, currentCalls, failureGuardDescriptorReads: failureGuardReads.length, failureGuardCarryReads: failureGuardJsonReads.length, realParentLedgerController: true, realDurableChargeAndFailureGuardReached: mode !== "fork-closing", gitResourceClockIpcPidObservationsMocked: true, historicalAuthenticationCovered: false, runtimeFitEstablished: false })}\n`)
     } finally {
       Object.defineProperty(process, "pid", pidDescriptor); Object.defineProperty(process, "ppid", ppidDescriptor)
