@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Actual V7 window initialized after source closure at17:51:30UTC; independent DATA review next, no request or preparation
+stopped_at: V7 independent DATA review passed and projected; final request pins then ONE ROOT preparation next
 last_updated: "2026-10-15"
 last_activity: 2026-10-15
-last_activity_desc: Canonical private V7 window46a7cd22 created after source closure; eight-hour deadline01:51:30UTC, full36 entry cutoff19:10:30UTC
+last_activity_desc: Actual DATA reviewer passed window/current-source/chronology joins; DATA3db052e7 projected, no request/preparation/Match yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V7 DATA CLOSED; final request and ONE preparation next
+
+Actual independent typed `/root/review_265_v7_window_data` PASS_DATA_REVIEW/findings[]/0BLOCKER0WARNING/allcommandsCLOSED/ownershipRELEASED17:59:04UTC. Actual929B window0600/uid501/singlelink/stableNOFOLLOW/rawf6c864c6/domain46a7cd22, SOURCEcanonical495B/root26c69b7d/exactroles, actual264214B publicPlanraw1c8ee749, Git sourceancestor/nonplanningclean and four future targets ENOENT. Actual ordering reviewed from ROOT-attributed closed tool/clock record plus independent fresh Git/file evidence; no external custody or replayed prior clock invented. ROOT's initially assumed262144B publicPlan reviewer read cap was too tight, corrected to300000B after confirming existingproduction4MiB bound; no frozen policy/source/Plan/window/budget changed. Other reviewer literal/path mistakes corrected honestly, not counted as successful checks.
+
+ROOT pure DATA projection97458 CLOSED0/canonical881B/rootsha256:3db052e732a4f0db4c203e5b962d4460622c60f150b9defe5ab13b68f78b86c5, exact actualreviewer role/currentwindow/SOURCE joins. Sole SOURCE26c69b7d and DATA3db052e7 active in GATES. NEXT final committed planning/request pins, ONE unique ROOT preparation using selected V7 request, then only if successful NEW immutable allocation-only direct-child commit and unique ROOT entry/fresh passing SAME-PROCESS capacity before charge. No repeat preparation/window/authority, no source/HEAD/planning edits once preparation starts except required allocation-only commit. Unique ordinaryreader/root/verify_265_v7_retained is prospective/uninvoked; actualentry/head required, otherwise terminal-only check. No request/allocation/store/temp/claim/entry/Match created yet. ActualwindowA17:51:30UTC/deadline01:51:30UTC/latestfull19:10:30UTC/all continuous costs/bounds/privacy/history unchanged; metadata proof is not capacity/empirical admission. Phase265/Plan16/all9LEAG pending.
 
 ## Current continuation — actual V7 window initialized; DATA still pending
 
