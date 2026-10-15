@@ -64,7 +64,7 @@ describe("continuation-boundary-v8-P", () => {
     expect(() => continuation.authenticateLeanBaselineContinuationCarryV2(git, [], bytes => c.reserve(context, bytes ?? 0))).toThrow("capacity")
     expect(read).not.toHaveBeenCalled(); expect(git).not.toHaveBeenCalled(); expect(allocate).not.toHaveBeenCalled(); read.mockRestore()
   })
-  it("measures real selected owned paths, refuses shrink and unknown members without source or ledger parsing", () => {
+  it.each(["unknown", "disappearance"] as const)("measures real selected owned paths, refuses %s masked by growth without source or ledger parsing", mutation => {
     const anchorMs = 1792093334001, { root: _, ...old } = continuationWindowFixtureV2(), body = { ...old, routeNamespace: "20261015-v8", approvedAtMs: 1792093334000, approvalEvidence: { ...old.approvalEvidence, humanDecisionId: "human-approval-observed-20261015T194214Z" }, anchorMs, carryMs: ledger.leanContinuationGlobalFloorV2(anchorMs), capMs: ledger.leanContinuationGlobalFloorV2(anchorMs) + 28800000, deadlineMs: anchorMs + 28800000 }
     const w = ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) }), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V8
     const dir = realpathSync(mkdtempSync(join(tmpdir(), "boundary-v8-owned-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
@@ -75,8 +75,18 @@ describe("continuation-boundary-v8-P", () => {
       const observe = continuation.createLeanContinuationOwnedMeasurementV8(w), first = observe()
       writeFileSync(resolve(p.store, "ledger.ndjson"), "not parsed by measurement", { mode: 0o600 })
       expect(observe().retainedBytes).toBeGreaterThanOrEqual(first.retainedBytes)
-      writeFileSync(resolve(p.store, "unknown.json"), "no", { mode: 0o600 })
-      expect(observe).toThrow(/MEMBERS/)
+      if (mutation === "disappearance") {
+        writeFileSync(resolve(p.store, "initial-analysis.json"), Buffer.alloc(4096), { mode: 0o600 }); const before = observe()
+        fs.unlinkSync(resolve(p.store, "initial-analysis.json"))
+        writeFileSync(resolve(p.store, "current-analysis.json"), Buffer.alloc(16384), { mode: 0o600 })
+        expect(fs.lstatSync(resolve(p.store, "current-analysis.json")).blocks * 512).toBeGreaterThan(4096)
+        const reserve = vi.fn(), charge = vi.fn()
+        expect(() => { const after = observe(); reserve(after.retainedBytes - before.retainedBytes); charge() }).toThrow(/OWNED_CHANGED/)
+        expect(reserve).not.toHaveBeenCalled(); expect(charge).not.toHaveBeenCalled()
+      } else {
+        writeFileSync(resolve(p.store, "unknown.json"), "no", { mode: 0o600 })
+        expect(observe).toThrow(/MEMBERS/)
+      }
     } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
   })
 })

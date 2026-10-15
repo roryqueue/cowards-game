@@ -573,6 +573,7 @@ export const createLeanContinuationOwnedMeasurementV8 = (window: LeanBaselineCon
       if (after.dev !== s.dev || after.ino !== s.ino || after.size !== s.size || after.blocks !== s.blocks || after.mode !== s.mode || after.uid !== s.uid || after.mtimeMs !== s.mtimeMs || after.ctimeMs !== s.ctimeMs || realpathSync(path) !== path) return fail("V8_OWNED_CHANGED")
     }
     visit(p.window, 0o600); visit(p.request, 0o600); visit(p.allocation, 0o644); visit(p.store, 0o700, true); visit(p.temp, 0o700, true, true)
+    for (const path of previous.keys()) if (!seen.has(path)) return fail("V8_OWNED_CHANGED")
     if (!integer(retainedBytes) || !integer(scratchBytes)) return fail("V8_OWNED_CHANGED")
     return { retainedBytes, scratchBytes }
   }
