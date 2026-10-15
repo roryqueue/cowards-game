@@ -27,6 +27,24 @@ import * as continuationAuthority from "./lib/v1-38-lean-experiment-authority.js
 import * as continuationSource from "./lib/v1-38-lean-baseline-source.js"
 import { leanColdProcedureRoot } from "./lib/v1-38-lean-baseline-pipeline.js"
 import { checkFactoryBoundaries } from "./check-v1-38-factory-boundaries.js"
+
+describe("continuation-boundary-v8-Q", () => {
+  it("selects the exact approved CLI only and refuses unselected allocation even when manifest listed", () => {
+    const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V8
+    for (const mode of ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"]) expect(parseLeanBaselineCommand([mode, "--request", p.request])).toEqual({ mode, request: p.request })
+    expect(() => parseLeanBaselineCommand(["prepare-continuation-v2", "--request", p.request + ".other"])).toThrow()
+    expect(() => continuationGit.readLeanBaselineContinuationGitV2(["show", "a".repeat(40) + ":" + p.allocation], [{ path: p.allocation, root: root("opaque") }])).toThrow(/METADATA/)
+  })
+  it("real closing charge refusal preserves durable charge and prevents provider entry", async () => {
+    const charged: number[] = [], provider = vi.fn(), binding = Object.freeze({}); let failClosing = false
+    const c = continuationHelper.createLeanContinuationBoundaryControllerV8([], [], [], binding, () => { if (failClosing) throw new Error("closing") }, () => {})
+    await expect(parentApi.dispatchLeanContinuationChargedCellV6((stage, body) => c.withStage(binding, stage, body), () => { charged.push(1); failClosing = true; return 1 }, () => {}, provider)).rejects.toThrow("closing")
+    expect(charged).toEqual([1]); expect(provider).not.toHaveBeenCalled(); expect(() => c.reserve(binding, 0)).toThrow()
+  })
+  it("reserves fresh local resources without re-entering source or admitted-ledger evidence", () => {
+    expect(typeof parentApi.createLeanContinuationLocalReservationV8).toBe("function")
+  })
+})
 // Separate unconsumed PREPARE fixture. Git/resources/clock are inert; source,
 // raw/domain hashes, descriptors, controller and CARRY importer remain real.
 const preledgerDetailV6 = () => ({ currents: 0, sourceClosed: 0, archiveOpened: 0, archiveClosed: 0, fullVisits: 0, liveVisits: 0, fullOpeningVisits: 0, fullClosingVisits: 0, liveOpeningVisits: 0, liveClosingVisits: 0, union: 0, liveUnion: 0, capturedSurvivors: 0, exportedDescriptorReads: 0, reserveCallbacks: 0, chunks: 0, opens: 0, lstats: 0, realpaths: 0, fstats: 0, rawHashes: 0, inputRawHashes: 0, liveInputRawHashes: 0, sourceRawHashes: 0, carryRawHashes: 0, manifestScopes: 0, physicalScans: 0, journalReads: 0 })
