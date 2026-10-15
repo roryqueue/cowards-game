@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V7 implementation and clean review closed; ROOT targeted checks closed, scoped validation and distinct verification next
+stopped_at: V7 parent coverage gap fixed and reviewed; ROOT delta checks closed, re-audit and distinct verifier next
 last_updated: "2026-10-15"
 last_activity: 2026-10-15
-last_activity_desc: Fixed V7 source17acda11 reviewed clean; ROOT215 passing tests, exact inherited strict output and boundaries closed, no experiment window
+last_activity_desc: Test-only parent gap fixeaf2e013 reviewed clean; ROOT3 new cases passed, unchanged strict output, current root4accdb7e; no experiment window
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V7 parent gap fix checked; re-audit next
+
+State-A audit identified one missing source-test behavior V7-N-PARENT-01, not a demonstrated production defect. Original executor added ONLY84 test lines to existing driver.test.ts/eaf2e0137f3ecfa97fabbd5e99ce1ecd8a4f86fc; five production files unchanged from17ac. Actual reused independent reviewer CLEAN/findings[]/commands CLOSED/released for test delta and real parent/charge/controller/failure-guard joins. Earlier three fixture failures were clock/order/counter corrections, not invented production RED.
+
+ROOT51644 CLOSED0/3pass166skip/6.66s: tiny V7 actual parent, admitted ledger, durable charge API, real stage controller and independent failure-terminal guard. SOURCE denial observed actual exit and kept exact51charged bytes while writing guarded child_failed/closing pilot; resource refusal preserved51charged/no terminal or revival; fork-closing killed/observedexit/no entry/50prior. End-to-end715/391/289ms/max20,029B, all external Git/resource/wallclock/IPC/PID observations explicitly mocked, no historical custody/real provider/Match. ROOT7574 SAME15 strict CLOSED2/complete13FULL7051B WHOLE-equal actual pre23557/zeroNEW; factory84692 CLOSED0/1443files/0; inert1372 CLOSED0/rootsha256:4accdb7ebe79504b5e4ff6926afa38ded551e138ab253992898a7e97d4fe6dd4/697impl15planning/nonadmitting/SOURCE-DATAnull; diff0. Prior215 actual passes remain qualified unchanged-test/production evidence, NOT215 rerun at new head;3newROOTcases disjoint, total218 execution union. Censored legacy batches remain censored, whole-fit/history claims unchanged. Re-audit and distinct actual source verification next; source cutoff21:09:46UTC, no A/window/request/allocation/entry/Match initialized, all prior costs/bounds/privacy/history unchanged. Phase265/Plan16/all9LEAG remain pending.
 
 ## Current continuation — V7 source qualification closed; validation/verification next
 

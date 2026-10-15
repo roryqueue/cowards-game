@@ -1,5 +1,15 @@
 # Baseline continuation gates
 
+## V7-N-PARENT-01 normal source-test fix — ROOT delta qualification closed
+
+Actual State-A audit correctly escalated requested N caller coverage; one normal existing-file test addition eaf2e0137f3ecfa97fabbd5e99ce1ecd8a4f86fc/84lines/driver.test.ts only by original executor. No production/dependency/policy change. Actual reused independent reviewer delta CLEAN/findings[]/0BLOCKER0WARNING/allcommands CLOSED/released; detailed append below. Three early bounded fixture failures (clock, mutation ordering, counter instrumentation) were corrected without pretending production RED. New tag continuation-ready-v7-N-parent uses a new tiny inert fixture, not another unchanged censored legacy batch.
+
+ROOT51644 CLOSED0/3pass166skip/6.66s on final source: source case COMPLETE715ms end-to-end/max20,029B, actual parent/ledger/charge/controller and real independent guard (12descriptor reads/two carry JSON reads/82fresh memory observations), exact51charged ledger bytes preserved, observed child exit, guarded child_failed/closed pilot/supervisor child_exit_observed/controller invalid. Resource case COMPLETE391ms/18,419B preserves51charged but no terminal/revival/false interval closure after independent capacity refusal. Fork-closing COMPLETE289ms/17,475B performs one inert fork/kill/observed exit before entry/release/charge,50prior remain. External Git/allocation lookup/resource/wallclock/EventEmitterIPC/scoped PID observations mocked and restored; actual descriptor/JSON methods forward unchanged. No historical auth/guard replacement/hash substitution/branch patch/actual provider or Match/full-fit claim. All construction/sample/cleanup included under15s/64MiB; no test worker remains.
+
+ROOT7574 SAME exact15-path strict CLOSED2/full13FULL7051B WHOLE-byte-equal actual pre23557/zeroNEW/no suppression. Factory84692 CLOSED0/1443files/violations[]. Inert manifest1372 CLOSED0 rootsha256:4accdb7ebe79504b5e4ff6926afa38ded551e138ab253992898a7e97d4fe6dd4/697implementation/15planning/admittingfalse/sourceGateNULL/sourceGateRootNULL; diff check0. Configured types/service/public and215 prior ROOT passes are qualified unchanged code/test-body evidence under independent narrow delta review, NOT claimed reruns at eaf. New3 actual ROOT cases disjoint =>218 execution union, not218Matches or global suite. Old censored batches remain143/no pass report; historical custody/exactV7spent-success/postcustodybindArchive/actualcapacity/whole-fit remain unproven.
+
+Scoped re-audit must decide V7-N-PARENT-01 closure; ROOT does not self-assign auditor disposition. Distinct source-goal verifier then remains before any SOURCE projection/actual A/window. Source cutoff21:09:46UTC, original V7T/continuous F(t)/all costs/resources/privacy/immutable history unchanged. No actual A/window/request/allocation/run/Match/ordinary reader, no empirical/LEAG/Phase265/freeze/formation/holdout/public/counting/production credit.
+
 ## Ready-time V7 ROOT qualification — all selected commands closed
 
 Fixed source17acda11990ed258bb8ac7a4a130b70e7c312a54, integrated actual independent review CLEAN/findings[] as appended below. O completion26617 author29pass33.70s/strict5963 inherited13FULL7051B; ROOT independently ran checks afterward. Dependency repair was ONLY ignored node_modules/@cowards/spec symlink from incomplete temporary snapshot to ../../packages/spec; old target contents preserved, no package/source/config/lock/install/build/golden change. Original import/strict-cascade failures remain recorded, not reclassified as successful tests or original empirical crash cause.
@@ -949,3 +959,36 @@ AUTHOR reports strict5963 CLOSED2 with13FULL/7051B/raw51ffa198070a0ad8699f925a7d
 All review source/context/Git/clock/append checks are CLOSED, no background command or source owner retained. Git confirmed actual HEAD17acda11990ed258bb8ac7a4a130b70e7c312a54 and no working edits in the eight paths; scoped `git diff --check` closed0. The only reviewer write is this append to the existing GATES carrier; canonical `265-REVIEW.md`, preceding carrier bytes, source, STATE, projections, HEAD and all private artifacts remain untouched. No commit or push. Append-only ownership RELEASED to ROOT, the sole subsequent planning owner.
 
 ROOT source changes/review/qualification/distinct verifier must all close BEFORE actual future A; then ROOT records A/canonical V7 bytes, independent DATA checks actual chronology/bytes/current source, and only afterward request/preparation can occur. Mathematical schema agreement cannot self-certify readiness. This reviewer created no A/window/request/allocation and grants no downstream action. Current SOURCE-only cutoff21:09:46UTC/1792098586000 applies under the approved extension; original T and continuously carried F(t) are unchanged. Preserve every old route/charge as immutable cost-only, no retry/refund/reuse/shrink, all15GB/3GB/global300/new36/four unopened/guest1000/startup2500/host5000/Match600000 bounds, canonical rules/privacy and current-freeze-before-formation. No empirical/LEAG/Plan16/Phase265/baseline/freeze/formation/holdout/public/counting/production completion follows from CLEAN.
+
+## Ready-time V7 parent-gap delta review — 2026-10-15
+
+2026-10-15T17:39:45Z — actual independent `/root/review_265_ready_window_v7`, `CLEAN`, findings `[]`, BLOCKER0/WARNING0/INFO0. Narrow review of actual source HEAD `eaf2e0137f3ecfa97fabbd5e99ce1ecd8a4f86fc` against prior reviewed `17acda11990ed258bb8ac7a4a130b70e7c312a54`: ONLY84 added test lines in `scripts/run-v1-38-lean-baseline.test.ts:193-276`. Actual author remains `/root/execute_265_ready_window_v7`. Prior full eight-file CLEAN is preserved, not repeated. Git comparison confirms the five production files are unchanged. Necessary context was Plan16 N, the existing State-A `V7-N-PARENT-01` gap, and actual parent/failure-terminal/ledger joins, not historical phase scope.
+
+```yaml
+review: ready-time-v7-parent-gap-delta
+status: clean
+depth: standard
+source_base: 17acda11990ed258bb8ac7a4a130b70e7c312a54
+reviewed_source_head: eaf2e0137f3ecfa97fabbd5e99ce1ecd8a4f86fc
+actual_head: eaf2e0137f3ecfa97fabbd5e99ce1ecd8a4f86fc
+files_reviewed: 1
+files_reviewed_list:
+  - scripts/run-v1-38-lean-baseline.test.ts
+findings: {critical: 0, warning: 0, info: 0, total: 0}
+narrative_findings: []
+commands: CLOSED
+ownership: RELEASED_TO_ROOT
+qualification: DELTA_SOURCE_REVIEW_ONLY_ROOT_RETEST_REAUDIT_AND_DISTINCT_VERIFICATION_PENDING
+```
+
+### Narrative Findings (AI reviewer)
+
+No material defect established in the new test delta. The three `[continuation-ready-v7-N-parent]` cases call real `runLeanBoundedParent` with a strict-created V7 allocation, actual admitted ledger/entry/time records, actual `chargeLeanSlot`, real stage controller and the production independent failure-terminal guard. Forwarding spies invoke the actual descriptor and JSON readers unchanged. There is no private-guard replacement, historical-hash substitution, branch patch or synthetic successful provider/Match. Git/allocation lookup, available resources/RSS/disk, wall clock and EventEmitter IPC/PID observations are explicitly inert. Tiny empty survivor inventory is a qualified source fixture, not authenticated historical custody or coverage of every survivor-growth branch.
+
+Source mode issues a real durable charge in the inert release callback under narrowly replaced child PID/PPID, restores those descriptors immediately, and only mutates the pinned source in the subsequent exit microtask after claim closing accepts. Actual parent observes exit, rejects the changed source at the terminal stage, and routes to independent failure evidence (`run-v1-38-lean-baseline.ts:444,516-542,558-586`). Assertions require unchanged exact ledger bytes/51charged/one charge, child_failed terminal, closed inactive pilot interval, supervisor cleanup child_exit_observed/uncertainty/unknown cause, invalidated controller and two real carry JSON reads across failure publication. Resource mode reaches the same real guard but refuses capacity, preserves the charge bytes and requires no terminal/supervisor artifact or falsely closed pilot interval. Fork-closing mode changes source after inert fork creation, causing the actual pre-entry closing refusal/kill/observed-exit cleanup at418-427; it requires no release, no pilot start and only50 carried charges. All cases deny result/retained-check artifacts and require exactly one observed exit.
+
+PID/PPID are restored in both the synchronous charge `finally` and outer cleanup; all external/reader spies, CWD and temporary fixture files are restored/removed. Parent real timers are cleared on the observed-exit paths, including fork-closing's bounded cleanup listener. The test uses actual monotonic time, starts the synthetic pilot after admission closure, and bounds construction+sample+cleanup to15000ms and retained fixture bytes below64MiB. This is connected tiny source-test coverage, not a live parent/child runtime or empirical readiness result.
+
+Execution is AUTHOR-reported, NOT reviewer-run:98204 CLOSED0/3pass/166skip/~6s, COMPLETE end-to-end593/490/229ms, maximum20029B. The three earlier fixture failures concerned mocked clock/order/counter construction, not reproduced production RED. Author strict2456 CLOSED2/13FULL7051B/raw51ffa198070a0ad8699f925a7d899cb02f3b98e2cefa7f83d38c74717ec2dbfe; ROOT owns actual retest/whole-output comparison, new inert source identity, coverage re-audit and distinct source verification. This delta verdict does not itself change the existing VALIDATION gap disposition, assert ROOT qualification, or issue a source-verifier verdict.
+
+All inspection/Git/clock/append checks CLOSED; append-only GATES ownership RELEASED to ROOT. No tests, private history/artifacts, manifest/capacity/prepare/provider/runtime/Strategy/Match/ordinary-reader operation; no source/STATE/VALIDATION/projection/canonical265-REVIEW edit, commit or HEAD change. Prior carrier bytes remain intact. Source cutoff21:09:46UTC, continuous F(t), original T/decision and every resource/rule/privacy/no-refund/unopened-holdout constraint remain unchanged. No actual A/window initialized; ROOT qualification/re-audit/distinct verification must close before actual A, then independent DATA before request/preparation. Whole Phase265/all9LEAG remain partial/pending.
