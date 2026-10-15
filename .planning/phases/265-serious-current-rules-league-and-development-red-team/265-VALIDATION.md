@@ -6,12 +6,36 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-15
-source_reviewed: 17acda11990ed258bb8ac7a4a130b70e7c312a54
-source_gate: ready-time-v7-coverage-gap-distinct-source-verification-pending
+source_reviewed: eaf2e0137f3ecfa97fabbd5e99ce1ecd8a4f86fc
+source_gate: ready-time-v7-scoped-source-coverage-pass-distinct-verification-pending
 empirical_validation: v6-preparation-window-expired-unique-terminal-only-check-zero-retained-charge
 ---
 
 # Phase265 — Validation Strategy
+
+## Current State-A V7-N-PARENT-01 re-audit — scoped gap CLOSED
+
+Actual reused auditor `/root/validate_265_ready_window_v7` re-audited ONLY the prior N parent/failure coverage gap at observed HEADdacdeac0/fixed sourceeaf2e0137f3ecfa97fabbd5e99ce1ecd8a4f86fc. Inspected the84-line addition in existing `scripts/run-v1-38-lean-baseline.test.ts:193-276`, actual parent/failure-guard joins at driver:418-427/444/516-542/558-586, final independent delta review and ROOT's actual closed delta qualification. Git comparison confirms all five production files unchanged from17ac; prior L/M/O and other N coverage/qualifications are retained without repeating the eight-file audit. No tests or empirical/private operations were started by this re-audit. CLEAN/findings[] supports source review; the following inspected behavioral assertions plus ROOT execution, not CLEAN alone, close the gap.
+
+| New actual caller case / relevant gap | Behavioral assertions and actual ROOT51644 outcome | Disposition |
+|---|---|---|
+| Source denial after real durable charge and observed exit | Real strict-created V7 allocation/admitted ledger/entry/time/`chargeLeanSlot`, real controller and real independent failure-terminal guard. Source changes only in the inert child's exit microtask after claim closing. Requires exact unchanged51charged ledger bytes/one charge, child_failed terminal, inactive closed pilot, supervisor child_exit_observed/unknown cause, invalidated controller and two forwarding real carry JSON reads. COMPLETE715ms/max20,029B;12descriptor reads/two carry reads/82fresh memory observations. | **COVERED**, including V7 parent selector:444 and guard selector:560. Removing V7 selection or bypassing the required terminal behavior would fail the asserted outcome. |
+| Independent failure-resource refusal | Same actual parent/charge/controller/guard; injected resource denial after durable charge requires unchanged51charged bytes, no child-terminal or supervisor artifact, no falsely closed pilot and no authority revival/result/retained check. COMPLETE391ms/18,419B. | **COVERED nonpositive refusal**, not a capacity observation. |
+| Fork closing fails before release | Real parent import-stage closing sees pinned-source drift after one inert fork; requires SIGKILL, exactly one observed exit, no release/pilot start, only50prior charges and invalid controller. COMPLETE289ms/17,475B. | **COVERED bounded pre-entry cleanup**; no real native child was launched. |
+
+ROOT command `node --max-old-space-size=768 ./node_modules/vitest/vitest.mjs run --maxWorkers=1 scripts/run-v1-38-lean-baseline.test.ts -t '\[continuation-ready-v7-N-parent\]'` CLOSED0/3pass/166skip/6.66s. These are ROOT results, not auditor reruns. Descriptor/JSON spies forward actual bodies; no independent-guard replacement, historical hash substitution or production patch. External Git/allocation lookup/resource/wallclock/EventEmitter IPC/scoped PID/PPID observations are explicitly mocked and restored; actual monotonic time is used. Construction/sample/cleanup are bounded15s/64MiB, all three actual samples under1s. Three earlier clock/order/counter fixture failures were corrected; they are not reproduced implementation RED or hidden passes.
+
+ROOT7574 SAME original15-path strict CLOSED2/complete13FULL7051B WHOLE-equal actual pre23557/zeroNEW/no suppression; not global compiler green. Factory84692 CLOSED0/1443files/0violations; inert1372 CLOSED0/rootsha256:4accdb7ebe79504b5e4ff6926afa38ded551e138ab253992898a7e97d4fe6dd4/697implementation/15planning/admittingfalse/SOURCE-DATAnull; diff0. Prior215 ROOT passes/configured types/service/public remain qualified unchanged-production/test-body evidence, NOT215 rerun at eaf. New3 are disjoint:218 execution union, not global suite/218Matches. Old censored67775/32101 remain143/no completed reports and were not repeated or counted as passes.
+
+| Narrow re-audit metric | Outcome |
+|---|---|
+| Prior material source-test gap V7-N-PARENT-01 | **FILLED / CLOSED** by three actual passing behavioral cases; no remaining material scoped source gap |
+| Current approved L/M/N/O source coverage | **4/4 COVERED**, each subject to the prior explicit source-only qualifications; N now includes the missing actual parent/failure caller seam |
+| Reproduced implementation/failing-test BLOCKERs | 0; unresolved source-test gaps0 |
+| WARNING qualifications | External/mock observations and tiny empty survivor inventory do not prove all survivor-growth/history branches, genuine historical custody, exact V7 spent-success inventory, postcustody driver bindArchive, actual capacity or whole authenticated runtime fit. Existing static/mocked/censored qualifications remain unchanged. |
+| Whole Phase265 / readiness | **PARTIAL**, nyquist_compliant:false, wave_0_complete:false, all9LEAG pending; distinct actual source-goal verification still required |
+
+Only existing265-VALIDATION.md changed; all inspection/edit/diff commands CLOSED and ownership RELEASED to ROOT. Prior partial-audit/historical bytes below remain unchanged as the record of the identified gap; their then-pending gap status is superseded only by this narrow closure. No SOURCE/DATA, actual A/window/request/allocation/run/Match/ordinary reader or empirical receipt created. SOURCE-only cutoff21:09:46UTC/original T/continuous F(t)/all costs/history/resource/rule/privacy/current-freeze-before-formation limits remain unchanged. This coverage closure is not source-verifier readiness, DATA approval, empirical admission, or Phase265/LEAG completion.
 
 ## Current State-A ready-time V7 source coverage audit — PARTIAL
 
