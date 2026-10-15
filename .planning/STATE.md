@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V8 research and revised plan independently checked; ROOT strict baseline captured; execute P then Q then R next
+stopped_at: V8 independent review ROOT qualification and three-gap coverage re-audit closed; distinct source verifier next
 last_updated: "2026-10-15"
 last_activity: 2026-10-15
-last_activity_desc: Plan floor omission corrected and fresh checker passed; exact 15-path strict retains 13 inherited blocks, zero pre-edit delta
+last_activity_desc: Fixed sourcec51651f7 and qualified ROOT233 execution union; no actual V8 window or empirical work
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,28 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V8 source coverage gaps CLOSED, distinct verifier next
+
+Actual source fixedc51651f787ccf640780c91d7602b1ffd940415fc. Typed testauthor/root/tests_265_boundary_v8 added real sampler/target reservations and real ordinary-reader positive identity cases inae8c499d/43fb494e; typed executor/root/fix_265_postmatch_v8 moved4155B callback verbatim into same-module checking-only factory/actual child wiring and three real post-retention closing cases73673efa. Fresh actual independent reviewer/root/review_265_v8_final_delta CLEAN/findings[]/allcommandsCLOSED/released21:16:41UTC. ROOT52442 all47newPQRpass30.21s; SAME15 exposed one new test optional-members typing error, fixed only object constructionc51651f7, affected65572 sampler1pass5.13s. Final SAME15 strict47691 CLOSED2/13FULL7051B complete-equal pre53657 except only driver201→202/321→322; noNEW/suppression/global-green claim. Configuredtypes0/factory7547 1443files0/diff0; finalinert70116root2ceabd168ffb8bc7ecb38384283de8ed95910a591911680befa46dfde77d4404/697impl15planning/admittingfalse/SOURCEnull. Prior224+9newgapcases=233uniqueROOTexecutionunion, not233rerunatfinalHEAD/Matches;47beforecorrection+affected1after overlap, not48.
+
+Actual fresh typed/root/validate_265_v8_gap_closure independently inspected P-COST01/Q-POST01/R-IDENTITY01 andc51651f7test-only correction:3/3COVERED/no concrete scopedgap/BLOCKER/SKIP, allcommandsCLOSED/released21:20:43UTC. ExistingVALIDATIONonly updated, partial/nyquistfalse/wave0false/all9LEAGpending unchanged. R explicitly synthetic complete audit-output seam preserves real enrollment/controller/publisher/private identity; Q real charge/gzip/terminal/observation/diagnostic/resource retention before failed closing prevents charge/provider2; all external/context/history/fit qualifications retained. Initial fixture/runner/type failures honest inGATES, no false production RED. Next DISTINCT actual source verifier before SOURCEhardcutoff21:42:14UTC; no A/window/SOURCE/DATA/request/allocation/prepare/run/Match/ordinary reader yet. Any new source edit invalidates readiness. Current-rules-first/private holdout/no-public/no-counted/no-production/immutable old evidence/cumulativecosts unchanged. Earlier continuations historical.
+
+## Current continuation — V8 source review/fix and ROOT qualification CLOSED
+
+Actual integrated review found CR-V8-01 stale parent36-cell reserve and CR-V8-02 masked owned-path deletion. Typed fixer `/root/fix_265_boundary_v8` committed1f8d2db9 and58821ed2ab224d68eb6bfacb8ae8a76eb5d13f87, FF-only integrated after commands CLOSED; its temporary worktree/branch and own sentinel removed, existing dirty/untracked items preserved. Actual reused independent reviewer `/root/review_265_boundary_v8` delta CLEAN/findings[]/0BLOCKER0WARNING/commandsCLOSED/released. Parent now authenticates bounded append-only terminal progress, retaining charged-but-unfinished reserve; every previously observed owned path must remain seen despite compensating growth elsewhere. No IPC progress authority/full-history recursion/new mint or legacy cadence change.
+
+ROOT new P/Q/R76188 CLOSED0/38pass354skip22.12s, helper36768 CLOSED0/all144pass10.03s, selected driver28217 CLOSED0/36pass144skip20.04s (includes five already-counted V8 parent tests), retained97577 CLOSED0/29pass39skip32.02s. Unique actual execution union224 = new38 + helper126 other + driver31 other + retained29; not224Matches/global suite. Original15-path strict43697 CLOSED2/13diagnostics7051B; complete content equals pre53657 after ONLY driver201→202 and321→322 line shifts, verified by the single added import before both sites. No new error/suppression, not global compiler green. Configured projecttypes0; service88863 strict0/ownership0/19old report-only; public0; factory22336 1443files/violations[]; diff0. Inert52046 root732b665b/697implementation15planning/admittingfalse/SOURCE-DATAnull. Exact full roots and qualifications in existing GATES.
+
+NEXT scoped State-A Nyquist audit then DISTINCT actual source verifier, before unchanged absolute SOURCE cutoff2026-10-15T21:42:14UTC. No actual V8 A/window/request/allocation/preparation/run/Match/ordinary reader; active SOURCE/DATA zero. Old V7 and every earlier route remain spent/immutable; all continuous prior/new costs and unchanged resources/rules/privacy carried. Wider approved between-boundary drift interval remains disclosed. Genuine historical custody, full pipeline fit and actual fresh same-process capacity are not established by source fixtures. Plan16/Phase265/all9LEAG pending; no freeze/formation/holdout/public/counting/production credit. Earlier continuation below is historical.
+
+## Current continuation — V8 SOURCE P/Q/R CLOSED, integrated review next
+
+Actual typed `/root/execute_265_boundary_v8` authored exact eight existing files, scoped PREDf5259269/Pf8b708b3, QRED1a4b58d6/Qef55f4c4, RRED186860d9/R9a0a1487 and narrow Q closure-reserve/test fix809df7fe86ba655585ca06e2fa5fa199d6fda933. All commands CLOSED/all source ownership RELEASED at actual20:37:30UTC, trackedclean before this ROOT documentation. ROOT actual diff8files/582insertions92deletions, no other source/config/package/private edits. No empty worktree metadata is treated as isolation/cleanup authority; actual runtime is sequential main/no worktree.
+
+Author actual final18694 P/Q/R35pass354skip17.59s plus disjoint92906 realparent/realcharge/realcontroller closing-refusal1pass178skip5.51s =qualified36 execution union, NOT36allrerun/Matches. ONE public assay46793 COMPLETE1070ms/4,851,654B/cleanuptrue; scale2→8 kept3opening3closing/9fullchecks, reserve138→1137/resource141→1140, real bounded descriptor/hash/schema/controller, explicit external/context/resource/PID/disjoint-cost mocks, not real capacity/custody/whole-fit. LegacyV7 preledger goldens preserve33capacity/3HEAD/6rawreads per callback; O16pass. Author source-dependency correction: admitted capacity basis is pure identity/elapsed, NOT journal reads; actual cumulative physical path measures owned/prior/report delta. Earlier broad recursion suspicion is not reported as an observed dependency. Five R fixtures use real ledger/descriptors/gzip evidence/audit/claim/time/terminal/publisher but source-context/window/scope/external observations injected; genuine full historical-context child success/post-retention→next-charge fixture not claimed. Integrated review must inspect local member allowlists and post-retention caller seam. Author narrow strict inherited-only, ROOT exact15 comparison/qualification still owed.
+
+Next ONE actual integrated independent code review/fix over fixed809df7fe vs planningbaseb7c9e953, then ROOT new+legacy tests/exactstrict/boundaries, State-A scoped Nyquist and distinct actual source verifier. Absolute SOURCE hardstop21:42:14UTC unchanged. Actual A/window/request/allocation/prepare/run/Match/ordinary reader uncreated/uninvoked; active SOURCE/DATA zero. Plan16/Phase265/all9LEAG pending; no empirical/freeze/formation/holdout/public/counting/production credit. All old spent artifacts/costs/rules/runtime/privacy preserved. Earlier execution-ready paragraph below is historical.
 
 ## Current continuation — V8 checked SOURCE amendment ready to execute
 
