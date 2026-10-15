@@ -1,10 +1,41 @@
 # Baseline continuation gates
 
+## Actual V7 preparation and unique pre-entry terminal closure — 2026-10-15
+
+All actual source and DATA closures above their issuance order remain historical proof, not empirical completion. Final private canonical request4040B/0600/rawsha256:1fcba4e7945739e8ccdbfde70eb769a9fd581eb422a0a2333472d55fc1f6567d pins committed sourceHeadb68668f29d1955482a8175f3f49089309b360b84, implementation4accdb7e, planningRootsha256:f85be8f96d9780f9690fd01d5b22e554373295cd872285094eab07b0b772f937, manifestRootsha256:ad716eeb1968ee69e0754d4a3753e07463233c4337690adf1bfa4a3271f035a7, SOURCE26c69b7d, DATA3db052e7 and actual V7 window. Strict official request reader1748 CLOSED0 before preparation. ROOT used exact selected TMPDIR/core0/768MiB-old-space/cache-disabled environment, not the legacy shell wrapper. This is a host setting, not an RSS-bound claim.
+
+| Actual ROOT operation | Closed safe outcome |
+|---|---|
+| ONE preparation90673/PID98020/PPID63691 | CLOSED0, first post-terminal clock18:44:46UTC. Issuance bounded by last pre-issue18:03:53UTC and first post-issue18:04:38UTC observations; exact start not retained. Actual prepared-v2 output: allocation domainsha256:c2e9a661576d827cbb4edf04f94cec5b3c2b2a5fd5837d6edabf2d56b956a381, sourceHeadb68668f2, claimRootsha256:181c72c19ea2fdcb804f9b857ef661d5b9cffcfdf31ae10ec4f580a3aee18eef, charged50 predecessor/planned36/fourreservedunopened/issuedfalse. Preparation success is not execution or empirical credit. |
+| Bounded actual allocation checkcb390e | CLOSED0:17352B/0644/uid501/singlelink/stable NOFOLLOW/canonical bytes/strict validator and actual request/window/root joins; rawsha256:2d6a90d63a3f9e7af699046e1a6ddafcbf2eb0585844439b45233d7465129c96. No allocation reconstruction into authority. |
+| Allocation-only commit and push | Actual464e11f5c874558527b047eab0bc6e81f71c930f, direct parentb68668f29d1955482a8175f3f49089309b360b84; sole changed path `.planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261014-v7.json`. Committed raw bytes match actual allocation. Trackedclean; push30696 CLOSED0 before run. No other source/HEAD/planning edit during hold. |
+| ONE ROOT run24772/PID28764/PPID63691 | Issuance bounded by18:45:39UTC pre-issue and18:45:53UTC post-issue, exact start not retained. CLOSED1 at ROOT clock19:10:30UTC. Finite diagnostic below, no raw error published. No retry/replacement. |
+
+```text
+LEAN_BASELINE_RUN_PREENTRY stage=FULL_GUARD completed=false code=DETAILS_WITHHELD guards_began=388 guards_completed=387 opening_began=388 opening_completed=388 closing_began=387 closing_completed=387 source_callbacks=3268 descriptor_callbacks=160249 carry_inventory_source_chunk_callbacks=386
+LEAN_BASELINE_FAILED_DETAILS_WITHHELD
+```
+
+These actual finite counters describe the observed failed invocation, not total work for a successful run, a completed Match, CPU profiler attribution or the original throw. Source at driver1224–1250 places the sample frontier/resource/time checks after opening and before closing; the diagnostic does not distinguish those checks or prove which threw. Original underlying cause remains UNKNOWN. Full36 frontier19:10:30UTC coincidence is not causal proof. Subsequent unchanged full36 admission is nevertheless definitively disallowed by the independently verified arithmetic: windowdeadline1792115490000 minus reserve24060000 equals1792091430000. The absolute eight-hour window deadline remains later01:51:30UTC; no reset/refund/excluded checking time.
+
+### ONE actual independent terminal-only verification
+
+Actual distinct typed `/root/verify_265_v7_retained` independently CLOSED/released2026-10-15T19:12:43.260Z, report **SAFE TERMINAL-ONLY CHECK — no ordinary empirical input**. This is its sole terminal check, not an ordinary reader acceptance. It independently observed:
+
+- Actual HEAD464e11f5/directparentb68668f2, allocation-only commit diff, trackedclean and final HEAD unchanged. PreparationPID98020/runPID28764 and exact prepare/run/verify processes absent; parentPID63691 is the Codex app service, not the experiment.
+- Actual immutable window929B/0600/rawf6c864c6483805035f19c40b1c9652225d302ef39457723a9be9973e764652e3; request4040B/0600/raw1fcba4e7945739e8ccdbfde70eb769a9fd581eb422a0a2333472d55fc1f6567d; allocation17352B/0644/raw2d6a90d63a3f9e7af699046e1a6ddafcbf2eb0585844439b45233d7465129c96. Regular/currentowner501/singlelink/NOFOLLOW stable reads; request/window/allocation/SOURCE/DATA/source-head/roles joins passed. Allocation still36slots/fourreservations/50predecessorcharges.
+- Current store and temp real0700/currentowner501. `entry.json`, `run-claim.json`, `reader-claim.json`, `child-terminal.json`, `entry-failure.json`, `result.json` all ENOENT. `ledger.ndjson` and `time.ndjson` each0B/0600/singlelink/rawsha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
+- Actual A/carry/cap/deadline/full36 reserve/latest inclusive entry arithmetic agrees. No real entry-bound head is established; ordinary verify-continuation-v2 was NOT invoked and must not be invoked with a fictional head. No files/namespaces/spent metadata/ledgers/reservations changed; no tests/heavy historical authentication/runtime/provider/Match or commit.
+
+Zero retained new charges and missing records do not prove absence of all unrecorded observations or transient construction. No empirical/LEAG/freeze/formation/holdout/public/counting/production credit; Plan16/Phase265/all9LEAG remain pending. Source/HEAD hold released only after this actual terminal and actual unique independent closure. All V7 and older private authority/allocation/claims/store/journals/results remain immutable/spent; no retry/resume/reuse/refund/recredit. SOURCE and DATA canonical bodies below are preserved byte-for-byte but demoted to TEXT after closure; zero active projections. Public records may now change without pretending the old request remains executable.
+
+The existing Plan16's new pending lean-cadence proposal is a genuinely NEW assurance/resource choice, not an adopted repair or source diagnosis proving causation. No new source/window/request/allocation/clock/route is created. Preserve every original resource/runtime/rule/privacy boundary and cost; unchanged known-failing/no-longer-admissible runs and repeated heavy history scans are not authorized while pending.
+
 ## V7 actual DATA acceptance projected — final request pins next
 
 Actual independent `/root/review_265_v7_window_data` PASS_DATA_REVIEW/findings[]/allcommandsCLOSED/RELEASED17:59:04UTC; full bounded observations/chronology attribution/operational-cap correction appended below. ROOT pure validator97458 CLOSED0/canonical881B/DATArootsha256:3db052e732a4f0db4c203e5b962d4460622c60f150b9defe5ab13b68f78b86c5. Exactly one active DATA follows, plus sole SOURCE26c69b7d; windowbytes/domain/source/Plan/actualreviewer roles unchanged. This is actual independent DATA closure before request/preparation, not external custody or runtime admission. No request/allocation/store/temp/entry/Match exists yet; final planning pins/ONE ROOT preparation/new allocation-only direct-child commit/unique ROOT entry/fresh SAME-PROCESS capacity and appropriate ONE actual verifier remain. Source/HEAD/planning hold begins at preparation, no competing heavy work. WindowA17:51:30UTC/latestfull19:10:30UTC/deadline01:51:30UTC/all costs and limits unchanged.
 
-```json
+```text
 {"approvalEvidence":{"humanDecisionId":"human-approval-observed-20261014T223307Z","recordedBy":"/root"},"commands_closed":true,"dataReviewer":"/root/review_265_v7_window_data","grantId":"baseline-continuation-20261014-v7-175130","planRoot":"sha256:1c8ee749388b47a04bdae3ce9b31dfecb8c04e630514dfc5e3822f27c37243c9","readerOperator":"/root/verify_265_v7_retained","reviewedSourceHead":"eaf2e0137f3ecfa97fabbd5e99ce1ecd8a4f86fc","runOperator":"/root","schemaVersion":"lean-baseline-continuation-data-gate-v2","sourceGateRoot":"sha256:26c69b7dd0884b15f16af0fa437c9e0fd04cb770445fb6e8ba29e26c5816fac1","sourceRoot":"sha256:4accdb7ebe79504b5e4ff6926afa38ded551e138ab253992898a7e97d4fe6dd4","status":"passed","windowBytesRoot":"sha256:f6c864c6483805035f19c40b1c9652225d302ef39457723a9be9973e764652e3","windowRoot":"sha256:46a7cd22e0de56d221ce2d64cb2d9d63adbbe16232dd6d6d6a55e113c684b261"}
 ```
 
@@ -22,7 +53,7 @@ Actual distinct `/root/verify_265_ready_window_v7` PASS_SOURCE_ONLY_REQUIREMENTS
 
 ROOT pure SOURCE schema/domain66772 CLOSED0, canonical495B/rootsha256:26c69b7dd0884b15f16af0fa437c9e0fd04cb770445fb6e8ba29e26c5816fac1. Exactly one active SOURCE projection follows; old projections remain unchanged TEXT. All source changes/review/ROOTqualification/scopedvalidation/distinct verification are closed before any actual A. No A/window/DATA/request/allocation/run created at this checkpoint. ROOT actual initialization and separate independent DATA remain next; sourceproof is not capacity or execution authority and mathematical timestamps cannot self-certify chronology.
 
-```json
+```text
 {"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"eaf2e0137f3ecfa97fabbd5e99ce1ecd8a4f86fc","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_ready_window_v7","sourceReviewer":"/root/review_265_ready_window_v7","sourceRoot":"sha256:4accdb7ebe79504b5e4ff6926afa38ded551e138ab253992898a7e97d4fe6dd4","sourceVerifier":"/root/verify_265_ready_window_v7","source_review":"passed","source_verification":"passed"}
 ```
 

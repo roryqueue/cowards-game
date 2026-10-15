@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: V7 independent DATA review passed and projected; final request pins then ONE ROOT preparation next
+status: blocked
+stopped_at: V7 preparation passed; unique run failed pre-entry; independent terminal check closed; new resource/cadence decision pending
 last_updated: "2026-10-15"
 last_activity: 2026-10-15
-last_activity_desc: Actual DATA reviewer passed window/current-source/chronology joins; DATA3db052e7 projected, no request/preparation/Match yet
+last_activity_desc: V7 allocation sealed and pushed; zero new retained charges, no entry/head/result; full36 admission frontier elapsed
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,18 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V7 CLOSED pre-entry; prospective lean-cadence decision pending
+
+ROOT's ONE preparation90673/PID98020 CLOSED0, first terminal observation2026-10-15T18:44:46UTC. Actual canonical allocation17352B/0644/domainsha256:c2e9a661576d827cbb4edf04f94cec5b3c2b2a5fd5837d6edabf2d56b956a381/rawsha256:2d6a90d63a3f9e7af699046e1a6ddafcbf2eb0585844439b45233d7465129c96 passed strict/canonical/request/window joins. Allocation-only direct-child commit464e11f5c874558527b047eab0bc6e81f71c930f has parentb68668f29d1955482a8175f3f49089309b360b84 and was pushed before ONE ROOT run24772/PID28764. Run issuance is bounded by18:45:39/18:45:53UTC observations, not an invented exact start.
+
+Actual run CLOSED1 at observed19:10:30UTC: finite FULL_GUARD/completed=false/DETAILS_WITHHELD; guards388began/387completed, opening388/388, closing387/387, sourcecallbacks3268, descriptorcallbacks160249, combinedcarry/inventory/source/chunkcallbacks386. Underlying thrown cause remains UNKNOWN. Coincidence with the full36 latest-entry instant does not prove the original error. The independently checked time contract now definitively refuses a future unchanged full36 entry: A17:51:30UTC, deadline01:51:30UTC, whole36 reserve24060000ms, latestinclusive19:10:30UTC elapsed. Do not confuse this admission frontier with the later absolute window deadline.
+
+ONE actual independent typed `/root/verify_265_v7_retained` performed TERMINAL-ONLY verification, CLOSED/released2026-10-15T19:12:43.260Z. It did NOT invoke ordinary verify-continuation-v2. Actual HEAD/direct-parent/only-allocation delta/trackedclean and immutable window/request/allocation hashes/joins/modes passed; exact preparation/run/reader processes absent. Current real0700store/temp; ledger.ndjson and time.ndjson each0B/0600; entry/runclaim/readerclaim/childterminal/entryfailure/result all ENOENT. No actual entry-bound head, no new retained charge or empirical input. Fifty predecessor charges remain spent. Record absence is not proof of absence of every unrecorded observation or transient construction. Source/HEAD hold released ONLY after actual terminal plus this unique independent check; public closure documentation may now change. V7 window/request/allocation/store/temp/claim and every older spent artifact remain immutable: no retry/resume/reuse/refund/recredit or fictional result/reader. Prior SOURCE/DATA bodies archived as TEXT, not portable current authority.
+
+Genuinely new human decision, NOT applied: proposed existing-Plan16 lean cadence checks full evidence at setup/major-stage/pre-Match/post-Match/terminal boundaries instead of around every internal file-read callback; bounded reads/local descriptor checks, live capacity/time, source/HEAD hold, schema/runtime isolation, charge-before-provider and irreversible failure remain. This accepts a wider between-boundary drift-detection interval, not equivalent assurance. Proposed budget: at most two SOURCE-work hours from a future explicit approval, then ONE distinct eight-hour private window initialized after checked SOURCE closure, all prior costs carried. No future anchor/namespace/authority exists; detailed non-authorizing proposal is at the end of existing Plan16. No changed cadence/time/route may execute before approval and checked implementation/review/validation. Do not repeat the known no-longer-admissible V7 run or heavy history scans while pending.
+
+Same15GB split12/2/1,3GBRAM/global300/new36/fourreservedunopened/guest1000/startup2500/host5000/Match600000 and canonical rules/privacy. Plan16/Phase265/all9LEAG pending, Phase266 planning-only. Current-rules serious league/evaluation/freeze BEFORE formation; equal separate cold retraining, unopened holdout, no public/counting/production. Source-only218 qualified tests remain source evidence, not successful Matches or whole-fit. Earlier continuations below are historical checkpoints, not current instructions.
 
 ## Current continuation — V7 DATA CLOSED; final request and ONE preparation next
 
