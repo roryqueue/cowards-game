@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Source hard stop elapsed on resume; V7 L/M/N tested, O incomplete, no new experiment window
+stopped_at: Four-hour source extension approved; finish O and integrated source checks before experiment clock
 last_updated: "2026-10-15"
 last_activity: 2026-10-15
-last_activity_desc: Actual clock15:31UTC exceeds02:30:07UTC source cutoff; executor closed and released, readiness unestablished
+last_activity_desc: Human approved four more source-work hours observed17:09:46UTC, new cutoff21:09:46UTC; no experiment window initialized
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — four-hour SOURCE extension approved
+
+Latest direct human `approved` accepts ROOT's exact request for four more hours to finish implementation and checks, then start the already-approved distinct eight-hour private experiment only AFTER source readiness closes. First ROOT approval observation2026-10-15T17:09:46UTC/1792084186000; new SOURCE-only hardstop2026-10-15T21:09:46UTC/1792098586000 (17:09:46Eastern). This prospectively supersedes expired02:30:07UTC for source work, not historical execution authority or timing evidence. All prior/current/source/idle costs remain continuously carried through unchanged F(t), no refund/reset/exclusion. Original V7 experiment approval T1792017187000/decisionlabel remains unchanged; no A/window/request/allocation created by this source extension.
+
+Actual agents/processes reconciled: prior executor and all commands CLOSED/released; sole tracked dirty file retained.ts four-line O predicate extension preserved. Resume O only after narrowly diagnosing missing @cowards/spec dependency; normal safe workspace build/link repair may restore unchanged checked-in package resolution, no reinstall/purge/config drift or empirical operation. Then integrated independent review/fix, ROOT tests/types/boundaries, scoped validation and distinct source verification. L/M/N are not re-executed as new tasks. Same15GB/3GB/global300/new36/fourunopened/guest1000/startup2500/host5000/Match600000/currentfreeze-beforeformation/holdoutprivacy bounds. All consumed history immutable; active SOURCE/DATA zero and Plan16/Phase265/all9LEAG incomplete. Earlier deadline-blocked paragraphs below historical.
 
 ## Current continuation — source deadline elapsed; preserve partial V7 work
 
