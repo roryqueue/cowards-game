@@ -16,6 +16,31 @@ import * as ledger from "../../packages/strategy-lab/src/league/lean-experiment.
 import * as continuation from "./v1-38-lean-baseline-continuation.js"
 
 describe("continuation-boundary-v8-P", () => {
+  it("continuation-boundary-v8-P-cost real disjoint sampler includes each public synthetic stat/member debit once and refuses aliases/shrink", () => {
+    // Public finite observations only: no historical file is opened or read.
+    const rows = new Map<string, { size: number; allocated: number; mode: number; members?: string[]; ino: number }>()
+    const add = (path: string, size: number, allocated: number, mode = 0o600, members?: string[]) => rows.set(resolve(path), { size, allocated, mode, members, ino: rows.size + 1 })
+    for (const [p, sizes] of [[ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2, [935, 4041]], [ledger.LEAN_BASELINE_CONTINUATION_PATHS_V6, [929, 4047]]] as const) { add(p.window, sizes[0], 4096); add(p.request, sizes[1], 4096) }
+    for (const [p, sizes] of [[ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4, [935, 4056, 17366, 746080, 146345, 208491, 1002]], [ledger.LEAN_BASELINE_CONTINUATION_PATHS_V5, [929, 4051, 17360, 749813, 146600, 208495, 1234]], [ledger.LEAN_BASELINE_CONTINUATION_PATHS_V7, [929, 4040, 17352, 754167, 146961, 208476, 1002]]] as const) {
+      add(p.window, sizes[0], 4096); add(p.request, sizes[1], 4096); add(p.allocation, sizes[2], 20480, 0o644)
+      for (const [name, size, allocated] of [["allocation.json", sizes[2], 20480], ["carry.json", sizes[3], Math.ceil(sizes[3] / 4096) * 4096], ["source-hold.json", sizes[4], Math.ceil(sizes[4] / 4096) * 4096], ["source-manifest.json", sizes[5], Math.ceil(sizes[5] / 4096) * 4096], ["ledger.ndjson", 0, 0], ["time.ndjson", 0, 0]] as const) add(join(p.store, name), size, allocated)
+      add(p.claim, sizes[6], 4096); add(p.store, 0, 4096, 0o700, ["allocation.json", "carry.json", "ledger.ndjson", "source-hold.json", "source-manifest.json", "time.ndjson"]); add(p.temp, 0, 4096, 0o700, ["window-claim.json"])
+    }
+    const stat = vi.spyOn(fs, "lstatSync").mockImplementation((path => { const r = rows.get(String(path)); if (!r) throw new Error("UNEXPECTED_STAT"); return { size: r.size, blocks: r.allocated / 512, mode: r.mode, uid: process.getuid?.(), nlink: 1, dev: 1, ino: r.ino, isFile: () => !r.members, isDirectory: () => !!r.members, isSymbolicLink: () => false } as fs.Stats }) as typeof fs.lstatSync)
+    const real = vi.spyOn(fs, "realpathSync").mockImplementation((path => String(path)) as typeof fs.realpathSync), members = vi.spyOn(fs, "readdirSync").mockImplementation((path => rows.get(String(path))!.members!.slice()) as typeof fs.readdirSync), open = vi.spyOn(fs, "openSync"), read = vi.spyOn(fs, "readFileSync")
+    read.mockClear()
+    try {
+      const total = [...rows.values()].reduce((n, row) => n + row.allocated, 0), known = continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V8
+      expect(continuation.measureLeanContinuationKnownDisjointBytesV8()).toBe(total - 1167360)
+      expect(known + continuation.measureLeanContinuationKnownDisjointBytesV8()).toBe(88924160 + total)
+      const target = rows.get(resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V7.window))!, directory = rows.get(resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V7.store))!
+      target.allocated += 4096; directory.allocated += 8192
+      expect(continuation.measureLeanContinuationKnownDisjointBytesV8()).toBe(total - 1167360 + 12288)
+      target.allocated = 0; expect(() => continuation.measureLeanContinuationKnownDisjointBytesV8()).toThrow(/V8_KNOWN_COST/)
+      target.allocated = 4096; target.ino = 1; expect(() => continuation.measureLeanContinuationKnownDisjointBytesV8()).toThrow(/V8_KNOWN_COST/)
+      expect(open).not.toHaveBeenCalled(); expect(read).not.toHaveBeenCalled()
+    } finally { for (const spy of [stat, real, members, open, read]) spy.mockRestore() }
+  })
   it("selects only the approved prospective route and preserves the legacy floor", () => {
     const anchorMs = 1792093334001, { root: _, ...old } = continuationWindowFixtureV2()
     const body = { ...old, routeNamespace: "20261015-v8", approvedAtMs: 1792093334000, approvalEvidence: { ...old.approvalEvidence, humanDecisionId: "human-approval-observed-20261015T194214Z" }, anchorMs, carryMs: ledger.leanContinuationGlobalFloorV2(anchorMs), capMs: ledger.leanContinuationGlobalFloorV2(anchorMs) + 28800000, deadlineMs: anchorMs + 28800000 }

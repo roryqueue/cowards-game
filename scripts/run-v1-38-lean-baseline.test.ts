@@ -29,6 +29,48 @@ import * as continuationSource from "./lib/v1-38-lean-baseline-source.js"
 import { leanColdProcedureRoot } from "./lib/v1-38-lean-baseline-pipeline.js"
 import { checkFactoryBoundaries } from "./check-v1-38-factory-boundaries.js"
 
+it.each(["unrelated", "A", "B"] as const)("continuation-boundary-v8-P-cost real sampler/local two-target reservations near cap: %s (public zero bytes; external clock/resources mocked)", point => {
+  const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "v8-public-cost-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V8
+  const anchor = 1792093334001, carryMs = lean.leanContinuationGlobalFloorV2(anchor), body = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "synthetic-cost-only", approvalEvidence: { humanDecisionId: "human-approval-observed-20261015T194214Z", recordedBy: "synthetic-root" }, approvedAtMs: 1792093334000, anchorMs: anchor, deadlineMs: anchor + 28800000, carryMs, capMs: carryMs + 28800000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261015-v8" as const, reviewedSourceHead: "a".repeat(40), sourceRoot: root("synthetic-cost-source"), sourceGateRoot: root("synthetic-cost-gate"), planRoot: root("synthetic-cost-plan"), runOperator: "synthetic-runner", readerOperator: "synthetic-reader" }, window = lean.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })
+  const clock = vi.spyOn(Date, "now").mockReturnValue(anchor), disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000)
+  const ipc = { send: Object.getOwnPropertyDescriptor(process, "send"), connected: Object.getOwnPropertyDescriptor(process, "connected") }
+  Object.defineProperty(process, "send", { value: undefined, configurable: true }); Object.defineProperty(process, "connected", { value: false, configurable: true })
+  try {
+    fs.mkdirSync(resolve(".strategy-lab"), { mode: 0o700 }); fs.mkdirSync(resolve(".planning/artifacts"), { recursive: true })
+    const write = (path: string, size: number, mode = 0o600) => fs.writeFileSync(resolve(path), Buffer.alloc(size), { mode })
+    for (const [old, sizes] of [[lean.LEAN_BASELINE_CONTINUATION_PATHS_V2, [935, 4041]], [lean.LEAN_BASELINE_CONTINUATION_PATHS_V6, [929, 4047]]] as const) { write(old.window, sizes[0]); write(old.request, sizes[1]) }
+    for (const [old, sizes] of [[lean.LEAN_BASELINE_CONTINUATION_PATHS_V4, [935, 4056, 17366, 746080, 146345, 208491, 1002]], [lean.LEAN_BASELINE_CONTINUATION_PATHS_V5, [929, 4051, 17360, 749813, 146600, 208495, 1234]], [lean.LEAN_BASELINE_CONTINUATION_PATHS_V7, [929, 4040, 17352, 754167, 146961, 208476, 1002]]] as const) {
+      fs.mkdirSync(resolve(old.store), { mode: 0o700 }); fs.mkdirSync(resolve(old.temp), { mode: 0o700 }); write(old.window, sizes[0]); write(old.request, sizes[1]); write(old.allocation, sizes[2], 0o644); write(old.claim, sizes[6])
+      for (const [name, size] of [["allocation.json", sizes[2]], ["carry.json", sizes[3]], ["source-hold.json", sizes[4]], ["source-manifest.json", sizes[5]], ["ledger.ndjson", 0], ["time.ndjson", 0]] as const) write(join(old.store, name), size)
+    }
+    fs.mkdirSync(resolve(p.store), { mode: 0o700 }); fs.mkdirSync(resolve(p.temp), { mode: 0o700 })
+    const sampler = vi.spyOn(continuationHelper, "measureLeanContinuationKnownDisjointBytesV8"), floor = continuationHelper.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V8 + continuationHelper.measureLeanContinuationKnownDisjointBytesV8(), owned = continuationHelper.createLeanContinuationOwnedMeasurementV8(window), initialOwned = owned().retainedBytes
+    try {
+      const local = parentApi.createLeanContinuationLocalReservationV8(window), metadata = 2 * 7 * 4194304 + 4 * 3 * 262144, baseline = floor + metadata + initialOwned, a = join(p.store, "initial-analysis.json"), b = join(p.store, "current-analysis.json"), unrelated = join(p.store, "response-work.json")
+      expect(local.reserve().retainedBytes).toBe(baseline)
+      local.reserveWrite(65536, a); expect(local.reserveWrite(98304, b).retainedBytes).toBe(baseline + 163840)
+      write(unrelated, 32768); const unrelatedBlocks = fs.lstatSync(resolve(unrelated)).blocks * 512
+      let expected = baseline + 163840 + unrelatedBlocks
+      expect(local.reserve().retainedBytes).toBe(expected) // unrelated growth discharges NEITHER target
+      if (point !== "unrelated") {
+        write(a, 4096); expect(local.reserve().retainedBytes).toBe(expected) // only A's measured blocks overlap A
+        local.completeWrite(a); expected -= 65536 - fs.lstatSync(resolve(a)).blocks * 512
+        expect(local.reserve().retainedBytes).toBe(expected) // B remains fully outstanding
+      }
+      if (point === "B") {
+        write(b, 8192); expect(local.reserve().retainedBytes).toBe(expected)
+        local.completeWrite(b); expected -= 98304 - fs.lstatSync(resolve(b)).blocks * 512
+        expect(local.reserve().retainedBytes).toBe(expected)
+      }
+      const effect = vi.fn()
+      local.observeGrowth(LEAN_CAPS.retainedBytes - expected + 1)
+      expect(() => { local.reserve(); effect() }).toThrow(/V8_RESERVATION_CAPACITY/)
+      expect(effect).not.toHaveBeenCalled(); expect(() => local.reserve()).toThrow(/V8_RESERVATION_SCOPE/)
+      expect(sampler).toHaveBeenCalledTimes(2)
+    } finally { sampler.mockRestore() }
+  } finally { for (const spy of [clock, disk, usage, available]) spy.mockRestore(); for (const [key, descriptor] of Object.entries(ipc)) { if (descriptor) Object.defineProperty(process, key, descriptor); else Reflect.deleteProperty(process, key) }; cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
+}, 15000)
+
 describe("continuation-boundary-v8-Q", () => {
   it("actual V8 strict preflight reaches real immutable-history anchor refusal with no setup (public cost observations mocked, not custody)", () => {
     const known = vi.spyOn(continuationHelper, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096), send = Object.getOwnPropertyDescriptor(process, "send")
