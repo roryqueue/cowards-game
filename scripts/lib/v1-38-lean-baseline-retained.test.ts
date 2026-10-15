@@ -332,6 +332,55 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       expect(publish).not.toHaveBeenCalled()
     } finally { clock.mockRestore(); disk.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
   })
+  it.each(["pass", "opening", "closing", "reader-denial", "failure-resource"] as const)("continuation-boundary-v8-R real ledger, descriptor/evidence/audit/claim/terminal/publisher: %s (synthetic context; external resources/PID mocked)", mode => {
+    const s = partialV2Snapshot("20261015-v8"), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "public-v8-ordinary-reader-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V8
+    const clock = vi.spyOn(Date, "now").mockReturnValue(s.window.anchorMs + 1200), disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000), known = vi.spyOn(continuationFiles, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096)
+    const ipc = { send: Object.getOwnPropertyDescriptor(process, "send"), connected: Object.getOwnPropertyDescriptor(process, "connected") }
+    Object.defineProperty(process, "send", { value: undefined, configurable: true }); Object.defineProperty(process, "connected", { value: false, configurable: true })
+    const spies: { mockRestore(): void }[] = []
+    try {
+      fs.mkdirSync(resolve(".strategy-lab"), { mode: 0o700 }); fs.mkdirSync(resolve(p.temp), { mode: 0o700 })
+      const ledger = continuationLedger.createLeanLedger(resolve(p.store), s.allocation), write = (name: string, value: unknown) => fs.writeFileSync(join(ledger.directory, name), leanCanonicalBytes(value), { mode: 0o600 })
+      fs.writeFileSync(resolve(p.window), leanCanonicalBytes(s.window), { mode: 0o600 }); fs.writeFileSync(resolve(p.request), leanCanonicalBytes(s.request), { mode: 0o600 })
+      write("entry.json", s.entry); write("child-terminal.json", { ...s.terminal, physicalBytes: 100000000 })
+      const events = structuredClone(s.ledgerEvents) as Record<string, any>[], replay = continuationLedger.encodeLeanReplay([]), terminalEvent = events.find(row => row.kind === "terminal")!
+      if (s.allocation.sampleSlotRoots.includes(s.allocation.slots[0]!.root)) { terminalEvent.replay = replay.container; fs.writeFileSync(join(ledger.directory, `${String(terminalEvent.chargeRoot).slice(7)}.gz`), replay.bytes, { mode: 0o600 }) }
+      fs.writeFileSync(join(ledger.directory, "ledger.ndjson"), events.map(row => Buffer.from(leanCanonicalBytes(row)).toString() + "\n").join(""), { mode: 0o600 })
+      const timeline = [...s.time.starts].filter(([id]) => id !== "continuation-retained-verifier-v2").flatMap(([id, atMs]) => [{ kind: "start", id, atMs }, { kind: "close", id, atMs: s.time.closes.get(id)! }])
+      fs.writeFileSync(join(ledger.directory, "time.ndjson"), timeline.map(row => Buffer.from(leanCanonicalBytes(row)).toString() + "\n").join(""), { mode: 0o600 })
+      const local = continuationEntry.createLeanContinuationLocalReservationV8(s.window, true), evidence = continuationLedger.verifyLeanEvidence(ledger, bytes => { local.reserve(bytes) }), manifest = { root: s.allocation.sourceRoot, planningRoot: s.allocation.planningRoot, manifestRoot: s.manifestRoot, windowBytesRoot: s.windowBytesRoot, sourceGateRoot: s.sourceGateRoot, dataReviewRoot: s.dataReviewRoot }
+      write("result.json", { ...s.result, evidenceRoot: evidence.root, elapsedMs: evidence.elapsedMs, physicalHighWaterBytes: evidence.physicalHighWaterBytes, scratchHighWaterBytes: evidence.scratchHighWaterBytes })
+      write("carry.json", s.carry); write("source-hold.json", s.sourceHold); write("source-manifest.json", manifest); write("pair-0.json", s.pairs[0]); write("observation-0.json", s.observations[0]); write("seal-metadata.json", s.artifacts["seal-metadata.json"])
+      for (const source of s.sources) {
+        write(`source-${source.role}.json`, source)
+        const body = { schemaVersion: "lean-baseline-continuation-source-publication-v2", allocationRoot: s.allocation.root, sourceHead: s.allocation.sourceHead, head: s.head, implementationRoot: s.allocation.sourceRoot, coldRoot: s.allocation.coldRoot, role: source.role, snapshotRoot: source.root, sourceRoot: source.sourceRoot, windowRoot: s.window.root, windowBytesRoot: s.windowBytesRoot, requestBytesRoot: s.requestBytesRoot, dataReviewRoot: s.dataReviewRoot }
+        write(`publication-${source.role}-continuation-v2.json`, { ...body, root: labRoot(body.schemaVersion, body) })
+      }
+      const reason = { schemaVersion: "lean-parent-supervisor-reasons-v1", allocationRoot: s.allocation.root, sourceRoot: s.allocation.sourceRoot, requestBytesRoot: s.requestBytesRoot, entryBytesRoot: leanBytesRoot(leanCanonicalBytes(s.entry)), head: s.head, parentPid: s.entry.parentPid, childPid: s.entry.childPid, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published", childReady: "observed", resourceSampling: "observed", finalIdentity: "matched", failureReceipt: "absent", cleanup: "child_exit_observed", terminalization: "unobserved", initiatingCause: "unknown" } }
+      write("parent-supervisor-reasons.json", { ...reason, root: labRoot(reason.schemaVersion, reason) })
+      const fixed = join(dir, "fixed-public-source"); fs.writeFileSync(fixed, "fixed source")
+      const binding = Object.freeze({ publicSynthetic: true }), controller = continuationFiles.createLeanContinuationBoundaryControllerV8([{ path: fixed, stat: fs.lstatSync(fixed) }], [], [{ path: fixed, role: "fixed_source" }], binding, () => {}, bytes => { local.reserve(bytes) })
+      let readerStages = 0, invalidated = false, invalidGuardCalls = 0
+      const stage = <T>(kind: continuationFiles.LeanContinuationStageV6, body: () => T) => { if (kind === "reader") readerStages++; return controller.withStage(binding, kind, () => { const value = body(); if (mode === "opening" && kind === "import" || mode === "closing" && kind === "publication" || (mode === "reader-denial" || mode === "failure-resource") && kind === "reader" && readerStages === 2) fs.writeFileSync(fixed, "changed source"); if (mode === "failure-resource" && kind === "reader" && readerStages === 2) usage.mockReturnValue({ ...process.memoryUsage(), rss: 4000000000 }); return value }) }
+      const ctx = { ...s, ledger, allocation: ledger.allocation, paths: p, fixedHead: s.head, manifest, localReservation: local, guard: (bytes = 0) => { if (invalidated) invalidGuardCalls++; return controller.reserve(binding, bytes) }, stage, invalidate: () => { invalidated = true; controller.invalidate(); local.invalidate() } }
+      spies.push(vi.spyOn(continuationEntry, "readLeanBaselineContinuationWindowV2").mockReturnValue(s.window), vi.spyOn(continuationEntry, "assertLeanBaselineContinuationScopeV2").mockImplementation(() => {}), vi.spyOn(continuationEntry, "openLeanBaselineContinuationContextV2").mockReturnValue(ctx as never), vi.spyOn(process, "kill").mockImplementation(() => { throw Object.assign(new Error("synthetic PID gone"), { code: "ESRCH" }) }))
+      if (mode === "reader-denial") {
+        const failed = continuationReader.verifyLeanBaselineContinuationRetainedV2(p.request)
+        expect(failed).toMatchObject({ disposition: "gaps_found", failure: "CONTINUATION_READER_FAILURE", report: null, issued: false }); expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(failed)).toBe(false); expect(invalidGuardCalls).toBe(0)
+      } else if (mode !== "pass") {
+        expect(() => continuationReader.verifyLeanBaselineContinuationRetainedV2(p.request)).toThrow()
+        if (mode === "opening") { expect(continuationLedger.readLeanTimeAccounting(ledger).starts.has("continuation-retained-verifier-v2")).toBe(false); expect(fs.existsSync(join(ledger.directory, "reader-claim.json"))).toBe(false) }
+        else if (mode === "failure-resource") { expect(invalidGuardCalls).toBe(0); expect(fs.existsSync(join(ledger.directory, "retained-check.json"))).toBe(false) }
+        else { const pending = JSON.parse(fs.readFileSync(join(ledger.directory, "retained-check.json"), "utf8")); expect(pending).toMatchObject({ disposition: "pending_closing", report: null, issued: false }); expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(pending)).toBe(false) }
+      } else {
+        const result = continuationReader.verifyLeanBaselineContinuationRetainedV2(p.request)
+        expect(result).toMatchObject({ disposition: "gaps_found", failure: null, charged: 51, issued: false, verificationStatus: "closed_private_return" })
+        expect(Object.isFrozen(result)).toBe(true); expect(continuationLedger.readLeanTimeAccounting(ledger).closed.has("continuation-retained-verifier-v2")).toBe(true)
+        expect(JSON.parse(fs.readFileSync(join(ledger.directory, "retained-check.json"), "utf8"))).toMatchObject({ disposition: "pending_closing", report: null, issued: false })
+      }
+      expect(continuationLedger.readLeanLedger(ledger).charged).toBe(51)
+    } finally { for (const spy of [...spies, clock, disk, usage, available, known]) spy.mockRestore(); for (const [key, descriptor] of Object.entries(ipc)) { if (descriptor) Object.defineProperty(process, key, descriptor); else Reflect.deleteProperty(process, key) }; cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
+  }, 15000)
   it.each(["pass", "closing", "uncertain", "foreign"] as const)("[WR-CAD-02] [continuation-stage-cadence-I] actual V6 publisher closes full acceptance and never writes issued credit: %s", mode => publisherSeam(mode, "20261014-v6"))
   it.each(["pass", "closing", "uncertain", "foreign"] as const)("[continuation-ready-v7-O] actual V7 publisher pending closing/private identity: %s (inert external observations)", mode => publisherSeam(mode, "20261014-v7"))
   it.each(["source", "head", "input", "reservation", "deadline", "namespace", "failure-resource", "failure-pass"] as const)("[continuation-ready-v7-O] actual publisher keeps redacted nonpositive evidence under %s (inert external seams)", mode => {
@@ -455,7 +504,7 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send")
     }
   }, 30000)
-  const readerStageSeam = (mode: "pass" | "history" | "result" | "publication", namespace: "20261014-v6" | "20261014-v7") => {
+  const readerStageSeam = (mode: "pass" | "history" | "result" | "publication", namespace: "20261014-v6" | "20261014-v7" | "20261015-v8") => {
     const snapshot = partialV2Snapshot(namespace), ledger = { directory: "synthetic-only", allocation: snapshot.allocation } as continuationLedger.LeanExperimentLedger
     const interval = "continuation-retained-verifier-v2", starts = new Map([["continuation-run-admission", snapshot.entry.wallStartMs - 10], ["pilot-entry", snapshot.entry.wallStartMs], [interval, snapshot.terminal.wallObservedMs + 1]]), closes = new Map([["continuation-run-admission", snapshot.entry.wallStartMs - 1], ["pilot-entry", snapshot.entry.wallStartMs + snapshot.terminal.elapsedUpperBoundMs], [interval, snapshot.terminal.wallObservedMs + 20]])
     let timeReads = 0
@@ -463,9 +512,10 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     const state = { allocation: snapshot.allocation, events: snapshot.ledgerEvents, charged: 51, charges: new Map(snapshot.evidence.records.filter(r => r.chargeRoot).map(r => [r.chargeRoot, r])) } as unknown as ReturnType<typeof continuationLedger.readLeanLedger>
     const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "cadence-reader-"))), closedPath = join(directory, "history"), resultPath = join(directory, "active-result"), marker = {}, stages: string[] = []
     fs.writeFileSync(closedPath, "closed"); fs.writeFileSync(resultPath, "result")
-    const controller = continuationFiles.createLeanContinuationStageControllerV6([closedPath, resultPath].map(path => ({ path, stat: fs.lstatSync(path) })), [], [{ path: closedPath, role: "closed_history" }, { path: resultPath, role: "active_input" }], marker, () => {})
+    const pins = [closedPath, resultPath].map(path => ({ path, stat: fs.lstatSync(path) })), roles = [{ path: closedPath, role: "closed_history" }, { path: resultPath, role: "active_input" }]
+    const controller = namespace === "20261015-v8" ? continuationFiles.createLeanContinuationBoundaryControllerV8(pins, [], roles, marker, () => {}, () => {}) : continuationFiles.createLeanContinuationStageControllerV6(pins, [], roles, marker, () => {})
     const stage = <T>(kind: import("./v1-38-lean-baseline-continuation.js").LeanContinuationStageV6, body: () => T): T => { stages.push(kind); return controller.withStage(marker, kind, () => { const value = body(); if (mode === "history" && kind === "reader" && stages.filter(s => s === "reader").length === 2) fs.writeFileSync(closedPath, "changed"); return value }) }
-    const ctx = { ...snapshot, ledger, paths: continuationLedger.leanBaselineContinuationPathsForWindowV2(snapshot.window), fixedHead: snapshot.head, manifest: { schemaVersion: "lean-baseline-continuation-data-manifest-v2", admitting: true, implementationEntries: [], planningEntries: [], entries: [], root: snapshot.allocation.sourceRoot, planningRoot: snapshot.allocation.planningRoot, manifestRoot: snapshot.manifestRoot, windowRoot: snapshot.allocation.window.root, windowBytesRoot: snapshot.windowBytesRoot, sourceGateRoot: snapshot.sourceGateRoot, dataReviewRoot: snapshot.dataReviewRoot, sourceGate: null, dataGate: null }, guard: vi.fn((_additional?: number) => controller.live(marker, () => {})), stage, invalidate: () => controller.invalidate() }
+    const ctx = { ...snapshot, ledger, paths: continuationLedger.leanBaselineContinuationPathsForWindowV2(snapshot.window), fixedHead: snapshot.head, manifest: { schemaVersion: "lean-baseline-continuation-data-manifest-v2", admitting: true, implementationEntries: [], planningEntries: [], entries: [], root: snapshot.allocation.sourceRoot, planningRoot: snapshot.allocation.planningRoot, manifestRoot: snapshot.manifestRoot, windowRoot: snapshot.allocation.window.root, windowBytesRoot: snapshot.windowBytesRoot, sourceGateRoot: snapshot.sourceGateRoot, dataReviewRoot: snapshot.dataReviewRoot, sourceGate: null, dataGate: null }, guard: vi.fn((_additional?: number) => namespace === "20261015-v8" ? (controller as ReturnType<typeof continuationFiles.createLeanContinuationBoundaryControllerV8>).reserve(marker, _additional) : controller.live(marker, () => {})), stage, invalidate: () => controller.invalidate() }
     // Ten minutes into the approved window leaves 26 minutes. The closed pilot
     // interval is already over five minutes old, so only its remaining closure
     // reserve fits; the original full closure+offline reserve would not.
@@ -520,10 +570,10 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       expect((report as any).failure).toBeNull()
       expect(report).toMatchObject({ schemaVersion: "lean-baseline-continuation-retained-check-v2", disposition: "gaps_found", charged: 51 })
       expect(reads.mock.calls.some(call => call[1] === 4194304)).toBe(true)
-      expect(stages).toEqual(["reader", "claim", "reader", "terminal", "publication"])
+      expect(stages).toEqual([...(namespace === "20261015-v8" ? ["import"] : []), "reader", "claim", "reader", "terminal", "publication"])
       expect(report).toMatchObject({ issued: false })
       expect(begin).toHaveBeenCalledTimes(1); expect(close).toHaveBeenCalledTimes(1); expect(ctx.guard).toHaveBeenCalledWith(65536)
-      expect(sequence.slice(0, 2)).toEqual(["preflight", "open"])
+      expect(sequence.slice(0, 2)).toEqual(namespace === "20261015-v8" ? [] : ["preflight", "open"])
       expect(write.mock.calls.map(call => call[1])).toContain("reader-claim.json")
       expect(reads.mock.calls.some(call => String(call[0]).includes("/source-") && call[1] === 262144)).toBe(true)
     } finally {
@@ -535,6 +585,7 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
   }
   it.each(["pass", "history", "result", "publication"] as const)("[continuation-stage-cadence-I] actual V6 reader opening/audit/terminal/publication: %s (mock context/resources)", mode => readerStageSeam(mode, "20261014-v6"), 30000)
   it.each(["pass", "history", "result", "publication"] as const)("[continuation-ready-v7-O] real V7 verify/claim/audit/terminal/publication: %s (inert mocked context/resources)", mode => readerStageSeam(mode, "20261014-v7"), 15000)
+  it.each(["pass", "history", "result", "publication"] as const)("continuation-boundary-v8-R real reader/claim/audit/terminal/publication: %s (synthetic context/data/time, real controller and audit)", mode => readerStageSeam(mode, "20261015-v8"), 15000)
 })
 describe("strict v12 finite attribution custody join", () => {
   const fixture = () => {
