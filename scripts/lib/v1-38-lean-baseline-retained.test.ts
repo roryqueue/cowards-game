@@ -332,12 +332,37 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       expect(publish).not.toHaveBeenCalled()
     } finally { clock.mockRestore(); disk.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
   })
-  it.each(["pass", "opening", "closing", "reader-denial", "failure-resource"] as const)("continuation-boundary-v8-R real ledger, descriptor/evidence/audit/claim/terminal/publisher: %s (synthetic context; external resources/PID mocked)", mode => {
+  it.each(["pass", "opening", "closing", "reader-denial", "failure-resource", "identity-pass", "identity-closing"] as const)("continuation-boundary-v8-R-identity real reader enrollment, ledger, descriptor/claim/terminal/publisher: %s (synthetic context; complete audit ONLY for identity modes; external resources/PID mocked)", mode => {
     const s = partialV2Snapshot("20261015-v8"), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "public-v8-ordinary-reader-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V8
     const clock = vi.spyOn(Date, "now").mockReturnValue(s.window.anchorMs + 1200), disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000), known = vi.spyOn(continuationFiles, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096)
     const ipc = { send: Object.getOwnPropertyDescriptor(process, "send"), connected: Object.getOwnPropertyDescriptor(process, "connected") }
     Object.defineProperty(process, "send", { value: undefined, configurable: true }); Object.defineProperty(process, "connected", { value: false, configurable: true })
     const spies: { mockRestore(): void }[] = []
+    // This explicitly synthetic report tests private return identity, not league
+    // completeness. The ordinary reader still owns callback enrollment.
+    let syntheticAuditReports = 0
+    if (mode.startsWith("identity-")) {
+      // The audit is a lexical self-call, so an exported-function spy cannot
+      // intercept it. Replace ONLY its final frozen report, after real audit.
+      const freeze = Object.freeze
+      let checkingAuditRoot = false
+      let contentRoot: string | undefined
+      spies.push(vi.spyOn(Object, "freeze").mockImplementation((value: any) => {
+        if (!checkingAuditRoot && typeof value?.root === "string" && value?.schemaVersion === "lean-baseline-continuation-retained-v2" && value?.allocationRoot === s.allocation.root && value?.windowRoot === undefined && value?.evidenceRoot) contentRoot = value.root
+        if (!checkingAuditRoot && syntheticAuditReports === 0 && typeof value?.root === "string" && value?.windowRoot === s.window.root && value?.carryRoot === s.allocation.predecessor.root && value?.count && value?.resourceRoot && Array.isArray(value?.unusedOrdinals)) {
+          const { root: auditRoot, ...auditBody } = value
+          checkingAuditRoot = true
+          try {
+            // The outer audit hash includes the inner content report root.
+            if (!contentRoot || auditRoot !== labRoot("lean-baseline-continuation-retained-v2", { ...auditBody, root: contentRoot })) return freeze(value)
+            syntheticAuditReports++
+            const synthetic = { ...auditBody, complete: true, syntheticIdentityFixtureOnly: true }
+            return freeze({ ...synthetic, root: labRoot("lean-baseline-continuation-retained-v2", synthetic) })
+          } finally { checkingAuditRoot = false }
+        }
+        return freeze(value)
+      }))
+    }
     try {
       fs.mkdirSync(resolve(".strategy-lab"), { mode: 0o700 }); fs.mkdirSync(resolve(p.temp), { mode: 0o700 })
       const ledger = continuationLedger.createLeanLedger(resolve(p.store), s.allocation), write = (name: string, value: unknown) => fs.writeFileSync(join(ledger.directory, name), leanCanonicalBytes(value), { mode: 0o600 })
@@ -361,23 +386,31 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       const fixed = join(dir, "fixed-public-source"); fs.writeFileSync(fixed, "fixed source")
       const binding = Object.freeze({ publicSynthetic: true }), controller = continuationFiles.createLeanContinuationBoundaryControllerV8([{ path: fixed, stat: fs.lstatSync(fixed) }], [], [{ path: fixed, role: "fixed_source" }], binding, () => {}, bytes => { local.reserve(bytes) })
       let readerStages = 0, invalidated = false, invalidGuardCalls = 0
-      const stage = <T>(kind: continuationFiles.LeanContinuationStageV6, body: () => T) => { if (kind === "reader") readerStages++; return controller.withStage(binding, kind, () => { const value = body(); if (mode === "opening" && kind === "import" || mode === "closing" && kind === "publication" || (mode === "reader-denial" || mode === "failure-resource") && kind === "reader" && readerStages === 2) fs.writeFileSync(fixed, "changed source"); if (mode === "failure-resource" && kind === "reader" && readerStages === 2) usage.mockReturnValue({ ...process.memoryUsage(), rss: 4000000000 }); return value }) }
+      const stage = <T>(kind: continuationFiles.LeanContinuationStageV6, body: () => T) => { if (kind === "reader") readerStages++; return controller.withStage(binding, kind, () => { const value = body(); if (mode === "opening" && kind === "import" || (mode === "closing" || mode === "identity-closing") && kind === "publication" || (mode === "reader-denial" || mode === "failure-resource") && kind === "reader" && readerStages === 2) fs.writeFileSync(fixed, "changed source"); if (mode === "failure-resource" && kind === "reader" && readerStages === 2) usage.mockReturnValue({ ...process.memoryUsage(), rss: 4000000000 }); return value }) }
       const ctx = { ...s, ledger, allocation: ledger.allocation, paths: p, fixedHead: s.head, manifest, localReservation: local, guard: (bytes = 0) => { if (invalidated) invalidGuardCalls++; return controller.reserve(binding, bytes) }, stage, invalidate: () => { invalidated = true; controller.invalidate(); local.invalidate() } }
       spies.push(vi.spyOn(continuationEntry, "readLeanBaselineContinuationWindowV2").mockReturnValue(s.window), vi.spyOn(continuationEntry, "assertLeanBaselineContinuationScopeV2").mockImplementation(() => {}), vi.spyOn(continuationEntry, "openLeanBaselineContinuationContextV2").mockReturnValue(ctx as never), vi.spyOn(process, "kill").mockImplementation(() => { throw Object.assign(new Error("synthetic PID gone"), { code: "ESRCH" }) }))
       if (mode === "reader-denial") {
         const failed = continuationReader.verifyLeanBaselineContinuationRetainedV2(p.request)
         expect(failed).toMatchObject({ disposition: "gaps_found", failure: "CONTINUATION_READER_FAILURE", report: null, issued: false }); expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(failed)).toBe(false); expect(invalidGuardCalls).toBe(0)
-      } else if (mode !== "pass") {
+      } else if (mode !== "pass" && mode !== "identity-pass") {
         expect(() => continuationReader.verifyLeanBaselineContinuationRetainedV2(p.request)).toThrow()
         if (mode === "opening") { expect(continuationLedger.readLeanTimeAccounting(ledger).starts.has("continuation-retained-verifier-v2")).toBe(false); expect(fs.existsSync(join(ledger.directory, "reader-claim.json"))).toBe(false) }
         else if (mode === "failure-resource") { expect(invalidGuardCalls).toBe(0); expect(fs.existsSync(join(ledger.directory, "retained-check.json"))).toBe(false) }
         else { const pending = JSON.parse(fs.readFileSync(join(ledger.directory, "retained-check.json"), "utf8")); expect(pending).toMatchObject({ disposition: "pending_closing", report: null, issued: false }); expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(pending)).toBe(false) }
       } else {
         const result = continuationReader.verifyLeanBaselineContinuationRetainedV2(p.request)
-        expect(result).toMatchObject({ disposition: "gaps_found", failure: null, charged: 51, issued: false, verificationStatus: "closed_private_return" })
+        expect(result).toMatchObject({ disposition: mode === "identity-pass" ? "passed" : "gaps_found", failure: null, charged: 51, issued: false, verificationStatus: "closed_private_return" })
+        if (mode === "identity-pass") {
+          expect(result.report).toMatchObject({ complete: true, syntheticIdentityFixtureOnly: true })
+          expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(result)).toBe(true)
+          for (const copy of [JSON.parse(JSON.stringify(result)), structuredClone(result), { ...result }, Object.freeze({ ...result })]) expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(copy)).toBe(false)
+        }
         expect(Object.isFrozen(result)).toBe(true); expect(continuationLedger.readLeanTimeAccounting(ledger).closed.has("continuation-retained-verifier-v2")).toBe(true)
-        expect(JSON.parse(fs.readFileSync(join(ledger.directory, "retained-check.json"), "utf8"))).toMatchObject({ disposition: "pending_closing", report: null, issued: false })
+        const durableBytes = fs.readFileSync(join(ledger.directory, "retained-check.json")), durable = JSON.parse(durableBytes.toString("utf8"))
+        expect(durable).toMatchObject({ disposition: "pending_closing", report: null, issued: false })
+        expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(durable)).toBe(false); expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(durableBytes)).toBe(false)
       }
+      if (mode.startsWith("identity-")) expect(syntheticAuditReports).toBe(1)
       expect(continuationLedger.readLeanLedger(ledger).charged).toBe(51)
     } finally { for (const spy of [...spies, clock, disk, usage, available, known]) spy.mockRestore(); for (const [key, descriptor] of Object.entries(ipc)) { if (descriptor) Object.defineProperty(process, key, descriptor); else Reflect.deleteProperty(process, key) }; cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
   }, 15000)
