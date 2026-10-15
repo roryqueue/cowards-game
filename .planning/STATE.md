@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Lean boundary cadence and fresh window approved; narrow existing Plan16 research and checked amendment next
+stopped_at: V8 research and revised plan independently checked; ROOT strict baseline captured; execute P then Q then R next
 last_updated: "2026-10-15"
 last_activity: 2026-10-15
-last_activity_desc: Human approved two-hour source repair and one fresh eight-hour private window after source closure; V7 remains spent
+last_activity_desc: Plan floor omission corrected and fresh checker passed; exact 15-path strict retains 13 inherited blocks, zero pre-edit delta
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — V8 checked SOURCE amendment ready to execute
+
+Actual typed researcher/root/research_265_boundary_v8 CLOSED/released;98-line append to existing research only. Actual planner/root/plan_265_boundary_v8 CLOSED/released; existing Plan16 final P/Q/R amendment only. Independent checker/root/check_265_boundary_v8 found ONE real floor omission: pre-auth88924160 excluded known disjoint V7 allocated1167360. Fresh revisionplanner/root/plan_265_boundary_v8_fix1 corrected ONLY P; fresh checker/root/check_265_boundary_v8_fix1 VERIFICATION PASSED/issues[]/commandsCLOSED/released. V8 known-file LOWER BOUND90091520 plus other disjoint known costs/fresh bounded directory-growth-owned observations and nonoverlapping reservations; not invented measured total or capacity receipt. Wrong-default plan-path inference by first checker withdrawn after exact-carrier correction, not a concurrent rewrite.
+
+ROOT53657 pre-edit SAME exact15-path strict CLOSED2/actual full13diagnostic blocks/7051B WHOLE-byte-equal actual prior23557/zeroNEW; this is inherited debt, NOT global compiler green. No production source edit yet. NEXT actual typed executor/root/execute_265_boundary_v8 owns P→Q→R, eight existing source/test files/max3 per serial unit/scoped atomic commits/releases; ONE integrated review/fix, ROOT qualification, scoped validation and distinct source verifier afterward. ROOT owns GATES/STATE and no complete Plan16 SUMMARY before empirical work. Source cutoff21:42:14UTC unchanged; no actual A/window/request/allocation/prepare/Match/ordinary reader, active SOURCE/DATA zero. Prior scientific/resource/privacy/cost/history qualifications unchanged; Plan16/Phase265/all9LEAG pending.
 
 ## Current continuation — lighter boundary cadence APPROVED, source clock running
 
