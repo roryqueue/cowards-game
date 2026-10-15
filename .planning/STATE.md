@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V7 source cycle closed and SOURCE projected; actual next-window initialization and independent DATA review next
+stopped_at: Actual V7 window initialized after source closure at17:51:30UTC; independent DATA review next, no request or preparation
 last_updated: "2026-10-15"
 last_activity: 2026-10-15
-last_activity_desc: Distinct source verifier passed4of4/gaps[]; canonical SOURCE26c69b7d projected after closures, no A/window yet
+last_activity_desc: Canonical private V7 window46a7cd22 created after source closure; eight-hour deadline01:51:30UTC, full36 entry cutoff19:10:30UTC
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,14 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — actual V7 window initialized; DATA still pending
+
+All prospective source changes/actual review/ROOT qualification/scoped validation/distinct source verification CLOSED before SOURCE projection and commit9a347e6c/push. ROOT actual pre-initialization35520 CLOSED0 confirmed implementation4accdb7e/SOURCE26c69b7d/Planroot1c8ee749, allfive V7 targets absent, private base real0700/uid501. Then actual clock observation2026-10-15T17:51:30UTC A=1792086690000, AFTER all source closures and BEFORE any DATA review/request/preparation. This is actual initialization, not approval time: original T1792017187000/decisionlabel remains distinct.
+
+Exactly one canonical `.strategy-lab/lean-baseline-continuation-window-20261014-v7.json` created/format-only newline removal/fsynced,929B/0600/uid501/singlelink. Windowdomainsha256:46a7cd22e0de56d221ce2d64cb2d9d63adbbe16232dd6d6d6a55e113c684b261/rawsha256:f6c864c6483805035f19c40b1c9652225d302ef39457723a9be9973e764652e3. Carry738748903=F(A),cap767548903=carry+28800000,deadline1792115490000=2026-10-16T01:51:30UTC (21:51:30EasternOct15). Whole36 reserve24060000ms => latest entry1792091430000=19:10:30UTC/15:10:30EasternOct15 inclusive; all DATA/review/preparation/idle/run/reader time now consumes this window and prior costs remain recorded. Sourcecutoff21:09:46UTC was satisfied before proper initialization; no implicit source/experiment reset or refund. Future runROOT, distinct planned ordinaryreader/root/verify_265_v7_retained not invoked/no verdict invented.
+
+Independent actual DATA review is NEXT before request/preparation. No active DATA/request/allocation/store/temp/claim/entry/Match exists. Source and canonical window remain fixed; do not mutate spent old or new window bytes. Same15GB/3GB/global300/new36/fourunopened/runtime/canonicalrules/privacy/freezebeforeformation boundaries. Fresh SAME-PROCESS capacity still mandatory before charge; source/window math not admission. Phase265/Plan16/all9LEAG pending; no empirical/freeze/formation/holdout/public/counting/production credit. Earlier no-window checkpoints below historical.
 
 ## Current continuation — V7 SOURCE cycle CLOSED; initialize actual window next
 
