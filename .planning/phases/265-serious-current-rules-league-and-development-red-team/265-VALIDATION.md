@@ -5,13 +5,59 @@ status: partial
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
-updated: 2026-10-14
-source_reviewed: e86e624dcf9dd47974e69c53b596030e5e3773c6
-source_gate: preledger-policy-independent-source-pass-requirements-pending
+updated: 2026-10-15
+source_reviewed: 17acda11990ed258bb8ac7a4a130b70e7c312a54
+source_gate: ready-time-v7-coverage-gap-distinct-source-verification-pending
 empirical_validation: v6-preparation-window-expired-unique-terminal-only-check-zero-retained-charge
 ---
 
 # Phase265 — Validation Strategy
+
+## Current State-A ready-time V7 source coverage audit — PARTIAL
+
+Actual scoped auditor `/root/validate_265_ready_window_v7` inspected the approved final Plan16 L/M/N/O amendment, four-hour SOURCE extension and stage clarification, current STATE/AGENTS/config, existing validation map, eight current source/test paths and their delta from e86e624d, ROOT qualification at GATES top and the final actual independent review. Observed HEAD87d272aa contains fixed source17acda11990ed258bb8ac7a4a130b70e7c312a54. Nyquist is enabled; installed Vitest/source-test conventions retained. No new test, implementation edit, private artifact/history authentication, manifest, capacity, preparation, runtime/provider/Strategy/Match or ordinary-reader operation was started by this audit. ROOT execution outcomes below are qualified ROOT evidence, not auditor reruns. Independent CLEAN/findings[] is source-review evidence, not automatic test-coverage closure.
+
+| Plan16 task / scoped must-have / threat | Actual tests and ROOT execution evidence | Coverage disposition |
+|---|---|---|
+| L: exact T/A/F(A), safe arithmetic, fixed bounds, finite selectors/private admitted policy and old V3–V6 predicates; T-265-V7-01 | `scripts/lib/v1-38-lean-baseline-continuation.test.ts:18` tag `[continuation-ready-v7-L]`: 7 cases, including four finite synthetic delays, coherent carry inflation/underflow, decision/early-A/overflow/bounds/unknown-route denials, exact path/allocation/physical-policy joins and legacy controls. Included in ROOT full helper5275/126pass. | **COVERED source-only.** Synthetic A proves mathematical policy, not actual SOURCE-before-A chronology or an initialized window. |
+| M: only two fixed V6 opaque anchors; old V6 allocation/store/temp absence, selected future exclusion, predecessor identity/debit no-shrink; T-265-V7-02 | Same helper file:75 tag `[continuation-ready-v7-M]`: 16 cases. Real bounded read/raw-hash refuses synthetic window bytes; missing/size/mode/owner/link and all three V6 absence negatives; five selected-future reconciliation/debit negatives; synthetic predecessor identity/debit floor. Full helper also executes existing inventory/descriptor/cadence/no-refund controls. | **COVERED qualified source negatives.** Fixed-root/size sensitivity includes static constant inspection; current V7 fixture refuses before successful predecessor traversal. Neither that inspection nor legacy controls prove exact V7 spent-success inventory, genuine historical custody or all later request/closing branches. Those remain explicitly unproven, not empirical credit. |
+| N: exact V7 CLI/Git/private unconsumed preflight, full fresh cadence and drift refusal, real source→CARRY refusal, durable charge before inert provider; T-265-V7-01/02/03 | `scripts/run-v1-38-lean-baseline.test.ts:115` tag `[continuation-ready-v7-N]`: 24 cases. ROOT14472 runs these plus existing preledger policy/carry controls, 48pass. Actual source/controller/importer/raw hashes/descriptors reach fixed allocation-anchor refusal; each completed callback asserts THREE current / 33capacity / 3HEAD / 6fresh input reads+SHA, BOTH live passes and FULL barriers. Three real synthetic-ledger/stage dispatcher cases preserve durable charge before inert provider. Finite selected/unselected allocation Git and private mutable-output/cwd/privacy/drift denials are exercised. | **PARTIAL — V7-N-PARENT-01.** New tests never call `runLeanBoundedParent`; newly selected V7 observed-exit cleanup / independent failure-terminal guard has no completed actual caller test. Pre-entry refusal and isolated dispatcher cannot stand in for that branch. |
+| O: independent reader opening/claim/audit/terminal/publication, pending closing and exact private returned identity; T-265-V7-02/03 | `scripts/lib/v1-38-lean-baseline-retained.test.ts:306` and :447, tag `[continuation-ready-v7-O]`: 16 cases. ROOT50706/O+I+V4 gives29pass. Real verify/publish/stage-controller seams cover closing mutation/uncertain write/foreign context, source/HEAD/input/reservation/deadline/namespace denial, guarded redacted nonpositive failure, and accepted identity versus JSON/structured/spread/frozen clones. Durable success-shaped bytes stay pending_closing/report:null/issued:false. | **COVERED qualified source seams.** External context/resources/clock/ledger/evidence observations are mocked; not an actual issued V7 ordinary reader, authenticated history or empirical acceptance. No serialized positive authority is established. |
+
+### Material source gap — V7-N-PARENT-01 (escalated, no test started)
+
+Plan N explicitly requires actual caller parent-cleanup/charge/failure evidence. `scripts/run-v1-38-lean-baseline.ts:444` selects V7 for observed-exit/failure handling, and :560 admits V7 to the independent failure-terminal guard. The existing parent negative at `scripts/run-v1-38-lean-baseline.test.ts:533` is V6-only. ROOT's two additional legacy context/parent batches were budget-censored, not passing reports; neither demonstrates this V7 branch. This is a **material missing source-test behavior**, distinct from the approved historical-custody/capacity/whole-fit qualifications. No implementation bug or failing behavioral assertion was established by inspection; debug iterations0/3 (audit-only/no test execution), implementation BLOCKER0. Source-readiness coverage remains blocked until the requested N behavior runs green.
+
+Minimal next action within the existing driver test file: add a bounded tiny synthetic V7 admitted ledger plus inert child through real `runLeanBoundedParent` and its real failure guard, tag `[continuation-ready-v7-N-parent]`. At least exercise source denial after a durable charge and actual observed child exit: unchanged exact ledger bytes/51charged, child_failed terminal, closed pilot interval, supervisor cleanup child_exit_observed and invalidated source controller; also independent resource refusal with no false terminal/authority revival and no refund. Preserve pre-entry fork-closing cleanup assertions if extending that case table. Mock only external Git/resources/clock/IPC as disclosed; do not authenticate private history, substitute historical hashes or reuse the expensive old fixture unchanged. Suggested isolated command (NOT RUN by this audit): `node --max-old-space-size=768 ./node_modules/vitest/vitest.mjs run --maxWorkers=1 scripts/run-v1-38-lean-baseline.test.ts -t '\[continuation-ready-v7-N-parent\]'`. Complete bounded execution, independent delta review, ROOT affected qualification and re-audit precede distinct source-goal verification and any A. Implementation remains read-only for this audit; an actual source defect, if a new test reveals one, must be escalated.
+
+### ROOT evidence union and limits
+
+| Actual closed ROOT command / selected scope | Observed result, not auditor rerun |
+|---|---|
+| Full existing helper5275 | 126pass/0skip/10.86s; includes all L7/M16 and qualified existing default/V3 inventory→real V6 helper bootstrap. |
+| Driver14472: ready-v7-N or preledger-policy/carry | 48pass/118skip/24.43s; includes all N24. |
+| Retained50706: ready-v7-O or stage-cadence-I or continuation-v4 | 29pass/29skip/30.09s; includes all O16. |
+| Disjoint driver22350: CLI/narrowmetadata/current-onlyCLI/V6-CLI/unselectedGit | 12pass/154skip/5.62s; disjoint from driver48. |
+| SAME original15-path strict43218 | CLOSED2, complete13FULL/7051B WHOLE-byte-equal actual pre23557, zeroNEW/no suppression; not global compiler green. |
+| Configured project types99785; direct installed service64250; actual public/factory boundaries | Types0; service0/strict0/ownership0/19old report-only; public0; factory78465/0/1443files/violations[]. Two initial wrong script paths failed import before checks and remain failures; corrected actual commands are separate passes. |
+| Inert manifest23896 and ROOT diff check | CLOSED0/rootsha256:f40704d8f385d51db4e11495276ca65f60c352227f0f1062e6f7ac817184e93a/697implementation/15planning/admittingfalse/SOURCE-DATAnull; diff0. No install/purge/policy/config/golden change. |
+
+Union215 unique actual source tests =126+48+29+12, including all63new L7/M16/N24/O16; overlapping author counts are not added. This is neither a global regression result nor215Matches. Legacy driver batches67775/32101 exceeded budget and terminated143, with actual parent/worker absence checked; no complete report/pass count/new defect attribution. Far-scale old assay CENSORED9rows/96callbacks/7609ms/44,015,616Bextra uses explicit source/custody/resource/pure-domain mocks and proves no fit. Do not repeat an unchanged censored batch as remediation.
+
+Real new V7 prepare samples extra0/32 are COMPLETE fixed-anchor REFUSALS at1246/2105ms,243/435callbacks; real raw hashes/fd/controller/importer, mocked Git/resources/clock/catalog. SOURCE closes and CARRY opens, but no archive closing, capture, setup or publication succeeds. Separately, default/V3 n2/64 real inventory returns6/68actual rows into real V6 helper bootstrap (12/166ms, <12.7MiB); this is not V7 predecessor success or actual postcustody driver bindArchive. Genuine historical custody, exact V7 spent-success inventory, postcustody driver bindArchive, actual capacity and whole authenticated runtime fit remain unproven. Static/source-string evidence and mocked seams are not promoted to empirical coverage.
+
+### Validation Audit 2026-10-15 — ready-time V7 only
+
+| Metric | Count / outcome |
+|---|---|
+| Scoped source tasks | 4: L/M/O COVERED with stated qualifications; N PARTIAL; none wholly MISSING |
+| New material source-test gaps | 1: V7-N-PARENT-01, escalated to ROOT; 0 resolved by this audit |
+| Reproduced implementation/failing-test BLOCKERs | 0; no behavioral test started by this read-only source audit |
+| Existing passing-test caveats | WARNING: static-anchor sensitivity, mocked owner seams, genuine custody/capacity/fit and censored legacy limits above |
+| Files changed / ownership | Only existing265-VALIDATION.md; all inspection/edit/diff commands CLOSED, ownership RELEASED to ROOT |
+| Whole Phase265 | **PARTIAL**, nyquist_compliant:false, wave_0_complete:false, all9LEAG pending |
+
+No active SOURCE/DATA, future A/window/request/allocation/entry/Match or empirical receipt was created. Distinct actual source verification remains separate and pending; current SOURCE-only hardstop21:09:46UTC/1792098586000 and original T/continuous F(t)/all elapsed costs remain unchanged. Five-new-target physical absence is the initial ROOT/DATA/precreation prerequisite, not an impossible invariant after legitimate request/window creation; old V6 allocation/store/temp absence remains required throughout. Preserve immutable spent history/no retry/refund/reuse/shrink, all15GB/3GB/global300/new36/four-unopened/guest1000/startup2500/host5000/Match600000 bounds, canonical rules/privacy and current-freeze-before-formation. UI gates do not apply to these private host/domain/test-only changes; actual Match/replay realism remains pending. Earlier sections below are preserved historical snapshots, not current readiness.
 
 ## Current State-A J/K pre-ledger source validation
 
