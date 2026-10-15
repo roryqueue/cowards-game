@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: awaiting_human_decision
-stopped_at: V8 run and unique ordinary reader CLOSED without acceptance or new retained charges; additional 30-minute source-only diagnosis requested
+status: in_progress
+stopped_at: Approved bounded V8 source-only diagnosis through 2026-10-15T23:43:53UTC; no repair or new empirical authority
 last_updated: "2026-10-15"
 last_activity: 2026-10-15
-last_activity_desc: V8 failed child exit1 UNKNOWN_INTERNAL_FAILURE and ordinary reader exit1 withheld; safe closure no empirical credit
+last_activity_desc: Additional 30-minute diagnosis approved at23:13:53UTC; V8 and its reader remain spent
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — additional30-minute SOURCE-ONLY diagnosis APPROVED
+
+Latest direct human `approved` accepts ROOT's exact additional30-minute source-only diagnostic request: find why V8 failed; no new Match/run/rule/budget change authorized. First ROOT approval observation2026-10-15T23:13:53UTC; diagnostic hardstop2026-10-15T23:43:53UTC. Includes source trace, bounded inert/public diagnostic checks, evidence assessment and notes; production repair, new empirical namespace/window/request/allocation/preparation/reader/provider/Strategy/Match and old route reuse remain outside this approval. All cumulative prior/new/source/idle costs continuous, no reset/refund. Same15GB/3GB/runtime/scientific/privacy/current-freeze-first bounds.
+
+Actual prior root/child/reader PIDs12383/86407/23327 absent, trackedclean/currentHEADf691dec5 at resumption; actual unique run and reader CLOSED/released as below, no active duplicate. GSD diagnosis-only resumes existing `.planning/debug/265-native-exit-reader-cost.md`, no new numbered plan/workstream/proof tree. ROOT owns STATE/GATES; typed manager will own ONLY existing debugfile after explicit handoff. Known symptoms are prefilled, no repeat symptom/authority questions. V8's original suppressed errors remain UNKNOWN unless directly supported; a conditional/current producer-consumer contradiction or inert reproduction is not automatically the original throw. Plan16/Phase265/all9LEAGpending, Phase266planning-only, no freeze/formation/holdout/public/counting/production credit. Earlier pending diagnostic-approval paragraph below is historical, superseded only for this bounded diagnosis.
 
 ## Current continuation — V8 CLOSED, no useful empirical result; new diagnostic allowance pending
 

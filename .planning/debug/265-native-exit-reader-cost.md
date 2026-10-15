@@ -2,7 +2,7 @@
 status: investigating
 trigger: Continue v1.38 autonomously after the approved baseline window
 created: 2026-10-12
-updated: 2026-10-14
+updated: 2026-10-15
 mode: source_only
 ---
 
@@ -18,10 +18,18 @@ Retained reader physical88924160B; current store+scratch2453504B/46rows; reader 
 
 ## Current Focus
 
-hypothesis: V6 major-stage static identity repair still spent about45min in CARRY before WINDOW_EXPIRED; remaining live resource/accounting inventory work may amplify each callback. Exact dominant hot function is not established.
-test: Static connected call algebra only at fixed db1d7011 production source; no private history authentication, prepare replay, reader, capacity or live experiment. Identify actual CARRY path, controller capture ordering and fresh physical/resource pass counts before recommending a bounded synthetic sensitivity test.
-expecting: Evidence-backed normal source repair within approved stage/live assurance, or an explicit genuinely new decision if required. Preserve fresh live predicates and both passes; no unsupported equivalence/performance/cause claim or blind native change.
-next_action: ROOT owns STATE/GATES; typed diagnosis manager owns ONLY this existing debug file, diagnosis-only one bounded investigation. V6 unique prepare62237/PID83376 and independent terminal-only verifier are CLOSED/released; zero retained allocation/head/Match charge. Spent V6/older bytes immutable. Source-only hardstop2026-10-15T02:30:07UTC/all costs continuous; full36 frontier19:49:07UTC elapsed. No new window, allocation, Match, ordinary reader or numbered plan.
+hypothesis: V8 child failed before any retained Match charge, and its unique ordinary reader refused before a reader claim. Source-only trace should first distinguish parent/child handshake and slow synchronous stage ordering from child context failures, and identify deterministic reader preclaim contradictions without replaying spent authority. Exact original throws and dominant elapsed cost remain UNKNOWN.
+test: Trace actual fixedc51651f7/production73673efa currentf691dec5 driver, boundary/local reservation and retained consumer. At most bounded inert/public diagnostic checks; no production edits, private history authentication, live capacity/preparation/context/reader/provider/Strategy/Match replay, or source-derived copied Function masquerading as actual caller proof.
+expecting: Ranked evidence-backed causal chain, confirmed present defects or precise missing observations, minimal prospective repair direction and fit/assurance implications; no blind unchanged route or unsupported original-cause/performance claim.
+next_action: ROOT owns STATE/GATES; typed diagnosis manager owns ONLY this existing debug markdown after handoff, goal find_root_cause_only, one bounded investigation. Approval first observed2026-10-15T23:13:53UTC, hardstop23:43:53UTC; manager returns by23:35UTC for ROOT evidence assessment/commit. All V8/older attempts/authority/evidence immutable/spent, no new empirical authority or extra production repair time. Every new/old cost remains continuous.
+
+### V8 additional diagnosis-only approval — 2026-10-15T23:13:53UTC
+
+Human approved exactly30additionalminutes source-only diagnosis, not repair/newrun/newbudget/rules. Hardstop23:43:53UTC. Symptoms prefilled: ONE ROOTprep10046 CLOSED0, allocationc2adb2b3/rawfbcd010d/17350B0644 sealed ONLYdelta5ff79458 over5f1a480c/pushed; ONErun74064/PID12383 CLOSED1 first terminalclock22:10:15UTC, generic RUN_PREENTRY/UNKNOWN/DETAILS_WITHHELD. Real entry551B/head5ff/PIDs12383/86407 exists, terminal659B child_failed/exit1/signalnull, entryfailure121B unknown/UNKNOWN_INTERNAL_FAILURE, ledger0B/time258B/resultabsent. OriginalthrowUNKNOWN; no new retained Match. Child first absent inROOT22:06:58 process observation, not an exact exit time/cause. Root firstpostissueclock21:34:45, timejournal0 at21:47:45 then144B at21:54:39, time201B+entrypresent at22:03:58, parentpilotclosed22:09:47.743; these bounded observations are NOT precise stage-time profiling or dominant-cost proof.
+
+ONE actual independent ordinaryreader/root/verify_265_v8_retained session92229/PID23327 CLOSED1/DETAILS_WITHHELD, firstpostterminal22:24:02UTC, before22:40:47.743 original31mclosurecutoff. Finalcheck22:24:28.043 exactentry/terminal/allocation/source/head/PID joins/root/mode/hash/processabsence passed, ledger0B/time258B unchanged, readerclaim/retainedcheck/resultabsent/no readerinterval. UnderlyingreaderthrowUNKNOWN; missingresult is observed, not demonstrated cause. ActualholdsRELEASED afterbothclosures; publicSOURCE/DATAbodiesarchivedTEXT, zeroactive. Currenttrackingf691dec5 contains only truthfulpostclosureplanning changes; sourcec51651f7/implementation2ceabd16 remains unchanged. Do not treat legitimatepostclosureGATES/STATE drift or archivedgateabsence as original failure evidence.
+
+Boundaries: no rerun/resume/reuse/refund/recredit, no privateStrategy/objective/memory/prompts/runtimeIO/stdio/rawerrors published; unopenedholdout, current-rules serious league/evaluation/freeze BEFOREformation, no public/counting/production. Same15GB/3GB/global300/new36/fourunopened/guest1000/startup2500/host5000/Match600000. At most one investigation cycle, zero fix cycles; existing debugcarrier only. ROOT may commit safe diagnosis notes after all agentcommands close; no new Plan/SUMMARY/readiness gate or empirical output. Parent/child handshake timing is a hypothesis to test, not a recorded original causal fact.
 
 ### V6 actual preparation terminal — 2026-10-14
 
