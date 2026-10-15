@@ -19,7 +19,7 @@ describe("continuation-boundary-v8-P", () => {
   it("continuation-boundary-v8-P-cost real disjoint sampler includes each public synthetic stat/member debit once and refuses aliases/shrink", () => {
     // Public finite observations only: no historical file is opened or read.
     const rows = new Map<string, { size: number; allocated: number; mode: number; members?: string[]; ino: number }>()
-    const add = (path: string, size: number, allocated: number, mode = 0o600, members?: string[]) => rows.set(resolve(path), { size, allocated, mode, members, ino: rows.size + 1 })
+    const add = (path: string, size: number, allocated: number, mode = 0o600, members?: string[]) => rows.set(resolve(path), { size, allocated, mode, ...(members === undefined ? {} : { members }), ino: rows.size + 1 })
     for (const [p, sizes] of [[ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2, [935, 4041]], [ledger.LEAN_BASELINE_CONTINUATION_PATHS_V6, [929, 4047]]] as const) { add(p.window, sizes[0], 4096); add(p.request, sizes[1], 4096) }
     for (const [p, sizes] of [[ledger.LEAN_BASELINE_CONTINUATION_PATHS_V4, [935, 4056, 17366, 746080, 146345, 208491, 1002]], [ledger.LEAN_BASELINE_CONTINUATION_PATHS_V5, [929, 4051, 17360, 749813, 146600, 208495, 1234]], [ledger.LEAN_BASELINE_CONTINUATION_PATHS_V7, [929, 4040, 17352, 754167, 146961, 208476, 1002]]] as const) {
       add(p.window, sizes[0], 4096); add(p.request, sizes[1], 4096); add(p.allocation, sizes[2], 20480, 0o644)
