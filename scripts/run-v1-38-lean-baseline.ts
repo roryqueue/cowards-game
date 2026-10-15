@@ -924,9 +924,52 @@ export const createLeanContinuationLocalReservationV8 = (window: LeanBaselineCon
   const otherKnownDisjointBytes = measureLeanContinuationKnownDisjointBytesV8()
   let floor = LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V8 + otherKnownDisjointBytes, accounting = createLeanContinuationReservationAccountingV8(floor), journalPrefix: Buffer = Buffer.alloc(0), journalFloor = 0, observedGrowth = 0, closure = reader, closureStart: number | undefined, remainingSlots = reader ? 0 : 36, invalid = false
   const outstandingWrites = new Map<string, { bytes: number; previousBlocks: number; previousSize: number }>()
+  let progressLedger: LeanExperimentLedger | undefined, progressPrefix: Buffer = Buffer.alloc(0)
+  // Current owned journal only: bounded descriptors and canonical hash/schema
+  // joins, never archive/source authentication or a complete guard callback.
+  const progress = (additional: number) => {
+    if (!progressLedger) return
+    const a = progressLedger.allocation, path = join(p.store, "ledger.ndjson")
+    const bytes = readLeanContinuationBoundedBytesV2(path, 4194304, 0o600, more => { resource(additional + (more ?? 0), true) })
+    if (bytes.length < progressPrefix.length || !bytes.subarray(0, progressPrefix.length).equals(progressPrefix)) return fail("V8_PROGRESS_CHANGED")
+    const text = bytes.toString("utf8"), lines = text ? text.slice(0, -1).split("\n") : []
+    if (text && !text.endsWith("\n") || lines.length > 512) return fail("V8_PROGRESS_CHANGED")
+    let charges = 0, terminals = 0, chargeRoot: LabRoot | undefined, stopped = false, elapsed = w.carryMs, physical = 0
+    const natural = (n: unknown): n is number => Number.isSafeInteger(n) && Number(n) >= 0
+    for (const line of lines) {
+      const e = JSON.parse(line)
+      if (!e || !Buffer.from(leanCanonicalBytes(e)).equals(Buffer.from(line))) return fail("V8_PROGRESS_CHANGED")
+      if (e.kind === "charge") {
+        const c = e.charge, slot = a.slots[charges]
+        if (stopped || charges !== terminals || !slot || !exactLabKeys(e, ["kind", "charge"]) || !c || !exactLabKeys(c, ["schemaVersion", "allocationRoot", "slotRoot", "ordinal", "root"]) || c.schemaVersion !== "lean-slot-charge-v1" || c.allocationRoot !== a.root || c.ordinal !== charges || c.slotRoot !== slot.root || c.root !== labRoot(c.schemaVersion, { schemaVersion: c.schemaVersion, allocationRoot: a.root, slotRoot: slot.root, ordinal: charges })) return fail("V8_PROGRESS_CHANGED")
+        charges++; chargeRoot = c.root
+      } else if (e.kind === "terminal") {
+        const r = e.record
+        if (stopped || charges !== terminals + 1 || e.chargeRoot !== chargeRoot || !exactLabKeys(e, ["kind", "chargeRoot", "record", "replay"]) || !r || !exactLabKeys(r, ["classification", "code", "outcome", "elapsedMs", "cleanupComplete", "invocationCount", "accountingRoot", "executionRoot", "telemetry"]) || !["success", "player_violation", "system_failure"].includes(String(r.classification)) || !natural(r.elapsedMs) || r.elapsedMs > LEAN_CAPS.matchMs + 30000 || !natural(r.invocationCount) || r.invocationCount > 49600 || !ROOT(r.accountingRoot) || !ROOT(r.executionRoot) || !r.telemetry || !exactLabKeys(r.telemetry, ["transitions", "events"]) || !Object.values(r.telemetry).every(natural) || typeof r.cleanupComplete !== "boolean") return fail("V8_PROGRESS_CHANGED")
+        if (r.classification === "success" ? r.code !== "OK" || !r.cleanupComplete || !["bottom", "top", "DRAW"].includes(String(r.outcome)) : r.outcome !== null || (r.classification === "player_violation" ? r.code !== "PLAYER_VIOLATION" || !r.cleanupComplete : !["SUPERVISOR_FAILURE", "CAPACITY", "CLEANUP"].includes(String(r.code))) || !r.cleanupComplete && r.code !== "CLEANUP") return fail("V8_PROGRESS_CHANGED")
+        if (e.replay !== null) {
+          const replay = e.replay
+          if (!exactLabKeys(replay, ["schemaVersion", "privacy", "codec", "compressedRoot", "uncompressedRoot", "compressedBytes", "uncompressedBytes", "frames", "root"])) return fail("V8_PROGRESS_CHANGED")
+          const { root: replayRoot, ...body } = replay
+          if (replay.schemaVersion !== "lean-sampled-replay-gzip-v1" || replay.privacy !== "private_offline" || replay.codec !== "gzip-node-v1" || !ROOT(replay.compressedRoot) || !ROOT(replay.uncompressedRoot) || !natural(replay.compressedBytes) || !natural(replay.uncompressedBytes) || !natural(replay.frames) || replay.compressedBytes > LEAN_CAPS.retainedBytes || replay.uncompressedBytes > 256000000 || replayRoot !== labRoot(replay.schemaVersion, body)) return fail("V8_PROGRESS_CHANGED")
+        }
+        terminals++
+      } else if (e.kind === "resource") {
+        if (!exactLabKeys(e, ["kind", "elapsedMs", "physicalBytes", "bufferBytes", "scratchBytes"]) || !natural(e.elapsedMs) || !natural(e.physicalBytes) || !natural(e.bufferBytes) || !natural(e.scratchBytes) || e.elapsedMs < elapsed || e.elapsedMs > w.carryMs + Math.max(0, Date.now() - w.anchorMs) + 1 || e.physicalBytes < physical || e.physicalBytes + floor > LEAN_CAPS.retainedBytes || e.bufferBytes + e.scratchBytes > LEAN_CAPS.scratchBytes || e.physicalBytes + floor + e.bufferBytes + e.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes) return fail("V8_PROGRESS_CHANGED")
+        elapsed = e.elapsedMs; physical = e.physicalBytes
+      } else if (e.kind === "stop") {
+        if (stopped || !exactLabKeys(e, ["kind", "reason"]) || !["complete", "failure", "capacity", "integrity"].includes(String(e.reason)) || e.reason === "complete" && (charges !== 36 || terminals !== 36)) return fail("V8_PROGRESS_CHANGED")
+        stopped = true
+      } else return fail("V8_PROGRESS_CHANGED")
+    }
+    progressPrefix = bytes; journalFloor = Math.max(journalFloor, elapsed)
+    // Charges do not complete cells. In particular the parent's active flag
+    // cannot describe its child: an in-flight charged cell remains reserved.
+    if (!closure) remainingSlots = 36 - terminals
+  }
   const writePath = (name: string) => { const path = resolve(name); if (![p.allocation, p.request, p.window].map(name => resolve(name)).includes(path) && ![p.store, p.temp].some(name => path.startsWith(resolve(name) + "/") && !relative(resolve(name), path).includes("/"))) return fail("V8_WRITE_SCOPE"); return path }
   const fileBlocks = (path: string) => { try { const s = lstatSync(path); if (!s.isFile() || s.isSymbolicLink() || s.nlink !== 1 || s.uid !== process.getuid?.() || realpathSync(path) !== path) return fail("V8_WRITE_SCOPE"); return { blocks: s.blocks * 512, size: s.size } } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return { blocks: 0, size: -1 }; throw error } }
-  const resource = (additional: number) => {
+  const resource = (additional: number, readingProgress = false) => {
     if (invalid || process.pid !== pid || process.cwd() !== cwd || !Number.isSafeInteger(additional) || additional < 0) return fail("V8_RESERVATION_SCOPE")
     const owned = measure()
     let outstanding = 0
@@ -935,7 +978,7 @@ export const createLeanContinuationLocalReservationV8 = (window: LeanBaselineCon
     const now = Date.now(), mono = process.hrtime.bigint() - began, usage = process.memoryUsage(), disk = statfsSync(cwd, { bigint: true }), free = disk.bavail * disk.bsize, native = 2 * 268435456 + 512000000 + 335544320
     // Before the first bounded journal leaf is read, no dependent effect is
     // admitted. reserve() rechecks after it obtains the fresh pilot close.
-    const remaining = closure ? closureStart === undefined ? 0 : Math.max(0, w.closureMs - Math.max(0, now - closureStart)) : remainingSlots * LEAN_CAPS.matchMs + w.closureMs + w.offlineOverheadMs
+    const remaining = readingProgress ? 0 : closure ? closureStart === undefined ? 0 : Math.max(0, w.closureMs - Math.max(0, now - closureStart)) : remainingSlots * LEAN_CAPS.matchMs + w.closureMs + w.offlineOverheadMs
     if (mono < 0n || mono > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n || now < wall) return fail("V8_RESERVATION_CLOCK")
     const elapsed = Math.max(leanContinuationGlobalFloorV2(now), w.carryMs + Math.max(now - w.anchorMs, wall - w.anchorMs + Number((mono + 999999n) / 1000000n)), journalFloor)
     if (![retained, reserve, owned.scratchBytes + reserve, elapsed + remaining, now + remaining].every(n => Number.isSafeInteger(n) && n >= 0) || now + remaining > w.deadlineMs || elapsed + remaining > w.capMs || retained > LEAN_CAPS.retainedBytes || retained + LEAN_CAPS.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || owned.scratchBytes + reserve + usage.arrayBuffers > LEAN_CAPS.scratchBytes || usage.rss + (process.connected ? rssOf(process.ppid) : 0) + usage.arrayBuffers + reserve + native > LEAN_BASELINE_CONTINUATION_POLICY_V2.memoryBytes || observeLeagueAvailableMemoryBytes() < native || free > BigInt(Number.MAX_SAFE_INTEGER) || free < BigInt(LEAN_CAPS.totalBytes - floor - observedGrowth - owned.retainedBytes) || process.connected === false && process.send !== undefined) return fail("V8_RESERVATION_CAPACITY")
@@ -943,6 +986,7 @@ export const createLeanContinuationLocalReservationV8 = (window: LeanBaselineCon
   }
   const reserve = (additional = 0) => {
     try {
+      progress(additional)
       let result = resource(additional)
       const path = join(p.store, "time.ndjson")
       if (existsSync(path)) {
@@ -955,7 +999,7 @@ export const createLeanContinuationLocalReservationV8 = (window: LeanBaselineCon
         const started = new Set<string>()
         for (const line of rows) {
           const row = JSON.parse(line) as Record<string, unknown>
-          if (!exactLabKeys(row, ["kind", "id", "atMs"]) || !["start", "close"].includes(String(row.kind)) || !["continuation-run-admission", "pilot-entry", "continuation-retained-verifier-v2"].includes(String(row.id)) || !Number.isSafeInteger(row.atMs) || Number(row.atMs) < previous || !Buffer.from(leanCanonicalBytes(row)).equals(Buffer.from(line))) return fail("V8_JOURNAL_CHANGED")
+          if (!exactLabKeys(row, ["kind", "id", "atMs"]) || !["start", "close"].includes(String(row.kind)) || !["continuation-run-admission", "pilot-entry", "continuation-retained-verifier-v2"].includes(String(row.id)) || !Number.isSafeInteger(row.atMs) || Number(row.atMs) < previous || Number(row.atMs) > Date.now() + 1 || !Buffer.from(leanCanonicalBytes(row)).equals(Buffer.from(line))) return fail("V8_JOURNAL_CHANGED")
           const id = String(row.id)
           if (row.kind === "start") { if (activeId !== undefined || started.has(id)) return fail("V8_JOURNAL_CHANGED"); started.add(id); activeId = id }
           else { if (activeId !== id) return fail("V8_JOURNAL_CHANGED"); activeId = undefined }
@@ -968,6 +1012,7 @@ export const createLeanContinuationLocalReservationV8 = (window: LeanBaselineCon
     } catch (error) { invalid = true; throw error }
   }
   return Object.freeze({ reserve, reserveWrite(bytes: number, name: string) { try { const path = writePath(name), before = fileBlocks(path); if (!Number.isSafeInteger(bytes) || bytes < 0 || outstandingWrites.has(path)) return fail("V8_WRITE_SCOPE"); outstandingWrites.set(path, { bytes, previousBlocks: before.blocks, previousSize: before.size }); return reserve() } catch (error) { invalid = true; throw error } },
+    bindProgress(ledger: LeanExperimentLedger) { if (invalid || progressLedger || resolve(ledger.directory) !== resolve(p.store) || ledger.allocation.schemaVersion !== "lean-baseline-continuation-allocation-v2" || ledger.allocation.window.root !== w.root || readLeanAdmittedContinuationAllocationV2(ledger) !== ledger.allocation) return fail("V8_PROGRESS_SCOPE"); progressLedger = ledger },
     completeWrite(name: string, unwritten = false) { try { const path = writePath(name), pending = outstandingWrites.get(path); if (!pending) return fail("V8_WRITE_SCOPE"); reserve(); const after = fileBlocks(path); if (unwritten ? pending.previousSize !== -1 || after.size !== -1 : after.size <= pending.previousSize || after.blocks < pending.previousBlocks) return fail("V8_WRITE_SCOPE"); outstandingWrites.delete(path); return reserve() } catch (error) { invalid = true; throw error } },
     reconcileAuthenticated(carriedDebitFloor: number) { if (invalid || outstandingWrites.size || !Number.isSafeInteger(carriedDebitFloor) || carriedDebitFloor < floor) return fail("V8_CARRIED_DEBIT"); floor = carriedDebitFloor; accounting = createLeanContinuationReservationAccountingV8(floor); reserve() },
     setRemainingSlots(slots: number) { if (invalid || !Number.isSafeInteger(slots) || slots < 0 || slots > 36) return fail("V8_RESERVATION_SCOPE"); remainingSlots = slots },
@@ -1306,6 +1351,7 @@ const openContinuationContextV2 = (requestPath: string, reader: boolean, diagnos
   const identities = v6 ? () => {} : createLeanContinuationIdentityGuardV2(pinned, survivors)
   let controller: ReturnType<typeof createLeanContinuationStageControllerV6> | ReturnType<typeof createLeanContinuationBoundaryControllerV8> | undefined
   const binding = Object.freeze({ ...c.binding, allocationRoot: allocation.root, carryRoot: allocation.predecessor.root, claimRoot: claim.root, ledger })
+  c.localReservation?.bindProgress(ledger)
   continuationRunStageV2(diagnostic, "MANIFEST_CARRY_HOLD", true)
   const startWall = Date.now(), startMono = process.hrtime.bigint()
   const guardedMetadataPaths = [c.paths.allocation, join(ledger.directory, "allocation.json"), join(ledger.directory, "ledger.ndjson"), join(ledger.directory, "time.ndjson")] as const
@@ -1327,14 +1373,14 @@ const openContinuationContextV2 = (requestPath: string, reader: boolean, diagnos
     const journal = descriptor(join(ledger.directory, "ledger.ndjson"), 4194304, 0o600, bytes => reserveMetadata(additionalBytes + CONTINUATION_V2_METADATA_PARSE_RESERVE + (bytes ?? 0)))
     if (expectedLedger && leanBytesRoot(journal) !== expectedLedger) return fail("V2_LEDGER_CHANGED")
     const state = readLeanLedger(ledger), nowMs = Date.now(), usage = process.memoryUsage(), fs = statfsSync(ledger.directory, { bigint: true }), child = process.connected ? process.pid : 0, parent = process.connected ? process.ppid : process.pid
-    c.localReservation?.setRemainingSlots(closure ? 0 : 36 - state.charges.size + (active ? 1 : 0))
+    c.localReservation?.setRemainingSlots(closure ? 0 : 36 - state.terminals.size)
     if (state.stopped && !closure) { closure = true; closureBegan = readLeanTimeAccounting(ledger).closes.get("pilot-entry") ?? nowMs }
     const elapsedMono = process.hrtime.bigint() - startMono
     if (elapsedMono < 0n || elapsedMono > BigInt(Number.MAX_SAFE_INTEGER) * 1000000n || child && process.ppid !== readLeanChildEntry(ledger).parentPid) return fail("V2_LIVENESS")
     let growth = 0
     if (c.localReservation) for (const row of carry.inventory as LeanContinuationInventoryRowV2[]) { const s = lstatSync(resolve(row.path)); if (!Number.isSafeInteger(s.blocks * 512) || s.blocks * 512 < row.allocatedBytes) return fail("V8_SURVIVOR_SHRINK"); growth += s.blocks * 512 - row.allocatedBytes }
     c.localReservation?.observeGrowth(growth)
-    const sample = { nowMs, monotonicElapsedMs: Math.max(0, startWall - c.window.anchorMs) + Number((elapsedMono + 999999n) / 1000000n), remainingSlots: closure ? 0 : 36 - state.charges.size + (active ? 1 : 0), ...(closure ? { remainingClosureMs: Math.max(0, c.window.closureMs - Math.max(0, nowMs - closureBegan)), remainingOfflineMs: 0 } : {}), charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger) + growth, scratchBytes: measureLeanPhysicalBytes(c.paths.temp) + metadataReserveBytes, parentRssBytes: child ? rssOf(parent) : usage.rss, childRssBytes: child ? usage.rss : 0, arrayBuffersBytes: usage.arrayBuffers + metadataReserveBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(fs.bavail * fs.bsize), live: !child || process.connected === true }
+    const sample = { nowMs, monotonicElapsedMs: Math.max(0, startWall - c.window.anchorMs) + Number((elapsedMono + 999999n) / 1000000n), remainingSlots: closure ? 0 : c.localReservation ? 36 - state.terminals.size : 36 - state.charges.size + (active ? 1 : 0), ...(closure ? { remainingClosureMs: Math.max(0, c.window.closureMs - Math.max(0, nowMs - closureBegan)), remainingOfflineMs: 0 } : {}), charged: state.charged, retainedBytes: cumulativeLeanPhysicalBytes(ledger) + growth, scratchBytes: measureLeanPhysicalBytes(c.paths.temp) + metadataReserveBytes, parentRssBytes: child ? rssOf(parent) : usage.rss, childRssBytes: child ? usage.rss : 0, arrayBuffersBytes: usage.arrayBuffers + metadataReserveBytes, availableMemoryBytes: observeLeagueAvailableMemoryBytes(), freeBytes: Number(fs.bavail * fs.bsize), live: !child || process.connected === true }
     assertLeanBaselineContinuationFrontierV2(allocation, sample, ledger)
     if (currentLeanElapsedMs(ledger) + sample.remainingSlots * LEAN_CAPS.matchMs + (sample.remainingClosureMs ?? c.window.closureMs) + (sample.remainingOfflineMs ?? c.window.offlineOverheadMs) > allocation.caps.elapsedMs) return fail("V2_JOURNAL_FRONTIER")
     continuationRunCountV2(diagnostic, "closing_began"); identities(); continuationRunCountV2(diagnostic, "closing_completed"); return sample
