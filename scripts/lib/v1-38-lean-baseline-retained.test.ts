@@ -117,13 +117,13 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     const old = continuationFixtureBase().allocation
     const policy = continuationLedger.LEAN_BASELINE_CONTINUATION_POLICY_V2
     const anchorMs = policy.globalAnchorMs, carryMs = Math.max(policy.oldCheckElapsedMs, continuationLedger.leanContinuationGlobalFloorV2(anchorMs))
-    const syntheticA = 1792017187000 + 12345, syntheticCarry = 459375903 + (syntheticA - 1791807317000)
+    const syntheticA = (routeNamespace === "20261015-v8" ? 1792093334000 : 1792017187000) + 12345, syntheticCarry = 459375903 + (syntheticA - 1791807317000)
     const windowBody = {
       schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const,
-      grantId: "synthetic-no-authority", approvalEvidence: { humanDecisionId: routeNamespace === "20261014-v7" ? "human-approval-observed-20261014T223307Z" : "synthetic-only", recordedBy: "/root/cowards-game/reviewers/human" },
+      grantId: "synthetic-no-authority", approvalEvidence: { humanDecisionId: routeNamespace === "20261015-v8" ? "human-approval-observed-20261015T194214Z" : routeNamespace === "20261014-v7" ? "human-approval-observed-20261014T223307Z" : "synthetic-only", recordedBy: "/root/cowards-game/reviewers/human" },
       approvedAtMs: anchorMs, anchorMs, deadlineMs: anchorMs + policy.durationMs, carryMs, capMs: carryMs + policy.durationMs,
       durationMs: policy.durationMs, closureMs: policy.closureMs, offlineOverheadMs: policy.offlineOverheadMs,
-      routeNamespace, ...(routeNamespace === "20261014-v6" ? { approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 } : routeNamespace === "20261014-v7" ? { approvedAtMs: 1792017187000, anchorMs: syntheticA, carryMs: syntheticCarry, capMs: syntheticCarry + 28800000, deadlineMs: syntheticA + 28800000 } : {}), reviewedSourceHead: "c".repeat(40), sourceRoot: old.sourceRoot,
+      routeNamespace, ...(routeNamespace === "20261014-v6" ? { approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 } : routeNamespace === "20261014-v7" || routeNamespace === "20261015-v8" ? { approvedAtMs: routeNamespace === "20261015-v8" ? 1792093334000 : 1792017187000, anchorMs: syntheticA, carryMs: syntheticCarry, capMs: syntheticCarry + 28800000, deadlineMs: syntheticA + 28800000 } : {}), reviewedSourceHead: "c".repeat(40), sourceRoot: old.sourceRoot,
       sourceGateRoot: root("source-gate"), planRoot: old.planRoot, runOperator: "/root/cowards-game/operators/runner", readerOperator: "/root/cowards-game/operators/retained-reader",
     }
     const window = { ...windowBody, root: labRoot(windowBody.schemaVersion, windowBody) }
@@ -321,6 +321,17 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       if (mode !== "pass") expect(() => controller.live(context, () => {})).toThrow()
     } finally { for (const spy of [time, state, elapsed, physical, clock]) spy.mockRestore(); fs.rmSync(directory, { recursive: true }) }
   }
+  it("continuation-boundary-v8-R refuses foreign publication callbacks rather than minting private success (real ledger/controller, synthetic report)", () => {
+    const { allocation } = v2Allocation("20261015-v8"), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "v8-private-return-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    const disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), clock = vi.spyOn(Date, "now").mockReturnValue(allocation.window.anchorMs + 10)
+    try {
+      const ledger = continuationLedger.createLeanLedger(join(dir, "store"), allocation), binding = Object.freeze({}), controller = continuationFiles.createLeanContinuationBoundaryControllerV8([], [], [], binding, () => {}, () => {})
+      continuationLedger.beginLeanInterval(ledger, "continuation-retained-verifier-v2"); continuationLedger.closeLeanInterval(ledger, "continuation-retained-verifier-v2")
+      const publish = vi.fn(), foreignStage = <T>(body: () => T) => controller.withStage(binding, "publication", body)
+      expect(() => continuationReader.publishLeanContinuationRetainedCheckV2(ledger, { complete: true } as never, null, () => {}, publish as never, foreignStage)).toThrow(/V2_TERMINAL_REFUSAL/)
+      expect(publish).not.toHaveBeenCalled()
+    } finally { clock.mockRestore(); disk.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
+  })
   it.each(["pass", "closing", "uncertain", "foreign"] as const)("[WR-CAD-02] [continuation-stage-cadence-I] actual V6 publisher closes full acceptance and never writes issued credit: %s", mode => publisherSeam(mode, "20261014-v6"))
   it.each(["pass", "closing", "uncertain", "foreign"] as const)("[continuation-ready-v7-O] actual V7 publisher pending closing/private identity: %s (inert external observations)", mode => publisherSeam(mode, "20261014-v7"))
   it.each(["source", "head", "input", "reservation", "deadline", "namespace", "failure-resource", "failure-pass"] as const)("[continuation-ready-v7-O] actual publisher keeps redacted nonpositive evidence under %s (inert external seams)", mode => {
