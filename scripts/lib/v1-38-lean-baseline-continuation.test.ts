@@ -50,6 +50,35 @@ describe("continuation-boundary-v8-P", () => {
     expect(() => { const retained = continuation.createLeanContinuationReservationAccountingV8(known, 4096).reserve(100, 0); if (retained > 88924160 + 4096 + 100) throw new Error("capacity"); importer(); allocate() }).toThrow()
     expect(importer).not.toHaveBeenCalled(); expect(allocate).not.toHaveBeenCalled()
   })
+  it.each(["source", "archive", "bootstrap", "prepare", "claim", "import", "charge", "dispatch", "post_match", "terminal", "reader", "publication"] as const)("permanently refuses %s closing without accepting its value", stage => {
+    let calls = 0, effect = 0
+    const context = Object.freeze({}), c = continuation.createLeanContinuationBoundaryControllerV8([], [], [], context, () => { if (++calls === 2) throw new Error("closing") }, () => {})
+    expect(() => c.withStage(context, stage, () => ++effect)).toThrow("closing")
+    expect(effect).toBe(1); expect(() => c.reserve(context, 0)).toThrow(); expect(() => c.withStage(context, "charge", () => ++effect)).toThrow(); expect(effect).toBe(1)
+  })
+  it("actual importer reservation refuses the known V8 debit before any allocation or historical file read", () => {
+    const context = Object.freeze({}), allocate = vi.fn(), git = vi.fn(), diskLimit = 88924160 + 1167360 - 1
+    const account = continuation.createLeanContinuationReservationAccountingV8(continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V8, 8192)
+    const c = continuation.createLeanContinuationBoundaryControllerV8([], [], [], context, () => {}, bytes => { if (account.required(bytes, 0) > diskLimit) throw new Error("capacity") })
+    const read = vi.spyOn(fs, "openSync")
+    expect(() => continuation.authenticateLeanBaselineContinuationCarryV2(git, [], bytes => c.reserve(context, bytes ?? 0))).toThrow("capacity")
+    expect(read).not.toHaveBeenCalled(); expect(git).not.toHaveBeenCalled(); expect(allocate).not.toHaveBeenCalled(); read.mockRestore()
+  })
+  it("measures real selected owned paths, refuses shrink and unknown members without source or ledger parsing", () => {
+    const anchorMs = 1792093334001, { root: _, ...old } = continuationWindowFixtureV2(), body = { ...old, routeNamespace: "20261015-v8", approvedAtMs: 1792093334000, approvalEvidence: { ...old.approvalEvidence, humanDecisionId: "human-approval-observed-20261015T194214Z" }, anchorMs, carryMs: ledger.leanContinuationGlobalFloorV2(anchorMs), capMs: ledger.leanContinuationGlobalFloorV2(anchorMs) + 28800000, deadlineMs: anchorMs + 28800000 }
+    const w = ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) }), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V8
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "boundary-v8-owned-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    try {
+      fs.mkdirSync(resolve(".strategy-lab"), { mode: 0o700 }); fs.mkdirSync(resolve(".planning/artifacts"), { recursive: true })
+      fs.mkdirSync(resolve(p.store), { mode: 0o700 }); fs.mkdirSync(resolve(p.temp), { mode: 0o700 })
+      writeFileSync(resolve(p.window), "window", { mode: 0o600 }); writeFileSync(resolve(p.request), "request", { mode: 0o600 })
+      const observe = continuation.createLeanContinuationOwnedMeasurementV8(w), first = observe()
+      writeFileSync(resolve(p.store, "ledger.ndjson"), "not parsed by measurement", { mode: 0o600 })
+      expect(observe().retainedBytes).toBeGreaterThanOrEqual(first.retainedBytes)
+      writeFileSync(resolve(p.store, "unknown.json"), "no", { mode: 0o600 })
+      expect(observe).toThrow(/MEMBERS/)
+    } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+  })
 })
 
 describe("[continuation-ready-v7-L] delayed initialization policy (synthetic A only)", () => {
