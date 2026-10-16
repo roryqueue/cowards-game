@@ -19,13 +19,97 @@ import * as continuationEntry from "../run-v1-38-lean-baseline.js"
 import * as continuationLedger from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as continuationFiles from "./v1-38-lean-baseline-continuation.js"
 import * as leagueHost from "../run-v1-38-serious-league.js"
+import * as childProcess from "node:child_process"
+import * as continuationGit from "./v1-38-lean-container-match-session.js"
+import * as factoryImplementation from "../v1-38-factory-implementation.js"
 vi.mock("node:fs", async original => ({ ...await original<typeof import("node:fs")>(), readSync: vi.fn((await original<typeof import("node:fs")>()).readSync) }))
+vi.mock("node:child_process", async original => { const actual = await original<typeof import("node:child_process")>(); return { ...actual, execFileSync: vi.fn(actual.execFileSync) } })
 vi.mock("./v1-38-lean-seal-metadata.js", () => ({ inspectLeanSealMetadata: () => {
   const body = { schemaVersion: "lean-seal-metadata-inventory-v1", protocol: { present: false, bytesRoot: null }, originalPublicReference: { present: false, bytesRoot: null }, checkoutDirty: true, originalCompatibleUnopenedSealVerified: false, privateStoreOrPreimageRead: false, newExploratorySealCreated: false, reservedHoldoutPerProfile: 4, disposition: "holdout_claim_deferred_no_verified_compatible_seal", reason: "existing_clean_checkout_seal_prerequisite_not_met", claims: { absenceOfAllExternalSealsProved: false, originalCommitmentSatisfied: false, holdoutOpened: false } }
   return { ...body, root: labRoot("lean-seal-metadata-inventory-v1", body) }
 } }))
 
 const root = (name: string): LabRoot => labRoot("lean-retained-test-v1", name)
+it.each(["missing", "getter", "proxy"] as const)("continuation-startup-repair-C initial default reader refusal is preclaim and withheld: %s", async mode => {
+  const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "public-startup-reader-initial-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), stages: string[] = [], getter = vi.fn(), trap = vi.fn()
+  const ipc = { send: Object.getOwnPropertyDescriptor(process, "send"), connected: Object.getOwnPropertyDescriptor(process, "connected") }
+  Object.defineProperty(process, "send", { value: undefined, configurable: true }); Object.defineProperty(process, "connected", { value: false, configurable: true })
+  const error = mode === "getter" ? Object.defineProperty({}, "message", { get: getter }) : new Proxy({}, { get: trap, ownKeys: trap })
+  const window = mode === "missing" ? undefined : vi.spyOn(continuationEntry, "readLeanBaselineContinuationWindowV2").mockImplementation(() => { throw error })
+  try {
+    let denied = false
+    try { continuationReader.verifyLeanBaselineContinuationRetainedV2(continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V8.request, stage => { stages.push(stage) }) } catch { denied = true }
+    expect(denied).toBe(true)
+    expect(stages).toEqual(["INITIAL_WINDOW"]); expect(fs.readdirSync(dir)).toEqual([])
+    if (mode !== "missing") {
+      const thrown = await continuationEntry.leanBaselineMain(["verify-continuation-v2", "--request", continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V8.request]).catch(value => value)
+      expect(continuationEntry.leanBaselineContinuationReaderFailureV2(thrown)).toBe("LEAN_BASELINE_VERIFY stage=INITIAL_WINDOW code=DETAILS_WITHHELD\n")
+    }
+    expect(getter).not.toHaveBeenCalled(); expect(trap).not.toHaveBeenCalled()
+  } finally { window?.mockRestore(); cwd.mockRestore(); for (const key of ["send", "connected"] as const) { const descriptor = ipc[key]; if (descriptor) Object.defineProperty(process, key, descriptor); else Reflect.deleteProperty(process, key) }; fs.rmSync(dir, { recursive: true }) }
+})
+// COVERAGE GAP: real default opening reached the expected fixed-anchor refusal,
+// but two closed attempts took11.83/11.95s, exceeding the10s fixture contract.
+// Not counted as passing coverage. No guard or timeout is weakened to enable it.
+it.skip("continuation-startup-repair-C GAP default opening/controller/importer exceeds10s fixture bound (public synthetic files; external Git/resources only)", async () => {
+  const began = performance.now(), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "public-startup-reader-default-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V8
+  let statVisits = 0
+  const actualStat = fs.lstatSync, stat = vi.spyOn(fs, "lstatSync").mockImplementation(((path: fs.PathLike, ...args: unknown[]) => {
+    // Drop instrumentation histories, not checks or observations. In particular
+    // mocked readSync must not retain every transient buffer from real guards.
+    if (++statVisits % 128 === 0) { cwd.mockClear(); vi.mocked(fs.readSync).mockClear(); for (const spy of spies) spy.mockClear?.() }
+    return Reflect.apply(actualStat, fs, [resolve(String(path)), ...args])
+  }) as typeof fs.lstatSync)
+  const oldArgs = process.execArgv, ipc = { send: Object.getOwnPropertyDescriptor(process, "send"), connected: Object.getOwnPropertyDescriptor(process, "connected") }, spies: { mockRestore(): void; mockClear?(): void }[] = [stat]
+  let writtenBytes = 0
+  const write = (path: string, value: string | Uint8Array, mode = 0o644) => { const absolute = resolve(path); fs.mkdirSync(resolve(absolute, ".."), { recursive: true }); fs.writeFileSync(absolute, value, { mode }); fs.chmodSync(absolute, mode); writtenBytes += Buffer.byteLength(value); expect(writtenBytes).toBeLessThan(8 * 1024 * 1024) }
+  const stages: string[] = [], sourceHead = "b".repeat(40), fixedHead = "c".repeat(40), reviewedHead = "a".repeat(40), anchor = 1792093335000
+  let importAttempts = 0, controllerCalls = 0
+  try {
+    Object.defineProperty(process, "send", { value: undefined, configurable: true }); Object.defineProperty(process, "connected", { value: false, configurable: true })
+    spies.push(vi.spyOn(factoryImplementation, "factoryAssessmentImplementationManifest").mockReturnValue({ entries: [], root: root("public-source-catalog") }))
+    spies.push(vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000))
+    // Named external closed-history metadata observation only. No importer,
+    // controller, preflight or default context is replaced by a success object.
+    spies.push(vi.spyOn(continuationFiles, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096))
+    spies.push(vi.spyOn(childProcess, "execFileSync").mockImplementation(((command: string) => command === "ps" ? "100\n" : "0\n") as typeof childProcess.execFileSync))
+    const sourcePaths = [...continuationEntry.LEAN_BASELINE_CONTINUATION_OWNED_PATHS, "scripts/run-v1-38-lean-baseline.sh", "scripts/lib/v1-38-lean-baseline-analysis.ts", "scripts/lib/v1-38-lean-baseline-metrics.ts", "scripts/lib/v1-38-lean-cold-corpus.ts", "scripts/lib/v1-38-lean-seal-metadata.ts", "scripts/lib/v1-38-lean-training-adapter.ts", "scripts/lib/v1-38-lean-baseline.ts", "packages/strategy-lab/src/league/lean-training.ts", "scripts/run-v1-38-lean-experiment.ts", "scripts/lib/v1-38-lean-child-cli-terminal.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts", "packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"]
+    for (const path of new Set([...sourcePaths, ...continuationEntry.LEAN_BASELINE_CONTINUATION_PLANNING_PATHS])) write(path, "public synthetic source only", path.endsWith(".sh") ? 0o755 : 0o644)
+    const base = continuationEntry.leanBaselineContinuationSourceManifestV2(), planRoot = base.planningEntries.find(row => row.path.endsWith("265-16-BASELINE-CONTINUATION-PLAN-20261012.md"))!.root
+    const sg: continuationEntry.LeanContinuationSourceGateV2 = { schemaVersion: "lean-baseline-continuation-source-gate-v2", plan_check: "passed", source_review: "passed", root_validation: "passed", source_verification: "passed", commands_closed: true, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceAuthor: "public-author", sourceReviewer: "public-reviewer", sourceVerifier: "public-verifier" }
+    const carryMs = continuationLedger.leanContinuationGlobalFloorV2(anchor), wb = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "public-default-refusal-no-authority", approvalEvidence: { humanDecisionId: "human-approval-observed-20261015T194214Z", recordedBy: "public-fixture" }, approvedAtMs: 1792093334000, anchorMs: anchor, deadlineMs: anchor + 28800000, carryMs, capMs: carryMs + 28800000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261015-v8" as const, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: labRoot(sg.schemaVersion, sg), planRoot, runOperator: "public-runner", readerOperator: "public-reader" }, window = continuationLedger.validateLeanBaselineContinuationWindowV2({ ...wb, root: labRoot(wb.schemaVersion, wb) })
+    const dg: continuationEntry.LeanContinuationDataGateV2 = { schemaVersion: "lean-baseline-continuation-data-gate-v2", status: "passed", grantId: window.grantId, windowRoot: window.root, windowBytesRoot: leanBytesRoot(leanCanonicalBytes(window)), reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: window.sourceGateRoot, planRoot, approvalEvidence: window.approvalEvidence, runOperator: window.runOperator, readerOperator: window.readerOperator, dataReviewer: "public-data-reviewer", commands_closed: true }
+    write(p.gates, `\`\`\`json\n${Buffer.from(leanCanonicalBytes(sg))}\n\`\`\`\n\`\`\`json\n${Buffer.from(leanCanonicalBytes(dg))}\n\`\`\`\n`); write(p.window, leanCanonicalBytes(window), 0o600)
+    const clock = vi.spyOn(Date, "now").mockReturnValue(anchor); spies.push(clock)
+    process.execArgv = ["--import", "tsx"]; vi.stubEnv("TSX_DISABLE_CACHE", "1"); vi.stubEnv("NODE_DISABLE_COMPILE_CACHE", "1"); vi.stubEnv("TMPDIR", resolve(p.temp)); for (const key of ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"]) vi.stubEnv(key, undefined)
+    const manifest = continuationEntry.leanBaselineContinuationDataManifestV2(window, continuationEntry.leanBaselineContinuationSourceManifestV2()), seed = "public-default-refusal", coldRoot = leanColdProcedureRoot(seed)
+    const request: continuationEntry.LeanBaselineContinuationRequestV2 = { schemaVersion: "lean-baseline-continuation-request-v2", seed, sourceHead, sourceRoot: base.root, planningRoot: manifest.planningRoot, planRoot, reviewRoot: window.sourceGateRoot, coldRoot, candidateRoots: continuationEntry.deriveLeanBaselineCandidateRoots(coldRoot), requestRoots: continuationEntry.deriveLeanBaselineRequestRoots({ seed, coldRoot, planRoot, sourceRoot: base.root }), offlineOverheadMs: window.offlineOverheadMs, sourceAuthor: sg.sourceAuthor, runOperator: window.runOperator, readerOperator: window.readerOperator, windowRoot: window.root, windowBytesRoot: manifest.windowBytesRoot, sourceGateRoot: window.sourceGateRoot, dataReviewRoot: manifest.dataReviewRoot, manifestRoot: manifest.manifestRoot }
+    write(p.request, leanCanonicalBytes(request), 0o600); fs.mkdirSync(resolve(p.temp), { mode: 0o700 })
+    const inventory: continuationFiles.LeanContinuationInventoryRowV2[] = [], custody = { publicSynthetic: true }, pb = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: 465187899, allocatedDiskBytes: 90091520, residualDiskBytes: 90091520, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: root("public-original"), closedCapsuleRoot: labRoot("lean-baseline-continuation-closed-capsule-v2", custody), custodyRoot: labRoot("lean-baseline-continuation-custody-v2", custody), inventoryRoot: labRoot("lean-baseline-continuation-inventory-v2", inventory), qualifiedReaderAuthority: "cost_only" as const }, predecessor = { ...pb, root: labRoot(pb.schemaVersion, pb) }
+    const allocation = continuationLedger.createLeanBaselineContinuationAllocationV2({ sourceRoot: request.sourceRoot, reviewRoot: request.reviewRoot, coldRoot: request.coldRoot, planRoot: request.planRoot, candidateRoots: request.candidateRoots, requestRoots: request.requestRoots, seed: request.seed, sourceHead, planningRoot: request.planningRoot, manifestRoot: request.manifestRoot, windowBytesRoot: request.windowBytesRoot, sourceGateRoot: request.sourceGateRoot, dataReviewRoot: request.dataReviewRoot, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)), predecessor, window }), ledger = continuationLedger.createLeanLedger(resolve(p.store), allocation)
+    write(p.allocation, leanCanonicalBytes(allocation)); write(join(p.store, "carry.json"), leanCanonicalBytes({ carry: predecessor, inventory, custody }), 0o600); write(join(p.store, "source-manifest.json"), leanCanonicalBytes(manifest), 0o600)
+    const cb = { schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: window.grantId, routeNamespace: window.routeNamespace, windowRoot: window.root, windowBytesRoot: request.windowBytesRoot, requestBytesRoot: allocation.requestBytesRoot, sourceHead, sourceRoot: request.sourceRoot, sourceGateRoot: request.sourceGateRoot, dataReviewRoot: request.dataReviewRoot, planningRoot: request.planningRoot, manifestRoot: request.manifestRoot }, claim = { ...cb, root: labRoot(cb.schemaVersion, cb) }
+    write(p.claim, leanCanonicalBytes(claim), 0o600)
+    const hb = { schemaVersion: "lean-baseline-continuation-source-hold-v2", allocationRoot: allocation.root, sourceHead, manifestRoot: allocation.manifestRoot, claimRoot: claim.root, rows: [] }; write(join(p.store, "source-hold.json"), leanCanonicalBytes({ ...hb, root: labRoot(hb.schemaVersion, hb) }), 0o600)
+    clock.mockReturnValue(anchor + 100); continuationLedger.beginLeanInterval(ledger, "continuation-run-admission"); continuationLedger.closeLeanInterval(ledger, "continuation-run-admission")
+    clock.mockReturnValue(anchor + 300)
+    const entry = { schemaVersion: "lean-child-entry-v2" as const, allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, head: fixedHead, parentPid: process.pid + 1000, childPid: process.pid + 1001, handshakeRoot: root("public-token"), wallStartMs: anchor + 300, monotonicStartNs: process.hrtime.bigint().toString() }
+    continuationLedger.publishLeanChildEntry(ledger, entry); continuationLedger.beginLeanInterval(ledger, "pilot-entry", entry.wallStartMs); clock.mockReturnValue(anchor + 600)
+    const terminal = continuationLedger.deriveLeanChildTerminal(ledger, entry, { exitCode: 1, signal: null, wallObservedMs: Date.now(), monotonicObservedNs: process.hrtime.bigint().toString(), status: "child_failed", parentRssBytes: 100000000, childRssObservedBytes: 100000000, physicalBytes: 100000000, freeBytes: 100000000000 }); continuationLedger.publishLeanChildTerminal(ledger, terminal); clock.mockReturnValue(anchor + 1200)
+    spies.push(vi.spyOn(continuationGit, "readLeanBaselineContinuationGitV2").mockImplementation(args => { if (args[0] === "rev-parse") return Buffer.from(`${fixedHead}\n`); if (args[0] === "merge-base") return Buffer.alloc(0); if (args[0] === "rev-list") return Buffer.from(`${fixedHead} ${sourceHead}\n`); if (args[0] === "diff") return Buffer.from(`${p.allocation}\n`); if (args[0] === "show") return fs.readFileSync(resolve(args[1]!.slice(args[1]!.indexOf(":") + 1))); throw new Error("UNEXPECTED_PUBLIC_GIT") }))
+    const actualController = continuationFiles.createLeanContinuationBoundaryControllerV8, actualImporter = continuationFiles.authenticateLeanBaselineContinuationCarryV2
+    spies.push(vi.spyOn(continuationFiles, "createLeanContinuationBoundaryControllerV8").mockImplementation((...args) => { controllerCalls++; return actualController(...args) }), vi.spyOn(continuationFiles, "authenticateLeanBaselineContinuationCarryV2").mockImplementation((...args) => { importAttempts++; return actualImporter(...args) }))
+    const originalTime = fs.readFileSync(join(ledger.directory, "time.ndjson")), originalLedger = fs.readFileSync(join(ledger.directory, "ledger.ndjson"))
+    let refusal: unknown
+    try { continuationReader.verifyLeanBaselineContinuationRetainedV2(p.request, stage => stages.push(stage)) } catch (error) { refusal = error }
+    expect(refusal).toBeDefined(); expect(stages.at(-1)).toBe("IMPORT"); expect(importAttempts).toBe(1); expect(controllerCalls).toBeGreaterThan(0)
+    expect(fs.existsSync(resolve(continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS.allocation))).toBe(false)
+    expect(fs.readFileSync(join(ledger.directory, "time.ndjson"))).toEqual(originalTime); expect(fs.readFileSync(join(ledger.directory, "ledger.ndjson"))).toEqual(originalLedger); expect(originalLedger.length).toBe(0)
+    for (const name of ["reader-claim.json", "retained-check.json", "result.json"]) expect(fs.existsSync(join(ledger.directory, name))).toBe(false)
+    expect(continuationLedger.readLeanTimeAccounting(ledger).closed.has("pilot-entry")).toBe(true)
+    process.stdout.write(`PUBLIC_DEFAULT_READER_REFUSAL ${JSON.stringify({ importAttempts, controllerCalls, stages, writtenBytes, statVisits, sourceOnly: true, authenticatedHistoricalFit: false, validImporterToClaimCoverage: false })}\n`)
+  } finally { for (const spy of spies.reverse()) spy.mockRestore(); process.execArgv = oldArgs; vi.unstubAllEnvs(); for (const key of ["send", "connected"] as const) { const d = ipc[key]; if (d) Object.defineProperty(process, key, d); else Reflect.deleteProperty(process, key) }; cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(10000) }
+}, 10000)
 describe("continuation compressed read admission", () => {
   it("connects bounded reads to shared verification without changing legacy evidence roots or inflation reservations", () => {
     const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-evidence-")))
