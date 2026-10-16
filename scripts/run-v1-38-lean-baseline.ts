@@ -380,6 +380,32 @@ interface LeanContinuationIpcV8 {
   off(event: string, listener: (...args: any[]) => void): unknown
   send?(message: unknown): unknown
 }
+const continuationOwnedFailuresV2 = new WeakMap<object, Readonly<LeanChildFailureReceipt>>()
+const continuationOwnedFailureV2 = (code: "HANDSHAKE" | "PARENT_LOST" | "CHILD_PARENT") => {
+  const error = new TypeError(`LEAN_CONTINUATION_${code}`)
+  continuationOwnedFailuresV2.set(error, Object.freeze({ type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code, stage: code === "CHILD_PARENT" ? "preflight" : "handshake" }))
+  return error
+}
+interface LeanContinuationCliChildV2 { connected: boolean; exitCode?: number | string | null | undefined; disconnect(): void; send?(message: LeanChildFailureReceipt, callback?: (error: Error | null) => void): unknown }
+/** Only exact driver-minted errors carry categories. No hostile field is read. */
+export const resolveLeanContinuationChildCliTerminalV2 = async (action: Promise<unknown>, child: LeanContinuationCliChildV2 = process): Promise<void> => {
+  let exit: 0 | 1 = 0
+  try { await action } catch (error) {
+    exit = 1
+    process.stderr.write("LEAN_BASELINE_FAILED_DETAILS_WITHHELD\n")
+    const trusted = error !== null && typeof error === "object" ? continuationOwnedFailuresV2.get(error) : undefined
+    if (error !== null && typeof error === "object") continuationOwnedFailuresV2.delete(error)
+    const receipt: LeanChildFailureReceipt = trusted ?? { type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code: "UNKNOWN_INTERNAL_FAILURE", stage: "unknown" }
+    if (child.connected && child.send) await new Promise<void>(done => {
+      const timer = setTimeout(done, 250)
+      const finish = () => { clearTimeout(timer); done() }
+      try { child.send!(receipt, finish) } catch { finish() }
+    })
+  } finally { child.exitCode = exit; if (child.connected) { try { child.disconnect() } catch { child.exitCode = 1 } } }
+}
+type ContinuationReaderDiagnosticStageV2 = "INITIAL_WINDOW" | "CONTEXT_OPEN" | "IMPORT" | "REUSE_WINDOW_TERMINAL" | "ENTRY_PID_CONTEXT" | "READER_INTERVAL" | "CLAIM" | "EVIDENCE_RESULT" | "TERMINAL" | "PUBLICATION"
+const continuationReaderFailuresV2 = new WeakMap<object, ContinuationReaderDiagnosticStageV2>()
+export const leanBaselineContinuationReaderFailureV2 = (error: unknown): string => `LEAN_BASELINE_VERIFY stage=${error !== null && typeof error === "object" ? continuationReaderFailuresV2.get(error) ?? "UNKNOWN" : "UNKNOWN"} code=DETAILS_WITHHELD\n`
 const ownContinuationControlV8 = (value: unknown, keys: readonly string[]): Record<string, unknown> | undefined => {
   if (!value || typeof value !== "object" || leanHostIsProxy(value)) return
   const fields = Object.getOwnPropertyDescriptors(value)
@@ -393,7 +419,7 @@ export const waitLeanContinuationReleaseV8 = (checkWindow: () => void, host: Lea
   let armed = false, settled = false, releaseTimer: ReturnType<typeof setTimeout> | undefined
   let stagingTimer: ReturnType<typeof setInterval> | undefined
   const cleanup = () => { if (releaseTimer !== undefined) clearTimeout(releaseTimer); if (stagingTimer !== undefined) clearInterval(stagingTimer); host.off("message", message); host.off("disconnect", disconnected) }
-  const refuse = (code: "HANDSHAKE" | "PARENT_LOST") => { if (settled) return; settled = true; cleanup(); reject(new TypeError(`LEAN_CONTINUATION_${code}`)) }
+  const refuse = (code: "HANDSHAKE" | "PARENT_LOST") => { if (settled) return; settled = true; cleanup(); reject(continuationOwnedFailureV2(code)) }
   const check = () => { if (!host.connected || host.ppid !== expectedParent) { refuse("PARENT_LOST"); return false }; try { checkWindow(); return true } catch { refuse("HANDSHAKE"); return false } }
   const disconnected = () => refuse("PARENT_LOST")
   const message = (value: unknown) => {
@@ -416,19 +442,20 @@ export const waitLeanContinuationReleaseV8 = (checkWindow: () => void, host: Lea
   try { if (!host.send) { refuse("PARENT_LOST"); return }; host.send({ ready: host.pid }) } catch { refuse("PARENT_LOST") }
 })
 const coordinateLeanContinuationParentV8 = (child: ReturnType<typeof fork>, deadline: number, checkWindow: () => void) => {
+  const acceptedControls = new WeakSet<object>()
   let phase: "ready" | "staging" | "armed" | "released" = "ready", nonce: string | undefined, failure: unknown
   let readyResolve!: () => void, readyReject!: (error: unknown) => void, armedResolve!: () => void, armedReject!: (error: unknown) => void
   const ready = new Promise<void>((a, b) => { readyResolve = a; readyReject = b }), armed = new Promise<void>((a, b) => { armedResolve = a; armedReject = b })
   void ready.catch(() => {}); void armed.catch(() => {})
-  const refuse = () => { failure ??= new TypeError("LEAN_CONTINUATION_HANDSHAKE"); readyReject(failure); armedReject(failure); if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL") }
-  const check = () => { if (failure) throw failure; if (!child.connected || child.exitCode !== null || child.signalCode !== null || Date.now() >= deadline) throw new TypeError("LEAN_CONTINUATION_PARENT_LOST"); checkWindow() }
+  const refuse = () => { failure ??= continuationOwnedFailureV2("HANDSHAKE"); readyReject(failure); armedReject(failure); if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL") }
+  const check = () => { if (failure) throw failure; if (!child.connected || child.exitCode !== null || child.signalCode !== null || Date.now() >= deadline) throw continuationOwnedFailureV2("PARENT_LOST"); checkWindow() }
   const message = (value: unknown) => {
     try {
       check()
       const r = ownContinuationControlV8(value, ["ready"])
-      if (phase === "ready" && r?.ready === child.pid) { phase = "staging"; readyResolve(); return }
+      if (phase === "ready" && r?.ready === child.pid) { phase = "staging"; acceptedControls.add(value as object); readyResolve(); return }
       const a = ownContinuationControlV8(value, ["releaseArmed", "nonce"])
-      if (phase === "armed" && a?.releaseArmed === child.pid && a.nonce === nonce) { phase = "released"; armedResolve(); return }
+      if (phase === "armed" && a?.releaseArmed === child.pid && a.nonce === nonce) { phase = "released"; acceptedControls.add(value as object); armedResolve(); return }
       // Failure receipts remain the existing handler's responsibility.
       refuse()
     } catch { refuse() }
@@ -437,14 +464,15 @@ const coordinateLeanContinuationParentV8 = (child: ReturnType<typeof fork>, dead
   child.on("message", message); child.on("exit", exited); child.on("error", disconnected); child.on("disconnect", disconnected)
   const period = setInterval(() => { try { check() } catch { refuse() } }, 250)
   const timeout = setTimeout(refuse, Math.max(1, deadline - Date.now()))
-  return { ready, check, async arm() { check(); if (phase !== "staging") throw new TypeError("LEAN_CONTINUATION_HANDSHAKE"); nonce = randomBytes(32).toString("hex"); phase = "armed"; child.send({ armRelease: nonce }); await armed; check() }, acceptsControl(value: unknown) { const r = ownContinuationControlV8(value, ["ready"]), a = ownContinuationControlV8(value, ["releaseArmed", "nonce"]); return !!(r?.ready === child.pid && phase === "staging" || a?.releaseArmed === child.pid && a.nonce === nonce && phase === "released") }, close() { clearInterval(period); clearTimeout(timeout); child.off("message", message); child.off("exit", exited); child.off("error", disconnected); child.off("disconnect", disconnected) } }
+  return { ready, check, async arm() { check(); if (phase !== "staging") throw continuationOwnedFailureV2("HANDSHAKE"); nonce = randomBytes(32).toString("hex"); phase = "armed"; child.send({ armRelease: nonce }); await armed; check() }, acceptsControl(value: unknown) { if (!value || typeof value !== "object" || !acceptedControls.has(value)) return false; acceptedControls.delete(value); return true }, close() { clearInterval(period); clearTimeout(timeout); child.off("message", message); child.off("exit", exited); child.off("error", disconnected); child.off("disconnect", disconnected) } }
 }
 /** Same parent IPC handler, independently exercisable without a subprocess. */
 export const leanParentFailureReceiptHandler = (ledger: LeanExperimentLedger, childPid: number | undefined, accept: (receipt: LeanChildFailureReceipt | LeanChildFailureReceiptV7) => void, uncertain: (reason: "duplicate_failure_receipt" | "malformed_ipc") => void, acceptsControl?: (value: unknown) => boolean) => {
   let received = false
   return (message: unknown) => {
     if (acceptsControl?.(message)) return
-    if (message !== null && typeof message === "object" && exactLabKeys(message, ["ready"]) && message.ready === childPid) return
+    if (!acceptsControl && message !== null && typeof message === "object" && exactLabKeys(message, ["ready"]) && message.ready === childPid) return
+    if (acceptsControl) { const safe = ownContinuationControlV8(message, ["type", "schemaVersion", "code", "stage"]); if (!safe) { uncertain("malformed_ipc"); return }; message = safe }
     let validReceipt: boolean
     const allocation = ledger.allocation
     if (["lean-correction-supervisor-diagnostic-allocation-v7", "lean-correction-supervisor-baseline-allocation-v7", "lean-correction-supervisor-diagnostic-allocation-v8", "lean-correction-supervisor-baseline-allocation-v8"].includes(allocation.schemaVersion) && "route" in allocation) {
@@ -466,7 +494,8 @@ export const leanBoundedParentTimeBudget = (ledger: LeanExperimentLedger, termin
   if (retry && elapsedMs + reserveMs >= caps.elapsedMs) return fail("PREFIX_CAPACITY")
   return { elapsedMs, capMs: caps.elapsedMs, timeoutMs: Math.max(1, caps.elapsedMs - elapsedMs - terminalReserveMs) }
 }
-export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string; prospectiveStart?: { wallStartMs: number; monotonicStartNs: string }; beforeRelease?: () => void; stage?: <T>(kind: LeanContinuationStageV6, body: () => T) => T; beforeTerminal?: () => void; onFailure?: () => void; terminalReserveMs?: number; supervisorObservation?: true; onChildCreated?: () => void; onPreEntryCleanup?: (value: { childPid: number; exitCode: number | null; signal: string | null }) => void; writeReservation?: Pick<ReturnType<typeof createLeanContinuationLocalReservationV8>, "reserveWrite" | "completeWrite"> }) => {
+export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedger; requestPath: string; allocationPath: string; store: string; sourceRoot: LabRoot; manifestRoot: () => LabRoot; childMode: string; prospectiveStart?: { wallStartMs: number; monotonicStartNs: string }; beforeRelease?: () => void; stage?: <T>(kind: LeanContinuationStageV6, body: () => T) => T; beforeTerminal?: () => void; onFailure?: () => void; terminalReserveMs?: number; supervisorObservation?: true; onStage?: (stage: ContinuationRunStageV2) => void; onChildCreated?: () => void; onPreEntryCleanup?: (value: { childPid: number; exitCode: number | null; signal: string | null }) => void; writeReservation?: Pick<ReturnType<typeof createLeanContinuationLocalReservationV8>, "reserveWrite" | "completeWrite"> }) => {
+  options.onStage?.("PARENT_IMPORT")
   const { ledger, requestPath, store: STORE } = options, allocation = ledger.allocation
   const boundaryV8 = allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && allocation.window.routeNamespace === "20261015-v8"
   if (boundaryV8 && readLeanAdmittedContinuationAllocationV2(ledger) !== allocation) return fail("V8_PARENT_CONTEXT")
@@ -482,7 +511,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
   options.beforeRelease?.()
   leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0)
   const token = randomBytes(32).toString("hex")
-  const effect = <T>(kind: LeanContinuationStageV6, body: () => T): T => options.stage ? options.stage(kind, body) : body()
+  const effect = <T>(kind: LeanContinuationStageV6, body: () => T): T => { options.onStage?.(kind === "claim" ? "PARENT_CLAIM" : kind === "dispatch" ? "PARENT_DISPATCH" : kind === "terminal" ? "PARENT_TERMINAL" : "PARENT_IMPORT"); return options.stage ? options.stage(kind, body) : body() }
   const stagingDeadline = boundaryV8 ? Date.now() + leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).timeoutMs : 0
   let coordination: ReturnType<typeof coordinateLeanContinuationParentV8> | undefined
   let earlyExit: { code: number | null; signal: NodeJS.Signals | null } | undefined
@@ -565,6 +594,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
   const failureHandler = leanParentFailureReceiptHandler(ledger, child.pid, receipt => { childFailure = receipt }, reason => { uncertain = true; observe(reason) }, coordination?.acceptsControl)
   child.on("message", failureHandler)
   try {
+    options.onStage?.("PARENT_READY")
     if (coordination) { await coordination.ready; coordination.check() } else await waitLeanBoundedChildReady(child)
     if (!child.pid) return fail("CHILD_PID")
     childRssObservedBytes = rssOf(child.pid)
@@ -583,7 +613,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     entered = true
     if (!boundaryV8) child.send({ release: token })
     })
-    if (coordination) { effect("dispatch", () => {}); coordination.check(); await coordination.arm(); coordination.check(); child.send({ release: token }); coordination.close() }
+    if (coordination) { effect("dispatch", () => {}); coordination.check(); options.onStage?.("PARENT_RELEASE"); await coordination.arm(); coordination.check(); child.send({ release: token }); coordination.close() }
     period = setInterval(() => {
       try {
         if (allocation.schemaVersion === "lean-baseline-continuation-allocation-v2") options.beforeRelease?.()
@@ -598,6 +628,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     timeout = setTimeout(() => { uncertain = true; observe("deadline_timeout"); child.kill("SIGKILL") }, boundaryV8 ? Math.max(1, stagingDeadline - Date.now()) : leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).timeoutMs)
     const exit = observedExit ?? await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => resolveExit({ code, signal })))
     clearInterval(period); clearTimeout(timeout)
+    options.onStage?.("PARENT_TERMINAL")
     terminalCallbackBegan = true; options.beforeTerminal?.()
     try { if (head() !== fixedHead || options.manifestRoot() !== fixedManifest || requestBytesRoot(requestPath) !== fixedRequest) { uncertain = true; observe("final_identity_mismatch"); finalIdentity = "mismatch" } } catch { uncertain = true; observe("final_identity_exception"); finalIdentity = "exception" }
     let terminal: ReturnType<typeof publishTerminal>
@@ -1125,7 +1156,7 @@ export const withLeanContinuationReaderMetadataV2 = <T>(window: LeanBaselineCont
 }
 const continuationClaimBodyV2 = (request: LeanBaselineContinuationRequestV2, window: LeanBaselineContinuationWindowV2, requestBytesRoot: LabRoot) => ({ schemaVersion: "lean-baseline-continuation-window-claim-v2", grantId: window.grantId, routeNamespace: window.routeNamespace, windowRoot: window.root, windowBytesRoot: request.windowBytesRoot, requestBytesRoot, sourceHead: request.sourceHead, sourceRoot: request.sourceRoot, sourceGateRoot: request.sourceGateRoot, dataReviewRoot: request.dataReviewRoot, planningRoot: request.planningRoot, manifestRoot: request.manifestRoot })
 const continuationReviewRowsV2 = (manifest: ReturnType<typeof leanBaselineContinuationDataManifestV2>, sourceHead: string, window: LeanBaselineContinuationWindowV2): LeanContinuationReviewedRowV2[] => [...manifest.implementationEntries.map(row => ({ ...row, commit: sourceHead, kind: "reviewed_source" as const })), ...manifest.planningEntries.filter(row => row.path !== leanBaselineContinuationPathsForWindowV2(window).window).map(row => ({ ...row, commit: sourceHead, kind: "active_planning" as const }))]
-type ContinuationRunStageV2 = "RUN_SCOPE" | "PREFLIGHT" | "ALLOCATION_JOIN" | "CLAIM_DIRECT_PARENT" | "MANIFEST_CARRY_HOLD" | "FULL_GUARD" | "CARRY_REAUTHENTICATION" | "PRE_ENTRY_BARRIER"
+type ContinuationRunStageV2 = "RUN_SCOPE" | "PREFLIGHT" | "ALLOCATION_JOIN" | "CLAIM_DIRECT_PARENT" | "MANIFEST_CARRY_HOLD" | "FULL_GUARD" | "CARRY_REAUTHENTICATION" | "PRE_ENTRY_BARRIER" | "PARENT_IMPORT" | "PARENT_READY" | "PARENT_CLAIM" | "PARENT_DISPATCH" | "PARENT_RELEASE" | "PARENT_TERMINAL"
 // Hook counts, not inferred internal scans: source_callbacks counts the actual
 // preflight source hook; descriptor_callbacks counts explicit request/admitted
 // context read hooks. Carry's shared hook cannot truthfully split its internal
@@ -1152,7 +1183,7 @@ const issueContinuationRunFailureV2 = (error: unknown, d: ContinuationRunDiagnos
  * catch, artifact, journal or authority consumer. Never reads error fields. */
 export const leanBaselineContinuationRunFailureV2 = (error: unknown): string => {
   const d = error !== null && typeof error === "object" ? continuationRunFailuresV2.get(error) : undefined
-  return d ? `LEAN_BASELINE_RUN_PREENTRY stage=${d.stage} completed=${d.completed} code=DETAILS_WITHHELD ${continuationRunCounterNamesV2.map(name => `${name}=${d.counts[name]}`).join(" ")}\n` : "LEAN_BASELINE_RUN_PREENTRY stage=UNKNOWN code=DETAILS_WITHHELD\n"
+  return d ? `LEAN_BASELINE_RUN_${d.stage.startsWith("PARENT_") ? "PARENT" : "PREENTRY"} stage=${d.stage} completed=${d.completed} code=DETAILS_WITHHELD ${continuationRunCounterNamesV2.map(name => `${name}=${d.counts[name]}`).join(" ")}\n` : "LEAN_BASELINE_RUN_PREENTRY stage=UNKNOWN code=DETAILS_WITHHELD\n"
 }
 /** Private own-DATA capture, using the same hostile-input primitives as the
  * identity compiler. No getter/proxy is evaluated, no caller object frozen,
@@ -1526,8 +1557,17 @@ export const runLeanBaselineContinuationV2 = async (requestPath: string) => {
     continuationRunStageV2(diagnostic, "PRE_ENTRY_BARRIER", true)
   } catch (error) { issueContinuationRunFailureV2(error, diagnostic); throw error } finally { diagnostic.active = false }
   const { ledger } = c
+  diagnostic.active = true
+  try {
+  continuationRunStageV2(diagnostic, "PARENT_IMPORT")
   if ((c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V8)) { c.authenticateSource(); c.stage("import", () => c.guard()) }
-  return runLeanBoundedParent({ ledger, requestPath, allocationPath: c.paths.allocation, store: c.paths.store, sourceRoot: c.allocation.sourceRoot, manifestRoot: () => { if ((c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V8)) return c.authenticateSource(); c.guard(); const manifest = leanBaselineContinuationDataManifestV2(c.window, leanBaselineContinuationSourceManifestV2()); if (manifest.manifestRoot !== c.allocation.manifestRoot || manifest.planningRoot !== c.allocation.planningRoot) return fail("V2_MANIFEST_HOLD"); return manifest.root }, childMode: "child-continuation-v2", prospectiveStart: { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, beforeRelease: c.guard, ...((c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V8) ? { stage: c.stage, beforeTerminal: c.closeRun, onFailure: c.invalidate } : {}), terminalReserveMs: c.window.closureMs, supervisorObservation: true, ...(c.localReservation ? { writeReservation: c.localReservation } : {}) })
+  return await runLeanBoundedParent({ ledger, requestPath, allocationPath: c.paths.allocation, store: c.paths.store, sourceRoot: c.allocation.sourceRoot, manifestRoot: () => { if ((c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V8)) return c.authenticateSource(); c.guard(); const manifest = leanBaselineContinuationDataManifestV2(c.window, leanBaselineContinuationSourceManifestV2()); if (manifest.manifestRoot !== c.allocation.manifestRoot || manifest.planningRoot !== c.allocation.planningRoot) return fail("V2_MANIFEST_HOLD"); return manifest.root }, childMode: "child-continuation-v2", prospectiveStart: { wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }, beforeRelease: c.guard, ...((c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V8) ? { stage: c.stage, beforeTerminal: c.closeRun, onFailure: c.invalidate } : {}), terminalReserveMs: c.window.closureMs, supervisorObservation: true, onStage: stage => continuationRunStageV2(diagnostic, stage), ...(c.localReservation ? { writeReservation: c.localReservation } : {}) })
+  } catch (error) {
+    if (c.paths !== LEAN_BASELINE_CONTINUATION_PATHS_V8) throw error
+    const withheld = new TypeError("LEAN_BASELINE_FAILED_DETAILS_WITHHELD")
+    continuationRunFailuresV2.set(withheld, Object.freeze({ stage: diagnostic.stage, completed: false, counts: Object.freeze({ ...diagnostic.counts }) }))
+    throw withheld
+  } finally { diagnostic.active = false }
 }
 
 /** Connected charge/provider seam. Closing charge denial never calls provider;
@@ -1573,7 +1613,7 @@ export const createLeanContinuationChildDispatchV2 = (ledger: LeanExperimentLedg
 export const runLeanBaselineContinuationChildV2 = async (requestPath: string) => {
   const approvedWindow = readLeanBaselineContinuationWindowV2(requestPath), paths = leanBaselineContinuationPathsForWindowV2(approvedWindow); continuationWindowAdmissionV2(approvedWindow, 36)
   assertLeanBaselineContinuationScopeV2(false, approvedWindow)
-  if (requestPath !== paths.request || !process.send || !process.connected) return fail("CONTINUATION_CHILD_PARENT")
+  if (requestPath !== paths.request || !process.send || !process.connected) throw continuationOwnedFailureV2("CHILD_PARENT")
   const token = paths === LEAN_BASELINE_CONTINUATION_PATHS_V8 ? await waitLeanContinuationReleaseV8(() => { continuationWindowAdmissionV2(approvedWindow, 36) }) : await new Promise<string>((accept, reject) => { const timer = setTimeout(() => reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")), 30000); process.once("disconnect", () => { clearTimeout(timer); reject(new TypeError("LEAN_CONTINUATION_PARENT_LOST")) }); process.once("message", value => { clearTimeout(timer); if (!exactLabKeys(value, ["release"]) || typeof value.release !== "string") { reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")); return }; accept(value.release) }); process.send!({ ready: process.pid }) })
   const ledger = openLeanLedger(paths.store), entry = readLeanChildEntry(ledger)
   admitLeanChildRelease(entry, token, process.pid, process.ppid)
@@ -1624,6 +1664,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const args = process.argv.slice(2)
   const childMode = args.length === 3 && ["child-current", "child-continuation", "child-continuation-v2"].includes(args[0]!) && args[1] === "--request"
   const action = childMode ? args[0] === "child-continuation-v2" ? runLeanBaselineContinuationChildV2(args[2]!) : args[0] === "child-continuation" ? runLeanBaselineContinuationChild(args[2]!) : runLeanCurrentChild(args[2]!) : leanBaselineMain(args)
-  if (childMode) void resolveLeanChildCliTerminal(action)
+  if (childMode) void (args[0] === "child-continuation-v2" ? resolveLeanContinuationChildCliTerminalV2(action) : resolveLeanChildCliTerminal(action))
   else void action.then(value => { process.stdout.write(`${JSON.stringify(value)}\n`) }).catch(error => { if (args.length === 3 && args[0] === "prepare-continuation-v2" && args[1] === "--request" && (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V5.request || (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V6.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V7.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V8.request))) process.stderr.write(leanBaselineContinuationPreparationFailureV4(error)); if (args.length === 3 && args[0] === "run-continuation-v2" && args[1] === "--request" && (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V6.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V7.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V8.request)) process.stderr.write(leanBaselineContinuationRunFailureV2(error)); process.stderr.write("LEAN_BASELINE_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
 }
