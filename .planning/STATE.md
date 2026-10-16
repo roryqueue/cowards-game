@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: awaiting_human_decision
-stopped_at: Approved source-only repair cycle CLOSED partial; startup fix reviewed, two behavioral coverage gaps remain, no empirical authority
+status: in_progress
+stopped_at: Approved additional 30-minute test-only pass for B/C behavioral gaps; no empirical authority
 last_updated: "2026-10-16"
 last_activity: 2026-10-16
-last_activity_desc: Startup and finite diagnostics repaired; 29 new tests pass, distinct verification gaps_found, no new experiment or Matches
+last_activity_desc: Additional bounded test-only B/C coverage pass approved; prior partial result and all empirical boundaries preserved
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — additional30-minute TEST-ONLY gap pass APPROVED
+
+Latest direct human `yes, approved` accepts ROOT's exact proposed **one additional30-minute, test-only pass** for the two reporting/reader coverage gaps, no experiment or Matches. First ROOT approval observation **2026-10-16T18:11:20UTC** (14:11:20 Eastern); hardstop **2026-10-16T18:41:20UTC** (14:41:20 Eastern), including authoring/checks/review/validation/verification/notes. This permits new bounded inert fixture attempts for existing Plan16 B/C only, not another empirical route or production repair. Existing production15f9d49d remains fixed; test ownership limited to existing driver.test.ts and retained.test.ts. Preserve <=8MiB/<=10s fixture bound, all runtime/resource/rules/privacy predicates and old artifacts. Do not simply rerun the known-unfit skipped fixture or increase its bound; use a materially smaller connected synthetic fixture with disclosed lowest external observation seams, never replace the entire real default context/importer/controller with a success object. B must exercise actual wrapper catch after parent entry; C must distinguish real preclaim refusal from actual claim-before-missing-result nonacceptance. No new numbered plan/workstream/report/module/SUMMARY; original Plan16 acceptance criteria remain.
+
+Actual main71738215 trackedclean, prior source/test/review/verifier commands CLOSED and released; no active executor found at resumption. ROOT owns STATE/GATES and final checks, sequential typed author owns only the two existing test files. Existing research/checked Plan16 and exact two verification gaps are inputs, no repeat diagnosis/history scan. All prior costs remain cumulative/no reset; consumed V8/older routes immutable, no new window/request/allocation/prepare/ordinary reader/provider/Strategy/Match/private history replay. Plan16/Phase265/all9LEAGpending, current-rules league/freeze BEFORE formation, holdout unopened/no-public/no-counted/no-production. Prior partial closure below remains historical evidence, not erased or recredited by this approval.
 
 ## Current continuation — bounded source repair CLOSED PARTIAL; two coverage gaps remain
 
