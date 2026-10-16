@@ -48,6 +48,28 @@ it.each(["missing", "getter", "proxy"] as const)("continuation-startup-repair-C 
     expect(getter).not.toHaveBeenCalled(); expect(trap).not.toHaveBeenCalled()
   } finally { window?.mockRestore(); cwd.mockRestore(); for (const key of ["send", "connected"] as const) { const descriptor = ipc[key]; if (descriptor) Object.defineProperty(process, key, descriptor); else Reflect.deleteProperty(process, key) }; fs.rmSync(dir, { recursive: true }) }
 })
+it.each(["missing-source", "getter", "proxy"] as const)("continuation-startup-repair-C real default CONTEXT_OPEN refusal stays preclaim and withheld: %s (not valid-import-to-claim coverage)", async mode => {
+  const began = performance.now(), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "public-reader-context-open-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V8
+  const oldArgs = process.execArgv, ipc = { send: Object.getOwnPropertyDescriptor(process, "send"), connected: Object.getOwnPropertyDescriptor(process, "connected") }, anchor = 1792093334001, stages: string[] = [], getter = vi.fn(), trap = vi.fn()
+  const carryMs = continuationLedger.leanContinuationGlobalFloorV2(anchor), body = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "public-context-refusal", approvalEvidence: { humanDecisionId: "human-approval-observed-20261015T194214Z", recordedBy: "public-fixture" }, approvedAtMs: 1792093334000, anchorMs: anchor, deadlineMs: anchor + 28800000, carryMs, capMs: carryMs + 28800000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261015-v8" as const, reviewedSourceHead: "a".repeat(40), sourceRoot: root("public-source"), sourceGateRoot: root("public-gate"), planRoot: root("public-plan"), runOperator: "public-runner", readerOperator: "public-reader" }, window = continuationLedger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })
+  const originalStat = fs.lstatSync, originalReader = continuationReader.verifyLeanBaselineContinuationRetainedV2, originalOpen = continuationEntry.openLeanBaselineContinuationContextV2
+  const clock = vi.spyOn(Date, "now").mockReturnValue(anchor), stat = vi.spyOn(fs, "lstatSync").mockImplementation(((path: fs.PathLike, ...args: unknown[]) => Reflect.apply(originalStat, fs, [resolve(String(path)), ...args])) as typeof fs.lstatSync)
+  const usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000), known = vi.spyOn(continuationFiles, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096), core = vi.spyOn(childProcess, "execFileSync").mockReturnValue("0\n")
+  const hostile = mode === "getter" ? Object.defineProperty({}, "message", { get: getter }) : new Proxy({}, { get: trap, ownKeys: trap })
+  const disk = vi.spyOn(fs, "statfsSync").mockImplementation(() => { if (mode !== "missing-source") throw hostile; return { bavail: 100000000000n, bsize: 1n } as never })
+  const opened = vi.spyOn(continuationEntry, "openLeanBaselineContinuationContextV2").mockImplementation((...args) => originalOpen(...args)), reader = vi.spyOn(continuationReader, "verifyLeanBaselineContinuationRetainedV2").mockImplementation((path, observer) => originalReader(path, stage => { stages.push(stage); observer?.(stage) }))
+  try {
+    Object.defineProperty(process, "send", { value: undefined, configurable: true }); Object.defineProperty(process, "connected", { value: false, configurable: true })
+    process.execArgv = ["--import", "tsx"]; vi.stubEnv("TSX_DISABLE_CACHE", "1"); vi.stubEnv("NODE_DISABLE_COMPILE_CACHE", "1"); vi.stubEnv("TMPDIR", resolve(p.temp)); for (const key of ["NODE_OPTIONS", "NODE_COMPILE_CACHE", "NODE_REDIRECT_WARNINGS", "NODE_V8_COVERAGE"]) vi.stubEnv(key, undefined)
+    fs.mkdirSync(resolve(p.temp), { recursive: true, mode: 0o700 }); fs.mkdirSync(resolve(p.window, ".."), { recursive: true }); fs.writeFileSync(resolve(p.window), leanCanonicalBytes(window), { mode: 0o600 })
+    const error = await continuationEntry.leanBaselineMain(["verify-continuation-v2", "--request", p.request]).catch(value => value)
+    expect(continuationEntry.leanBaselineContinuationReaderFailureV2(error)).toBe("LEAN_BASELINE_VERIFY stage=CONTEXT_OPEN code=DETAILS_WITHHELD\n")
+    expect(stages).toEqual(["INITIAL_WINDOW", "CONTEXT_OPEN"]); expect(opened).toHaveBeenCalledOnce(); expect(reader).toHaveBeenCalledOnce()
+    for (const path of [p.store, p.claim, p.allocation]) expect(fs.existsSync(resolve(path))).toBe(false)
+    expect(fs.readdirSync(resolve(p.temp))).toEqual([]); expect(getter).not.toHaveBeenCalled(); expect(trap).not.toHaveBeenCalled()
+    expect(Buffer.byteLength(leanCanonicalBytes(window))).toBeLessThan(8 * 1024 * 1024)
+  } finally { for (const spy of [reader, opened, disk, core, known, available, usage, stat, clock]) spy.mockRestore(); process.execArgv = oldArgs; vi.unstubAllEnvs(); for (const key of ["send", "connected"] as const) { const d = ipc[key]; if (d) Object.defineProperty(process, key, d); else Reflect.deleteProperty(process, key) }; cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(10000) }
+}, 10000)
 // COVERAGE GAP: real default opening reached the expected fixed-anchor refusal,
 // but two closed attempts took11.83/11.95s, exceeding the10s fixture contract.
 // Not counted as passing coverage. No guard or timeout is weakened to enable it.
