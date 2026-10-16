@@ -14,6 +14,7 @@ import * as continuationMatch from "./lib/v1-38-lean-baseline-match.js"
 import { validateLeanPreparationContinuationReasonJoinV13 } from "./lib/v1-38-lean-correction-retained.js"
 import { assertLeanSupervisorReasonCustodyV2 } from "./lib/v1-38-lean-baseline-retained.js"
 import * as continuationRetainedReader from "./lib/v1-38-lean-baseline-retained.js"
+import * as childTerminal from "./lib/v1-38-lean-child-cli-terminal.js"
 
 const root = (name: string) => labRoot("baseline-cli-test", name)
 const ownMessageKind = (value: unknown) => value && typeof value === "object" && "armRelease" in value ? "armRelease" : "release"
@@ -52,6 +53,42 @@ it.each(["duplicate", "release-before-arm", "extra", "getter", "proxy", "disconn
     await outcome
     expect(getter).not.toHaveBeenCalled(); expect(trap).not.toHaveBeenCalled(); expect(host.listenerCount("message")).toBe(0); expect(vi.getTimerCount()).toBe(0)
   } finally { vi.useRealTimers() }
+})
+it.each(["timeout", "disconnect", "spoof", "getter", "proxy", "success", "send-throw", "send-hang"] as const)("continuation-startup-repair-B owned terminal provenance and bounded cleanup: %s", async mode => {
+  vi.useFakeTimers()
+  const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true), getter = vi.fn(() => "LEAN_CONTINUATION_HANDSHAKE"), trap = vi.fn()
+  const host = Object.assign(new EventEmitter(), { pid: 123, ppid: 122, connected: true, send: vi.fn() })
+  const child = { connected: true, exitCode: undefined as number | undefined, disconnect: vi.fn(() => { child.connected = false }), send: vi.fn((_: unknown, done?: (error: Error | null) => void) => { if (mode === "send-throw") throw new Error("secret"); if (mode !== "send-hang") done?.(null); return true }) }
+  try {
+    let action: Promise<unknown>
+    if (mode === "timeout" || mode === "disconnect") {
+      action = parentApi.waitLeanContinuationReleaseV8(() => {}, host)
+    } else if (mode === "success") action = Promise.resolve()
+    else action = Promise.reject(mode === "getter" ? Object.defineProperty({}, "message", { get: getter }) : mode === "proxy" ? new Proxy({}, { ownKeys: trap, get: trap }) : new TypeError("LEAN_CONTINUATION_HANDSHAKE"))
+    void action.catch(() => {})
+    const terminal = parentApi.resolveLeanContinuationChildCliTerminalV2(action, child)
+    if (mode === "disconnect") { host.connected = false; host.emit("disconnect") }
+    if (mode === "timeout") { host.emit("message", { armRelease: "a".repeat(64) }); await vi.advanceTimersByTimeAsync(30000) }
+    await vi.advanceTimersByTimeAsync(251); await terminal
+    expect(child.exitCode).toBe(mode === "success" ? 0 : 1); expect(child.disconnect).toHaveBeenCalledTimes(1)
+    if (mode !== "success") { expect(child.send.mock.calls[0]![0]).toEqual({ type: "lean-child-failure", schemaVersion: "lean-child-failure-v1", code: mode === "timeout" ? "HANDSHAKE" : mode === "disconnect" ? "PARENT_LOST" : "UNKNOWN_INTERNAL_FAILURE", stage: mode === "timeout" || mode === "disconnect" ? "handshake" : "unknown" }); expect(childTerminal.isLeanChildFailureReceipt(child.send.mock.calls[0]![0])).toBe(true) }
+    expect(getter).not.toHaveBeenCalled(); expect(trap).not.toHaveBeenCalled(); expect(vi.getTimerCount()).toBe(0)
+  } finally { stderr.mockRestore(); vi.useRealTimers() }
+})
+it("continuation-startup-repair-B trusted errors are one-use; clones and legacy stay distinct", async () => {
+  const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true), host = Object.assign(new EventEmitter(), { pid: 123, ppid: 122, connected: true, send: vi.fn() })
+  try {
+    const action = parentApi.waitLeanContinuationReleaseV8(() => {}, host), captured = action.catch(error => error)
+    host.emit("disconnect"); const error: unknown = await captured
+    for (const [value, expected] of [[error, "PARENT_LOST"], [error, "UNKNOWN_INTERNAL_FAILURE"], [new TypeError("LEAN_CONTINUATION_PARENT_LOST"), "UNKNOWN_INTERNAL_FAILURE"], ["LEAN_CONTINUATION_PARENT_LOST", "UNKNOWN_INTERNAL_FAILURE"]] as const) {
+      const child = { connected: true, exitCode: 0, disconnect: vi.fn(), send: vi.fn((_: unknown, done?: (e: Error | null) => void) => { done?.(null); return true }) }
+      await parentApi.resolveLeanContinuationChildCliTerminalV2(Promise.reject(value), child)
+      expect(child.send.mock.calls[0]![0]).toMatchObject({ code: expected })
+    }
+    const legacy = { connected: true, exitCode: 0, disconnect: vi.fn(), send: vi.fn((_: unknown, done?: (e: Error | null) => void) => { done?.(null); return true }) }
+    await childTerminal.resolveLeanChildCliTerminal(Promise.reject(new TypeError("LEAN_PILOT_HANDSHAKE")), legacy)
+    expect(legacy.send.mock.calls[0]![0]).toMatchObject({ code: "HANDSHAKE", stage: "unknown" })
+  } finally { stderr.mockRestore() }
 })
 import * as continuationGit from "./lib/v1-38-lean-container-match-session.js"
 import * as fs from "node:fs"
