@@ -374,10 +374,76 @@ export const waitLeanBoundedChildReady = (child: ReturnType<typeof fork>) => new
   child.once("message", message => { clearTimeout(timer); if (!message || typeof message !== "object" || !exactLabKeys(message, ["ready"]) || message.ready !== child.pid) { reject(new TypeError("LEAN_BASELINE_CHILD_READY")); return }; ready() })
   child.once("exit", () => { clearTimeout(timer); reject(new TypeError("LEAN_BASELINE_CHILD_EXIT_BEFORE_ENTRY")) })
 })
+interface LeanContinuationIpcV8 {
+  pid: number; ppid: number; connected: boolean
+  on(event: string, listener: (...args: any[]) => void): unknown
+  off(event: string, listener: (...args: any[]) => void): unknown
+  send?(message: unknown): unknown
+}
+const ownContinuationControlV8 = (value: unknown, keys: readonly string[]): Record<string, unknown> | undefined => {
+  if (!value || typeof value !== "object" || leanHostIsProxy(value)) return
+  const fields = Object.getOwnPropertyDescriptors(value)
+  if (Reflect.ownKeys(fields).length !== keys.length || keys.some(key => !fields[key] || !("value" in fields[key]!))) return
+  return Object.fromEntries(keys.map(key => [key, fields[key]!.value]))
+}
+/** Non-authorizing coordination only. The caller retains entry/token admission.
+ * checkWindow is the existing absolute window/frontier, never a fresh duration. */
+export const waitLeanContinuationReleaseV8 = (checkWindow: () => void, host: LeanContinuationIpcV8 = process) => new Promise<string>((accept, reject) => {
+  const expectedParent = host.ppid
+  let armed = false, settled = false, releaseTimer: ReturnType<typeof setTimeout> | undefined
+  let stagingTimer: ReturnType<typeof setInterval> | undefined
+  const cleanup = () => { if (releaseTimer !== undefined) clearTimeout(releaseTimer); if (stagingTimer !== undefined) clearInterval(stagingTimer); host.off("message", message); host.off("disconnect", disconnected) }
+  const refuse = (code: "HANDSHAKE" | "PARENT_LOST") => { if (settled) return; settled = true; cleanup(); reject(new TypeError(`LEAN_CONTINUATION_${code}`)) }
+  const check = () => { if (!host.connected || host.ppid !== expectedParent) { refuse("PARENT_LOST"); return false }; try { checkWindow(); return true } catch { refuse("HANDSHAKE"); return false } }
+  const disconnected = () => refuse("PARENT_LOST")
+  const message = (value: unknown) => {
+    if (settled || !check()) return
+    if (!armed) {
+      const arm = ownContinuationControlV8(value, ["armRelease"])
+      if (!arm || typeof arm.armRelease !== "string" || !/^[a-f0-9]{64}$/u.test(arm.armRelease)) { refuse("HANDSHAKE"); return }
+      armed = true
+      releaseTimer = setTimeout(() => refuse("HANDSHAKE"), 30000)
+      try { host.send?.({ releaseArmed: host.pid, nonce: arm.armRelease }) } catch { refuse("PARENT_LOST") }
+      return
+    }
+    const release = ownContinuationControlV8(value, ["release"])
+    if (!release || typeof release.release !== "string" || !/^[a-f0-9]{64}$/u.test(release.release)) { refuse("HANDSHAKE"); return }
+    settled = true; cleanup(); accept(release.release)
+  }
+  host.on("message", message); host.on("disconnect", disconnected)
+  stagingTimer = setInterval(check, 250)
+  if (!check()) return
+  try { if (!host.send) { refuse("PARENT_LOST"); return }; host.send({ ready: host.pid }) } catch { refuse("PARENT_LOST") }
+})
+const coordinateLeanContinuationParentV8 = (child: ReturnType<typeof fork>, deadline: number, checkWindow: () => void) => {
+  let phase: "ready" | "staging" | "armed" | "released" = "ready", nonce: string | undefined, failure: unknown
+  let readyResolve!: () => void, readyReject!: (error: unknown) => void, armedResolve!: () => void, armedReject!: (error: unknown) => void
+  const ready = new Promise<void>((a, b) => { readyResolve = a; readyReject = b }), armed = new Promise<void>((a, b) => { armedResolve = a; armedReject = b })
+  void ready.catch(() => {}); void armed.catch(() => {})
+  const refuse = () => { failure ??= new TypeError("LEAN_CONTINUATION_HANDSHAKE"); readyReject(failure); armedReject(failure); if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL") }
+  const check = () => { if (failure) throw failure; if (!child.connected || child.exitCode !== null || child.signalCode !== null || Date.now() >= deadline) throw new TypeError("LEAN_CONTINUATION_PARENT_LOST"); checkWindow() }
+  const message = (value: unknown) => {
+    try {
+      check()
+      const r = ownContinuationControlV8(value, ["ready"])
+      if (phase === "ready" && r?.ready === child.pid) { phase = "staging"; readyResolve(); return }
+      const a = ownContinuationControlV8(value, ["releaseArmed", "nonce"])
+      if (phase === "armed" && a?.releaseArmed === child.pid && a.nonce === nonce) { phase = "released"; armedResolve(); return }
+      // Failure receipts remain the existing handler's responsibility.
+      refuse()
+    } catch { refuse() }
+  }
+  const exited = () => { if (phase !== "released") refuse() }, disconnected = () => { if (phase !== "released") refuse() }
+  child.on("message", message); child.on("exit", exited); child.on("error", disconnected); child.on("disconnect", disconnected)
+  const period = setInterval(() => { try { check() } catch { refuse() } }, 250)
+  const timeout = setTimeout(refuse, Math.max(1, deadline - Date.now()))
+  return { ready, check, async arm() { check(); if (phase !== "staging") throw new TypeError("LEAN_CONTINUATION_HANDSHAKE"); nonce = randomBytes(32).toString("hex"); phase = "armed"; child.send({ armRelease: nonce }); await armed; check() }, acceptsControl(value: unknown) { const r = ownContinuationControlV8(value, ["ready"]), a = ownContinuationControlV8(value, ["releaseArmed", "nonce"]); return !!(r?.ready === child.pid && phase === "staging" || a?.releaseArmed === child.pid && a.nonce === nonce && phase === "released") }, close() { clearInterval(period); clearTimeout(timeout); child.off("message", message); child.off("exit", exited); child.off("error", disconnected); child.off("disconnect", disconnected) } }
+}
 /** Same parent IPC handler, independently exercisable without a subprocess. */
-export const leanParentFailureReceiptHandler = (ledger: LeanExperimentLedger, childPid: number | undefined, accept: (receipt: LeanChildFailureReceipt | LeanChildFailureReceiptV7) => void, uncertain: (reason: "duplicate_failure_receipt" | "malformed_ipc") => void) => {
+export const leanParentFailureReceiptHandler = (ledger: LeanExperimentLedger, childPid: number | undefined, accept: (receipt: LeanChildFailureReceipt | LeanChildFailureReceiptV7) => void, uncertain: (reason: "duplicate_failure_receipt" | "malformed_ipc") => void, acceptsControl?: (value: unknown) => boolean) => {
   let received = false
   return (message: unknown) => {
+    if (acceptsControl?.(message)) return
     if (message !== null && typeof message === "object" && exactLabKeys(message, ["ready"]) && message.ready === childPid) return
     let validReceipt: boolean
     const allocation = ledger.allocation
@@ -417,9 +483,13 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
   leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0)
   const token = randomBytes(32).toString("hex")
   const effect = <T>(kind: LeanContinuationStageV6, body: () => T): T => options.stage ? options.stage(kind, body) : body()
+  const stagingDeadline = boundaryV8 ? Date.now() + leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).timeoutMs : 0
+  let coordination: ReturnType<typeof coordinateLeanContinuationParentV8> | undefined
+  let earlyExit: { code: number | null; signal: NodeJS.Signals | null } | undefined
   let spawned: ReturnType<typeof fork> | undefined, child: ReturnType<typeof fork>
-  try { child = effect("import", () => { spawned = fork(resolve(process.argv[1] ?? fail("ENTRY_PATH")), [options.childMode, "--request", requestPath], { execArgv: process.execArgv, stdio: ["ignore", "ignore", "ignore", "ipc"] }); return spawned }) }
+  try { child = effect("import", () => { spawned = fork(resolve(process.argv[1] ?? fail("ENTRY_PATH")), [options.childMode, "--request", requestPath], { execArgv: process.execArgv, stdio: ["ignore", "ignore", "ignore", "ipc"] }); if (boundaryV8) { spawned.once("exit", (code, signal) => { earlyExit = { code, signal } }); coordination = coordinateLeanContinuationParentV8(spawned, stagingDeadline, () => { continuationWindowAdmissionV2(allocation.window, 36); options.beforeRelease?.(); const rss = rssOf(spawned!.pid!); if (process.memoryUsage().rss + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > leanMemoryLimitForAllocation(allocation)) return fail("PREFIX_CAPACITY") }) }; return spawned }) }
   catch (error) {
+    coordination?.close()
     // A rejected closing pass may follow a successful fork. Never lose the
     // unreleased child merely because the stage refused to return its handle.
     if (spawned && spawned.exitCode === null && spawned.signalCode === null) {
@@ -445,7 +515,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
   }
   let finalIdentity: LeanSupervisorReasonEnvelope["observations"]["finalIdentity"] = "matched"
   const v6 = allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && (allocation.window.routeNamespace === "20261014-v6" || allocation.window.routeNamespace === "20261014-v7" || allocation.window.routeNamespace === "20261015-v8")
-  let publishedEntry: LeanChildEntryV2 | undefined, observedExit: { code: number | null; signal: NodeJS.Signals | null } | undefined
+  let publishedEntry: LeanChildEntryV2 | undefined, observedExit: { code: number | null; signal: NodeJS.Signals | null } | undefined = earlyExit
   let terminalPublicationBegan = false, failureTerminalAttempted = false, terminalCallbackBegan = false
   let period: ReturnType<typeof setInterval> | undefined, timeout: ReturnType<typeof setTimeout> | undefined
   child.once("exit", (code: number | null, signal: NodeJS.Signals | null) => { exitEventObserved = true; observedExit = { code, signal } })
@@ -492,9 +562,10 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     guard(); const terminal = publishTerminal(entry, exit); guard(); return terminal
   }
   child.on("error", () => { uncertain = true; observe("child_error") })
-  child.on("message", leanParentFailureReceiptHandler(ledger, child.pid, receipt => { childFailure = receipt }, reason => { uncertain = true; observe(reason) }))
+  const failureHandler = leanParentFailureReceiptHandler(ledger, child.pid, receipt => { childFailure = receipt }, reason => { uncertain = true; observe(reason) }, coordination?.acceptsControl)
+  child.on("message", failureHandler)
   try {
-    await waitLeanBoundedChildReady(child)
+    if (coordination) { await coordination.ready; coordination.check() } else await waitLeanBoundedChildReady(child)
     if (!child.pid) return fail("CHILD_PID")
     childRssObservedBytes = rssOf(child.pid)
     if (process.memoryUsage().rss + childRssObservedBytes + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > leanMemoryLimitForAllocation(allocation)) return fail("PREFIX_CAPACITY")
@@ -512,7 +583,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     entered = true
     if (!boundaryV8) child.send({ release: token })
     })
-    if (boundaryV8) { effect("dispatch", () => {}); child.send({ release: token }) }
+    if (coordination) { effect("dispatch", () => {}); coordination.check(); await coordination.arm(); coordination.check(); child.send({ release: token }); coordination.close() }
     period = setInterval(() => {
       try {
         if (allocation.schemaVersion === "lean-baseline-continuation-allocation-v2") options.beforeRelease?.()
@@ -524,7 +595,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
         uncertain = true; observe("resource_sampling_exception"); child.kill("SIGKILL")
       }
     }, 250)
-    timeout = setTimeout(() => { uncertain = true; observe("deadline_timeout"); child.kill("SIGKILL") }, leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).timeoutMs)
+    timeout = setTimeout(() => { uncertain = true; observe("deadline_timeout"); child.kill("SIGKILL") }, boundaryV8 ? Math.max(1, stagingDeadline - Date.now()) : leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).timeoutMs)
     const exit = observedExit ?? await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolveExit => child.once("exit", (code, signal) => resolveExit({ code, signal })))
     clearInterval(period); clearTimeout(timeout)
     terminalCallbackBegan = true; options.beforeTerminal?.()
@@ -555,6 +626,7 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     }
     throw error
   } finally {
+    coordination?.close(); child.off("message", failureHandler)
     if (period !== undefined) clearInterval(period)
     if (timeout !== undefined) clearTimeout(timeout)
     if (options.prospectiveStart && child.exitCode === null && child.signalCode === null) {
@@ -1502,7 +1574,7 @@ export const runLeanBaselineContinuationChildV2 = async (requestPath: string) =>
   const approvedWindow = readLeanBaselineContinuationWindowV2(requestPath), paths = leanBaselineContinuationPathsForWindowV2(approvedWindow); continuationWindowAdmissionV2(approvedWindow, 36)
   assertLeanBaselineContinuationScopeV2(false, approvedWindow)
   if (requestPath !== paths.request || !process.send || !process.connected) return fail("CONTINUATION_CHILD_PARENT")
-  const token = await new Promise<string>((accept, reject) => { const timer = setTimeout(() => reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")), 30000); process.once("disconnect", () => { clearTimeout(timer); reject(new TypeError("LEAN_CONTINUATION_PARENT_LOST")) }); process.once("message", value => { clearTimeout(timer); if (!exactLabKeys(value, ["release"]) || typeof value.release !== "string") { reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")); return }; accept(value.release) }); process.send!({ ready: process.pid }) })
+  const token = paths === LEAN_BASELINE_CONTINUATION_PATHS_V8 ? await waitLeanContinuationReleaseV8(() => { continuationWindowAdmissionV2(approvedWindow, 36) }) : await new Promise<string>((accept, reject) => { const timer = setTimeout(() => reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")), 30000); process.once("disconnect", () => { clearTimeout(timer); reject(new TypeError("LEAN_CONTINUATION_PARENT_LOST")) }); process.once("message", value => { clearTimeout(timer); if (!exactLabKeys(value, ["release"]) || typeof value.release !== "string") { reject(new TypeError("LEAN_CONTINUATION_HANDSHAKE")); return }; accept(value.release) }); process.send!({ ready: process.pid }) })
   const ledger = openLeanLedger(paths.store), entry = readLeanChildEntry(ledger)
   admitLeanChildRelease(entry, token, process.pid, process.ppid)
   const c = openLeanBaselineContinuationContextV2(requestPath), parent = createLeanParentObservationGuard(entry.parentPid)
