@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: awaiting_human_decision
-stopped_at: Additional test-only pass CLOSED partial; three early-context tests added, original B/C gaps open, production testability scope choice next
+status: in_progress
+stopped_at: Narrow internal production testability refactor APPROVED; research and checked existing Plan16 amendment next, no empirical authority
 last_updated: "2026-10-16"
 last_activity: 2026-10-16
-last_activity_desc: Test-only pass added three passing refusals; 32 repair tests pass, both original gaps remain open, no production or empirical change
+last_activity_desc: Approved narrow internal refactor to supply synthetic external observations in tests while production checks/rules remain unchanged
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,14 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — internal testability refactor APPROVED
+
+Latest direct human `approved` accepts ROOT's exact proposal: **a small internal refactor so tests can substitute hardwired historical external inputs while production checks and game rules remain unchanged**, instead of another test-only retry. First ROOT approval observation **2026-10-16T23:55:19UTC** (19:55:19 Eastern). This is fresh narrow source-and-test scope, not a retrospective extension of either closed clock/window, a reset/refund or empirical authority. No new arbitrary approval-expiry clock is inferred: use bounded existing Plan16 tasks/review loops and track actual work; do not create another time-only checkpoint. Preserve existing numeric fixture/runtime/resource/scientific/privacy bounds. Research the smallest imported external-observation seam, amend/check existing Plan16, implement/test, independently review/fix, validate and distinctly verify. No new numbered plan/workstream/proof tree or early phase-completion claim.
+
+Production must keep original immutable expectation binding, actual importer/descriptors/hash/schema/joins/controller/lifecycle and complete guards, no request/CLI-selectable override or exported admission mint. Only test-loader mocks may substitute small public synthetic external records; negative changed-anchor cases must still refuse. Existing actual wrapper and default reader must be exercised through post-entry/claim/result failure, not whole-context/importer success stubs. If a materially different rule, resource, acceptance/trust policy or public exposure change is required, stop for that human-only choice. Existing research/failed fixture evidence is input, no private history replay or repeated known-unfit unchanged test.
+
+Main ac6eaeac trackedclean at resumption; prior authors/reviewers/validators/verifiers CLOSED/released, all old empirical artifacts/charges immutable/spent. ROOT owns STATE/GATES, typed agents own exact existing carriers/source handed off serially. No new experiment/namespace/window/request/allocation/preparation/ordinary reader/provider/Strategy/Match authority; none will run here. Plan16/Phase265/all9LEAG pending, Phase266 planning-only; current-rules serious league/evaluation/freeze BEFORE formation, holdout unopened/no public/counting/production. Earlier test-only restriction below is superseded ONLY for this narrowly approved internal refactor, never for an empirical route or changed production checks.
 
 ## Current continuation — additional TEST-ONLY pass CLOSED PARTIAL; internal testability scope choice
 
