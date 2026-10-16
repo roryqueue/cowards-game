@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Approved bounded source-only startup and diagnostics repair; checked Plan16 amendment next, no empirical authority
+status: awaiting_human_decision
+stopped_at: Approved source-only repair cycle CLOSED partial; startup fix reviewed, two behavioral coverage gaps remain, no empirical authority
 last_updated: "2026-10-16"
 last_activity: 2026-10-16
-last_activity_desc: One 60-minute source-only repair-and-check cycle approved; no new experiment or Matches
+last_activity_desc: Startup and finite diagnostics repaired; 29 new tests pass, distinct verification gaps_found, no new experiment or Matches
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,16 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — bounded source repair CLOSED PARTIAL; two coverage gaps remain
+
+The latest approved ONE60-minute source-only repair/check cycle began **2026-10-16T16:07:27UTC**, absolute hardstop17:07:27UTC. Checked existing Plan16 amendment/research f0ec1e83 and independent checker passed before implementation. Production repairs are fixed at **15f9d49d4669cdf60c9ee25a3758ed95e5416c03**; final test-only **98a07ae6767a6ad9f744b790aa7b13c8f167b74d**. Four existing source/test files only; no shared formatter/module/config/rules/runtime-limit edit. Child now waits for non-authorizing arm after complete parent staging, then starts unchanged one-shot30s release watchdog; own-driver private provenance preserves finite child categories, reader early stages are safely reported. Initial independent review found real armed-periodic-fullguard hazard CR01, corrected and re-reviewed clean. Final A parent correlation negatives independently reviewed clean. All source/test/fix/review commands and ownership CLOSED/released.
+
+ROOT final new-case21314/b2c4db **29passed/257skipped/10.56s** (one explicit Cgap,256 filter-excluded), final SAME15strict58125/b6c1d3 CLOSED2/full13diagnostics7051B **whole-output byte equal** pre17e767: no new errors, not global strict green. Configured project types passed; service strict0/ownership0/report-only19, public passed, factory1443files/violations[], selected compatibility97910/762f7a22pass21.80s overlaps new selection, no summed unique/full-suite/empirical claim. Tests use inert IPC/logical clocks and disclosed external Git/resource/PID/custody seams; no actual provider/Strategy/Match/private history replay.
+
+Scoped State-A auditor/root/validate_265_startup_repair CLOSED16:53:05UTC: A correlation gap filled, B actual wrapper-stage test WARNING and C valid-default-reader path BLOCKER remain OPEN. DISTINCT source verifier/root/verify_265_startup_repair CLOSED/released **16:56:11UTC**: **gaps_found/PARTIAL,3of5 scoped source truths verified**, two implementation-present behaviors unverified, no new implementation defect established. B needs actual run-wrapper post-entry failure→safe parent-stage assertion. C needs valid synthetic default importer/controller→interval/claim→absent-result/nonaccepting cleanup coverage. Existing default-refusal fixture exceeded its10s contract twice11.83/11.95s after bounded corrections and stays explicitly skipped; no more attempt or bound relaxation inferred. These are coverage gaps, not proof of the original V8 throw or broken runtime. Do not repeat the known-unfit fixture, waive gaps, launch another run or automatically extend the completed single cycle. Further fixture/debug retry requires a new explicit bounded source-only disposition; no exact authority literal or rules decision is needed, but current approval is not a second repair cycle.
+
+All empirical windows/allocations/claims/ledgers/results/verifiers remain spent and immutable,50prior/zeroNEWretainedcharges unchanged, cumulative costs continuous/no reset/refund. Current approval granted NO new experiment/window/namespace/request/allocation/prepare/ordinary reader/provider/Strategy/Match; none launched. Plan16/Phase265/all9LEAGpending, Phase266planning-only, serious current-rules league/evaluation/freeze BEFORE formation, private holdout unopened/no public/counting/production. Temporary CR01 worktree/merged branch removed safely after FF-only integration; source commits remain on main and old unrelated sentinels/worktrees untouched. Existing GATES/VALIDATION carry exact review/tests/gaps; no new numbered plan/proof tree. Earlier in-progress/pending paragraphs below are historical. Source hold released, no active entry/helper/verifier remains in this repair lane; safe final notes/commit/push are the only closing actions.
 
 ## Current continuation — source-only startup/diagnostics repair APPROVED
 

@@ -1,8 +1,8 @@
 ---
-status: investigating
+status: awaiting_human_decision
 trigger: Continue v1.38 autonomously after the approved baseline window
 created: 2026-10-12
-updated: 2026-10-15
+updated: 2026-10-16
 mode: source_only
 ---
 
@@ -18,10 +18,10 @@ Retained reader physical88924160B; current store+scratch2453504B/46rows; reader 
 
 ## Current Focus
 
-hypothesis: V8 original child/run and ordinary-reader throws remain UNKNOWN. Current source confirms a conditional parent-staging/child-release-watchdog ordering hazard and lost finite continuation diagnostics; no deterministic failed-child/zero-ledger/no-result reader preclaim contradiction was established. Dominant elapsed cost remains UNKNOWN.
-test: CLOSED source-static trace at unchanged fixedc51651f7/production73673efa and tracking3d3802c9. Zero synthetic checks, tests, scratch, private-history authentication, actual context/capacity/preparation/run/reader/provider/Strategy/Match execution, or source-derived copied Function invocation.
-expecting: ROOT assesses the ranked source findings and minimal prospective repair/tests below. No original-cause proof, fix, unchanged retry, performance claim, new authority or completion credit follows.
-next_action: Diagnosis CLOSED and ROOT assessment complete; narrow startup-ordering/trusted-finite-diagnostics source repair proposed, not authorized/applied. Await explicit source-only repair allowance. No more diagnosis to consume remaining time, no empirical replay/new route. Original causes UNKNOWN; all V8/older bytes and costs immutable/spent.
+hypothesis: Original V8 child/run and reader throws remain UNKNOWN. Confirmed conditional startup ordering/category-loss defects repaired prospectively at15f9d49d; original-cause/dominant-cost/runtime-fit proof still absent.
+test: Approved single source-only repair/check cycle CLOSED PARTIAL. Final ROOT29newtests10.56s at98a07ae6,22selected compatibility tests overlap; exact SAME15strict13inherited/7051B whole-byte equal pre-edit, configuredtypes/boundaries passed. Distinct review fixed CR01; scoped validation/distinct verifier retain B/C coverage gaps. No actual private history/reader/provider/Strategy/Match or old evidence mutation.
+expecting: No further attempt in this completed single cycle. Actual parent-wrapper safe-stage behavioral test and valid-default-importer→claim→missing-result coverage remain open; current source wiring is not behavioral or empirical proof.
+next_action: Surface honest partial closure for bounded source-only fixture/debug disposition, no exact literal/new rules decision required. Do not repeat skipped known-unfit fixture, loosen bound, infer second cycle/new experiment or reuse spent V8 authority. All commands/ownership released16:56:11UTC before17:07:27 hardstop; immutable history/cumulative costs preserved.
 
 ### V8 additional diagnosis-only approval — 2026-10-15T23:13:53UTC
 
