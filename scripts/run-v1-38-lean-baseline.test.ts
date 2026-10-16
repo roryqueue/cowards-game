@@ -16,6 +16,43 @@ import { assertLeanSupervisorReasonCustodyV2 } from "./lib/v1-38-lean-baseline-r
 import * as continuationRetainedReader from "./lib/v1-38-lean-baseline-retained.js"
 
 const root = (name: string) => labRoot("baseline-cli-test", name)
+const ownMessageKind = (value: unknown) => value && typeof value === "object" && "armRelease" in value ? "armRelease" : "release"
+it("continuation-startup-repair-A child arms once after slow staging and expires at exactly 30000ms", async () => {
+  vi.useFakeTimers()
+  const host = Object.assign(new EventEmitter(), { pid: 123, ppid: 122, connected: true, send: vi.fn() })
+  const check = vi.fn()
+  try {
+    const action = parentApi.waitLeanContinuationReleaseV8(check, host)
+    const refusal = expect(action).rejects.toThrow(/HANDSHAKE/)
+    await vi.advanceTimersByTimeAsync(45000)
+    expect(host.send).toHaveBeenCalledExactlyOnceWith({ ready: 123 })
+    host.emit("message", { armRelease: "a".repeat(64) })
+    expect(host.send).toHaveBeenLastCalledWith({ releaseArmed: 123, nonce: "a".repeat(64) })
+    await vi.advanceTimersByTimeAsync(29999)
+    expect(host.listenerCount("message")).toBe(1)
+    await vi.advanceTimersByTimeAsync(1)
+    await refusal
+    expect(host.listenerCount("message")).toBe(0); expect(host.listenerCount("disconnect")).toBe(0)
+  } finally { vi.useRealTimers() }
+})
+it.each(["duplicate", "release-before-arm", "extra", "getter", "proxy", "disconnect", "expired", "valid"] as const)("continuation-startup-repair-A finite control state and absolute frontier: %s", async mode => {
+  vi.useFakeTimers()
+  const host = Object.assign(new EventEmitter(), { pid: 123, ppid: 122, connected: true, send: vi.fn() }), getter = vi.fn(() => "secret"), trap = vi.fn(), nonce = "b".repeat(64)
+  let expired = false
+  try {
+    const action = parentApi.waitLeanContinuationReleaseV8(() => { if (expired) throw new Error("DO_NOT_PUBLISH") }, host)
+    const outcome = mode === "valid" ? expect(action).resolves.toBe("c".repeat(64)) : expect(action).rejects.toThrow(/HANDSHAKE|PARENT_LOST/)
+    if (mode === "release-before-arm") host.emit("message", { release: "c".repeat(64) })
+    else if (mode === "extra") host.emit("message", { armRelease: nonce, extra: true })
+    else if (mode === "getter") host.emit("message", Object.defineProperty({}, "armRelease", { get: getter }))
+    else if (mode === "proxy") host.emit("message", new Proxy({}, { ownKeys: trap }))
+    else if (mode === "disconnect") { host.connected = false; host.emit("disconnect") }
+    else if (mode === "expired") { expired = true; await vi.advanceTimersByTimeAsync(250) }
+    else { host.emit("message", { armRelease: nonce }); host.emit("message", mode === "duplicate" ? { armRelease: nonce } : { release: "c".repeat(64) }) }
+    await outcome
+    expect(getter).not.toHaveBeenCalled(); expect(trap).not.toHaveBeenCalled(); expect(host.listenerCount("message")).toBe(0); expect(vi.getTimerCount()).toBe(0)
+  } finally { vi.useRealTimers() }
+})
 import * as continuationGit from "./lib/v1-38-lean-container-match-session.js"
 import * as fs from "node:fs"
 import * as childProcess from "node:child_process"
@@ -379,7 +416,7 @@ describe("[continuation-ready-v7-N] actual V7 callers (synthetic A / Git resourc
   }, 15000)
 })
 describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (inert IPC/Git/resource/clock/PID observations)", () => {
-  it.each([false, true].flatMap(v8 => (v8 ? ["source", "resource", "fork-closing", "charge-closing", "progress"] as const : ["source", "resource", "fork-closing"] as const).map(mode => ({ v8, mode, tag: v8 ? "continuation-boundary-v8-Q" : "continuation-ready-v7-N-parent" }))))("$tag preserves spent bytes and nonaccepting observed-exit handling: $mode", async ({ mode, v8 }) => {
+  it.each([false, true].flatMap(v8 => (v8 ? ["source", "resource", "fork-closing", "charge-closing", "progress", "slow-staging", "dispatch-closing"] as const : ["source", "resource", "fork-closing"] as const).map(mode => ({ v8, mode, tag: v8 && (mode === "slow-staging" || mode === "dispatch-closing") ? "continuation-startup-repair-A" : v8 ? "continuation-boundary-v8-Q" : "continuation-ready-v7-N-parent" }))))("$tag preserves spent bytes and nonaccepting observed-exit handling: $mode", async ({ mode, v8 }) => {
     const began = performance.now(), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "ready-v7-parent-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
     const p = v8 ? lean.LEAN_BASELINE_CONTINUATION_PATHS_V8 : lean.LEAN_BASELINE_CONTINUATION_PATHS_V7, fixedHead = "b".repeat(40), sourcePath = join(dir, "fixed-source"), stages: string[] = [], seen: string[] = []
     const syntheticApproval = v8 ? 1792093334000 : 1792017187000, syntheticA = syntheticApproval + 12345, carryMs = 459375903 + (syntheticA - 1791807317000)
@@ -403,7 +440,7 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
     const actualUsage = usage.getMockImplementation()!; usage.mockImplementation(() => { resourceCalls++; return actualUsage() })
     let controller: ReturnType<typeof continuationHelper.createLeanContinuationStageControllerV6> | ReturnType<typeof continuationHelper.createLeanContinuationBoundaryControllerV8> | undefined
     const binding = Object.freeze({ namespace: window.routeNamespace, synthetic: true })
-    const child = Object.assign(new EventEmitter(), { pid: actualPid + 1000, exitCode: null as number | null, signalCode: null as NodeJS.Signals | null,
+    const child = Object.assign(new EventEmitter(), { pid: actualPid + 1000, connected: true, exitCode: null as number | null, signalCode: null as NodeJS.Signals | null,
       kill: vi.fn((signal: NodeJS.Signals) => { seen.push("kill"); queueMicrotask(() => { if (child.exitCode !== null || child.signalCode !== null) return; child.signalCode = signal; seen.push("observed-exit"); child.emit("exit", null, signal) }); return true }),
       send: vi.fn(() => {
         // Only the inert IPC callback observes child PID/PPID. Actual entry,
@@ -457,7 +494,11 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
         }); return true
       }),
     })
-    const fork = vi.spyOn(childProcess, "fork").mockImplementation(() => { seen.push("fork"); if (mode === "fork-closing") fs.writeFileSync(sourcePath, "changed source"); else queueMicrotask(() => child.emit("message", { ready: child.pid })); return child as never })
+    const releaseEffect = child.send
+    const childHost = Object.assign(new EventEmitter(), { pid: child.pid, ppid: actualPid, connected: true, send: vi.fn((message: unknown) => { seen.push("child-control"); child.emit("message", message) }) })
+    let childWait: Promise<unknown> | undefined
+    if (v8) child.send = vi.fn((...args: unknown[]) => { seen.push(ownMessageKind(args[0])); childHost.emit("message", args[0]); return true })
+    const fork = vi.spyOn(childProcess, "fork").mockImplementation(() => { seen.push("fork"); if (mode === "fork-closing") fs.writeFileSync(sourcePath, "changed source"); else queueMicrotask(() => { if (!v8) { child.emit("message", { ready: child.pid }); return }; childWait = parentApi.waitLeanContinuationReleaseV8(() => { if (Date.now() >= window.deadlineMs) throw new Error("SYNTHETIC_WINDOW") }, childHost).then(token => { expect(token).toMatch(/^[a-f0-9]{64}$/); seen.push("child-token-accepted"); releaseEffect() }).catch(() => { seen.push("child-refused") }) }); return child as never })
     const git = vi.spyOn(childProcess, "execFileSync").mockImplementation(((command: string, args: readonly string[]) => {
       if (command === "ps") return "100\n"
       if (command === "git" && args[0] === "rev-parse" && args[1] === "HEAD") return fixedHead
@@ -476,17 +517,19 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
       if (mode === "progress") { local = parentApi.createLeanContinuationLocalReservationV8(window); local.bindProgress(ledger) }
       const pins = [{ path: sourcePath, stat: fs.lstatSync(sourcePath) }], roles = [{ path: sourcePath, role: "fixed_source" }], current = () => { currentCalls++; if (performance.now() - began > 12000) throw new Error("TINY_PARENT_CENSORED") }
       controller = v8 ? continuationHelper.createLeanContinuationBoundaryControllerV8(pins, [], roles, binding, current, () => { if (local) { local.reserve(); return }; const usage = process.memoryUsage(); if (usage.rss > 3000000000) throw new Error("RESOURCE_DENIED") }) : continuationHelper.createLeanContinuationStageControllerV6(pins, [], roles, binding, current)
-      const stage = <T>(kind: continuationHelper.LeanContinuationStageV6, body: () => T): T => { stages.push(kind); return controller!.withStage(binding, kind, body) }
+      const stage = <T>(kind: continuationHelper.LeanContinuationStageV6, body: () => T): T => { stages.push(kind); const value = controller!.withStage(binding, kind, body); if (mode === "slow-staging" && ["import", "claim", "dispatch"].includes(kind)) { clock.mockReturnValue(Date.now() + 45000); expect(seen).not.toContain("armRelease"); expect(lean.readLeanLedger(ledger).charges.size).toBe(0) }; if (mode === "dispatch-closing" && kind === "dispatch") throw new Error("SYNTHETIC_DISPATCH_CLOSING"); return value }
       const action = parentApi.runLeanBoundedParent({ ledger, requestPath: p.request, allocationPath: p.allocation, store: ledger.directory, sourceRoot: allocation.sourceRoot, manifestRoot: () => allocation.sourceRoot, childMode: "child-continuation-v2", prospectiveStart: { wallStartMs: syntheticA + 1000, monotonicStartNs: process.hrtime.bigint().toString() }, stage, beforeRelease: () => controller!.live(binding, () => {}), beforeTerminal, onFailure: invalidated, terminalReserveMs: window.closureMs, supervisorObservation: true })
-      await expect(action).rejects.toThrow(mode === "source" || mode === "charge-closing" || mode === "progress" ? /CHILD_FAILED/ : mode === "resource" ? /V2_CAPACITY/ : /PIN_CHANGED/)
+      await expect(action).rejects.toThrow(mode === "dispatch-closing" ? /SYNTHETIC_DISPATCH_CLOSING/ : mode === "source" || mode === "charge-closing" || mode === "progress" || mode === "slow-staging" ? /CHILD_FAILED/ : mode === "resource" ? /V2_CAPACITY/ : /PIN_CHANGED/)
       expect(fork).toHaveBeenCalledTimes(1); expect(seen).toContain("observed-exit"); expect(currentCalls).toBeGreaterThan(0)
       expect(() => controller!.live(binding, () => {})).toThrow(/V[68]_CONTEXT/)
       if (mode === "fork-closing") {
         expect(child.kill).toHaveBeenCalledWith("SIGKILL"); expect(child.send).not.toHaveBeenCalled(); expect(lean.readLeanLedger(ledger).charged).toBe(50); expect(lean.readLeanTimeAccounting(ledger).starts.has("pilot-entry")).toBe(false)
+      } else if (mode === "dispatch-closing") {
+        expect(seen).not.toContain("armRelease"); expect(seen).not.toContain("release"); expect(lean.readLeanLedger(ledger).charges.size).toBe(0); expect(lean.readLeanTimeAccounting(ledger).closed.has("pilot-entry")).toBe(true)
       } else {
         expect(seen.indexOf("durable-charge")).toBeLessThan(seen.indexOf("observed-exit")); expect(fs.readFileSync(join(ledger.directory, "ledger.ndjson"))).toEqual(spentBytes)
         expect(lean.readLeanLedger(ledger).charged).toBe(mode === "progress" ? 52 : 51); expect(lean.readLeanLedger(ledger).charges.size).toBe(mode === "progress" ? 2 : 1); expect(invalidated).toHaveBeenCalledTimes(1); expect(beforeTerminal).toHaveBeenCalledTimes(1)
-        if (mode === "source" || mode === "charge-closing" || mode === "progress") {
+        if (mode === "source" || mode === "charge-closing" || mode === "progress" || mode === "slow-staging") {
           const terminal = lean.readLeanChildTerminal(ledger), time = lean.readLeanTimeAccounting(ledger), reason = JSON.parse(fs.readFileSync(join(ledger.directory, "parent-supervisor-reasons.json"), "utf8"))
           expect(terminal.status).toBe("child_failed"); expect(time.closed.has("pilot-entry")).toBe(true); expect(time.active).toBe(false)
           expect(reason).toMatchObject({ uncertain: true, observations: { cleanup: "child_exit_observed", finalIdentity: mode === "progress" ? "matched" : "exception", initiatingCause: "unknown" } }); expect(resourceCalls).toBeGreaterThan(4)
@@ -500,8 +543,10 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
       expect(bytes).toBeLessThan(64 * 1024 * 1024)
       expect(seen.filter(event => event === "observed-exit")).toHaveLength(1)
       if (mode === "charge-closing") { expect(chargeClosingRefused).toBe(true); expect(deniedProvider).not.toHaveBeenCalled(); expect(lean.readLeanLedger(ledger).charged).toBe(51) }
+      if (mode === "slow-staging") { expect(seen.filter(x => x === "armRelease")).toHaveLength(1); expect(seen.indexOf("child-token-accepted")).toBeLessThan(seen.indexOf("durable-charge")); expect(Date.now()).toBeGreaterThan(syntheticA + 90000) }
       process.stdout.write(`FINITE_SYNTHETIC_${v8 ? "V8" : "V7"}_PARENT ${JSON.stringify({ mode, status: "COMPLETE", sampleMs: Math.ceil(performance.now() - began), actualFileBytes: bytes, stages, seen, charged: lean.readLeanLedger(ledger).charged, resourceCalls, currentCalls, failureGuardDescriptorReads: failureGuardReads.length, failureGuardCarryReads: failureGuardJsonReads.length, realParentLedgerController: true, realDurableChargeAndFailureGuardReached: mode !== "fork-closing", gitResourceClockIpcPidObservationsMocked: true, historicalAuthenticationCovered: false, runtimeFitEstablished: false })}\n`)
     } finally {
+      childHost.connected = false; childHost.emit("disconnect"); await childWait
       Object.defineProperty(process, "pid", pidDescriptor); Object.defineProperty(process, "ppid", ppidDescriptor)
       const cleanupBegan = performance.now()
       for (const spy of [git, fork, clock, usage, resource, available, disk, descriptorReads, jsonReads, interval, known]) spy.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(15000)
