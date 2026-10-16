@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Approved additional 30-minute test-only pass for B/C behavioral gaps; no empirical authority
+status: awaiting_human_decision
+stopped_at: Additional test-only pass CLOSED partial; three early-context tests added, original B/C gaps open, production testability scope choice next
 last_updated: "2026-10-16"
 last_activity: 2026-10-16
-last_activity_desc: Additional bounded test-only B/C coverage pass approved; prior partial result and all empirical boundaries preserved
+last_activity_desc: Test-only pass added three passing refusals; 32 repair tests pass, both original gaps remain open, no production or empirical change
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,16 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — additional TEST-ONLY pass CLOSED PARTIAL; internal testability scope choice
+
+Approved30-minute pass T**2026-10-16T18:11:20UTC**/hardstop18:41:20UTC is CLOSED without an empirical action. Test commit **12b3879a94647dcfbde7a11e045df58425fd8d57** adds ONLY22lines in retained.test.ts: three actual CLI→reader→default-opener CONTEXT_OPEN missing-source/getter/proxy refusal cases, no importer/claim/result success inferred. Production remains15f9d49d unchanged. Author CLOSED18:21:58UTC; independent test-delta review clean/released18:24:42UTC; State-A validation PARTIAL/released18:26:54UTC; DISTINCT verifier gaps_found/PARTIAL/released**18:28:52UTC**, narrow new subcoverage VERIFIED, **0of2 original gaps resolved**. All author/review/validator/verifier commands and file ownership CLOSED.
+
+ROOT28928/8533db finalrepairselection **32passed/257skipped/10.61s**, includes prior29+new3/one explicit oldCskip/256filterexcluded, not whole-suite or empirical credit. SAME15strict52494/d58d8b CLOSED2/full13diagnostics7051B WHOLE-byte-equal pre17e767, no new error/global-green claim; configuredprojecttypesff0406 passed. Failed B fixture changes removed, not committed or credited; corrected final attempt87809/2b41f5 took32.67s fixture/38.52s command and never established the required post-entry assertion. No safety/time/resource check was loosened. Existing GATES records setup failures as fixture failures, not production RED or original-cause evidence.
+
+START-B-PARENT-STAGE-01 actual-wrapper-after-entry diagnostic remains OPEN/WARNING; START-C-DEFAULT-01 valid default importer/controller→interval/claim→absent-result/nonaccepting cleanup remains OPEN/BLOCKER for **coverage**, not proven implementation failure. Current lexical frozen historical anchors/spent-metadata joins constrain a small public synthetic valid-flow fixture; this is NOT proof all approaches are impossible. Another identical time-only retry is not recommended. Proposed genuinely new scope choice: permit a narrow internal **production testability refactor** separating immutable external expected-observation binding from actual reader/importer/parent control flow, preserving all production defaults/descriptors/hash/schema/joins/guards and no CLI/request-selectable override or authority mint. It needs checked scope/review before edits and is **not approved or applied** by this test-only authorization. No new exact literal is required; the missing permission is to make that internal code change rather than tests alone.
+
+Current single test-only cycle is closed, not an unlimited retry/time extension. Safe final notes/commit/push only until a new scope disposition. Original V8 causes/real runtime fit UNKNOWN; all costs cumulative and old bytes/charges/results/verifiers immutable/no refund/reset. Plan16/Phase265/all9LEAGpending, Phase266planning-only, serious current-rules league/evaluation/freeze BEFORE formation, holdout unopened/no public/counting/production. No new namespace/window/request/allocation/preparation/ordinary reader/provider/Strategy/Match/private history replay or source-rule/resource change. Earlier continuations below are historical, not reusable authority.
 
 ## Current continuation — additional30-minute TEST-ONLY gap pass APPROVED
 

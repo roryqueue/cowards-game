@@ -6,12 +6,35 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-16
-source_reviewed: 98a07ae6767a6ad9f744b790aa7b13c8f167b74d
-source_gate: startup-diagnostics-repair-A-correlation-gap-filled-B-wrapper-C-default-open-source-verification-pending
+source_reviewed: 12b3879a94647dcfbde7a11e045df58425fd8d57
+source_gate: startup-diagnostics-A-correlation-and-C-context-open-subcoverage-filled-B-wrapper-full-C-default-open-distinct-verification-pending
 empirical_validation: v8-preparation-passed-child-failed-ordinary-reader-refused-zero-new-retained-charge-no-acceptance
 ---
 
 # Phase265 — Validation Strategy
+
+## Current State-A additional test-only pass — PARTIAL, 2026-10-16
+
+Scoped auditor `/root/validate_265_context_gap_tests` inspected ONLY the22-line test delta `cc39ccf8`→`12b3879a94647dcfbde7a11e045df58425fd8d57`, actual wrapper/reader/default-opener/preflight callees, final Plan16 B/C criteria, current STATE and final GATES review/ROOT qualification. Production remains `15f9d49d4669cdf60c9ee25a3758ed95e5416c03`. The validation skill guided actual caller-to-assertion mapping; no whole-phase/history re-audit, new tests, reruns, source edits, private operations or new files. The additional30-minute approval is18:11:20UTC→18:41:20UTC, not a new empirical allowance.
+
+| Gap / task | Actual coverage and remaining behavior | Current disposition |
+|---|---|---|
+| CONTEXT_OPEN subcoverage /265-16-C | Retained test:51–72 calls actual `leanBaselineMain` verify wrapper→actual retained reader→original default opener→actual preflight. Three modes (missing-source/getter/proxy) require exact `LEAN_BASELINE_VERIFY stage=CONTEXT_OPEN code=DETAILS_WITHHELD`, stages exactly INITIAL_WINDOW/CONTEXT_OPEN, opener/reader called once, absent store/claim/allocation, empty temporary directory and zero getter/proxy observations. Canonical window bytes remain below8MiB and independent performance clock bounds construction/execution/cleanup below10s. | **FILLED / COVERED narrow preclaim refusal subcoverage**, three actual ROOT-passing cases. Synthetic external observations, not real custody/capacity or full C closure. |
+| START-B-PARENT-STAGE-01 /265-16-B | No retained passing test exercises actual run wrapper failure after parent entry and asserts finite PARENT catch location. Failed setup attempts were removed; final corrected fixture took32.67s (38.52s command), exceeded10s and refused before intended post-entry assertion. No PARENT stage proof was captured. | **OPEN / ESCALATED WARNING**, original gap unresolved; no implementation defect inferred or failed-attempt credit. Auditor debug0/3; no retry performed. |
+| START-C-DEFAULT-01 /265-16-C | CONTEXT_OPEN coverage above does not execute actual importer/controller or valid default joins→reader interval/claim→absent-result/nonaccepting cleanup. Other default preclaim stages beyond INITIAL_WINDOW/CONTEXT_OPEN remain unverified. Existing11.83/11.95s fixed-anchor fixture stays explicitly skipped as known-unfit containment, not a manual pass or resolved requirement. | **OPEN / ESCALATED BLOCKER for required coverage**, full C remains PARTIAL/MISSING; no new fixture/debug iteration or implementation-bug/original-cause claim. |
+
+The new tests forward real filesystem lstat after relative-path resolution and real opener/reader calls; explicit seams are host RAM/disk, disjoint-cost/core-limit observations, IPC/env/CWD and logical time. Only public canonical window bytes are constructed; spies/env/args/IPC/CWD are restored and the public temp root removed in finally. No importer/controller/context-success object is substituted, and no importer/controller execution is credited. Current lexical frozen importer anchor and closed-capsule/spent-metadata joins constrain this bounded synthetic-fixture approach; this is **not absolute impossibility of every test approach**. Any production testability refactor is a future human scope decision, not authorized or applied here. No waiver, guard weakening, timeout increase or further identical retry follows.
+
+Attributed CLOSED evidence (not auditor executions):
+
+| Command / role | Actual outcome and scope |
+|---|---|
+| ROOT `node --max-old-space-size=768 ./node_modules/vitest/vitest.mjs run --maxWorkers=1 scripts/run-v1-38-lean-baseline.test.ts scripts/lib/v1-38-lean-baseline-retained.test.ts -t 'continuation-startup-repair-(A\|B\|C)'` | Session28928/terminal8533db CLOSED0: **32passed/257skipped/10.61s**, prior29+new3 overlapping selection; one explicit old Cgap plus256filter-excluded. Not a full-suite/unique-summed/empirical pass. Author new-three selection73298/7d4f56 CLOSED0,6.66s total/46ms fixtures is separate attributed evidence, not another three unique tests. |
+| ROOT SAME original15-path strict invocation, unchanged scope recorded in Plan16/GATES | Session52494/terminald58d8b CLOSED2, full13diagnostics/7051B **whole-output byte equal** actual pre17e767. ZeroNEW/no suppression; inherited failure, **not global strict green**. |
+| ROOT `./node_modules/.bin/tsc -b packages/strategy-lab/tsconfig.json packages/runtime-js/tsconfig.json --pretty false` | ff0406 CLOSED0. Prior production boundary/public/factory checks remain qualified unchanged-production history, not rerun for this test-only delta. |
+| Independent `/root/review_265_context_gap_tests` | CLOSED/released18:24:42UTC, exact22-line delta clean0BLOCKER/0WARNING/findings[]; static review, no tests rerun and no behavioral-gap waiver. |
+
+Audit result: **one narrow subcoverage FILLED; zero of the exact two original gaps resolved; both remain ESCALATED, whole amendment/Phase265 PARTIAL**. Earlier A closure/history below remains intact. All failed B attempts and actual command closures remain in existing GATES; setup corrections are not production RED/fixes or evidence of the original V8 cause. All auditor inspection/edit/diff commands CLOSED; sole existing VALIDATION ownership RELEASED to ROOT for DISTINCT verification and notes, no commit by auditor. Plan16/Phase265/all9LEAG pending, nyquistfalse/wave0false, Phase266planning-only, cumulative costs/spent bytes immutable/no reset/refund, original V8 causes/runtime-fit UNKNOWN, current-rules league/freeze BEFORE formation, holdout unopened/no public/counting/production and no new window/request/allocation/prepare/ordinary empirical reader/provider/Strategy/Match authority remain binding.
 
 ## Current narrow A correlation-gap closure — whole amendment PARTIAL, 2026-10-16
 
