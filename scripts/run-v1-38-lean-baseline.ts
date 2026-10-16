@@ -441,7 +441,7 @@ export const waitLeanContinuationReleaseV8 = (checkWindow: () => void, host: Lea
   if (!check()) return
   try { if (!host.send) { refuse("PARENT_LOST"); return }; host.send({ ready: host.pid }) } catch { refuse("PARENT_LOST") }
 })
-const coordinateLeanContinuationParentV8 = (child: ReturnType<typeof fork>, deadline: number, checkWindow: () => void) => {
+export const coordinateLeanContinuationParentV8 = (child: ReturnType<typeof fork>, deadline: number, checkWindow: () => void) => {
   const acceptedControls = new WeakSet<object>()
   let phase: "ready" | "staging" | "armed" | "released" = "ready", nonce: string | undefined, failure: unknown
   let readyResolve!: () => void, readyReject!: (error: unknown) => void, armedResolve!: () => void, armedReject!: (error: unknown) => void
@@ -462,7 +462,9 @@ const coordinateLeanContinuationParentV8 = (child: ReturnType<typeof fork>, dead
   }
   const exited = () => { if (phase !== "released") refuse() }, disconnected = () => { if (phase !== "released") refuse() }
   child.on("message", message); child.on("exit", exited); child.on("error", disconnected); child.on("disconnect", disconnected)
-  const period = setInterval(() => { try { check() } catch { refuse() } }, 250)
+  // Full guards already closed before arm. Do not let a queued poll consume
+  // the child's independent release lifetime while its acknowledgement waits.
+  const period = setInterval(() => { try { check(phase !== "armed") } catch { refuse() } }, 250)
   const timeout = setTimeout(refuse, Math.max(1, deadline - Date.now()))
   return { ready, check, async arm() { check(); if (phase !== "staging") throw continuationOwnedFailureV2("HANDSHAKE"); nonce = randomBytes(32).toString("hex"); phase = "armed"; child.send({ armRelease: nonce }); await armed; check(false) }, acceptsControl(value: unknown) { if (!value || typeof value !== "object" || !acceptedControls.has(value)) return false; acceptedControls.delete(value); return true }, close() { clearInterval(period); clearTimeout(timeout); child.off("message", message); child.off("exit", exited); child.off("error", disconnected); child.off("disconnect", disconnected) } }
 }

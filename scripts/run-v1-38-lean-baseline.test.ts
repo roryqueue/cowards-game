@@ -18,6 +18,54 @@ import * as childTerminal from "./lib/v1-38-lean-child-cli-terminal.js"
 
 const root = (name: string) => labRoot("baseline-cli-test", name)
 const ownMessageKind = (value: unknown) => value && typeof value === "object" && "armRelease" in value ? "armRelease" : "release"
+it.each(["release", "disconnect", "absolute-expiry"] as const)("continuation-startup-repair-A-CR01 delayed acknowledgement crosses real poll without full armed guards: %s", async mode => {
+  // Real coordinator timers and control parsing; only transport/PIDs and the
+  // absolute wall clock are synthetic. No subprocess, provider or private data.
+  const anchor = 1_800_000_000_000, deadline = anchor + 60000
+  let now = anchor, armed = false, released = false, armedGuards = 0
+  const clock = vi.spyOn(Date, "now").mockImplementation(() => now), fullGuard = vi.fn(() => { if (armed && !released) armedGuards++ })
+  const timers: ReturnType<typeof setTimeout>[] = []
+  const host = Object.assign(new EventEmitter(), { pid: 123, ppid: 122, connected: true, send: vi.fn((value: unknown) => {
+    if (value && typeof value === "object" && "releaseArmed" in value) timers.push(setTimeout(() => child.emit("message", value), 350))
+    else child.emit("message", value)
+    return true
+  }) })
+  const child = Object.assign(new EventEmitter(), { pid: 123, connected: true, exitCode: null, signalCode: null, send: vi.fn((value: unknown) => {
+    if (ownMessageKind(value) === "armRelease") armed = true
+    else released = true
+    host.emit("message", value); return true
+  }), kill: vi.fn(() => { host.connected = false; host.emit("disconnect"); return true }) })
+  const parent = parentApi.coordinateLeanContinuationParentV8(child as unknown as ReturnType<typeof childProcess.fork>, deadline, fullGuard)
+  const token = parentApi.waitLeanContinuationReleaseV8(() => { if (now >= deadline) throw new Error("SYNTHETIC_ABSOLUTE_EXPIRY") }, host)
+  void token.catch(() => {})
+  try {
+    await parent.ready
+    const stagingGuards = fullGuard.mock.calls.length, action = parent.arm()
+    void action.catch(() => {})
+    expect(fullGuard).toHaveBeenCalledTimes(stagingGuards + 1)
+    if (mode !== "release") timers.push(setTimeout(() => {
+      if (mode === "absolute-expiry") now = deadline
+      else { child.connected = false; child.emit("disconnect") }
+    }, 275))
+    if (mode === "release") {
+      await action
+      expect(armedGuards).toBe(0)
+      expect(fullGuard).toHaveBeenCalledTimes(stagingGuards + 1)
+      child.send({ release: "c".repeat(64) })
+      await expect(token).resolves.toBe("c".repeat(64))
+      // Post-release periodic full supervision remains active.
+      await new Promise<void>(done => timers.push(setTimeout(done, 275)))
+      expect(fullGuard.mock.calls.length).toBeGreaterThan(stagingGuards + 1)
+      expect(child.kill).not.toHaveBeenCalled()
+    } else {
+      await expect(action).rejects.toThrow(/HANDSHAKE|PARENT_LOST/)
+      await expect(token).rejects.toThrow(/HANDSHAKE|PARENT_LOST/)
+      expect(armedGuards).toBe(0)
+      expect(child.kill).toHaveBeenCalledWith("SIGKILL")
+      expect(released).toBe(false)
+    }
+  } finally { parent.close(); for (const timer of timers) clearTimeout(timer); host.emit("disconnect"); await token.catch(() => {}); clock.mockRestore() }
+})
 it("continuation-startup-repair-A child arms once after slow staging and expires at exactly 30000ms", async () => {
   vi.useFakeTimers()
   const host = Object.assign(new EventEmitter(), { pid: 123, ppid: 122, connected: true, send: vi.fn() })
