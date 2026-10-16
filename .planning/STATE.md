@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: awaiting_human_decision
-stopped_at: V8 diagnosis CLOSED; narrow startup ordering and finite diagnostics repair proposed, not applied or authorized
-last_updated: "2026-10-15"
-last_activity: 2026-10-15
-last_activity_desc: Confirmed startup-watchdog hazard and diagnostic gaps; original causes UNKNOWN, no source fixes or Matches
+status: in_progress
+stopped_at: Approved bounded source-only startup and diagnostics repair; checked Plan16 amendment next, no empirical authority
+last_updated: "2026-10-16"
+last_activity: 2026-10-16
+last_activity_desc: One 60-minute source-only repair-and-check cycle approved; no new experiment or Matches
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — source-only startup/diagnostics repair APPROVED
+
+Latest direct human `approved` accepts the exact proposed **60-minute repair-and-check cycle, with no new experiment run**. First ROOT approval observation **2026-10-16T16:07:27UTC** (12:07:27 Eastern); absolute source-work hardstop **2026-10-16T17:07:27UTC** (13:07:27 Eastern). This allowance includes checked existing Plan16 amendment, narrow startup coordination and trusted finite diagnostics repair, inert regression checks, independent review/fix, scoped validation/verification and notes. Preserve the existing30s release bound, complete opening/closing checks, resource/liveness/authorization-before-release/charge, all cumulative costs and existing15GB/3GB/runtime/scientific/privacy limits. No timeout increase/reset/removal, arbitrary thrown-message trust or raw private errors. Resolve explicit existing-file ownership before any shared helper edit. No new numbered plan/workstream/proof tree.
+
+V8 run74064 and its unique reader92229 are CLOSED, ownership/source hold released; tracked main clean at a161eb8f before this update. All old routes/requests/windows/allocations/claims/results/ledgers/terminals/verifiers remain spent and immutable. This approval grants **no new experiment/window/namespace/request/allocation/prepare/ordinary reader/provider/Strategy/Match**. Original causes UNKNOWN; source regressions cannot establish actual runtime fit or empirical completion. Existing diagnosis is research input, not repeated heavy history work. ROOT owns STATE/GATES; sequential typed planner/checker/executor/reviewer/validator/verifier own only explicitly handed-off existing carriers/source. Plan16/Phase265/all9LEAG pending; Phase266 planning-only, current-rules league/freeze before formation, unopened holdout, no public/counting/production. Earlier pending-repair proposal below is historical, superseded only within this bounded source allowance.
 
 ## Current continuation — V8 diagnosis CLOSED; source-only repair proposed
 
