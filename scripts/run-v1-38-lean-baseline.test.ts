@@ -18,6 +18,48 @@ import * as childTerminal from "./lib/v1-38-lean-child-cli-terminal.js"
 
 const root = (name: string) => labRoot("baseline-cli-test", name)
 const ownMessageKind = (value: unknown) => value && typeof value === "object" && "armRelease" in value ? "armRelease" : "release"
+it.each(["wrongPID", "wrongnonce", "unsolicited"] as const)("continuation-startup-repair-A-parent-negative rejects real parent acknowledgement: %s", async mode => {
+  // Actual parent coordinator and child wait state machines. Only transport,
+  // PID observations and the timer clock are inert; no subprocess or authority.
+  vi.useFakeTimers()
+  const deadline = Date.now() + 60000, fullGuard = vi.fn(), provider = vi.fn()
+  let nonce: string | undefined
+  const host = Object.assign(new EventEmitter(), { pid: 123, ppid: 122, connected: true, send: vi.fn((value: unknown) => {
+    if (value && typeof value === "object" && "releaseArmed" in value && "nonce" in value) {
+      nonce = String(value.nonce)
+      child.emit("message", { releaseArmed: mode === "wrongPID" ? 124 : 123, nonce: mode === "wrongnonce" ? `${nonce[0] === "0" ? "1" : "0"}${nonce.slice(1)}` : nonce })
+    } else child.emit("message", value)
+    return true
+  }) })
+  const child = Object.assign(new EventEmitter(), { pid: 123, connected: true, exitCode: null as number | null, signalCode: null as NodeJS.Signals | null,
+    send: vi.fn((value: unknown) => { if (ownMessageKind(value) === "release") provider(); host.emit("message", value); return true }),
+    kill: vi.fn(() => { child.connected = false; child.signalCode = "SIGKILL"; host.connected = false; host.emit("disconnect"); child.emit("exit", null, "SIGKILL"); return true }),
+  })
+  const parent = parentApi.coordinateLeanContinuationParentV8(child as unknown as ReturnType<typeof childProcess.fork>, deadline, fullGuard)
+  const token = parentApi.waitLeanContinuationReleaseV8(() => {}, host)
+  void token.catch(() => {})
+  try {
+    await parent.ready
+    if (mode === "unsolicited") child.emit("message", { releaseArmed: child.pid, nonce: "a".repeat(64) })
+    const release = parent.arm().then(() => child.send({ release: "c".repeat(64) }))
+    await expect(release).rejects.toThrow(/HANDSHAKE|PARENT_LOST/)
+    await expect(token).rejects.toThrow(/HANDSHAKE|PARENT_LOST/)
+    expect(child.kill).toHaveBeenCalledWith("SIGKILL"); expect(provider).not.toHaveBeenCalled()
+    expect(child.send.mock.calls.some(([message]) => ownMessageKind(message) === "release")).toBe(false)
+    expect(child.send).toHaveBeenCalledTimes(mode === "unsolicited" ? 0 : 1)
+    if (mode !== "unsolicited") { expect(nonce).toMatch(/^[a-f0-9]{64}$/u); expect(fullGuard).toHaveBeenCalled() }
+    const late = { releaseArmed: child.pid, nonce: nonce ?? "a".repeat(64) }
+    child.emit("message", late)
+    expect(parent.acceptsControl(late)).toBe(false)
+    expect(() => parent.check(false)).toThrow(/HANDSHAKE|PARENT_LOST/)
+    expect(provider).not.toHaveBeenCalled()
+  } finally {
+    parent.close(); host.emit("disconnect"); await token.catch(() => {})
+    for (const event of ["message", "exit", "error", "disconnect"]) expect(child.listenerCount(event)).toBe(0)
+    for (const event of ["message", "disconnect"]) expect(host.listenerCount(event)).toBe(0)
+    expect(vi.getTimerCount()).toBe(0); vi.useRealTimers()
+  }
+})
 it.each(["release", "disconnect", "absolute-expiry"] as const)("continuation-startup-repair-A-CR01 delayed acknowledgement crosses real poll without full armed guards: %s", async mode => {
   // Real coordinator timers and control parsing; only transport/PIDs and the
   // absolute wall clock are synthetic. No subprocess, provider or private data.
