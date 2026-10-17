@@ -236,6 +236,7 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       const freshAnchor = 1792279083001, freshCarry = continuationLedger.leanContinuationGlobalFloorV2(freshAnchor)
       Object.assign(windowBody, { approvedAtMs: 1792279083000, anchorMs: freshAnchor, carryMs: freshCarry, capMs: freshCarry + 28800000, deadlineMs: freshAnchor + 28800000, approvalEvidence: { ...windowBody.approvalEvidence, humanDecisionId: "human-approval-observed-20261017T231803Z" } })
     }
+    if (routeNamespace === "20261017-v13") Object.assign(windowBody, { approvedAtMs: 1792279083000, anchorMs: 1792280297748, carryMs: 932356651, capMs: 961156651, deadlineMs: 1792309097748, approvalEvidence: { ...windowBody.approvalEvidence, humanDecisionId: "human-approval-observed-20261017T231803Z" } })
     const window = { ...windowBody, root: labRoot(windowBody.schemaVersion, windowBody) }
     const carryBody = {
       schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const,
@@ -286,8 +287,8 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       for (const name of ["reader-claim.json", "retained-check.json", "time.ndjson", "ledger.ndjson"]) expect(fs.existsSync(resolve(p.store, name))).toBe(false)
     } finally { for (const spy of spies.reverse()) spy.mockRestore(); for (const key of ["send", "connected"] as const) { const d = ipc[key]; if (d) Object.defineProperty(process, key, d); else Reflect.deleteProperty(process, key) }; fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(45000) }
   }, 45000)
-  it("[continuation-route-v12] rejects a missing result before context opening or one-use effects", () => {
-    const { allocation } = v2Allocation("20261017-v12"), p = continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V12
+  it.each([["v12", "20261017-v12"], ["v13", "20261017-v13"]] as const)("[continuation-route-%s] rejects a missing result before context opening or one-use effects", (_tag, namespace) => {
+    const { allocation } = v2Allocation(namespace), p = continuationLedger.leanBaselineContinuationPathsForWindowV2(allocation.window)
     const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "public-v12-result-precheck-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), stages: string[] = []
     const ipc = { send: Object.getOwnPropertyDescriptor(process, "send"), connected: Object.getOwnPropertyDescriptor(process, "connected") }
     Object.defineProperty(process, "send", { value: undefined, configurable: true }); Object.defineProperty(process, "connected", { value: false, configurable: true })

@@ -2298,7 +2298,7 @@ it("continuation-device-v11-driver-bind actual importer binds fresh device and s
   expect(() => context.guard()).toThrow()
 }, "20261017-v11"), 60000)
 
-for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "continuation-next-v10-reader-remaining-closure" }, { namespace: "20261017-v11" as const, tag: "continuation-device-v11-retained-default continuation-reader-precheck-v11" }, { namespace: "20261017-v12" as const, tag: "continuation-fresh-window-v12-reader" }]) it(`${tag} actual default reader admits40minutes, preserves31minute closure and refuses hard expiry (public synthetic history/resources)`, () => withInternalObservationTree(true, async f => {
+for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "continuation-next-v10-reader-remaining-closure" }, { namespace: "20261017-v11" as const, tag: "continuation-device-v11-retained-default continuation-reader-precheck-v11" }, { namespace: "20261017-v12" as const, tag: "continuation-fresh-window-v12-reader" }, { namespace: "20261017-v13" as const, tag: "continuation-route-v13-reader" }]) it(`${tag} actual default reader admits40minutes, preserves31minute closure and refuses hard expiry (public synthetic history/resources)`, () => withInternalObservationTree(true, async f => {
   const { D, L, R, p, ledger, w, tick, read, fs } = f, stages: string[] = []
   f.note("remaining reader closure at40minutes")
   expect(w.deadlineMs - Date.now()).toBe(2400000)
@@ -2312,6 +2312,10 @@ for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "co
   expect(stages).toContain("CLAIM"); expect(stages).toContain("PUBLICATION")
   expect(read(p.store + "/reader-claim.json").allocationRoot).toBe(ledger.allocation.root)
   expect(result).toMatchObject({ disposition: "gaps_found", failure: "CONTINUATION_READER_FAILURE", report: null })
+  if (namespace === "20261017-v13") {
+    expect(stages.indexOf("READER_INTERVAL")).toBeGreaterThan(stages.indexOf("ENTRY_PID_CONTEXT"))
+    expect(result.sourceHoldFailure).toBe("CONTINUATION_READER_FAILURE")
+  }
   for (const value of [result, structuredClone(result), JSON.parse(JSON.stringify(result)), { ...result }]) expect(R.isLeanContinuationAcceptedPrivateCheckV6(value)).toBe(false)
   expect(L.readLeanTimeAccounting(ledger).closed.has("continuation-retained-verifier-v2")).toBe(true)
   const claimBytes = fs.readFileSync(resolve(p.store, "reader-claim.json")), timeBytes = fs.readFileSync(resolve(p.store, "time.ndjson"))
@@ -2402,7 +2406,7 @@ it("continuation-fresh-window-v12-auth authenticates old costs without inheritin
 
 it("continuation-route-v13-cost authenticates one retired V12 leaf and refuses old-path or current admission drift", () => withInternalObservationTree(false, async f => {
   const { C, D, L, p, w, imported, obs, git, review, bounded, fs: native, resource } = f
-  const old = L.LEAN_BASELINE_CONTINUATION_PATHS_V12, path = resolve(old.window), bytes = native.readFileSync(path), row = obs.spentV12Metadata[0]
+  const old = L.LEAN_BASELINE_CONTINUATION_PATHS_V12, path = resolve(old.window), bytes = native.readFileSync(path), row = obs.spentV12Metadata[0], originalRawRoot = row.rawRoot
   const authenticate = () => C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)
   expect(imported.inventory.filter((r: any) => r.path === old.window)).toHaveLength(1)
   expect(imported.custody.records).toContainEqual({ name: old.window, rawRoot: L.leanBytesRoot(bytes) })
@@ -2427,9 +2431,9 @@ it("continuation-route-v13-cost authenticates one retired V12 leaf and refuses o
       else if (mode === "alias") { native.unlinkSync(path); native.symlinkSync(resolve(old.request), path) }
       else if (mode === "owner") { const stat = native.lstatSync; spy = vi.spyOn(native, "lstatSync").mockImplementation(((name: any, ...args: any[]) => { const s = stat(name, ...args); return String(name) === path ? Object.assign(s, { uid: 999 }) : s }) as any) }
       else if (mode === "replacement") { const stat = native.fstatSync; spy = vi.spyOn(native, "fstatSync").mockImplementation(((...args: any[]) => { const s = Reflect.apply(stat, native, args); return s.size === row.bytes ? Object.assign(s, { ino: s.ino + 1 }) : s }) as any) }
-      else { const oldW = JSON.parse(bytes.toString()), { root: _, ...b } = { ...oldW, anchorMs: oldW.anchorMs + 1, carryMs: oldW.carryMs + 1, capMs: oldW.capMs + 1, deadlineMs: oldW.deadlineMs + 1 }; f.json(old.window, { ...b, root: labRoot(b.schemaVersion, b) }) }
-      expect(authenticate).toThrow()
-    } finally { spy?.mockRestore(); if (mode === "alias") native.unlinkSync(path); native.writeFileSync(path, bytes, { mode: 0o600 }); native.chmodSync(path, 0o600) }
+      else { const oldW = JSON.parse(bytes.toString()), { root: _, ...b } = { ...oldW, anchorMs: oldW.anchorMs + 1, carryMs: oldW.carryMs + 1, capMs: oldW.capMs + 1, deadlineMs: oldW.deadlineMs + 1 }; f.json(old.window, { ...b, root: labRoot(b.schemaVersion, b) }); row.rawRoot = L.leanBytesRoot(native.readFileSync(path)) }
+      if (mode === "clock") expect(authenticate).toThrow(/V13_ALLOWANCE_ANCHOR/); else expect(authenticate).toThrow()
+    } finally { spy?.mockRestore(); row.rawRoot = originalRawRoot; if (mode === "alias") native.unlinkSync(path); native.writeFileSync(path, bytes, { mode: 0o600 }); native.chmodSync(path, 0o600) }
   }
   for (const name of obs.spentV12Absences) { f.write(name, "public unexpected", 0o600); try { expect(authenticate).toThrow(/V13_SPENT_ABSENCE/) } finally { native.unlinkSync(resolve(name)) } }
   const before = native.readFileSync(resolve(p.request)); f.json(p.request, { ...f.request, windowRoot: root("stale-window") })
@@ -2440,8 +2444,8 @@ it("continuation-route-v13-cost authenticates one retired V12 leaf and refuses o
   for (const name of ["run-claim.json", "reader-claim.json", "result.json"]) expect(native.existsSync(resolve(p.store, name))).toBe(false)
 }, "20261017-v13"), 45000)
 
-it("continuation-route-v12 CLI selects only the exact request, never an observation policy switch", () => {
-  const request = lean.LEAN_BASELINE_CONTINUATION_PATHS_V12.request
+it.each([["v12", lean.LEAN_BASELINE_CONTINUATION_PATHS_V12], ["v13", lean.LEAN_BASELINE_CONTINUATION_PATHS_V13]] as const)("continuation-route-%s CLI selects only the exact request, never an observation policy switch", (_tag, paths) => {
+  const request = paths.request
   for (const mode of ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"]) {
     expect(parentApi.parseLeanBaselineCommand([mode, "--request", request])).toEqual({ mode, request })
     expect(() => parentApi.parseLeanBaselineCommand([mode, "--request", request + ".other"])).toThrow()
@@ -2600,6 +2604,26 @@ it(`${observationTag} actual reader closure rejects changed second-open time byt
   try { expect(() => { D.openLeanBaselineContinuationContextV2(p.request, true, undefined, checkingMode); effect() }).toThrow(/V2_FILE_CHANGED/); expect(mutated).toBe(true); expect(effect).not.toHaveBeenCalled() } finally { reading.mockRestore(); opened.mockRestore() }
 }, namespace), 45000)
 }
+
+it("continuation-route-v13-second-open actual fullSample refuses changed legacy bytes permanently", () => withInternalObservationTree(false, async f => {
+  const { D, L, p, w } = f, native: typeof fs = f.fs
+  f.note("stabilized legacy second-open")
+  const context = D.openLeanBaselineContinuationContextV2(p.request, false), target = resolve(p.store, "ledger.ndjson"), read = native.readFileSync, open = native.openSync, fds = new Set<number>()
+  let mutated = false
+  const opened = vi.spyOn(native, "openSync").mockImplementation((name, flags, mode) => { const fd = open(name, flags, mode); if (String(name) === target) fds.add(fd); else fds.delete(fd); return fd })
+  const reading = vi.spyOn(native, "readFileSync").mockImplementation(((...args: Parameters<typeof fs.readFileSync>) => {
+    const result = Reflect.apply(read, native, args)
+    if (!mutated && typeof args[0] === "number" && fds.has(args[0])) { mutated = true; native.appendFileSync(target, Buffer.concat([L.leanCanonicalBytes({ kind: "resource", elapsedMs: w.carryMs, physicalBytes: 4096, bufferBytes: 0, scratchBytes: 0 }), Buffer.from("\n")])) }
+    return result
+  }) as typeof fs.readFileSync)
+  const effect = vi.fn()
+  try {
+    expect(() => { context.fullSample(); effect() }).toThrow(/V2_FILE_CHANGED/)
+    expect(mutated).toBe(true)
+  } finally { reading.mockRestore(); opened.mockRestore() }
+  expect(() => context.guard()).toThrow(/V8_CONTEXT/)
+  expect(() => context.stage("dispatch", effect)).toThrow(/V8_CONTEXT/); expect(effect).not.toHaveBeenCalled()
+}, "20261017-v13"), 45000)
 
 it("continuation-guard-overlap-v11 stable valid journal append passes; descriptor-overlap permanently denies dependent effects", () => withInternalObservationTree(false, async f => {
   const { D, L, p, ledger, w } = f, native: typeof fs = f.fs

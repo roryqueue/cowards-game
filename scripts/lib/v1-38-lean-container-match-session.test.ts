@@ -18,11 +18,11 @@ import { defaultRuntimeMetadata, RUNTIME_INVOCATION_V1_17_TEST_KEY_ID, createSel
 import { encodeCandidateHostEnvelopeV117 } from "../../packages/runtime-js/src/candidate-host-envelope.js"
 import { encodeSubprocessIpcRequest } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { registerCandidateEvidenceFixture } from "../../packages/runtime-js/src/candidate-evidence-fixture.js"
-import { leanBytesRoot, LEAN_STARTUP_POLICY_V5, LEAN_BASELINE_CONTINUATION_PATHS_V11, LEAN_BASELINE_CONTINUATION_PATHS_V12, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationWindowV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { leanBytesRoot, LEAN_STARTUP_POLICY_V5, LEAN_BASELINE_CONTINUATION_PATHS_V11, LEAN_BASELINE_CONTINUATION_PATHS_V12, LEAN_BASELINE_CONTINUATION_PATHS_V13, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationWindowV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { readLeanBaselineContinuationGitV2 } from "./v1-38-lean-container-match-session.js"
 const LEAN_CONTAINER_IMAGE = LAB_ADMITTED_ROOTS.image
-it("[continuation-route-v12] blocks a manifest-listed V12 allocation when another route is selected", () => {
-  const path = LEAN_BASELINE_CONTINUATION_PATHS_V12.allocation, allocationRoot = `sha256:${"a".repeat(64)}` as const
+it.each([["v12", LEAN_BASELINE_CONTINUATION_PATHS_V12], ["v13", LEAN_BASELINE_CONTINUATION_PATHS_V13]] as const)("[continuation-route-%s] blocks a manifest-listed allocation when another route is selected", (_tag, paths) => {
+  const path = paths.allocation, allocationRoot = `sha256:${"a".repeat(64)}` as const
   const anchorMs = 1792242843861, carryMs = 894902764, body = {
     schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const,
     grantId: "synthetic-v11-route-binding", approvalEvidence: { humanDecisionId: "human-approval-observed-20261017T124639Z", recordedBy: "/root" },
