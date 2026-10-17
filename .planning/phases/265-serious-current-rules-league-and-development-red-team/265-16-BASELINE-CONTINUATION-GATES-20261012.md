@@ -1,5 +1,17 @@
 # Baseline continuation gates
 
+## Tasks5+6 resumed source qualification — 2026-10-17
+
+Final narrow test-relocation review /root/review_265_opening_fix clean atb7124d9d; all assertions preserved, accessor returns identical frozen constant. ROOT factory72366/b6989c CLOSED0,1446files/violations[]. All ROOT/source/review commands closed; State-A mapping final, distinct source verification next. No whole-phase or empirical completion claim.
+
+Source e78dc4d3 closes CR-OWNED-OPENING-01 after author RED6fdcb7b3. Interrupted author7759 output unavailable after restart; outcome UNKNOWN. ROOT confirmed no matching active test/experiment process and independently ran24cases30376/f5e477 (23helper+actual context negative),23.85s/fixture18.157s5606706B; actual V12 positive79537/ad9899,1pass31.42s/fixture26.069s5607967B;5route cases84874/da3cbf,5.28s. Thirty unique selected ROOT cases, not a full-suite claim; all fixtures<=45s/8MiB,60s process-group watchdog, commands closed. Independent /root/review_265_opening_fix clean; detailed narrow review below.
+
+Configured package build41353/0ca5e2 exposed two NEW project-boundary errors6059/6307: domain test imported the script observation leaf outside package rootDir. ROOT b7124d9d relocates exactly that existing assertion block into the helper test, calling its existing observation accessor; no production change or assertion deletion. Corrected project build23881/129e03 CLOSED0; repeated affected5cases52065/c99761 CLOSED0/5.47s, overlapping earlier five not extra coverage. Narrow independent relocation review follows.
+
+ROOT strict comparison: same twelve entry files/options/dependencies; baseline uses read-only compiler-host Git overlays at90824b9c for eleven changed source/test files, plus unchanged supervisor test; no checkout/files/private reads.90160/e46ff1 baseline and12988/5cea15 current observations CLOSED, WHOLE formatted diagnostics byte-equal; final b7124d9d47135/2aa09c again WHOLE-output equal. Six inherited errors only, feasibility-protocol52 and planner/missions52/60/66/68/69. Observation harness exit0 is NOT compiler-global green. Scoped State-A mapping in existing VALIDATION; distinct source verification still owed.
+
+Original experiment deadline21:14:03.861UTC expired during interruption; ROOT resumed22:23:09UTC. No V12 window/request/allocation/entry/reader/Match created; no allowance reset or empirical credit. All old evidence immutable. Source correction may close, but renewed empirical time is a new human resource decision. Plan16/265/all9LEAG pending;266 planning-only/holdout unopened/freeze before formation/no public-counted-production.
+
 ## V11 opaque cost-only snapshot for prospective setup
 
 Independent /root/explore_265_bootstrap_guard complete-check PASS, exit0/all commands CLOSED: exact22files/2directories/5absences,1363285B opaque hashed,1421312B allocated files/0directories, candidate floor93921280. NOFOLLOW descriptors/path/owner/mode/link/unique identity and exact stable membership checked; no contents parsed/printed, reader/Match/authority invoked, or files written. Agent reports synchronous wall_time_seconds0.000042804 and no retained session/chunk identifier; this tool-reported timing is not a measured experiment cost. Earlier selector typo was corrected before the complete check; no rerun for provenance. Tuple comparison is closed; SOURCE/DATA/allocation/capacity remain separate gates.
@@ -2295,3 +2307,25 @@ observe() allows store nlink increases provisionally, but directory() validates 
 Other delta tracing found no additional actionable finding: two-buffer journal capture/fresh strict EOF/prefix checks; legacy second-open snapshot brackets; fullSample/pre-pair/startCell/closure invalidation; exact V12 selection/default older strict policy; finite driver/retained/Git negative predicates; immutable V11 cost-only22/2/5 and file floor93921280 counted once; original T/A/carry/cap/deadline retained. ROOT public-tuple comparison445f48 is attributed, not new private authentication.
 
 Author Task5 31, Task6a2/6c2/6b7 and overlapping10 regressions are attributed, not rerun or summed. Author SIX strict reports six inherited outside scope; ROOT comparison/qualification and distinct verification remain owed; no global-green claim. Eleven source files exactly match522193e9. No source/private/history/ordinary-reader/runtime/provider/Strategy/Match operation, authority/artifact creation, allocation/time extension or commit. Only this append. All reviewer commands CLOSED; sole GATES section ownership RELEASED to ROOT. Source gate requires CR-OWNED-OPENING-01 repair/review; empirical/Phase265/all9LEAG gates remain pending.
+
+## Independent CR-OWNED-OPENING-01 re-review — CLOSED
+
+Reviewer /root/review_265_opening_fix; 2026-10-17T22:25:11Z. **status: clean; BLOCKER: 0; WARNING: 0.** Static narrow delta522193e9f45830ffbea82684d9273a6d47c3f9b0 -> exact sourceHEAD e78dc4d36399f920ed6e104dd2228f71ba8badb9. Changed scope: scripts/lib/v1-38-lean-baseline-continuation.ts and scripts/run-v1-38-lean-baseline.test.ts; unchanged eleven-file review not repeated.
+
+CR-OWNED-OPENING-01 CLOSED by helper703-704: committed stat/members are classified against opening stat/members before replacing that pin. Unexplained nlink rise with unchanged opening members now fails before later creation can excuse it. Identity/mode/shrink checks still precede classification. Stable between-call additions satisfy the direct-child relation; creation between opening stat/list remains admissible when opening stat matches committed stat. Closing checks, added-leaf pins, complete all-root revalidation and strict second scan retain exact ending identity/link/member/high-water pins (698-750). Failure still permanently invalidates measurement, local reservation and boundary controller (driver1103; helper750/828).
+
+Actual V12 regression2391-2422 constructs the real context under existing public fixture seams, commits nlink2, injects opening nlink3 with unchanged members, then creates the allowed leaf after listing. It asserts the interleaving, OWNED_CHANGED, restored-seam refusal and effects0. Existing helper308-330 positives and actual-context2427-2465 remain applicable; no regression found by static tracing.
+
+ROOT-attributed evidence, NOT rerun:30376/f5e477 CLOSED0,24pass/23.85s (23helper+1actual negative), fixture18.157s/5606706B;79537/ad9899 CLOSED0,1actual positive/31.42s,fixture26.069s/5607967B. Interrupted author7759 remains UNKNOWN. No full-suite/global-types/real-runtime or historical-cause claim.
+
+Only this <=2500B GATES append; no source/STATE/VALIDATION/new report/commit, tests, private history, ordinary reader, importer/provider/Strategy/Match or authority operation. All reviewer commands CLOSED; GATES ownership RELEASED to ROOT. Source qualification/distinct verification remain ROOT's gates; original empirical deadline expired, no renewed allowance or prospective setup/run authorized.
+
+## Independent test-boundary re-review — CLOSED
+
+Reviewer /root/review_265_opening_fix; 2026-10-17T22:28:16Z. **status: clean; BLOCKER: 0; WARNING: 0.** Exact HEAD b7124d9d9c308bb9bcfe8f83f3d01e2ced0ea7ce; delta from e78dc4d3 contains ONLY packages/strategy-lab/src/league/lean-experiment.test.ts and scripts/lib/v1-38-lean-baseline-continuation.test.ts.
+
+The relocated block preserves every assertion: 22 ordered paths, byte/block totals, endpoint metadata/hashes, two directories/member checks, five exact absences and four freeze checks. Same test tag/name; no skip. New accessor call returns the identical frozen constant (observations432-433), without I/O or alternate data. Recipient has no hoisted mock of that accessor. Removing the scripts import from the composite domain project's src boundary resolves the dependency cause without changing production, policy, configuration or assertion strength. Prior opening-fix review remains intact.
+
+ROOT-attributed, not rerun: configured build23881/129e03 CLOSED0; five affected tests52065/c99761 CLOSED0/5.47s; exact12strict47135/2aa09c byte-equal to pre908 six inherited diagnostics; factory72366/b6989c passed1446. No global strict-green claim.
+
+Only this <=1500B GATES append. All reviewer commands CLOSED; ownership RELEASED to ROOT. No tests/private operations/source edits/new report/commit/authority/run. Expired empirical window remains expired.

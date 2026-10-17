@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Independent review found opening-pair ordering gap; narrow source correction active
+stopped_at: Source correction reviewed and ROOT validated; distinct source verification pending; experiment window expired
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: CR-OWNED-OPENING-01 independently reproduced; author fixing before any new experiment
+last_activity_desc: b7124d9d reviewed;30focused tests and configured build pass; distinct verification next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V11 closed; bounded source correction
+
+Source correction now b7124d9d, production e78dc4d3: independent opening-pair and test-relocation reviews clean, ROOT30unique focused tests pass, configured lab/runtime build pass, factory1446/violations[], exact12strict comparison has only six unchanged inherited diagnostics. Interrupted author7759 remains UNKNOWN; ROOT results are separate actual executions. Scoped State-A coverage updated, distinct source verification next. No new Match or V12 artifact; original empirical window expired and must not be silently extended.
+
+ROOT resumed at2026-10-17T22:23:09UTC after agent interruption. Original deadline21:14:03.861UTC has passed; latest `please continue` is not a new time/resource allowance. No V12 window/request/allocation/entry was created in this continuation. RED6fdcb7b3 is committed; the author's two-line helper correction survives uncommitted. Old test session7759 is unavailable, so its outcome is UNKNOWN, never assumed green; no matching active test/experiment process observed in fresh narrow process check. ROOT resumes bounded source-only qualification, independent review/verification and safe commit/push. No new Match or reset/reuse of old authority; empirical admission now requires a genuinely new prospective time decision after source closure.
 
 Independent Tasks5+6 review CLOSED issues_found/1BLOCKER0WARNING; CR-OWNED-OPENING-01 requires committed-to-opening directory identity/member validation independently of later allowed creation. One bounded extracted-function reproduction accepted the invalid sequence; this is not actual constructor or historical-cause evidence. Author /root/execute_265_reader_guard now owns the narrow conformance fix and actual-context RED/GREEN regression; review ownership released. Original deadline/caps unchanged, no fresh route artifact or Match. Review/fix, ROOT qualification/scoped validation and distinct source verification remain required.
 

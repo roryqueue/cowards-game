@@ -6,12 +6,32 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-17
-source_reviewed: 90824b9ce6437ae7cb12178742d2b46558454216
-source_gate: reader-guard-tasks-1-4-reviewed-root-validated-distinct-verification-passed
+source_reviewed: b7124d9d9c308bb9bcfe8f83f3d01e2ced0ea7ce
+source_gate: tasks-5-6-reviewed-root-focused-validation-distinct-verification-pending
 empirical_validation: v11-run-and-unique-retained-reader-closed-gaps-found-zero-new-charge
 ---
 
 # Phase265 — Validation Strategy
+
+## Tasks5+6 scoped State-A — 2026-10-17
+
+Final source b7124d9d retains production e78dc4d3. ROOT corrected package-root test import errors by relocating the unchanged opaque-table assertions into the helper test; independent narrow review clean. Corrected configured lab/runtime build23881/129e03 PASS, repeated affected5cases52065/c99761 PASS (not extra unique coverage), final strict47135/2aa09c whole-output equals baseline six inherited diagnostics, factory72366/b6989c PASS1446files/violations[]. Helper line references below describe pre-relocation layout; test names/assertions unchanged. All commands closed; distinct source verification next.
+
+Source e78dc4d3: full eleven-file independent review found CR-OWNED-OPENING-01; narrow re-review by /root/review_265_opening_fix is clean after meaningful actual-context RED6fdcb7b3 and the two-line opening-pair repair. Interrupted author session7759 has UNKNOWN outcome. ROOT independently completed the checks below; this supersedes older Task5 planning-only descriptions for source status, not historical evidence or empirical admission.
+
+| Scope | Actual behavior and assertions | Coverage |
+|---|---|---|
+| 5a owned scan | helper tests267–330 cover complete fresh totals, allowed additions between/during scans, journal growth, shrink/replacement/loss/alias/unknown leaves, nonjournal growth, second instability and permanent denial. Driver2391–2422 reproduces unexplained opening links followed by later allowed creation through actual V12 context; refusal persists and effects remain zero. | Covered source behavior. |
+| 5b journal and callers | helper234–264 covers complete new EOF, captured/authenticated prefix mutation, second append and simultaneous buffer reservation. Driver2427ff exercises actual context/fullSample/time/unfinished charge/startCell/deadline; author-attributed fullSample/dispatch/reader second-open negatives remain applicable. Old routes stay strict. | Covered with public synthetic history/resource seams, not real runtime performance. |
+| 6a exact route and costs | domain687ff enforces fixed original T/A/carry/cap/deadline, rejects aliases/changed tuples and preserves legacy time policy. Frozen22/2/5 tuple and93921280 floor checked; ROOT445f48 compared every public tuple value against independently observed GATES snapshot. | Covered; no new clock or authority. |
+| 6b real integration | driver2348ff rejects CLI policy override;2357ff authenticates cost-only V11 survivors once and rejects content/shrink/mode/owner/member/absence/anchor changes and capacity before importer. Actual default V12 context selects bounded mode; charge/dispatch/closure keep complete fresh checks. | Covered; prior50 charges remain spent, no warm-start. |
+| 6c reader/Git | retained285ff missing-result refusal precedes context/claim/journal; session24ff denies an unselected V12 allocation even if manifest-listed. Existing retained private identity, paired closings and failure/nonacceptance paths extended finitely. | Covered source-only; no actual retained reader invoked. |
+
+ROOT30376/f5e477:24pass (23helper+actual negative),23.85s,fixture18.157s/5606706B. ROOT79537/ad9899:1actual positive,31.42s,fixture26.069s/5607967B. ROOT84874/da3cbf:5route cases across four files,5.28s. Thirty unique selected ROOT cases, not whole-suite green or sum of overlapping author runs. All public fixtures within45s/8MiB and60s process-group watchdog; commands closed.
+
+ROOT exact twelve-entry strict comparison uses TypeScript compiler API, identical options/dependencies, read-only in-memory Git overlays at90824b9c for all eleven changed files versus current source, plus unchanged supervisor test. Baseline90160/e46ff1 and final12988/5cea15 both closed; WHOLE formatted output byte-equal, six inherited diagnostics only in feasibility-protocol52 and planner/missions52/60/66/68/69. Harness exit0 means observation completed, not compiler-global green. No new diagnostics or source suppression.
+
+Distinct source verification remains pending. Whole phase stays partial/nyquistfalse/wave0false/all9LEAG pending. Original21:14:03.861UTC window expired during interruption; no V12 artifacts or empirical action created. Source closure cannot renew the allowance or admit formation/holdout/public/counted/production work.
 
 ## Reader/guard correction — scoped State-A, 2026-10-17
 
