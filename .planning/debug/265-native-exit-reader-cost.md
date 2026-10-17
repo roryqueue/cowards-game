@@ -1,5 +1,5 @@
 ---
-status: awaiting_human_decision
+status: awaiting_resource_decision
 trigger: Continue v1.38 autonomously after the approved baseline window
 created: 2026-10-12
 updated: 2026-10-16
@@ -19,9 +19,9 @@ Retained reader physical88924160B; current store+scratch2453504B/46rows; reader 
 ## Current Focus
 
 hypothesis: Original V8 child/run and reader throws remain UNKNOWN. Confirmed conditional startup ordering/category-loss defects repaired prospectively at15f9d49d; original-cause/dominant-cost/runtime-fit proof still absent.
-test: Source repair cycle and additional30-minute TEST-ONLY pass CLOSED PARTIAL. Test12b3879a adds3actualCONTEXT_OPEN refusals, ROOT32repairtests10.61s; SAME15strict13inherited/7051B whole-byte equal pre-edit, configuredtypes passed. Independent review/validation/distinct verifier retain both original B/C gaps,0of2resolved. Production15f9d49d unchanged; no actual private history/ordinary reader/provider/Strategy/Match or old evidence mutation.
-expecting: No further attempt in this completed single cycle. Actual parent-wrapper safe-stage behavioral test and valid-default-importer→claim→missing-result coverage remain open; current source wiring is not behavioral or empirical proof.
-next_action: Await genuinely new narrow internal production-testability scope disposition; tests-only retries did not close full valid reader/parent-wrapper paths. No identical retry, weakened bound, source refactor or new empirical route inferred. Lexical immutable external-anchor observations constrain current fixture design, not universal impossibility. All latest commands/ownership released18:28:52UTC before18:41:20 hardstop; original causes UNKNOWN, immutable history/cumulative costs preserved.
+test: Approved narrow internal testability refactor CLOSED VERIFIED at source10a49449/tracking1ebbceaf. Exact frozen historical expected data relocated without changing checks/rules/defaults; actual connected B/C tests pass25.698s/27.042s and~1.414MB under prospectively checked TESTONLY45s/8MiB harness. Fullhelper147/focused38/exactHEAD2 green (overlap qualified); configuredtypes/boundaries green; strict13inherited unchanged after two verified line relocations. Independent review clean, State-A2of2 original source gaps FILLED, DISTINCT verifier3of3 source truths VERIFIED/no findings; all commands CLOSED/ownership RELEASED. No empirical operation or old byte/cost mutation.
+expecting: Source-coverage blocker resolved, not empirical/runtime-fit or original-cause proof. Real parent-after-entry finite diagnostic/observed-exit cleanup and real default importer→interval→claim→missing-result nonacceptance now exercised with disclosed synthetic external observations. Earlier failed/censored fixtures stay failed.
+next_action: Human resource choice only: one fresh eight-hour private remaining-baseline window under unchanged limits/cumulative costs. Prior V8 window/route expired/spent; latest approval fulfilled source refactor only. No exact literal, new source-gap retry or invented source-work expiry needed; no new window/request/allocation/preparation/Match before that new allowance and checked prospective route. Plan16/Phase265/all9LEAG pending, rules/privacy/holdout/formation order unchanged.
 
 ### V8 additional diagnosis-only approval — 2026-10-15T23:13:53UTC
 

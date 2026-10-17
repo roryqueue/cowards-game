@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Narrow internal production testability refactor APPROVED; research and checked existing Plan16 amendment next, no empirical authority
-last_updated: "2026-10-16"
-last_activity: 2026-10-16
-last_activity_desc: Approved narrow internal refactor to supply synthetic external observations in tests while production checks/rules remain unchanged
+stopped_at: Internal testability refactor VERIFIED; both B/C source gaps closed; fresh prospective experiment resource window requires human decision
+last_updated: "2026-10-17"
+last_activity: 2026-10-17
+last_activity_desc: Completed checked refactor, independent review/fix, ROOT qualification, scoped validation and distinct source verification; no empirical run
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,16 @@ total_plans_in_phase: 16
 ---
 
 # State: Coward's Game
+
+## Current continuation — approved internal refactor CLOSED VERIFIED; empirical window decision
+
+Actual final source/tests **10a49449cb6a820f780501c970b4804fea94bfef**, verified at tracking **1ebbceaf004f6fddc04f0b5ea0c98ad13a29c18d**. Existing Plan16 OBS-1/2/3 research→checked plan→execution→independent review/fix→ROOT checks→State-A validation→DISTINCT source verification is CLOSED. `/root/verify_265_observation_refactor` returned **VERIFIED3/3 source truths,0BLOCKER/0WARNING**, commands CLOSED/ownership RELEASED; ROOT observed closure by2026-10-17T00:46:14UTC. Exact former fixed observations preserved in one readonly/deep-frozen leaf, real source closure includes it; no selectable production override, authority mint, removed validator or changed numeric/rules boundary. Retained production/engine/runtime/provider/authority modules unchanged.
+
+Both original source-coverage gaps now CLOSED: START-B-PARENT-STAGE-01 actual CLI parent-after-entry owned closing failure/observed exit/terminal cleanup, and START-C-DEFAULT-01 actual default importer/controller→interval→spent claim→missing result→resource-checked failed publication/nonaccepted original return+copies. ROOT B COMPLETE25.698s/1,413,896B, C COMPLETE27.042s/1,414,517B including construction+cleanup, each1pass/separate60s externalwatchdog/groupabsent under prospectively checked TESTONLY45s/8MiB harness. Fast38passes, fullhelper147passes (overlap), exact2liveHEADdrift cases pass. Project types/boundaries/diffcheck pass; SAME15 strict13inherited/7051B exactly pre-edit after ONLY verified driver202→191/322→311 relocation. Four new fixture type errors fixed, not waived. Earlier failed/censored tests stay failed; original V8 initiating cause and empirical/runtime fit remain UNKNOWN. No new Match, real private history/reader or empirical setup ran.
+
+Latest approval was the narrow source/test refactor, now fulfilled; it did **not** supply another experiment window. The prior ONE V8 eight-hour window/route is expired/spent. Standing same-scope route consent removes repeat literal checkpoints but does not itself extend that explicitly finite resource allowance. **Genuinely NEW pending human choice: permit one fresh eight-hour private remaining-baseline window after checked prospective route/source setup, with the same15GB/3GB/global300/new36/fourunopened/guest1000/startup2500/host5000/Match600000 bounds and all continuously carried costs/history.** No exact authorization literal needed. This proposal is NOT applied; no actual future anchor/window/version/namespace/request/allocation/prepare/capacity/charge is created here. No new source-work approval expiry is fabricated, and no more source-gap retry is needed. Do not launch unchanged old V8 or repeat completed reviews/tests while that resource choice is pending.
+
+Plan16/Phase265/all9LEAG empirical requirements remain pending, Phase266 planning-only; whole validation partial/nyquistfalse/wave0false. Current-rules serious league/evaluation/freeze BEFORE formation; unopened holdout/no public/counting/production. All old routes/artifacts/claims/reservations/results/charges/readers immutable/spent/no reset/refund/recredit. Source-only success is not league success or phase completion. Earlier continuations below are historical.
 
 ## Current continuation — fixed-observation extraction reviewed; prospective synthetic harness adjustment
 

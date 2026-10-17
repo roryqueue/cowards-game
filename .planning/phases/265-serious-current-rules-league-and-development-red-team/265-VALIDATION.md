@@ -7,11 +7,13 @@ wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-17
 source_reviewed: 10a49449cb6a820f780501c970b4804fea94bfef
-source_gate: fixed-observation-defaults-B-C-and-required-sensitivities-covered-distinct-verification-pending
+source_gate: fixed-observation-defaults-B-C-and-required-sensitivities-verified-source-only-empirical-pending
 empirical_validation: v8-preparation-passed-child-failed-ordinary-reader-refused-zero-new-retained-charge-no-acceptance
 ---
 
 # Phase265 — Validation Strategy
+
+ROOT closeout: DISTINCT `/root/verify_265_observation_refactor` at1ebbceaf independently VERIFIED3/3 source truths/0BLOCKER0WARNING; exact verdict and static comparisons in existing GATES. Both B/C source gaps and required sensitivity mappings are closed; no remaining scoped validation escalation. This supersedes pending-verifier wording in the audit snapshot below ONLY. Whole partial/nyquistfalse/wave0false/Plan16/Phase265/all9LEAG empirical pending unchanged; source qualification is not a real league result. All commands/ownership CLOSED/released.
 
 ## Current State-A OBS-1–3 scoped audit — source coverage, whole phase PARTIAL, 2026-10-17
 
