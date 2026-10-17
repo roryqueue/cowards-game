@@ -1977,7 +1977,7 @@ it("internal-observations-default preserves ordered catalogs, legacy aliases and
 // Public synthetic external observations only. Every hash, descriptor, schema,
 // source collector, importer, controller, wrapper and failure publisher is real.
 // No success object substitutes for any of those production boundaries.
-const withInternalObservationTree = async (verify: boolean, run: (f: any) => Promise<void>, namespace: "20261015-v8" | "20261017-v9" = "20261015-v8") => {
+const withInternalObservationTree = async (verify: boolean, run: (f: any) => Promise<void>, namespace: "20261015-v8" | "20261017-v9" | "20261017-v10" = "20261015-v8") => {
   // Prospective checked test-only harness. Earlier 10s attempts below remain
   // CENSORED; this changes no production admission, resource or runtime limit.
   const harness = "OBS3-HARNESS-45000", fixtureLimitMs = 45000
@@ -2001,11 +2001,11 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     vi.resetModules()
     const defaults = await vi.importActual<typeof import("./lib/v1-38-lean-continuation-observations.js")>("./lib/v1-38-lean-continuation-observations.js")
     const phase = ".planning/phases/265-serious-current-rules-league-and-development-red-team/", plan = `${phase}265-16-BASELINE-CONTINUATION-PLAN-20261012.md`
-    const obs: any = { ...defaults.LEAN_CONTINUATION_EXPECTED_OBSERVATIONS, sourcePaths: [], continuationOwnedPaths: ["scripts/lib/v1-38-lean-continuation-observations.ts"], continuationExtraPaths: [], continuationPlanningPaths: [plan, `${phase}265-16-BASELINE-CONTINUATION-GATES-20261012.md`], closedCostV2: {}, spentV3Metadata: [], spentV4Metadata: [], spentV4Directories: [], spentV5Metadata: [], spentV5Directories: [], spentV6Metadata: [], spentV7Metadata: [], spentV7Directories: [], spentV8Metadata: [], spentV8Directories: [] }
+    const obs: any = { ...defaults.LEAN_CONTINUATION_EXPECTED_OBSERVATIONS, sourcePaths: [], continuationOwnedPaths: ["scripts/lib/v1-38-lean-continuation-observations.ts"], continuationExtraPaths: [], continuationPlanningPaths: [plan, `${phase}265-16-BASELINE-CONTINUATION-GATES-20261012.md`], closedCostV2: {}, spentV3Metadata: [], spentV4Metadata: [], spentV4Directories: [], spentV5Metadata: [], spentV5Directories: [], spentV6Metadata: [], spentV7Metadata: [], spentV7Directories: [], spentV8Metadata: [], spentV8Directories: [], spentV9Metadata: [], spentV9Directories: [] }
     vi.doMock("./lib/v1-38-lean-continuation-observations.js", () => ({ ...defaults, readLeanContinuationExpectedObservations: () => obs }))
     const D = await import("./run-v1-38-lean-baseline.js"), L = await import("../packages/strategy-lab/src/league/lean-experiment.js"), C = await import("./lib/v1-38-lean-baseline-continuation.js"), R = await import("./lib/v1-38-lean-baseline-retained.js"), G = await import("./lib/v1-38-lean-container-match-session.js"), F = await import("./v1-38-factory-implementation.js"), H = await import("./run-v1-38-serious-league.js")
     const { labRoot: hash, freezeLabValue } = await import("../packages/strategy-lab/src/contracts.js"), { leanColdProcedureRoot: cold } = await import("./lib/v1-38-lean-baseline-pipeline.js")
-    const p = namespace === "20261017-v9" ? L.LEAN_BASELINE_CONTINUATION_PATHS_V9 : L.LEAN_BASELINE_CONTINUATION_PATHS_V8, old = L.LEAN_BASELINE_CONTINUATION_PATHS, sourceHead = "c".repeat(40), head = { value: "d".repeat(40) }, reviewedHead = "e".repeat(40)
+    const p = namespace === "20261017-v10" ? L.LEAN_BASELINE_CONTINUATION_PATHS_V10 : namespace === "20261017-v9" ? L.LEAN_BASELINE_CONTINUATION_PATHS_V9 : L.LEAN_BASELINE_CONTINUATION_PATHS_V8, old = L.LEAN_BASELINE_CONTINUATION_PATHS, sourceHead = "c".repeat(40), head = { value: "d".repeat(40) }, reviewedHead = "e".repeat(40)
     const originalCwd = process.cwd(); process.chdir(dir); restored.push(() => process.chdir(originalCwd))
     const write = (name: string, value: string | Uint8Array, mode = 0o644) => { bounded(); const target = resolve(name); fs.mkdirSync(resolve(target, ".."), { recursive: true }); fs.writeFileSync(target, value, { mode }); fs.chmodSync(target, mode); written += Buffer.byteLength(value); bounded() }
     const json = (name: string, value: unknown, mode = 0o600) => write(name, L.leanCanonicalBytes(value), mode)
@@ -2028,7 +2028,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     }).mockRestore)
     restored.push(vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }).mockRestore)
     restored.push(vi.spyOn(H, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000).mockRestore)
-    let logicalMs = 0, anchor = namespace === "20261017-v9" ? 1792198286001 : 1792093334001
+    let logicalMs = 0, anchor = namespace === "20261017-v10" ? 1792241199001 : namespace === "20261017-v9" ? 1792198286001 : 1792093334001
     const tick = (ms: number) => { logicalMs += ms }
     restored.push(vi.spyOn(Date, "now").mockImplementation(() => anchor + logicalMs).mockRestore)
     restored.push(vi.spyOn(process.hrtime, "bigint").mockImplementation(() => 100000000000n + BigInt(logicalMs) * 1000000n).mockRestore)
@@ -2066,15 +2066,15 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     // production large carry/hold/catalog history. Unmocked defaults separately
     // pin every production member; these leaf-only synthetic catalogs exercise
     // the same actual descriptor/membership/absence validators on fewer rows.
-    for (const key of ["spentV3Metadata", "spentV4Metadata", "spentV5Metadata", "spentV6Metadata", "spentV7Metadata", ...(namespace === "20261017-v9" ? ["spentV8Metadata" as const] : [])] as const) {
-      const selected = defaults.LEAN_CONTINUATION_EXPECTED_OBSERVATIONS[key].filter(row => /(?:window-|request-)|\/window-claim\.json$/u.test(row.path))
+    for (const key of ["spentV3Metadata", "spentV4Metadata", "spentV5Metadata", "spentV6Metadata", "spentV7Metadata", ...(namespace !== "20261015-v8" ? ["spentV8Metadata" as const] : []), ...(namespace === "20261017-v10" ? ["spentV9Metadata" as const] : [])] as const) {
+      const selected = defaults.LEAN_CONTINUATION_EXPECTED_OBSERVATIONS[key].filter(row => key === "spentV9Metadata" || /(?:window-|request-)|\/window-claim\.json$/u.test(row.path))
       for (const [i, row] of selected.entries()) {
-        const bytes = Buffer.alloc(0), mode = "mode" in row ? row.mode : 0o600
+        const bytes = Buffer.alloc(key === "spentV9Metadata" ? row.bytes ?? 0 : 0), mode = "mode" in row ? row.mode : 0o600
         write(row.path, bytes, mode)
         obs[key].push({ ...row, bytes: bytes.length, rawRoot: L.leanBytesRoot(bytes), ...("allocatedBytes" in row ? { allocatedBytes: fs.lstatSync(resolve(row.path)).blocks * 512 } : {}) })
       }
     }
-    for (const key of ["spentV4Directories", "spentV5Directories", "spentV7Directories", ...(namespace === "20261017-v9" ? ["spentV8Directories" as const] : [])] as const) {
+    for (const key of ["spentV4Directories", "spentV5Directories", "spentV7Directories", ...(namespace !== "20261015-v8" ? ["spentV8Directories" as const] : []), ...(namespace === "20261017-v10" ? ["spentV9Directories" as const] : [])] as const) {
       const metadata = obs[key.replace("Directories", "Metadata")]
       for (const original of defaults.LEAN_CONTINUATION_EXPECTED_OBSERVATIONS[key]) {
         const row = { path: original.path, members: metadata.filter((item: any) => item.path.startsWith(original.path + "/")).map((item: any) => item.path.slice(original.path.length + 1)).sort() }
@@ -2103,20 +2103,20 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     const base = D.leanBaselineContinuationSourceManifestV2(), sg = { schemaVersion: "lean-baseline-continuation-source-gate-v2", plan_check: "passed", source_review: "passed", root_validation: "passed", source_verification: "passed", commands_closed: true, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceAuthor: "inert-author", sourceReviewer: "inert-reviewer", sourceVerifier: "inert-verifier" }
     // Same approved V8 numeric contract as existing fixtures, never a new route.
     const carryMs = L.leanContinuationGlobalFloorV2(anchor)
-    const wb = { schemaVersion: "lean-baseline-continuation-window-v2", status: "approved", grantId: "public-internal-observations", approvalEvidence: { humanDecisionId: namespace === "20261017-v9" ? "human-approval-observed-20261017T005126Z" : "human-approval-observed-20261015T194214Z", recordedBy: "public-inert-root" }, approvedAtMs: anchor - 1, anchorMs: anchor, carryMs, capMs: carryMs + 28800000, deadlineMs: anchor + 28800000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: namespace, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: hash(sg.schemaVersion, sg), planRoot: base.planningEntries.find(row => row.path === plan)!.root, runOperator: "inert-runner", readerOperator: "inert-reader" }, w = rooted(wb)
+    const wb = { schemaVersion: "lean-baseline-continuation-window-v2", status: "approved", grantId: "public-internal-observations", approvalEvidence: { humanDecisionId: namespace === "20261017-v10" ? "human-approval-observed-20261017T124639Z" : namespace === "20261017-v9" ? "human-approval-observed-20261017T005126Z" : "human-approval-observed-20261015T194214Z", recordedBy: "public-inert-root" }, approvedAtMs: anchor - 1, anchorMs: anchor, carryMs, capMs: carryMs + 28800000, deadlineMs: anchor + 28800000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: namespace, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: hash(sg.schemaVersion, sg), planRoot: base.planningEntries.find(row => row.path === plan)!.root, runOperator: "inert-runner", readerOperator: "inert-reader" }, w = rooted(wb)
     const dg = { schemaVersion: "lean-baseline-continuation-data-gate-v2", status: "passed", grantId: w.grantId, windowRoot: w.root, windowBytesRoot: L.leanBytesRoot(L.leanCanonicalBytes(w)), reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: w.sourceGateRoot, planRoot: w.planRoot, approvalEvidence: w.approvalEvidence, runOperator: w.runOperator, readerOperator: w.readerOperator, dataReviewer: "inert-data-reviewer", commands_closed: true }
     write(p.gates, `\`\`\`json\n${Buffer.from(L.leanCanonicalBytes(sg))}\n\`\`\`\n\`\`\`json\n${Buffer.from(L.leanCanonicalBytes(dg))}\n\`\`\`\n`); json(p.window, w)
     const manifest = D.leanBaselineContinuationDataManifestV2(w, D.leanBaselineContinuationSourceManifestV2()), seed = "public-internal-observations", coldRoot = cold(seed)
     expect(manifest.implementationEntries.map(row => row.path)).toEqual([...obs.sourcePaths, ...obs.continuationOwnedPaths].sort((a, b) => a.localeCompare(b)))
     expect(D.LEAN_BASELINE_CONTINUATION_OWNED_PATHS).toHaveLength(1)
-    counts = { implementation: manifest.implementationEntries.length, planning: manifest.planningEntries.length, spentMetadata: ["spentV3Metadata", "spentV4Metadata", "spentV5Metadata", "spentV6Metadata", "spentV7Metadata", ...(namespace === "20261017-v9" ? ["spentV8Metadata" as const] : [])].reduce((sum, key) => sum + obs[key].length, 0), spentDirectories: obs.spentV4Directories.length + obs.spentV5Directories.length + obs.spentV7Directories.length + obs.spentV8Directories.length }
+    counts = { implementation: manifest.implementationEntries.length, planning: manifest.planningEntries.length, spentMetadata: ["spentV3Metadata", "spentV4Metadata", "spentV5Metadata", "spentV6Metadata", "spentV7Metadata", ...(namespace !== "20261015-v8" ? ["spentV8Metadata" as const] : []), ...(namespace === "20261017-v10" ? ["spentV9Metadata" as const] : [])].reduce((sum, key) => sum + obs[key].length, 0), spentDirectories: obs.spentV4Directories.length + obs.spentV5Directories.length + obs.spentV7Directories.length + obs.spentV8Directories.length + (namespace === "20261017-v10" ? obs.spentV9Directories.length : 0) }
     const request = { schemaVersion: "lean-baseline-continuation-request-v2", seed, sourceHead, sourceRoot: base.root, planningRoot: manifest.planningRoot, planRoot: w.planRoot, reviewRoot: w.sourceGateRoot, coldRoot, candidateRoots: D.deriveLeanBaselineCandidateRoots(coldRoot), requestRoots: D.deriveLeanBaselineRequestRoots({ seed, coldRoot, planRoot: w.planRoot, sourceRoot: base.root }), offlineOverheadMs: w.offlineOverheadMs, sourceAuthor: sg.sourceAuthor, runOperator: w.runOperator, readerOperator: w.readerOperator, windowRoot: w.root, windowBytesRoot: manifest.windowBytesRoot, sourceGateRoot: w.sourceGateRoot, dataReviewRoot: manifest.dataReviewRoot, manifestRoot: manifest.manifestRoot }
     json(p.request, request)
     stage = "real initial import"
     // Actual bounded public allocated bytes cover the unchanged known-file
     // lower bound. This is real no-refund disk accounting, not a sampler stub
     // or a 90 MB imitation of historical artifacts.
-    write(".strategy-lab/lean-public-accounted-extra.bin", Buffer.alloc(namespace === "20261017-v9" ? 2621440 : 1310720), 0o600)
+    write(".strategy-lab/lean-public-accounted-extra.bin", Buffer.alloc(namespace !== "20261015-v8" ? 2621440 : 1310720), 0o600)
     const review = manifest.entries.filter(row => row.path !== p.window).map(row => ({ ...row, commit: manifest.implementationEntries.some(s => s.path === row.path) ? reviewedHead : sourceHead, kind: manifest.implementationEntries.some(s => s.path === row.path) ? "reviewed_source" as const : "active_planning" as const }))
     const imported = C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)
     counts.inventory = imported.inventory.length
@@ -2153,6 +2153,27 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     expect(elapsedMs).toBeLessThanOrEqual(fixtureLimitMs); expect(maximumBytes).toBeLessThanOrEqual(8 * 1024 * 1024); expect(fs.existsSync(dir)).toBe(false); expect(realMono()).toBeGreaterThan(0n)
   }
 }
+it("continuation-next-v10-driver-sample actual default context fullSample uses truthful unfinished counts and journal floor (public synthetic history/resources)", () => withInternalObservationTree(false, async f => {
+  const { D, L, p, ledger, allocation, w, tick, json, read } = f
+  f.note("next-cell actual context")
+  tick(w.durationMs - 3060000)
+  const context = D.openLeanBaselineContinuationContextV2(p.request)
+  const before = context.fullSample(); expect(before.remainingSlots).toBe(36); expect(before.charged).toBe(50)
+  expect(before.nowMs).toBe(w.deadlineMs - 3060000)
+  const start = Date.now(), entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, head: f.head.value, parentPid: process.ppid, childPid: process.pid, handshakeRoot: root("public-sample-handshake"), wallStartMs: start, monotonicStartNs: process.hrtime.bigint().toString() }
+  json(p.store + "/entry.json", entry); L.beginLeanInterval(ledger, "pilot-entry", start)
+  context.stage("charge", () => L.chargeLeanSlot(ledger, allocation.slots[0], { freeBytes: 100000000000, availableMemoryBytes: 4000000000 }))
+  context.startCell(); context.finishCell(); const active = context.fullSample(); expect(active.remainingSlots).toBe(36); expect(active.charged).toBe(51)
+  const charge = L.readLeanLedger(ledger).charges.get(allocation.slots[0].root)
+  context.stage("post_match", () => L.retainLeanMatch(ledger, charge, { classification: "success", code: "OK", outcome: "DRAW", elapsedMs: 10, cleanupComplete: true, invocationCount: 0, accountingRoot: root("accounting"), executionRoot: root("execution"), telemetry: { transitions: 0, events: 0 } }, [], undefined, () => {}))
+  const terminal = context.fullSample(); expect(terminal.remainingSlots).toBe(35); expect(terminal.charged).toBe(51)
+  // A legitimate higher journal floor cannot be displaced by frozen wall time.
+  const events = L.readLeanLedger(ledger).events, path = p.store + "/ledger.ndjson"
+  f.write(path, events.map((event: unknown) => Buffer.from(L.leanCanonicalBytes(event)).toString() + "\n").join("") + Buffer.from(L.leanCanonicalBytes({ kind: "resource", elapsedMs: w.capMs - 3060000 + 1, physicalBytes: 4096, bufferBytes: 0, scratchBytes: 0 })).toString() + "\n", 0o600)
+  const provider = vi.fn(); expect(() => { context.fullSample(); provider() }).toThrow(/CAPACITY|FRONTIER/); expect(provider).not.toHaveBeenCalled()
+  expect(L.readLeanLedger(ledger).charged).toBe(51); expect(read(p.store + "/allocation.json").slots).toHaveLength(36)
+}, "20261017-v10"), 60000)
+
 // CENSORED, not coverage: latest connected attempt stopped at IMPORT before
 // interval/claim. 1 implementation + 3 planning, 13 opaque metadata + 6 dirs,
 // inventory36, 6048 resource samples, 1412568 bytes, 10010ms including cleanup.
