@@ -2503,3 +2503,7 @@ Tests: tuple/old policy, cost/absence/no double debit, hash-pinned clock mismatc
 Author tests are attributed, not rerun; max44321ms/5611481B within45s/8MiB,60s watchdog. ROOT qualification, distinct verification, actual full-tree/SOURCE/HEAD/five-absence prewindow and DATA remain owed. No global-green/runtime/empirical claim.
 
 Only this <=3500B GATES append after author release. No tests/private reads/actual helper/importer/reader/provider/Match, artifact/window/source changes, new report or commit. All reviewer commands CLOSED; GATES ownership RELEASED to ROOT. SAME allowance/immutable V12, all9LEAG pending.
+
+### Task8 narrow fixture type correction — CLOSED
+
+Author6d460588 changes only R2436: native fstat Parameters/signature and fs.Stats assertion replace inferred unknown; same inode-replacement mutation, no suppression/production edit. ROOT reported3 new strict diagnostics; ROOT strict rerun and independent rereview remain owed. `pnpm exec vitest run scripts/run-v1-38-lean-baseline.test.ts -t continuation-route-v13-cost`,60s process-group watchdog:22055/9a3697 CLOSED0,7914ms,1 PASS; public fixture1958ms/5608088B including cleanup (45s/8MiB bounds), inventory86/50spent unchanged. diff --check passes; no private reads/artifacts/actual run. All commands CLOSED; test/GATES ownership RELEASED to ROOT after this evidence commit.
