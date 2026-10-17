@@ -502,3 +502,38 @@ Source: helper214/232 compares persisted dev;235ff copies old rawRoot;669ff auth
 Exact V11: fresh stream affected FILE hashes against authenticated old roots; private invocation proof excludes synthetic rows. Other identity/NOFOLLOW/owner/single-link/stable fd+path remain; sealed/nullhash/drift/mismatch/race refuse. Private directory proof: stable NOFOLLOW fd/path, exact inode/mode/owner/authenticated direct members; missing proof refuses. Unreviewed size/blocks/mtime/ctime exact; reviewed-ancestor allowances ONLY. Live dev strict after binding. Once/startup stage, never polling;4096rows/64KiB/exact lengths/safe sum<=15GB. guard(65536) before buffer allocation/each chunk; read bound does not replace disk debit/scratch/RAM/time guards.
 
 ROOT resolved blanket consent: distinct V11, no V10 reuse/new allowance/reset. Immutable V10 anchor fixes T/A/carry/cap/deadline; new source closes before new binding, not old A. Independently compare V10 request/window opaque costs once; keep allocation/store/temp absences. Existing withInternalObservationTree driver fixture (~2008): actual authenticateCarry->reconcile->bindArchive; legacy/postbind dev negatives. Distinct roles/SOURCE/DATA/new allocation and actual gates remain required. No tests/private operations/admission performed.
+
+## V11 reader and guard correction
+
+Source-only candidate for existing checked-plan review, not execution evidence/new route authority. ROOT reports V11 run, unique reader and postcheck CLOSED; hold RELEASED at 2026-10-17T18:30:49.635Z (ef552665). Original deadline 2026-10-17T21:14:03.861Z/all costs remain; no extension/reset/refund. Initial cause UNKNOWN. No old reader invocation, allocation, Match, private-history traversal or unchanged known-failure rerun.
+
+Facts: scripts/lib/v1-38-lean-baseline-retained.ts:713-725 opens default context/import before readAndAudit:767 reads result.json; driver test:2294 currently obtains late refusal through absence. scripts/run-v1-38-lean-baseline.ts:608-618 calls beforeRelease outside finite sampling-operation classification; continuation reason-v1 loses that operation. Helper createLeanContinuationOwnedMeasurementV8:599-629 compares directory metadata around readdir/members, so concurrent allowed creation can refuse; bounded journal reads also require descriptor stability. These are source seams/conditional hazards, not actual V11 attribution. Probe overhead lacks measured attribution.
+
+Three serial tasks (shared tests). Existing author/checker/source verification and GATES carry evidence; no new numbered plan/SUMMARY/review tree. Per D-22/D-25/D-27/D-29/D-30 preserve consumed evidence, identity/content checks, 25/250/200 sampling/code checks and every numeric bound.
+
+### Task 1: Absent-result rejection before expensive import
+
+Files: scripts/lib/v1-38-lean-baseline-retained.ts; scripts/lib/v1-38-lean-baseline-retained.test.ts; scripts/run-v1-38-lean-baseline.test.ts.
+After existing request/window/scope/deadline admission, before CONTEXT_OPEN/default importer, add bounded no-follow metadata-only necessary-condition checking of selected result.json. Preserve existing owner/mode/type/single-link/path identity and size-bound policy. Absence/invalid metadata refuses without reading result content/private history, claims, journals or acceptance. The full later guarded result read/audit and both closings remain authoritative, including changes after precheck. Historical evidence stays frozen and never rerun; successful validation is unchanged. If a literal legacy contract forbids altered failure ordering, preserve it via existing prospective opt-in rather than inventing a namespace for tests; flag any precise connection conflict.
+Tests: genuine absence proves importer/evidence readers/publication/journal effects never reached. Cover symlink, type/owner/mode/link/path and oversize negatives. Preserve real-default-opener late coverage near driver:2294 by creating a bounded inert ordinary synthetic result file rejected for schema/content after the same import/claim/closing path. Keep successful guarded-path and late-mutation coverage.
+Verify under existing 60s watchdog: pnpm exec vitest run scripts/lib/v1-38-lean-baseline-retained.test.ts scripts/run-v1-38-lean-baseline.test.ts -t continuation-reader-precheck-v11
+Done: cheaper fail-only rejection; no success authority or late guard coverage lost.
+
+### Task 2: Finite trusted timer guard-operation evidence
+
+Files: scripts/run-v1-38-lean-baseline.ts; scripts/run-v1-38-lean-supervisor-exit-repro.test.ts; scripts/lib/v1-38-lean-baseline-retained.test.ts.
+Add smallest allowlisted continuation_guard_exception reason only when the timer beforeRelease invocation throws, then rethrow into unchanged resource_sampling_exception/uncertainty/kill/cleanup. Never inspect error text or serialize exceptions, stacks, paths or payloads; initiatingCause remains unknown. Require coexistence with resource_sampling_exception; preserve ordering/root/4096-byte envelope rules. Connect current reason-v1 producer and reader compatibility; historical bytes/roots remain immutable and retain existing acceptance, never retrofitted with the label.
+Tests: public synthetic guard throw receives label; RSS/time/kill throws do not; canonical validation, historical v1 compatibility and private-sentinel nonleakage. Keep exact failure/kill/cleanup/deadline behavior/bounds.
+Verify under existing 60s watchdog: pnpm exec vitest run scripts/run-v1-38-lean-supervisor-exit-repro.test.ts scripts/lib/v1-38-lean-baseline-retained.test.ts -t continuation-guard-operation-v11
+Done: identifies trusted throwing operation, not underlying fault or actual V11 cause.
+
+### Task 3: Deterministic public overlap regression, not race relaxation
+
+Files: scripts/lib/v1-38-lean-baseline-continuation.test.ts; scripts/run-v1-38-lean-baseline.test.ts.
+Use existing public temporary fixtures and deterministic filesystem hooks, not sleeps. Create allowed O_EXCL artifact during readdir/observation versus completed before scan: overlap still refuses, stable control passes. Append canonical valid journal row during descriptor reading versus completed beforehand: overlap refuses with permanent invalidation and no dependent effect. Preserve replacement/disappearance/shrink/alias/unknown-member negatives. No source race fix.
+Verify under existing 60s watchdog: pnpm exec vitest run scripts/lib/v1-38-lean-baseline-continuation.test.ts scripts/run-v1-38-lean-baseline.test.ts -t continuation-guard-overlap-v11
+Done: public evidence of current conditional hazard, not actual causation.
+
+Use RED/GREEN; all fixtures <=8MiB, <=45s each, existing 60s watchdog. No tests run during planning. Optional fresh-scan stabilization stays OUT until checked proof preserves tentative identities, authenticated prefixes, conservative high-water costs, fresh final stability and permanent denial of other drift. Not a pending human-choice gate; routine diagnosis continues.
+
+Coverage: GOAL/LEAG integrity only/no completion claim; RESEARCH reader ordering/diagnostic/overlap -> tasks 1/2/3; cited decisions/caps -> all. Deferred gameplay/new route authority excluded. ROOT records existing review/focused tests/source verification in GATES before later empirical action.

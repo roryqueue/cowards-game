@@ -1714,3 +1714,5 @@ Three serial tasks; N1-3 exact file owners/commands retained:
 3. Existing helper/driver/retained tests, RED/GREEN tag continuation-device-v11: reuse public withInternalObservationTree driver fixture (~2008), actual authenticateCarry->reconcile->bindArchive device-only success; forged anchors/proof, missinghash/sealed/content/metadata/directory/race/overbound refusals; later dev drift denied, polling no rehash; legacy strict refusal. Test new route joins/same allowance/no-refund/failed private acceptance. No private operations.
 
 One causal suite+legacy; N limits. Actual distinct author/reviewer/verifier closure->SOURCE. Then actual DATA/request/ONE distinct preparation/allocation/entry; unchanged capacity/reader rules. Audit: GOAL/LEAG integrity only/all9pending, research delta/D-30 covered; no deferred work/new report/plan/commit.
+
+See 265-16-BASELINE-CONTINUATION-RESEARCH-20261012.md: V11 reader and guard correction (source-only).

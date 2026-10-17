@@ -1,5 +1,9 @@
 # Baseline continuation gates
 
+## Reader/guard source correction — checked 2026-10-17
+
+Distinct /root/check_265_reader_guard PASS/issues[], commands CLOSED/read-only: three serial source/test tasks in RESEARCH heading V11 reader and guard correction, incorporated by Plan16 final103B pointer (399973B below400000). Necessary-condition missing-result refusal preserves full successful/late verification; finite timer guard label preserves failed custody/no raw errors; deterministic overlap regressions do not repair or weaken races. No namespace/run/Match/new allowance. ROOT scoped SIX-path strict prebaseline19248/f5ec26 CLOSED2: six inherited diagnostics in feasibility-protocol.ts52 and planner/missions.ts52/60/66/68/69; full output retained for exact final comparison. This is not the prior SAME15 scope or compiler-global green. Source execution/review/fix/validation/distinct verification remain owed; every empirical requirement stays pending.
+
 ## V11 actual terminal and retained closure — 2026-10-17
 
 Preparation ROOT19997/PID39144 CLOSED0/b29d76; allocation sha256:9ec37387bba57e54c55512f63c13dd0bf309a3d64238bb47b3e6dbee55632485 committed/pushed as ONLY delta e7902389d054ee4c3a8a2bedbf88d14ba4da18c7 over6b0618b340825c70deaa02f9b8988978b6ec212e. ONE ROOT run33981/PID80257/child84654 CLOSED1/cef03d. Parent finite output PARENT_TERMINAL/DETAILS_WITHHELD, guards/openings/closings24complete, source3272/descriptor5638/carry-source19850 callbacks. Actual entry1792246618261 and terminal1792250825241 witness4206980ms; SIGKILL, initiating cause unknown. Reasons resource_sampling_exception/final_identity_exception, uncertaintrue, are not an OOM/disk/guest/root-cause diagnosis.
