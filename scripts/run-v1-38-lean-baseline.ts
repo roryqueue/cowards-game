@@ -1279,9 +1279,9 @@ const continuationPreflightV2 = (requestPath: string, consumed: boolean, reader:
     }
   }
   const roles = pins.map(row => ({ path: row.path, role: manifest.planningEntries.some(p => p.path === row.path) ? "active_planning" : row.path === requestPath ? "active_input" : "fixed_source" }))
-  let controller = localReservation ? createLeanContinuationBoundaryControllerV8(pins, [], roles, binding, current, bytes => { localReservation.reserve(bytes) }) : v6 ? createLeanContinuationStageControllerV6(pins, [], roles, binding, current) : undefined
+  let controller = localReservation ? createLeanContinuationBoundaryControllerV8(pins, [], roles, binding, current, bytes => localReservation.reserve(bytes)) : v6 ? createLeanContinuationStageControllerV6(pins, [], roles, binding, current) : undefined
   const guard = (additionalBytes = 0) => {
-    if (localReservation && controller) return (controller as ReturnType<typeof createLeanContinuationBoundaryControllerV8>).reserve(binding, additionalBytes)
+    if (localReservation && controller && "reserve" in controller) return controller.reserve(binding, additionalBytes)
     if (controller) return controller.live(binding, () => current(additionalBytes))
     current(additionalBytes); identity()
   }
@@ -1305,7 +1305,7 @@ const continuationPreflightV2 = (requestPath: string, consumed: boolean, reader:
       const added = [paths.temp, paths.store, paths.allocation].filter(name => resolve(dirname(name)) === path).map(name => name.slice(dirname(name) === "." ? 0 : dirname(name).length + 1))
       if (!rows.length || rows.some(row => !row.members || members.some(name => !row.members!.includes(name) && !added.includes(name)))) return fail("V6_SETUP_MEMBERS")
     }
-    controller = localReservation ? createLeanContinuationBoundaryControllerV8(pins, inventory, [...roles, ...archiveRoles], binding, current, bytes => { localReservation.reserve(bytes) }, directoryPolicy) : createLeanContinuationStageControllerV6(pins, inventory, [...roles, ...archiveRoles], binding, current, directoryPolicy)
+    controller = localReservation ? createLeanContinuationBoundaryControllerV8(pins, inventory, [...roles, ...archiveRoles], binding, current, bytes => localReservation.reserve(bytes), directoryPolicy) : createLeanContinuationStageControllerV6(pins, inventory, [...roles, ...archiveRoles], binding, current, directoryPolicy)
     stageBarrier("bootstrap", () => guard())
   }
   return { paths, window, source, manifest, request, requestBytesRoot, git, fixedHead, guard, binding, stage: stageBarrier, authenticateSource, bindArchive, localReservation }
@@ -1448,7 +1448,7 @@ const openContinuationContextV2 = (requestPath: string, reader: boolean, diagnos
   const v6 = (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V7 || (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V8 || (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V9 || (c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V10 || c.paths === LEAN_BASELINE_CONTINUATION_PATHS_V11))))
   const survivors = [...carry.inventory as LeanContinuationInventoryRowV2[], ...hold.rows as LeanContinuationInventoryRowV2[]]
   const identities = v6 ? () => {} : createLeanContinuationIdentityGuardV2(pinned, survivors)
-  let controller: ReturnType<typeof createLeanContinuationStageControllerV6> | ReturnType<typeof createLeanContinuationBoundaryControllerV8> | undefined
+  let controller: ReturnType<typeof createLeanContinuationStageControllerV6> | ReturnType<typeof createLeanContinuationBoundaryControllerV8<ReturnType<NonNullable<typeof c.localReservation>["reserve"]>>> | undefined
   const binding = Object.freeze({ ...c.binding, allocationRoot: allocation.root, carryRoot: allocation.predecessor.root, claimRoot: claim.root, ledger })
   c.localReservation?.bindProgress(ledger)
   continuationRunStageV2(diagnostic, "MANIFEST_CARRY_HOLD", true)
@@ -1510,9 +1510,9 @@ const openContinuationContextV2 = (requestPath: string, reader: boolean, diagnos
       if (leanBytesRoot(descriptor(row.path, row.path === c.paths.allocation ? 262144 : 4194304, mode, bytes => reserveMetadata(bytes ?? 0))) !== row.root) return fail("V6_CONTEXT_BYTES")
     }
   }
-  if (c.localReservation) controller = createLeanContinuationBoundaryControllerV8(pinned, survivors, [...pinnedRoles, ...survivorRoles], binding, () => { current(); sampleGuard() }, bytes => { c.localReservation!.reserve(bytes) }, directoryPolicy)
+  if (c.localReservation) controller = createLeanContinuationBoundaryControllerV8(pinned, survivors, [...pinnedRoles, ...survivorRoles], binding, () => { current(); sampleGuard() }, bytes => c.localReservation!.reserve(bytes), directoryPolicy)
   else if (v6) controller = createLeanContinuationStageControllerV6(pinned, survivors, [...pinnedRoles, ...survivorRoles], binding, current, directoryPolicy)
-  const guard = (additionalBytes = 0) => { if (c.localReservation) { if (controller && "reserve" in controller) (controller as ReturnType<typeof createLeanContinuationBoundaryControllerV8>).reserve(binding, additionalBytes); return c.localReservation.reserve(additionalBytes) }; return controller ? controller.live(binding, () => sampleGuard(additionalBytes)) : sampleGuard(additionalBytes) }
+  const guard = (additionalBytes = 0) => { if (c.localReservation) return controller && "reserve" in controller ? controller.reserve(binding, additionalBytes) : c.localReservation.reserve(additionalBytes); return controller ? controller.live(binding, () => sampleGuard(additionalBytes)) : sampleGuard(additionalBytes) }
   const stage = <T>(kind: LeanContinuationStageV6, body: () => T): T => controller ? controller.withStage(binding, kind, () => { guard(); const result = body(); guard(); return result }) : body()
   guard()
   continuationRunStageV2(diagnostic, "CARRY_REAUTHENTICATION")

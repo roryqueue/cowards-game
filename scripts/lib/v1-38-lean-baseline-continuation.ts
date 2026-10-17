@@ -659,7 +659,7 @@ export const measureLeanContinuationKnownDisjointBytesV8 = (window?: LeanBaselin
 /** Same complete boundary machinery, with a distinct, private local reservation
  * path. It cannot mint or serialize authority, and never calls current/live
  * from reserve. Current is invoked ONLY by complete opening/closing checks. */
-export const createLeanContinuationBoundaryControllerV8 = (pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[], roles: readonly { path: string; role: string }[], context: object, current: () => void, observeReservation: (additionalBytes: number) => void, directoryPolicy?: (path: string, members: readonly string[]) => void) => {
+export const createLeanContinuationBoundaryControllerV8 = <T>(pins: readonly { path: string; stat: Stats }[], survivors: readonly LeanContinuationInventoryRowV2[], roles: readonly { path: string; role: string }[], context: object, current: () => void, observeReservation: (additionalBytes: number) => T, directoryPolicy?: (path: string, members: readonly string[]) => void) => {
   const pid = process.pid, cwd = process.cwd(); let invalid = false, observing = false, inLive = false
   const assert = (candidate: object) => { if (invalid || candidate !== context || process.pid !== pid || process.cwd() !== cwd) { invalid = true; return fail("V8_CONTEXT") } }
   const controller = createLeanContinuationStageControllerV6(pins, survivors, roles, context, () => { assert(context); current() }, directoryPolicy)
@@ -667,7 +667,7 @@ export const createLeanContinuationBoundaryControllerV8 = (pins: readonly { path
     assert(candidate)
     if (observing || !integer(additionalBytes)) { invalid = true; return fail("V8_RESERVATION") }
     observing = true
-    try { observeReservation(additionalBytes); assert(candidate) } catch (error) { invalid = true; controller.invalidate(); throw error } finally { observing = false }
+    try { const result = observeReservation(additionalBytes); assert(candidate); return result } catch (error) { invalid = true; controller.invalidate(); throw error } finally { observing = false }
   }
   return Object.freeze({
     reserve,
