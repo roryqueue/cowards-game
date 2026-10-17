@@ -27,6 +27,49 @@ export const continuationNextAllocationFixtureV10 = () => {
   return ledger.validateLeanBaselineContinuationAllocationV2({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 describe("continuation-next-v10-policy", () => {
+  it("continuation-next-v10-carry pins the independently compared file-only floor and opaque tuple", () => {
+    const o = readLeanContinuationExpectedObservations(); expect(o.spentV9Metadata).toHaveLength(14); expect(o.spentV9Metadata.reduce((n, row) => n + row.bytes, 0)).toBe(1163382); expect(o.spentV9Metadata.reduce((n, row) => n + row.allocatedBytes, 0)).toBe(1204224); expect(o.spentV9Directories.map(row => row.members.length)).toEqual([10, 1]); expect(Object.isFrozen(o.spentV9Metadata[0])).toBe(true); expect(Object.isFrozen(o.spentV9Directories[0]!.members)).toBe(true); expect(continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V10).toBe(92491776); expect(continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V9).toBe(91287552)
+  })
+  it("continuation-next-v10-carry authenticates all public V9 opaque survivors, memberships and absences with cost once and no refund", async () => {
+    const original = readLeanContinuationExpectedObservations(), dir = realpathSync(mkdtempSync(join(tmpdir(), "route-v9-public-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    const obs = { ...original, spentV3Metadata: [], spentV4Metadata: [], spentV4Directories: [], spentV5Metadata: [], spentV5Directories: [], spentV6Metadata: [], spentV7Metadata: [], spentV7Directories: [], spentV8Metadata: [], spentV8Directories: [], spentV9Metadata: original.spentV9Metadata.map(row => ({ ...row })), spentV9Directories: original.spentV9Directories }
+    try {
+      fs.mkdirSync(resolve(".planning/artifacts"), { recursive: true }); fs.mkdirSync(resolve(".strategy-lab"), { mode: 0o700 })
+      for (const row of obs.spentV9Directories) fs.mkdirSync(resolve(row.path), { mode: 0o700 })
+      for (const [i, row] of obs.spentV9Metadata.entries()) {
+        const bytes = Buffer.from(`public opaque V9 ${i}`); writeFileSync(resolve(row.path), bytes, { mode: row.mode }); fs.chmodSync(resolve(row.path), row.mode)
+        row.bytes = bytes.length; row.allocatedBytes = fs.lstatSync(resolve(row.path)).blocks * 512; row.rawRoot = ledger.leanBytesRoot(bytes)
+      }
+      vi.doMock("./v1-38-lean-continuation-observations.js", () => ({ readLeanContinuationExpectedObservations: () => obs }))
+      vi.resetModules()
+      const C = await import("./v1-38-lean-baseline-continuation.js"), git = vi.fn(), w = continuationNextWindowFixtureV10(), inventory = () => C.inventoryLeanContinuationSurvivorsV2([], [], git, () => {}, w)
+      const first = inventory(); expect(first.filter(row => row.rawRoot !== null)).toHaveLength(15); expect(git).not.toHaveBeenCalled()
+      const fileBytes = obs.spentV9Metadata.reduce((n, row) => n + row.allocatedBytes, 0), directoryBytes = obs.spentV9Directories.reduce((n, row) => n + fs.lstatSync(resolve(row.path)).blocks * 512, 0)
+      expect(C.measureLeanContinuationKnownDisjointBytesV9(w)).toBe(directoryBytes)
+      const consumed = [ledger.LEAN_BASELINE_CONTINUATION_PATHS.request, ledger.LEAN_BASELINE_CONTINUATION_PATHS.allocation, ledger.LEAN_BASELINE_CONTINUATION_PATHS.store, ledger.LEAN_BASELINE_CONTINUATION_PATHS.temp].map(path => ({ path, allocatedBytes: 0 }))
+      const priorDebit = fileBytes + directoryBytes + 8192, debit = C.reconcileLeanContinuationV2DiskDebit(priorDebit, first, priorDebit, [...first, ...consumed], w)
+      expect(debit.allocatedDiskBytes).toBe(priorDebit); expect(debit.residualDiskBytes).toBeGreaterThanOrEqual(0)
+      const target = obs.spentV9Metadata[0]!, bytes = fs.readFileSync(resolve(target.path))
+      for (const mutation of ["hash", "missing", "mode", "shrink", "symlink", "hardlink"] as const) {
+        if (mutation === "hash") writeFileSync(resolve(target.path), Buffer.alloc(bytes.length, 88))
+        if (mutation === "missing") fs.renameSync(resolve(target.path), resolve(target.path + ".saved"))
+        if (mutation === "mode") fs.chmodSync(resolve(target.path), 0o644)
+        if (mutation === "shrink") writeFileSync(resolve(target.path), "")
+        if (mutation === "symlink" || mutation === "hardlink") { fs.renameSync(resolve(target.path), resolve(target.path + ".saved")); if (mutation === "symlink") symlinkSync(resolve(target.path + ".saved"), resolve(target.path)); else fs.linkSync(resolve(target.path + ".saved"), resolve(target.path)) }
+        expect(inventory, mutation).toThrow()
+        if (mutation === "symlink" || mutation === "hardlink") fs.unlinkSync(resolve(target.path))
+        if (["missing", "symlink", "hardlink"].includes(mutation)) fs.renameSync(resolve(target.path + ".saved"), resolve(target.path))
+        writeFileSync(resolve(target.path), bytes); fs.chmodSync(resolve(target.path), target.mode)
+      }
+      for (const name of ["extra.json", "result.json", "reader-claim.json", "retained-check.json"]) {
+        const path = resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V9.store, name); writeFileSync(path, "x", { mode: 0o600 }); expect(inventory).toThrow(); fs.unlinkSync(path)
+      }
+      fs.mkdirSync(resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V6.store)); expect(inventory).toThrow(/V6_SPENT_ABSENCE/); fs.rmdirSync(resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V6.store))
+      const account = C.createLeanContinuationReservationAccountingV9(C.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V10, directoryBytes), allocate = vi.fn()
+      expect(() => { const bytes = account.reserve(4096, 0); if (bytes > 92491775) throw new Error("capacity"); C.authenticateLeanBaselineContinuationCarryV2(git, [], () => { throw new Error("prewrite capacity") }, w); allocate() }).toThrow("capacity")
+      expect(git).not.toHaveBeenCalled(); expect(allocate).not.toHaveBeenCalled()
+    } finally { vi.doUnmock("./v1-38-lean-continuation-observations.js"); vi.resetModules(); cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+  })
   it("binds only the approved exact route, delayed A and unchanged legacy defaults", () => {
     const w = continuationNextWindowFixtureV10(), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V10
     expect(ledger.leanBaselineContinuationPathsForWindowV2(w)).toBe(p)
