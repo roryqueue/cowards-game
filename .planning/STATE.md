@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh-window source VERIFIED2/2; committed SOURCE then actual window and DATA setup
+stopped_at: V12 DATA refused untracked generated sidecars; same-window distinct binding repair
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
 last_activity_desc: Task7 source2631c6b7 clean review, ROOT34focused/types/factory pass; A uninitialized
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V11 closed; bounded source correction
+
+Actual V12 DATA review CLOSED1BLOCKER0WARNING/no projection: manifest700includes untracked generated scripts/lib/v1-38-lean-continuation-observations.js and .d.ts, absent from reviewed2631c6b7; driver1320/1563 requires every implementation row at that reviewed commit. A later request commit cannot repair immutable window binding. V12window/raw0d8ebb07 unchanged; four futurepathsabsent, no request/prepare/allocation/entry/reader/Match. V12binding is retired, not mutated or retried. All review commands closed/hold absent.
+
+ROOT282469 confirmed both generated sidecars untracked, ordinary0644 files from prior configured build failure; moved recoverably via30b390/metadata hash check into /tmp/cowards-generated-sidecars-ww9Vy5, preserving exact bytes (js df71dfc142f16d34024c8bb232e5ffab016776c990e9db591de6f5b77698c5db;dts b68f843a7e890c0c6b245e96cbe1646bef4d734fd2d55c63126915d69546cce7). No consumed private evidence or user source deleted. Checked narrow distinct V13 SOURCE/window binding planning follows under standing fresh-route consent within SAME A1792280297748/T1792279083000/carry932356651/cap961156651/deadline07:38:17.748UTC, no new allowance/reset. Preserve V12window as cost-only and all old evidence. Actual source-tree check must precede future window creation, not merely manifest-root match.
 
 Actual ROOT V12 window initialized after committed SOURCE6da9d528:67565/abfaf1 A=1792280297748 (2026-10-17T23:38:17.748UTC), T1792279083000, continuouscarry932356651,cap961156651,deadline2026-10-18T07:38:17.748UTC. Window17448d02/raw0d8ebb07,941canonicalbytes0600/fsync8b8af3. Source700entries/d064cf72,SOURCE126beb8a,Plan7a794b6d. This is ONE approved new allowance, no reset of costs/50spent. Independent actual DATA review precedes final request/ONE preparation/allocation-only direct-child commit/push/ONE ROOT run with fresh same-process capacity. Four future request/allocation/store/temp targets absent at initialization; no Match or empirical admission. Planned unique reader/root/verify_265_owned_source, no reader invoked.
 

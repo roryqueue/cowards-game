@@ -2431,3 +2431,31 @@ Actual assertion coverage: driver2140-2152 builds old V10 independently;2193-220
 Execution evidence attributed, not rerun: ROOT31small29833/6fb00b plus3connected53877/69ec40=34unique; author44 overlap, not additive. Configured types23859/bdee55 and factory10614/339f00 PASS1446; exact12strict preserves six inherited diagnostic texts/locations, not global green. Public synthetic seams prove source behavior, not real capacity/runtime/Match.
 
 Only this bounded GATES append; all verifier commands CLOSED, ownership RELEASED. No tests/private history/artifacts/actual A/importer/reader/provider/authority/Match/commit. A remains UNINITIALIZED; SOURCE/DATA/allocation/live-capacity gates still owed. No empirical/LEAG completion, automatic renewal or downstream formation/holdout/public/counted/production authority.
+
+## Actual V12 DATA review — BLOCKED
+
+Reviewer /root/review_265_opening_fix; 2026-10-17T23:40:29Z; HEAD f8649273c4ba995dfb4b6daea312ce24734993ee. **status: issues_found; BLOCKER: 1; WARNING: 0. No passing DATA projection issued.** Scope authorized public window/manifest/SOURCE/plan/Git metadata only.
+
+### CR-DATA-SOURCE-TREE-01 — BLOCKER: manifest contains two files absent from reviewed commit
+
+Current700-entry manifest d064cf721ae1cf03317e5b6b9b2c77df6fdb82a2648e7c86e1577303a46e9597 includes scripts/lib/v1-38-lean-continuation-observations.js and .d.ts. Both are untracked, not ignored; git ls-tree at reviewed2631c6b776821a4ad4104caf74e5c94e5539bb30 and currentHEAD contains neither. ROOT attributes them to existing generated compiler output; this review did not create or inspect their content separately.
+
+**Failure path:** scripts/run-v1-38-lean-baseline.ts:1320 authenticates EVERY implementation row against window.reviewedSourceHead, THEN1321 authenticates manifest rows against request.sourceHead. Helper scripts/lib/v1-38-lean-baseline-continuation.ts:142/150 requires the Git blob at that exact head. Reopening repeats reviewed-head checks at driver1563. Thus actual preparation cannot authenticate this manifest at2631c6b7. Source ancestry alone is insufficient.
+
+**Required correction:** establish a coherent reviewed-tree/SOURCE/window binding under an explicit disposition before DATA can pass. Merely reviewing these two outputs or committing them at a later request.sourceHead does NOT add blobs to immutable2631c6b7 and cannot satisfy1320. Deleting outputs would change the pinned sourceRoot. No removal, tracking, source-predicate relaxation, window replacement or allowance reset is authorized or performed by this review.
+
+Other observed checks passed before refusal: canonical941B0600 window17448d02/raw0d8ebb07; exact T1792279083000/A1792280297748/carry932356651/cap961156651/deadline1792309097748 and continuousF; current manifest matches pinned root; sole canonical SOURCE126beb8a equals committed6da9d528; Plan7a794b6d matches exact dated PLAN. Role identities match source closures, ROOT runner and planned unique reader. Reviewed2631c6b7 -> SOURCE6da9d528 -> HEAD ancestry passes; SOURCE Git time23:37:56UTC precedes A23:38:17.748UTC. Actual approval/init chronology is ROOT-attested, not independently witnessed.
+
+Commands45db6f CLOSED1 (reviewer's wrong PLAN suffix, no mutation); corrected e352ad CLOSED1 on real missing tracked files. Final bounded NOFOLLOW/fstat/path/realpath check b0fab3 CLOSED0 confirms unchanged raw window,941B0600/owner/nlink and all FOUR future request/allocation/store/temp ENOENT. No DATA manifest, preparation, importer, capacity, reader, private Strategy/cold/holdout content, provider or Match invoked. Only this <=3000B GATES append; no commit or other write. All commands CLOSED; GATES ownership RELEASED to ROOT.
+
+## Task8 distinct-binding plan check — CLOSED
+
+/root/check_265_fresh_window: VERIFICATION PASSED; 0 BLOCKER/0 WARNING; issues:[]. ONLY RESEARCH Task8:614+, incorporated by PLAN final pointer. Read STATE/DATA refusal, scoped goal/requirements/decisions and cited public source. Task7/Tasks5+6 remain closed, not reverified; no whole-phase or empirical pass.
+
+Independent bounded observation CLOSED0: exact V12 window is ordinary941B/4096allocated/0600/uid501/nlink1, rawRoot sha256:0d8ebb07b8c96b4d96da1e999e37c5d6f679e90bad27fe90efa55b8e9760f52c. O_NOFOLLOW descriptor, opening/final fstat+lstat identity/size/block/time checks and canonical realpath; bounded942B buffer read941B then EOF, hashed without content parse/print and zeroed. Exact V12 request/allocation/store/temp each ENOENT. Matches ROOT9a84e7; file floor93921280+4096=93925376. No private Strategy/history opened.
+
+8a fixes V13 to SAME actual T1792279083000/A1792280297748/carry932356651/cap961156651/deadline1792309097748 and approval; no renewal. 8b retains V10 authentication plus independently pinned canonical V12 same-clock custody before inventory, all older costs once/four absence obligations, near-cap debit and50/cost_only. Existing V12/older predicates are not rewritten. Positive AND negative route sets, return-valued reservation wiring, actual constructor/fullSample/pre-pair, parent and failure paths are explicit. 8c retains full default-reader audit/closing/nonacceptance and unselected-allocation denial.
+
+Checked existing helper142-150 against driver1320/1563: every implementation row must authenticate at reviewedSourceHead. Planned prewindow ROOT sequence reuses this check with complete membership/stable manifest+HEAD/committed SOURCE; generated/missing/changed blob and local-drift negatives require zero window-write calls. DATA repeats proof; later request commits cannot repair a retired binding. No scanner exclusion or admission bypass planned.
+
+Three serial groups bound eleven mechanical files (3/4/4), with concrete RED/GREEN selectors, connected real-function tests and45s/8MiB/60s limits; no generic refactor or certification expansion. All source/review/qualification/verification and actual SOURCE/tree/absence/window/DATA/allocation/capacity/entry/reader gates remain owed. Same runtime/resource/privacy/holdout/freeze bounds, all9LEAG pending. Only this append; no tests/source edits/new artifact/commit/authority/Match. All checker commands CLOSED; ownership RELEASED to ROOT.
