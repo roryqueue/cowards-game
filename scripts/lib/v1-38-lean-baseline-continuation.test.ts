@@ -215,6 +215,29 @@ describe("continuation-route-v9", () => {
 })
 
 describe("continuation-boundary-v8-P", () => {
+  it.each(["stable", "creation", "ledger", "time"] as const)("continuation-owned-stabilization complete fresh owned scan: %s", mode => {
+    const began = performance.now(), w = continuationDeviceWindowFixtureV11(), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V11
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "public-owned-stabilization-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    let hook: ReturnType<typeof vi.spyOn> | undefined
+    try {
+      fs.mkdirSync(resolve(p.store), { recursive: true, mode: 0o700 }); fs.mkdirSync(resolve(p.temp), { mode: 0o700 }); fs.mkdirSync(resolve(p.window, ".."), { recursive: true })
+      writeFileSync(resolve(p.window), "window", { mode: 0o600 }); writeFileSync(resolve(p.request), "request", { mode: 0o600 })
+      for (const name of ["ledger.ndjson", "time.ndjson"]) writeFileSync(resolve(p.store, name), "", { mode: 0o600 })
+      const observe = continuation.createLeanContinuationOwnedMeasurementV8(w, "one-current-owned-overlap"), baseline = observe()
+      let mutated = false, storeReads = 0
+      if (mode === "creation") {
+        const read = fs.readdirSync
+        hook = vi.spyOn(fs, "readdirSync").mockImplementation(((path: fs.PathLike, ...args: unknown[]) => { const result = Reflect.apply(read, fs, [path, ...args]); if (String(path) === resolve(p.store)) { storeReads++; if (!mutated) { mutated = true; writeFileSync(resolve(p.store, "cold-corpus.json"), Buffer.alloc(4097), { mode: 0o600, flag: "wx" }) } }; return result }) as typeof fs.readdirSync)
+      } else if (mode !== "stable") {
+        const stat = vi.mocked(fs.lstatSync).getMockImplementation()!, target = resolve(p.store, mode === "ledger" ? "ledger.ndjson" : "time.ndjson")
+        hook = vi.spyOn(fs, "lstatSync").mockImplementation(((path: fs.PathLike, ...args: unknown[]) => { const result = Reflect.apply(stat, fs, [path, ...args]); if (!mutated && String(path) === target) { mutated = true; fs.appendFileSync(target, Buffer.alloc(4097)) }; return result }) as typeof fs.lstatSync)
+      }
+      const after = observe(); hook?.mockRestore(); hook = undefined
+      const actual = [p.window, p.request, p.store, p.temp, ...fs.readdirSync(resolve(p.store)).map(name => join(p.store, name))].reduce((sum, path) => sum + fs.lstatSync(resolve(path)).blocks * 512, 0)
+      expect(after.retainedBytes).toBe(actual); expect(after.retainedBytes).toBeGreaterThanOrEqual(baseline.retainedBytes)
+      expect(mutated).toBe(mode !== "stable"); if (mode === "creation") { expect(storeReads).toBeGreaterThan(2); expect(storeReads).toBeLessThanOrEqual(6) }
+    } finally { hook?.mockRestore(); cwd.mockRestore(); rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(45000) }
+  }, 45000)
   it("continuation-reservation-forward-v11 forwards one exact fresh observer result per guard", () => {
     let sequence = 0
     const binding = Object.freeze({}), observer = vi.fn((additionalBytes: number) => ({ retainedBytes: additionalBytes, scratchBytes: 0, elapsedMs: ++sequence }))
