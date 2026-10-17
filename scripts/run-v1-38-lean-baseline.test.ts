@@ -2241,7 +2241,7 @@ it("continuation-device-v11-driver-bind actual importer binds fresh device and s
   expect(() => context.guard()).toThrow()
 }, "20261017-v11"), 60000)
 
-it("continuation-next-v10-reader-remaining-closure actual default reader admits40minutes, preserves31minute closure and refuses hard expiry (public synthetic history/resources)", () => withInternalObservationTree(true, async f => {
+for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "continuation-next-v10-reader-remaining-closure" }, { namespace: "20261017-v11" as const, tag: "continuation-device-v11-retained-default" }]) it(`${tag} actual default reader admits40minutes, preserves31minute closure and refuses hard expiry (public synthetic history/resources)`, () => withInternalObservationTree(true, async f => {
   const { D, L, R, p, ledger, w, tick, read, fs } = f, stages: string[] = []
   f.note("remaining reader closure at40minutes")
   expect(w.deadlineMs - Date.now()).toBe(2400000)
@@ -2254,14 +2254,14 @@ it("continuation-next-v10-reader-remaining-closure actual default reader admits4
   expect(stages).toContain("CLAIM"); expect(stages).toContain("PUBLICATION")
   expect(read(p.store + "/reader-claim.json").allocationRoot).toBe(ledger.allocation.root)
   expect(result).toMatchObject({ disposition: "gaps_found", failure: "CONTINUATION_READER_FAILURE", report: null })
-  expect(R.isLeanContinuationAcceptedPrivateCheckV6(result)).toBe(false)
+  for (const value of [result, structuredClone(result), JSON.parse(JSON.stringify(result)), { ...result }]) expect(R.isLeanContinuationAcceptedPrivateCheckV6(value)).toBe(false)
   expect(L.readLeanTimeAccounting(ledger).closed.has("continuation-retained-verifier-v2")).toBe(true)
   const claimBytes = fs.readFileSync(resolve(p.store, "reader-claim.json")), timeBytes = fs.readFileSync(resolve(p.store, "time.ndjson"))
   tick(w.deadlineMs - Date.now()); expect(Date.now()).toBe(w.deadlineMs)
   expect(() => D.openLeanBaselineContinuationContextV2(p.request, true)).toThrow(/V2_WINDOW_EXPIRED/)
   expect(fs.readFileSync(resolve(p.store, "reader-claim.json"))).toEqual(claimBytes)
   expect(fs.readFileSync(resolve(p.store, "time.ndjson"))).toEqual(timeBytes)
-}, "20261017-v10", 28800000 - 2400000 - 2), 60000)
+}, namespace, 28800000 - 2400000 - 2), 60000)
 
 it("continuation-next-v10-driver-sample actual default context fullSample uses truthful unfinished counts and journal floor (public synthetic history/resources)", () => withInternalObservationTree(false, async f => {
   const { D, L, p, ledger, allocation, w, tick, json, read } = f
