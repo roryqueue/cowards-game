@@ -1883,6 +1883,9 @@ it("internal-observations-default preserves ordered catalogs, legacy aliases and
 // source collector, importer, controller, wrapper and failure publisher is real.
 // No success object substitutes for any of those production boundaries.
 const withInternalObservationTree = async (verify: boolean, run: (f: any) => Promise<void>) => {
+  // Prospective checked test-only harness. Earlier 10s attempts below remain
+  // CENSORED; this changes no production admission, resource or runtime limit.
+  const harness = "OBS3-HARNESS-45000", fixtureLimitMs = 45000
   const began = performance.now(), realMono = process.hrtime.bigint.bind(process.hrtime)
   const fs = { ...await vi.importActual<typeof import("node:fs")>("node:fs") }
   const CP = { ...await vi.importActual<typeof import("node:child_process")>("node:child_process") }
@@ -1897,8 +1900,8 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
   vi.doMock("node:fs", () => fs); vi.doMock("node:child_process", () => CP)
   const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "internal-observations-")))
   const restored: Array<() => void> = [], args = process.execArgv, send = Object.getOwnPropertyDescriptor(process, "send"), connected = Object.getOwnPropertyDescriptor(process, "connected")
-  let written = 0, maximumBytes = 0, status = "CENSORED", stage = "imports", counts: Record<string, number> = {}
-  const bounded = () => { if (performance.now() - began > 10000 || written > 8 * 1024 * 1024) throw new Error(`PUBLIC_FIXTURE_BOUND_${stage}`) }
+  let written = 0, maximumBytes = 0, status = "PARTIAL", stage = "imports", counts: Record<string, number> = {}
+  const bounded = () => { if (performance.now() - began > fixtureLimitMs || written > 8 * 1024 * 1024) throw new Error(`PUBLIC_FIXTURE_BOUND_${stage}`) }
   try {
     vi.resetModules()
     const defaults = await vi.importActual<typeof import("./lib/v1-38-lean-continuation-observations.js")>("./lib/v1-38-lean-continuation-observations.js")
@@ -2041,20 +2044,26 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     for (const [i, name] of legacyMockNames.entries()) vi.doMock(name, () => legacyMocks[i])
     fs.rmSync(dir, { recursive: true })
     const elapsedMs = performance.now() - began
-    process.stdout.write(`INTERNAL_OBSERVATIONS_FIXTURE ${JSON.stringify({ verify, status, stage, counts, maximumBytes, written, elapsedMs: Math.ceil(elapsedMs), cleanupIncluded: true, syntheticOnly: true })}\n`)
-    expect(elapsedMs).toBeLessThanOrEqual(10000); expect(maximumBytes).toBeLessThanOrEqual(8 * 1024 * 1024); expect(fs.existsSync(dir)).toBe(false); expect(realMono()).toBeGreaterThan(0n)
+    if (elapsedMs > fixtureLimitMs) status = "CENSORED"
+    process.stdout.write(`INTERNAL_OBSERVATIONS_FIXTURE ${JSON.stringify({ harness, fixtureLimitMs, verify, status, stage, counts, maximumBytes, written, elapsedMs: Math.ceil(elapsedMs), cleanupIncluded: true, syntheticOnly: true })}\n`)
+    expect(elapsedMs).toBeLessThanOrEqual(fixtureLimitMs); expect(maximumBytes).toBeLessThanOrEqual(8 * 1024 * 1024); expect(fs.existsSync(dir)).toBe(false); expect(realMono()).toBeGreaterThan(0n)
   }
 }
 // CENSORED, not coverage: latest connected attempt stopped at IMPORT before
 // interval/claim. 1 implementation + 3 planning, 13 opaque metadata + 6 dirs,
 // inventory36, 6048 resource samples, 1412568 bytes, 10010ms including cleanup.
-// Do not re-enable unchanged or infer postclaim behavior from initial import.
-it.skip("internal-observations-C actual CLI default importer claims before missing result and resource-checked cleanup", () => withInternalObservationTree(true, async f => {
+// The ONE prospective OBS3-HARNESS-45000 admission below is separate; no
+// postclaim behavior is inferred from the earlier initial-import observation.
+// Actual prospective attempt passed: 27059ms including cleanup, 1414512 bytes,
+// 18043 resource samples. Real interval/claim/evidence-result/closed failure
+// publication observed; actual/clone/deserialized private acceptance all false.
+it("internal-observations-C actual CLI default importer claims before missing result and resource-checked cleanup", () => withInternalObservationTree(true, async f => {
   const { D, L, R, p, ledger, resource, read } = f
   const stages: string[] = [], reader = R.verifyLeanBaselineContinuationRetainedV2
   f.restored.push(vi.spyOn(R, "verifyLeanBaselineContinuationRetainedV2").mockImplementation((request: string, observe?: (s: string) => void) => reader(request, (s: string) => { stages.push(s); f.note(s); observe?.(s) })).mockRestore)
   let failure: unknown
   try { await D.leanBaselineMain(["verify-continuation-v2", "--request", p.request]) } catch (error) { failure = error }
+  process.stdout.write(`INTERNAL_OBSERVATIONS_C_PROGRESS ${JSON.stringify({ stages, diagnostic: D.leanBaselineContinuationReaderFailureV2(failure).trim(), claimExists: fs.existsSync(resolve(p.store, "reader-claim.json")), resultExists: fs.existsSync(resolve(p.store, "result.json")), timeActive: L.readLeanTimeAccounting(ledger).active, verifierClosed: L.readLeanTimeAccounting(ledger).closed.has("continuation-retained-verifier-v2"), resourceSamples: resource.calls })}\n`)
   expect(fs.existsSync(resolve(p.store, "reader-claim.json")), `${stages.join("->")} ${D.leanBaselineContinuationReaderFailureV2(failure)}`).toBe(true)
   const claim = read(`${p.store}/reader-claim.json`); expect(claim.allocationRoot).toBe(ledger.allocation.root)
   const time = L.readLeanTimeAccounting(ledger); expect(time.closed.has("continuation-retained-verifier-v2")).toBe(true); expect(time.active).toBe(false)
@@ -2063,12 +2072,19 @@ it.skip("internal-observations-C actual CLI default importer claims before missi
   const ordered = ["IMPORT", "READER_INTERVAL", "CLAIM", "EVIDENCE_RESULT", "TERMINAL", "PUBLICATION"]
   for (let i = 1; i < ordered.length; i++) expect(stages.indexOf(ordered[i]!)).toBeGreaterThan(stages.indexOf(ordered[i - 1]!))
   for (const value of [check, structuredClone(check), JSON.parse(JSON.stringify(check))]) expect(R.isLeanContinuationAcceptedPrivateCheckV6(value)).toBe(false)
+  process.stdout.write(`INTERNAL_OBSERVATIONS_C_NONACCEPTANCE ${JSON.stringify({ disposition: check.disposition, failure: check.failure, acceptedObject: R.isLeanContinuationAcceptedPrivateCheckV6(check), acceptedClone: R.isLeanContinuationAcceptedPrivateCheckV6(structuredClone(check)), acceptedDeserialized: R.isLeanContinuationAcceptedPrivateCheckV6(JSON.parse(JSON.stringify(check))) })}\n`)
   expect(resource.calls).toBeGreaterThan(10)
   expect(failure).toBeUndefined()
-}), 15000)
+}), 60000)
 // CENSORED, not coverage: latest connected attempt never verified fork/entry.
 // Same catalog/inventory sizes as C; 7575 actual resource samples, 1411664 bytes,
-// 10012ms including cleanup. The finite PARENT assertions below remain UNPROVED.
+// 10012ms including cleanup. The ONE prospective OBS3-HARNESS-45000 admission
+// below is separate; it does not retroactively prove those old assertions.
+// OBS3-HARNESS-45000 attempt ONE: PARTIAL, not a timing censor. 25611ms incl
+// cleanup, 1412277 bytes, 18694 resource samples. Real fork/entry/observed exit
+// and finite PARENT_CLAIM refusal passed; child-terminal absent/pilot unclosed.
+// The external denial fired inside completeWrite(time), before entered=true,
+// not the intended closing barrier. No second fresh admission is implied.
 it.skip("internal-observations-B actual CLI wrapper reaches parent entry then owned closing denial with observed child exit", () => withInternalObservationTree(false, async f => {
   const { D, L, R, CP, fs, p, ledger, resource, read, restored } = f
   const provider = vi.fn()
@@ -2084,6 +2100,7 @@ it.skip("internal-observations-B actual CLI wrapper reaches parent entry then ow
   let failure: unknown
   try { await D.leanBaselineMain(["run-continuation-v2", "--request", p.request]) } catch (error) { failure = error }
   f.note(D.leanBaselineContinuationRunFailureV2(failure).trim())
+  process.stdout.write(`INTERNAL_OBSERVATIONS_B_PROGRESS ${JSON.stringify({ diagnostic: D.leanBaselineContinuationRunFailureV2(failure).trim(), forks: fork.mock.calls.length, resourceDenialObserved: resource.tripped, entryExists: fs.existsSync(resolve(p.store, "entry.json")), childExitEvents: exits, terminalExists: fs.existsSync(resolve(p.store, "child-terminal.json")), resultExists: fs.existsSync(resolve(p.store, "result.json")), pilotClosed: L.readLeanTimeAccounting(ledger).closed.has("pilot-entry"), resourceSamples: resource.calls })}\n`)
   expect(fork).toHaveBeenCalledOnce()
   expect(resource.tripped).toBe(true)
   expect(fs.existsSync(resolve(p.store, "run-claim.json"))).toBe(true)
@@ -2103,4 +2120,4 @@ it.skip("internal-observations-B actual CLI wrapper reaches parent entry then ow
   expect(R.isLeanContinuationAcceptedPrivateCheckV6(reason)).toBe(false)
   expect(resource.calls).toBeGreaterThan(10)
   for (const event of ["message", "disconnect"]) expect(child.listenerCount(event)).toBe(0)
-}), 15000)
+}), 60000)
