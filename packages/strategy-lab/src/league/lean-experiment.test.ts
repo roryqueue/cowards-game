@@ -725,7 +725,7 @@ it("[continuation-fresh-window-v12] [continuation-route-v12] binds only the new 
     { anchorMs: windowBody.approvedAtMs - 1, deadlineMs: windowBody.approvedAtMs - 1 + 28800000, carryMs: lean.leanContinuationGlobalFloorV2(windowBody.approvedAtMs - 1), capMs: lean.leanContinuationGlobalFloorV2(windowBody.approvedAtMs - 1) + 28800000 },
     { carryMs: windowBody.carryMs - 1, capMs: windowBody.capMs - 1 }, { carryMs: windowBody.carryMs + 1, capMs: windowBody.capMs + 1 },
     { deadlineMs: windowBody.deadlineMs + 1 }, { capMs: windowBody.capMs + 1 }, { durationMs: 28800001 }, { closureMs: 1859999 }, { offlineOverheadMs: 599999 },
-    { anchorMs: Number.MAX_SAFE_INTEGER, deadlineMs: Number.MAX_SAFE_INTEGER + 28800000 },
+    { anchorMs: Number.MAX_SAFE_INTEGER, deadlineMs: Number.MAX_SAFE_INTEGER },
   ]) expect(() => lean.validateLeanBaselineContinuationWindowV2(reroot({ ...windowBody, ...patch }))).toThrow("CONTINUATION_V2_WINDOW")
   expect(() => lean.validateLeanBaselineContinuationWindowV2({ ...validWindow, root: pin })).toThrow("CONTINUATION_V2_WINDOW")
   for (const path of [p.request + ".alias", p.request + "/extra", p.request.replace("20261017-v12", "20261018-v12")]) {
