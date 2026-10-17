@@ -1,5 +1,13 @@
 # Baseline continuation gates
 
+## V10 closed / prospective device-continuity source inputs
+
+ROOT45298/05a923 preparation CLOSED1 CARRY/DETAILS_WITHHELD; unique independent terminal-only `/root/review_265_v10_data` baf0e0 CLOSED0 at2026-10-17T13:20:18.933UTC. Exact V10 process counts0, allocation/store/temp absent, fixedHEAD02c828af/trackedclean. No actual entry/head/ordinary reader or retained new Match. Original throw UNKNOWN; source hold released, failed V10 immutable.
+
+Independently observed immutable cost inputs for a DISTINCT same-window route: `.strategy-lab/lean-baseline-continuation-request-20261017-v10.json`,4031B,allocated4096B,0600,uid501,singlelink,raw sha256:c81226da93b9f4c76d26804f2fc7b23d3c30e31047044b4285b3ac21fc3fd029; `.strategy-lab/lean-baseline-continuation-window-20261017-v10.json`,941B,allocated4096B,0600,uid501,singlelink,raw sha256:4d5c15298a6d096c72f15700728af2317826bc99cfc783a7332e62624a319179. Stable bounded NOFOLLOW descriptor/path observations, no content disclosed. Sum8192B, prospective V11 known-file floor92499968B; older floors/debits unchanged. V10 allocation/store/temp absences remain required. Actual V10 window rootc9924ac3 and original T/A/carry/cap/deadline stay immutable; new source closure precedes new binding, not historical A.
+
+ROOT SAME15 strict70319/94827f CLOSED2 before device repair:13inherited diagnostics/7051B, full output retained for exact final comparison. No new source edits yet and no global strict-green claim. Standing direct human fresh-route consent covers a distinct same-scope setup within the ORIGINAL approved eight-hour allowance, not a V10 retry, added time/Matches, refund or reset. Actual SOURCE/DATA/new-allocation/capacity gates remain required; all9LEAG pending.
+
 ## V10 current DATA projection
 
 Independent actual `/root/review_265_v10_data` PASS_DATA_REVIEW/findings[], all commands closed; canonical projection follows that observation and the actual window. This is source/input review, not capacity or empirical admission.
