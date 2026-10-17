@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Reader/guard source correction verified; current-owned writer/observer race repair planning
+stopped_at: Reader/guard source correction verified; bounded current-owned overlap repair implementing
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: Four source corrections verified and pushed; no new experiment or Match
+last_activity_desc: Task5 implementing and disjoint Task6a source preparation; no new experiment or Match
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V11 closed; bounded source correction
+
+Task5 coherent current-owned scan/journal correction and Task6 finite same-window V12 integration are independently CHECKED PASS; /root/execute_265_reader_guard owns four helper/driver files. Smaller-model coauthor /root/execute_265_v12_domain owns only domain/domain-test/observation-table6a files; tests deferred,6b/c and activation wait for Task5 release/coherent integration. ROOT independently observed V11 cost-only22files/2directories/5absences; /root/explore_265_bootstrap_guard verified exact tuple,1421312B file increment/floor93921280. No old content parsing/training reuse, artifacts, authority or Match. Original deadline21:14:03.861UTC and all costs/bounds unchanged; no new allowance. Actual source review/fix/validation/verification and fresh-route gates remain owed.
 
 Tasks1–4 source90824b9c CLOSED: author /root/execute_265_reader_guard, independent /root/review_265_reader_guard clean, ROOT45selectedtests/configuredtypes/factory1444 pass and exact SIX-path strict output equals six inherited pre-errors, DISTINCT /root/verify_265_reader_guard_source VERIFIED4/4/gaps[]/0BLOCKER0WARNING. Source/tasks/qualification pushed87bbb0c9; final verification recorded in existing GATES. Cheap missing-result refusal, finite timer guard evidence and single fresh reservation are implemented; overlap is reproduced, not fixed. All commands/ownership closed. No actual run/reader/allocation/new Match or completion credit.
 
