@@ -188,7 +188,7 @@ describe("[continuation-ready-v7-M] spent metadata refusals, never historical su
     } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
   }
   it("binds ONLY the two supplied raw roots/sizes; synthetic bytes actually refuse, no digest substitution", () => fixture(f => {
-    const source = fs.readFileSync(resolve(import.meta.dirname, "v1-38-lean-baseline-continuation.ts"), "utf8"), anchors = source.match(/const spentV6Metadata = freezeLabValue\(\[([\s\S]*?)\n\]\)/u)?.[1]
+    const source = fs.readFileSync(resolve(import.meta.dirname, "v1-38-lean-continuation-observations.ts"), "utf8"), anchors = source.match(/const spentV6Metadata = freezeLabValue\(\[([\s\S]*?)\n\]\)/u)?.[1]
     expect(anchors).toContain("bytes: 929"); expect(anchors).toContain("bytes: 4047")
     expect(anchors).toContain("sha256:1311fadb75d16b9e6eaa299f7e961034cc941ecbb8db4dbe28121724b98459ec")
     expect(anchors).toContain("sha256:0c9c7559f42a08901ede3627d257cdf0efcfd6a98e8893dbf5df4c7c52f4361d")

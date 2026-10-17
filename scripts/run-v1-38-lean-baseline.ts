@@ -156,19 +156,7 @@ export const nextLeanSupervisorSamplingSequenceV2 = (sequence: number): number =
   if (!Number.isInteger(sequence) || sequence < 0 || sequence > 2147483647) return fail("SUPERVISOR_SEQUENCE_V2")
   return Math.min(2147483647, sequence + 1)
 }
-const SOURCE_PATHS = [
-  "scripts/run-v1-38-lean-baseline.ts", "scripts/run-v1-38-lean-baseline.sh",
-  "scripts/lib/v1-38-lean-baseline-pipeline.ts", "scripts/lib/v1-38-lean-baseline-source.ts",
-  "scripts/lib/v1-38-lean-baseline-match.ts", "scripts/lib/v1-38-lean-baseline-analysis.ts",
-  "scripts/lib/v1-38-lean-baseline-metrics.ts",
-  "scripts/lib/v1-38-lean-baseline-retained.ts", "scripts/lib/v1-38-lean-cold-corpus.ts",
-  "scripts/lib/v1-38-lean-seal-metadata.ts",
-  "scripts/lib/v1-38-lean-training-adapter.ts", "scripts/lib/v1-38-lean-experiment-authority.ts",
-  "scripts/lib/v1-38-lean-baseline.ts", "packages/strategy-lab/src/league/lean-training.ts",
-  "packages/strategy-lab/src/league/lean-experiment.ts", "scripts/run-v1-38-lean-experiment.ts",
-  "scripts/lib/v1-38-lean-child-cli-terminal.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts",
-  "scripts/lib/v1-38-lean-container-match-session.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts",
-] as const
+const SOURCE_PATHS = readLeanContinuationExpectedObservations().sourcePaths
 
 export const leanBaselineSourceManifest = () => {
   const byPath = new Map(factoryAssessmentImplementationManifest().entries.map(e => [e.path, e]))
@@ -704,22 +692,11 @@ const continuationFailureTerminalGuardV6 = (ledger: LeanExperimentLedger, entry:
   }
 }
 const CONTINUATION_PHASE = ".planning/phases/265-serious-current-rules-league-and-development-red-team/"
-export const LEAN_BASELINE_CONTINUATION_OWNED_PATHS = Object.freeze([
-  "packages/strategy-lab/src/league/lean-experiment.ts", "scripts/lib/v1-38-lean-baseline-continuation.ts", "scripts/lib/v1-38-lean-baseline-continuation.test.ts",
-  "scripts/lib/v1-38-lean-experiment-authority.ts", "scripts/lib/v1-38-lean-baseline-authority.test.ts", "scripts/lib/v1-38-lean-baseline-match.ts", "scripts/lib/v1-38-lean-baseline-match.test.ts",
-  "scripts/run-v1-38-lean-baseline.ts", "scripts/lib/v1-38-lean-baseline-pipeline.ts", "scripts/lib/v1-38-lean-baseline-source.ts", "scripts/lib/v1-38-lean-baseline-pipeline.test.ts",
-  "scripts/lib/v1-38-lean-baseline-retained.ts", "scripts/lib/v1-38-lean-baseline-retained.test.ts", "scripts/run-v1-38-lean-baseline.test.ts", "scripts/lib/v1-38-lean-container-match-session.ts",
-])
-export const LEAN_BASELINE_CONTINUATION_PLANNING_PATHS = Object.freeze([
-  ".planning/PROJECT.md", ".planning/REQUIREMENTS.md", ".planning/ROADMAP.md", ".planning/STATE.md", ".planning/research/SUMMARY.md",
-  ".planning/debug/265-native-exit-reader-cost.md",
-  ...["265-16-PLAN.md", "265-15-PLAN.md", "265-15-PILOT-RETAINED-VERIFICATION-v2.md", "265-16-BASELINE-CONTINUATION-APPROVAL-20261012.md", "265-16-BASELINE-CONTINUATION-RESEARCH-20261012.md", "265-16-BASELINE-CONTINUATION-PLAN-20261012.md", "265-16-BASELINE-CONTINUATION-GATES-20261012.md"].map(name => `${CONTINUATION_PHASE}${name}`),
-  ".planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-EXPERIMENT-20261003.md",
-  ".planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-REMAINING-PLAN-20261003.md",
-])
+export const LEAN_BASELINE_CONTINUATION_OWNED_PATHS = readLeanContinuationExpectedObservations().continuationOwnedPaths
+export const LEAN_BASELINE_CONTINUATION_PLANNING_PATHS = readLeanContinuationExpectedObservations().continuationPlanningPaths
 export const leanBaselineContinuationSourceManifest = () => {
   const source = new Map(leanBaselineSourceManifest().entries.filter(row => /^(?:packages|scripts)\//u.test(row.path) || ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.json", "tsconfig.base.json"].includes(row.path)).map(row => [row.path, row]))
-  for (const path of [...LEAN_BASELINE_CONTINUATION_OWNED_PATHS, "packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"]) {
+  for (const path of [...LEAN_BASELINE_CONTINUATION_OWNED_PATHS, ...readLeanContinuationExpectedObservations().continuationExtraPaths]) {
     source.set(path, { path, root: leanBytesRoot(readLeanContinuationBytes(path, 4194304)) })
   }
   const implementationEntries = [...source.values()].sort((a, b) => a.path.localeCompare(b.path))
@@ -1675,3 +1652,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   if (childMode) void (args[0] === "child-continuation-v2" ? resolveLeanContinuationChildCliTerminalV2(action) : resolveLeanChildCliTerminal(action))
   else void action.then(value => { process.stdout.write(`${JSON.stringify(value)}\n`) }).catch(error => { if (args.length === 3 && args[0] === "prepare-continuation-v2" && args[1] === "--request" && (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V5.request || (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V6.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V7.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V8.request))) process.stderr.write(leanBaselineContinuationPreparationFailureV4(error)); if (args.length === 3 && args[0] === "run-continuation-v2" && args[1] === "--request" && (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V6.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V7.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V8.request)) process.stderr.write(leanBaselineContinuationRunFailureV2(error)); process.stderr.write("LEAN_BASELINE_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
 }
+import { readLeanContinuationExpectedObservations } from "./lib/v1-38-lean-continuation-observations.js"

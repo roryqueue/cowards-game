@@ -206,64 +206,7 @@ export interface LeanContinuationReviewedRowV2 { path: string; root: LabRoot; co
 export interface LeanContinuationInventoryRowV2 extends LeanContinuationInventoryRow { members?: readonly string[] }
 const pathsForV2 = (window?: LeanBaselineContinuationWindowV2) => window === undefined ? LEAN_BASELINE_CONTINUATION_PATHS_V2 : leanBaselineContinuationPathsForWindowV2(window)
 const futureV2 = (path: string, p: ReturnType<typeof pathsForV2>) => [p.request, p.allocation, p.store, p.temp, p.window].some(root => path === root || path.startsWith(`${root}/`))
-const spentV3Metadata = Object.freeze([
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V2.request, bytes: 4041, rawRoot: "sha256:900e97e973ac31c596d1f5f1b8b89e1b8e532310e0b2d6e67053fbe9a8321065" },
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V2.window, bytes: 935, rawRoot: "sha256:2c0c2905fea2e4a264aac99df251e5aa89d0b2c44588453d3c41586f4b3a881d" },
-])
-/** Opaque spent setup anchors only, never a V4 run/custody capsule. */
-const spentV4Metadata = freezeLabValue([
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V4.window, bytes: 935, mode: 0o600, maximum: 65536, rawRoot: "sha256:98b0cd906323554e3c0cefb96700c317a9bd2e346135c7560d715b87eb303ba6" },
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V4.request, bytes: 4056, mode: 0o600, maximum: 65536, rawRoot: "sha256:bd17509fee8d2138b89b4a114224f1ee1ee009217475e924d6dd7cdfd90466c7" },
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V4.allocation, bytes: 17366, mode: 0o644, maximum: 262144, rawRoot: "sha256:19aeee9f9416849b4e7bb214afa7d470349f36e302b09bda700c7a50e717938f" },
-  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V4.store, "allocation.json"), bytes: 17366, mode: 0o600, maximum: 262144, rawRoot: "sha256:19aeee9f9416849b4e7bb214afa7d470349f36e302b09bda700c7a50e717938f" },
-  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V4.store, "carry.json"), bytes: 746080, mode: 0o600, maximum: 4194304, rawRoot: "sha256:7bb1e101e0938ab8497311444e81ad30578f41d372a3c7999e61dfddad90f5a7" },
-  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V4.store, "source-manifest.json"), bytes: 208491, mode: 0o600, maximum: 4194304, rawRoot: "sha256:35c507b2a0fd12b3d131671ba6596f8e4dcfcafa62676fcfa703c672d9dee508" },
-  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V4.store, "source-hold.json"), bytes: 146345, mode: 0o600, maximum: 4194304, rawRoot: "sha256:744be76efaaaeca29076208f2da70a5f755569b93c6a47d0622b3aa1f4525911" },
-  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V4.store, "ledger.ndjson"), bytes: 0, mode: 0o600, maximum: 4194304, rawRoot: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
-  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V4.store, "time.ndjson"), bytes: 0, mode: 0o600, maximum: 4194304, rawRoot: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V4.claim, bytes: 1002, mode: 0o600, maximum: 65536, rawRoot: "sha256:14cc57d66661a98c8f9150842b441310c8a70d29fef5186b5c58a49e62c9e45c" },
-])
-const spentV4Directories = freezeLabValue([
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V4.store, members: ["allocation.json", "carry.json", "ledger.ndjson", "source-hold.json", "source-manifest.json", "time.ndjson"] },
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V4.temp, members: ["window-claim.json"] },
-])
-/** Independent terminal-check raw anchors; unknown claim size is bounded,
- * not invented. These bytes authenticate preservation, never run authority. */
-const spentV5Metadata = freezeLabValue([
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V5.window, bytes: 929, mode: 0o600, maximum: 65536, rawRoot: "sha256:989dc4984483ac4ebcecb154e2c8b9256657d0cbb21258b50fb4cdaa99481faa" },
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V5.request, bytes: 4051, mode: 0o600, maximum: 65536, rawRoot: "sha256:386e72a26e326d7f09c9c93a6f087c481a7ff0117be284fcb72aeb0aa692e6b1" },
-  ...[LEAN_BASELINE_CONTINUATION_PATHS_V5.allocation, join(LEAN_BASELINE_CONTINUATION_PATHS_V5.store, "allocation.json")].map((path, i) => ({ path, bytes: 17360, mode: i ? 0o600 : 0o644, maximum: 262144, rawRoot: "sha256:439ff997177d812aebc8194b77dd6dcc30353541b0f5061f3eea036f32c7c7c6" })),
-  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V5.store, "carry.json"), bytes: 749813, mode: 0o600, maximum: 4194304, rawRoot: "sha256:a6168503f6bee69d22688a003c7acb1c0d850647cdc447f81d10747150eca348" },
-  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V5.store, "source-manifest.json"), bytes: 208495, mode: 0o600, maximum: 4194304, rawRoot: "sha256:e01c2cc7f6fd49185f92ded151ddc0b4bc6c26347cd3e3b597a76b099943388a" },
-  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V5.store, "source-hold.json"), bytes: 146600, mode: 0o600, maximum: 4194304, rawRoot: "sha256:e0ff6a1879e9cfb90f5303097a2a1e20a130be0ada3f3b42bfe63949ec79cb55" },
-  ...["ledger.ndjson", "time.ndjson"].map(name => ({ path: join(LEAN_BASELINE_CONTINUATION_PATHS_V5.store, name), bytes: 0, mode: 0o600, maximum: 4194304, rawRoot: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" })),
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V5.claim, bytes: null, mode: 0o600, maximum: 65536, rawRoot: "sha256:e2e94f1a122f3c994a09c4ccfb028d630fae52abb0c0aaacce733e4dd57cb13c" },
-])
-const spentV5Directories = freezeLabValue([
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V5.store, members: ["allocation.json", "carry.json", "ledger.ndjson", "source-hold.json", "source-manifest.json", "time.ndjson"] },
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V5.temp, members: ["window-claim.json"] },
-])
-/** ROOT's two observed opaque files only. No allocation, store, capsule or
- * terminal was created by the spent V6 preparation; absence stays required. */
-const spentV6Metadata = freezeLabValue([
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V6.window, bytes: 929, mode: 0o600, maximum: 65536, rawRoot: "sha256:1311fadb75d16b9e6eaa299f7e961034cc941ecbb8db4dbe28121724b98459ec" },
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V6.request, bytes: 4047, mode: 0o600, maximum: 65536, rawRoot: "sha256:0c9c7559f42a08901ede3627d257cdf0efcfd6a98e8893dbf5df4c7c52f4361d" },
-])
-/** ROOT734f20 opaque observations. None of these objects is run authority. */
-const spentV7Metadata = freezeLabValue([
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V7.window, bytes: 929, allocatedBytes: 4096, mode: 0o600, maximum: 65536, rawRoot: "sha256:f6c864c6483805035f19c40b1c9652225d302ef39457723a9be9973e764652e3" },
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V7.request, bytes: 4040, allocatedBytes: 4096, mode: 0o600, maximum: 65536, rawRoot: "sha256:1fcba4e7945739e8ccdbfde70eb769a9fd581eb422a0a2333472d55fc1f6567d" },
-  ...[LEAN_BASELINE_CONTINUATION_PATHS_V7.allocation, join(LEAN_BASELINE_CONTINUATION_PATHS_V7.store, "allocation.json")].map((path, i) => ({ path, bytes: 17352, allocatedBytes: 20480, mode: i ? 0o600 : 0o644, maximum: 262144, rawRoot: "sha256:2d6a90d63a3f9e7af699046e1a6ddafcbf2eb0585844439b45233d7465129c96" })),
-  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V7.store, "carry.json"), bytes: 754167, allocatedBytes: 757760, mode: 0o600, maximum: 4194304, rawRoot: "sha256:9e6808767f3b5ba461c28457bdaf0781de8fbe9a56fdbcdbc6b6a7cdca20283e" },
-  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V7.store, "source-hold.json"), bytes: 146961, allocatedBytes: 147456, mode: 0o600, maximum: 4194304, rawRoot: "sha256:92bd96b0ab29518205f8583386dbcf4137733d5039656e9d33577ab538dd25a4" },
-  { path: join(LEAN_BASELINE_CONTINUATION_PATHS_V7.store, "source-manifest.json"), bytes: 208476, allocatedBytes: 208896, mode: 0o600, maximum: 4194304, rawRoot: "sha256:d720d3d51da9e16b63bf93a1548c1fbff28719cf14696aa3d763e235cc7f9ad7" },
-  ...["ledger.ndjson", "time.ndjson"].map(name => ({ path: join(LEAN_BASELINE_CONTINUATION_PATHS_V7.store, name), bytes: 0, allocatedBytes: 0, mode: 0o600, maximum: 4194304, rawRoot: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" })),
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V7.claim, bytes: 1002, allocatedBytes: 4096, mode: 0o600, maximum: 65536, rawRoot: "sha256:8f63b98b44d23de6aca4cae83ed61056f7e76ebb9351ce36773abba6aa257518" },
-])
-const spentV7Directories = freezeLabValue([
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V7.store, members: ["allocation.json", "carry.json", "ledger.ndjson", "source-hold.json", "source-manifest.json", "time.ndjson"] },
-  { path: LEAN_BASELINE_CONTINUATION_PATHS_V7.temp, members: ["window-claim.json"] },
-])
+const { spentV3Metadata, spentV4Metadata, spentV4Directories, spentV5Metadata, spentV5Directories, spentV6Metadata, spentV7Metadata, spentV7Directories } = readLeanContinuationExpectedObservations()
 export const LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V8 = 88924160 + 1167360
 const sameIdentityV2 = (old: LeanContinuationInventoryRow, row: LeanContinuationInventoryRow) => ["path", "kind", "bytes", "allocatedBytes", "dev", "ino", "mode", "mtimeMs", "ctimeMs"].every(key => old[key as keyof LeanContinuationInventoryRow] === row[key as keyof LeanContinuationInventoryRow])
 /** Exact reviewed bytes may transition before freeze. Consumed evidence cannot. */
@@ -624,7 +567,7 @@ export const createLeanContinuationBoundaryControllerV8 = (pins: readonly { path
   })
 }
 
-export const LEAN_CONTINUATION_CLOSED_COST_V2 = Object.freeze({ sourceHead: "16db0fa0610e1a2378be8594b191d61f2f3c3baa", allocationCommit: "f6ff7ec36de7387feab7e4b4ad3695db480a4c1f", allocationBytesRoot: "sha256:3ea8c18d1a8a5b7816ed44f10572d4469870e75dcee8c7223895809830cd2c87", resultBytesRoot: "sha256:79ad5c21114afcec3b420b2f452db20cc29b2ca769c8ade317a343187b792796", checkBytesRoot: "sha256:64015d7c5e2c0ced02e0fa09f7c10f2cd7534a3f42b7f046af2a65d7bef17286", checkRoot: "sha256:e1711e16eafd3ded5d69988fe7617208fa7fcdc62b9681d45910ef2825f88838" })
+export const LEAN_CONTINUATION_CLOSED_COST_V2 = readLeanContinuationExpectedObservations().closedCostV2
 /** Pure closed-cost join, shared by the pinned importer and inert fixtures. */
 export const validateLeanContinuationClosedCapsuleV2 = (a: LeanBaselineContinuationAllocation, capsule: { carry: Record<string, any>; result: Record<string, any>; check: Record<string, any>; entry: Record<string, any>; terminal: Record<string, any>; parent: Record<string, any>; events: readonly Record<string, any>[]; intervals: readonly Record<string, any>[] }): { elapsedMs: number; allocatedDiskBytes: number } => {
   validateLeanBaselineContinuationAllocation(a)
@@ -790,3 +733,4 @@ export const authenticateLeanBaselineContinuationCarry = (git: LeanContinuationG
   const carry: LeanBaselineContinuationCarry = freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
   guard(); return freezeLabValue({ carry, custody, inventory })
 }
+import { readLeanContinuationExpectedObservations } from "./v1-38-lean-continuation-observations.js"
