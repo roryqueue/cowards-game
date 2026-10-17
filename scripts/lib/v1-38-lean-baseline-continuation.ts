@@ -700,6 +700,8 @@ const stabilizedOwnedMeasurement = (p: { window: string; request: string; alloca
           const before = observe(path, 0o700, true), opening = members(path, scratch)
           const prior = pins.get(path)
           const unsettledOpening = prior?.members && opening.length > prior.members.length && sameOwnedStat(prior.stat, before)
+          // Later additions cannot explain drift already present at opening.
+          if (prior?.members && (!sameOwnedStat(prior.stat, before) || prior.members.length !== opening.length)) directoryChange(path, prior.stat, prior.members, before, opening)
           pins.set(path, { stat: before, members: opening, scratch })
           for (const name of opening) leaf(join(path, name), 0o600, scratch)
           const closing = members(path, scratch), after = observe(path, 0o700, true), added = closing.filter(name => !opening.includes(name))
