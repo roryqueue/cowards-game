@@ -720,6 +720,14 @@ export const verifyLeanBaselineContinuationRetainedV2 = (requestPath: string, ob
   if (approvedWindow.status !== "approved" || admissionNow < approvedWindow.anchorMs || admissionNow >= approvedWindow.deadlineMs ||
       leanContinuationGlobalFloorV2(admissionNow) > approvedWindow.capMs) return fail("V2_READER_WINDOW")
   const v8 = (paths === LEAN_BASELINE_CONTINUATION_PATHS_V8 || (paths === LEAN_BASELINE_CONTINUATION_PATHS_V9 || (paths === LEAN_BASELINE_CONTINUATION_PATHS_V10 || paths === LEAN_BASELINE_CONTINUATION_PATHS_V11)))
+  if (paths === LEAN_BASELINE_CONTINUATION_PATHS_V11) {
+    // Necessary metadata only: no content, custody or success is authenticated
+    // here. The later guarded descriptor read/audit and closings remain required.
+    // Older routes retain their original failure ordering.
+    const resultPath = resolve(paths.store, "result.json"), stat = lstatSync(resultPath)
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== process.getuid?.() ||
+        (stat.mode & 0o7777) !== 0o600 || !natural(stat.size) || stat.size > 4194304 || realpathSync(resultPath) !== resultPath) return fail("CONTINUATION_READER_FAILURE")
+  }
   stage("CONTEXT_OPEN")
   const freshOpening = v8 ? openLeanBaselineContinuationContextV2(requestPath, true, () => stage("IMPORT")) : undefined
   stage("IMPORT")
