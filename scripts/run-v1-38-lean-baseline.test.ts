@@ -2433,7 +2433,7 @@ it("continuation-route-v13-cost authenticates one retired V12 leaf and refuses o
       else if (mode === "mode") native.chmodSync(path, 0o644)
       else if (mode === "alias") { native.unlinkSync(path); native.symlinkSync(resolve(old.request), path) }
       else if (mode === "owner") { const stat = native.lstatSync; spy = vi.spyOn(native, "lstatSync").mockImplementation(((name: any, ...args: any[]) => { const s = stat(name, ...args); return String(name) === path ? Object.assign(s, { uid: 999 }) : s }) as any) }
-      else if (mode === "replacement") { const stat = native.fstatSync; spy = vi.spyOn(native, "fstatSync").mockImplementation(((...args: any[]) => { const s = Reflect.apply(stat, native, args); return s.size === row.bytes ? Object.assign(s, { ino: s.ino + 1 }) : s }) as any) }
+      else if (mode === "replacement") { const stat = native.fstatSync; spy = vi.spyOn(native, "fstatSync").mockImplementation(((...args: Parameters<typeof fs.fstatSync>) => { const s = Reflect.apply(stat, native, args) as fs.Stats; return s.size === row.bytes ? Object.assign(s, { ino: s.ino + 1 }) : s }) as typeof fs.fstatSync) }
       else { const oldW = JSON.parse(bytes.toString()), { root: _, ...b } = { ...oldW, anchorMs: oldW.anchorMs + 1, carryMs: oldW.carryMs + 1, capMs: oldW.capMs + 1, deadlineMs: oldW.deadlineMs + 1 }; f.json(old.window, { ...b, root: labRoot(b.schemaVersion, b) }) }
       expect(authenticate).toThrow()
     } finally { spy?.mockRestore(); if (mode === "alias") native.unlinkSync(path); native.writeFileSync(path, bytes, { mode: 0o600 }); native.chmodSync(path, 0o600) }
