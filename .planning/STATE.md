@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V11 actual DATA passed; one preparation and unique ROOT entry next
+stopped_at: V11 run and unique retained reader closed without new Match credit; source diagnosis resumes
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: V11 device continuity review fixes and 23 ROOT tests pass; same original window; no new Match
+last_activity_desc: V11 retained gaps_found, zero new charges; source hold released after independent closure
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,15 @@ total_plans_in_phase: 16
 
 # State: Coward's Game
 
-## Current continuation — next-Match time admission APPROVED
+## Current continuation — V11 closed; bounded source correction
+
+V11 preparation19997/PID39144 CLOSED0/b29d76. Allocation9ec37387 was the ONLY direct-child commit e7902389 of request.sourceHead6b0618b3, pushed. Unique ROOT run33981/PID80257/child84654 CLOSED1/cef03d: PARENT_TERMINAL/DETAILS_WITHHELD; actual entry14:16:58.261UTC, child terminal15:27:05.241UTC, witnessed4206980ms/SIGKILL. Parent recorded resource_sampling_exception and final_identity_exception, uncertain/initiating cause UNKNOWN. Cold-corpus exists but contents remain unopened; initial proposals/selection/training and result absent. Zero new retained Match charges, historical50 still spent. Do not infer OOM, disk exhaustion, guest fault or a particular guard from this evidence.
+
+ONE actual ordinary retained reader /root/verify_265_v11_retained94344/PID94958 CLOSED0/36740a with gaps_found, failure/sourceHoldFailure CONTINUATION_READER_FAILURE, reportnull, issuedfalse/currentCharged0/total50/all36unused/holdoutfalse/formationfalse. Exit0 is NOT empirical success. Independent bounded postcheck b39c45 CLOSED0 at18:30:49.635UTC: all three PIDs absent, pinned HEAD/direct-parent/tracked source unchanged, entry/terminal/reason hashes unchanged. Reader claim and failed check exist; result absent; ledger0B/time416B. All commands/ownership CLOSED; source/HEAD/planning hold RELEASED. V11 and every old route/artifact/claim/reader remain immutable, spent and nonaccepted; no retry/refund/recredit or second reader.
+
+Source-only investigation found a conditional writer/observer race and multiplicative synchronous probes, not the actual initiating cause. Continue existing Plan16 bounded correction with public fixtures: prove overlap hazard, preserve all stability/resource/privacy checks, and evaluate early missing-result rejection plus finite trusted guard diagnostics. No new plan tree, changed rule/resource cap or new allowance. Original T/A/carry/cap/deadline21:14:03.861UTC remain unchanged. A future distinct route requires independently reviewed fixed source, fresh immutable allocation and same-process capacity; no unchanged known-failing launch. All9LEAG/265 remain pending;266 planning-only/no freeze or formation; holdout unopened/no public/counting/production.
+
+## Historical continuation — next-Match time admission APPROVED
 
 Actual DATA /root/review_265_v11_data PASS/findings[], d29c8d/1db5fd CLOSED0, ownership RELEASED: stable canonical window, reviewed source/plan/SOURCE, actual roles, committed ancestry and four future-path absences confirmed. Sole canonical DATA now projected. ROOT final request/ONE preparation next. If preparation passes, ONLY new allocation committed/pushed as sole-parent direct child of request.sourceHead, then ONE ROOT run; actual fresh SAME-PROCESS capacity before charge/provider. From preparation through terminal and ONE actual retained verifier hold source/HEAD/pinned planning fixed except allocation-only commit. Planned unique reader /root/verify_265_v11_retained runs only if actual entry/head exists; otherwise terminal-only. No duplicate entry/reader, new allowance/reset/refund, or empirical credit.
 

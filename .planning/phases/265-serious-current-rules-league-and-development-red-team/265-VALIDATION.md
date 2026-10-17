@@ -8,10 +8,14 @@ created: 2026-09-14
 updated: 2026-10-17
 source_reviewed: bfad7431d3fe6cc5fdda65dafbe523d0c2de40e3
 source_gate: v11-device-continuity-reviewed-root-validated-distinct-verification-passed
-empirical_validation: v10-preparation-failed-before-allocation-terminal-only-closed-zero-new-retained-charge
+empirical_validation: v11-run-and-unique-retained-reader-closed-gaps-found-zero-new-charge
 ---
 
 # Phase265 — Validation Strategy
+
+## V11 empirical closure — 2026-10-17
+
+Actual run33981 CLOSED1 and ONE retained reader94344 CLOSED0/gaps_found/issuedfalse/currentCharged0/total50/reportnull; sourceHoldFailure and failure CONTINUATION_READER_FAILURE. Independent postcheck b39c45 closed18:30:49.635UTC, all three PIDs absent and held source unchanged. Cold corpus exists/unopened, proposals/selection/training/result absent. No new Match or phase/LEAG/freeze credit; source hold released, every old attempt remains immutable. GATES contains attributed exact roots and limitations. Conditional overlap/source-cost hazards are unverified hypotheses about this failure, not empirical causes or resolved gaps. Earlier source-only coverage remains valid for its reviewed source, not proof of runtime feasibility.
 
 ## Current V11 scoped State-A audit — 2026-10-17
 

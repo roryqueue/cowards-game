@@ -1,18 +1,26 @@
 # Baseline continuation gates
 
-## V11 current DATA projection
+## V11 actual terminal and retained closure — 2026-10-17
+
+Preparation ROOT19997/PID39144 CLOSED0/b29d76; allocation sha256:9ec37387bba57e54c55512f63c13dd0bf309a3d64238bb47b3e6dbee55632485 committed/pushed as ONLY delta e7902389d054ee4c3a8a2bedbf88d14ba4da18c7 over6b0618b340825c70deaa02f9b8988978b6ec212e. ONE ROOT run33981/PID80257/child84654 CLOSED1/cef03d. Parent finite output PARENT_TERMINAL/DETAILS_WITHHELD, guards/openings/closings24complete, source3272/descriptor5638/carry-source19850 callbacks. Actual entry1792246618261 and terminal1792250825241 witness4206980ms; SIGKILL, initiating cause unknown. Reasons resource_sampling_exception/final_identity_exception, uncertaintrue, are not an OOM/disk/guest/root-cause diagnosis.
+
+ONE planned ordinary reader /root/verify_265_v11_retained94344/PID94958 CLOSED0/36740a: check sha256:5913bf54705776d5a179994cb2ae0845f634f7cde49c8bc85ac31ac737753f01, gaps_found, failure/sourceHoldFailure CONTINUATION_READER_FAILURE, reportnull, currentCharged0/total50/all36unused/issuedfalse/holdoutOpenedfalse/formationMaterializedfalse. Exit0 means command closure, not accepted evidence. Its ONE bounded postcheck b39c45 CLOSED0 at18:30:49.635UTC; exact three PIDs absent, HEAD/direct-parent/trackedclean unchanged. Entry raw29f5d9616058f856914f35fc5e430d4d3c8d1f8dce4ff54a9f4298449fe07cf4, terminal raw09dfcd6ce0a5aee92e7b71a465e3565c4f0c0a481c7e3a043c581b5f556c747e and reasons rawd62e055976a12bf5fc40c5d9f75cb141d2ccd9b9c539c89a546ebd6f52b5678c matched ROOT's prior finite observations without a second parse.
+
+Reader claim555B/raw1e4c259e2e10dc18312d87fdd8d546cd8f722666813e0843b810b3f290d5e61b/rootce9dbccc0f326a1700680b43dcf25cfef1c2f4e015930bf1a192dec0931358d2; check1299B/raw1692f8d66559dfbcc09f37bc84b33e88a529365d4777c1bfe8f00518b6285301. Ledger0B/0records; time416B/6records/raw687f51bff04187f8bbd79085a87328c41f098e322724c0495748dde99eb4be3e. Result/entryfailure absent. Cold-corpus137327B regular/no symlink EXISTS, contents unopened; initial-proposals/selection/training absent. Absence does not prove absence of transient work. Source/HEAD/planning hold released ONLY after all actual closures; all consumed bytes/charges/authority/readers immutable. No baseline/LEAG/freeze credit or new allowance. Source-only investigations are recorded in the existing debug carrier.
+
+## V11 historical DATA projection
 
 Actual independent /root/review_265_v11_data PASS_DATA_REVIEW/findings[], all commands CLOSED/ownership RELEASED. Canonical actual-window projection; not capacity or empirical success. Original allowance unchanged, V10 immutable.
 
-```json
+```text
 {"approvalEvidence":{"humanDecisionId":"human-approval-observed-20261017T124639Z","recordedBy":"/root"},"commands_closed":true,"dataReviewer":"/root/review_265_v11_data","grantId":"lean-baseline-continuation-20261017-v11-same-window","planRoot":"sha256:68653cdd810a45fd9b4e345ae49007fcb1125fd3db74f5ed76c93b5385811ef8","readerOperator":"/root/verify_265_v11_retained","reviewedSourceHead":"bfad7431d3fe6cc5fdda65dafbe523d0c2de40e3","runOperator":"/root","schemaVersion":"lean-baseline-continuation-data-gate-v2","sourceGateRoot":"sha256:2a00c7ad5e224627545277dc2b9cf5ee1c0c0d2dc0cbf03ad67d078e3d1a7214","sourceRoot":"sha256:52266d7b1826f8e26048f95ca5df2d09da46ea26114eab908eea235a331f4aec","status":"passed","windowBytesRoot":"sha256:75dfe68b7389871f23ff0cfea0827dd9f123c850be02536dbe51106aa24c3a60","windowRoot":"sha256:6fd97a8e7dfab8ca4b949f497d9592a1c0c075835bdf415c6ef236fccf3a547c"}
 ```
 
-## V11 current SOURCE projection
+## V11 historical SOURCE projection
 
 Actual author/review/fix, ROOT qualification/State-A and distinct source verifier are CLOSED VERIFIED3/3/findings[]. Final configured project types ROOT8988d1 also CLOSED0. Source698members, same original allowance; no actual V11 window or empirical admission yet. V10 projection bodies remain historical text, not current selectors.
 
-```json
+```text
 {"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"bfad7431d3fe6cc5fdda65dafbe523d0c2de40e3","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_device_continuity","sourceReviewer":"/root/review_265_next_cell","sourceRoot":"sha256:52266d7b1826f8e26048f95ca5df2d09da46ea26114eab908eea235a331f4aec","sourceVerifier":"/root/verify_265_device_continuity","source_review":"passed","source_verification":"passed"}
 ```
 
