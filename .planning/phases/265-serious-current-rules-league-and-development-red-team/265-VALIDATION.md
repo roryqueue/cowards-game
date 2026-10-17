@@ -6,14 +6,16 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-17
-source_reviewed: bfad7431d3fe6cc5fdda65dafbe523d0c2de40e3
-source_gate: v11-device-continuity-reviewed-root-validated-distinct-verification-passed
+source_reviewed: 90824b9ce6437ae7cb12178742d2b46558454216
+source_gate: reader-guard-tasks-1-4-reviewed-root-validated-distinct-verification-passed
 empirical_validation: v11-run-and-unique-retained-reader-closed-gaps-found-zero-new-charge
 ---
 
 # Phase265 — Validation Strategy
 
 ## Reader/guard correction — scoped State-A, 2026-10-17
+
+DISTINCT /root/verify_265_reader_guard_source VERIFIED4/4 source truths,0BLOCKER0WARNING,gaps[], all commands CLOSED/ownership released; existing GATES binds exact evidence/limits. This closes only tasks1–4 and supersedes pending-verifier text below. Task5/current-owned race repair is not implemented or admitted. No whole-phase/empirical credit.
 
 Source90824b9c, tasks1–4 only; distinct code review clean/findings[]. ROOT inspected actual caller assertions rather than inferring coverage from counts. Task5 remains planning-only/unwired and outside this closure.
 

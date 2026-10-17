@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V11 run and unique retained reader closed without new Match credit; source diagnosis resumes
+stopped_at: Reader/guard source correction verified; current-owned writer/observer race repair planning
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: V11 retained gaps_found, zero new charges; source hold released after independent closure
+last_activity_desc: Four source corrections verified and pushed; no new experiment or Match
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V11 closed; bounded source correction
+
+Tasks1–4 source90824b9c CLOSED: author /root/execute_265_reader_guard, independent /root/review_265_reader_guard clean, ROOT45selectedtests/configuredtypes/factory1444 pass and exact SIX-path strict output equals six inherited pre-errors, DISTINCT /root/verify_265_reader_guard_source VERIFIED4/4/gaps[]/0BLOCKER0WARNING. Source/tasks/qualification pushed87bbb0c9; final verification recorded in existing GATES. Cheap missing-result refusal, finite timer guard evidence and single fresh reservation are implemented; overlap is reproduced, not fixed. All commands/ownership closed. No actual run/reader/allocation/new Match or completion credit.
+
+Continue checked Task5 research for current-owned file-creation/journal-append races under D-29's fresh local accounting and complete boundary checks. A directory-only repair is insufficient; journal frontier must stay fresh, both-buffer reservation and identity/prefix/high-water protections remain. No new numbered plan, allowance or changed numeric cap; original21:14:03.861UTC deadline unchanged. Future launch remains blocked on the actual safe source correction and ordinary distinct-route gates, not a repeat approval literal. All prior failures/evidence immutable;265/all9LEAG pending and266 planning-only.
 
 V11 preparation19997/PID39144 CLOSED0/b29d76. Allocation9ec37387 was the ONLY direct-child commit e7902389 of request.sourceHead6b0618b3, pushed. Unique ROOT run33981/PID80257/child84654 CLOSED1/cef03d: PARENT_TERMINAL/DETAILS_WITHHELD; actual entry14:16:58.261UTC, child terminal15:27:05.241UTC, witnessed4206980ms/SIGKILL. Parent recorded resource_sampling_exception and final_identity_exception, uncertain/initiating cause UNKNOWN. Cold-corpus exists but contents remain unopened; initial proposals/selection/training and result absent. Zero new retained Match charges, historical50 still spent. Do not infer OOM, disk exhaustion, guest fault or a particular guard from this evidence.
 
