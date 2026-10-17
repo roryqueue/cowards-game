@@ -2305,6 +2305,46 @@ for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "co
   expect(fs.readFileSync(resolve(p.store, "time.ndjson"))).toEqual(timeBytes)
 }, namespace, 28800000 - 2400000 - 2), 60000)
 
+it("continuation-reservation-forward-v11 real preflight, rebound and opened guards forward fresh samples once", () => withInternalObservationTree(false, async f => {
+  const { D, C, p, imported, fs: native } = f
+  f.note("connected reservation forwarding")
+  const create = C.createLeanContinuationBoundaryControllerV8, rows: { binding: object; controller: any; observer: ReturnType<typeof vi.fn> }[] = []
+  const factory = vi.spyOn(C, "createLeanContinuationBoundaryControllerV8").mockImplementation(((...args: any[]) => {
+    const observe = args[5], observer = vi.fn((bytes: number) => observe(bytes)); args[5] = observer
+    const controller = create(...args); rows.push({ binding: args[3], controller, observer }); return controller
+  }) as typeof C.createLeanContinuationBoundaryControllerV8)
+  try {
+    const context = D.openLeanBaselineContinuationContextV2(p.request)
+    expect(rows).toHaveLength(2)
+    const fullBefore = context.fullSample()
+    expect(fullBefore).toMatchObject({ charged: 50, remainingSlots: 36, parentRssBytes: 100000000, live: true })
+    const opened = rows[1]!, firstIndex = opened.observer.mock.calls.length, open = native.openSync, ledgerPath = resolve(p.store, "ledger.ndjson"), timePath = resolve(p.store, "time.ndjson")
+    const files = vi.spyOn(native, "openSync").mockImplementation(((...args: any[]) => Reflect.apply(open, native, args)) as typeof fs.openSync)
+    try {
+      const first = context.guard(17)
+      expect(opened.observer.mock.calls.slice(firstIndex)).toEqual([[17]])
+      expect(first).toBe(opened.observer.mock.results[firstIndex]!.value)
+      expect(Object.keys(first).sort()).toEqual(["elapsedMs", "retainedBytes", "scratchBytes"])
+      expect(files.mock.calls.filter((call: any[]) => String(call[0]) === ledgerPath)).toHaveLength(1)
+      expect(files.mock.calls.filter((call: any[]) => String(call[0]) === timePath)).toHaveLength(1)
+      const second = context.guard(19)
+      expect(second).not.toBe(first); expect(second).toBe(opened.observer.mock.results[firstIndex + 1]!.value)
+      expect(second.retainedBytes - first.retainedBytes).toBe(2)
+    } finally { files.mockRestore() }
+    context.bindArchive(imported.inventory)
+    expect(rows).toHaveLength(3)
+    for (const row of rows) {
+      expect(row.observer.mock.calls.length).toBeGreaterThan(0)
+      for (const result of row.observer.mock.results) if (result.type === "return") expect(result.value).toEqual({ retainedBytes: expect.any(Number), scratchBytes: expect.any(Number), elapsedMs: expect.any(Number) })
+      const start = row.observer.mock.calls.length, sample = row.controller.reserve(row.binding, 23)
+      expect(row.observer.mock.calls.slice(start)).toEqual([[23]]); expect(sample).toBe(row.observer.mock.results[start]!.value)
+    }
+    const fullAfter = context.stage("dispatch", () => context.fullSample())
+    expect(Object.keys(fullAfter).sort()).toEqual(Object.keys(fullBefore).sort())
+    expect(fullAfter).toMatchObject({ charged: 50, remainingSlots: 36, parentRssBytes: 100000000, live: true })
+  } finally { factory.mockRestore() }
+}, "20261017-v11"), 45000)
+
 it("continuation-guard-overlap-v11 stable valid journal append passes; descriptor-overlap permanently denies dependent effects", () => withInternalObservationTree(false, async f => {
   const { D, L, p, ledger, w, fs: native } = f
   f.note("journal overlap default context")

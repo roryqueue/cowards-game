@@ -215,6 +215,28 @@ describe("continuation-route-v9", () => {
 })
 
 describe("continuation-boundary-v8-P", () => {
+  it("continuation-reservation-forward-v11 forwards one exact fresh observer result per guard", () => {
+    let sequence = 0
+    const binding = Object.freeze({}), observer = vi.fn((additionalBytes: number) => ({ retainedBytes: additionalBytes, scratchBytes: 0, elapsedMs: ++sequence }))
+    const controller = continuation.createLeanContinuationBoundaryControllerV8([], [], [], binding, () => {}, observer)
+    const first = controller.reserve(binding, 7), second = controller.reserve(binding, 11)
+    expect(observer.mock.calls).toEqual([[7], [11]])
+    expect(first).toBe(observer.mock.results[0]!.value); expect(second).toBe(observer.mock.results[1]!.value)
+    expect(first).not.toBe(second); expect(second).toEqual({ retainedBytes: 11, scratchBytes: 0, elapsedMs: 2 })
+  })
+  it.each(["context", "reentry", "throw", "drift"] as const)("continuation-reservation-forward-v11 permanently denies %s without returning an observation", mode => {
+    const binding = Object.freeze({}), cwd = process.cwd(), drift = vi.spyOn(process, "cwd").mockReturnValue(cwd), effect = vi.fn(), sentinel = new Error("public observer failure")
+    let controller: ReturnType<typeof continuation.createLeanContinuationBoundaryControllerV8>
+    const observer = vi.fn(() => { if (mode === "reentry") controller.reserve(binding); if (mode === "throw") throw sentinel; if (mode === "drift") drift.mockReturnValue(cwd + "/changed"); return { retainedBytes: 0, scratchBytes: 0, elapsedMs: 1 } })
+    controller = continuation.createLeanContinuationBoundaryControllerV8([], [], [], binding, () => {}, observer)
+    try {
+      expect(() => { controller.reserve(mode === "context" ? {} : binding); effect() }).toThrow(mode === "throw" ? sentinel : /V8_/)
+      drift.mockReturnValue(cwd)
+      expect(() => { controller.reserve(binding); effect() }).toThrow(/V8_CONTEXT/)
+      expect(() => controller.withStage(binding, "dispatch", effect)).toThrow(/V8_CONTEXT/)
+      expect(observer).toHaveBeenCalledTimes(mode === "context" ? 0 : 1); expect(effect).not.toHaveBeenCalled()
+    } finally { drift.mockRestore() }
+  })
   it.each([false, true])("continuation-guard-overlap-v11 allowed creation during readdir=%s keeps refusal permanent", overlap => {
     const began = performance.now(), w = continuationDeviceWindowFixtureV11(), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V11
     const dir = realpathSync(mkdtempSync(join(tmpdir(), "public-owned-overlap-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
