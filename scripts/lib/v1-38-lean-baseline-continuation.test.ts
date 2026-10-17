@@ -26,6 +26,29 @@ export const continuationNextAllocationFixtureV10 = () => {
   const { root: _, ...body } = { ...old, window, caps: { ...old.caps, elapsedMs: window.capMs }, windowBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(window)) }
   return ledger.validateLeanBaselineContinuationAllocationV2({ ...body, root: labRoot(body.schemaVersion, body) })
 }
+export const continuationDeviceWindowFixtureV11 = () => {
+  const { root: _, ...old } = continuationNextWindowFixtureV10()
+  const body = { ...old, routeNamespace: "20261017-v11" as const, anchorMs: 1792242843861, carryMs: 894902764, capMs: 923702764, deadlineMs: 1792271643861 }
+  return ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })
+}
+describe("continuation-device-v11-policy", () => {
+  it("inherits the exact spent allowance without extending any time or old policy", () => {
+    const w = continuationDeviceWindowFixtureV11()
+    expect(ledger.leanBaselineContinuationPathsForWindowV2(w).request).toBe(".strategy-lab/lean-baseline-continuation-request-20261017-v11.json")
+    expect(ledger.leanBaselineContinuationMatchReserveMsV2(w, 36)).toBe(600000)
+    expect(ledger.leanBaselineContinuationElapsedFloorV2(w, w.anchorMs + 1234)).toBe(w.carryMs + 1234)
+    for (const key of ["anchorMs", "carryMs", "capMs", "deadlineMs", "approvedAtMs"] as const) {
+      const { root: _, ...body } = { ...w, [key]: w[key] + 1 }
+      expect(() => ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })).toThrow()
+    }
+    expect(ledger.leanBaselineContinuationMatchReserveMsV2(continuationWindowFixtureV2(), 36)).toBe(21600000)
+  })
+  it("keeps device-only copied public rows unauthoritative", () => {
+    const old: continuation.LeanContinuationInventoryRow = { path: "scripts/public.bin", kind: "file", bytes: 1, allocatedBytes: 4096, dev: 1, ino: 2, mode: 0o644, mtimeMs: 3, ctimeMs: 4, rawRoot: r("public") }
+    expect(() => continuation.reconcileLeanContinuationInventoryV2([old], [{ ...old, dev: 2 }], [], continuationDeviceWindowFixtureV11())).toThrow(/IMMUTABLE_CHANGED/)
+    expect(() => continuation.reconcileLeanContinuationInventoryV2([old], [{ ...old, dev: 2 }], [], continuationNextWindowFixtureV10())).toThrow(/IMMUTABLE_CHANGED/)
+  })
+})
 describe("continuation-next-v10-policy", () => {
   it("continuation-next-v10-carry pins the independently compared file-only floor and opaque tuple", () => {
     const o = readLeanContinuationExpectedObservations(); expect(o.spentV9Metadata).toHaveLength(14); expect(o.spentV9Metadata.reduce((n, row) => n + row.bytes, 0)).toBe(1163382); expect(o.spentV9Metadata.reduce((n, row) => n + row.allocatedBytes, 0)).toBe(1204224); expect(o.spentV9Directories.map(row => row.members.length)).toEqual([10, 1]); expect(Object.isFrozen(o.spentV9Metadata[0])).toBe(true); expect(Object.isFrozen(o.spentV9Directories[0]!.members)).toBe(true); expect(continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V10).toBe(92491776); expect(continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V9).toBe(91287552)
