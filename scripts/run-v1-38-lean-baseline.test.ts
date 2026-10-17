@@ -1992,7 +1992,7 @@ it("internal-observations-default preserves ordered catalogs, legacy aliases and
 // Public synthetic external observations only. Every hash, descriptor, schema,
 // source collector, importer, controller, wrapper and failure publisher is real.
 // No success object substitutes for any of those production boundaries.
-const withInternalObservationTree = async (verify: boolean, run: (f: any) => Promise<void>, namespace: "20261015-v8" | "20261017-v9" | "20261017-v10" | "20261017-v11" = "20261015-v8", pilotStartElapsedMs = 0, deviceNegative?: "missing-hash" | "wrong-hash" | "metadata" | "directory-members" | "sealed") => {
+const withInternalObservationTree = async (verify: boolean, run: (f: any) => Promise<void>, namespace: "20261015-v8" | "20261017-v9" | "20261017-v10" | "20261017-v11" = "20261015-v8", pilotStartElapsedMs = 0, deviceNegative?: "missing-hash" | "wrong-hash" | "metadata" | "directory-members" | "sealed" | "empty-directory" | "logical-bound") => {
   // Prospective checked test-only harness. Earlier 10s attempts below remain
   // CENSORED; this changes no production admission, resource or runtime limit.
   const harness = "OBS3-HARNESS-45000", fixtureLimitMs = 45000
@@ -2102,7 +2102,9 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     if (namespace === "20261017-v11") {
       const item = deviceNegative === "sealed" ? "sealed.bin" : "item.bin"
       write(`.strategy-lab/lean-public-history/${item}`, Buffer.alloc(131073, 79), 0o600)
-      for (const name of [".strategy-lab/lean-public-history", `.strategy-lab/lean-public-history/${item}`]) {
+      if (deviceNegative === "empty-directory") fs.mkdirSync(resolve(".strategy-lab/lean-public-history/empty"))
+      if (deviceNegative === "logical-bound") write(".strategy-lab/lean-public-history/zz-size-bound.bin", "public small size projection", 0o600)
+      for (const name of [".strategy-lab/lean-public-history", `.strategy-lab/lean-public-history/${item}`, ...(deviceNegative === "empty-directory" ? [".strategy-lab/lean-public-history/empty"] : []), ...(deviceNegative === "logical-bound" ? [".strategy-lab/lean-public-history/zz-size-bound.bin"] : [])]) {
         const s = fs.lstatSync(resolve(name)), members = s.isDirectory() ? fs.readdirSync(resolve(name)).sort() : undefined
         originalInventory.push({ path: name, kind: s.isDirectory() ? "directory" : "file", bytes: s.size, allocatedBytes: s.blocks * 512, dev: s.dev + 1, ino: s.ino, mode: s.mode & 0o777, mtimeMs: s.mtimeMs, ctimeMs: s.ctimeMs, rawRoot: s.isFile() ? L.leanBytesRoot(fs.readFileSync(resolve(name))) : null, ...(members ? { members } : {}) })
       }
@@ -2112,6 +2114,8 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
       if (deviceNegative === "metadata") file.ino += 1
       if (deviceNegative === "directory-members") { originalInventory[0]!.members = ["not-authenticated.bin"]; originalInventory.splice(1) }
       if (deviceNegative === "sealed") file.kind = "sealed_metadata"
+      if (deviceNegative === "empty-directory") for (const row of originalInventory) if (row.kind === "directory") delete row.members
+      if (deviceNegative === "logical-bound") originalInventory[2]!.bytes = L.LEAN_CAPS.totalBytes - file.bytes + 1
     }
     const oldRequest = Buffer.from("public old request"), predecessor = rooted({ schemaVersion: "lean-baseline-continuation-carry-v1", chargedMatches: 43, elapsedUpperBoundMs: 459375903, allocatedDiskBytes: Math.max(4096, originalInventory.reduce((sum, row) => sum + row.allocatedBytes, 0)), historicalPeakDiskBytes: "unknown", historicalPeakRssBytes: "unknown", custodyRoot: hash("lean-baseline-continuation-custody-v1", { inert: true }), inventoryRoot: hash("lean-baseline-continuation-inventory-v1", originalInventory), qualifiedReaderAuthority: "cost_only" })
     const a = L.createLeanBaselineContinuationAllocation({ sourceRoot: root("old-source"), reviewRoot: root("old-review"), coldRoot: root("old-cold"), planRoot: root("old-plan"), candidateRoots: [root("old-a"), root("old-b")], requestRoots: Array.from({ length: 36 }, (_, i) => root(`old-request-${i}`)), seed: "public-old", sourceHead: "a".repeat(40), planningRoot: root("old-planning"), requestBytesRoot: L.leanBytesRoot(oldRequest), offlineOverheadMs: 60000, predecessor })
@@ -2157,7 +2161,29 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     // or a 90 MB imitation of historical artifacts.
     write(".strategy-lab/lean-public-accounted-extra.bin", Buffer.alloc(namespace !== "20261015-v8" ? 2621440 : 1310720), 0o600)
     const review = manifest.entries.filter(row => row.path !== p.window).map(row => ({ ...row, commit: manifest.implementationEntries.some(s => s.path === row.path) ? reviewedHead : sourceHead, kind: manifest.implementationEntries.some(s => s.path === row.path) ? "reviewed_source" as const : "active_planning" as const }))
-    if (deviceNegative) {
+    if (deviceNegative === "logical-bound") {
+      // Two authenticated affected files each fit individually, but their sum
+      // exceeds15GB by one byte. Project ONLY metadata, never allocate the size.
+      const target = originalInventory[2]!, targetPath = resolve(target.path)
+      const lstat = fs.lstatSync.bind(fs), fstat = fs.fstatSync.bind(fs), open = fs.openSync.bind(fs), close = fs.closeSync.bind(fs), read = fs.readSync.bind(fs), alloc = Buffer.alloc.bind(Buffer)
+      let fdTarget = -1, targetOpens = 0, targetReads = 0, targetAllocations = 0
+      const spies = [
+        vi.spyOn(fs, "lstatSync").mockImplementation(((path: string, ...args: any[]) => { const s = lstat(path, ...args); return String(path) === targetPath ? Object.assign(s, { size: target.bytes }) : s }) as any),
+        vi.spyOn(fs, "openSync").mockImplementation(((path: string, ...args: any[]) => { const fd = open(path, ...args); if (String(path) === targetPath) { fdTarget = fd; targetOpens++ }; return fd }) as any),
+        vi.spyOn(fs, "closeSync").mockImplementation((fd: number) => { if (fd === fdTarget) fdTarget = -1; return close(fd) }),
+        vi.spyOn(fs, "fstatSync").mockImplementation(((fd: number, ...args: any[]) => { const s = fstat(fd, ...args); return fd === fdTarget ? Object.assign(s, { size: target.bytes }) : s }) as any),
+        vi.spyOn(fs, "readSync").mockImplementation(((fd: number, ...args: any[]) => { if (fd === fdTarget) targetReads++; return read(fd, ...args) }) as any),
+        vi.spyOn(Buffer, "alloc").mockImplementation(((...args: any[]) => { if (fdTarget !== -1) targetAllocations++; return alloc(...args) }) as any),
+      ]
+      try {
+        expect(originalInventory.filter(row => row.kind === "file").reduce((sum, row) => sum + row.bytes, 0)).toBe(L.LEAN_CAPS.totalBytes + 1)
+        expect(target.bytes).toBeLessThan(L.LEAN_CAPS.totalBytes)
+        expect(() => C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)).toThrow(/V11_CONTINUITY_BOUND/)
+        expect(targetOpens).toBe(1); expect(targetReads).toBe(0); expect(targetAllocations).toBe(0)
+      } finally { for (const spy of spies.reverse()) spy.mockRestore() }
+      status = "COMPLETE"; return
+    }
+    if (deviceNegative && deviceNegative !== "empty-directory") {
       expect(() => C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)).toThrow(/V11_CONTINUITY_/)
       status = "COMPLETE"; return
     }
@@ -2197,6 +2223,21 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     expect(elapsedMs).toBeLessThanOrEqual(fixtureLimitMs); expect(maximumBytes).toBeLessThanOrEqual(8 * 1024 * 1024); expect(fs.existsSync(dir)).toBe(false); expect(realMono()).toBeGreaterThan(0n)
   }
 }
+it("continuation-device-v11-review cumulative logical bound refuses before target content buffer or read", () => withInternalObservationTree(false, async () => { throw new Error("unexpected admitted fixture") }, "20261017-v11", 0, "logical-bound"), 60000)
+it("continuation-device-v11-review authenticates empty directory without serialized members, refuses an extra child and public copied proof", () => withInternalObservationTree(false, async f => {
+  const { C, fs: native, imported, originalInventory, review, git, w, bounded } = f
+  const path = ".strategy-lab/lean-public-history/empty", original = originalInventory.find((row: any) => row.path === path), current = imported.inventory.find((row: any) => row.path === path)
+  expect(original.members).toBeUndefined(); expect(current.members).toEqual([]); expect(current.dev).not.toBe(original.dev)
+  expect(() => C.reconcileLeanContinuationInventoryV2(originalInventory, imported.inventory, review, w)).toThrow(/IMMUTABLE_CHANGED/)
+  expect(() => C.reconcileLeanContinuationInventoryV2(originalInventory, structuredClone(imported.inventory), review, w)).toThrow(/IMMUTABLE_CHANGED/)
+  const before = native.lstatSync(resolve(path)), lstat = native.lstatSync.bind(native), fstat = native.fstatSync.bind(native)
+  native.writeFileSync(resolve(path, "unexpected.bin"), "public unreviewed child", { mode: 0o600 })
+  // Retain the authenticated directory's other metadata so the exact direct
+  // membership predicate, rather than a timestamp difference, is decisive.
+  const fixed = (s: fs.Stats) => s.ino === before.ino ? Object.assign(s, { size: before.size, blocks: before.blocks, mtimeMs: before.mtimeMs, ctimeMs: before.ctimeMs }) : s
+  const pathSpy = vi.spyOn(native, "lstatSync").mockImplementation(((...args: any[]) => fixed(lstat(...args))) as any), fdSpy = vi.spyOn(native, "fstatSync").mockImplementation(((...args: any[]) => fixed(fstat(...args))) as any)
+  try { expect(() => C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)).toThrow(/V11_CONTINUITY_MEMBERS/) } finally { pathSpy.mockRestore(); fdSpy.mockRestore() }
+}, "20261017-v11", 0, "empty-directory"), 60000)
 it.each(["missing-hash", "wrong-hash", "metadata", "directory-members", "sealed"] as const)("continuation-device-v11-importer denies authenticated historical %s", deviceNegative => withInternalObservationTree(false, async () => { throw new Error("unexpected admitted fixture") }, "20261017-v11", 0, deviceNegative), 60000)
 it("continuation-device-v11-importer authenticates device-only files/directories once and rejects copied proof, content and descriptor races", () => withInternalObservationTree(false, async f => {
   const { C, L, fs: native, originalInventory, imported, git, review, w, bounded } = f
