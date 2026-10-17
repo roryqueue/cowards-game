@@ -683,6 +683,24 @@ it("fails closed on parent crash, torn terminal, and prospective cap overrun", (
   expect(() => chargeLeanSlot(exceeded, exceeded.allocation.slots[0]!, { freeBytes: 20e9, availableMemoryBytes: 2e9 })).toThrow()
 })
 
+it("continuation-route-v13 binds only the same actual window and exact finite paths", () => {
+  const L = twoPair as any, p = L.LEAN_BASELINE_CONTINUATION_PATHS_V13
+  expect(p).toEqual({ request: ".strategy-lab/lean-baseline-continuation-request-20261017-v13.json", allocation: ".planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261017-v13.json", store: ".strategy-lab/lean-baseline-continuation-20261017-v13", temp: ".strategy-lab/lean-baseline-continuation-20261017-v13-tmp", window: ".strategy-lab/lean-baseline-continuation-window-20261017-v13.json", claim: ".strategy-lab/lean-baseline-continuation-20261017-v13-tmp/window-claim.json", gates: L.LEAN_BASELINE_CONTINUATION_PATHS.gates })
+  expect(Object.isFrozen(p)).toBe(true)
+  const body = { schemaVersion: "lean-baseline-continuation-window-v2", status: "approved", grantId: "public-v13-same-window", approvalEvidence: { humanDecisionId: "human-approval-observed-20261017T231803Z", recordedBy: "public-root" }, approvedAtMs: 1792279083000, anchorMs: 1792280297748, carryMs: 932356651, capMs: 961156651, deadlineMs: 1792309097748, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261017-v13", reviewedSourceHead: "a".repeat(40), sourceRoot: pin, sourceGateRoot: pin, planRoot: pin, runOperator: "public-runner", readerOperator: "public-reader" }
+  const rooted = (v: any) => ({ ...v, root: labRoot(v.schemaVersion, v) })
+  const w = L.validateLeanBaselineContinuationWindowV2(rooted(body))
+  expect(L.leanBaselineContinuationPathsForRequestV2(p.request)).toBe(p)
+  expect(L.leanBaselineContinuationPathsForWindowV2(w)).toBe(p)
+  expect(L.leanBaselineContinuationMatchReserveMsV2(w, 36)).toBe(600000)
+  expect(L.leanBaselineContinuationMatchReserveMsV2(w, 0)).toBe(0)
+  expect(L.leanBaselineContinuationElapsedFloorV2(w, w.anchorMs + 1234)).toBe(932357885)
+  for (const patch of [{ approvedAtMs: body.approvedAtMs + 1 }, { approvalEvidence: { ...body.approvalEvidence, humanDecisionId: "another-approval" } }, { anchorMs: body.anchorMs + 1, carryMs: body.carryMs + 1, capMs: body.capMs + 1, deadlineMs: body.deadlineMs + 1 }, { carryMs: body.carryMs + 1, capMs: body.capMs + 1 }, { capMs: body.capMs + 1 }, { deadlineMs: body.deadlineMs + 1 }, { durationMs: 28800001 }, { closureMs: 1860001 }, { offlineOverheadMs: 600001 }, { routeNamespace: "20261018-v13" }]) expect(() => L.validateLeanBaselineContinuationWindowV2(rooted({ ...body, ...patch }))).toThrow("CONTINUATION_V2_WINDOW")
+  for (const alias of [p.request + ".alias", p.request + "/extra", p.request.replace("20261017", "20261018")]) expect(() => L.leanBaselineContinuationPathsForRequestV2(alias)).toThrow("CONTINUATION_V2_REQUEST_PATH")
+  expect(L.leanBaselineContinuationPathsForWindowV2(rooted({ ...body, routeNamespace: "20261017-v12" }))).toBe(L.LEAN_BASELINE_CONTINUATION_PATHS_V12)
+  expect(L.leanBaselineContinuationMatchReserveMsV2(rooted({ ...body, approvedAtMs: body.anchorMs, routeNamespace: "20261012-v3" }), 36)).toBe(21600000)
+})
+
 it("[continuation-fresh-window-v12] [continuation-route-v12] binds only the new approval with continuous costs and preserves V11", () => {
   const lean = twoPair as any
   const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V12
