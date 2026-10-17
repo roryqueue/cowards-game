@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Source correction reviewed and ROOT validated; distinct source verification pending; experiment window expired
+stopped_at: Source correction CLOSED VERIFIED; fresh empirical time allowance requires human decision
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: b7124d9d reviewed;30focused tests and configured build pass; distinct verification next
+last_activity_desc: b7124d9d independently verified5/5; expired window prevents new experiment
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V11 closed; bounded source correction
+
+SOURCE CYCLE CLOSED: b7124d9d independently VERIFIED5/5 Task5+6 truths by /root/verify_265_owned_source,0BLOCKER0WARNING,gaps[], all commands/ownership closed. Independent integrated and correction reviews clean after fixes; ROOT30unique focused tests/configured build/factory1446 passed, exact12strict retains six inherited diagnostics only. ROOT10d53e at22:29:03.587UTC observed exact V12 window/request/allocation/store/temp ALL absent. No actual V12 preparation, run, reader or Match.
+
+CURRENT HUMAN RESOURCE DECISION: original eight-hour window expired21:14:03.861UTC (5:14:03.861p.m. America/New_York) during the interruption. Latest `please continue` does not extend it. Proposed, NOT APPROVED: ONE fresh eight-hour private experiment window anchored only after the necessary new prospective source/setup checks, same15GB/3GB/global300/36planned/fourunopened and all guest/startup/host/Match/closure/offline bounds; continue next-Match admission and carry all past/intervening costs, no reset/refund. Standing distinct-route consent removes repeated route literals but does not supply this new time allowance. Do not create/run a new route or repeat expired/consumed V12/V11/older authority before explicit resource approval. Safe source cycle is finished; no repeated heavy source/verification scans while unchanged. Plan16/265/all9LEAG pending,266 planning-only; current-rules evaluation/freeze before formation and holdout unopened.
 
 Source correction now b7124d9d, production e78dc4d3: independent opening-pair and test-relocation reviews clean, ROOT30unique focused tests pass, configured lab/runtime build pass, factory1446/violations[], exact12strict comparison has only six unchanged inherited diagnostics. Interrupted author7759 remains UNKNOWN; ROOT results are separate actual executions. Scoped State-A coverage updated, distinct source verification next. No new Match or V12 artifact; original empirical window expired and must not be silently extended.
 

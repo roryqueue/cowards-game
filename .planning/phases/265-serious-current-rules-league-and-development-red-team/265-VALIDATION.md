@@ -7,13 +7,15 @@ wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-17
 source_reviewed: b7124d9d9c308bb9bcfe8f83f3d01e2ced0ea7ce
-source_gate: tasks-5-6-reviewed-root-focused-validation-distinct-verification-pending
+source_gate: tasks-5-6-reviewed-root-validated-distinct-verification-passed
 empirical_validation: v11-run-and-unique-retained-reader-closed-gaps-found-zero-new-charge
 ---
 
 # Phase265 — Validation Strategy
 
 ## Tasks5+6 scoped State-A — 2026-10-17
+
+DISTINCT /root/verify_265_owned_source VERIFIED5/5 source truths,0BLOCKER0WARNING,gaps[], all commands CLOSED/ownership released. This closes the scoped source cycle and supersedes pending-verifier text below only. No whole-phase/empirical credit; original window expired and no new allowance exists.
 
 Final source b7124d9d retains production e78dc4d3. ROOT corrected package-root test import errors by relocating the unchanged opaque-table assertions into the helper test; independent narrow review clean. Corrected configured lab/runtime build23881/129e03 PASS, repeated affected5cases52065/c99761 PASS (not extra unique coverage), final strict47135/2aa09c whole-output equals baseline six inherited diagnostics, factory72366/b6989c PASS1446files/violations[]. Helper line references below describe pre-relocation layout; test names/assertions unchanged. All commands closed; distinct source verification next.
 
