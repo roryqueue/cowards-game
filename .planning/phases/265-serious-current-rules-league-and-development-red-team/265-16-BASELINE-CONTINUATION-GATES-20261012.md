@@ -1,5 +1,13 @@
 # Baseline continuation gates
 
+## V10 current SOURCE projection
+
+Actual checked plan, independent source review/fix, ROOT qualification/validation and distinct source verification have closed before window initialization. Older V9 SOURCE/DATA bodies below remain historical text and committed history, not current selectors. Actual source698members; no empirical capacity or completion implied.
+
+```json
+{"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"478061b636d633c503ca7f87af8792c17ed6cd33","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_next_cell","sourceReviewer":"/root/review_265_next_cell","sourceRoot":"sha256:e88e5f996d3d8aa00cb13fc8870c3d1e1e4299ab43ed4495681021ee5aab54be","sourceVerifier":"/root/verify_265_next_cell","source_review":"passed","source_verification":"passed"}
+```
+
 ## V10 ROOT qualification and scoped validation — 2026-10-17
 
 Source478061b636d633c503ca7f87af8792c17ed6cd33, actual author `/root/execute_265_next_cell`; independent `/root/review_265_next_cell` integrated review plus fix review now findings[]. CR-NEXT-01 zero-work reader admission and WR-NEXT-01 backward-clock test were reproduced and corrected, never waived. N1–N3 source delta is nine existing files, no engine/runtime/provider changes.
@@ -1900,7 +1908,7 @@ PENDING HUMAN PROPOSAL, NOT AUTHORITY: ONE fresh eight-hour private attempt afte
 
 ROOT inert actual collector85196/chunk0ae25d CLOSED0 observed01:36:38.110UTC:698 implementation members, sourceRootc712935e/planRoot1d102788/sourceGateRootaf7d9c8a below. Distinct actual author/reviewer/verifier closures precede this sole canonical SOURCE. This projection is source readiness only, not DATA/capacity or empirical success. Old historical projection examples remain text/non-authority; no prior artifact bytes changed. Actual experiment A is not initialized yet.
 
-```json
+```text
 {"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"bb5c2b830048ee8fdfb208d9c005af1f41edadc0","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_v9_route","sourceReviewer":"/root/review_265_v9_route","sourceRoot":"sha256:c712935e5302a6be681ccd33487c4f7129a960fa6958201b48992900be02dcb8","sourceVerifier":"/root/verify_265_v9_route","source_review":"passed","source_verification":"passed"}
 ```
 
@@ -2035,7 +2043,7 @@ F(A)=459375903+(1792201032312−1791807317000)=**853091215**, cap**881891215**, 
 
 Sole canonical DATA below was generated with production `validateLeanContinuationDataGateV2` and `leanCanonicalBytes`; finite domain projection root **sha256:9d18fe1c33fbd501da6de9aa06b63eeef2cf1ee8dd1f43824b8dd0695146e65e**. All actual check commands CLOSED; only this existing GATES append changed, no commit/new report/module/test/private mutation. GATES ownership RELEASED to ROOT at final return.
 
-```json
+```text
 {"approvalEvidence":{"humanDecisionId":"human-approval-observed-20261017T005126Z","recordedBy":"/root"},"commands_closed":true,"dataReviewer":"/root/review_265_v9_data","grantId":"lean-baseline-continuation-20261017-v9-one-window","planRoot":"sha256:1d102788209c389b556a4b615f7f264cbdce01388bab414f0e5a2de80afe39bc","readerOperator":"/root/verify_265_v9_retained","reviewedSourceHead":"bb5c2b830048ee8fdfb208d9c005af1f41edadc0","runOperator":"/root","schemaVersion":"lean-baseline-continuation-data-gate-v2","sourceGateRoot":"sha256:af7d9c8a9e05b595cbb6f176900c2acf59987179bc6341177f4a746daece7007","sourceRoot":"sha256:c712935e5302a6be681ccd33487c4f7129a960fa6958201b48992900be02dcb8","status":"passed","windowBytesRoot":"sha256:9573d0dab6378c9fa32192b9086258415f35a5947576b2fac54b78df99e2aa9e","windowRoot":"sha256:db97fba9562af0c529138feff8827f4f92a836ba31f781d44ca6fbd587a17c9b"}
 ```
 
