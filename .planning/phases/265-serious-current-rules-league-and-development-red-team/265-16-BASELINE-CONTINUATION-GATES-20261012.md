@@ -1,5 +1,13 @@
 # Baseline continuation gates
 
+## Current SOURCE — fresh V12 allowance
+
+Task7 source2631c6b7 independently VERIFIED2/2 by /root/verify_265_owned_source,0BLOCKER0WARNING,gaps[], all commands closed. Tasks5+6 remain verified. ROOT inert source53031/ed4d5d confirms700 implementation entries/root below; no actual A or authority yet. This sole canonical SOURCE projection records actual closed roles, not empirical acceptance.
+
+```json
+{"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"2631c6b776821a4ad4104caf74e5c94e5539bb30","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_fresh_window","sourceReviewer":"/root/review_265_opening_fix","sourceRoot":"sha256:d064cf721ae1cf03317e5b6b9b2c77df6fdb82a2648e7c86e1577303a46e9597","sourceVerifier":"/root/verify_265_owned_source","source_review":"passed","source_verification":"passed"}
+```
+
 ## Task7 ROOT qualification — CLOSED
 
 Exact source2631c6b776821a4ad4104caf74e5c94e5539bb30; independent code review clean/0BLOCKER0WARNING. ROOT small31 selected cases29833/6fb00b CLOSED0/10.21s; connected real preflight+auth+V11control3cases53877/69ec40 CLOSED0/29.95s, maxfixture22101ms/5606692B. Thirty-four unique ROOT selected cases; author44 are attributed and overlapping, never summed. Public45s/8MiB/60s watchdog retained. Configured lab/runtime build23859/bdee55 CLOSED0. Factory10614/339f00 CLOSED0/1446files/violations[].
@@ -2409,3 +2417,17 @@ Tests preserve old routes and assert two fresh anchors, re-rooted semantic negat
 Author44unique passes and RED/GREEN commands in preceding section are attributed, NOT rerun. Largest reported fixture42448ms/5610098B stays within45s/8MiB; commands use60s outer watchdog. No global types/strict-green, empirical/runtime or historical-cause claim. ROOT qualification/distinct verification and actual SOURCE/A/DATA/request/allocation/capacity gates remain owed.
 
 Only this <=3500B GATES append after ownership release; no tests/private reads/artifacts/source edits/new report/commit/importer/reader/provider/Match operation. All reviewer commands CLOSED; GATES ownership RELEASED to ROOT. Plan16/265/all9LEAG pending; no authority minted or automatic renewal.
+
+## Distinct Task7 source verification — CLOSED
+
+Verifier /root/verify_265_owned_source; 2026-10-17. **SOURCE-ONLY VERIFIED: 2/2; BLOCKER: 0; WARNING: 0; gaps: [].** Exact source2631c6b776821a4ad4104caf74e5c94e5539bb30, baseb7124d9d9c308bb9bcfe8f83f3d01e2ced0ea7ce, qualificationHEAD6fd18882990a0a78109624c0f8bed407e8289d00. Six scoped files match source. Tasks5+6 stay closed except superseded V12 time equality.
+
+**7a VERIFIED — fresh approval without resetting cost.** lean-experiment834/851-870 implements exact T1792279083000/decision human-approval-observed-20261017T231803Z, A>=T, carry=459375903+(A-1791807317000), unchanged duration28800000/closure1860000/offline600000 and common cap/deadline/safe-sum/root checks. Only V12's predicate changed; V10/V11 branch and fixed V11 tuple remain identical. Domain test686-735 accepts two distinct new anchors and re-roots negatives for old/wrong approval, A<T, lowered/inflated carry, bounds, unsafe sums/root and aliases; V11 old tuple passes and changed approval/clock refuses. No actual A initialized.
+
+**7b VERIFIED — historical authentication independent of prospective time.** helper891-927 validates current window before reads; retains bounded NOFOLLOW historical V10 custody, exact frozen raw hash, canonical/schema/namespace validation and custody.records. Only V12 drops old/current clock+approval equality; frozen duration/closure/offline still join. V11 preserves its entire former equality. Inventory/reconciliation/50spent/cost_only,93921280 floor and22/2/5 obligations are unchanged. Driver926/939-944/1243-1258 and existing opened-context joins still bind current DATA/request/window/allocation, fresh capacity, journal/monotonic floors and hard deadline.
+
+Actual assertion coverage: driver2140-2152 builds old V10 independently;2193-2204 runs the real importer and tests V11 different-clock rejection. Auth2359-2393 mutates missing/changed/re-rooted historical bytes and forged current/stale DATA/request, asserting unchanged one-use bytes/no new result or claim. Preflight2317-2355 calls real constructor/controller/reservation/rebinding/fullSample (observer spy forwards real implementation). Sample2577-2599 asserts F(A), later floor,3060000 reserve, charged51/remaining36 until terminal, and journal-cap denial before provider. Default reader2294-2317 reaches CLAIM/PUBLICATION with invalid result, stays gaps_found/report:null/nonaccepted, closes interval, and expiry preserves claim/time. Parent2642-2682 observes one synthetic child exit, fresh-capacity denial, zero provider calls,50charges/no result/closed interval. Existing stabilization/second-open and unselected-allocation controls remain applicable.
+
+Execution evidence attributed, not rerun: ROOT31small29833/6fb00b plus3connected53877/69ec40=34unique; author44 overlap, not additive. Configured types23859/bdee55 and factory10614/339f00 PASS1446; exact12strict preserves six inherited diagnostic texts/locations, not global green. Public synthetic seams prove source behavior, not real capacity/runtime/Match.
+
+Only this bounded GATES append; all verifier commands CLOSED, ownership RELEASED. No tests/private history/artifacts/actual A/importer/reader/provider/authority/Match/commit. A remains UNINITIALIZED; SOURCE/DATA/allocation/live-capacity gates still owed. No empirical/LEAG completion, automatic renewal or downstream formation/holdout/public/counted/production authority.
