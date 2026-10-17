@@ -14,6 +14,37 @@ import { join } from "node:path"
 import { labRoot } from "../../packages/strategy-lab/src/contracts.js"
 import * as ledger from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import * as continuation from "./v1-38-lean-baseline-continuation.js"
+import { readLeanContinuationExpectedObservations } from "./v1-38-lean-continuation-observations.js"
+
+describe("continuation-route-v9", () => {
+  const window = (delta: Record<string, unknown> = {}) => {
+    const { root: _, ...old } = continuationWindowFixtureV2(), anchorMs = 1792198286001
+    const body = { ...old, routeNamespace: "20261017-v9", approvedAtMs: 1792198286000, approvalEvidence: { ...old.approvalEvidence, humanDecisionId: "human-approval-observed-20261017T005126Z" }, anchorMs, carryMs: ledger.leanContinuationGlobalFloorV2(anchorMs), capMs: ledger.leanContinuationGlobalFloorV2(anchorMs) + 28800000, deadlineMs: anchorMs + 28800000, ...delta }
+    return ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })
+  }
+  it("selects exact delayed-A route and rejects unsafe/cross-route identities without changing old defaults", () => {
+    const w = window(), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V9
+    expect(ledger.leanBaselineContinuationPathsForWindowV2(w)).toBe(p)
+    expect(ledger.leanBaselineContinuationPathsForRequestV2(p.request)).toBe(p)
+    expect(Object.isFrozen(p)).toBe(true)
+    expect(ledger.leanBaselineContinuationPathsForWindowV2(continuationWindowFixtureV2())).toBe(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2)
+    expect(continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V8).toBe(90091520)
+    expect(continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V9).toBe(91287552)
+    for (const delta of [{ approvedAtMs: 1792198286001 }, { anchorMs: 1792198285999 }, { routeNamespace: "20261017-v9.other" }, { anchorMs: Number.MAX_SAFE_INTEGER }, { carryMs: w.carryMs + 1, capMs: w.capMs + 1 }, { approvalEvidence: { ...w.approvalEvidence, humanDecisionId: "wrong" } }]) expect(() => window(delta)).toThrow()
+    for (const name of [p.request + ".other", p.request + "/extra", p.request.replace("20261017", "20261018")]) expect(() => ledger.leanBaselineContinuationPathsForRequestV2(name)).toThrow()
+    expect(() => ledger.leanBaselineContinuationElapsedFloorV2(w, w.anchorMs - 1)).toThrow()
+    expect(ledger.leanBaselineContinuationElapsedFloorV2(w, w.anchorMs, w.carryMs + 12, 8)).toBe(w.carryMs + 12)
+  })
+  it("pins independently reviewed opaque V8 facts deeply frozen, cost only", () => {
+    const o = readLeanContinuationExpectedObservations()
+    expect(o.spentV8Metadata).toHaveLength(15)
+    expect(o.spentV8Metadata.reduce((n, row) => n + row.bytes, 0)).toBe(1157120)
+    expect(o.spentV8Metadata.reduce((n, row) => n + row.allocatedBytes, 0)).toBe(1196032)
+    expect(o.spentV8Directories.map(row => row.members.length)).toEqual([11, 1])
+    expect(Object.isFrozen(o.spentV8Metadata[0])).toBe(true)
+    expect(Object.isFrozen(o.spentV8Directories[0]!.members)).toBe(true)
+  })
+})
 
 describe("continuation-boundary-v8-P", () => {
   it("continuation-boundary-v8-P-cost real disjoint sampler includes each public synthetic stat/member debit once and refuses aliases/shrink", () => {
