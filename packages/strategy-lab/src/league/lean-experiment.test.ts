@@ -10,6 +10,7 @@ import { assertLeanPublicationCapacity } from "./lean-experiment.js"
 import { LEAN_CORRECTION_ROUTES, LEAN_SUPERVISOR_CORRECTION_ROUTES, LEAN_FRESH_SUPERVISOR_ROUTES, leanCorrectionRoutePaths } from "./lean-experiment.js"
 import { writeLeanAll, createLeanAllocation, chargeLeanSlot, createLeanLedger, retainLeanMatch, verifyLeanEvidence, chooseLeanTier, encodeLeanReplay, decodeLeanReplay, leanSchedule, readLeanLedger } from "./lean-experiment.js"
 import * as twoPair from "./lean-experiment.js"
+import { LEAN_CONTINUATION_EXPECTED_OBSERVATIONS } from "../../../../scripts/lib/v1-38-lean-continuation-observations.js"
 
 it("[startup-origin-v8] binds only distinct ordinal5 policy, unchanged limits and STARTUP6/6/12", () => {
   const lean = twoPair as any, p = lean.LEAN_RESOURCE_WINDOW_V15_STARTUP_ATTRIBUTION_POLICY
@@ -681,4 +682,92 @@ it("fails closed on parent crash, torn terminal, and prospective cap overrun", (
   retainV2Terminal(exceeded, e, terminal)
   expect(() => readLeanChildTerminal(exceeded)).toThrow("TERMINAL")
   expect(() => chargeLeanSlot(exceeded, exceeded.allocation.slots[0]!, { freeBytes: 20e9, availableMemoryBytes: 2e9 })).toThrow()
+})
+
+it("[continuation-route-v12] binds the exact same-window route and refuses aliases or changed approval tuples", () => {
+  const lean = twoPair as any
+  const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V12
+  expect(p).toEqual({
+    request: ".strategy-lab/lean-baseline-continuation-request-20261017-v12.json",
+    window: ".strategy-lab/lean-baseline-continuation-window-20261017-v12.json",
+    allocation: ".planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261017-v12.json",
+    store: ".strategy-lab/lean-baseline-continuation-20261017-v12",
+    temp: ".strategy-lab/lean-baseline-continuation-20261017-v12-tmp",
+    claim: ".strategy-lab/lean-baseline-continuation-20261017-v12-tmp/window-claim.json",
+    gates: lean.LEAN_BASELINE_CONTINUATION_PATHS.gates,
+  })
+  expect(Object.isFrozen(p)).toBe(true)
+  expect(lean.leanBaselineContinuationPathsForRequestV2(p.request)).toBe(p)
+  const windowBody = {
+    schemaVersion: "lean-baseline-continuation-window-v2", status: "approved",
+    grantId: "lean-baseline-continuation-20261017-v12-same-window",
+    approvalEvidence: { humanDecisionId: "human-approval-observed-20261017T124639Z", recordedBy: "/root" },
+    approvedAtMs: 1792241199000, anchorMs: 1792242843861, deadlineMs: 1792271643861,
+    carryMs: 894902764, capMs: 923702764, durationMs: 28800000, closureMs: 1860000,
+    offlineOverheadMs: 600000, routeNamespace: "20261017-v12", reviewedSourceHead: "a".repeat(40),
+    sourceRoot: pin, sourceGateRoot: pin, planRoot: pin, runOperator: "/root", readerOperator: "/root/reader",
+  } as const
+  const validWindow = { ...windowBody, root: labRoot(windowBody.schemaVersion, windowBody) }
+  const admitted = lean.validateLeanBaselineContinuationWindowV2(validWindow)
+  expect(lean.leanBaselineContinuationPathsForWindowV2(admitted)).toBe(p)
+  expect(lean.leanBaselineContinuationMatchReserveMsV2(admitted, 0)).toBe(0)
+  expect(lean.leanBaselineContinuationMatchReserveMsV2(admitted, 36)).toBe(600_000)
+  const legacyWindowBody = { ...windowBody, approvedAtMs: 1792242843861, routeNamespace: "20261012-v3" }
+  const legacyWindow = { ...legacyWindowBody, root: labRoot(legacyWindowBody.schemaVersion, legacyWindowBody) }
+  expect(lean.leanBaselineContinuationPathsForWindowV2(legacyWindow)).toBe(lean.LEAN_BASELINE_CONTINUATION_PATHS_V2)
+  const wrongApprovalTime = { ...windowBody, approvedAtMs: 1792241199001 }
+  expect(() => lean.validateLeanBaselineContinuationWindowV2({ ...wrongApprovalTime, root: labRoot(wrongApprovalTime.schemaVersion, wrongApprovalTime) })).toThrow()
+  const wrongAnchor = { ...windowBody, anchorMs: 1792242843862, deadlineMs: 1792271643862, carryMs: 894902765, capMs: 923702765 }
+  expect(() => lean.validateLeanBaselineContinuationWindowV2({ ...wrongAnchor, root: labRoot(wrongAnchor.schemaVersion, wrongAnchor) })).toThrow()
+  for (const path of [p.request + ".alias", p.request + "/extra", p.request.replace("20261017-v12", "20261018-v12")]) {
+    expect(() => lean.leanBaselineContinuationPathsForRequestV2(path)).toThrow()
+  }
+  expect(lean.leanBaselineContinuationMatchReserveMsV2(lean.validateLeanBaselineContinuationWindowV2(legacyWindow), 3)).toBe(1_800_000)
+})
+
+it("[continuation-route-v12] exposes the exact frozen spent-V11 opaque cost tables", () => {
+  const { spentV11Metadata, spentV11Directories, spentV11Absences } = LEAN_CONTINUATION_EXPECTED_OBSERVATIONS as any
+  expect(spentV11Metadata).toHaveLength(22)
+  expect(spentV11Metadata.map((row: any) => row.path)).toEqual([
+    ".strategy-lab/lean-baseline-continuation-window-20261017-v11.json",
+    ".strategy-lab/lean-baseline-continuation-request-20261017-v11.json",
+    ".planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261017-v11.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/allocation.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/carry.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/child-terminal.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/cold-corpus.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/entry.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/ledger.ndjson",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/parent-supervisor-reasons.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/publication-cold-opponent-continuation-v2.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/publication-probe-continuation-v2.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/reader-claim.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/retained-check.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/run-claim.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/seal-metadata.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/source-cold-opponent.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/source-hold.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/source-manifest.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/source-probe.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/time.ndjson",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11-tmp/window-claim.json",
+  ])
+  expect(spentV11Metadata.reduce((sum: number, row: any) => sum + row.bytes, 0)).toBe(1_363_285)
+  expect(spentV11Metadata.reduce((sum: number, row: any) => sum + row.allocatedBytes, 0)).toBe(1_421_312)
+  expect(spentV11Metadata[0]).toMatchObject({ path: ".strategy-lab/lean-baseline-continuation-window-20261017-v11.json", bytes: 942, allocatedBytes: 4096, mode: 0o600, rawRoot: "sha256:75dfe68b7389871f23ff0cfea0827dd9f123c850be02536dbe51106aa24c3a60" })
+  expect(spentV11Metadata[21]).toMatchObject({ path: ".strategy-lab/lean-baseline-continuation-20261017-v11-tmp/window-claim.json", bytes: 1014, allocatedBytes: 4096, mode: 0o600, rawRoot: "sha256:3ebd9719f06a7bf0200b9e6e9abff729d09aa1b6814e9266554af02e4f3488e1" })
+  expect(spentV11Directories).toHaveLength(2)
+  expect(spentV11Directories[0].members).toHaveLength(18)
+  expect(spentV11Directories[1].members).toEqual(["window-claim.json"])
+  expect(spentV11Absences).toEqual([
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/result.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/entry-failure.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/initial-proposals.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/initial-selection.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v11/initial-training.json",
+  ])
+  expect(Object.isFrozen(spentV11Metadata)).toBe(true)
+  expect(Object.isFrozen(spentV11Metadata[0])).toBe(true)
+  expect(Object.isFrozen(spentV11Directories[0].members)).toBe(true)
+  expect(Object.isFrozen(spentV11Absences)).toBe(true)
 })
