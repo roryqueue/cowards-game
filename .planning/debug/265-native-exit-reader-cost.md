@@ -2,13 +2,17 @@
 status: awaiting_resource_decision
 trigger: Continue v1.38 autonomously after the approved baseline window
 created: 2026-10-12
-updated: 2026-10-16
+updated: 2026-10-17
 mode: source_only
 ---
 
 # Phase 265 native exit and retained-reader cost
 
 ## Symptoms and actual closed evidence
+
+LATEST V9 frontier: source amendmentbb5c2b83 reviewed/ROOT-qualified/State-A audited/DISTINCTverified3/3; actualprepare77295 passed, allocationONLY3bcb2126 direct childc785ac85 pushed; unique ROOT6972/PID876/child68790 CLOSED1 by02:56:29UTC, PARENT_TERMINAL/DETAILS_WITHHELD/observedSIGKILL. ONE ordinary reader53683/PID6269 CLOSED1/IMPORT, no claim/check/result/reader interval. Independent bounded current ledger = ONEstop/failure/ZEROnewcharges; all50oldspent. Parent resource_sampling_exception/final_identity_exception/uncertaintrue, initiating causeUNKNOWN. All three PIDs absent, actual hold released afterclosures. No secondreader/retry or oldbyte mutation. Existing GATES exact retained-verifier note holds raw roots/custody joins; no new diagnosis/heavyhistory pass occurred.
+
+ROOT248afd time-only/non-admitting03:22:05UTC:remaining22506939ms < unchanged whole36reserve24060000ms. The present resource admission blocker is established independently of original cause; another unchanged full36 run cannot fit. NEW HUMAN proposal pending/unapplied: one fresh8h private allowance after checked source closure, next-cell600000ms plus remaining closure/offline time admission, same15GB/3GB/global300/36planned/runtime/rules/privacy; carry allcosts/noreset, honestpartial unless36complete+verified. No extra time/newnamespace/policy change automatically inferred from standing same-scope route consent. Source3/3closure staysclosed, empirical265/all9LEAGpending/freeze-before-formation/holdoutunopened/no public-counted-production. Prior source/native causal questions remainUNKNOWN, not diagnosed from elapsed coincidence. All earlier continuation evidence below is historical.
 
 Expected: existing Plan16's36-cell cold current-rules baseline, then one ordinary reader; holdout/formation unopened. Actual v2 allocation283a39d6/sourceHead16db0fa0/directchildHEADf6ff7ec3: unique ROOT28008/PID9931/child34016 CLOSED0;7newcharges/6success/1system SUPERVISOR_FAILURE;29unused;50cumulative. Failed ordinal6: native_response/executor/SUBPROCESS_EXIT, soldierBrain methodordinal205,398invocations/264951ms/cleanuptrue. This finite projection does NOT establish guest timeout, OOM, host deadline or numeric exit status.
 

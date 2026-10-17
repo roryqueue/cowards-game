@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V9 SOURCE and independent actual DATA PASS; final request, ONE preparation and unique ROOT entry next
+stopped_at: V9 run and unique retained verifier CLOSED without new Matches; prospective time-admission decision required
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: V9 actual DATA independently passed; final request/allocation-only commit then unique ROOT entry, source and planning hold applies
+last_activity_desc: V9 safe non-acceptance, zero new charges, all processes closed; whole36 time admission no longer fits, no retry
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,17 @@ total_plans_in_phase: 16
 
 # State: Coward's Game
 
-## Current continuation — fresh eight-hour private baseline window APPROVED
+## Current continuation — V9 CLOSED; prospective time-admission choice PENDING
+
+V9 ROOT preparation77295/bbeec9 CLOSED0, allocation4d501598256424cd1382c0e41f4cdef77915be04c0b598ab9f22549f55ed4945 committed/pushed ONLY as direct child3bcb21262a8b56b32adeb73edce805387d2d8c6e of sourceHeadc785ac85a76a8f62929c1f2e0c50d75235e2fd58. ONE ROOT run6972/PID876/child68790 CLOSEDexit1/6bf913 by2026-10-17T02:56:29UTC: PARENT_TERMINAL/DETAILS_WITHHELD,24complete guards/openings/closings,3272source/5494descriptor/11459carry-inventory-source callbacks. Actual entry/head exists, terminal SIGKILL/exitnull, initiating cause UNKNOWN. Parsed current ledger ONEstop/failure and ZEROnewcharge/terminal events;50prior charges stay spent. No cold corpus/proposals/sources/pairs/result or empirical/LEAG/freeze credit.
+
+Planned UNIQUE ordinary reader `/root/verify_265_v9_retained` actually ran ONCE53683/PID6269, CLOSEDexit1/cd56e8: IMPORT/DETAILS_WITHHELD, gaps_found/safe non-acceptance. No reader claim/check/result/interval. Independent bounded checks0244d5/7d87df/66f0d8 closed by03:20:49.665UTC: all three PIDs absent, fixedHEAD/direct-parent and current metadata raw hashes unchanged. Parent observed resource_sampling_exception/final_identity_exception, uncertaintrue/initiatingCauseunknown; absent failure receipt is not exact-cause proof. All commands/ownership CLOSED, source/HEAD/planning hold RELEASED after actual run+reader closure. Every consumed V9/older byte/authority/allocation/claim/ledger/result/reader stays immutable/no resume/retry/replace/refund/recredit. No second reader or unchanged known-unadmittable run.
+
+CURRENT HUMAN-ONLY RESOURCE CHOICE, NOT approved/applied: ONE fresh eight-hour PRIVATE attempt after checked source closure, using next-Match-at-a-time time admission instead of reserving worst-case time for ALL36 remaining cells. Carry all old/new/source/setup/idle/reader costs continuously, no reset/refund. Same15GB/3GB/global300/36planned/fourunopened/guest1000/startup2500/host5000/Match600000, closure1860000/offline600000. Reserve next600000ms cell plus remaining closure/offline before each charge, retain active-cell reserve until terminal, enforce hard deadline continuously; incomplete36 is explicitly partial/inconclusive, never league/freeze complete. Fresh reviewed fixed source/actual distinct roles/NEW immutable allocation/SAMEPROCESS capacity remain required; old route unusable. This changes prospective resource admission plus one bounded fresh allowance, not a repeated literal, automatic extension or permission to claim completion. No future namespace/window/request/allocation is created here; standing same-scope consent does not itself amend this frozen policy.
+
+ROOT248afd CLOSED0 non-admitting stable canonical-window arithmetic03:22:05.373UTC: remaining22506939ms before unchanged09:37:12.312UTC < whole36required24060000ms; latest whole36entry02:56:12.312UTC passed. This proves the CURRENT admission blocker, NOT the initial failure cause. No disk shortage/OOM/guest violation established. GSD continuation cannot skip incomplete265 or resurrect archived plans from inflated file counts: authoritative roadmap has262–264complete/265pending. Source3/3 remains verified, Plan16/Phase265/all9LEAGpending,266planning-only/wholevalidationpartial/nyquistfalse/wave0false. Current-rules league/evaluation/freeze BEFOREformation, unopenedholdout/no public/counting/production. Milestone audit/archive/tag cannot honestly pass yet. Existing GATES/VALIDATION/debug hold safe evidence; no new numberedplan/report/SUMMARY. All continuations below are historical, not reusable run instructions.
+
+## Historical continuation — fresh eight-hour private baseline window APPROVED
 
 INDEPENDENT ACTUAL DATA `/root/review_265_v9_data` PASS/0blocker/0warning, all commands CLOSED/ownership RELEASED. Sole canonical DATAroot9d18fe1c33fbd501da6de9aa06b63eeef2cf1ee8dd1f43824b8dd0695146e65e now in GATES; actual window stable NOFOLLOW custody/raw/domain joins, source698members/plan/source-gate, approvedT/actualA chronology/actual roles and four future-path absences passed. Reviewer initial wrong guessed grantId assertion was setup noise, corrected against actual approved one-window id; no artifact mutation. SOURCE and DATA are NOT capacity or empirical success. ROOT will construct exact final request from committed current manifest, ONE prepare, commit/push ONLY newly prepared canonical allocation as direct child, then ONE ROOT entry under fixed source/HEAD/pinned planning and fresh SAMEPROCESS whole36capacity. Do not duplicate preparation, entry or reader. If actualentry/head exists, planned unique ordinary reader `/root/verify_265_v9_retained` runs once after terminal; otherwise terminal-only. Preserve all old bytes/charges and current rules/privacy/freeze order. This top note is the pre-entry hold checkpoint; actual processes/private markers supersede it until safe terminal/reader closure permits updates.
 
