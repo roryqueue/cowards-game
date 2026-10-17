@@ -2214,7 +2214,7 @@ it("continuation-device-v11-importer authenticates device-only files/directories
   let targetFd = -1
   const opened = vi.spyOn(native, "openSync").mockImplementation(((path: string, ...args: any[]) => { const fd = openSync(path, ...args); targetFd = String(path) === resolve(target.path) ? fd : -1; return fd }) as any)
   try {
-    const corrupted = vi.spyOn(native, "readSync").mockImplementation(((fd: number, buffer: Buffer, ...args: any[]) => { const n = readSync(fd, buffer, ...args); if (fd === targetFd && n) buffer[0] ^= 1; return n }) as any)
+    const corrupted = vi.spyOn(native, "readSync").mockImplementation(((fd: number, buffer: Buffer, ...args: any[]) => { const n = readSync(fd, buffer, ...args); if (fd === targetFd && n) buffer.writeUInt8(buffer.readUInt8(0) ^ 1, 0); return n }) as any)
     expect(again).toThrow(/CONTINUITY_HASH/); corrupted.mockRestore()
     const raced = vi.spyOn(native, "fstatSync").mockImplementation(((fd: number, ...args: any[]) => { const s = fstat(fd, ...args); return fd === targetFd ? Object.assign(s, { dev: s.dev + 1 }) : s }) as any)
     expect(again).toThrow(/CONTINUITY_CHANGED/); raced.mockRestore()
