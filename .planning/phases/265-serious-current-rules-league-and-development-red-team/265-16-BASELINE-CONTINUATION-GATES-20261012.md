@@ -1,5 +1,13 @@
 # Baseline continuation gates
 
+## V10 current DATA projection
+
+Independent actual `/root/review_265_v10_data` PASS_DATA_REVIEW/findings[], all commands closed; canonical projection follows that observation and the actual window. This is source/input review, not capacity or empirical admission.
+
+```json
+{"approvalEvidence":{"humanDecisionId":"human-approval-observed-20261017T124639Z","recordedBy":"/root"},"commands_closed":true,"dataReviewer":"/root/review_265_v10_data","grantId":"lean-baseline-continuation-20261017-v10-one-window","planRoot":"sha256:dd0289a5e3cbc2e156b428b6fd2a0482ea535b3fed1b4e4ad823e5e7364ed80b","readerOperator":"/root/verify_265_v10_retained","reviewedSourceHead":"478061b636d633c503ca7f87af8792c17ed6cd33","runOperator":"/root","schemaVersion":"lean-baseline-continuation-data-gate-v2","sourceGateRoot":"sha256:656f99305bafdeb959a3cacebf4d726e3bd7f7ac53343e99bd15b62c897fcbf3","sourceRoot":"sha256:e88e5f996d3d8aa00cb13fc8870c3d1e1e4299ab43ed4495681021ee5aab54be","status":"passed","windowBytesRoot":"sha256:4d5c15298a6d096c72f15700728af2317826bc99cfc783a7332e62624a319179","windowRoot":"sha256:c9924ac3c80fc356c1341192b6e97bd1f6dcf78668192fb4b4d20a149fce20ce"}
+```
+
 ## V10 current SOURCE projection
 
 Actual checked plan, independent source review/fix, ROOT qualification/validation and distinct source verification have closed before window initialization. Older V9 SOURCE/DATA bodies below remain historical text and committed history, not current selectors. Actual source698members; no empirical capacity or completion implied.
@@ -2094,3 +2102,11 @@ Distinct /root/verify_265_next_cell inspected nine-file17f3502f..478061b6 at tra
 - **N3 VERIFIED:** retained569/628/636 and tests296–305/439ff preserve36/current+50/receipts/unused/failure and reject incomplete/forged completion/original/copied/foreign acceptance. Driver2161–2182 traverses actual default importer/controller/reader CLAIM/closing failed publication at40minutes with1859999ms closure; exact expiry preserves claim/time bytes. Missing-result nonacceptance, NOT V10 complete-success audit proof.
 
 Behavior evidence: attributed CLOSED73064/49152/91418 and ROOT checks, not reruns/summed counts. Fixtures synthesize history/expected facts/Git/resources/clocks/PID/fork/IPC, not real custody/capacity/runtime-fit/strength/cause proof. Diffcheck clean; no TBD/FIXME/XXX. No tests/private metadata/reader/Match rerun. Commands CLOSED; GATES ownership RELEASED/no commit. Plan16/265/all9LEAG empirical PENDING; validationpartial/nyquistfalse/wave0false/266planning-only; holdout unopened/no formation/public/counting/production.
+
+## Actual V10 independent DATA review — 2026-10-17T13:15:14Z
+
+/root/review_265_v10_data: **PASS_DATA_REVIEW;0BLOCKER/0WARNING;findings:[]**. Actual inert check b75bf4 CLOSED0,13:15:14.177–14.886UTC. Production bounded NOFOLLOW read: canonical window941B/4096allocated,0600/uid501/singlelink; stable descriptor/path/dev/ino/size/blocks/mode/mtime/ctime/realpath. Raw4d5c15298a6d096c72f15700728af2317826bc99cfc783a7332e62624a319179; windowrootc9924ac3 agrees. Production window/SOURCE/DATA validators pass; exactlyONEcanonicalSOURCE/noDATA. Actual inert collector698members/sourcee88e5f99, SOURCE656f9930, exact397038B Plan dd0289a5 and every window join agree.
+
+Reviewedsource478061b6→SOURCEcommit8f40b883→HEAD97ef755e ancestry passes; committed SOURCE equals current TOP. SOURCE Git time13:13:50UTC precedes actual A13:14:03.861UTC/1792242843861. Actual ordered source closures and ROOT27337/6572e6 initialization are attributed ROOT-tool observations, NOT external custody. Source author/reviewer/verifier match actual next_cell roles; run/root, future reader/root/verify_265_v10_retained, this DATA reviewer distinct. All698 implementation paths tracked; committed/working implementation deltas empty. Exact V10 request/allocation/store/temp ENOENT.
+
+T/id approved1792241199000/124639Z; A>=T. F(A)894902764/cap923702764/deadline21:14:03.861UTC; next-cell+closure+offline3060000ms/latest20:23:03.861UTC. Costs continuous/no refund;36planned/fourunopened/all old costs/rules/privacy unchanged. Not capacity/admission/empirical/phase completion. No history/content authentication,test,prepare,run,reader or private write. All check commands CLOSED before this sole <=1800B append; no projection/source edit/commit. GATES ownership RELEASED to ROOT.
