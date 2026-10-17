@@ -215,6 +215,28 @@ describe("continuation-route-v9", () => {
 })
 
 describe("continuation-boundary-v8-P", () => {
+  it.each([false, true])("continuation-guard-overlap-v11 allowed creation during readdir=%s keeps refusal permanent", overlap => {
+    const began = performance.now(), w = continuationDeviceWindowFixtureV11(), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V11
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "public-owned-overlap-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    let members: ReturnType<typeof vi.spyOn> | undefined
+    try {
+      fs.mkdirSync(resolve(p.store), { recursive: true, mode: 0o700 }); fs.mkdirSync(resolve(p.temp), { mode: 0o700 }); fs.mkdirSync(resolve(p.window, ".."), { recursive: true })
+      writeFileSync(resolve(p.window), "window", { mode: 0o600 }); writeFileSync(resolve(p.request), "request", { mode: 0o600 })
+      const observe = continuation.createLeanContinuationOwnedMeasurementV8(w), context = Object.freeze({}), effect = vi.fn()
+      const controller = continuation.createLeanContinuationBoundaryControllerV8([], [], [], context, () => {}, () => { observe() })
+      controller.reserve(context)
+      const create = () => writeFileSync(resolve(p.store, "cold-corpus.json"), "{}", { mode: 0o600, flag: "wx" })
+      let created = false
+      if (overlap) { const read = fs.readdirSync; members = vi.spyOn(fs, "readdirSync").mockImplementation(((path: fs.PathLike, ...args: unknown[]) => { if (!created && String(path) === resolve(p.store)) { created = true; create() }; return Reflect.apply(read, fs, [path, ...args]) }) as typeof fs.readdirSync) }
+      else create()
+      const dependent = () => { controller.reserve(context); effect() }
+      if (overlap) {
+        expect(dependent).toThrow(/V8_OWNED_CHANGED/); expect(created).toBe(true); members!.mockRestore(); members = undefined
+        expect(dependent).toThrow(/V8_CONTEXT/); expect(() => controller.withStage(context, "dispatch", effect)).toThrow(/V8_CONTEXT/); expect(effect).not.toHaveBeenCalled()
+      } else { dependent(); expect(effect).toHaveBeenCalledOnce() }
+      expect(fs.readFileSync(resolve(p.store, "cold-corpus.json"), "utf8")).toBe("{}")
+    } finally { members?.mockRestore(); cwd.mockRestore(); rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(45000) }
+  }, 45000)
   it("continuation-boundary-v8-P-cost real disjoint sampler includes each public synthetic stat/member debit once and refuses aliases/shrink", () => {
     // Public finite observations only: no historical file is opened or read.
     const rows = new Map<string, { size: number; allocated: number; mode: number; members?: string[]; ino: number }>()
