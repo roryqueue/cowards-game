@@ -708,9 +708,12 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
             const foreign = parentApi.createLeanContinuationLocalReservationV8(window)
             expect(() => foreign.bindProgress({ ...ledger, directory: ledger.directory + "-foreign" })).toThrow(/PROGRESS_SCOPE/)
             seen.push("seven-progress-integrity-refusals")
-            // There are two charges but only one terminal: reserve35, NOT34.
-            clock.mockReturnValue(window.deadlineMs - 35 * LEAN_CAPS.matchMs - window.closureMs - window.offlineOverheadMs + 1)
-            poll!(); expect(child.kill).toHaveBeenCalledWith("SIGKILL"); seen.push("inflight-reserve-refused"); return
+            // Truthful unfinished count is35; V10 reserves ONE cell, legacy35.
+            const priorPollMs = Date.now(), exhaustedMs = window.deadlineMs - (v10 ? 1 : 35) * LEAN_CAPS.matchMs - window.closureMs - window.offlineOverheadMs + 1
+            expect(exhaustedMs).toBeGreaterThanOrEqual(priorPollMs)
+            clock.mockReturnValue(exhaustedMs)
+            poll!(); expect(localRefusal).toBeInstanceOf(TypeError); expect((localRefusal as Error).message).toMatch(/V8_RESERVATION_CAPACITY/)
+            expect(child.kill).toHaveBeenCalledWith("SIGKILL"); seen.push("inflight-reserve-refused"); return
           }
           fs.writeFileSync(sourcePath, "changed source"); if (mode === "resource") usage.mockReturnValue({ ...actualUsage(), rss: 3000000001 }); child.exitCode = 0; seen.push("observed-exit"); child.emit("exit", 0, null)
         }); return true
@@ -727,6 +730,7 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
       if (command === "git" && args[0] === "show" && args[1] === `HEAD:${p.allocation}`) return Buffer.from(leanCanonicalBytes(allocation))
       throw new Error("UNEXPECTED_TINY_PARENT_EXTERNAL_CALL")
     }) as typeof childProcess.execFileSync)
+    let localRefusal: unknown
     const invalidated = vi.fn(() => { controller!.invalidate(); local?.invalidate() }), beforeTerminal = vi.fn(() => local?.closeRun())
     try {
       fs.mkdirSync(resolve(".planning/artifacts"), { recursive: true }); fs.mkdirSync(resolve(p.temp), { recursive: true, mode: 0o700 }); fs.writeFileSync(resolve(p.request), requestBytes, { mode: 0o600 }); fs.writeFileSync(resolve(p.window), leanCanonicalBytes(window), { mode: 0o600 }); fs.writeFileSync(sourcePath, "fixed source")
@@ -738,7 +742,7 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
       clock.mockReturnValue(v10 ? window.deadlineMs - 3061000 : syntheticA + 1000)
       if (mode === "progress") { local = parentApi.createLeanContinuationLocalReservationV8(window); local.bindProgress(ledger) }
       const pins = [{ path: sourcePath, stat: fs.lstatSync(sourcePath) }], roles = [{ path: sourcePath, role: "fixed_source" }], current = () => { currentCalls++; if (performance.now() - began > 12000) throw new Error("TINY_PARENT_CENSORED") }
-      controller = v8 ? continuationHelper.createLeanContinuationBoundaryControllerV8(pins, [], roles, binding, current, () => { if (local) { local.reserve(); return }; const usage = process.memoryUsage(); if (usage.rss > 3000000000) throw new Error("RESOURCE_DENIED") }) : continuationHelper.createLeanContinuationStageControllerV6(pins, [], roles, binding, current)
+      controller = v8 ? continuationHelper.createLeanContinuationBoundaryControllerV8(pins, [], roles, binding, current, () => { if (local) { try { local.reserve() } catch (error) { localRefusal = error; throw error }; return }; const usage = process.memoryUsage(); if (usage.rss > 3000000000) throw new Error("RESOURCE_DENIED") }) : continuationHelper.createLeanContinuationStageControllerV6(pins, [], roles, binding, current)
       const stage = <T>(kind: continuationHelper.LeanContinuationStageV6, body: () => T): T => { stages.push(kind); const value = controller!.withStage(binding, kind, body); if (mode === "slow-staging" && ["import", "claim", "dispatch"].includes(kind)) { clock.mockReturnValue(Date.now() + 45000); expect(seen).not.toContain("armRelease"); expect(lean.readLeanLedger(ledger).charges.size).toBe(0) }; if (mode === "dispatch-closing" && kind === "dispatch") throw new Error("SYNTHETIC_DISPATCH_CLOSING"); return value }
       const action = parentApi.runLeanBoundedParent({ ledger, requestPath: p.request, allocationPath: p.allocation, store: ledger.directory, sourceRoot: allocation.sourceRoot, manifestRoot: () => allocation.sourceRoot, childMode: "child-continuation-v2", prospectiveStart: { wallStartMs: syntheticA + 1000, monotonicStartNs: process.hrtime.bigint().toString() }, stage, beforeRelease: () => controller!.live(binding, () => {}), beforeTerminal, onFailure: invalidated, terminalReserveMs: window.closureMs, supervisorObservation: true })
       await expect(action).rejects.toThrow(mode === "dispatch-closing" ? /SYNTHETIC_DISPATCH_CLOSING/ : mode === "source" || mode === "charge-closing" || mode === "progress" || mode === "slow-staging" ? /CHILD_FAILED/ : mode === "resource" ? /V2_CAPACITY/ : /PIN_CHANGED/)
@@ -1977,7 +1981,7 @@ it("internal-observations-default preserves ordered catalogs, legacy aliases and
 // Public synthetic external observations only. Every hash, descriptor, schema,
 // source collector, importer, controller, wrapper and failure publisher is real.
 // No success object substitutes for any of those production boundaries.
-const withInternalObservationTree = async (verify: boolean, run: (f: any) => Promise<void>, namespace: "20261015-v8" | "20261017-v9" | "20261017-v10" = "20261015-v8") => {
+const withInternalObservationTree = async (verify: boolean, run: (f: any) => Promise<void>, namespace: "20261015-v8" | "20261017-v9" | "20261017-v10" = "20261015-v8", pilotStartElapsedMs = 0) => {
   // Prospective checked test-only harness. Earlier 10s attempts below remain
   // CENSORED; this changes no production admission, resource or runtime limit.
   const harness = "OBS3-HARNESS-45000", fixtureLimitMs = 45000
@@ -2130,6 +2134,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     json(p.claim, claim); json(`${p.store}/source-hold.json`, rooted({ schemaVersion: "lean-baseline-continuation-source-hold-v2", allocationRoot: allocation.root, sourceHead, manifestRoot: allocation.manifestRoot, claimRoot: claim.root, rows: [] }))
     if (verify) {
       L.beginLeanInterval(ledger, "continuation-run-admission"); tick(1); L.closeLeanInterval(ledger, "continuation-run-admission"); tick(1)
+      if (pilotStartElapsedMs) tick(pilotStartElapsedMs - 2)
       const currentEntry = { schemaVersion: "lean-child-entry-v2" as const, allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, head: head.value, parentPid: 811111, childPid: 811112, handshakeRoot: root("inert-handshake"), wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() }
       L.publishLeanChildEntry(ledger, currentEntry); L.beginLeanInterval(ledger, "pilot-entry", currentEntry.wallStartMs); tick(1)
       L.publishLeanChildTerminal(ledger, L.deriveLeanChildTerminal(ledger, currentEntry, { exitCode: 1, signal: null, wallObservedMs: Date.now(), monotonicObservedNs: process.hrtime.bigint().toString(), status: "child_failed", parentRssBytes: 100000000, childRssObservedBytes: 0, physicalBytes: L.cumulativeLeanPhysicalBytes(ledger), freeBytes: 100000000000 })); tick(1)
@@ -2153,6 +2158,28 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     expect(elapsedMs).toBeLessThanOrEqual(fixtureLimitMs); expect(maximumBytes).toBeLessThanOrEqual(8 * 1024 * 1024); expect(fs.existsSync(dir)).toBe(false); expect(realMono()).toBeGreaterThan(0n)
   }
 }
+it("continuation-next-v10-reader-remaining-closure actual default reader admits40minutes, preserves31minute closure and refuses hard expiry (public synthetic history/resources)", () => withInternalObservationTree(true, async f => {
+  const { D, L, R, p, ledger, w, tick, read, fs } = f, stages: string[] = []
+  f.note("remaining reader closure at40minutes")
+  expect(w.deadlineMs - Date.now()).toBe(2400000)
+  const before = L.readLeanTimeAccounting(ledger), close = before.closes.get("pilot-entry")
+  expect(Date.now() - close).toBe(1)
+  expect(w.closureMs - (Date.now() - close)).toBe(1859999)
+  // Real default opener/importer/controller, private enrollment and both closing
+  // barriers. Missing public result is deliberately nonaccepting, not a stubbed success.
+  const result = R.verifyLeanBaselineContinuationRetainedV2(p.request, (stage: string) => { stages.push(stage); f.note(stage) })
+  expect(stages).toContain("CLAIM"); expect(stages).toContain("PUBLICATION")
+  expect(read(p.store + "/reader-claim.json").allocationRoot).toBe(ledger.allocation.root)
+  expect(result).toMatchObject({ disposition: "gaps_found", failure: "CONTINUATION_READER_FAILURE", report: null })
+  expect(R.isLeanContinuationAcceptedPrivateCheckV6(result)).toBe(false)
+  expect(L.readLeanTimeAccounting(ledger).closed.has("continuation-retained-verifier-v2")).toBe(true)
+  const claimBytes = fs.readFileSync(resolve(p.store, "reader-claim.json")), timeBytes = fs.readFileSync(resolve(p.store, "time.ndjson"))
+  tick(w.deadlineMs - Date.now()); expect(Date.now()).toBe(w.deadlineMs)
+  expect(() => D.openLeanBaselineContinuationContextV2(p.request, true)).toThrow(/V2_WINDOW_EXPIRED/)
+  expect(fs.readFileSync(resolve(p.store, "reader-claim.json"))).toEqual(claimBytes)
+  expect(fs.readFileSync(resolve(p.store, "time.ndjson"))).toEqual(timeBytes)
+}, "20261017-v10", 28800000 - 2400000 - 2), 60000)
+
 it("continuation-next-v10-driver-sample actual default context fullSample uses truthful unfinished counts and journal floor (public synthetic history/resources)", () => withInternalObservationTree(false, async f => {
   const { D, L, p, ledger, allocation, w, tick, json, read } = f
   f.note("next-cell actual context")
