@@ -6,12 +6,24 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-17
-source_reviewed: b7124d9d9c308bb9bcfe8f83f3d01e2ced0ea7ce
-source_gate: tasks-5-6-reviewed-root-validated-distinct-verification-passed
+source_reviewed: 2631c6b776821a4ad4104caf74e5c94e5539bb30
+source_gate: task7-reviewed-root-qualification-in-progress
 empirical_validation: v11-run-and-unique-retained-reader-closed-gaps-found-zero-new-charge
 ---
 
 # Phase265 — Validation Strategy
+
+## Task7 scoped State-A — fresh allowance, 2026-10-17
+
+Existing Tasks5+6 source coverage remains closed; only V12's never-materialized timing is superseded by explicit new human approval. Task7 independent plan check and code review both clean. No whole-phase/empirical completion or actual A.
+
+| Task | Behavioral coverage | Disposition |
+|---|---|---|
+| 7a new V12 allowance | Domain fresh-window test accepts two anchors after exact new T/decision, rejects re-rooted wrong approval/cost/deadline/bounds/unsafe sums; old V11 tuple still passes and changed V11 time refuses. Helper and retained fixtures use only new V12 time. | COVERED: ROOT small31 selected pass29833/6fb00b,10.21s; overlapping author runs not added. |
+| 7b historical/current separation | Actual importer authenticates unchanged historical V10 bytes independently of current V12; changed/missing/re-rooted historical bytes and forged current/stale DATA/request refuse without one-use effects. Real preflight/rebinding/context/reservation passes with new times; V11 mismatched historical clock refuses. | COVERED: ROOT connected3 pass53877/69ec40,29.95s; maxfixture22101ms/5606692B. |
+| 7b downstream and prior controls | Author-attributed real fullSample, active charge/journal/deadline, parent capacity refusal and default-reader late-failure/expiry; owned stabilization, second-open refusals, V11 default and unselected-allocation denial. | COVERED source behavior: author44unique total, detailed sessions in GATES, largestfixture42448ms/5610098B; not a new empirical result. |
+
+All selected public fixtures retain45s/8MiB and60s outer watchdogs. ROOT configured lab/runtime build23859/bdee55 CLOSED0. Exact strict comparison/factory closure and distinct source verification are recorded next in GATES. Scope is timing integrity for LEAG-01/02/05 only; all9LEAG/265 remain pending, Phase266 planning-only, no formation/holdout/public/counted/production. Whole-phase status stays partial/nyquistfalse/wave0false; no new test gap identified in this amendment.
 
 ## Tasks5+6 scoped State-A — 2026-10-17
 
