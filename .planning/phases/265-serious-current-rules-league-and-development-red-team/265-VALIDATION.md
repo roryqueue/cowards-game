@@ -6,14 +6,20 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-17
-source_reviewed: bb5c2b830048ee8fdfb208d9c005af1f41edadc0
-source_gate: v9-route-three-source-tasks-closed-verified-qualified-shared-positive-unit-coverage
+source_reviewed: 478061b636d633c503ca7f87af8792c17ed6cd33
+source_gate: v10-next-cell-source-reviewed-validated-distinct-verification-pending
 empirical_validation: v9-preparation-passed-run-failed-one-reader-import-refusal-zero-new-charge-no-acceptance
 ---
 
 # Phase265 — Validation Strategy
 
-## Current empirical V9 closure — 2026-10-17
+## Current V10 State-A source audit — 2026-10-17
+
+D-30 approved next-Match admission is implemented in N1–N3, independently reviewed/fixed and scoped validation covered. ROOT inspected actual helper tests29–113 (real charge at51min cutoff/+1 refusal, exact route and opaque carry mutations), driver tests474–527/641–735 (compiled preflight and coordinated parent/progress/capacity attribution),2161–2209 (real default reader remaining closure, hard expiry, real context charge/terminal/journal), and retained296–305/439–510 (incomplete counts, false complete/unused/exhaustion and private identity refusal). Six time sites preserve truthful remaining counts; exact V10 alone uses one Match's time. Checking-only zero-slot wrappers enforce deadline/floors; actual work/reader guards reserve their applicable remaining costs.
+
+Actual author passing commands42small/legacy plus connected fullSample and review-fix reader cases are attributed in GATES, not new ROOT executions. ROOT final SAME15 comparison is byte-identical13inherited7051B, configuredtypes/boundaries/factory/diff pass. Review findings CR-NEXT-01/WR-NEXT-01 closed after meaningful RED/GREEN corrections. No source assertion implies real capacity/36Match success; distinct source verification is next. Whole phase remains partial/nyquistfalse/wave0false, all9LEAG pending,266 planning-only. Existing V9 terminal history remains unchanged; no new experiment window or Match yet.
+
+## Historical empirical V9 closure — 2026-10-17
 
 Scoped source3/3 is CLOSED VERIFIED, not empirical completion. Actual preparation77295 passed; unique ROOT run6972 CLOSEDexit1/PARENT_TERMINAL, observedSIGKILL/zero new charges/no result. Its ONE actual ordinary verifier53683 CLOSEDexit1/IMPORT, safe non-acceptance/gaps_found, no reader claim/check/interval. All three PIDs absent and original current metadata hashes unchanged; independent bounded custody/ledger checks and exact limitations in existing GATES. No initiating cause/OOM/disk/guest-timeout conclusion. Fifty prior charges remain spent. Whole phase partial/nyquistfalse/wave0false/all9LEAGpending and266planning-only unchanged. Actual time-only check248afd proves remaining22506939ms < full36reserve24060000ms at03:22:05UTC; further unchanged play cannot be admitted. Prospective next-cell time admission plus one fresh8h allowance is a NEW HUMAN resource choice pending/unapplied, not a test waiver or phase advance. No new test/gate rerun, old result mutation/refund/recredit, holdout/formation/public/counted/production permission.
 
