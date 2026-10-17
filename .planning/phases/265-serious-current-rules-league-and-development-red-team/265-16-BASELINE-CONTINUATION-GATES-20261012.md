@@ -1,5 +1,13 @@
 # Baseline continuation gates
 
+## V11 current DATA projection
+
+Actual independent /root/review_265_v11_data PASS_DATA_REVIEW/findings[], all commands CLOSED/ownership RELEASED. Canonical actual-window projection; not capacity or empirical success. Original allowance unchanged, V10 immutable.
+
+```json
+{"approvalEvidence":{"humanDecisionId":"human-approval-observed-20261017T124639Z","recordedBy":"/root"},"commands_closed":true,"dataReviewer":"/root/review_265_v11_data","grantId":"lean-baseline-continuation-20261017-v11-same-window","planRoot":"sha256:68653cdd810a45fd9b4e345ae49007fcb1125fd3db74f5ed76c93b5385811ef8","readerOperator":"/root/verify_265_v11_retained","reviewedSourceHead":"bfad7431d3fe6cc5fdda65dafbe523d0c2de40e3","runOperator":"/root","schemaVersion":"lean-baseline-continuation-data-gate-v2","sourceGateRoot":"sha256:2a00c7ad5e224627545277dc2b9cf5ee1c0c0d2dc0cbf03ad67d078e3d1a7214","sourceRoot":"sha256:52266d7b1826f8e26048f95ca5df2d09da46ea26114eab908eea235a331f4aec","status":"passed","windowBytesRoot":"sha256:75dfe68b7389871f23ff0cfea0827dd9f123c850be02536dbe51106aa24c3a60","windowRoot":"sha256:6fd97a8e7dfab8ca4b949f497d9592a1c0c075835bdf415c6ef236fccf3a547c"}
+```
+
 ## V11 current SOURCE projection
 
 Actual author/review/fix, ROOT qualification/State-A and distinct source verifier are CLOSED VERIFIED3/3/findings[]. Final configured project types ROOT8988d1 also CLOSED0. Source698members, same original allowance; no actual V11 window or empirical admission yet. V10 projection bodies remain historical text, not current selectors.
@@ -2164,3 +2172,13 @@ Author CLOSED RED/GREEN8pass/final2pass/exactempty1.462s4.026MB and strict13inhe
 - **N3 VERIFIED:** retained722–755/875–925 preserves fresh opening before interval/claim, independent failure closure/private identity. Tests296–305/439ff and driver2286ff reject incomplete/unused/exhausted/failed original and copies; no complete-success inference.
 
 Attributed behavior, NOT rerun: ROOT23 selected pass; author connected bind12.079s/4.026MB and reader28.310s/4.029MB externally bounded pass. SAME15strict13inherited7051B whole-byte-equal pre, NOT global strict green. Synthetic externals, not real custody/capacity/cause proof. Diffcheck clean/no debt markers. No tests/private artifacts/reader/provider/Match/commit. Commands CLOSED; sole GATES ownership RELEASED. All9LEAG/265pending; same15GB/currentrules/unopenedholdout/freeze-before-formation; old routes immutable/no reset/refund/empirical admission.
+
+## Actual V11 DATA review — 2026-10-17
+
+/root/review_265_v11_data: **PASS_DATA_REVIEW; findings:[]**. Actual command d29c8d CLOSED0,13:49:14.866–13:49:15.410UTC checks (3.535s process). Bounded stable NOFOLLOW fd/path before+after, owner/singlelink/mode/size/metadata; production window validator and exact canonical bytes pass. Window942B/0600,dev16777221/ino89678699; domain6fd97a8e7dfab8ca4b949f497d9592a1c0c075835bdf415c6ef236fccf3a547c, raw75dfe68b7389871f23ff0cfea0827dd9f123c850be02536dbe51106aa24c3a60.
+
+ONE inert collector: source52266d7b1826f8e26048f95ca5df2d09da46ea26114eab908eea235a331f4aec/698members; SOURCE2a00c7ad5e224627545277dc2b9cf5ee1c0c0d2dc0cbf03ad67d078e3d1a7214; Plan68653cdd810a45fd9b4e345ae49007fcb1125fd3db74f5ed76c93b5385811ef8. Stable pins/sole SOURCE projection and committed08eb8a5b projection match; ancestry bfad7431→08eb8a5b→HEADd207a67b, trackedclean. Six distinct roles match actual source-role closures, this reviewer, ROOT runner and future /root/verify_265_v11_retained; author closure ROOT-attested, other source roles completed in live listing.
+
+Exact grant lean-baseline-continuation-20261017-v11-same-window, original T1792241199000/A1792242843861/carry894902764/cap923702764/deadline1792271643861 unchanged. Binding after SOURCE does NOT mean new A or source before historical A. Request/allocation/store/temp ENOENT before+after; window unchanged. Earlier508ae7 CLOSED1 was reviewer extra-newline assertion error before collector; canonical serializer already supplies newline, corrected without file mutation.
+
+No source review/retest/private history/Strategy/holdout/old reader/provider/Match/capacity or empirical credit. V10 failure immutable; Plan16/265/all9LEAG pending. No DATA projection created. All commands CLOSED; sole GATES append ownership RELEASED to ROOT.
