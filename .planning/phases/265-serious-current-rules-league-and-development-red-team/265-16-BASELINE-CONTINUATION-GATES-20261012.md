@@ -1,5 +1,161 @@
 # Baseline continuation gates
 
+## Approved next-Match admission: opaque V9 carry observation
+
+ROOT bounded observation352a74 CLOSED0 at 2026-10-17T12:49:56.056Z.14 files, two exact directories, three absences; stable NOFOLLOW descriptor/path identities, owner/mode/size/allocated bytes and raw hashes checked. Total hashed 1163382B, file debit 1204224B; prospective V10 known-file floor 92491776B. Contents remained opaque; no old reader or authority replay. Independent comparison pending. D-30 approval is recorded in STATE/CONTEXT; this is cost preservation only, no new capacity or route artifact.
+
+```json
+{
+  "observedAt": "2026-10-17T12:49:56.056Z",
+  "rows": [
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-window-20261017-v9.json",
+      "bytes": 938,
+      "allocatedBytes": 4096,
+      "mode": 384,
+      "maximum": 65536,
+      "rawRoot": "sha256:9573d0dab6378c9fa32192b9086258415f35a5947576b2fac54b78df99e2aa9e"
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-request-20261017-v9.json",
+      "bytes": 4028,
+      "allocatedBytes": 4096,
+      "mode": 384,
+      "maximum": 65536,
+      "rawRoot": "sha256:052c4851e75bca37e2921e3c2769472f272ec373df63fd49370a05d563bb3b58"
+    },
+    {
+      "path": ".planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261017-v9.json",
+      "bytes": 17356,
+      "allocatedBytes": 20480,
+      "mode": 420,
+      "maximum": 262144,
+      "rawRoot": "sha256:72392772c091b4fb9e05acc7ca0717bbd8ba4c5983bea344d3518cc94b24b490"
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9/allocation.json",
+      "bytes": 17356,
+      "allocatedBytes": 20480,
+      "mode": 384,
+      "maximum": 262144,
+      "rawRoot": "sha256:72392772c091b4fb9e05acc7ca0717bbd8ba4c5983bea344d3518cc94b24b490"
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9/carry.json",
+      "bytes": 763586,
+      "allocatedBytes": 765952,
+      "mode": 384,
+      "maximum": 4194304,
+      "rawRoot": "sha256:132e2192d25521bf012423a943d3f0617da2d8b5c1de19a03f565f5b4ba68abe"
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9/child-terminal.json",
+      "bytes": 666,
+      "allocatedBytes": 4096,
+      "mode": 384,
+      "maximum": 65536,
+      "rawRoot": "sha256:d1a0dc0c9d96dcecf99c7c97d44459cc7de79712188c9d0666ac60cb6c3b4cc2"
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9/entry.json",
+      "bytes": 549,
+      "allocatedBytes": 4096,
+      "mode": 384,
+      "maximum": 65536,
+      "rawRoot": "sha256:91bcc15a7082f4790e3c42516958b4509b2e00ad72516cb89bba7d8fd04b8e24"
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9/ledger.ndjson",
+      "bytes": 35,
+      "allocatedBytes": 4096,
+      "mode": 384,
+      "maximum": 65536,
+      "rawRoot": "sha256:74fc0b8bac1974c3d00ab565572da3786bf4bfaf0af7fa73b9b09c7f2279a898"
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9/parent-supervisor-reasons.json",
+      "bytes": 937,
+      "allocatedBytes": 4096,
+      "mode": 384,
+      "maximum": 65536,
+      "rawRoot": "sha256:ec0428650b65bae175c83de3dc4cf08e2fc614508c71cc3dd9b0a7dd80756be1"
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9/run-claim.json",
+      "bytes": 402,
+      "allocatedBytes": 4096,
+      "mode": 384,
+      "maximum": 65536,
+      "rawRoot": "sha256:100292610e1fec0ed36241ebc2e281c75ef3865a3ab1085d3961465ca8357551"
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9/source-hold.json",
+      "bytes": 147515,
+      "allocatedBytes": 151552,
+      "mode": 384,
+      "maximum": 4194304,
+      "rawRoot": "sha256:9276fe7e3638bec3758975ef8b82aecf8292c72bbd8a86d351816a44cdf7c172"
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9/source-manifest.json",
+      "bytes": 208745,
+      "allocatedBytes": 208896,
+      "mode": 384,
+      "maximum": 4194304,
+      "rawRoot": "sha256:c9ac2c20c80a19292b70df399e5c38f5b7e70b2c46daf9f6b2766fced4b7ccbe"
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9/time.ndjson",
+      "bytes": 258,
+      "allocatedBytes": 4096,
+      "mode": 384,
+      "maximum": 65536,
+      "rawRoot": "sha256:bf7ee677b86cbbb3b522924e9246cb9e7fa65ee49c9e5c5133d50562a3393fb9"
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9-tmp/window-claim.json",
+      "bytes": 1011,
+      "allocatedBytes": 4096,
+      "mode": 384,
+      "maximum": 65536,
+      "rawRoot": "sha256:f53ea680e3952e92a629c141137f9838b9294ea204f874953862951cc006597d"
+    }
+  ],
+  "directories": [
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9",
+      "members": [
+        "allocation.json",
+        "carry.json",
+        "child-terminal.json",
+        "entry.json",
+        "ledger.ndjson",
+        "parent-supervisor-reasons.json",
+        "run-claim.json",
+        "source-hold.json",
+        "source-manifest.json",
+        "time.ndjson"
+      ]
+    },
+    {
+      "path": ".strategy-lab/lean-baseline-continuation-20261017-v9-tmp",
+      "members": [
+        "window-claim.json"
+      ]
+    }
+  ],
+  "absent": [
+    ".strategy-lab/lean-baseline-continuation-20261017-v9/result.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v9/reader-claim.json",
+    ".strategy-lab/lean-baseline-continuation-20261017-v9/retained-check.json"
+  ],
+  "totalBytes": 1163382,
+  "fileAllocatedBytes": 1204224,
+  "nextFileFloor": 92491776
+}
+```
+
+
 ## Actual V8 SOURCE execution handoff — integrated review pending
 
 Actual typed `/root/execute_265_boundary_v8` P→Q→R all commands CLOSED/eight-path ownership RELEASED20:37:30UTC. Fixed source809df7fe86ba655585ca06e2fa5fa199d6fda933; actual ROOT diff vs planningbaseb7c9e953:8files/582insertions92deletions/trackedclean. Commits PREDf5259269/Pf8b708b3; QRED1a4b58d6/Qef55f4c4; RRED186860d9/R9a0a1487;809df7fe narrow routine Q closure-reservation correction plus actual parent/charge closing-refusal test. No other source/newfile/SUMMARY/STATE/config/package/private operation by author. Empty worktree metadata in the template is ignored: this was actual sequential main/no isolation or cleanup claim.
@@ -1888,3 +2044,9 @@ Bounded current metadata remained byte-identical after the reader: terminal666B/
 Allowlisted parent-reasons projection verified entry/HEAD/allocation/source/PID/entry-bytes/exit/signal custody joins. Actual codes are **resource_sampling_exception** and **final_identity_exception**; observations: entry published, childReady observed, resourceSampling exception, finalIdentity exception, failureReceipt absent, cleanup child_exit_observed, terminalization unobserved, initiatingCause unknown; uncertain=true. These establish observed finite supervisor branches only. Original native causes and the V9 initiating cause remain **UNKNOWN**; neither SIGKILL, missing result, withheld IMPORT refusal nor cutoff coincidence establishes an exact cause, guest failure, runtime fit or capacity success.
 
 **Disposition: SAFE NON-ACCEPTANCE / gaps_found; complete=false.** Missing useful baseline/result is a BLOCKER to empirical goal achievement, not an accepted failed-check report. Plan16/Phase265/all9LEAG remain pending; Phase266 planning-only, whole VALIDATION partial/nyquistfalse/wave0false. Preserve all50 prior spent charges, every old/current artifact and attempted reader, continuously carried costs/no reset/refund/recredit,36remaining/fourunopened/global300/15GB/3GB/guest1000/startup2500/host5000/Match600000 and all rules/privacy. Serious current-rules league/evaluation/freeze BEFORE formation; unopened holdout/no public/counting/production credit. This append occurred only AFTER actual reader terminal and closed bounded metadata commands. No new report/SUMMARY/plan/source/test/commit. All commands CLOSED; ordinary-reader and sole GATES ownership RELEASED to ROOT at final return. Source/HEAD/planning hold can now release only because the actual reader has closed, not because verification passed.
+
+## D-30/V10 scoped plan and finite metadata check — 2026-10-17
+
+Independent /root/check_265_next_cell: PASS; issues: []. Checked ONLY final D-30 amendment (Plan16 lines1661-1704) against final research, STATE top and D-30. N1/N2 cover all six time sites; real36/35 counts unchanged, one active600000 reserve survives until authenticated terminal, zero removes only Match time, hard deadline/floors remain enforced. N3 preserves private identity/closings and incomplete35/36/unused/failure/exhaustion nonacceptance. Legacy policy/resources/runtime unchanged; serial tasks and actual review/qualification/State-A/distinct source closure precede sole SOURCE and actual A, then DATA/request/prepare/allocation-only direct child/ONE entry/actual-entry reader. No empirical completion credited.
+
+Actual command3a68b0 CLOSED0, observed12:54:24.343UTC: exact TOP tuple matched14 opaque files/2exact directories/3absences; stable NOFOLLOW lstat/fstat/path/realpath/currentuid501/mode/nlink/rawSHA256, exact members/absences rechecked. Read each file once,1163382B total within16MiB; FILE debit1204224B,91287552+1204224=92491776B newfloor. No content parsing/old reader/history replay/store recursion/new artifact/Match/runtime/test/source/plan edit/commit. All check commands CLOSED before append; ownership RELEASED to ROOT. Plan16/265/all9LEAGpending; no capacity/runtime-fit assertion.

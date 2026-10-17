@@ -1656,3 +1656,49 @@ Narrow source amendment completes only after actual route tests/review/ROOT chec
 </success_criteria>
 
 Planner handoff: existing-file amendment only; no source/test/private metadata operation, actual window or empirical action executed, no new artifact or planner commit. Independent plan/finite metadata check remains ROOT's next handoff. All planner commands CLOSED; ownership RELEASED to ROOT.
+
+
+## D-30 prospective amendment: 20261017-v10
+
+ONE approved private8h attempt; T1792241199000/id human-approval-observed-20261017T124639Z. A ONLY after checked source closure, A>=T; deadline=A+28800000/cap=F(A)+28800000. All prior/intervening costs continuous; no reset/refund/extension/repeat approval or source-work deadline. Preserve15GB/3GB/global300/36planned/fourunopened/guest1000/startup2500/host5000/Match600000, remaining closure1860000/offline600000. All36 required; incomplete partial/inconclusive/no freeze. Current-rules freeze BEFORE formation; holdout unopened/no public/counting/production; rules/runtime/privacy unchanged.
+
+Exact namespace20261017-v10: request .strategy-lab/lean-baseline-continuation-request-20261017-v10.json; window .strategy-lab/lean-baseline-continuation-window-20261017-v10.json; allocation .planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261017-v10.json; store .strategy-lab/lean-baseline-continuation-20261017-v10; temp .strategy-lab/lean-baseline-continuation-20261017-v10-tmp; existing exact member/claim suffixes. No route widening; old artifacts immutable/spent,V9zeroNEWcharges/50historicalspent.
+
+Read final58 RESEARCH/STATE/D-30/GATES; Discovery0; no new module/report/plan. ROOT352a74:14opaque V9 files/2dirs/3absences,debit1204224/floor92491776. Independent exact comparison CLOSED before adoption; no parsing/old reader. Serial N1->N2->N3; CLOSED before test handoff; preserve edits.
+
+<tasks>
+<task type="auto" tdd="true">
+<name>N1: Exact time policy and opaque V9 carry</name>
+<files>packages/strategy-lab/src/league/lean-experiment.ts, scripts/lib/v1-38-lean-continuation-observations.ts, scripts/lib/v1-38-lean-baseline-continuation.ts, scripts/lib/v1-38-lean-baseline-continuation.test.ts</files>
+<behavior>ACTUAL charge50->51 at deadline-3060000 succeeds;1ms later refuses before append. V9 still requires24060000 for36. </behavior>
+<action>Per D-30/D-22/D-25/D-27 add exact PATHS/namespace/window allowlist/T-id/delayed-A/resolvers. One pure validated domain Match-time selector: legacy remainingSlots*matchMs; ONLY V10 positive count ONE matchMs, zero0. Apply at chargeLeanSlot1952-1954 and assertLeanBaselineContinuationFrontierV2 line52. Preserve counts/ranges/closure/ordinals/caps/charge-before-provider/legacy behavior. After comparison add spentV9Metadata/spentV9Directories to frozen leaf; extend pathsForV2/inventory/owned/disjoint scopes. NOFOLLOW/hash/metadata/member/absence checks visit V9 once; V10floor92491776 ONLY, older data/floors/debt unchanged. Deduplicate files; fresh directories/growth/reservations separate.</action>
+<action>RED/GREEN tags continuation-next-v10-policy/carry: real admitted ledger ACTUAL charge at3060000/one-ms refusal, real frontier/receipt36/35, old24060000 edge, T/id/A/overflow/alias negatives, old defaults/deep freeze, changed/missing/extra/shrink/member/absence/cost-once/near-cap denial. Real public bytes/hashes/schemas/controller.</action>
+<verify><automated>node --max-old-space-size=768 ./node_modules/vitest/vitest.mjs run --maxWorkers=1 scripts/lib/v1-38-lean-baseline-continuation.test.ts -t 'continuation-next-v10-(policy|carry)'</automated></verify>
+<done>RED/GREEN/default/carry closed; ownership RELEASED.</done>
+</task>
+<task type="auto" tdd="true">
+<name>N2: Active-cell admission through driver/Git</name>
+<files>scripts/run-v1-38-lean-baseline.ts, scripts/run-v1-38-lean-baseline.test.ts, scripts/lib/v1-38-lean-container-match-session.ts</files>
+<behavior>Real ledger0charges/1active/1terminal/36terminals keeps36/36/35/0unfinished; ONE600000 reserve survives charge/provider-return/finishCell until terminal. Next-cell exhaustion denies charge/provider.</behavior>
+<action>Per D-30/D-29 apply selector at FOUR driver sites: continuationWindowAdmissionV2 934; compileContinuationPreflightExpectationsV6.admit1221; createLeanContinuationLocalReservationV8.resource1064; openLeanBaselineContinuationContextV2.sampleGuard1468. All SIX formulas covered. Keep1051/1466 real36-terminal counts/receipt36/35, no double active reserve. Zero removes ONLY Match time, never unspent closure/offline. Nested readingProgress checking-only then full fresh reserve before effects. Deadline/journal/monotonic floors apply even zero work/terminal/publication; reserve-fit equality is not deadline success. Wire ALL finite positive/negative branches in final RESEARCH map; Git104 denies known-unselected V10 even manifest-listed. Audit PATHS_V9/namespace siblings; V8 startup/source/ledger/3GB/runtime guards unchanged.</action>
+<action>RED/GREEN continuation-next-v10-driver: actual parent coordinated release AND privately compiled preflight at distinguishing time; real bounded progress/active-terminal transitions/prefix mutation; actual charge-closing refusal/provider uncalled; postterminal next-charge refusal; elapsed-floor exhaustion/hard-deadline equality INCLUDING zero work. Public real callers/controller/charge, synthetic externals disclosed; no Strategy/Match/provider.</action>
+<verify><automated>node --max-old-space-size=768 ./node_modules/vitest/vitest.mjs run --maxWorkers=1 scripts/run-v1-38-lean-baseline.test.ts -t 'continuation-next-v10-driver'</automated></verify>
+<done>Six sites/branches connected, active reserve retained; ownership RELEASED.</done>
+</task>
+<task type="auto" tdd="true">
+<name>N3: Retained connectivity and partial nonacceptance</name>
+<files>scripts/lib/v1-38-lean-baseline-retained.ts, scripts/lib/v1-38-lean-baseline-retained.test.ts, scripts/run-v1-38-lean-baseline.test.ts</files>
+<behavior>35/36/unused/failure/exhaustion cannot complete/freeze/private-accept; failed original/copies remain nonaccepted.</behavior>
+<action>Per D-30/D-25/D-27 extend retained722/735/875/908-910 exact predicates into existing V8 opening/claim/private failure-publication path. Audit636/637 inherits selector without count rewriting; preserve731-733 reader-closure and880 zero-work formulas. Keep BOTH closings/private identity. Incomplete partial even absent report; no controller revival/imputation/retry/cause inference. RED/GREEN continuation-next-v10-retained: real small public reader/claim/closings;35/36/unused/failure/exhaustion refuse; original/clone/deserialized/foreign nonacceptance. No private reader.</action>
+<verify><automated>node --max-old-space-size=768 ./node_modules/vitest/vitest.mjs run --maxWorkers=1 scripts/lib/v1-38-lean-baseline-retained.test.ts scripts/run-v1-38-lean-baseline.test.ts -t 'continuation-next-v10-retained'</automated></verify>
+<done>Reader/partial identity checks close; ownership RELEASED.</done>
+</task>
+</tasks>
+
+NEW selectors; commands<60s or split. One integrated delta review/fix; ROOT focused changed/legacy cases, configured types/boundaries/factory/diff, SAME15 before/after inherited diagnostics/fix ALL NEW/no global-green. Scoped State-A caller-to-assertion audit then DISTINCT actual source verification. No unchanged expensive B/C repeat; changed caller without equivalent assertion requires explicit bounded case. Gaps stop.
+
+After source commands/findings CLOSE: sole SOURCE/distinct author-reviewer-verifier -> ROOT A/window/F(A) -> independent actual DATA/roles/chronology/roots/ancestry/absence -> request -> ONE prepare -> NEW allocation-only direct-child commit/push -> ONE ROOT entry with fresh SAME-PROCESS next-cell+remaining-closure/offline capacity BEFORE EVERY charge/provider -> ONE actual-entry/head ordinary reader after terminal, otherwise terminal-only. Hold source/HEAD/planning through terminal/reader except allocation commit. Existing threat model retained.
+
+Audit: GOAL/LEAG-01/02/05 integrity->N1-3 only; other LEAG unchanged/all9pending. RESEARCH six sites/paths/carry/reader/tests/order->N1-3. D-30->all;D-22/25/27/29 carry/count/failure/cadence; other decisions unchanged/no deferred idea. Plan16/265pending,validationpartial/nyquistfalse/wave0false,266planning-only.
+
+Carrier-only; no source/private reads/tests/commits/action. CLOSED/RELEASED to ROOT.

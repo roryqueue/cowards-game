@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V9 run and unique retained verifier CLOSED without new Matches; prospective time-admission decision required
+stopped_at: Approved next-Match time admission; Plan16 source amendment in progress
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: V9 safe non-acceptance, zero new charges, all processes closed; whole36 time admission no longer fits, no retry
+last_activity_desc: Human approved one fresh eight-hour private attempt with next-Match plus cleanup admission
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,13 @@ total_plans_in_phase: 16
 
 # State: Coward's Game
 
-## Current continuation — V9 CLOSED; prospective time-admission choice PENDING
+## Current continuation — next-Match time admission APPROVED
+
+The latest direct human `approved` accepts the exact preceding proposal: ONE fresh eight-hour private attempt, with next-Match-plus-cleanup time admission instead of reserving all36 remaining cells upfront. First ROOT approval observation T is 2026-10-17T12:46:39UTC (1792241199000), id `human-approval-observed-20261017T124639Z`. Actual window anchor A is deferred until checked source closure. Carry all prior and intervening costs continuously; same15GB/3GB/global300/36planned/fourunopened and guest1000/startup2500/host5000/Match600000 bounds. Reserve the next cell plus remaining closure/offline before every charge, retain active-cell reservation until terminal, enforce the hard deadline, and label any incomplete baseline partial/inconclusive. This is an approved prospective resource policy, not empirical completion or reuse of consumed V9.
+
+ROOT inspected current state, tracked-clean main869cb4d3, active agents and actual processes: no active experiment or verifier. Existing Plan16 research/checked amendment, implementation, independent review/fix and focused validation/verification follow; use existing carriers and avoid report/numbered-plan proliferation. No new window, request, allocation or Match exists at this checkpoint. Standing consent covers the distinct prospective private route after source gates; no repeat literal is needed. All earlier terminal evidence remains immutable. Current-rules freeze still precedes formation; holdout unopened and no public/counting/production.
+
+## Historical continuation — V9 CLOSED; prospective time-admission choice PENDING
 
 V9 ROOT preparation77295/bbeec9 CLOSED0, allocation4d501598256424cd1382c0e41f4cdef77915be04c0b598ab9f22549f55ed4945 committed/pushed ONLY as direct child3bcb21262a8b56b32adeb73edce805387d2d8c6e of sourceHeadc785ac85a76a8f62929c1f2e0c50d75235e2fd58. ONE ROOT run6972/PID876/child68790 CLOSEDexit1/6bf913 by2026-10-17T02:56:29UTC: PARENT_TERMINAL/DETAILS_WITHHELD,24complete guards/openings/closings,3272source/5494descriptor/11459carry-inventory-source callbacks. Actual entry/head exists, terminal SIGKILL/exitnull, initiating cause UNKNOWN. Parsed current ledger ONEstop/failure and ZEROnewcharge/terminal events;50prior charges stay spent. No cold corpus/proposals/sources/pairs/result or empirical/LEAG/freeze credit.
 
