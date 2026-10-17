@@ -16,6 +16,46 @@ import * as ledger from "../../packages/strategy-lab/src/league/lean-experiment.
 import * as continuation from "./v1-38-lean-baseline-continuation.js"
 import { readLeanContinuationExpectedObservations } from "./v1-38-lean-continuation-observations.js"
 
+it("continuation-route-v13 retains one frozen V12 cost and four absences without extra owned debit", () => {
+  const { spentV12Metadata, spentV12Absences } = readLeanContinuationExpectedObservations()
+  expect(spentV12Metadata).toEqual([{ path: ledger.LEAN_BASELINE_CONTINUATION_PATHS_V12.window, bytes: 941, allocatedBytes: 4096, mode: 0o600, maximum: 65536, rawRoot: "sha256:0d8ebb07b8c96b4d96da1e999e37c5d6f679e90bad27fe90efa55b8e9760f52c" }])
+  expect(spentV12Absences).toEqual([ledger.LEAN_BASELINE_CONTINUATION_PATHS_V12.request, ledger.LEAN_BASELINE_CONTINUATION_PATHS_V12.allocation, ledger.LEAN_BASELINE_CONTINUATION_PATHS_V12.store, ledger.LEAN_BASELINE_CONTINUATION_PATHS_V12.temp])
+  expect(Object.isFrozen(spentV12Metadata)).toBe(true); expect(Object.isFrozen(spentV12Metadata[0])).toBe(true); expect(Object.isFrozen(spentV12Absences)).toBe(true)
+  expect((continuation as any).LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V13).toBe(93925376)
+  const { root: _, ...old } = continuationWindowFixtureV12(), body = { ...old, routeNamespace: "20261017-v13" as const, anchorMs: 1792280297748, carryMs: 932356651, capMs: 961156651, deadlineMs: 1792309097748 }
+  const w = ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), "public-v13-owned-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+  try { expect(continuation.createLeanContinuationOwnedMeasurementV8(w)()).toEqual({ retainedBytes: 0, scratchBytes: 0 }) } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+})
+
+it("continuation-route-v13 prewindow authenticates every current manifest row at reviewed HEAD before synthetic publication", () => {
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), "public-v13-source-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), head = "a".repeat(40)
+  try {
+    fs.mkdirSync(resolve("scripts")); writeFileSync(resolve("scripts/owned.ts"), "public owned"); writeFileSync(resolve("scripts/generated.js"), "public generated")
+    const manifest = () => fs.readdirSync(resolve("scripts")).sort().map(name => ({ path: `scripts/${name}`, root: ledger.leanBytesRoot(fs.readFileSync(resolve(`scripts/${name}`))) }))
+    const sourceRows = manifest(), sourceRoot = labRoot("public-source", sourceRows), committed = new Map(sourceRows.map(row => [row.path, fs.readFileSync(resolve(row.path))]))
+    for (const mode of ["matching", "missing-generated", "changed-blob", "local-drift", "head-drift"] as const) {
+      const writeWindow = vi.fn(), seen: string[] = []; let currentHead = head
+      const prewindow = () => {
+        const rows = manifest(), members = rows.map(row => row.path), rootBefore = labRoot("public-source", rows)
+        if (rootBefore !== sourceRoot || currentHead !== head) throw new Error("SOURCE_BINDING")
+        for (const row of rows) continuation.authenticateLeanContinuationPinnedSource(row, head, members, args => {
+          expect(args).toEqual(["show", `${head}:${row.path}`]); seen.push(row.path)
+          if (mode === "missing-generated" && row.path.endsWith("generated.js")) throw new Error("MISSING_GIT_BLOB")
+          if (mode === "local-drift") writeFileSync(resolve("scripts/owned.ts"), "changed public owned")
+          if (mode === "head-drift") currentHead = "b".repeat(40)
+          return mode === "changed-blob" ? Buffer.from("wrong Git bytes") : committed.get(row.path)!
+        }, () => { if (currentHead !== head || labRoot("public-source", manifest()) !== rootBefore) throw new Error("SOURCE_CHANGED") })
+        if (currentHead !== head || labRoot("public-source", manifest()) !== rootBefore) throw new Error("SOURCE_CHANGED")
+        writeWindow()
+      }
+      if (mode === "matching") { prewindow(); expect(seen).toEqual(sourceRows.map(row => row.path)); expect(writeWindow).toHaveBeenCalledOnce() }
+      else { expect(prewindow).toThrow(/MISSING_GIT_BLOB|SOURCE_ROOT|SOURCE_CHANGED/); expect(writeWindow).not.toHaveBeenCalled() }
+      writeFileSync(resolve("scripts/owned.ts"), committed.get("scripts/owned.ts")!)
+    }
+  } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+})
+
 it("[continuation-route-v12] exposes the exact frozen spent-V11 opaque cost tables", () => {
   const { spentV11Metadata, spentV11Directories, spentV11Absences } = readLeanContinuationExpectedObservations()
   expect(spentV11Metadata).toHaveLength(22)
