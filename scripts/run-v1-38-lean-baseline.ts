@@ -933,7 +933,9 @@ export const leanBaselineContinuationSourceManifestV2 = () => {
 }
 const continuationWindowAdmissionV2 = (window: LeanBaselineContinuationWindowV2, remainingSlots: number, journalMs = 0): number => {
   const now = Date.now(), elapsed = leanBaselineContinuationElapsedFloorV2(window, now, journalMs)
-  const reserve = leanBaselineContinuationMatchReserveMsV2(window, remainingSlots) + (window.routeNamespace === "20261017-v10" || remainingSlots !== 0 ? window.closureMs + window.offlineOverheadMs : 0)
+  // Zero here is checking-only metadata/reader startup, not actual work. The
+  // reader/local frontier independently reserves its remaining closure budget.
+  const reserve = leanBaselineContinuationMatchReserveMsV2(window, remainingSlots) + (remainingSlots !== 0 ? window.closureMs + window.offlineOverheadMs : 0)
   if (!Number.isSafeInteger(remainingSlots) || remainingSlots < 0 || remainingSlots > 36 || now >= window.deadlineMs || now + reserve > window.deadlineMs || elapsed + reserve > window.capMs) return fail("V2_WINDOW_EXPIRED")
   return elapsed
 }
@@ -1220,7 +1222,7 @@ const compileContinuationPreflightExpectationsV6 = (window: LeanBaselineContinua
   const assert = (candidate: object, exactWindow: LeanBaselineContinuationWindowV2) => { if (candidate !== binding || exactWindow !== window || process.pid !== (scope as { pid: number }).pid || process.cwd() !== issuanceCwd) return fail("V6_CONTEXT") }
   const admit = (candidate: object, exactWindow: LeanBaselineContinuationWindowV2, remainingSlots: number, journalMs = 0) => {
     assert(candidate, exactWindow)
-    const now = Date.now(), elapsed = continuationPreflightElapsedV6(w, now, journalMs), reserve = leanBaselineContinuationMatchReserveMsV2(w, remainingSlots) + (w.routeNamespace === "20261017-v10" || remainingSlots !== 0 ? w.closureMs + w.offlineOverheadMs : 0)
+    const now = Date.now(), elapsed = continuationPreflightElapsedV6(w, now, journalMs), reserve = leanBaselineContinuationMatchReserveMsV2(w, remainingSlots) + (remainingSlots !== 0 ? w.closureMs + w.offlineOverheadMs : 0)
     if (!Number.isSafeInteger(remainingSlots) || remainingSlots < 0 || remainingSlots > 36 || now >= w.deadlineMs || now + reserve > w.deadlineMs || elapsed + reserve > w.capMs) return fail("V2_WINDOW_EXPIRED")
     return elapsed
   }
