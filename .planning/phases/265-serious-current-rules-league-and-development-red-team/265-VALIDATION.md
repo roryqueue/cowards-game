@@ -5,13 +5,52 @@ status: partial
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
-updated: 2026-10-16
-source_reviewed: 12b3879a94647dcfbde7a11e045df58425fd8d57
-source_gate: startup-diagnostics-A-correlation-and-C-context-open-subcoverage-filled-B-wrapper-full-C-default-open-distinct-verification-pending
+updated: 2026-10-17
+source_reviewed: 10a49449cb6a820f780501c970b4804fea94bfef
+source_gate: fixed-observation-defaults-B-C-and-required-sensitivities-covered-distinct-verification-pending
 empirical_validation: v8-preparation-passed-child-failed-ordinary-reader-refused-zero-new-retained-charge-no-acceptance
 ---
 
 # Phase265 — Validation Strategy
+
+## Current State-A OBS-1–3 scoped audit — source coverage, whole phase PARTIAL, 2026-10-17
+
+Scoped auditor `/root/validate_265_observation_refactor` inspected AGENTS/current STATE, the approved final Plan16 internal-testability/harness amendments, final research, final integrated/re-review/type-delta/ROOT evidence in existing GATES, and actual source/assertions at HEAD `10a49449cb6a820f780501c970b4804fea94bfef`. The validation skill supplied caller-to-assertion mapping; this is NOT another whole-phase audit. State A / `workflow.nyquist_validation:true` retained. No tests/probes were rerun or authored by this auditor: passing outcomes below are attributed actual CLOSED ROOT executions, not independent auditor executions or static-review substitutes. Only this existing VALIDATION carrier changes; source/tests/retained production remain read-only.
+
+| Task / exact gap | Actual inspected behavioral assertion | Scoped disposition |
+|---|---|---|
+| OBS-1/2 / fixed production defaults and closure | Driver test:1847–1880 independently pins former ordered catalogs, legacy path aliases, exactly one new owned leaf, and the real collector's leaf root against actual file bytes. Helper test:1267–1345 independently pins every spentV3–V7/CLOSED_COST binding, recursively checks frozen objects/arrays, attempts mutation and checks subsequent reads/legacy export; separate UNMOCKED importer actually rejects changed allocation bytes before Git. Leaf:1–105 has only fixed readonly/frozen data and zero-argument accessor; two consumer deltas relocate literals/wiring, not validators. | **FILLED / green**, unit + integration; no selector, setter, registrar, cache, admission mint, guard/numeric-policy weakening or private-success substitute found. |
+|265-16-B / START-B-PARENT-STAGE-01 | Driver test:2103–2140 invokes actual CLI→run wrapper→actual parent. Only disclosed expected-data/factory/Git/resources/coherent logical clocks/PID/fork/IPC observations are synthetic. Actual entry/pilot bytes arm external one-shot disk denial at the real closing HEAD check AFTER `entered=true` (driver:588–604). Assertions require closing marker before denial, real fork/entry/run claim, observed SIGKILL exit exactly once, failed terminal/cleanup reason, closed pilot/inactive journal, charged50, provider0/resultabsent and exact withheld finite PARENT_CLAIM, not RUN_PREENTRY. Actual parent catch:637–646 uses independent resource-checked failure terminalization. | **FILLED / green source behavior**, formerly OPEN WARNING. Not actual child/runtime/custody/latency/capacity or original-cause evidence. |
+|265-16-C / START-C-DEFAULT-01 | Driver test:2069–2088 forwards the actual reader (not importer/context success). Actual default lexical opening/importer/controller→reader interval→durable allocation-bound claim→absent result→terminal/publication is traversed (retained:708–816). Assertions require ordered IMPORT→READER_INTERVAL→CLAIM→EVIDENCE_RESULT→TERMINAL→PUBLICATION, spent claim, closed verifier/inactive time, resultabsent, failed durable publication/reportnull; ORIGINAL awaited CLI return must be gaps_found/CONTINUATION_READER_FAILURE/reportnull and privately nonaccepted, as must its structured/deserialized copies. Failure cleanup retains independent resource guards. | **FILLED / green source behavior**, formerly OPEN coverage BLOCKER; no implementation bug was established. This is postclaim nonacceptance, not merely preclaim refusal, real empirical reader success or accepted private proof. |
+
+### Required sensitivity mapping — real existing assertions, not test-count inference
+
+All helper anchors below are `scripts/lib/v1-38-lean-baseline-continuation.test.ts` and were exercised by ROOT's full147-case run. No need to repeat complete B/C admission for each existing lower-boundary mutation.
+
+| Approved sensitivity | Passing behavioral assertion / precise coverage |
+|---|---|
+| Changed anchor bytes/mode/missing/extra members/descriptors | :190–211 actual V6 anchor/absence/size/mode/alias denials; :807–845 real V4/V5 bytes, missing file, nonempty journal, extra store/temp, modes, ownership/replacement; :667–739 captures members and refuses fresh membership/replacement/restore with real identity guard. New unmocked changed-anchor test:1341 adds actual importer refusal. |
+| Parent/source/request/root joins and malformed canonical evidence | :1109–1113 refuses nondirect parent and different committed custody bytes; :508–523/:1164–1187 refuses wrong source raw root/OID/ref/path/descriptor; :612–632 refuses changed source/request capability bindings and noncanonical/changed allocation bytes; :1045–1075 valid seven-charge capsule then extra/missing terminal, changed event/head/carry roots, promoted check and open/reordered intervals must throw. |
+| Interval/carry/global floor, full opening/closing denial | :44–84 rerooted carry/time/decision deltas and all12 closing stages refuse irreversibly; :151–162/:984–994 shifted floor/frontier fields refuse; :241–273/:455–468 real controller/identity opening+closing drift, resource/deadline/callback/foreign-context refusal; :1137–1158 cost-only/floor/resource/clock denials. These are bounded source checks, not authenticated history. |
+| Source drift / original-and-copy private nonacceptance | :508/:718/:1164 actual source/root/replacement changes refuse; connected B closing refusal and C original/structured/deserialized result assertions above are green. |
+| Live HEAD drift — execution mapping FILLED | Helper:1032–1040 proves fresh HEAD reads/scope, NOT changed live HEAD refusal. Existing driver test:483–497 (`fresh head drift refuses and invalidates without setup`) and :1176–1180 (`denies live HEAD, resource and allocation-byte drift through the actual complete guard`) assert real changed-HEAD denial, invalidation and resource/allocation-byte refusal. ROOT1484/chunk096aae now CLOSED0:2pass/213filter-excluded/6.46s at unchanged10a49449. **FILLED / green**; prior pending-execution warning resolved without new test/source changes or B/C rerun. |
+
+### Attributed CLOSED ROOT commands and outcomes
+
+Runner prefix `node --max-old-space-size=768 ./node_modules/vitest/vitest.mjs run --maxWorkers=1`; B/C use their declared60000ms test timeout and external60000ms process-group watchdog, each exact anchored full-title selector resolving exactly ONE test. Actual commands did NOT include a `--testTimeout` CLI flag.
+
+| Command selection / task | Actual CLOSED outcome |
+|---|---|
+| Driver suite, `-t '^internal-observations-B actual CLI wrapper reaches parent entry then owned closing denial with observed child exit$'` / B | ROOT1921/chunkd107d2 CLOSED0:1pass/214filter-excluded; COMPLETE25698ms/1413896B construction+execution+cleanup; external31676ms/group62041absent. Erased TypeScript-only cast correction after run changes no runtime body. |
+| Driver suite, `-t '^internal-observations-C actual CLI default importer claims before missing result and resource-checked cleanup$'` / C | ROOT57570/chunkfe59b9 CLOSED0:1pass/214filter-excluded; COMPLETE27042ms/1414517B construction+execution+cleanup; external32742ms/group62116absent. Actual original/copy nonacceptance asserted after OBS3-R1 correction. |
+| Driver suite, `-t 'fresh head drift refuses and invalidates without setup\|denies live HEAD, resource and allocation-byte drift through the actual complete guard'` | ROOT1484/chunk096aae CLOSED0:2pass/213filter-excluded/6.46s. Exact two unchanged inspected sensitivities selected, no B/C rerun. |
+| Driver/helper/retained three suites, `-t 'internal-observations-default\|closed seven-charge cost capsule\|binds ONLY the two supplied raw roots\|continuation-startup-repair'` | ROOT36425/chunk298188 CLOSED0:38pass/401skip/13.50s; includes default pins, startup/terminal and six preclaim negatives. Explicit old censored C fixture remains skipped; filtered/skipped cases are not exercised. B/C plus this selection are40distinct passing cases, not a whole-suite pass. |
+| Full `scripts/lib/v1-38-lean-baseline-continuation.test.ts` | ROOT16570/chunka39dfd CLOSED0:147pass/0skip/10.02s. Overlaps fast selection; NOT147 added to40. Existing helper fixtures retain earlier individual bounds. |
+| Project types, SAME15 strict, boundaries/review | Configured project types/service boundaries/public discovery/factory1444files/violations[] passed. SAME15 strict CLOSED2/full13 inherited diagnostics7051B exactly matches pre-edit after ONLY independently verified driver202→191/322→311 relocation offsets; NOT global strict green. FOUR new test diagnostics were fixed, not waived. Final independent integrated/type-delta review findings[]; review alone supplies no passing behavior. |
+
+Audit metrics: original B/C gaps found2, source-behavior resolved2, defaults-preservation group covered1; required sensitivity execution mapping complete, zero remaining scoped coverage escalations. Auditor debug0/3; no failing fixture was retried. Earlier10s CENSORED and first45s B PARTIAL remain failed/immutable, never recredited. The prospective45s/8MiB test harness changes no production guest/startup/host/Match/resource/trust bound. All synthetic seams are disclosed; crypto/canonical parsers/descriptors/source hashing/importer/capsule/joins/controllers/claims/cleanup/private identity remain real.
+
+**Scoped source coverage GAPS FILLED; whole disposition remains PARTIAL**: statuspartial/nyquistfalse/wave0false; Plan16/Phase265/all9LEAG pending, Phase266planning-only, DISTINCT source verification still owed. Original V8 causes/real runtime fit UNKNOWN, all old artifacts/charges/costs immutable/spent/no reset/refund. Current-rules league/evaluation/freeze BEFORE formation; holdout unopened/no public/counting/production. No private history, namespace/window/request/allocation/preparation/capacity/ordinary empirical reader/provider/Strategy/Match operation or authority follows. Historical sections below are preserved and superseded only for these exact scoped source-coverage findings. All auditor inspection/edit/check commands CLOSED; sole VALIDATION ownership RELEASED to ROOT at final handoff for DISTINCT verification. No new file/report/SUMMARY/test/module/plan/commit.
 
 ## Current State-A additional test-only pass — PARTIAL, 2026-10-16
 
