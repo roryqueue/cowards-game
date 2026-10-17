@@ -2282,7 +2282,7 @@ it("continuation-device-v11-driver-bind actual importer binds fresh device and s
   expect(() => context.guard()).toThrow()
 }, "20261017-v11"), 60000)
 
-for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "continuation-next-v10-reader-remaining-closure" }, { namespace: "20261017-v11" as const, tag: "continuation-device-v11-retained-default" }]) it(`${tag} actual default reader admits40minutes, preserves31minute closure and refuses hard expiry (public synthetic history/resources)`, () => withInternalObservationTree(true, async f => {
+for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "continuation-next-v10-reader-remaining-closure" }, { namespace: "20261017-v11" as const, tag: "continuation-device-v11-retained-default continuation-reader-precheck-v11" }]) it(`${tag} actual default reader admits40minutes, preserves31minute closure and refuses hard expiry (public synthetic history/resources)`, () => withInternalObservationTree(true, async f => {
   const { D, L, R, p, ledger, w, tick, read, fs } = f, stages: string[] = []
   f.note("remaining reader closure at40minutes")
   expect(w.deadlineMs - Date.now()).toBe(2400000)
@@ -2290,7 +2290,8 @@ for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "co
   expect(Date.now() - close).toBe(1)
   expect(w.closureMs - (Date.now() - close)).toBe(1859999)
   // Real default opener/importer/controller, private enrollment and both closing
-  // barriers. Missing public result is deliberately nonaccepting, not a stubbed success.
+  // barriers. Inert public content is deliberately nonaccepting, not a stubbed success.
+  fs.writeFileSync(resolve(p.store, "result.json"), "{}", { mode: 0o600, flag: "wx" })
   const result = R.verifyLeanBaselineContinuationRetainedV2(p.request, (stage: string) => { stages.push(stage); f.note(stage) })
   expect(stages).toContain("CLAIM"); expect(stages).toContain("PUBLICATION")
   expect(read(p.store + "/reader-claim.json").allocationRoot).toBe(ledger.allocation.root)

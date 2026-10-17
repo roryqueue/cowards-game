@@ -258,6 +258,30 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     const allocation = continuationLedger.createLeanBaselineContinuationAllocationV2({ ...input, requestBytesRoot: leanBytesRoot(leanCanonicalBytes(request)) })
     return { allocation, request }
   }
+  it.each(["missing", "symlink", "directory", "owner", "mode", "hardlink", "parent-alias", "oversize"] as const)("continuation-reader-precheck-v11 rejects %s metadata before import or effects", mode => {
+    const began = performance.now(), { allocation } = v2Allocation("20261017-v11"), p = continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V11
+    const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "public-result-precheck-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), path = resolve(p.store, "result.json"), stages: string[] = []
+    const ipc = { send: Object.getOwnPropertyDescriptor(process, "send"), connected: Object.getOwnPropertyDescriptor(process, "connected") }
+    Object.defineProperty(process, "send", { value: undefined, configurable: true }); Object.defineProperty(process, "connected", { value: false, configurable: true })
+    const spies: { mockRestore(): void }[] = [cwd]
+    try {
+      fs.mkdirSync(resolve(p.store), { recursive: true, mode: 0o700 })
+      if (mode === "directory") fs.mkdirSync(path)
+      else if (mode !== "missing") fs.writeFileSync(path, "{}", { mode: 0o600 })
+      if (mode === "symlink") { fs.renameSync(path, path + ".target"); fs.symlinkSync(path + ".target", path) }
+      if (mode === "mode") fs.chmodSync(path, 0o644)
+      if (mode === "hardlink") fs.linkSync(path, path + ".alias")
+      if (mode === "parent-alias") { fs.renameSync(resolve(p.store), resolve(p.store) + ".target"); fs.symlinkSync(resolve(p.store) + ".target", resolve(p.store)) }
+      if (mode === "oversize") fs.truncateSync(path, 4194305)
+      if (mode === "owner") { const stat = fs.lstatSync; spies.push(vi.spyOn(fs, "lstatSync").mockImplementation(((name: fs.PathLike, ...args: unknown[]) => { const value = Reflect.apply(stat, fs, [name, ...args]); if (String(name) === path) value.uid += 1; return value }) as typeof fs.lstatSync)) }
+      spies.push(vi.spyOn(Date, "now").mockReturnValue(allocation.window.anchorMs + 1), vi.spyOn(continuationEntry, "readLeanBaselineContinuationWindowV2").mockReturnValue(allocation.window), vi.spyOn(continuationEntry, "assertLeanBaselineContinuationScopeV2").mockImplementation(() => {}))
+      const opened = vi.spyOn(continuationEntry, "openLeanBaselineContinuationContextV2").mockImplementation(() => { throw new Error("IMPORT_MUST_NOT_RUN") }), evidence = vi.spyOn(continuationReader, "verifyLeanContinuationEvidence"), content = vi.spyOn(fs, "readSync"), writes = vi.spyOn(fs, "openSync")
+      spies.push(opened, evidence, content, writes); content.mockClear()
+      expect(() => continuationReader.verifyLeanBaselineContinuationRetainedV2(p.request, stage => stages.push(stage))).toThrow()
+      expect(stages).toEqual(["INITIAL_WINDOW"]); expect(opened).not.toHaveBeenCalled(); expect(evidence).not.toHaveBeenCalled(); expect(content).not.toHaveBeenCalled(); expect(writes).not.toHaveBeenCalled()
+      for (const name of ["reader-claim.json", "retained-check.json", "time.ndjson", "ledger.ndjson"]) expect(fs.existsSync(resolve(p.store, name))).toBe(false)
+    } finally { for (const spy of spies.reverse()) spy.mockRestore(); for (const key of ["send", "connected"] as const) { const d = ipc[key]; if (d) Object.defineProperty(process, key, d); else Reflect.deleteProperty(process, key) }; fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(45000) }
+  }, 45000)
   const partialV2Snapshot = (routeNamespace: continuationLedger.LeanBaselineContinuationWindowV2["routeNamespace"] = "20261012-v3") => {
     const old = fixture(), { allocation, request } = v2Allocation(routeNamespace), slot = allocation.slots[0]!, oldPair = old.pairs[0]!, sources = [buildLeanBaselineSource({ role: "cold-opponent", source: emitTacticalSource(), coldRoot: allocation.coldRoot, implementationRoot: allocation.sourceRoot }), buildLeanBaselineSource({ role: "tactical-0", source: emitTacticalSource(), coldRoot: allocation.coldRoot, implementationRoot: allocation.sourceRoot })], sourceByRole = new Map(sources.map(source => [source.role, source]))
     const pairBody = { ...oldPair, slotRoot: slot.root, requestRoot: slot.requestRoot, topSourceRoot: sourceByRole.get(oldPair.topRole)!.sourceRoot, topSnapshotRoot: sourceByRole.get(oldPair.topRole)!.root, bottomSourceRoot: sourceByRole.get(oldPair.bottomRole)!.sourceRoot, bottomSnapshotRoot: sourceByRole.get(oldPair.bottomRole)!.root, priorLedgerBytesRoot: leanBytesRoot(new Uint8Array()), priorLedgerByteLength: 0, priorCharged: 50 }
