@@ -223,13 +223,13 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     const old = continuationFixtureBase().allocation
     const policy = continuationLedger.LEAN_BASELINE_CONTINUATION_POLICY_V2
     const anchorMs = policy.globalAnchorMs, carryMs = Math.max(policy.oldCheckElapsedMs, continuationLedger.leanContinuationGlobalFloorV2(anchorMs))
-    const syntheticA = routeNamespace === "20261017-v11" ? 1792242843861 : (routeNamespace === "20261017-v10" ? 1792241199000 : routeNamespace === "20261017-v9" ? 1792198286000 : routeNamespace === "20261015-v8" ? 1792093334000 : 1792017187000) + 12345, syntheticCarry = 459375903 + (syntheticA - 1791807317000)
+    const syntheticA = routeNamespace === "20261017-v11" || routeNamespace === "20261017-v12" ? 1792242843861 : (routeNamespace === "20261017-v10" ? 1792241199000 : routeNamespace === "20261017-v9" ? 1792198286000 : routeNamespace === "20261015-v8" ? 1792093334000 : 1792017187000) + 12345, syntheticCarry = routeNamespace === "20261017-v11" || routeNamespace === "20261017-v12" ? 894902764 : 459375903 + (syntheticA - 1791807317000)
     const windowBody = {
       schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const,
-      grantId: "synthetic-no-authority", approvalEvidence: { humanDecisionId: (routeNamespace === "20261017-v10" || routeNamespace === "20261017-v11") ? "human-approval-observed-20261017T124639Z" : routeNamespace === "20261017-v9" ? "human-approval-observed-20261017T005126Z" : routeNamespace === "20261015-v8" ? "human-approval-observed-20261015T194214Z" : routeNamespace === "20261014-v7" ? "human-approval-observed-20261014T223307Z" : "synthetic-only", recordedBy: "/root/cowards-game/reviewers/human" },
+      grantId: "synthetic-no-authority", approvalEvidence: { humanDecisionId: (routeNamespace === "20261017-v10" || routeNamespace === "20261017-v11" || routeNamespace === "20261017-v12") ? "human-approval-observed-20261017T124639Z" : routeNamespace === "20261017-v9" ? "human-approval-observed-20261017T005126Z" : routeNamespace === "20261015-v8" ? "human-approval-observed-20261015T194214Z" : routeNamespace === "20261014-v7" ? "human-approval-observed-20261014T223307Z" : "synthetic-only", recordedBy: "/root/cowards-game/reviewers/human" },
       approvedAtMs: anchorMs, anchorMs, deadlineMs: anchorMs + policy.durationMs, carryMs, capMs: carryMs + policy.durationMs,
       durationMs: policy.durationMs, closureMs: policy.closureMs, offlineOverheadMs: policy.offlineOverheadMs,
-      routeNamespace, ...(routeNamespace === "20261014-v6" ? { approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 } : routeNamespace === "20261014-v7" || routeNamespace === "20261015-v8" || routeNamespace === "20261017-v9" || (routeNamespace === "20261017-v10" || routeNamespace === "20261017-v11") ? { approvedAtMs: (routeNamespace === "20261017-v10" || routeNamespace === "20261017-v11") ? 1792241199000 : routeNamespace === "20261017-v9" ? 1792198286000 : routeNamespace === "20261015-v8" ? 1792093334000 : 1792017187000, anchorMs: syntheticA, carryMs: syntheticCarry, capMs: syntheticCarry + 28800000, deadlineMs: syntheticA + 28800000 } : {}), reviewedSourceHead: "c".repeat(40), sourceRoot: old.sourceRoot,
+      routeNamespace, ...(routeNamespace === "20261014-v6" ? { approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 } : routeNamespace === "20261014-v7" || routeNamespace === "20261015-v8" || routeNamespace === "20261017-v9" || routeNamespace === "20261017-v10" || routeNamespace === "20261017-v11" || routeNamespace === "20261017-v12" ? { approvedAtMs: routeNamespace === "20261017-v10" || routeNamespace === "20261017-v11" || routeNamespace === "20261017-v12" ? 1792241199000 : routeNamespace === "20261017-v9" ? 1792198286000 : routeNamespace === "20261015-v8" ? 1792093334000 : 1792017187000, anchorMs: syntheticA, carryMs: syntheticCarry, capMs: syntheticCarry + 28800000, deadlineMs: syntheticA + 28800000 } : {}), reviewedSourceHead: "c".repeat(40), sourceRoot: old.sourceRoot,
       sourceGateRoot: root("source-gate"), planRoot: old.planRoot, runOperator: "/root/cowards-game/operators/runner", readerOperator: "/root/cowards-game/operators/retained-reader",
     }
     const window = { ...windowBody, root: labRoot(windowBody.schemaVersion, windowBody) }
@@ -282,6 +282,27 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       for (const name of ["reader-claim.json", "retained-check.json", "time.ndjson", "ledger.ndjson"]) expect(fs.existsSync(resolve(p.store, name))).toBe(false)
     } finally { for (const spy of spies.reverse()) spy.mockRestore(); for (const key of ["send", "connected"] as const) { const d = ipc[key]; if (d) Object.defineProperty(process, key, d); else Reflect.deleteProperty(process, key) }; fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(45000) }
   }, 45000)
+  it("[continuation-route-v12] rejects a missing result before context opening or one-use effects", () => {
+    const { allocation } = v2Allocation("20261017-v12"), p = continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V12
+    const dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "public-v12-result-precheck-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), stages: string[] = []
+    const ipc = { send: Object.getOwnPropertyDescriptor(process, "send"), connected: Object.getOwnPropertyDescriptor(process, "connected") }
+    Object.defineProperty(process, "send", { value: undefined, configurable: true }); Object.defineProperty(process, "connected", { value: false, configurable: true })
+    try {
+      fs.mkdirSync(resolve(p.store), { recursive: true, mode: 0o700 })
+      const clock = vi.spyOn(Date, "now").mockReturnValue(allocation.window.anchorMs + 1)
+      const window = vi.spyOn(continuationEntry, "readLeanBaselineContinuationWindowV2").mockReturnValue(allocation.window)
+      const scope = vi.spyOn(continuationEntry, "assertLeanBaselineContinuationScopeV2").mockImplementation(() => {})
+      const opened = vi.spyOn(continuationEntry, "openLeanBaselineContinuationContextV2").mockImplementation(() => { throw new Error("IMPORT_MUST_NOT_RUN") })
+      try {
+        expect(() => continuationReader.verifyLeanBaselineContinuationRetainedV2(p.request, stage => stages.push(stage))).toThrow()
+        expect(stages).toEqual(["INITIAL_WINDOW"])
+        expect(opened).not.toHaveBeenCalled()
+        expect(scope).toHaveBeenCalledOnce()
+        for (const name of ["reader-claim.json", "retained-check.json", "time.ndjson", "ledger.ndjson"]) expect(fs.existsSync(resolve(p.store, name))).toBe(false)
+        expect(fs.readdirSync(resolve(p.store))).toEqual([])
+      } finally { opened.mockRestore(); scope.mockRestore(); window.mockRestore(); clock.mockRestore() }
+    } finally { cwd.mockRestore(); for (const key of ["send", "connected"] as const) { const d = ipc[key]; if (d) Object.defineProperty(process, key, d); else Reflect.deleteProperty(process, key) }; fs.rmSync(dir, { recursive: true }) }
+  })
   const partialV2Snapshot = (routeNamespace: continuationLedger.LeanBaselineContinuationWindowV2["routeNamespace"] = "20261012-v3") => {
     const old = fixture(), { allocation, request } = v2Allocation(routeNamespace), slot = allocation.slots[0]!, oldPair = old.pairs[0]!, sources = [buildLeanBaselineSource({ role: "cold-opponent", source: emitTacticalSource(), coldRoot: allocation.coldRoot, implementationRoot: allocation.sourceRoot }), buildLeanBaselineSource({ role: "tactical-0", source: emitTacticalSource(), coldRoot: allocation.coldRoot, implementationRoot: allocation.sourceRoot })], sourceByRole = new Map(sources.map(source => [source.role, source]))
     const pairBody = { ...oldPair, slotRoot: slot.root, requestRoot: slot.requestRoot, topSourceRoot: sourceByRole.get(oldPair.topRole)!.sourceRoot, topSnapshotRoot: sourceByRole.get(oldPair.topRole)!.root, bottomSourceRoot: sourceByRole.get(oldPair.bottomRole)!.sourceRoot, bottomSnapshotRoot: sourceByRole.get(oldPair.bottomRole)!.root, priorLedgerBytesRoot: leanBytesRoot(new Uint8Array()), priorLedgerByteLength: 0, priorCharged: 50 }

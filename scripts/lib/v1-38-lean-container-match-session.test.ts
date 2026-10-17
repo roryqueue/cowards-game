@@ -18,8 +18,23 @@ import { defaultRuntimeMetadata, RUNTIME_INVOCATION_V1_17_TEST_KEY_ID, createSel
 import { encodeCandidateHostEnvelopeV117 } from "../../packages/runtime-js/src/candidate-host-envelope.js"
 import { encodeSubprocessIpcRequest } from "../../packages/runtime-js/src/subprocess-ipc.js"
 import { registerCandidateEvidenceFixture } from "../../packages/runtime-js/src/candidate-evidence-fixture.js"
-import { leanBytesRoot, LEAN_STARTUP_POLICY_V5 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { leanBytesRoot, LEAN_STARTUP_POLICY_V5, LEAN_BASELINE_CONTINUATION_PATHS_V11, LEAN_BASELINE_CONTINUATION_PATHS_V12, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationWindowV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { readLeanBaselineContinuationGitV2 } from "./v1-38-lean-container-match-session.js"
 const LEAN_CONTAINER_IMAGE = LAB_ADMITTED_ROOTS.image
+it("[continuation-route-v12] blocks a manifest-listed V12 allocation when another route is selected", () => {
+  const path = LEAN_BASELINE_CONTINUATION_PATHS_V12.allocation, allocationRoot = `sha256:${"a".repeat(64)}` as const
+  const anchorMs = 1792242843861, carryMs = 894902764, body = {
+    schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const,
+    grantId: "synthetic-v11-route-binding", approvalEvidence: { humanDecisionId: "human-approval-observed-20261017T124639Z", recordedBy: "/root" },
+    approvedAtMs: 1792241199000, anchorMs, deadlineMs: 1792271643861, carryMs, capMs: 923702764,
+    durationMs: LEAN_BASELINE_CONTINUATION_POLICY_V2.durationMs, closureMs: LEAN_BASELINE_CONTINUATION_POLICY_V2.closureMs,
+    offlineOverheadMs: LEAN_BASELINE_CONTINUATION_POLICY_V2.offlineOverheadMs, routeNamespace: "20261017-v11" as const,
+    reviewedSourceHead: "a".repeat(40), sourceRoot: allocationRoot, sourceGateRoot: allocationRoot, planRoot: allocationRoot,
+    runOperator: "/root/operator", readerOperator: "/root/reader",
+  }
+  const window = validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })
+  expect(() => readLeanBaselineContinuationGitV2(["show", `${"b".repeat(40)}:${path}`], [{ path, root: allocationRoot }], window)).toThrow("LEAN_BASELINE_CONTINUATION_GIT_V2_METADATA")
+})
 it("private probe session rejects injected transport before consuming a claim", () => {
   for (const key of ["dockerPath", "cleanupTimeoutMilliseconds"]) {
     const inherited = Object.create({ [key]: undefined }); inherited.privateProbeAuthority = {}; inherited.privateProbeBinding = {}
