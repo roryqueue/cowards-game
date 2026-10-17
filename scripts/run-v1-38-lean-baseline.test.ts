@@ -2107,7 +2107,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
 // Actual prospective attempt passed: 27059ms including cleanup, 1414512 bytes,
 // 18043 resource samples. Real interval/claim/evidence-result/closed failure
 // publication observed; actual/clone/deserialized private acceptance all false.
-it("internal-observations-C actual CLI default importer claims before missing result and resource-checked cleanup", () => withInternalObservationTree(true, async f => {
+it.each([{ namespace: "20261015-v8" as const, name: "internal-observations-C" }, { namespace: "20261017-v9" as const, name: "continuation-route-v9-C" }])("$name actual CLI default importer claims before missing result and resource-checked cleanup", ({ namespace }) => withInternalObservationTree(true, async f => {
   const { D, L, R, p, ledger, resource, read } = f
   const stages: string[] = [], reader = (R as typeof import("./lib/v1-38-lean-baseline-retained.js")).verifyLeanBaselineContinuationRetainedV2
   f.restored.push(vi.spyOn(R as typeof import("./lib/v1-38-lean-baseline-retained.js"), "verifyLeanBaselineContinuationRetainedV2").mockImplementation((request, observe) => reader(request, s => { stages.push(s); f.note(s); observe?.(s) })).mockRestore)
@@ -2126,7 +2126,7 @@ it("internal-observations-C actual CLI default importer claims before missing re
   process.stdout.write(`INTERNAL_OBSERVATIONS_C_NONACCEPTANCE ${JSON.stringify({ disposition: actual.disposition, failure: actual.failure, acceptedObject: R.isLeanContinuationAcceptedPrivateCheckV6(actual), acceptedClone: R.isLeanContinuationAcceptedPrivateCheckV6(structuredClone(actual)), acceptedDeserialized: R.isLeanContinuationAcceptedPrivateCheckV6(JSON.parse(JSON.stringify(actual))) })}\n`)
   expect(resource.calls).toBeGreaterThan(10)
   expect(failure).toBeUndefined()
-}), 60000)
+}, namespace), 60000)
 // CENSORED, not coverage: latest connected attempt never verified fork/entry.
 // Same catalog/inventory sizes as C; 7575 actual resource samples, 1411664 bytes,
 // 10012ms including cleanup. The ONE prospective OBS3-HARNESS-45000 admission

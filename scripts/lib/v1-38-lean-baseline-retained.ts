@@ -32,7 +32,7 @@ import type { LeanResponseNodeReceipt, LeanResponseWork } from "../../packages/s
 import * as parentReaderContract from "../run-v1-38-lean-baseline.js"
 import { measureLeanPhysicalBytes } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { observeLeagueAvailableMemoryBytes } from "../run-v1-38-serious-league.js"
-import { LEAN_BASELINE_CONTINUATION_PATHS_V6, LEAN_BASELINE_CONTINUATION_PATHS_V7, LEAN_BASELINE_CONTINUATION_PATHS_V8, readLeanAdmittedContinuationAllocationV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V6, LEAN_BASELINE_CONTINUATION_PATHS_V7, LEAN_BASELINE_CONTINUATION_PATHS_V8, LEAN_BASELINE_CONTINUATION_PATHS_V9, readLeanAdmittedContinuationAllocationV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAN_BASELINE_RETAINED_${code}`) }
 /** Strict v12 custody join, shared by ordinary and terminal-only readers.
@@ -719,7 +719,7 @@ export const verifyLeanBaselineContinuationRetainedV2 = (requestPath: string, ob
   const admissionNow = Date.now()
   if (approvedWindow.status !== "approved" || admissionNow < approvedWindow.anchorMs || admissionNow >= approvedWindow.deadlineMs ||
       leanContinuationGlobalFloorV2(admissionNow) > approvedWindow.capMs) return fail("V2_READER_WINDOW")
-  const v8 = paths === LEAN_BASELINE_CONTINUATION_PATHS_V8
+  const v8 = (paths === LEAN_BASELINE_CONTINUATION_PATHS_V8 || paths === LEAN_BASELINE_CONTINUATION_PATHS_V9)
   stage("CONTEXT_OPEN")
   const freshOpening = v8 ? openLeanBaselineContinuationContextV2(requestPath, true, () => stage("IMPORT")) : undefined
   stage("IMPORT")
@@ -732,7 +732,7 @@ export const verifyLeanBaselineContinuationRetainedV2 = (requestPath: string, ob
   if (!before.closed.has("pilot-entry") || pilotCloseMs === undefined || admissionNow + remainingClosureMs > approvedWindow.deadlineMs ||
       leanContinuationGlobalFloorV2(admissionNow) + remainingClosureMs > approvedWindow.capMs || currentLeanElapsedMs(ledger) + remainingClosureMs > allocation.caps.elapsedMs) return fail("V2_READER_WINDOW")
   readLeanChildTerminal(ledger)
-  const v6 = (paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || paths === LEAN_BASELINE_CONTINUATION_PATHS_V7 || paths === LEAN_BASELINE_CONTINUATION_PATHS_V8)
+  const v6 = (paths === LEAN_BASELINE_CONTINUATION_PATHS_V6 || paths === LEAN_BASELINE_CONTINUATION_PATHS_V7 || (paths === LEAN_BASELINE_CONTINUATION_PATHS_V8 || paths === LEAN_BASELINE_CONTINUATION_PATHS_V9))
   // A V6/V7 reader owns a new independently authenticated invocation. Never import
   // a parent's controller or mutate a one-use journal before this opening.
   const opening = freshOpening ?? (v6 ? openLeanBaselineContinuationContextV2(requestPath, true, () => stage("IMPORT")) : undefined)
@@ -872,7 +872,7 @@ export const publishLeanContinuationRetainedCheck = (ledger: LeanExperimentLedge
  * directory growth rather than opening or enumerating historical contents. */
 const continuationReaderFailurePublicationGuardV6 = (ledger: LeanExperimentLedger, additional: number): void => {
   const allocation = readLeanAdmittedContinuationAllocationV2(ledger), paths = leanBaselineContinuationPathsForWindowV2(allocation.window)
-  if ((paths !== LEAN_BASELINE_CONTINUATION_PATHS_V6 && paths !== LEAN_BASELINE_CONTINUATION_PATHS_V7 && paths !== LEAN_BASELINE_CONTINUATION_PATHS_V8) || !Number.isSafeInteger(additional) || additional < 0) return fail("V6_FAILURE_RESOURCE_SCOPE")
+  if ((paths !== LEAN_BASELINE_CONTINUATION_PATHS_V6 && paths !== LEAN_BASELINE_CONTINUATION_PATHS_V7 && (paths !== LEAN_BASELINE_CONTINUATION_PATHS_V8 && paths !== LEAN_BASELINE_CONTINUATION_PATHS_V9)) || !Number.isSafeInteger(additional) || additional < 0) return fail("V6_FAILURE_RESOURCE_SCOPE")
   let growth = 0
   const capacity = (reserved = 0) => {
     const usage = process.memoryUsage(), disk = statfsSync(ledger.directory, { bigint: true }), free = disk.bavail * disk.bsize, reserve = additional + reserved + 16777216
@@ -905,9 +905,9 @@ export const publishLeanContinuationRetainedCheckV2 = (
   publicationStage?: <T>(body: () => T) => T,
   failureGuard?: (additionalBytes?: number) => void,
 ) => {
-  const v6 = ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && (ledger.allocation.window.routeNamespace === "20261014-v6" || ledger.allocation.window.routeNamespace === "20261014-v7" || ledger.allocation.window.routeNamespace === "20261015-v8")
-  const failedV8 = ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && ledger.allocation.window.routeNamespace === "20261015-v8" && failure !== null
-  const boundaryV8 = ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && ledger.allocation.window.routeNamespace === "20261015-v8"
+  const v6 = ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && (ledger.allocation.window.routeNamespace === "20261014-v6" || ledger.allocation.window.routeNamespace === "20261014-v7" || (ledger.allocation.window.routeNamespace === "20261015-v8" || ledger.allocation.window.routeNamespace === "20261017-v9"))
+  const failedV8 = ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && (ledger.allocation.window.routeNamespace === "20261015-v8" || ledger.allocation.window.routeNamespace === "20261017-v9") && failure !== null
+  const boundaryV8 = ledger.allocation.schemaVersion === "lean-baseline-continuation-allocation-v2" && (ledger.allocation.window.routeNamespace === "20261015-v8" || ledger.allocation.window.routeNamespace === "20261017-v9")
   let sourceHoldFailure: string | null = null
   if (failedV8) sourceHoldFailure = "CONTINUATION_READER_FAILURE"
   else try { sourceGuard?.() } catch (error) { sourceHoldFailure = v6 ? "CONTINUATION_READER_FAILURE" : continuationReaderFailure(error); failure ??= sourceHoldFailure }

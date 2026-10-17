@@ -438,6 +438,27 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       expect(publish).not.toHaveBeenCalled()
     } finally { clock.mockRestore(); disk.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
   })
+  it.each(["safe", "resource-denial"] as const)("continuation-route-v9-retained failed publication uses independent resources, never accepted identity: %s", mode => {
+    const { allocation } = v2Allocation("20261017-v9"), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "v9-failed-publication-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    const disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), clock = vi.spyOn(Date, "now").mockReturnValue(allocation.window.anchorMs + 10), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000)
+    try {
+      const ledger = continuationLedger.createLeanLedger(join(dir, "store"), allocation)
+      fs.writeFileSync(join(ledger.directory, "carry.json"), leanCanonicalBytes({ inventory: [] }), { mode: 0o600 })
+      continuationLedger.beginLeanInterval(ledger, "continuation-retained-verifier-v2"); continuationLedger.closeLeanInterval(ledger, "continuation-retained-verifier-v2")
+      const admitted = continuationLedger.readLeanAdmittedContinuationAllocationV2(ledger)
+      const sourceGuard = vi.fn(() => { throw new Error("PRIVATE_INVALID_SOURCE") }), resource = vi.fn((bytes = 0) => continuationFiles.assertLeanBaselineContinuationFrontierV2(admitted, { nowMs: Date.now(), monotonicElapsedMs: 0, remainingSlots: 0, remainingClosureMs: 0, remainingOfflineMs: 0, charged: continuationLedger.readLeanLedger(ledger).charged, retainedBytes: continuationLedger.cumulativeLeanPhysicalBytes(ledger) + bytes, scratchBytes: bytes, parentRssBytes: process.memoryUsage().rss, childRssBytes: 0, arrayBuffersBytes: bytes, availableMemoryBytes: leagueHost.observeLeagueAvailableMemoryBytes(), freeBytes: 100000000000, live: true }, ledger))
+      if (mode === "resource-denial") usage.mockReturnValue({ ...process.memoryUsage(), rss: 4000000000 })
+      const invoke = () => continuationReader.publishLeanContinuationRetainedCheckV2(ledger, undefined, "CONTINUATION_READER_FAILURE", sourceGuard, undefined, undefined, resource)
+      if (mode === "resource-denial") { expect(invoke).toThrow(/TERMINAL_REFUSAL/); expect(fs.existsSync(join(ledger.directory, "retained-check.json"))).toBe(false) }
+      else {
+        const original = invoke(), bytes = fs.readFileSync(join(ledger.directory, "retained-check.json")), durable = JSON.parse(bytes.toString())
+        expect(original).toMatchObject({ disposition: "gaps_found", report: null, issued: false, sourceHoldFailure: "CONTINUATION_READER_FAILURE" })
+        for (const value of [original, structuredClone(original), durable, bytes, Object.freeze({ ...original }), {}]) expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(value)).toBe(false)
+        expect(JSON.stringify(original)).not.toContain("PRIVATE_INVALID_SOURCE")
+      }
+      expect(resource).toHaveBeenCalledWith(16 * 1024 * 1024); expect(sourceGuard).not.toHaveBeenCalled()
+    } finally { for (const spy of [clock, disk, usage, available]) spy.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
+  })
   it.each(["pass", "opening", "closing", "reader-denial", "failure-resource", "identity-pass", "identity-closing"] as const)("continuation-boundary-v8-R-identity real reader enrollment, ledger, descriptor/claim/terminal/publisher: %s (synthetic context; complete audit ONLY for identity modes; external resources/PID mocked)", mode => {
     const s = partialV2Snapshot("20261015-v8"), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "public-v8-ordinary-reader-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V8
     const clock = vi.spyOn(Date, "now").mockReturnValue(s.window.anchorMs + 1200), disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000), known = vi.spyOn(continuationFiles, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096)
