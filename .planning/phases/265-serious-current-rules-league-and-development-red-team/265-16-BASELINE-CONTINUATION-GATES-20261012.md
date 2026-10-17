@@ -2,6 +2,8 @@
 
 ## Reader/guard source correction — checked 2026-10-17
 
+Task4 separate /root/check_265_reader_guard check initially found a real plan gap: BOTH V8 observer constructors must return their result, including preflight, not just opened context. RESEARCH corrected generic forwarding and connected tests for both; same distinct checker re-read PASS/no remaining findings, all commands closed. Helper continuation.ts is the sole added source owner; root SIX-path strict baseline already includes it transitively. Every logical guard and full sample stays fresh; only duplicate back-to-back reservation with no intervening effect is removed. Current observed duplicate supplies a return value, so void-return deletion is expressly forbidden. Source execution/qualification still owed; no measured runtime speedup or empirical admission asserted.
+
 Distinct /root/check_265_reader_guard PASS/issues[], commands CLOSED/read-only: three serial source/test tasks in RESEARCH heading V11 reader and guard correction, incorporated by Plan16 final103B pointer (399973B below400000). Necessary-condition missing-result refusal preserves full successful/late verification; finite timer guard label preserves failed custody/no raw errors; deterministic overlap regressions do not repair or weaken races. No namespace/run/Match/new allowance. ROOT scoped SIX-path strict prebaseline19248/f5ec26 CLOSED2: six inherited diagnostics in feasibility-protocol.ts52 and planner/missions.ts52/60/66/68/69; full output retained for exact final comparison. This is not the prior SAME15 scope or compiler-global green. Source execution/review/fix/validation/distinct verification remain owed; every empirical requirement stays pending.
 
 ## V11 actual terminal and retained closure — 2026-10-17
