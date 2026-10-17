@@ -5,7 +5,7 @@ import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import * as lean from "../packages/strategy-lab/src/league/lean-experiment.js"
 import * as parent from "./run-v1-38-lean-baseline.js"
 
-type Mode = "clean" | "queued-exit-rss" | "observed-exit-rss" | "live-rss" | "parent-rss" | "accounting" | "reserve" | "threshold-kill"
+type Mode = "clean" | "queued-exit-rss" | "observed-exit-rss" | "live-rss" | "parent-rss" | "accounting" | "reserve" | "threshold-kill" | "guard"
 const host = vi.hoisted(() => ({ child: null as any, allocation: null as any, entry: null as any, terminal: null as any, files: new Map<string, Uint8Array>(), order: [] as string[], mode: "clean" as Mode, samples: 0, elapsed: 0, thrown: false, gone: false }))
 const syntheticError = () => new Error("SYNTHETIC_PRIVATE_SENTINEL")
 
@@ -58,12 +58,17 @@ const retestAllocation = () => {
   const p = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 35, elapsedUpperBoundMs: extension.priorElapsedMs, allocatedDiskBytes: extension.physicalFloorBytes, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: Array.from({ length: 661 }, (_, n) => ({ identity: `.strategy-lab/synthetic-v12-not-created-${n}`, allocatedBytes: n === 0 ? extension.physicalFloorBytes : 0 })) }
   return lean.createLeanSupervisorCorrectionAllocation({ timeboxExtension: extension, sourceRoot: root("source"), reviewRoot: root("review"), coldRoot: root("cold"), planRoot: extension.planRoot, seed: "synthetic-v12", candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, n) => root(`v12-request-${n}`)), route: "baseline", reuseGrantRoot: root("reuse"), supervisorDecisionRoot: extension.approvalRoot, acceptedCheckRoot: root("check"), acceptedReaderCloseRoot: root("final"), requestBytesRoot: root("request"), dataReviewRoot: root("data"), setupAccountingRoot: root("setup"), startupPolicyRoot: lean.LEAN_STARTUP_POLICY_V5.root, attemptOrdinal: 1, priorClosureRoot: root("history-carry"), continuationRoot: root("continuation"), predecessor: { ...p, root: labRoot(p.schemaVersion, p) } }, 8)
 }
-const begin = async (mode: Mode, v12 = false, deadlineFixture = false) => {
+const continuationAllocation = () => {
+  const body = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "synthetic-unit-grant", approvalEvidence: { humanDecisionId: "synthetic-unit-decision", recordedBy: "synthetic-root" }, approvedAtMs: 1791820000000, anchorMs: 1791820000000, deadlineMs: 1791848800000, carryMs: 472058903, capMs: 500858903, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261012-v3" as const, reviewedSourceHead: "a".repeat(40), sourceRoot: root("source"), sourceGateRoot: root("source-gate"), planRoot: root("plan"), runOperator: "synthetic-runner", readerOperator: "synthetic-reader" }
+  const window = { ...body, root: labRoot(body.schemaVersion, body) }, carry = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: 465187899, allocatedDiskBytes: 88924160, residualDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: root("carry"), closedCapsuleRoot: root("capsule"), custodyRoot: root("custody"), inventoryRoot: root("inventory"), qualifiedReaderAuthority: "cost_only" as const }
+  return lean.createLeanBaselineContinuationAllocationV2({ sourceRoot: root("source"), reviewRoot: root("review"), coldRoot: root("cold"), planRoot: root("plan"), candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, n) => root(`request-${n}`)), seed: "inert-continuation-v2", sourceHead: "b".repeat(40), planningRoot: root("planning"), manifestRoot: root("manifest"), requestBytesRoot: root("request"), window, windowBytesRoot: lean.leanBytesRoot(lean.leanCanonicalBytes(window)), sourceGateRoot: window.sourceGateRoot, dataReviewRoot: root("data-review"), predecessor: { ...carry, root: labRoot(carry.schemaVersion, carry) } })
+}
+const begin = async (mode: Mode, v12 = false, deadlineFixture = false, continuation = false) => {
   vi.useFakeTimers()
   const timers = deadlineFixture ? vi.spyOn(globalThis, "setTimeout") : null
   const input = { seed: "synthetic-parent", sourceRoot: root("source"), planRoot: root("plan"), coldRoot: root("cold") }
   const predecessor = { schemaVersion: "lean-correction-predecessor-v1" as const, chargedMatches: 11, elapsedUpperBoundMs: 3_319_046, allocatedDiskBytes: 0, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, historyRoot: root("history"), survivors: [{ identity: ".strategy-lab/synthetic-not-created", allocatedBytes: 0 }] }
-  const allocation = v12 ? retestAllocation() : mode === "reserve" ? retryAllocation() : lean.createLeanCorrectionAllocation({ ...input, reviewRoot: root("review"), candidateRoots: parent.deriveLeanBaselineCandidateRoots(input.coldRoot), requestRoots: parent.deriveLeanBaselineRequestRoots(input), route: "baseline", reuseGrantRoot: root("reuse"), diagnosisRoot: root("diagnosis"), predecessor: { ...predecessor, root: labRoot(predecessor.schemaVersion, predecessor) } })
+  const allocation = continuation ? continuationAllocation() : v12 ? retestAllocation() : mode === "reserve" ? retryAllocation() : lean.createLeanCorrectionAllocation({ ...input, reviewRoot: root("review"), candidateRoots: parent.deriveLeanBaselineCandidateRoots(input.coldRoot), requestRoots: parent.deriveLeanBaselineRequestRoots(input), route: "baseline", reuseGrantRoot: root("reuse"), diagnosisRoot: root("diagnosis"), predecessor: { ...predecessor, root: labRoot(predecessor.schemaVersion, predecessor) } })
   Object.assign(host, { allocation, entry: null, terminal: null, files: new Map(), order: [], mode, samples: 0, elapsed: mode === "reserve" ? 60_000_000 : 0, thrown: false, gone: false })
   const child = Object.assign(new EventEmitter(), { pid: process.pid + 1000, exitCode: null as number | null, signalCode: null as string | null, kills: [] as string[], send: () => true,
     kill(signal: string) {
@@ -76,9 +81,9 @@ const begin = async (mode: Mode, v12 = false, deadlineFixture = false) => {
   vi.spyOn(process, "memoryUsage").mockImplementation(() => {
     host.order.push("parent_rss")
     if (mode === "parent-rss" && host.samples > 1 && !host.thrown) { host.thrown = true; throw syntheticError() }
-    return { rss: mode === "threshold-kill" && host.samples > 1 ? lean.LEAN_CAPS.scratchBytes : 10_000_000, heapTotal: 0, heapUsed: 0, external: 0, arrayBuffers: 0 }
+    return { rss: mode === "threshold-kill" && host.samples > 1 ? lean.leanMemoryLimitForAllocation(allocation) : 10_000_000, heapTotal: 0, heapUsed: 0, external: 0, arrayBuffers: 0 }
   })
-  const settled = parent.runLeanBoundedParent({ ledger: { allocation } as lean.LeanExperimentLedger, store: "/synthetic-no-store", requestPath: "/synthetic/request.json", allocationPath: "/synthetic/allocation.json", sourceRoot: root("source"), manifestRoot: () => root("source"), childMode: "synthetic-never-forked", ...(v12 ? {} : { supervisorObservation: true as const }) }).then(value => ({ value, rejected: false }), () => ({ value: null, rejected: true }))
+  const settled = parent.runLeanBoundedParent({ ledger: { allocation } as lean.LeanExperimentLedger, store: "/synthetic-no-store", requestPath: "/synthetic/request.json", allocationPath: "/synthetic/allocation.json", sourceRoot: root("source"), manifestRoot: () => root("source"), childMode: "synthetic-never-forked", ...(v12 ? {} : { supervisorObservation: true as const }), ...(continuation ? { beforeRelease: () => { host.order.push("guard"); if (mode === "guard" && host.entry) throw syntheticError() } } : {}) }).then(value => ({ value, rejected: false }), () => ({ value: null, rejected: true }))
   child.emit("message", { ready: child.pid })
   await Promise.resolve(); await Promise.resolve()
   expect(host.entry).not.toBeNull()
@@ -103,6 +108,19 @@ const failure = async (mode: Exclude<Mode, "clean">) => {
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers() })
 
 describe("current synthetic supervisor failure mechanism", () => {
+  it.each(["guard", "live-rss", "parent-rss", "accounting", "threshold-kill", "clean"] as const)("continuation-guard-operation-v11 labels only timer beforeRelease throw: %s", async mode => {
+    const run = await begin(mode, false, false, true)
+    await vi.advanceTimersByTimeAsync(250); exit()
+    expect((await run.settled).rejected).toBe(mode !== "clean")
+    expect(host.terminal.status).toBe(mode === "clean" ? "child_exited" : "child_failed")
+    const retained = reason()
+    expect(retained.reasons.includes("continuation_guard_exception" as never)).toBe(mode === "guard")
+    expect(retained.reasons.includes("resource_sampling_exception")).toBe(mode !== "clean")
+    expect(retained.observations.initiatingCause).toBe("unknown")
+    expect(host.child.kills).toEqual(mode === "clean" ? [] : mode === "threshold-kill" ? ["SIGKILL", "SIGKILL"] : ["SIGKILL"])
+    const bytes = host.files.get(parent.LEAN_SUPERVISOR_REASON_FILE)!
+    expect(bytes.byteLength).toBeLessThanOrEqual(4096); expect(Buffer.from(bytes).toString()).not.toContain("SYNTHETIC_PRIVATE_SENTINEL")
+  }, 45000)
   it("clean control remains pending independent verification, not accepted", async () => {
     const run = await begin("clean"); await vi.advanceTimersByTimeAsync(250); exit()
     expect((await run.settled).value).toMatchObject({ issued: false, status: "child_exited_pending_independent_verification" })

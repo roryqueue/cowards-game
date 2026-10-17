@@ -425,12 +425,20 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     expect((snapshot.result.resourceReceipts as any[]).map(row => [row.ordinal, row.chargeRoot, row.before.charged, row.after.charged, row.before.remainingSlots, row.after.remainingSlots])).toEqual(Array.from({ length: 36 }, (_, ordinal) => [ordinal, snapshot.evidence.records[ordinal]?.chargeRoot, 50 + ordinal, 51 + ordinal, 36 - ordinal, 35 - ordinal]))
     expect(continuationReader.auditLeanBaselineContinuationRetainedV2(snapshot)).toMatchObject({ count: { cumulative: 86, current: 36, unused: 0, complete: true } })
   }, 30000)
-  it("[continuation-v2] accepts only an authentic legacy parent envelope joined to the exact reader terminal", () => {
+  it("[continuation-v2] continuation-guard-operation-v11 accepts legacy bytes and finite guard reason only with sampling failure", () => {
     const actual = { allocationRoot: root("allocation"), sourceRoot: root("source"), requestBytesRoot: root("request"), entryBytesRoot: root("entry"), head: "a".repeat(40), parentPid: 100, childPid: 101, exitCode: 0, signal: null, status: "child_exited" as const }
     const body = { schemaVersion: "lean-parent-supervisor-reasons-v1" as const, allocationRoot: actual.allocationRoot, sourceRoot: actual.sourceRoot, requestBytesRoot: actual.requestBytesRoot, entryBytesRoot: actual.entryBytesRoot, head: actual.head, parentPid: actual.parentPid, childPid: actual.childPid, exitCode: 0, signal: null, uncertain: false, reasons: [], observations: { entry: "published" as const, childReady: "observed" as const, resourceSampling: "observed" as const, finalIdentity: "matched" as const, failureReceipt: "absent" as const, cleanup: "child_exit_observed" as const, terminalization: "unobserved" as const, initiatingCause: "unknown" as const } }
     const bytes = leanCanonicalBytes({ ...body, root: labRoot(body.schemaVersion, body) })
     expect(continuationReader.assertLeanContinuationSupervisorCustodyV2(bytes, actual)).toMatchObject({ schemaVersion: "lean-parent-supervisor-reasons-v1" })
     expect(continuationReader.assertLeanContinuationSupervisorCustodyV1ForV2(bytes, actual)).toMatchObject({ schemaVersion: "lean-parent-supervisor-reasons-v1" })
+    const failed = { ...body, uncertain: true, reasons: ["resource_sampling_exception", "continuation_guard_exception"], observations: { ...body.observations, resourceSampling: "exception" } }
+    const failedBytes = leanCanonicalBytes({ ...failed, root: labRoot(failed.schemaVersion, failed) })
+    expect(continuationReader.assertLeanContinuationSupervisorCustodyV1ForV2(failedBytes, { ...actual, status: "child_failed" })).toMatchObject({ reasons: failed.reasons })
+    for (const reasons of [["continuation_guard_exception"], ["continuation_guard_exception", "resource_sampling_exception"], ["resource_sampling_exception", "continuation_guard_exception", "continuation_guard_exception"], ["resource_sampling_exception", "SYNTHETIC_PRIVATE_SENTINEL"]]) {
+      const bad = { ...failed, reasons }
+      expect(() => continuationEntry.validateLeanSupervisorReasonBytes(leanCanonicalBytes({ ...bad, root: labRoot(bad.schemaVersion, bad) }))).toThrow()
+    }
+    expect(() => continuationEntry.validateLeanSupervisorReasonBytes(Buffer.concat([Buffer.from(failedBytes), Buffer.from("\n")]))).toThrow()
     expect(() => continuationReader.assertLeanContinuationSupervisorCustodyV2(bytes, { ...actual, head: "b".repeat(40) })).toThrow(/SUPERVISOR_CUSTODY_V2/)
     const { root: _root, ...v2Body } = { ...body, schemaVersion: "lean-parent-supervisor-reasons-v2", root: "placeholder" }
     expect(() => continuationReader.assertLeanContinuationSupervisorCustodyV1ForV2(leanCanonicalBytes({ ...v2Body, root: labRoot(v2Body.schemaVersion, v2Body) }), actual)).toThrow()
