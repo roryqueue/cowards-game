@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Fresh eight-hour private remaining-baseline window APPROVED; checked distinct prospective V9 route setup next
+stopped_at: Prospective V9 research/plan and independent finite metadata check PASSED; three serial source tasks next before experiment initialization
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
 last_activity_desc: Human approved fresh eight-hour private baseline window under unchanged limits; prospective route research and checked setup in progress
@@ -26,6 +26,8 @@ total_plans_in_phase: 16
 Latest direct human `approved` accepts ROOT's exact fresh **ONE eight-hour private experiment window**, same15GB and every other bound, after verified source closure and checked distinct prospective route setup. First ROOT clock observation **2026-10-17T00:51:26UTC** is approval observation T, not yet the experiment anchor A. Existing refactor/source-coverage cycle is CLOSED VERIFIED and will not be reopened. Prior V8 route/window/all artifacts remain spent/expired/immutable; this approval creates no retrospective retry/refund/recredit. Standing same-scope route consent means no repeated exact literal. No arbitrary new source-work expiry is inferred.
 
 Next: existing Plan16 narrow research→checked prospective V9 route binding, preserving V8 startup/diagnostics/guards and all default legacy behavior, new immutable route destinations only; independently review/fix/qualify/validate/verify any necessary route-source delta. Only after actual source closures, ROOT records SOURCE and observes actual A>=T for the ONE eight-hour window, all intervening costs continuously carried. Independent actual DATA review/final request/allocation-only direct-child commit precede unique ROOT run; fresh passing SAME-PROCESS whole36 capacity mandatory before charge/provider. One actual retained verifier only with actual head/entry; otherwise bounded terminal-only closure. No old receipt or role/body copied as new authority.
+
+Prospective route setup progressed: typed research and existing Plan16 V9 amendment CLOSED; independent `/root/check_265_v9_route` plan PASS/issues[] plus actual finite metadata comparison chunk91a8a9 CLOSED0 at01:03:49.542–.568UTC:15files/2dirs/3absences/1,157,120B hashed/1,196,032allocated FILE bytes, raw tuples/member facts exactly matched ROOT's observation. V9 file basis91,287,552B; V8 basis90,091,520B unchanged. No private contents parsed/published or history promoted. Current plan389,042B remains below existing400,000B maximum; no source-size limit change. ROOT fresh SAME15 strict45598/chunk5acc4e CLOSED2:13inherited/7051B pre-edit baseline retained; new diagnostics must be fixed, never called global green. Serial execution V9-1→2→3 in the existing source/test owners is next; source-only gates precede actual A. Main owns STATE/GATES; executor no new SUMMARY or phase-completion write.
 
 Same36remaining preholdout cells/fourunopened/global300/15GB/3GB/guest1000/startup2500/host5000/Match600000 and all game/runtime/privacy rules. No formation until serious current-rules league/evaluation/freeze, holdout unopened/no public/counting/production. No actual A/window/namespace/request/allocation/preparation/capacity/Match created by this documentation. All prior current sections below are historical except their preserved source proof/bounds.
 

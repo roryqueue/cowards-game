@@ -8,6 +8,27 @@ depends_on: [265-15]
 autonomous: true
 requirements: [LEAG-01, LEAG-02, LEAG-03, LEAG-04, LEAG-05, LEAG-07]
 requirements_completed: []
+must_haves:
+  truths:
+    - "V9 source-only scope: exact 20261017-v9 selectors preserve V3-V8 defaults and select verified V8 lifecycle behavior, never authority by path alone."
+    - "V9 source-only scope: independently checked opaque V8 survivor costs are preserved exactly once; all prior charges and elapsed costs remain spent."
+    - "V9 source-only scope: real startup, current-source/resource guards and retained private identity reject connected failure cases without granting empirical acceptance."
+  artifacts:
+    - path: packages/strategy-lab/src/league/lean-experiment.ts
+      provides: Exact finite V9 policy and path selection through existing V2 schemas
+    - path: scripts/lib/v1-38-lean-continuation-observations.ts
+      provides: Fixed deeply frozen cost-only spentV8 observations alongside unchanged older defaults
+    - path: scripts/run-v1-38-lean-baseline.ts
+      provides: V9 connectivity to existing complete-boundary and coordinated-startup implementations
+    - path: scripts/lib/v1-38-lean-baseline-retained.ts
+      provides: V9 fresh opening, spent claim, independent failure resources and exact private closure
+  key_links:
+    - from: packages/strategy-lab/src/league/lean-experiment.ts
+      to: scripts/lib/v1-38-lean-baseline-continuation.ts
+      via: Strict selected window and fixed observations feed actual importer, owned measurement and once-only carry
+    - from: scripts/run-v1-38-lean-baseline.ts
+      to: scripts/lib/v1-38-lean-baseline-retained.ts
+      via: Exact request/window/source joins connect real default opening and invocation-private publication
 files_modified:
   - packages/strategy-lab/src/league/lean-experiment.ts
   - scripts/lib/v1-38-lean-baseline-continuation.ts
@@ -24,11 +45,12 @@ files_modified:
   - scripts/lib/v1-38-lean-baseline-retained.test.ts
   - scripts/run-v1-38-lean-baseline.test.ts
   - scripts/lib/v1-38-lean-container-match-session.ts
+  - scripts/lib/v1-38-lean-continuation-observations.ts
 ---
 
 # Plan 265-16 supplement: fresh current-rules baseline continuation
 
-CURRENT SOURCE DIRECTIVE (2026-10-16): the final section **Approved 60-minute SOURCE-only startup/diagnostics repair** governs this repair. Earlier empirical continuation directives are historical, not permission for another route. No new window, request, allocation, preparation, ordinary reader, provider, Strategy or Match is authorized.
+CURRENT SOURCE DIRECTIVE (2026-10-17): the final **Approved distinct V9 route-only amendment** governs necessary prospective source setup. OBS-1–3 is CLOSED VERIFIED; do not reopen it. Fresh private-window approval is real, but actual A/window and empirical preparation remain gated by the final amendment's actual SOURCE→DATA sequence. Earlier route/window directives are historical, not reusable authority.
 
 ## Approved V5 DATA-only time amendment — 2026-10-13
 
@@ -1514,3 +1536,123 @@ Clarification for normal qualification: these are synthetic source tests, NOT em
 Actual final source10a49449/tracking1ebbceaf; independent code review/fixes clean, ROOT integrated qualification complete, State-A auditor2of2 original B/C source gaps FILLED, DISTINCT verifier3of3 source truths VERIFIED/0BLOCKER0WARNING. Existing GATES and VALIDATION contain exact caller-to-assertion mapping, actual40-case focused+B/C qualification, fullhelper147 (overlap), additional2HEAD-drift cases, inherited strict13 qualification and passed project/boundary checks. B/C fixtures COMPLETE25.698/27.042s and~1.414MB including cleanup under checked45s/8MiB test-only harness; earlier failures remain failed. All author/reviewer/auditor/verifier commands CLOSED/ownership RELEASED. Approved narrow refactor is fulfilled, no more time-only or source-gap approval checkpoint is inferred.
 
 This source dependency is complete, **not Plan16/Phase265/LEAG empirical completion**. Prior V8 route/window is spent/expired; latest source approval grants no new empirical window. Proposed one fresh eight-hour PRIVATE remaining-baseline resource allowance is a genuinely new pending human choice, not initialized/applied here. Same budgets/rules/privacy/cost carry; no exact literal or repeated review of unchanged source needed. No future route/path/window/request/allocation/provider/Strategy/Match, reset/refund, freeze/formation/holdout/public/counting/production authority follows from this closeout.
+
+## Approved distinct V9 route-only amendment — 2026-10-17
+
+<objective>
+Bind exactly `20261017-v9` to the already verified V8 behavior under the latest ONE fresh eight-hour private-window approval, per D-01/D-02/D-05/D-22/D-25/D-27/D-28/D-29. This is necessary source setup, not another observation refactor, V8 retry, empirical admission or league completion. Source10a49449 and its DISTINCT3/3 OBS closure stay CLOSED. Only this supplement is amended; no numbered plan, module, report, SUMMARY or workstream is created.
+</objective>
+
+### Fixed scope, clock and metadata prerequisite
+
+ROOT approval observation T=`2026-10-17T00:51:26UTC`/`1792198286000`, decision ID `human-approval-observed-20261017T005126Z`, is NOT initialization A. A is observed only after every necessary source gate actually closes, with A>=T. No new arbitrary SOURCE-work expiry or repeat authorization literal. F(t)=459375903+(t−1791807317000); carry=F(A), cap=F(A)+28800000, deadline=A+28800000. Preserve safe integers, backward-clock refusal, journal/monotonic floors and remaining-work admission. Entire36 reserve24060000ms implies latest inclusive entry A+4740000; setup/DATA/review/idle/run/reader all consume that same window and continuous costs.
+
+Unchanged bounds:36new preholdout cells (8initial training+4matrix+8response training+8response pairings+4probe+4repeat), four reserved/unopened, global300;15,000,000,000B total=12GBretained+2GBscratch+1GBterminal;3,000,000,000B RAM; guest1000/startup2500/host5000/Match600000ms; closure1860000/offline600000ms. Fifty prior charges remain spent; V8 added ZERO retained charges. No old charge, byte, failure, claim, result or elapsed cost is reset/refunded/recredited. D-29's boundary cadence remains; its former source cutoff and V8 window are historical, not renewed.
+
+Before V9-1 adopts real literals, the independent plan checker ALSO performs one bounded read-only metadata comparison against the final GATES TEXT block `root-v8-opaque-metadata-observation-v1` (ROOTa7abd5 CLOSED0,2026-10-17T00:57:30.732Z). Review exactly its15files/two directory sets/three absences, no recursion, carry parsing, private history or additional evidence. Use regular NOFOLLOW singlelink/current-owner/realpath descriptors, stable pre/post fd/path identity, exact bytes/blocks/mode/uid/raw SHA256/per-file maxima and sorted members; compare to the recorded facts, including store/temp0700, private0600/public allocation0644. Bound total reads16MiB and command15s; stop on unexpected member, mismatch or unavailable input rather than exploring. This is one input review alongside plan check, not an extra proof carrier or renewed V8 authority. ROOT records actual checker findings in existing GATES; no copied reviewer body.
+
+Recorded input:1,157,120B hashed/1,196,032 allocated FILE bytes,15present files; both directory allocated-byte observations were0. Conditional on that independent exact comparison, V9 known FILE lower bound=90091520+1196032=91287552; V8 remains90091520. Fresh directory bytes/growth and other disjoint costs remain separate, not a guessed total or invented future growth. All per-path raw roots/sizes/maxima/modes/member sets come EXACTLY from that GATES JSON; do not substitute old V7 tuples. SpentV8 is opaque COST/PRESERVATION ONLY, never a successful capsule, current SOURCE/DATA projection or accepted reader.
+
+### Exact finite interface and branch coverage
+
+Add frozen `LEAN_BASELINE_CONTINUATION_PATHS_V9` with request `.strategy-lab/lean-baseline-continuation-request-20261017-v9.json`, window `.strategy-lab/lean-baseline-continuation-window-20261017-v9.json`, allocation `.planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261017-v9.json`, store `.strategy-lab/lean-baseline-continuation-20261017-v9`, temp `.strategy-lab/lean-baseline-continuation-20261017-v9-tmp`, claim temp/`window-claim.json`, SAME existing GATES. These are source constants, not instructions to create paths. Existing V2 allocation/window/request schemas and V8 startup wire stay unchanged. The unrelated historical LEAN_REMAINING_V9_EXTENSION is not this route.
+
+Audit object comparisons AND literal namespace comparisons, positive AND negative branches. The five finite production route owners below plus fixed-data leaf are the entire production edit scope; existing authority/ledger/runtime modules are read-only unless ROOT first resolves a concrete scope conflict. Reuse existing V8 helpers, not global renames, duplicated V9 implementations or general admission for arbitrary V2 routes.
+
+| Finite owner / source anchors | V9 coverage obligation / task |
+|---|---|
+| Domain lean-experiment.ts834–877 | WindowV2 union/strict allowlist/delayed-A predicate; exact request/window resolvers and privately compiled selected policy; T/id/A>=T/F(A), all old tuples/defaults unchanged →V9-1 |
+| Continuation helper209–325/494–547 | retainV7 for V8 OR V9; retainV8 ONLY V9, propagate V6/V4/V5; mandatory opaque visits/member checks/V6 absence; selected-owned measurement, known-disjoint sampler and once-only debit →V9-1 |
+| Driver183/491–619/666/1003–1009/1207–1280 | prepare/run/verify selection; ADMITTED-ledger check; early ready/exit; fixed staging deadline; coordinated arm/ack/release; armed reserve-only polling; local reservation, negative preflight allowlist, exact window/context/HEAD joins →V9-2 |
+| Driver1350/1394/1432–1516/1544–1547/1572/1598/1609/1654 | preparation priorGuard/catches; consumed strict context; authenticated progress/floor/growth/owned writes; real current()/source identity/controller; archive/bootstrap/prepare/claim; import/manifest/terminal/invalidate/PARENT; closing→dispatch→provider; CHILD wait/import and finite CLI diagnostics →V9-2 |
+| Container-match-session104 | Known-unselected V9 allocation denied even if manifest-listed; selected exact Git/direct-parent joins remain real →V9-2 |
+| Retained722/735/755/875/908–919 | Fresh opening BEFORE interval; strict claim/private enrollment; independent failure resources; failed/boundary predicates; pending_closing/report:null/issued:false and exact accepted reference only after BOTH closings →V9-3 |
+
+Schema-generic domain1486–1503/2246 and driver current/sampleGuard MUST be reached unchanged: private admitted allocation/window, pure elapsed/capacity basis,3GB memory-current (not generic2GB), fresh samples/remaining work. Authority390–411/505–513 already uses strictly admitted continuation→wireV8 with per-layer burn guards: add connectivity tests, NOT another source version, mint or issuer widening.
+
+### Serial ownership and tasks
+
+Discovery Level0: existing Node/TypeScript/Vitest/schema/descriptor patterns and265-PATTERNS reused; new route only, no package/service/ORM/AI framework. No UI/frontend files or behavior change: UI applicability=false, no artificial browser gate. No db push/schema generation, environment probes, package installs or unrelated certification. All three tasks are serial within existing Plan16: checked metadata+plan→V9-1 produces selected policy/carry→V9-2 connects lifecycle→V9-3 closes reader. Shared driver test ownership is transferred only after V9-2 commands CLOSE. No checkpoint inside these source tasks; each fits a narrow existing owner delta, no independent workstream.
+
+<tasks>
+<task type="auto" tdd="true">
+<name>V9-1: Add exact finite route and preserve spentV8 costs once</name>
+<read_first>AGENTS/current STATE and APPROVAL tops; final route-only RESEARCH363–438 and GATES finite V8 JSON plus actual independent metadata verdict;265-CONTEXT/265-PATTERNS; domain WindowV2/validateLeanBaselineContinuationWindowV2/path resolvers/compiled policy; fixed observation leaf and existing helper inventory/reconciliation/owned measurement/disjoint sampler; helper tests with public observation-loader seam.</read_first>
+<files>packages/strategy-lab/src/league/lean-experiment.ts, scripts/lib/v1-38-lean-continuation-observations.ts, scripts/lib/v1-38-lean-baseline-continuation.ts, scripts/lib/v1-38-lean-baseline-continuation.test.ts</files>
+<acceptance_criteria>Independent metadata comparison is actually closed before literals are used; exact V9 T/id/delayed-A and selectors reject unknown/cross-route identities; all V3–V8 defaults/catalog order/closed-cost anchors are unchanged. V9 authenticates all15 opaque V8 files/two exact memberships/three absences, preserves V6 absences and counts disjoint V8 costs exactly once before importer/write.</acceptance_criteria>
+<behavior>Exact V9 accepts a synthetic A>T with F(A) and denies A<T/wrong decision/unsafe sum/unknown alias or suffix. Unmocked older defaults remain byte-equivalent. Changed/missing/extra/alias/shrunken V8 survivor inputs refuse; near-cap aggregate denies before importer/write. V8 lower bound stays90091520, V9 becomes91287552 only after reviewed input; directories/growth/reservations remain fresh/nonoverlapping.</behavior>
+<action>Per D-01/D-02/D-05/D-10/D-22/D-25/D-27/D-29 add exactly the finite constant/union/allowlist/resolvers above. Exempt exact V9 from approval=A equality only to apply exact T/id/A>=T/carry=F(A); preserve every generic root/schema/cap/deadline check and all old branch predicates. Add deeply frozen spentV8Metadata/spentV8Directories observations to the existing zero-argument leaf using the independently compared GATES JSON, without altering former fields/catalog order/closedCostV2 or adding a configurable accessor. Keep the leaf in actual source closure. Read raw historical carry/hold/manifests opaquely, never as current admission.</action>
+<action>In pathsForV2/futureV2/inventoryLeanContinuationSurvivorsV2/reconcileLeanContinuationInventoryV2 retain old selection defaults, add V9's mandatory V8 file+directory visits and exact sorted members before inventory reconciliation, keep V6 allocation/store/temp absence. Add V9-only91287552 file floor. Extend createLeanContinuationOwnedMeasurementV8 to derive exact selected V8 OR V9 paths; extend measureLeanContinuationKnownDisjointBytesV8 with an optional strictly selected window while preserving no-argument/V8 behavior. Subtract both already-included V7 and V9-selected V8 allocated-file portions from sampled extras; add fresh directories/growth/selected-owned writes/nonoverlapping reservations once. Do not stack a complete V8 debit and its constituents, drop residual original debt, turn V8 present survivors into future absences, or require V9 paths absent after legitimate creation. Current logical charge floor remains50.</action>
+<action>Write RED then GREEN in existing helper tests under continuation-route-v9. Parameterize the public expected-observation seam with tiny real public bytes/derived hashes and actual descriptor/schema/importer/controller/reconciliation, not mocked hash success or authenticated context. Cover independent old defaults, deep freeze, all joins/metadata/member/safe-math negatives, cost-once/floor/no-refund and prewrite cap refusal. No CLI/env selectable override, setter, registration/mint, global cache, fake SOURCE/capsule or old artifact mutation.</action>
+<verify><automated>node --max-old-space-size=768 ./node_modules/vitest/vitest.mjs run --maxWorkers=1 scripts/lib/v1-38-lean-baseline-continuation.test.ts -t 'continuation-route-v9'</automated></verify>
+<done>Actual RED/GREEN new helper cases and independent old-default controls close; exact fixed inputs/cost-once/fresh directory treatment are reviewable, all task commands CLOSED and ownership RELEASED to V9-2. No new private path or actual A/window/request/allocation exists from these tests.</done>
+</task>
+<task type="auto" tdd="true">
+<name>V9-2: Connect all finite driver, Git and startup authority paths</name>
+<read_first>V9-1 actual diff/interfaces; complete branch table above; driver parseLeanBaselineCommand/continuationPreflightV2/openLeanBaselineContinuationContextV2/runLeanBoundedParent/waitLeanContinuationReleaseV8/runLeanBaselineContinuationChildV2/leanBaselineMain; container readLeanBaselineContinuationGitV2; authority issueLeanBaselineContinuationRuntimeAuthorityV2 and existing authority/match boundary tests read-only; existing public B fixture and shared observation builder.</read_first>
+<files>scripts/run-v1-38-lean-baseline.ts, scripts/run-v1-38-lean-baseline.test.ts, scripts/lib/v1-38-lean-container-match-session.ts, scripts/lib/v1-38-lean-baseline-authority.test.ts, scripts/lib/v1-38-lean-baseline-match.test.ts</files>
+<acceptance_criteria>Every driver/container branch row explicitly routes V9 into existing V8 boundary/reservation/coordinated startup/finite-diagnostic behavior, preserving older selection. Real generic private-ledger/3GB/remaining-work/current-source checks and authority→wireV8→per-layer burning guards are connected, with legacy claim denial. No legacy immediate release/30s-before-staging or generic2GB fallback.</acceptance_criteria>
+<behavior>Exact request/window/Git/source joins drive real strict preflight/importer/controller; changed HEAD/request/window/source and opening/closing failures irreversibly deny. Real paired parent/child wait tolerates slow pre-arm staging then arms ONE30000ms release watchdog; duplicate/invalid controls/disconnect/absolute expiry deny. Parent after actual entry closes nonacceptingly on owned closing failure, observes inert-child exit, and never dispatches provider work. Real charge closing is before provider; fresh runtime-construction guards burn at each layer.</behavior>
+<action>Per D-01/D-02/D-03/D-04/D-05/D-06/D-22/D-28/D-29 add exact V9 alongside V8 in every branch listed above, including common V6/V7/V8 strict sets, negative path/route refusals and outer PARENT catch. Use selected shared helpers, no global V8 rename/copy or arbitrary V2 broadening. Preserve preflight's private ledger/window identity, real current() HEAD/request/window/planning rechecks, pure reserve progress and all complete stage/failure/terminal/cleanup ordering. No full current/history reentry during armed reserve polling. Add exact V9 to known-unselected allocation denial even when manifest-listed. Authority production stays unchanged: real connected tests establish existing issuer selects wireV8 and private per-layer guards/entry/window-claim joins; old claims/copies cannot acquire new invocation authority.</action>
+<action>RED/GREEN new continuation-route-v9 tests in the exact existing files exercise all connected behaviors above,3GB-current denial/acceptance edge, progress-based remaining cells and actual charge-closing→provider ordering. Parameterize existing public fixture/expected-observation data rather than copying a fixture tree. Add one distinctly named V9 B variant through actual CLI→parent→entry→owned closing denial→observed exit→resource-checked nonaccepting cleanup, not a parent/importer success stub. Externally synthetic Git/factory/resource/time/PID/IPC observations remain explicit; crypto/descriptors/schemas/joins/controller/ledger remain real. No actual forked provider/Strategy/Match/private history or empirical namespace. Existing runtime boundary test file is edited ONLY for this V9 connectivity, not sandbox recertification.</action>
+<verify><automated>node --max-old-space-size=768 ./node_modules/vitest/vitest.mjs run --maxWorkers=1 scripts/run-v1-38-lean-baseline.test.ts scripts/lib/v1-38-lean-baseline-authority.test.ts scripts/lib/v1-38-lean-baseline-match.test.ts -t 'continuation-route-v9-(driver|authority|runtime)'</automated></verify>
+<done>All enumerated finite branches and real startup/authority/resource ordering have actual new assertions; V9 B variant is independently selected and qualified under the bounded harness below. Unchanged V8 closure is reused, not rerun for reassurance. Commands CLOSED, source/test ownership RELEASED before V9-3.</done>
+</task>
+<task type="auto" tdd="true">
+<name>V9-3: Connect fresh retained opening, spent claim and private failure closure</name>
+<read_first>V9-1/2 actual diff; retained verifyLeanBaselineContinuationRetainedV2/freshOpening/verifyLeanBaselineContinuationFailureResourceV6/publishLeanContinuationRetainedCheckV6/isLeanContinuationAcceptedPrivateCheckV6; driver shared public fixture and actual C case; final OBS3-R1 original-return identity fix and current GATES/VALIDATION.</read_first>
+<files>scripts/lib/v1-38-lean-baseline-retained.ts, scripts/lib/v1-38-lean-baseline-retained.test.ts, scripts/run-v1-38-lean-baseline.test.ts</files>
+<acceptance_criteria>All retained722/735/755/875/908–919 positive/negative finite predicates include exact V9 correctly; fresh opening precedes interval, actual default importer/controller reaches durable claim before missing-result refusal, failed closing cannot publish accepted identity, original return and copied/deserialized/foreign objects remain nonaccepted.</acceptance_criteria>
+<behavior>V9 invalid initial opening grants no interval/claim; valid public preclaim joins reach real interval→claim→absent-result→independent resource closure. Changed request/window/source/HEAD and opening/closing/resource refusal invalidate irreversibly. pending_closing/report:null/issued:false cannot enter the private accepted set; only actual frozen original after BOTH closings is eligible, never a clone or serialized ledger.</behavior>
+<action>Per D-01/D-02/D-05/D-21/D-25/D-27/D-28/D-29 extend ONLY exact retained route selections to reuse V8 freshOpening before interval, strict claims/private enrollment, independent failure-resource scope and failed/boundaryV8 publication behavior. Keep actual source/Git/descriptors/crypto/journal/controller/remaining-work checks and existing finite withheld CLI diagnostics. No result read before claim, invented successful report, empty accepted result or broadened private WeakMap/WeakSet enrollment.</action>
+<action>Add RED/GREEN continuation-route-v9-retained negatives and one continuation-route-v9-C connected variant in existing driver test fixture, parameterizing the public expected-observation seam, not copying fixture setup. Invoke actual CLI→default opener/importer/controller→interval→durable claim→missing result→resource-checked failed publication. Capture ORIGINAL awaited return and assert failed disposition/reportnull/private nonacceptance, separately durable failure fields and clone/deserialized/foreign identity refusal. Add successful-publication identity sensitivity using existing retained public fixtures with both actual closing predicates, never an authenticated-context success stub. Real-data history and actual ordinary empirical reader remain uninvoked.</action>
+<verify><automated>node --max-old-space-size=768 ./node_modules/vitest/vitest.mjs run --maxWorkers=1 scripts/lib/v1-38-lean-baseline-retained.test.ts scripts/run-v1-38-lean-baseline.test.ts -t 'continuation-route-v9-(retained|C)'</automated></verify>
+<done>Actual V9 default-opening/postclaim failure and exact private-reference assertions pass with disclosed synthetic external seams; all commands/ownership CLOSED/released for ONE integrated independent source review, ROOT checks, scoped Nyquist and DISTINCT source verification. No empirical/capacity or old-cause conclusion is inferred.</done>
+</task>
+</tasks>
+
+### Bounded qualification and actual gate sequence
+
+The task commands select NEW tests to be authored, not presently passing coverage. Ordinary small cases target<30s/command; split into disjoint named batches if needed. V9 B and C each use the already checked TEST-ONLY OBS3-HARNESS-45000/8MiB: real performance clock includes construction+execution+finally cleanup, declared60000ms named-test timeout and separate60000ms external process-group watchdog,768MiB/one worker, exact selector resolves ONE test. Run B/C separately from ordinary quick cases; no unchanged retry after censor, no clock reset, no fictional<30s claim. Record COMPLETE/CENSORED, actual bytes/elapsed/cleanup, union/overlap/skips honestly. This authorizes V9 source variants, NOT renewed old V8 fixture attempts or changed production limits.
+
+Before edits ROOT captures SAME original15-path strict invocation already printed at this plan's ROOT source gates, full actual output; after fixed delta run the IDENTICAL scope. Compare complete inherited diagnostics, zero NEW, only individually verified source-relocation offsets. Prior13/7051B is history, not presumed fresh output; fix every new error, no suppression/normalization/global-green claim. Include leaf transitively and configured `./node_modules/.bin/tsc -b packages/strategy-lab/tsconfig.json packages/runtime-js/tsconfig.json --pretty false`, `pnpm boundary:imports`, `pnpm public-discovery:check`, existing applicable factory-boundary check and `git diff --check`. Reuse installed tools only. Select actual changed cases and relevant existing small defaults/compatibility/guards once; do not repeat closed unchanged full certification or private-history tests.
+
+Checked plan+finite metadata review→V9-1→V9-2→V9-3, actual scoped source commits with serial release→ONE integrated independent actual delta review/fix/re-review (maximum3iterations)→ROOT final qualification→existing VALIDATION State-A scoped caller-to-assertion Nyquist audit→DISTINCT actual source-goal verification. All necessary commands/findings/source identity and ownership must actually close. A boolean sourceClosed or source test is not closure chronology, current-source custody, capacity or runtime fit. Concrete remaining gaps stop advancement without waiver; materially different rule/resource/trust/public changes require human direction.
+
+ONLY AFTER those actual closures, ROOT records sole new SOURCE in existing GATES, then observes actual A and writes canonical V9 window/F(A) numerics. Independent actual DATA review of real metadata/roots/roles/window/ancestry/absence and chronology precedes final immutable request. ONE ROOT preparation follows final committed pins. Only successfully created NEW immutable allocation permits its allocation-only direct-child commit/push, then unique ROOT entry; fresh passing SAME-PROCESS whole36 capacity is mandatory BEFORE any charge/provider. Hold source/HEAD/planning from preparation through actual terminal and unique actual retained verification, except that required allocation-only commit. One retained verifier needs ACTUAL entry/head; if absent, bounded terminal-only closure, no fictional reader. Old V8 destinations are never reused/mutated. This plan runs none of these empirical actions or creates their artifacts.
+
+<must_haves>
+Truths: exact V9 finite joins select existing verified V8 behavior without changing old defaults; independently reviewed opaque V8 survivors debit once with fresh disjoint resources; actual current-source/3GB/remaining-work/charge-before-provider and coordinated startup guards remain connected; actual fresh reader opening→spent claim→failure closure cannot forge accepted identity; actual SOURCE closure precedes A, then DATA/request/preparation/allocation/entry in order. Artifacts: only six production owners and existing tests named in V9-1–3, existing planning evidence carriers; no module/report tree. Key links: strict window→selected paths→real inventory/importer/carry; selected V9→current/reserve/controller→parent/child→wireV8→per-layer guards; real reader opening→interval/claim→both resource/identity closings→exact private return. Prohibitions: no runtime/CLI/env override or mint, no softened guards/success stubs/global renames, no old-route retry/refund, no source-only capacity/chronology proof, no empirical/phase completion by these tests.
+</must_haves>
+
+<threat_model>
+ASVS level1 disposition rigor, no new external certification claim: all high threats BLOCK source readiness until mitigated. Primary boundaries are route input→private admitted ledger, opaque FS/Git→carry/current identity, IPC→startup authority, reader→private acceptance, and source evidence→empirical claims.
+
+| Threat | STRIDE | Severity / disposition | Concrete mitigation |
+|---|---|---|---|
+| V9-T1 alias/cross-route or stale-source authority | Spoofing/Tampering/Elevation | high / mitigate | Exact selectors/T/id/A math, real private ledger/HEAD/window/request/Git checks, known-unselected denial and actual mutation tests V9-1/2 |
+| V9-T2 omitted/duplicated/recredited spent costs | Tampering/Repudiation | high / mitigate | Independently compared15NOFOLLOW raw tuples/members/absences, mandatory V8 visits,91287552 file basis plus fresh disjoint growth, once-only debit/no refund V9-1 |
+| V9-T3 legacy startup/resource fallback or leaked process | Denial of service | high / mitigate | Complete branch table, real coordinated arm/ack/one-shot30s/absolute deadline,3GB/current/progress checks, observed inert exit/resource cleanup V9-2 |
+| V9-T4 failed closing becomes private success/disclosure | Information disclosure/Elevation | high / mitigate | Fresh opening before interval, claim-before-result, independent failure resources, both closings/private exact identity, original+copy negatives and finite withheld diagnostics V9-3 |
+| V9-T5 synthetic tests mistaken for real admission | Spoofing/Repudiation | high / mitigate | Actual closed identities/SOURCE before A, separate real DATA, unique preparation/entry/fresh same-process capacity and actual-entry-only verifier; pending requirements |
+| V9-SC dependency substitution | Tampering | low / accept | No install/upgrade/dependency delta, existing installed tools only; if scope changes, package legitimacy gate applies before install |
+</threat_model>
+
+### Multi-source coverage/disposition audit
+
+| Source | Coverage / unchanged disposition |
+|---|---|
+| GOAL | Current-rules independently attacked empirical game/qualified portfolio/outcome remains original Plan16 work PENDING; V9-1–3 cover necessary route-integrity dependency only, not scientific completion |
+| REQ | LEAG-02/05 integrity/accounting/qualified refusal dependencies→V9-1–3; LEAG-01 complete cells, LEAG-03 solver, LEAG-04 response and LEAG-07 pure portfolio stay original tasks/PENDING |
+| REQ | LEAG-06/08 approved lean diversity/certification dispositions and LEAG-09 one automated equal-zero-channel round unchanged; all9LEAG remain pending, none marked complete/deferred anew |
+| RESEARCH | Final363–438 exact route/five owners/finite input/cost/resource/private identity map→branch table/V9-1–3; test bounds/actual gate order/uncertainty→qualification, no item omitted |
+| CONTEXT | D-01/D-02/D-05/D-10/D-22/D-25/D-27/D-29→V9-1–3 immutable joins/spent costs/failed closure/boundary cadence; latest approval changes prospective window only, not historical D-29 cutoff |
+| CONTEXT | D-03/D-04/D-06/D-28→host-only unchanged canonical MATCH_KERNEL/runtime/game rules/private output boundaries; no engine/React/source-execution changes |
+| CONTEXT | D-07/D-08/D-09/D-11/D-12/D-13/D-14/D-15/D-16/D-17/D-18/D-19/D-20/D-21/D-23/D-24/D-26→original scientific tasks/approved lean dispositions remain, not new source-task scope or implied pass; no deferred formation/rules/product idea implemented |
+| HUMAN | Actual fresh8happroval T/id, delayed A, continuous F/carry/all bounds→scope/V9-1/gate sequence; independent finite metadata adoption prerequisite→checker+V9-1 |
+
+<success_criteria>
+Narrow source amendment completes only after actual route tests/review/ROOT checks/scoped Nyquist/DISTINCT verification close. Phase265/Plan16/all9LEAG stay pending, VALIDATION partial/nyquistfalse/wave0false, Phase266 planning-only. Serious current-rules league/evaluation/freeze BEFORE formation; holdout unopened, no public/counting/production. Genuine full36 capacity/fit, empirical results and original V8 cause remain UNKNOWN. No new A/window/request/allocation/preparation/provider/Strategy/Match/ordinary empirical reader is created by planning or synthetic tests. Reuse existing evidence carriers; ROOT alone integrates/commits, no new proof hierarchy.
+</success_criteria>
+
+Planner handoff: existing-file amendment only; no source/test/private metadata operation, actual window or empirical action executed, no new artifact or planner commit. Independent plan/finite metadata check remains ROOT's next handoff. All planner commands CLOSED; ownership RELEASED to ROOT.
