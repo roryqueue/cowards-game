@@ -472,12 +472,51 @@ const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWind
   } finally { clock?.mockRestore(); boundary.mockRestore(); controllers.mockRestore(); git.mockRestore(); descriptors.mockRestore(); hashes.mockRestore(); disk.mockRestore(); available.mockRestore(); usage.mockRestore(); factory.mockRestore(); physical.mockRestore(); scopes.mockRestore(); raw.mockRestore(); chunks.mockRestore(); opens.mockRestore(); fstats.mockRestore(); realpaths.mockRestore(); stats.mockRestore(); exists.mockRestore(); vi.unstubAllEnvs(); process.execArgv = originalArgs; if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(15000) }
 }
 describe("continuation-next-v10-driver-preflight", () => {
+  it("real bounded progress reserves active cells through terminal, then retains zero-cell closure and hard deadline", () => {
+    const known = vi.spyOn(continuationHelper, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096), send = Object.getOwnPropertyDescriptor(process, "send")
+    Object.defineProperty(process, "send", { value: undefined, configurable: true })
+    try { preledgerFixtureV6(f => {
+      const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V10, w = f.window, cutoff = w.deadlineMs - 3060000
+      const pb = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: 465187899, allocatedDiskBytes: 88924160, residualDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: root("original"), closedCapsuleRoot: root("capsule"), custodyRoot: root("custody"), inventoryRoot: root("inventory"), qualifiedReaderAuthority: "cost_only" as const }
+      const allocation = lean.createLeanBaselineContinuationAllocationV2({ sourceRoot: w.sourceRoot, reviewRoot: root("review"), coldRoot: root("cold"), planRoot: w.planRoot, candidateRoots: [root("a"), root("b")], requestRoots: Array.from({ length: 36 }, (_, i) => root(`progress-${i}`)), seed: "synthetic-next-progress", sourceHead: "b".repeat(40), planningRoot: root("planning"), manifestRoot: root("manifest"), requestBytesRoot: root("request"), window: w, windowBytesRoot: leanBytesRoot(leanCanonicalBytes(w)), sourceGateRoot: w.sourceGateRoot, dataReviewRoot: root("data"), predecessor: { ...pb, root: labRoot(pb.schemaVersion, pb) } })
+      fs.mkdirSync(resolve(p.temp), { mode: 0o700 }); const ledger = lean.createLeanLedger(resolve(p.store), allocation)
+      const mono = vi.spyOn(process.hrtime, "bigint").mockReturnValue(1000000n)
+      try {
+        vi.mocked(Date.now).mockReturnValue(cutoff)
+        fs.writeFileSync(join(ledger.directory, "entry.json"), leanCanonicalBytes({ schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, head: allocation.sourceHead, parentPid: process.ppid, childPid: process.pid, handshakeRoot: root("handshake"), wallStartMs: cutoff, monotonicStartNs: "1000000" }), { mode: 0o600 })
+        lean.beginLeanInterval(ledger, "pilot-entry", cutoff)
+        const local = parentApi.createLeanContinuationLocalReservationV8(w); local.bindProgress(ledger); local.reserve()
+        const rejectNext = () => {
+          const candidate = parentApi.createLeanContinuationLocalReservationV8(w); candidate.bindProgress(ledger)
+          vi.mocked(Date.now).mockReturnValue(cutoff + 1); expect(() => candidate.reserve()).toThrow(/CAPACITY/)
+          vi.mocked(Date.now).mockReturnValue(cutoff)
+        }
+        const charge = lean.chargeLeanSlot(ledger, allocation.slots[0]!, { freeBytes: 100000000000, availableMemoryBytes: 4000000000 })
+        local.reserve(); expect(lean.readLeanLedger(ledger).terminals.size).toBe(0); rejectNext()
+        // Provider return / finishCell cannot change this authenticated ledger frontier.
+        local.setRemainingSlots(35); local.reserve(); rejectNext()
+        const compact = { classification: "success" as const, code: "OK" as const, outcome: "DRAW" as const, elapsedMs: 10, cleanupComplete: true, invocationCount: 0, accountingRoot: root("accounting"), executionRoot: root("execution"), telemetry: { transitions: 0, events: 0 } }
+        lean.retainLeanMatch(ledger, charge, compact, [], undefined, () => {}); local.reserve(); expect(lean.readLeanLedger(ledger).terminals.size).toBe(1); rejectNext()
+        const provider = vi.fn(); vi.mocked(Date.now).mockReturnValue(cutoff + 1)
+        expect(() => { lean.chargeLeanSlot(ledger, allocation.slots[1]!, { freeBytes: 100000000000, availableMemoryBytes: 4000000000 }); provider() }).toThrow(/FRONTIER/); expect(provider).not.toHaveBeenCalled(); expect(lean.readLeanLedger(ledger).charged).toBe(51)
+        vi.mocked(Date.now).mockReturnValue(cutoff)
+        for (const slot of allocation.slots.slice(1)) { const c = lean.chargeLeanSlot(ledger, slot, { freeBytes: 100000000000, availableMemoryBytes: 4000000000 }); lean.retainLeanMatch(ledger, c, compact, [], undefined, () => {}) }
+        expect(lean.readLeanLedger(ledger).terminals.size).toBe(36)
+        vi.mocked(Date.now).mockReturnValue(w.deadlineMs - 2460000); local.reserve()
+        vi.mocked(Date.now).mockReturnValue(w.deadlineMs - 2460000 + 1); expect(() => local.reserve()).toThrow(/CAPACITY/)
+        vi.mocked(Date.now).mockReturnValue(w.deadlineMs - 1)
+        const zero = parentApi.createLeanContinuationLocalReservationV8(w, true); zero.bindProgress(ledger); zero.reserve()
+        vi.mocked(Date.now).mockReturnValue(w.deadlineMs); expect(() => zero.reserve()).toThrow(/CAPACITY/)
+      } finally { mono.mockRestore(); fs.rmSync(resolve(p.store), { recursive: true }); fs.rmSync(resolve(p.temp), { recursive: true }) }
+    }, 0, false, "20261017-v10") } finally { known.mockRestore(); if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send") }
+  }, 15000)
   it.each([0, 1])("real privately compiled preflight at next-cell equality +%i", delta => {
     const known = vi.spyOn(continuationHelper, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096), send = Object.getOwnPropertyDescriptor(process, "send"); Object.defineProperty(process, "send", { value: undefined, configurable: true })
     try { preledgerFixtureV6(f => {
       const cutoff = f.window.deadlineMs - 3060000; f.onCurrent.value = () => vi.mocked(Date.now).mockReturnValue(cutoff + delta)
       expect(() => parentApi.prepareLeanBaselineContinuationV2(lean.LEAN_BASELINE_CONTINUATION_PATHS_V10.request)).toThrow(delta ? /V2_WINDOW_EXPIRED|RESERVATION_CAPACITY/ : /V2_ALLOCATION_ANCHOR/)
-      expect(f.detail.archiveOpened).toBe(delta ? 0 : 1); f.absent()
+      if (delta) expect(f.counts.heads).toBe(1); else expect(f.counts.heads).toBeGreaterThan(3)
+      f.absent()
     }, 0, false, "20261017-v10") } finally { known.mockRestore(); if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send") }
   }, 15000)
   it("finite CLI and known-unselected Git denial remain exact", () => {
@@ -648,7 +687,7 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
         queueMicrotask(() => {
           if (mode === "progress") {
             // Real parent polling at a time where stale36 fails but35 fits.
-            clock.mockReturnValue(window.deadlineMs - (v10 ? 1 : 36) * LEAN_CAPS.matchMs - window.closureMs - window.offlineOverheadMs + (v10 ? 0 : 1))
+            clock.mockReturnValue(window.deadlineMs - (v10 ? 1 : 36) * LEAN_CAPS.matchMs - window.closureMs - window.offlineOverheadMs + (v10 ? -1000 : 1))
             poll!(); expect(child.kill).not.toHaveBeenCalled(); seen.push("progress-poll-accepted")
             const path = join(ledger.directory, "ledger.ndjson"), original = fs.readFileSync(path), events = original.toString().trimEnd().split("\n").map(line => JSON.parse(line))
             const resourceRow = { kind: "resource", elapsedMs: window.carryMs + Date.now() - window.anchorMs, physicalBytes: 4096, bufferBytes: 0, scratchBytes: 0 }
@@ -696,7 +735,7 @@ describe("[continuation-ready-v7-N-parent] tiny real parent/failure custody (ine
       lean.beginLeanInterval(ledger, "continuation-run-admission"); lean.closeLeanInterval(ledger, "continuation-run-admission")
       // The real monotonic close rounds up; start the later pilot beyond that
       // synthetic admission close, rather than fabricating a backward journal.
-      clock.mockReturnValue(v10 ? window.deadlineMs - 3060000 : syntheticA + 1000)
+      clock.mockReturnValue(v10 ? window.deadlineMs - 3061000 : syntheticA + 1000)
       if (mode === "progress") { local = parentApi.createLeanContinuationLocalReservationV8(window); local.bindProgress(ledger) }
       const pins = [{ path: sourcePath, stat: fs.lstatSync(sourcePath) }], roles = [{ path: sourcePath, role: "fixed_source" }], current = () => { currentCalls++; if (performance.now() - began > 12000) throw new Error("TINY_PARENT_CENSORED") }
       controller = v8 ? continuationHelper.createLeanContinuationBoundaryControllerV8(pins, [], roles, binding, current, () => { if (local) { local.reserve(); return }; const usage = process.memoryUsage(); if (usage.rss > 3000000000) throw new Error("RESOURCE_DENIED") }) : continuationHelper.createLeanContinuationStageControllerV6(pins, [], roles, binding, current)
