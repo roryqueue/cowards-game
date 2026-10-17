@@ -909,7 +909,10 @@ export const authenticateLeanBaselineContinuationCarryV2 = (git: LeanContinuatio
     const anchorBytes = read(LEAN_BASELINE_CONTINUATION_PATHS_V10.window, 0o600, 65536)
     if (!expected || leanBytesRoot(anchorBytes) !== expected.rawRoot) return fail("V11_ALLOWANCE_ANCHOR")
     const allowance = validateLeanBaselineContinuationWindowV2(parse(anchorBytes))
-    if (allowance.routeNamespace !== "20261017-v10" || ["approvedAtMs", "anchorMs", "carryMs", "capMs", "deadlineMs", "durationMs", "closureMs", "offlineOverheadMs"].some(key => allowance[key as keyof typeof allowance] !== window[key as keyof typeof window]) || !equal(allowance.approvalEvidence, window.approvalEvidence)) return fail("V11_ALLOWANCE_ANCHOR")
+    // V12 has its own prospective approval; authenticated V10 remains lineage
+    // and cost evidence only. V11 retains the entire original allowance join.
+    const allowanceKeys = window.routeNamespace === "20261017-v12" ? ["durationMs", "closureMs", "offlineOverheadMs"] : ["approvedAtMs", "anchorMs", "carryMs", "capMs", "deadlineMs", "durationMs", "closureMs", "offlineOverheadMs"]
+    if (allowance.routeNamespace !== "20261017-v10" || allowanceKeys.some(key => allowance[key as keyof typeof allowance] !== window[key as keyof typeof window]) || (window.routeNamespace === "20261017-v11" && !equal(allowance.approvalEvidence, window.approvalEvidence))) return fail("V11_ALLOWANCE_ANCHOR")
   }
   const inventory = inventoryContinuationSurvivors(carry.inventory as LeanContinuationInventoryRow[], pinnedPaths, git, guard, window, true)
   const originalSum = (carry.inventory as LeanContinuationInventoryRow[]).reduce((n, row) => n + row.allocatedBytes, 0), residualDiskBytes = a.predecessor.allocatedDiskBytes - originalSum

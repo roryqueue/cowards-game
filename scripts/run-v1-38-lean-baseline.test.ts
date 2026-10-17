@@ -2378,6 +2378,7 @@ it("continuation-fresh-window-v12-auth authenticates old costs without inheritin
       expect(authenticate).toThrow(mutation === "missing" ? /ENOENT/ : /V11_ALLOWANCE_ANCHOR/)
     } finally { native.writeFileSync(resolve(historicalPath), original, { mode: 0o600 }) }
   }
+  f.tick(2) // Both genuine anchors are now in the past: test joins, not backward-clock refusal.
   for (const mutation of ["approval", "window", "request", "data"] as const) {
     const path = mutation === "request" ? p.request : mutation === "data" ? p.gates : p.window
     const before = native.readFileSync(resolve(path))

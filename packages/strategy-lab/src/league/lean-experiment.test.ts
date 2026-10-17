@@ -716,6 +716,7 @@ it("[continuation-fresh-window-v12] [continuation-route-v12] binds only the new 
   const v11 = { ...windowBody, ...oldTiming, routeNamespace: "20261017-v11" }
   expect(lean.validateLeanBaselineContinuationWindowV2(reroot(v11)).anchorMs).toBe(1792242843861)
   expect(() => lean.validateLeanBaselineContinuationWindowV2(reroot({ ...windowBody, routeNamespace: "20261017-v11" }))).toThrow("CONTINUATION_V2_WINDOW")
+  expect(() => lean.validateLeanBaselineContinuationWindowV2(reroot({ ...windowBody, approvedAtMs: oldTiming.approvedAtMs, approvalEvidence: oldTiming.approvalEvidence, routeNamespace: "20261017-v11" }))).toThrow("CONTINUATION_V2_WINDOW")
   const secondAnchor = windowBody.anchorMs + 12345
   expect(lean.validateLeanBaselineContinuationWindowV2(reroot({ ...windowBody, anchorMs: secondAnchor, deadlineMs: secondAnchor + 28800000, carryMs: lean.leanContinuationGlobalFloorV2(secondAnchor), capMs: lean.leanContinuationGlobalFloorV2(secondAnchor) + 28800000 })).anchorMs).toBe(secondAnchor)
   const legacyWindowBody = { ...windowBody, ...oldTiming, approvedAtMs: 1792242843861, routeNamespace: "20261012-v3" }
