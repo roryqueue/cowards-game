@@ -2306,7 +2306,7 @@ for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "co
 }, namespace, 28800000 - 2400000 - 2), 60000)
 
 it("continuation-reservation-forward-v11 real preflight, rebound and opened guards forward fresh samples once", () => withInternalObservationTree(false, async f => {
-  const { D, C, p, imported, fs: native } = f
+  const { D, C, p, imported } = f, native: typeof fs = f.fs
   f.note("connected reservation forwarding")
   const create = C.createLeanContinuationBoundaryControllerV8, rows: { binding: object; controller: any; observer: ReturnType<typeof vi.fn> }[] = []
   const factory = vi.spyOn(C, "createLeanContinuationBoundaryControllerV8").mockImplementation(((...args: any[]) => {
@@ -2346,7 +2346,7 @@ it("continuation-reservation-forward-v11 real preflight, rebound and opened guar
 }, "20261017-v11"), 45000)
 
 it("continuation-guard-overlap-v11 stable valid journal append passes; descriptor-overlap permanently denies dependent effects", () => withInternalObservationTree(false, async f => {
-  const { D, L, p, ledger, w, fs: native } = f
+  const { D, L, p, ledger, w } = f, native: typeof fs = f.fs
   f.note("journal overlap default context")
   const context = D.openLeanBaselineContinuationContextV2(p.request), path = resolve(p.store, "ledger.ndjson")
   const row = (n: number) => Buffer.concat([L.leanCanonicalBytes({ kind: "resource", elapsedMs: w.carryMs + n, physicalBytes: 4096, bufferBytes: 0, scratchBytes: 0 }), Buffer.from("\n")])
@@ -2354,7 +2354,7 @@ it("continuation-guard-overlap-v11 stable valid journal append passes; descripto
   native.appendFileSync(path, row(1)); expect(L.readLeanLedger(ledger).events).toHaveLength(1)
   expect(context.fullSample()).toMatchObject({ charged: 50, remainingSlots: 36 })
   const open = native.openSync, read = native.readSync, fds = new Set<number>(), effect = vi.fn(); let appended = false
-  const opened = vi.spyOn(native, "openSync").mockImplementation(((name: fs.PathLike, ...args: unknown[]) => { const fd = Reflect.apply(open, native, [name, ...args]); if (String(name) === path) fds.add(fd); else fds.delete(fd); return fd }) as typeof fs.openSync)
+  const opened = vi.spyOn(native, "openSync").mockImplementation((name, flags, mode) => { const fd = open(name, flags, mode); if (String(name) === path) fds.add(fd); else fds.delete(fd); return fd })
   const reading = vi.spyOn(native, "readSync").mockImplementation(((...args: Parameters<typeof fs.readSync>) => { const count = Reflect.apply(read, native, args); if (!appended && fds.has(args[0])) { appended = true; native.appendFileSync(path, row(2)) }; return count }) as typeof fs.readSync)
   try {
     expect(() => { context.fullSample(); effect() }).toThrow(/V2_FILE_CHANGED/)

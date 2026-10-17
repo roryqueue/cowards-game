@@ -1279,7 +1279,7 @@ const continuationPreflightV2 = (requestPath: string, consumed: boolean, reader:
     }
   }
   const roles = pins.map(row => ({ path: row.path, role: manifest.planningEntries.some(p => p.path === row.path) ? "active_planning" : row.path === requestPath ? "active_input" : "fixed_source" }))
-  let controller = localReservation ? createLeanContinuationBoundaryControllerV8(pins, [], roles, binding, current, bytes => localReservation.reserve(bytes)) : v6 ? createLeanContinuationStageControllerV6(pins, [], roles, binding, current) : undefined
+  let controller: ReturnType<typeof createLeanContinuationStageControllerV6> | ReturnType<typeof createLeanContinuationBoundaryControllerV8<ReturnType<NonNullable<typeof localReservation>["reserve"]>>> | undefined = localReservation ? createLeanContinuationBoundaryControllerV8(pins, [], roles, binding, current, bytes => localReservation.reserve(bytes)) : v6 ? createLeanContinuationStageControllerV6(pins, [], roles, binding, current) : undefined
   const guard = (additionalBytes = 0) => {
     if (localReservation && controller && "reserve" in controller) return controller.reserve(binding, additionalBytes)
     if (controller) return controller.live(binding, () => current(additionalBytes))
