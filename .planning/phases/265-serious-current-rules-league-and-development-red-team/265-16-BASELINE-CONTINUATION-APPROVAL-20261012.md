@@ -1,5 +1,11 @@
 # Approved eight-hour current-rules baseline continuation
 
+## Fresh private window APPROVED — 2026-10-17T00:51:26UTC
+
+Direct human `approved` accepts the exact final proposal following completed internal testability refactor: ONE fresh eight-hour private remaining-baseline window with same15GB and all other bounds. ROOT's first actual observation T is2026-10-17T00:51:26UTC; actual experiment initialization A is deliberately NOT created yet. It starts only after checked distinct prospective V9 route/source setup and actual source closures, before DATA/request/preparation. No new arbitrary source-work deadline or repeat authorization literal. Existing verified refactor source10a49449 and source-gap closure remain valid inputs; review only necessary route-source deltas, not completed unchanged work.
+
+All old windows/routes/allocations/claims/charges/results/verifiers and every cumulative prior cost remain immutable/spent, no reset/refund/reinterpretation/recredit. Continuous global-floor function and all prior costs carry through source/setup/idle/run/reader to A and later observations. Same28800000ms window,1860000ms closure,600000ms offline reserve,36new preholdout cells/fourunopened/global300/15GBtotal(12GBretained/2GBscratch/1GBterminal)/3GBRAM/guest1000/startup2500/host5000/Match600000. Serious current-rules league/evaluation/freeze BEFORE formation; unopened private holdout/no public/counting/production. This approval permits ordinary checked implementation of a distinct fresh same-scope route; it does not revive V8 or grant unbounded retries. No actual future A/numericwindow/namespace/request/allocation/capacity/charge or Match exists by this append.
+
 ## Prospective replacement window approved at 12:15:17 UTC
 
 The human's latest `yes, approved` accepts ROOT's specific fresh eight-hour remaining-baseline proposal. ROOT observed approval at 2026-10-12T12:15:17UTC (08:15:17 America/New_York), anchor1791807317000. This prospective window ends20:15:17UTC/16:15:17EDT, deadline1791836117000. Carry459375903 =415746903 +(1791807317000−1791763688000); cumulative cap488175903 =459375903+28800000. Every earlier idle, source, closure and wait interval is carried forward; old windows and consumed artifacts remain immutable history, not reset or revived.
