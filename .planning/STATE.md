@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Bounded overlap and finite integration implemented; independent source review next
+stopped_at: Independent review found opening-pair ordering gap; narrow source correction active
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: Task5+6 source522193e9 and focused tests closed; no new experiment or Match
+last_activity_desc: CR-OWNED-OPENING-01 independently reproduced; author fixing before any new experiment
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V11 closed; bounded source correction
+
+Independent Tasks5+6 review CLOSED issues_found/1BLOCKER0WARNING; CR-OWNED-OPENING-01 requires committed-to-opening directory identity/member validation independently of later allowed creation. One bounded extracted-function reproduction accepted the invalid sequence; this is not actual constructor or historical-cause evidence. Author /root/execute_265_reader_guard now owns the narrow conformance fix and actual-context RED/GREEN regression; review ownership released. Original deadline/caps unchanged, no fresh route artifact or Match. Review/fix, ROOT qualification/scoped validation and distinct source verification remain required.
 
 Task5+6 implementation and authors' focused tests CLOSED at source522193e9; coauthor6a5b7ff445/6cd829276b. All source ownership/test slots/commands released, tracked clean. ROOT exact public tuple comparison PASS445f48; no private content parsed. Independent integrated code review then ROOT qualification/validation/distinct source verification are next, before any fresh-route artifacts. Original21:14:03.861UTC deadline and every numeric/scientific/privacy bound unchanged; all9LEAG/265 still pending.
 

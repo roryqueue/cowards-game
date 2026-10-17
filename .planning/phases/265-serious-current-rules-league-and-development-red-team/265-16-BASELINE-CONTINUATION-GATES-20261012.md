@@ -2261,3 +2261,37 @@ Must-haves:
 Attributed behavior, NOT rerun: ROOT16481/0d8a42 43 selected +35600/2c684d 2 connected PASS (45 unique); author-only late default-reader PASS30.716s/4028965B. Synthetic externals, not real custody/capacity. Final SIX-path strict80478/f863e7 equals pre19248/f5ec26 WHOLE output (six inherited, zero NEW); configured types/factory1444 zero violations are ROOT evidence, not global strict green.
 
 Limits: Task5 OUT/planning-only; journal/launch hazard unresolved, actual cause/runtime benefit unknown. No private history/data/helper/actual reader/provider/Strategy/Match, new route/allocation or tests invoked; no commit/new report. All verifier commands CLOSED; sole GATES ownership RELEASED. Phase265 partial/all9LEAG pending;266 planning-only; freeze-before-formation/holdout unopened. Old routes/readers/costs immutable, no reset/refund or empirical admission.
+
+## Independent reader/guard code review — Tasks 5+6
+
+Reviewer /root/review_265_reader_guard; 2026-10-17; standard adversarial source/caller review. Base90824b9ce6437ae7cb12178742d2b46558454216 -> source522193e9f45830ffbea82684d9273a6d47c3f9b0; trackingHEAD4bf24f6a43d0179abe79477a09971b6dfe75f702. **status: issues_found; BLOCKER: 1; WARNING: 0.** Tasks1-4 unchanged/prior review not repeated.
+
+Explicit eleven-file scope:
+
+- packages/strategy-lab/src/league/lean-experiment.ts
+- packages/strategy-lab/src/league/lean-experiment.test.ts
+- scripts/lib/v1-38-lean-continuation-observations.ts
+- scripts/lib/v1-38-lean-baseline-continuation.ts
+- scripts/lib/v1-38-lean-baseline-continuation.test.ts
+- scripts/run-v1-38-lean-baseline.ts
+- scripts/run-v1-38-lean-baseline.test.ts
+- scripts/lib/v1-38-lean-baseline-retained.ts
+- scripts/lib/v1-38-lean-baseline-retained.test.ts
+- scripts/lib/v1-38-lean-container-match-session.ts
+- scripts/lib/v1-38-lean-container-match-session.test.ts
+
+### CR-OWNED-OPENING-01 — BLOCKER: later creation masks prior unexplained directory drift
+
+**File:** scripts/lib/v1-38-lean-baseline-continuation.ts:700-708 (especially706).
+
+observe() allows store nlink increases provisionally, but directory() validates the committed stat/member pair against the CLOSING pair, not the observed OPENING pair. Example: committed store nlink2/members[]; next opening already nlink3/members[]; then one allowed cold-corpus.json appears before closing, whose nlink remains3. Committed->closing appears to be delta1/one addition, and opening->closing delta0/one addition is also allowed. The stable second scan commits this invalid history. The unexplained drift was observable before the allowed creation and must permanently deny; a later addition cannot retroactively classify it. This breaches Task5a's committed->opening relation and permits later reservations/effects instead of refusal.
+
+**Fix:** classify committed stat+members against opening stat+members before replacing that pin, independently of opening->closing. Preserve valid creation-between-stat-and-readdir only when opening stat still matches committed stat; never use later closing members to excuse an already changed opening stat. Retain all-root retry, exact ending pins and irreversible denial.
+
+**Test gap:** existing unexplained-links case (continuation.test.ts267-305) adds a file before observation and injects an excessive delta; it does not combine pre-opening unexplained drift with later valid creation. Add that interleaving, assert initial refusal plus permanent denial/effects0, retain between-calls/opening-creation positives, and cover the actual context seam.
+
+**Bounded reproduction:** ROOT approved ONE public in-memory check. Exact extracted sameOwnedIdentity/sameOwnedStat/stabilizedOwnedMeasurement source SHA256 dd740da12fa896edbc3fcef3121770c5cce51ea869a3282b45f02fa77998a05e with synthetic Stats/fs seams accepted that sequence: retained4096/scratch0, six store listings, one addition. Command d0eeca CLOSED0; child344ms; external watchdog55000ms; no fixtures/files written. Extracted-function evidence, NOT connected constructor/integration or real-filesystem proof.
+
+Other delta tracing found no additional actionable finding: two-buffer journal capture/fresh strict EOF/prefix checks; legacy second-open snapshot brackets; fullSample/pre-pair/startCell/closure invalidation; exact V12 selection/default older strict policy; finite driver/retained/Git negative predicates; immutable V11 cost-only22/2/5 and file floor93921280 counted once; original T/A/carry/cap/deadline retained. ROOT public-tuple comparison445f48 is attributed, not new private authentication.
+
+Author Task5 31, Task6a2/6c2/6b7 and overlapping10 regressions are attributed, not rerun or summed. Author SIX strict reports six inherited outside scope; ROOT comparison/qualification and distinct verification remain owed; no global-green claim. Eleven source files exactly match522193e9. No source/private/history/ordinary-reader/runtime/provider/Strategy/Match operation, authority/artifact creation, allocation/time extension or commit. Only this append. All reviewer commands CLOSED; sole GATES section ownership RELEASED to ROOT. Source gate requires CR-OWNED-OPENING-01 repair/review; empirical/Phase265/all9LEAG gates remain pending.
