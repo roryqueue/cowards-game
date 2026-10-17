@@ -44,6 +44,46 @@ describe("continuation-route-v9", () => {
     expect(Object.isFrozen(o.spentV8Metadata[0])).toBe(true)
     expect(Object.isFrozen(o.spentV8Directories[0]!.members)).toBe(true)
   })
+  it("authenticates all public V8 opaque survivors, memberships and absences with cost once and no refund", async () => {
+    const original = readLeanContinuationExpectedObservations(), dir = realpathSync(mkdtempSync(join(tmpdir(), "route-v9-public-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    const obs = { ...original, spentV3Metadata: [], spentV4Metadata: [], spentV4Directories: [], spentV5Metadata: [], spentV5Directories: [], spentV6Metadata: [], spentV7Metadata: [], spentV7Directories: [], spentV8Metadata: original.spentV8Metadata.map(row => ({ ...row })), spentV8Directories: original.spentV8Directories }
+    try {
+      fs.mkdirSync(resolve(".planning/artifacts"), { recursive: true }); fs.mkdirSync(resolve(".strategy-lab"), { mode: 0o700 })
+      for (const row of obs.spentV8Directories) fs.mkdirSync(resolve(row.path), { mode: 0o700 })
+      for (const [i, row] of obs.spentV8Metadata.entries()) {
+        const bytes = Buffer.from(`public opaque V8 ${i}`); writeFileSync(resolve(row.path), bytes, { mode: row.mode }); fs.chmodSync(resolve(row.path), row.mode)
+        row.bytes = bytes.length; row.allocatedBytes = fs.lstatSync(resolve(row.path)).blocks * 512; row.rawRoot = ledger.leanBytesRoot(bytes)
+      }
+      vi.doMock("./v1-38-lean-continuation-observations.js", () => ({ readLeanContinuationExpectedObservations: () => obs }))
+      vi.resetModules()
+      const C = await import("./v1-38-lean-baseline-continuation.js"), git = vi.fn(), w = window(), inventory = () => C.inventoryLeanContinuationSurvivorsV2([], [], git, () => {}, w)
+      const first = inventory(); expect(first.filter(row => row.rawRoot !== null)).toHaveLength(15); expect(git).not.toHaveBeenCalled()
+      const fileBytes = obs.spentV8Metadata.reduce((n, row) => n + row.allocatedBytes, 0), directoryBytes = obs.spentV8Directories.reduce((n, row) => n + fs.lstatSync(resolve(row.path)).blocks * 512, 0)
+      expect(C.measureLeanContinuationKnownDisjointBytesV8(w)).toBe(directoryBytes)
+      const consumed = [ledger.LEAN_BASELINE_CONTINUATION_PATHS.request, ledger.LEAN_BASELINE_CONTINUATION_PATHS.allocation, ledger.LEAN_BASELINE_CONTINUATION_PATHS.store, ledger.LEAN_BASELINE_CONTINUATION_PATHS.temp].map(path => ({ path, allocatedBytes: 0 }))
+      const priorDebit = fileBytes + directoryBytes + 8192, debit = C.reconcileLeanContinuationV2DiskDebit(priorDebit, first, priorDebit, [...first, ...consumed], w)
+      expect(debit.allocatedDiskBytes).toBe(priorDebit); expect(debit.residualDiskBytes).toBeGreaterThanOrEqual(0)
+      const target = obs.spentV8Metadata[0]!, bytes = fs.readFileSync(resolve(target.path))
+      for (const mutation of ["hash", "missing", "mode", "shrink", "symlink", "hardlink"] as const) {
+        if (mutation === "hash") writeFileSync(resolve(target.path), Buffer.alloc(bytes.length, 88))
+        if (mutation === "missing") fs.renameSync(resolve(target.path), resolve(target.path + ".saved"))
+        if (mutation === "mode") fs.chmodSync(resolve(target.path), 0o644)
+        if (mutation === "shrink") writeFileSync(resolve(target.path), "")
+        if (mutation === "symlink" || mutation === "hardlink") { fs.renameSync(resolve(target.path), resolve(target.path + ".saved")); if (mutation === "symlink") symlinkSync(resolve(target.path + ".saved"), resolve(target.path)); else fs.linkSync(resolve(target.path + ".saved"), resolve(target.path)) }
+        expect(inventory, mutation).toThrow()
+        if (mutation === "symlink" || mutation === "hardlink") fs.unlinkSync(resolve(target.path))
+        if (["missing", "symlink", "hardlink"].includes(mutation)) fs.renameSync(resolve(target.path + ".saved"), resolve(target.path))
+        writeFileSync(resolve(target.path), bytes); fs.chmodSync(resolve(target.path), target.mode)
+      }
+      for (const name of ["extra.json", "result.json", "reader-claim.json", "retained-check.json"]) {
+        const path = resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V8.store, name); writeFileSync(path, "x", { mode: 0o600 }); expect(inventory).toThrow(); fs.unlinkSync(path)
+      }
+      fs.mkdirSync(resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V6.store)); expect(inventory).toThrow(/V6_SPENT_ABSENCE/); fs.rmdirSync(resolve(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V6.store))
+      const account = C.createLeanContinuationReservationAccountingV8(C.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V9, directoryBytes), allocate = vi.fn()
+      expect(() => { const bytes = account.reserve(4096, 0); if (bytes > 91287551) throw new Error("capacity"); C.authenticateLeanBaselineContinuationCarryV2(git, [], () => { throw new Error("prewrite capacity") }, w); allocate() }).toThrow("capacity")
+      expect(git).not.toHaveBeenCalled(); expect(allocate).not.toHaveBeenCalled()
+    } finally { vi.doUnmock("./v1-38-lean-continuation-observations.js"); vi.resetModules(); cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+  })
 })
 
 describe("continuation-boundary-v8-P", () => {

@@ -89,6 +89,153 @@ const spentV7Directories = freezeLabValue([
   { path: LEAN_BASELINE_CONTINUATION_PATHS_V7.store, members: ["allocation.json", "carry.json", "ledger.ndjson", "source-hold.json", "source-manifest.json", "time.ndjson"] },
   { path: LEAN_BASELINE_CONTINUATION_PATHS_V7.temp, members: ["window-claim.json"] },
 ])
+/** Independently compared spent V8 bytes: preservation/cost only, never authority. */
+const spentV8Metadata = freezeLabValue([
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-window-20261015-v8.json",
+    "bytes": 927,
+    "allocatedBytes": 4096,
+    "mode": 384,
+    "maximum": 65536,
+    "rawRoot": "sha256:2d10cd37d22e6ef76b5ffe5d4cff283c8264543d3bfe79fca08aaface1fbc05f"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-request-20261015-v8.json",
+    "bytes": 4036,
+    "allocatedBytes": 4096,
+    "mode": 384,
+    "maximum": 65536,
+    "rawRoot": "sha256:388cbe2d4e30f478a16f27e1fe657f4288a93a08074ec446c2b7b5700138e0ff"
+  },
+  {
+    "path": ".planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261015-v8.json",
+    "bytes": 17350,
+    "allocatedBytes": 20480,
+    "mode": 420,
+    "maximum": 262144,
+    "rawRoot": "sha256:fbcd010d88de954894b9e9d97a4b81258e580721cfa9cc8498d91dd64e31389f"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8/allocation.json",
+    "bytes": 17350,
+    "allocatedBytes": 20480,
+    "mode": 384,
+    "maximum": 262144,
+    "rawRoot": "sha256:fbcd010d88de954894b9e9d97a4b81258e580721cfa9cc8498d91dd64e31389f"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8/carry.json",
+    "bytes": 757888,
+    "allocatedBytes": 761856,
+    "mode": 384,
+    "maximum": 4194304,
+    "rawRoot": "sha256:4ab94f7a355d603099aa0b7e94e465c97dc4ff67a0ad742fbf1a06c5e70f07c1"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8/source-manifest.json",
+    "bytes": 208465,
+    "allocatedBytes": 208896,
+    "mode": 384,
+    "maximum": 4194304,
+    "rawRoot": "sha256:9e3f84f8ddcc9acdd5e7fef5f4957e1b1715f44b7d6eb7f4d367ba76a3b3d11e"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8/source-hold.json",
+    "bytes": 147225,
+    "allocatedBytes": 147456,
+    "mode": 384,
+    "maximum": 4194304,
+    "rawRoot": "sha256:5a7f2f0da52b3b74d32638085b0338a04d299e2775366322e97a874b73508226"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8/ledger.ndjson",
+    "bytes": 0,
+    "allocatedBytes": 0,
+    "mode": 384,
+    "maximum": 4194304,
+    "rawRoot": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8/time.ndjson",
+    "bytes": 258,
+    "allocatedBytes": 4096,
+    "mode": 384,
+    "maximum": 4194304,
+    "rawRoot": "sha256:8f1778dabc27b4668e2b91f7e547e157351c74aca7d47b67ff329edb266a85e7"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8/run-claim.json",
+    "bytes": 402,
+    "allocatedBytes": 4096,
+    "mode": 384,
+    "maximum": 262144,
+    "rawRoot": "sha256:4ab6b3aee85dab2bc17cb3d0f736de6e098a716e228c7db73b950fb19aaf266c"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8/entry.json",
+    "bytes": 551,
+    "allocatedBytes": 4096,
+    "mode": 384,
+    "maximum": 262144,
+    "rawRoot": "sha256:7f3e14791b650e5e8eec9e1be1b9e809f56a4f8fce93253d754de7e7baab6663"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8/child-terminal.json",
+    "bytes": 659,
+    "allocatedBytes": 4096,
+    "mode": 384,
+    "maximum": 262144,
+    "rawRoot": "sha256:29d750f49a075384d14fee50150af608203dfaeed5f80e32b805f76652021d6e"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8/entry-failure.json",
+    "bytes": 121,
+    "allocatedBytes": 4096,
+    "mode": 384,
+    "maximum": 262144,
+    "rawRoot": "sha256:d8200b485f6aa73c7e37dd2c233766db62f7480f22133659f8abc6f0b45eb2fd"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8/parent-supervisor-reasons.json",
+    "bytes": 888,
+    "allocatedBytes": 4096,
+    "mode": 384,
+    "maximum": 262144,
+    "rawRoot": "sha256:eb87a75da2dee291af822224d4fd586e2e3e7a65c4575da8eee74bb495398ca5"
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8-tmp/window-claim.json",
+    "bytes": 1000,
+    "allocatedBytes": 4096,
+    "mode": 384,
+    "maximum": 65536,
+    "rawRoot": "sha256:b02ae430adc7e7c6df0ec7633622c34a27f24bd42a5351017d3bac29d2e7150b"
+  }
+])
+const spentV8Directories = freezeLabValue([
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8",
+    "members": [
+      "allocation.json",
+      "carry.json",
+      "child-terminal.json",
+      "entry-failure.json",
+      "entry.json",
+      "ledger.ndjson",
+      "parent-supervisor-reasons.json",
+      "run-claim.json",
+      "source-hold.json",
+      "source-manifest.json",
+      "time.ndjson"
+    ]
+  },
+  {
+    "path": ".strategy-lab/lean-baseline-continuation-20261015-v8-tmp",
+    "members": [
+      "window-claim.json"
+    ]
+  }
+])
 const LEAN_CONTINUATION_CLOSED_COST_V2 = Object.freeze({ sourceHead: "16db0fa0610e1a2378be8594b191d61f2f3c3baa", allocationCommit: "f6ff7ec36de7387feab7e4b4ad3695db480a4c1f", allocationBytesRoot: "sha256:3ea8c18d1a8a5b7816ed44f10572d4469870e75dcee8c7223895809830cd2c87", resultBytesRoot: "sha256:79ad5c21114afcec3b420b2f452db20cc29b2ca769c8ade317a343187b792796", checkBytesRoot: "sha256:64015d7c5e2c0ced02e0fa09f7c10f2cd7534a3f42b7f046af2a65d7bef17286", checkRoot: "sha256:e1711e16eafd3ded5d69988fe7617208fa7fcdc62b9681d45910ef2825f88838" })
 
 const fixed = freezeLabValue({
@@ -97,6 +244,7 @@ const fixed = freezeLabValue({
   continuationExtraPaths: ["packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"],
   continuationPlanningPaths: LEAN_BASELINE_CONTINUATION_PLANNING_PATHS,
   spentV3Metadata, spentV4Metadata, spentV4Directories, spentV5Metadata, spentV5Directories, spentV6Metadata, spentV7Metadata, spentV7Directories,
+  spentV8Metadata, spentV8Directories,
   closedCostV2: LEAN_CONTINUATION_CLOSED_COST_V2,
 })
 type DeepReadonly<T> = T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> } : T
