@@ -299,7 +299,7 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     expect(continuationReader.assertLeanBaselineContinuationV2ClosedCount(85, 35)).toMatchObject({ complete: false, unused: 1 })
     for (const value of [report, structuredClone(report), JSON.parse(JSON.stringify(report)), { ...report }]) expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(value)).toBe(false)
     for (const delta of [{ status: "current_baseline_complete", unusedOrdinals: [] }, { unusedOrdinals: [] }, { failure: "CONTINUATION_READER_FAILURE", status: "current_baseline_complete" }]) expect(() => continuationReader.auditLeanBaselineContinuationRetainedV2({ ...s, result: { ...s.result, ...delta } } as typeof s)).toThrow()
-    const receipts = structuredClone(s.result.resourceReceipts); receipts[0]!.before.nowMs = s.window.deadlineMs; receipts[0]!.after.nowMs = s.window.deadlineMs
+    const receipts = structuredClone(s.result.resourceReceipts) as Array<{ before: { nowMs: number }; after: { nowMs: number } }>; receipts[0]!.before.nowMs = s.window.deadlineMs; receipts[0]!.after.nowMs = s.window.deadlineMs
     expect(() => continuationReader.auditLeanBaselineContinuationRetainedV2({ ...s, result: { ...s.result, resourceReceipts: receipts } } as typeof s)).toThrow()
   })
   it("[continuation-v4] reads an actual selected window before scope/metadata and denies crossed request/window", () => {
