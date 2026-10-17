@@ -1,4 +1,5 @@
 /** Prospective current-only private baseline entry. Importing this module is inert. */
+import { readLeanContinuationExpectedObservations } from "./lib/v1-38-lean-continuation-observations.js"
 import { constants, closeSync, fsyncSync, fchmodSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync, statfsSync, mkdirSync, existsSync } from "node:fs"
 import { fork, execFileSync } from "node:child_process"
 import { randomBytes } from "node:crypto"
@@ -1652,4 +1653,3 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   if (childMode) void (args[0] === "child-continuation-v2" ? resolveLeanContinuationChildCliTerminalV2(action) : resolveLeanChildCliTerminal(action))
   else void action.then(value => { process.stdout.write(`${JSON.stringify(value)}\n`) }).catch(error => { if (args.length === 3 && args[0] === "prepare-continuation-v2" && args[1] === "--request" && (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V4.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V5.request || (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V6.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V7.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V8.request))) process.stderr.write(leanBaselineContinuationPreparationFailureV4(error)); if (args.length === 3 && args[0] === "run-continuation-v2" && args[1] === "--request" && (args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V6.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V7.request || args[2] === LEAN_BASELINE_CONTINUATION_PATHS_V8.request)) process.stderr.write(leanBaselineContinuationRunFailureV2(error)); process.stderr.write("LEAN_BASELINE_FAILED_DETAILS_WITHHELD\n"); process.exitCode = 1 })
 }
-import { readLeanContinuationExpectedObservations } from "./lib/v1-38-lean-continuation-observations.js"

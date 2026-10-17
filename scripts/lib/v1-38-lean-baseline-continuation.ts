@@ -1,4 +1,5 @@
 /** Bounded trusted-host custody for the fresh continuation. Importing is inert. */
+import { readLeanContinuationExpectedObservations } from "./v1-38-lean-continuation-observations.js"
 import { createHash } from "node:crypto"
 import { constants, openSync, closeSync, fstatSync, readSync, lstatSync, realpathSync, readdirSync, type Stats } from "node:fs"
 import { resolve, join, relative } from "node:path"
@@ -733,4 +734,3 @@ export const authenticateLeanBaselineContinuationCarry = (git: LeanContinuationG
   const carry: LeanBaselineContinuationCarry = freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
   guard(); return freezeLabValue({ carry, custody, inventory })
 }
-import { readLeanContinuationExpectedObservations } from "./v1-38-lean-continuation-observations.js"

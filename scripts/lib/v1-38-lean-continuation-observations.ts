@@ -91,7 +91,7 @@ const spentV7Directories = freezeLabValue([
 ])
 const LEAN_CONTINUATION_CLOSED_COST_V2 = Object.freeze({ sourceHead: "16db0fa0610e1a2378be8594b191d61f2f3c3baa", allocationCommit: "f6ff7ec36de7387feab7e4b4ad3695db480a4c1f", allocationBytesRoot: "sha256:3ea8c18d1a8a5b7816ed44f10572d4469870e75dcee8c7223895809830cd2c87", resultBytesRoot: "sha256:79ad5c21114afcec3b420b2f452db20cc29b2ca769c8ade317a343187b792796", checkBytesRoot: "sha256:64015d7c5e2c0ced02e0fa09f7c10f2cd7534a3f42b7f046af2a65d7bef17286", checkRoot: "sha256:e1711e16eafd3ded5d69988fe7617208fa7fcdc62b9681d45910ef2825f88838" })
 
-export const LEAN_CONTINUATION_EXPECTED_OBSERVATIONS = freezeLabValue({
+const fixed = freezeLabValue({
   sourcePaths: SOURCE_PATHS,
   continuationOwnedPaths: LEAN_BASELINE_CONTINUATION_OWNED_PATHS,
   continuationExtraPaths: ["packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"],
@@ -99,5 +99,7 @@ export const LEAN_CONTINUATION_EXPECTED_OBSERVATIONS = freezeLabValue({
   spentV3Metadata, spentV4Metadata, spentV4Directories, spentV5Metadata, spentV5Directories, spentV6Metadata, spentV7Metadata, spentV7Directories,
   closedCostV2: LEAN_CONTINUATION_CLOSED_COST_V2,
 })
-export type LeanContinuationExpectedObservations = typeof LEAN_CONTINUATION_EXPECTED_OBSERVATIONS
+type DeepReadonly<T> = T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> } : T
+export type LeanContinuationExpectedObservations = DeepReadonly<typeof fixed>
+export const LEAN_CONTINUATION_EXPECTED_OBSERVATIONS: LeanContinuationExpectedObservations = fixed
 export const readLeanContinuationExpectedObservations = (): LeanContinuationExpectedObservations => LEAN_CONTINUATION_EXPECTED_OBSERVATIONS
