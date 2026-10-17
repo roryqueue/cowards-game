@@ -1920,7 +1920,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     // observations. Filesystem identities, modes, blocks and bytes stay actual.
     restored.push(vi.spyOn(F, "factoryAssessmentImplementationManifest").mockReturnValue({ entries: [], root: root("empty-external-factory") }).mockRestore)
     const resource = { fail: false, failAfterEntry: false, closingHeadObserved: false, closingHeadSample: 0, denialSample: 0, tripped: false, calls: 0 }
-    restored.push(vi.spyOn(fs, "statfsSync").mockImplementation((() => {
+    restored.push(vi.spyOn(fs, "statfsSync").mockImplementation(() => {
       bounded()
       resource.calls++
       counts.resourceSamples = resource.calls
@@ -1929,8 +1929,8 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
       if (resource.calls % 512 === 0) { vi.mocked(fs.statfsSync).mockClear(); vi.mocked(process.memoryUsage).mockClear(); vi.mocked(H.observeLeagueAvailableMemoryBytes).mockClear(); vi.mocked(G.readLeanBaselineContinuationGitV2).mockClear(); vi.mocked(CP.execFileSync).mockClear(); vi.mocked(Date.now).mockClear(); vi.mocked(process.hrtime.bigint).mockClear() }
       const closingDenial = resource.failAfterEntry && resource.closingHeadObserved && !resource.tripped
       if (closingDenial) { resource.tripped = true; resource.denialSample = resource.calls }
-      return { bavail: resource.fail || closingDenial ? 0n : 100000000000n, bsize: 1n }
-    }) as typeof fs.statfsSync).mockRestore)
+      return { type: 0n, blocks: 100000000000n, bfree: 100000000000n, files: 1000000n, ffree: 1000000n, bavail: resource.fail || closingDenial ? 0n : 100000000000n, bsize: 1n }
+    }).mockRestore)
     restored.push(vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }).mockRestore)
     restored.push(vi.spyOn(H, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000).mockRestore)
     let logicalMs = 0, anchor = 1792093334001
@@ -2050,7 +2050,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send")
     if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected")
     vi.unstubAllEnvs(); vi.doUnmock("./lib/v1-38-lean-continuation-observations.js"); vi.resetModules()
-    for (const [i, name] of legacyMockNames.entries()) vi.doMock(name, () => legacyMocks[i])
+    for (const [i, name] of legacyMockNames.entries()) vi.doMock(name, () => legacyMocks[i]!)
     fs.rmSync(dir, { recursive: true })
     const elapsedMs = performance.now() - began
     if (elapsedMs > fixtureLimitMs) status = "CENSORED"
@@ -2068,8 +2068,8 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
 // publication observed; actual/clone/deserialized private acceptance all false.
 it("internal-observations-C actual CLI default importer claims before missing result and resource-checked cleanup", () => withInternalObservationTree(true, async f => {
   const { D, L, R, p, ledger, resource, read } = f
-  const stages: string[] = [], reader = R.verifyLeanBaselineContinuationRetainedV2
-  f.restored.push(vi.spyOn(R, "verifyLeanBaselineContinuationRetainedV2").mockImplementation((request: string, observe?: (s: string) => void) => reader(request, (s: string) => { stages.push(s); f.note(s); observe?.(s) })).mockRestore)
+  const stages: string[] = [], reader = (R as typeof import("./lib/v1-38-lean-baseline-retained.js")).verifyLeanBaselineContinuationRetainedV2
+  f.restored.push(vi.spyOn(R as typeof import("./lib/v1-38-lean-baseline-retained.js"), "verifyLeanBaselineContinuationRetainedV2").mockImplementation((request, observe) => reader(request, s => { stages.push(s); f.note(s); observe?.(s) })).mockRestore)
   let failure: unknown
   const actual = await D.leanBaselineMain(["verify-continuation-v2", "--request", p.request]).catch((error: unknown) => { failure = error })
   process.stdout.write(`INTERNAL_OBSERVATIONS_C_PROGRESS ${JSON.stringify({ stages, diagnostic: D.leanBaselineContinuationReaderFailureV2(failure).trim(), claimExists: fs.existsSync(resolve(p.store, "reader-claim.json")), resultExists: fs.existsSync(resolve(p.store, "result.json")), timeActive: L.readLeanTimeAccounting(ledger).active, verifierClosed: L.readLeanTimeAccounting(ledger).closed.has("continuation-retained-verifier-v2"), resourceSamples: resource.calls })}\n`)
@@ -2108,7 +2108,7 @@ it("internal-observations-B actual CLI wrapper reaches parent entry then owned c
   })
   let exits = 0; child.on("exit", () => { exits++ })
   restored.push(() => child.removeAllListeners())
-  const fork = vi.spyOn(CP, "fork").mockImplementation((() => { queueMicrotask(() => child.emit("message", { ready: child.pid })); return child }) as unknown as typeof childProcess.fork)
+  const fork = vi.spyOn(CP as typeof childProcess, "fork").mockImplementation((() => { queueMicrotask(() => child.emit("message", { ready: child.pid })); return child }) as unknown as typeof childProcess.fork)
   restored.push(fork.mockRestore)
   resource.failAfterEntry = true
   let failure: unknown
