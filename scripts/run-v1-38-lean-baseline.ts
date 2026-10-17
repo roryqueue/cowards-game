@@ -46,6 +46,7 @@ export const LEAN_SUPERVISOR_REASON_CODES = Object.freeze([
   "child_error", "malformed_ipc", "duplicate_failure_receipt", "resource_threshold",
   "resource_sampling_exception", "deadline_timeout", "final_identity_mismatch",
   "final_identity_exception", "failure_receipt_publication_uncertain",
+  "continuation_guard_exception",
 ] as const)
 export type LeanSupervisorReasonCode = typeof LEAN_SUPERVISOR_REASON_CODES[number]
 // ChildProcess exit signals are finite host values. Never retain arbitrary text.
@@ -85,6 +86,7 @@ export const isLeanSupervisorReasonEnvelope = (value: unknown): value is LeanSup
   if (indexes.some((index, i) => index < 0 || (i > 0 && index <= indexes[i - 1]!)) || v.uncertain !== (v.reasons.length > 0)) return false
   if (!o || !exactLabKeys(o, ["entry", "childReady", "resourceSampling", "finalIdentity", "failureReceipt", "cleanup", "terminalization", "initiatingCause"]) || o.entry !== "published" || o.childReady !== "observed" || !["observed", "exception"].includes(o.resourceSampling) || !["matched", "mismatch", "exception"].includes(o.finalIdentity) || !["absent", "published", "publication_failed"].includes(o.failureReceipt) || o.cleanup !== "child_exit_observed" || o.terminalization !== "unobserved" || o.initiatingCause !== "unknown") return false
   if ((o.resourceSampling === "exception") !== v.reasons.includes("resource_sampling_exception") || (o.finalIdentity === "mismatch") !== v.reasons.includes("final_identity_mismatch") || (o.finalIdentity === "exception") !== v.reasons.includes("final_identity_exception") || (o.failureReceipt === "publication_failed") !== v.reasons.includes("failure_receipt_publication_uncertain")) return false
+  if (v.reasons.includes("continuation_guard_exception") && !v.reasons.includes("resource_sampling_exception")) return false
   const { root, ...body } = v
   return root === labRoot("lean-parent-supervisor-reasons-v1", body) && leanCanonicalBytes(v).length <= LEAN_SUPERVISOR_REASON_MAX_BYTES
 }
@@ -607,7 +609,10 @@ export const runLeanBoundedParent = async (options: { ledger: LeanExperimentLedg
     if (coordination) { effect("dispatch", () => {}); coordination.check(); options.onStage?.("PARENT_RELEASE"); await coordination.arm(); coordination.check(false); child.send({ release: token }); coordination.close() }
     period = setInterval(() => {
       try {
-        if (allocation.schemaVersion === "lean-baseline-continuation-allocation-v2") options.beforeRelease?.()
+        if (allocation.schemaVersion === "lean-baseline-continuation-allocation-v2") {
+          try { options.beforeRelease?.() }
+          catch (error) { observe("continuation_guard_exception"); throw error }
+        }
         const rss = sample("child_rss", () => rssOf(child.pid!))
         childRssObservedBytes = Math.max(childRssObservedBytes ?? 0, rss)
         if (sample("parent_rss", () => process.memoryUsage().rss) + rss + LEAN_EXTERNAL_SCRATCH_RESERVE + 320 * 1024 * 1024 > leanMemoryLimitForAllocation(allocation) || sample("time_budget", () => leanBoundedParentTimeBudget(ledger, options.terminalReserveMs ?? 0).elapsedMs >= leanCapsForAllocation(allocation).elapsedMs)) { uncertain = true; observe("resource_threshold"); sample("threshold_kill", () => child.kill("SIGKILL")) }
