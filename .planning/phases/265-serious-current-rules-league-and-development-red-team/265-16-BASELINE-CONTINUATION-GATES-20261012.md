@@ -1,5 +1,13 @@
 # Baseline continuation gates
 
+## V11 current SOURCE projection
+
+Actual author/review/fix, ROOT qualification/State-A and distinct source verifier are CLOSED VERIFIED3/3/findings[]. Final configured project types ROOT8988d1 also CLOSED0. Source698members, same original allowance; no actual V11 window or empirical admission yet. V10 projection bodies remain historical text, not current selectors.
+
+```json
+{"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"bfad7431d3fe6cc5fdda65dafbe523d0c2de40e3","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_device_continuity","sourceReviewer":"/root/review_265_next_cell","sourceRoot":"sha256:52266d7b1826f8e26048f95ca5df2d09da46ea26114eab908eea235a331f4aec","sourceVerifier":"/root/verify_265_device_continuity","source_review":"passed","source_verification":"passed"}
+```
+
 ## V10 closed / prospective device-continuity source inputs
 
 ROOT45298/05a923 preparation CLOSED1 CARRY/DETAILS_WITHHELD; unique independent terminal-only `/root/review_265_v10_data` baf0e0 CLOSED0 at2026-10-17T13:20:18.933UTC. Exact V10 process counts0, allocation/store/temp absent, fixedHEAD02c828af/trackedclean. No actual entry/head/ordinary reader or retained new Match. Original throw UNKNOWN; source hold released, failed V10 immutable.
@@ -8,19 +16,19 @@ Independently observed immutable cost inputs for a DISTINCT same-window route: `
 
 ROOT SAME15 strict70319/94827f CLOSED2 before device repair:13inherited diagnostics/7051B, full output retained for exact final comparison. No new source edits yet and no global strict-green claim. Standing direct human fresh-route consent covers a distinct same-scope setup within the ORIGINAL approved eight-hour allowance, not a V10 retry, added time/Matches, refund or reset. Actual SOURCE/DATA/new-allocation/capacity gates remain required; all9LEAG pending.
 
-## V10 current DATA projection
+## V10 historical DATA projection
 
 Independent actual `/root/review_265_v10_data` PASS_DATA_REVIEW/findings[], all commands closed; canonical projection follows that observation and the actual window. This is source/input review, not capacity or empirical admission.
 
-```json
+```text
 {"approvalEvidence":{"humanDecisionId":"human-approval-observed-20261017T124639Z","recordedBy":"/root"},"commands_closed":true,"dataReviewer":"/root/review_265_v10_data","grantId":"lean-baseline-continuation-20261017-v10-one-window","planRoot":"sha256:dd0289a5e3cbc2e156b428b6fd2a0482ea535b3fed1b4e4ad823e5e7364ed80b","readerOperator":"/root/verify_265_v10_retained","reviewedSourceHead":"478061b636d633c503ca7f87af8792c17ed6cd33","runOperator":"/root","schemaVersion":"lean-baseline-continuation-data-gate-v2","sourceGateRoot":"sha256:656f99305bafdeb959a3cacebf4d726e3bd7f7ac53343e99bd15b62c897fcbf3","sourceRoot":"sha256:e88e5f996d3d8aa00cb13fc8870c3d1e1e4299ab43ed4495681021ee5aab54be","status":"passed","windowBytesRoot":"sha256:4d5c15298a6d096c72f15700728af2317826bc99cfc783a7332e62624a319179","windowRoot":"sha256:c9924ac3c80fc356c1341192b6e97bd1f6dcf78668192fb4b4d20a149fce20ce"}
 ```
 
-## V10 current SOURCE projection
+## V10 historical SOURCE projection
 
 Actual checked plan, independent source review/fix, ROOT qualification/validation and distinct source verification have closed before window initialization. Older V9 SOURCE/DATA bodies below remain historical text and committed history, not current selectors. Actual source698members; no empirical capacity or completion implied.
 
-```json
+```text
 {"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"478061b636d633c503ca7f87af8792c17ed6cd33","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_next_cell","sourceReviewer":"/root/review_265_next_cell","sourceRoot":"sha256:e88e5f996d3d8aa00cb13fc8870c3d1e1e4299ab43ed4495681021ee5aab54be","sourceVerifier":"/root/verify_265_next_cell","source_review":"passed","source_verification":"passed"}
 ```
 
@@ -2146,3 +2154,13 @@ Final source bfad7431: ROOT36806/995645 CLOSED0 21selected pass/498filter-exclud
 /root/review_265_next_cell: **CR-DEVICE-01/WR-DEVICE-01 CLOSED;0 remaining BLOCKER/WARNING;findings:[]**. Exact f0289a1e..bfad7431, twofiles45+/4−. Production change ONLY removes emptyset rejection; private authentication, exact fresh member comparisons, fd/path/metadata and strict live identity remain. New real anchored public fixture omits directory members, admits fresh empty[], denies original/copied public proof, then pins other directory metadata so extra-child refusal specifically reaches CONTINUITY_MEMBERS. New cumulative bound case has two individually sub15GB affected FILE sizes summing15GB+1; real importer rejects CONTINUITY_BOUND after target open but BEFORE target Buffer.alloc/read (asserted0/0), with no huge payload. This covers aggregate, not merely per-file size.
 
 Author CLOSED RED/GREEN8pass/final2pass/exactempty1.462s4.026MB and strict13inherited7051B attributed, not rerun. Reviewer diffcheck CLOSED0; no tests/private/source/Match/commit. Only this append; existing ROOT edits preserved. All commands CLOSED/ownership RELEASED. ROOT qualification/State-A/distinct verification remain owed; empirical/Phase265pending.
+
+## DISTINCT V11 source verification — 2026-10-17
+
+/root/verify_265_device_continuity, distinct author/reviewer: **VERIFIED 3/3 source truths; 0 BLOCKER/0 WARNING; gaps:[]**. Inspected final Plan16 amendment, RESEARCH/STATE/VALIDATION and actual source/tests bfad7431d3fe6cc5fdda65dafbe523d0c2de40e3; docs HEAD6af732e2. Not whole-phase verification.
+
+- **N1 VERIFIED:** helper687/747 authenticates old inventory/custody/capsule before private inventory756.379–409 freshly hashes changed-dev FILE against old root with stable NOFOLLOW fd/path/owner/singlelink/other metadata; sealed/nullhash/mismatch/race refuse. Unexported exact-row Map cannot be supplied/copied through public APIs217/243. Original producer198–199 enumerates ALL children;407 compares authenticated direct membership including empty[]. CR-DEVICE-01 test2226+ reaches extra-member refusal with other metadata fixed.390–398 bounds cumulative15GB/exact lengths/64KiB guard-before-buffer/chunks; WR-DEVICE-01 test asserts aggregate15GB+1, target reads/allocations0.
+- **N2 VERIFIED:** domain864–898 pins original T1792241199000/A1792242843861/carry894902764/cap923702764/deadline1792271643861; helper749–754 authenticates V10 allowance equality.8192B once/floor92499968, old absences/debt retained. Driver1358–1361 importer→reconcile→bindArchive;1292ff/context1440ff bind fresh rows into device-strict identity475–515. Connected test2270+ asserts fullSample, no historical polling opens and later drift refusal. Finite parent/Git/charge/startup siblings preserve old policy.
+- **N3 VERIFIED:** retained722–755/875–925 preserves fresh opening before interval/claim, independent failure closure/private identity. Tests296–305/439ff and driver2286ff reject incomplete/unused/exhausted/failed original and copies; no complete-success inference.
+
+Attributed behavior, NOT rerun: ROOT23 selected pass; author connected bind12.079s/4.026MB and reader28.310s/4.029MB externally bounded pass. SAME15strict13inherited7051B whole-byte-equal pre, NOT global strict green. Synthetic externals, not real custody/capacity/cause proof. Diffcheck clean/no debt markers. No tests/private artifacts/reader/provider/Match/commit. Commands CLOSED; sole GATES ownership RELEASED. All9LEAG/265pending; same15GB/currentrules/unopenedholdout/freeze-before-formation; old routes immutable/no reset/refund/empirical admission.

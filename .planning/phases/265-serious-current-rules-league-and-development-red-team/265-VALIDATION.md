@@ -7,13 +7,15 @@ wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-17
 source_reviewed: bfad7431d3fe6cc5fdda65dafbe523d0c2de40e3
-source_gate: v11-device-continuity-reviewed-root-validated-distinct-verification-pending
+source_gate: v11-device-continuity-reviewed-root-validated-distinct-verification-passed
 empirical_validation: v10-preparation-failed-before-allocation-terminal-only-closed-zero-new-retained-charge
 ---
 
 # Phase265 — Validation Strategy
 
 ## Current V11 scoped State-A audit — 2026-10-17
+
+DISTINCT /root/verify_265_device_continuity independently VERIFIED3/3 source truths,0BLOCKER0WARNING,gaps[]; exact attribution/limitations in GATES. Final configured projecttypes ROOT8988d1 CLOSED0. Scoped source closure complete; empirical/whole-phase requirements remain pending. This supersedes pending-distinct-verifier wording in the audit snapshot below only.
 
 ROOT maps actual source/caller assertions to checked N1–N3 device-continuity amendment, not a whole-phase completion audit. Source bfad7431; author /root/execute_265_device_continuity, independent reviewer /root/review_265_next_cell; final findings[] after empty-directory and cumulative-read regression fixes. Prior V10 and older dispositions below remain historical.
 
