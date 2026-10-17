@@ -232,6 +232,10 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       routeNamespace, ...(routeNamespace === "20261014-v6" ? { approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 } : routeNamespace === "20261014-v7" || routeNamespace === "20261015-v8" || routeNamespace === "20261017-v9" || routeNamespace === "20261017-v10" || routeNamespace === "20261017-v11" || routeNamespace === "20261017-v12" ? { approvedAtMs: routeNamespace === "20261017-v10" || routeNamespace === "20261017-v11" || routeNamespace === "20261017-v12" ? 1792241199000 : routeNamespace === "20261017-v9" ? 1792198286000 : routeNamespace === "20261015-v8" ? 1792093334000 : 1792017187000, anchorMs: syntheticA, carryMs: syntheticCarry, capMs: syntheticCarry + 28800000, deadlineMs: syntheticA + 28800000 } : {}), reviewedSourceHead: "c".repeat(40), sourceRoot: old.sourceRoot,
       sourceGateRoot: root("source-gate"), planRoot: old.planRoot, runOperator: "/root/cowards-game/operators/runner", readerOperator: "/root/cowards-game/operators/retained-reader",
     }
+    if (routeNamespace === "20261017-v12") {
+      const freshAnchor = 1792279083001, freshCarry = continuationLedger.leanContinuationGlobalFloorV2(freshAnchor)
+      Object.assign(windowBody, { approvedAtMs: 1792279083000, anchorMs: freshAnchor, carryMs: freshCarry, capMs: freshCarry + 28800000, deadlineMs: freshAnchor + 28800000, approvalEvidence: { ...windowBody.approvalEvidence, humanDecisionId: "human-approval-observed-20261017T231803Z" } })
+    }
     const window = { ...windowBody, root: labRoot(windowBody.schemaVersion, windowBody) }
     const carryBody = {
       schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const,

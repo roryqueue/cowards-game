@@ -683,7 +683,7 @@ it("fails closed on parent crash, torn terminal, and prospective cap overrun", (
   expect(() => chargeLeanSlot(exceeded, exceeded.allocation.slots[0]!, { freeBytes: 20e9, availableMemoryBytes: 2e9 })).toThrow()
 })
 
-it("[continuation-route-v12] binds the exact same-window route and refuses aliases or changed approval tuples", () => {
+it("[continuation-fresh-window-v12] [continuation-route-v12] binds only the new approval with continuous costs and preserves V11", () => {
   const lean = twoPair as any
   const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V12
   expect(p).toEqual({
@@ -699,10 +699,10 @@ it("[continuation-route-v12] binds the exact same-window route and refuses alias
   expect(lean.leanBaselineContinuationPathsForRequestV2(p.request)).toBe(p)
   const windowBody = {
     schemaVersion: "lean-baseline-continuation-window-v2", status: "approved",
-    grantId: "lean-baseline-continuation-20261017-v12-same-window",
-    approvalEvidence: { humanDecisionId: "human-approval-observed-20261017T124639Z", recordedBy: "/root" },
-    approvedAtMs: 1792241199000, anchorMs: 1792242843861, deadlineMs: 1792271643861,
-    carryMs: 894902764, capMs: 923702764, durationMs: 28800000, closureMs: 1860000,
+    grantId: "public-v12-fresh-window",
+    approvalEvidence: { humanDecisionId: "human-approval-observed-20261017T231803Z", recordedBy: "/root" },
+    approvedAtMs: 1792279083000, anchorMs: 1792279083001, deadlineMs: 1792307883001,
+    carryMs: lean.leanContinuationGlobalFloorV2(1792279083001), capMs: lean.leanContinuationGlobalFloorV2(1792279083001) + 28800000, durationMs: 28800000, closureMs: 1860000,
     offlineOverheadMs: 600000, routeNamespace: "20261017-v12", reviewedSourceHead: "a".repeat(40),
     sourceRoot: pin, sourceGateRoot: pin, planRoot: pin, runOperator: "/root", readerOperator: "/root/reader",
   } as const
@@ -711,13 +711,23 @@ it("[continuation-route-v12] binds the exact same-window route and refuses alias
   expect(lean.leanBaselineContinuationPathsForWindowV2(admitted)).toBe(p)
   expect(lean.leanBaselineContinuationMatchReserveMsV2(admitted, 0)).toBe(0)
   expect(lean.leanBaselineContinuationMatchReserveMsV2(admitted, 36)).toBe(600_000)
-  const legacyWindowBody = { ...windowBody, approvedAtMs: 1792242843861, routeNamespace: "20261012-v3" }
+  const oldTiming = { approvedAtMs: 1792241199000, anchorMs: 1792242843861, carryMs: 894902764, capMs: 923702764, deadlineMs: 1792271643861, approvalEvidence: { humanDecisionId: "human-approval-observed-20261017T124639Z", recordedBy: "/root" } }
+  const reroot = (body: any) => ({ ...body, root: labRoot(body.schemaVersion, body) })
+  const v11 = { ...windowBody, ...oldTiming, routeNamespace: "20261017-v11" }
+  expect(lean.validateLeanBaselineContinuationWindowV2(reroot(v11)).anchorMs).toBe(1792242843861)
+  expect(() => lean.validateLeanBaselineContinuationWindowV2(reroot({ ...windowBody, routeNamespace: "20261017-v11" }))).toThrow("CONTINUATION_V2_WINDOW")
+  const secondAnchor = windowBody.anchorMs + 12345
+  expect(lean.validateLeanBaselineContinuationWindowV2(reroot({ ...windowBody, anchorMs: secondAnchor, deadlineMs: secondAnchor + 28800000, carryMs: lean.leanContinuationGlobalFloorV2(secondAnchor), capMs: lean.leanContinuationGlobalFloorV2(secondAnchor) + 28800000 })).anchorMs).toBe(secondAnchor)
+  const legacyWindowBody = { ...windowBody, ...oldTiming, approvedAtMs: 1792242843861, routeNamespace: "20261012-v3" }
   const legacyWindow = { ...legacyWindowBody, root: labRoot(legacyWindowBody.schemaVersion, legacyWindowBody) }
   expect(lean.leanBaselineContinuationPathsForWindowV2(legacyWindow)).toBe(lean.LEAN_BASELINE_CONTINUATION_PATHS_V2)
-  const wrongApprovalTime = { ...windowBody, approvedAtMs: 1792241199001 }
-  expect(() => lean.validateLeanBaselineContinuationWindowV2({ ...wrongApprovalTime, root: labRoot(wrongApprovalTime.schemaVersion, wrongApprovalTime) })).toThrow()
-  const wrongAnchor = { ...windowBody, anchorMs: 1792242843862, deadlineMs: 1792271643862, carryMs: 894902765, capMs: 923702765 }
-  expect(() => lean.validateLeanBaselineContinuationWindowV2({ ...wrongAnchor, root: labRoot(wrongAnchor.schemaVersion, wrongAnchor) })).toThrow()
+  for (const patch of [oldTiming, { approvedAtMs: windowBody.approvedAtMs + 1 }, { approvalEvidence: oldTiming.approvalEvidence },
+    { anchorMs: windowBody.approvedAtMs - 1, deadlineMs: windowBody.approvedAtMs - 1 + 28800000, carryMs: lean.leanContinuationGlobalFloorV2(windowBody.approvedAtMs - 1), capMs: lean.leanContinuationGlobalFloorV2(windowBody.approvedAtMs - 1) + 28800000 },
+    { carryMs: windowBody.carryMs - 1, capMs: windowBody.capMs - 1 }, { carryMs: windowBody.carryMs + 1, capMs: windowBody.capMs + 1 },
+    { deadlineMs: windowBody.deadlineMs + 1 }, { capMs: windowBody.capMs + 1 }, { durationMs: 28800001 }, { closureMs: 1859999 }, { offlineOverheadMs: 599999 },
+    { anchorMs: Number.MAX_SAFE_INTEGER, deadlineMs: Number.MAX_SAFE_INTEGER + 28800000 },
+  ]) expect(() => lean.validateLeanBaselineContinuationWindowV2(reroot({ ...windowBody, ...patch }))).toThrow("CONTINUATION_V2_WINDOW")
+  expect(() => lean.validateLeanBaselineContinuationWindowV2({ ...validWindow, root: pin })).toThrow("CONTINUATION_V2_WINDOW")
   for (const path of [p.request + ".alias", p.request + "/extra", p.request.replace("20261017-v12", "20261018-v12")]) {
     expect(() => lean.leanBaselineContinuationPathsForRequestV2(path)).toThrow()
   }

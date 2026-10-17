@@ -79,7 +79,8 @@ export const continuationDeviceWindowFixtureV11 = () => {
   return ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 export const continuationWindowFixtureV12 = () => {
-  const { root: _, ...old } = continuationDeviceWindowFixtureV11(), body = { ...old, routeNamespace: "20261017-v12" as const }
+  const { root: _, ...old } = continuationDeviceWindowFixtureV11(), anchorMs = 1792279083001
+  const body = { ...old, routeNamespace: "20261017-v12" as const, approvedAtMs: 1792279083000, approvalEvidence: { ...old.approvalEvidence, humanDecisionId: "human-approval-observed-20261017T231803Z" }, anchorMs, carryMs: ledger.leanContinuationGlobalFloorV2(anchorMs), capMs: ledger.leanContinuationGlobalFloorV2(anchorMs) + 28800000, deadlineMs: anchorMs + 28800000 }
   return ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })
 }
 describe("continuation-route-v12", () => {
