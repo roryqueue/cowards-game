@@ -2092,7 +2092,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     for (const key of ["spentV4Directories", "spentV5Directories", "spentV7Directories", ...(namespace !== "20261015-v8" ? ["spentV8Directories" as const] : []), ...((namespace === "20261017-v10" || (namespace === "20261017-v11" || namespace === "20261017-v12")) ? ["spentV9Directories" as const] : []), ...(namespace === "20261017-v12" ? ["spentV11Directories" as const] : [])] as const) {
       const metadata = obs[key.replace("Directories", "Metadata")]
       for (const original of defaults.LEAN_CONTINUATION_EXPECTED_OBSERVATIONS[key]) {
-        const row = { path: original.path, members: metadata.filter((item: any) => item.path.startsWith(original.path + "/")).map((item: any) => item.path.slice(original.path.length + 1)).sort() }
+        const row = { ...original, members: metadata.filter((item: any) => item.path.startsWith(original.path + "/")).map((item: any) => item.path.slice(original.path.length + 1)).sort() }
         obs[key].push(row); fs.mkdirSync(resolve(row.path), { recursive: true, mode: 0o700 }); fs.chmodSync(resolve(row.path), 0o700); expect(fs.readdirSync(resolve(row.path)).sort()).toEqual(row.members)
       }
     }
@@ -2152,7 +2152,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     const manifest = D.leanBaselineContinuationDataManifestV2(w, D.leanBaselineContinuationSourceManifestV2()), seed = "public-internal-observations", coldRoot = cold(seed)
     expect(manifest.implementationEntries.map(row => row.path)).toEqual([...obs.sourcePaths, ...obs.continuationOwnedPaths].sort((a, b) => a.localeCompare(b)))
     expect(D.LEAN_BASELINE_CONTINUATION_OWNED_PATHS).toHaveLength(1)
-    counts = { implementation: manifest.implementationEntries.length, planning: manifest.planningEntries.length, spentMetadata: ["spentV3Metadata", "spentV4Metadata", "spentV5Metadata", "spentV6Metadata", "spentV7Metadata", ...(namespace !== "20261015-v8" ? ["spentV8Metadata" as const] : []), ...((namespace === "20261017-v10" || (namespace === "20261017-v11" || namespace === "20261017-v12")) ? ["spentV9Metadata" as const] : []), ...(namespace === "20261017-v12" ? ["spentV11Metadata"] : [])].reduce((sum, key) => sum + obs[key].length, 0), spentDirectories: obs.spentV4Directories.length + obs.spentV5Directories.length + obs.spentV7Directories.length + obs.spentV8Directories.length + ((namespace === "20261017-v10" || (namespace === "20261017-v11" || namespace === "20261017-v12")) ? obs.spentV9Directories.length : 0) }
+    counts = { implementation: manifest.implementationEntries.length, planning: manifest.planningEntries.length, spentMetadata: ["spentV3Metadata", "spentV4Metadata", "spentV5Metadata", "spentV6Metadata", "spentV7Metadata", ...(namespace !== "20261015-v8" ? ["spentV8Metadata" as const] : []), ...((namespace === "20261017-v10" || (namespace === "20261017-v11" || namespace === "20261017-v12")) ? ["spentV9Metadata" as const] : []), ...(namespace === "20261017-v12" ? ["spentV11Metadata"] : [])].reduce((sum, key) => sum + obs[key].length, 0), spentDirectories: obs.spentV11Directories.length + obs.spentV4Directories.length + obs.spentV5Directories.length + obs.spentV7Directories.length + obs.spentV8Directories.length + ((namespace === "20261017-v10" || (namespace === "20261017-v11" || namespace === "20261017-v12")) ? obs.spentV9Directories.length : 0) }
     const request = { schemaVersion: "lean-baseline-continuation-request-v2", seed, sourceHead, sourceRoot: base.root, planningRoot: manifest.planningRoot, planRoot: w.planRoot, reviewRoot: w.sourceGateRoot, coldRoot, candidateRoots: D.deriveLeanBaselineCandidateRoots(coldRoot), requestRoots: D.deriveLeanBaselineRequestRoots({ seed, coldRoot, planRoot: w.planRoot, sourceRoot: base.root }), offlineOverheadMs: w.offlineOverheadMs, sourceAuthor: sg.sourceAuthor, runOperator: w.runOperator, readerOperator: w.readerOperator, windowRoot: w.root, windowBytesRoot: manifest.windowBytesRoot, sourceGateRoot: w.sourceGateRoot, dataReviewRoot: manifest.dataReviewRoot, manifestRoot: manifest.manifestRoot }
     json(p.request, request)
     stage = "real initial import"
@@ -2344,6 +2344,49 @@ it("continuation-reservation-forward-v11 real preflight, rebound and opened guar
     expect(fullAfter).toMatchObject({ charged: 50, remainingSlots: 36, parentRssBytes: 100000000, live: true })
   } finally { factory.mockRestore() }
 }, "20261017-v11"), 45000)
+
+it("continuation-route-v12 CLI selects only the exact request, never an observation policy switch", () => {
+  const request = lean.LEAN_BASELINE_CONTINUATION_PATHS_V12.request
+  for (const mode of ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"]) {
+    expect(parentApi.parseLeanBaselineCommand([mode, "--request", request])).toEqual({ mode, request })
+    expect(() => parentApi.parseLeanBaselineCommand([mode, "--request", request + ".other"])).toThrow()
+    expect(() => parentApi.parseLeanBaselineCommand([mode, "--request", request, "--observation-mode", "one-current-owned-overlap"])).toThrow()
+  }
+})
+
+it("continuation-route-v12 authenticates every opaque V11 row and rejects metadata, members, absences and capacity drift", () => withInternalObservationTree(false, async f => {
+  const { C, D, L, w, obs, imported, git, review, bounded, p, resource } = f, native: typeof fs = f.fs
+  f.note("V12 opaque predecessor mutation checks")
+  expect(obs.spentV11Metadata).toHaveLength(22); expect(obs.spentV11Directories).toHaveLength(2); expect(obs.spentV11Absences).toHaveLength(5)
+  for (const row of [...obs.spentV11Metadata, ...obs.spentV11Directories]) expect(imported.inventory.filter((entry: { path: string }) => entry.path === row.path)).toHaveLength(1)
+  expect(imported.carry).toMatchObject({ chargedMatches: 50, qualifiedReaderAuthority: "cost_only" })
+  expect(C.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V12).toBe(93921280)
+  const directoryBytes = [...obs.spentV4Directories, ...obs.spentV5Directories, ...obs.spentV7Directories, ...obs.spentV8Directories, ...obs.spentV9Directories, ...obs.spentV11Directories].reduce((sum: number, row: { path: string }) => sum + native.lstatSync(resolve(row.path)).blocks * 512, 0)
+  const earlyFileBytes = [...obs.spentV3Metadata, ...obs.spentV4Metadata, ...obs.spentV5Metadata, ...obs.spentV6Metadata].reduce((sum: number, row: { path: string }) => sum + native.lstatSync(resolve(row.path)).blocks * 512, 0)
+  expect(C.measureLeanContinuationKnownDisjointBytesV8(w)).toBe(directoryBytes + earlyFileBytes)
+  const authenticate = () => C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)
+  const target = resolve(obs.spentV11Metadata[0].path), bytes = native.readFileSync(target), stat = native.lstatSync
+  for (const mutation of ["content", "shrink", "mode", "owner"] as const) {
+    let hook: ReturnType<typeof vi.spyOn> | undefined
+    try {
+      if (mutation === "content") { const changed = Buffer.from(bytes); changed[0] = changed[0]! ^ 1; native.writeFileSync(target, changed) }
+      else if (mutation === "shrink") native.truncateSync(target, bytes.length - 1)
+      else if (mutation === "mode") native.chmodSync(target, obs.spentV11Metadata[0].mode === 0o600 ? 0o644 : 0o600)
+      else hook = vi.spyOn(native, "lstatSync").mockImplementation(((...args: Parameters<typeof fs.lstatSync>) => { const value = Reflect.apply(stat, native, args); return value !== undefined && String(args[0]) === target ? Object.assign(value, { uid: 999 }) : value }) as typeof fs.lstatSync)
+      expect(authenticate).toThrow(/V12_SPENT_METADATA|V2_INVENTORY_ALIAS/)
+    } finally { hook?.mockRestore(); native.writeFileSync(target, bytes); native.chmodSync(target, obs.spentV11Metadata[0].mode) }
+  }
+  for (const path of [resolve(obs.spentV11Directories[0].path, "unexpected.json"), resolve(obs.spentV11Absences[0])]) {
+    native.writeFileSync(path, "public unexpected member", { mode: 0o600 })
+    try { expect(authenticate).toThrow(/V12_SPENT_DIRECTORY|V12_SPENT_ABSENCE/) } finally { native.unlinkSync(path) }
+  }
+  const anchor = resolve(L.LEAN_BASELINE_CONTINUATION_PATHS_V10.window), original = native.readFileSync(anchor)
+  native.writeFileSync(anchor, Buffer.alloc(original.length, 32))
+  try { expect(authenticate).toThrow(/V11_ALLOWANCE_ANCHOR/) } finally { native.writeFileSync(anchor, original) }
+  const observer = vi.fn(); resource.fail = true
+  expect(() => D.openLeanBaselineContinuationContextV2(p.request, false, observer)).toThrow(/V8_RESERVATION_CAPACITY/)
+  expect(observer).not.toHaveBeenCalled()
+}, "20261017-v12"), 45000)
 
 for (const namespace of ["20261017-v11", "20261017-v12"] as const) {
 const observationTag = namespace === "20261017-v12" ? "continuation-route-v12" : "continuation-owned-stabilization"
