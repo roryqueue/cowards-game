@@ -1,6 +1,6 @@
 /** Fixed historical expected observations only. No admission or runtime override. */
 import { join } from "node:path"
-import { freezeLabValue } from "../../packages/strategy-lab/src/contracts.js"
+import { freezeLabValue, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAN_BASELINE_CONTINUATION_PATHS_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, LEAN_BASELINE_CONTINUATION_PATHS_V6, LEAN_BASELINE_CONTINUATION_PATHS_V7 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 
 const SOURCE_PATHS = [
@@ -377,13 +377,17 @@ const spentV9Directories = freezeLabValue([
   }
 ])
 
+const spentV10Metadata = freezeLabValue([
+  { path: ".strategy-lab/lean-baseline-continuation-request-20261017-v10.json", bytes: 4031, allocatedBytes: 4096, mode: 0o600, maximum: 65536, rawRoot: "sha256:c81226da93b9f4c76d26804f2fc7b23d3c30e31047044b4285b3ac21fc3fd029" as LabRoot },
+  { path: ".strategy-lab/lean-baseline-continuation-window-20261017-v10.json", bytes: 941, allocatedBytes: 4096, mode: 0o600, maximum: 65536, rawRoot: "sha256:4d5c15298a6d096c72f15700728af2317826bc99cfc783a7332e62624a319179" as LabRoot },
+])
 const fixed = freezeLabValue({
   sourcePaths: SOURCE_PATHS,
   continuationOwnedPaths: LEAN_BASELINE_CONTINUATION_OWNED_PATHS,
   continuationExtraPaths: ["packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"],
   continuationPlanningPaths: LEAN_BASELINE_CONTINUATION_PLANNING_PATHS,
   spentV3Metadata, spentV4Metadata, spentV4Directories, spentV5Metadata, spentV5Directories, spentV6Metadata, spentV7Metadata, spentV7Directories,
-  spentV8Metadata, spentV8Directories, spentV9Metadata, spentV9Directories,
+  spentV8Metadata, spentV8Directories, spentV9Metadata, spentV9Directories, spentV10Metadata,
   closedCostV2: LEAN_CONTINUATION_CLOSED_COST_V2,
 })
 type DeepReadonly<T> = T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> } : T

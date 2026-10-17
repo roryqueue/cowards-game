@@ -48,6 +48,18 @@ describe("continuation-device-v11-policy", () => {
     expect(() => continuation.reconcileLeanContinuationInventoryV2([old], [{ ...old, dev: 2 }], [], continuationDeviceWindowFixtureV11())).toThrow(/IMMUTABLE_CHANGED/)
     expect(() => continuation.reconcileLeanContinuationInventoryV2([old], [{ ...old, dev: 2 }], [], continuationNextWindowFixtureV10())).toThrow(/IMMUTABLE_CHANGED/)
   })
+  it("retains exact spent costs, bounded rows and guards without minting proof", () => {
+    const o = readLeanContinuationExpectedObservations(), w = continuationDeviceWindowFixtureV11()
+    expect(o.spentV10Metadata.map(row => row.bytes)).toEqual([4031, 941])
+    expect(o.spentV10Metadata.reduce((n, row) => n + row.allocatedBytes, 0)).toBe(8192)
+    expect(Object.isFrozen(o.spentV10Metadata[0])).toBe(true)
+    expect(continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V11).toBe(92499968)
+    expect(continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V10).toBe(92491776)
+    expect(() => continuation.inventoryLeanContinuationSurvivorsV2(Array.from({ length: 4097 }, (_, i) => ({ path: `scripts/${i}` } as continuation.LeanContinuationInventoryRow)), [], vi.fn(), () => {}, w)).toThrow(/INVENTORY_BOUND/)
+    const git = vi.fn()
+    expect(() => continuation.authenticateLeanBaselineContinuationCarryV2(git, [], () => { throw new Error("reserve-denial") }, w)).toThrow("reserve-denial")
+    expect(git).not.toHaveBeenCalled()
+  })
 })
 describe("continuation-next-v10-policy", () => {
   it("continuation-next-v10-carry pins the independently compared file-only floor and opaque tuple", () => {
