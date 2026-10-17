@@ -223,13 +223,13 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     const old = continuationFixtureBase().allocation
     const policy = continuationLedger.LEAN_BASELINE_CONTINUATION_POLICY_V2
     const anchorMs = policy.globalAnchorMs, carryMs = Math.max(policy.oldCheckElapsedMs, continuationLedger.leanContinuationGlobalFloorV2(anchorMs))
-    const syntheticA = (routeNamespace === "20261017-v9" ? 1792198286000 : routeNamespace === "20261015-v8" ? 1792093334000 : 1792017187000) + 12345, syntheticCarry = 459375903 + (syntheticA - 1791807317000)
+    const syntheticA = (routeNamespace === "20261017-v10" ? 1792241199000 : routeNamespace === "20261017-v9" ? 1792198286000 : routeNamespace === "20261015-v8" ? 1792093334000 : 1792017187000) + 12345, syntheticCarry = 459375903 + (syntheticA - 1791807317000)
     const windowBody = {
       schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const,
-      grantId: "synthetic-no-authority", approvalEvidence: { humanDecisionId: routeNamespace === "20261017-v9" ? "human-approval-observed-20261017T005126Z" : routeNamespace === "20261015-v8" ? "human-approval-observed-20261015T194214Z" : routeNamespace === "20261014-v7" ? "human-approval-observed-20261014T223307Z" : "synthetic-only", recordedBy: "/root/cowards-game/reviewers/human" },
+      grantId: "synthetic-no-authority", approvalEvidence: { humanDecisionId: routeNamespace === "20261017-v10" ? "human-approval-observed-20261017T124639Z" : routeNamespace === "20261017-v9" ? "human-approval-observed-20261017T005126Z" : routeNamespace === "20261015-v8" ? "human-approval-observed-20261015T194214Z" : routeNamespace === "20261014-v7" ? "human-approval-observed-20261014T223307Z" : "synthetic-only", recordedBy: "/root/cowards-game/reviewers/human" },
       approvedAtMs: anchorMs, anchorMs, deadlineMs: anchorMs + policy.durationMs, carryMs, capMs: carryMs + policy.durationMs,
       durationMs: policy.durationMs, closureMs: policy.closureMs, offlineOverheadMs: policy.offlineOverheadMs,
-      routeNamespace, ...(routeNamespace === "20261014-v6" ? { approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 } : routeNamespace === "20261014-v7" || routeNamespace === "20261015-v8" || routeNamespace === "20261017-v9" ? { approvedAtMs: routeNamespace === "20261017-v9" ? 1792198286000 : routeNamespace === "20261015-v8" ? 1792093334000 : 1792017187000, anchorMs: syntheticA, carryMs: syntheticCarry, capMs: syntheticCarry + 28800000, deadlineMs: syntheticA + 28800000 } : {}), reviewedSourceHead: "c".repeat(40), sourceRoot: old.sourceRoot,
+      routeNamespace, ...(routeNamespace === "20261014-v6" ? { approvedAtMs: 1792002607000, anchorMs: 1792002607000, carryMs: 654665903, capMs: 683465903, deadlineMs: 1792031407000 } : routeNamespace === "20261014-v7" || routeNamespace === "20261015-v8" || routeNamespace === "20261017-v9" || routeNamespace === "20261017-v10" ? { approvedAtMs: routeNamespace === "20261017-v10" ? 1792241199000 : routeNamespace === "20261017-v9" ? 1792198286000 : routeNamespace === "20261015-v8" ? 1792093334000 : 1792017187000, anchorMs: syntheticA, carryMs: syntheticCarry, capMs: syntheticCarry + 28800000, deadlineMs: syntheticA + 28800000 } : {}), reviewedSourceHead: "c".repeat(40), sourceRoot: old.sourceRoot,
       sourceGateRoot: root("source-gate"), planRoot: old.planRoot, runOperator: "/root/cowards-game/operators/runner", readerOperator: "/root/cowards-game/operators/retained-reader",
     }
     const window = { ...windowBody, root: labRoot(windowBody.schemaVersion, windowBody) }
@@ -293,6 +293,15 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
     return snapshot as unknown as continuationReader.LeanBaselineContinuationRetainedSnapshotV2
   }
 
+  it("continuation-next-v10-retained incomplete/unused/failure/exhaustion cannot complete or freeze", () => {
+    const s = partialV2Snapshot("20261017-v10"), report = continuationReader.auditLeanBaselineContinuationRetainedV2(s)
+    expect(report).toMatchObject({ count: { cumulative: 51, current: 1, unused: 35, complete: false }, complete: false })
+    expect(continuationReader.assertLeanBaselineContinuationV2ClosedCount(85, 35)).toMatchObject({ complete: false, unused: 1 })
+    for (const value of [report, structuredClone(report), JSON.parse(JSON.stringify(report)), { ...report }]) expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(value)).toBe(false)
+    for (const delta of [{ status: "current_baseline_complete", unusedOrdinals: [] }, { unusedOrdinals: [] }, { failure: "CONTINUATION_READER_FAILURE", status: "current_baseline_complete" }]) expect(() => continuationReader.auditLeanBaselineContinuationRetainedV2({ ...s, result: { ...s.result, ...delta } } as typeof s)).toThrow()
+    const receipts = structuredClone(s.result.resourceReceipts); receipts[0]!.before.nowMs = s.window.deadlineMs; receipts[0]!.after.nowMs = s.window.deadlineMs
+    expect(() => continuationReader.auditLeanBaselineContinuationRetainedV2({ ...s, result: { ...s.result, resourceReceipts: receipts } } as typeof s)).toThrow()
+  })
   it("[continuation-v4] reads an actual selected window before scope/metadata and denies crossed request/window", () => {
     const { allocation } = v2Allocation("20261012-v4"), p = continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V4
     const directory = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "continuation-v4-reader-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(directory)
@@ -427,7 +436,7 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       if (mode !== "pass") expect(() => controller.live(context, () => {})).toThrow()
     } finally { for (const spy of [time, state, elapsed, physical, clock]) spy.mockRestore(); fs.rmSync(directory, { recursive: true }) }
   }
-  it.each([{ namespace: "20261015-v8" as const, tag: "continuation-boundary-v8-R" }, { namespace: "20261017-v9" as const, tag: "continuation-route-v9-retained-foreign" }])("$tag refuses foreign publication callbacks rather than minting private success (real ledger/controller, synthetic report)", ({ namespace }) => {
+  it.each([{ namespace: "20261015-v8" as const, tag: "continuation-boundary-v8-R" }, { namespace: "20261017-v9" as const, tag: "continuation-route-v9-retained-foreign" }, { namespace: "20261017-v10" as const, tag: "continuation-next-v10-retained-foreign" }])("$tag refuses foreign publication callbacks rather than minting private success (real ledger/controller, synthetic report)", ({ namespace }) => {
     const { allocation } = v2Allocation(namespace), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "v8-private-return-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
     const disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), clock = vi.spyOn(Date, "now").mockReturnValue(allocation.window.anchorMs + 10)
     try {
@@ -438,8 +447,8 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       expect(publish).not.toHaveBeenCalled()
     } finally { clock.mockRestore(); disk.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
   })
-  it.each(["safe", "resource-denial"] as const)("continuation-route-v9-retained failed publication uses independent resources, never accepted identity: %s", mode => {
-    const { allocation } = v2Allocation("20261017-v9"), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "v9-failed-publication-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+  it.each(["20261017-v9", "20261017-v10"].flatMap(namespace => ["safe", "resource-denial"].map(mode => ({ namespace, mode, tag: namespace === "20261017-v10" ? "continuation-next-v10-retained" : "continuation-route-v9-retained" }))))("$tag failed publication uses independent resources, never accepted identity: $mode", ({ mode, namespace }) => {
+    const { allocation } = v2Allocation(namespace as continuationLedger.LeanBaselineContinuationWindowV2["routeNamespace"]), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "v9-failed-publication-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
     const disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), clock = vi.spyOn(Date, "now").mockReturnValue(allocation.window.anchorMs + 10), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000)
     try {
       const ledger = continuationLedger.createLeanLedger(join(dir, "store"), allocation)
@@ -459,8 +468,8 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
       expect(resource).toHaveBeenCalledWith(16 * 1024 * 1024); expect(sourceGuard).not.toHaveBeenCalled()
     } finally { for (const spy of [clock, disk, usage, available]) spy.mockRestore(); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
   })
-  it.each(["pass", "opening", "closing", "reader-denial", "failure-resource", "identity-pass", "identity-closing"] as const)("continuation-boundary-v8-R-identity real reader enrollment, ledger, descriptor/claim/terminal/publisher: %s (synthetic context; complete audit ONLY for identity modes; external resources/PID mocked)", mode => {
-    const s = partialV2Snapshot("20261015-v8"), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "public-v8-ordinary-reader-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V8
+  it.each(["20261015-v8", "20261017-v10"].flatMap(namespace => (namespace === "20261017-v10" ? ["pass", "opening", "closing", "reader-denial", "failure-resource"] : ["pass", "opening", "closing", "reader-denial", "failure-resource", "identity-pass", "identity-closing"]).map(mode => ({ namespace, mode, tag: namespace === "20261017-v10" ? "continuation-next-v10-retained" : "continuation-boundary-v8-R-identity" }))))("$tag real reader enrollment, ledger, descriptor/claim/terminal/publisher: $mode (synthetic context; complete audit ONLY for old identity modes; external resources/PID mocked)", ({ mode, namespace }) => {
+    const s = partialV2Snapshot(namespace as continuationLedger.LeanBaselineContinuationWindowV2["routeNamespace"]), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "public-v8-ordinary-reader-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = namespace === "20261017-v10" ? continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V10 : continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V8
     // Wall and monotonic observations must agree: real fixture work is timed
     // by performance.now, not charged against an otherwise frozen wall clock.
     const monotonic = vi.spyOn(process.hrtime, "bigint").mockReturnValue(100000000000n), clock = vi.spyOn(Date, "now").mockReturnValue(s.window.anchorMs + 1200), disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000), known = vi.spyOn(continuationFiles, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096)
@@ -534,6 +543,7 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
           expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(result)).toBe(true)
           for (const copy of [JSON.parse(JSON.stringify(result)), structuredClone(result), { ...result }, Object.freeze({ ...result })]) expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(copy)).toBe(false)
         }
+        if (namespace === "20261017-v10") { expect(result.report).toMatchObject({ complete: false }); for (const value of [result, structuredClone(result), JSON.parse(JSON.stringify(result)), { ...result }]) expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(value)).toBe(false) }
         expect(Object.isFrozen(result)).toBe(true); expect(continuationLedger.readLeanTimeAccounting(ledger).closed.has("continuation-retained-verifier-v2")).toBe(true)
         expect(continuationLedger.readLeanTimeAccounting(ledger).closes.get("continuation-retained-verifier-v2")).toBeLessThanOrEqual(Date.now())
         const durableBytes = fs.readFileSync(join(ledger.directory, "retained-check.json")), durable = JSON.parse(durableBytes.toString("utf8"))
