@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Prospective V9 research/plan and independent finite metadata check PASSED; three serial source tasks next before experiment initialization
+stopped_at: V9 source cycle CLOSED VERIFIED 3/3; SOURCE and approved actual window initialization next
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: Human approved fresh eight-hour private baseline window under unchanged limits; prospective route research and checked setup in progress
+last_activity_desc: V9 route implemented, reviewed clean, ROOT-qualified, State-A audited and distinctly source-verified; empirical setup next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — fresh eight-hour private baseline window APPROVED
+
+V9 source cycle is now CLOSED at bb5c2b830048ee8fdfb208d9c005af1f41edadc0: three serial RED/GREEN tasks, independent integrated review plus narrow old-fixture clock repair re-review clean, ROOT final qualification, scoped State-A audit and DISTINCT `/root/verify_265_v9_route` VERIFIED3/3/0blocker/0warning/gaps[]. All commands/ownership CLOSED. Actual ROOT new38small plus fullhelper150 overlap; connected V9B25.156s/V9C27.789s each complete within45s/8MiB inclusivecleanup; postrepair exact40legacycompatibility passed34.83s. SAME15strict13inherited7051B WHOLE-byte-equal reviewed final, not global strict green; configuredtypes/boundaries/factory/diffpassed. Old failed compatibility remains failed, shared positive reader fixture synthetic, original causes/runtime fit UNKNOWN. Existing GATES/VALIDATION retain exact assertions and attribution; no new numberedplan/report/SUMMARY.
+
+NEXT actual sequence: commit/push source closure, canonical SOURCE projection with actual distinct author/reviewer/verifier, actual A/window under approved T and unchanged continuous F(A), independent actual DATA review/final request, ONE preparation/new allocation-only direct-child commit/push, unique ROOT run with fresh passing SAME-PROCESS whole36 capacity before charge/provider, ONE actual-entry/head retained verification (otherwise terminal-only). No A/window/request/allocation/prepare/run initialized yet. Whole Phase265 validation partial/nyquistfalse/wave0false/all9LEAG pending, Phase266 planning-only. Earlier setup-next text below is historical, not an instruction to repeat closed source work.
 
 Latest direct human `approved` accepts ROOT's exact fresh **ONE eight-hour private experiment window**, same15GB and every other bound, after verified source closure and checked distinct prospective route setup. First ROOT clock observation **2026-10-17T00:51:26UTC** is approval observation T, not yet the experiment anchor A. Existing refactor/source-coverage cycle is CLOSED VERIFIED and will not be reopened. Prior V8 route/window/all artifacts remain spent/expired/immutable; this approval creates no retrospective retry/refund/recredit. Standing same-scope route consent means no repeated exact literal. No arbitrary new source-work expiry is inferred.
 
