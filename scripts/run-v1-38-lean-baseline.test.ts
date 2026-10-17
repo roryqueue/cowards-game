@@ -1919,7 +1919,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     // External factory inventory, Git, host resources and coherent wall/mono
     // observations. Filesystem identities, modes, blocks and bytes stay actual.
     restored.push(vi.spyOn(F, "factoryAssessmentImplementationManifest").mockReturnValue({ entries: [], root: root("empty-external-factory") }).mockRestore)
-    const resource = { fail: false, failAfterEntry: false, tripped: false, calls: 0 }
+    const resource = { fail: false, failAfterEntry: false, closingHeadObserved: false, closingHeadSample: 0, denialSample: 0, tripped: false, calls: 0 }
     restored.push(vi.spyOn(fs, "statfsSync").mockImplementation((() => {
       bounded()
       resource.calls++
@@ -1927,9 +1927,8 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
       // Instrumentation history is not evidence; counters survive. Keep the
       // actual repeated production samples, not millions of Vitest call rows.
       if (resource.calls % 512 === 0) { vi.mocked(fs.statfsSync).mockClear(); vi.mocked(process.memoryUsage).mockClear(); vi.mocked(H.observeLeagueAvailableMemoryBytes).mockClear(); vi.mocked(G.readLeanBaselineContinuationGitV2).mockClear(); vi.mocked(CP.execFileSync).mockClear(); vi.mocked(Date.now).mockClear(); vi.mocked(process.hrtime.bigint).mockClear() }
-      const time = resolve(p.store, "time.ndjson")
-      const closingDenial = resource.failAfterEntry && !resource.tripped && fs.existsSync(resolve(p.store, "entry.json")) && fs.readFileSync(time, "utf8").includes('"id":"pilot-entry"')
-      if (closingDenial) resource.tripped = true
+      const closingDenial = resource.failAfterEntry && resource.closingHeadObserved && !resource.tripped
+      if (closingDenial) { resource.tripped = true; resource.denialSample = resource.calls }
       return { bavail: resource.fail || closingDenial ? 0n : 100000000000n, bsize: 1n }
     }) as typeof fs.statfsSync).mockRestore)
     restored.push(vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }).mockRestore)
@@ -1940,6 +1939,16 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     restored.push(vi.spyOn(process.hrtime, "bigint").mockImplementation(() => 100000000000n + BigInt(logicalMs) * 1000000n).mockRestore)
     const git = (op: readonly string[]): Buffer => {
       bounded()
+      // Shared external Git observation, used by BOTH the Git wrapper and
+      // execFileSync seam. Local reserve/completeWrite never calls Git. The
+      // first HEAD after actual entry+pilot start is therefore the real
+      // controller closing check, after the parent's entered=true assignment.
+      if (op.length === 2 && op[0] === "rev-parse" && op[1] === "HEAD" && resource.failAfterEntry && !resource.closingHeadObserved && fs.existsSync(resolve(p.store, "entry.json"))) {
+        const observedEntry = L.readLeanChildEntry(ledger), observedTime = L.readLeanTimeAccounting(ledger)
+        if (observedEntry.parentPid === process.pid && observedTime.active && observedTime.starts.get("pilot-entry") === observedEntry.wallStartMs && !observedTime.closed.has("pilot-entry")) {
+          resource.closingHeadObserved = true; resource.closingHeadSample = resource.calls; counts.closingHeadObservations = 1
+        }
+      }
       if (op[0] === "rev-parse") return Buffer.from(`${head.value}\n`)
       if (op[0] === "merge-base") return Buffer.alloc(0)
       if (op[0] === "rev-list") return Buffer.from(op[4] === "b".repeat(40) || op.at(-1) === "b".repeat(40) ? `${"b".repeat(40)} ${"a".repeat(40)}\n` : `${head.value} ${sourceHead}\n`)
@@ -2084,8 +2093,12 @@ it("internal-observations-C actual CLI default importer claims before missing re
 // cleanup, 1412277 bytes, 18694 resource samples. Real fork/entry/observed exit
 // and finite PARENT_CLAIM refusal passed; child-terminal absent/pilot unclosed.
 // The external denial fired inside completeWrite(time), before entered=true,
-// not the intended closing barrier. No second fresh admission is implied.
-it.skip("internal-observations-B actual CLI wrapper reaches parent entry then owned closing denial with observed child exit", () => withInternalObservationTree(false, async f => {
+// not the intended closing barrier. It remains failed; the separate checked
+// OBS3-B-CLOSING-INJECTION correction below arms only on real closing HEAD.
+// Corrected attempt passed: 24859ms including cleanup, 1413892 bytes, 18881
+// resource samples; real closing HEAD at sample18733, denial at18734. Actual
+// failed terminal/pilot closure/observed exit/finite PARENT/nonacceptance pass.
+it("internal-observations-B actual CLI wrapper reaches parent entry then owned closing denial with observed child exit", () => withInternalObservationTree(false, async f => {
   const { D, L, R, CP, fs, p, ledger, resource, read, restored } = f
   const provider = vi.fn()
   const child = Object.assign(new EventEmitter(), { pid: 811113, connected: true, exitCode: null as number | null, signalCode: null as NodeJS.Signals | null,
@@ -2100,8 +2113,10 @@ it.skip("internal-observations-B actual CLI wrapper reaches parent entry then ow
   let failure: unknown
   try { await D.leanBaselineMain(["run-continuation-v2", "--request", p.request]) } catch (error) { failure = error }
   f.note(D.leanBaselineContinuationRunFailureV2(failure).trim())
-  process.stdout.write(`INTERNAL_OBSERVATIONS_B_PROGRESS ${JSON.stringify({ diagnostic: D.leanBaselineContinuationRunFailureV2(failure).trim(), forks: fork.mock.calls.length, resourceDenialObserved: resource.tripped, entryExists: fs.existsSync(resolve(p.store, "entry.json")), childExitEvents: exits, terminalExists: fs.existsSync(resolve(p.store, "child-terminal.json")), resultExists: fs.existsSync(resolve(p.store, "result.json")), pilotClosed: L.readLeanTimeAccounting(ledger).closed.has("pilot-entry"), resourceSamples: resource.calls })}\n`)
+  process.stdout.write(`INTERNAL_OBSERVATIONS_B_PROGRESS ${JSON.stringify({ correction: "OBS3-B-CLOSING-INJECTION", diagnostic: D.leanBaselineContinuationRunFailureV2(failure).trim(), forks: fork.mock.calls.length, closingHeadObserved: resource.closingHeadObserved, closingHeadSample: resource.closingHeadSample, denialSample: resource.denialSample, resourceDenialObserved: resource.tripped, entryExists: fs.existsSync(resolve(p.store, "entry.json")), childExitEvents: exits, terminalExists: fs.existsSync(resolve(p.store, "child-terminal.json")), resultExists: fs.existsSync(resolve(p.store, "result.json")), pilotClosed: L.readLeanTimeAccounting(ledger).closed.has("pilot-entry"), resourceSamples: resource.calls })}\n`)
   expect(fork).toHaveBeenCalledOnce()
+  expect(resource.closingHeadObserved).toBe(true)
+  expect(resource.closingHeadSample).toBeGreaterThan(0); expect(resource.denialSample).toBeGreaterThan(resource.closingHeadSample)
   expect(resource.tripped).toBe(true)
   expect(fs.existsSync(resolve(p.store, "run-claim.json"))).toBe(true)
   expect(fs.existsSync(resolve(p.store, "entry.json"))).toBe(true)
