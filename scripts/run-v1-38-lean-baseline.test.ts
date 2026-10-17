@@ -471,6 +471,17 @@ const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWind
     run({ window, counts, detail, initialization, callbacks, onCurrent, absent, assertInvalid: () => assertInvalid(), moveCwd }); absent()
   } finally { clock?.mockRestore(); boundary.mockRestore(); controllers.mockRestore(); git.mockRestore(); descriptors.mockRestore(); hashes.mockRestore(); disk.mockRestore(); available.mockRestore(); usage.mockRestore(); factory.mockRestore(); physical.mockRestore(); scopes.mockRestore(); raw.mockRestore(); chunks.mockRestore(); opens.mockRestore(); fstats.mockRestore(); realpaths.mockRestore(); stats.mockRestore(); exists.mockRestore(); vi.unstubAllEnvs(); process.execArgv = originalArgs; if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(15000) }
 }
+it("continuation-device-v11-driver selects only the finite route and withholds foreign diagnostic text", () => {
+  const request = ".strategy-lab/lean-baseline-continuation-request-20261017-v11.json"
+  expect(parentApi.parseLeanBaselineCommand(["prepare-continuation-v2", "--request", request])).toEqual({ mode: "prepare-continuation-v2", request })
+  expect(() => parentApi.parseLeanBaselineCommand(["prepare-continuation-v2", "--request", request + ".other"])).toThrow()
+  expect(parentApi.leanContinuationPreparationCodeV4(new TypeError("LEAN_BASELINE_CONTINUATION_V11_CONTINUITY_HASH"))).toBe("CONTINUITY_HASH")
+  expect(parentApi.leanContinuationPreparationCodeV4(new TypeError("LEAN_BASELINE_CONTINUATION_V11_CONTINUITY_MEMBERS"))).toBe("CONTINUITY_MEMBERS")
+  expect(parentApi.leanContinuationPreparationCodeV4(new TypeError("private/content/path"))).toBe("DETAILS_WITHHELD")
+  const getter = new TypeError(); Object.defineProperty(getter, "message", { get() { throw new Error("must not inspect") } })
+  expect(parentApi.leanContinuationPreparationCodeV4(getter)).toBe("DETAILS_WITHHELD")
+  expect(parentApi.leanContinuationPreparationCodeV4(new Proxy({}, { getPrototypeOf() { throw new Error("no traps") } }))).toBe("DETAILS_WITHHELD")
+})
 describe("continuation-next-v10-driver-preflight", () => {
   it("real bounded progress reserves active cells through terminal, then retains zero-cell closure and hard deadline", () => {
     const known = vi.spyOn(continuationHelper, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096), send = Object.getOwnPropertyDescriptor(process, "send")
