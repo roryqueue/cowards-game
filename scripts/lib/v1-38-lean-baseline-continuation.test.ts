@@ -31,6 +31,22 @@ export const continuationDeviceWindowFixtureV11 = () => {
   const body = { ...old, routeNamespace: "20261017-v11" as const, anchorMs: 1792242843861, carryMs: 894902764, capMs: 923702764, deadlineMs: 1792271643861 }
   return ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })
 }
+export const continuationWindowFixtureV12 = () => {
+  const { root: _, ...old } = continuationDeviceWindowFixtureV11(), body = { ...old, routeNamespace: "20261017-v12" as const }
+  return ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })
+}
+describe("continuation-route-v12", () => {
+  it("includes V11 opaque debit once and admits only the exact current owned scope", () => {
+    const w = continuationWindowFixtureV12(), dir = realpathSync(mkdtempSync(join(tmpdir(), "public-v12-owned-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    try {
+      expect(continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V12).toBe(93921280)
+      expect(continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V12 - continuation.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V11).toBe(1421312)
+      const measure = continuation.createLeanContinuationOwnedMeasurementV8(w)
+      expect(measure()).toEqual({ retainedBytes: 0, scratchBytes: 0 })
+      expect(() => continuation.createLeanContinuationOwnedMeasurementV8({ ...w, routeNamespace: "20261017-v12.other" } as never)).toThrow()
+    } finally { cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+  })
+})
 describe("continuation-device-v11-policy", () => {
   it("inherits the exact spent allowance without extending any time or old policy", () => {
     const w = continuationDeviceWindowFixtureV11()
