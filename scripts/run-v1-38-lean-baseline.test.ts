@@ -1842,3 +1842,40 @@ describe("current-only baseline CLI source contracts", () => {
     expect(output).toContain("lean-baseline-20261004-v1-tmp")
   })
 })
+
+// Independent pre-extraction defaults copied from public source at 3d672717.
+it("internal-observations-default preserves ordered catalogs, legacy aliases and real source closure", async () => {
+  const observations = await import("./lib/v1-38-lean-continuation-observations.js")
+  const CONTINUATION_PHASE = ".planning/phases/265-serious-current-rules-league-and-development-red-team/"
+  const expected = { sourcePaths: [
+  "scripts/run-v1-38-lean-baseline.ts", "scripts/run-v1-38-lean-baseline.sh",
+  "scripts/lib/v1-38-lean-baseline-pipeline.ts", "scripts/lib/v1-38-lean-baseline-source.ts",
+  "scripts/lib/v1-38-lean-baseline-match.ts", "scripts/lib/v1-38-lean-baseline-analysis.ts",
+  "scripts/lib/v1-38-lean-baseline-metrics.ts",
+  "scripts/lib/v1-38-lean-baseline-retained.ts", "scripts/lib/v1-38-lean-cold-corpus.ts",
+  "scripts/lib/v1-38-lean-seal-metadata.ts",
+  "scripts/lib/v1-38-lean-training-adapter.ts", "scripts/lib/v1-38-lean-experiment-authority.ts",
+  "scripts/lib/v1-38-lean-baseline.ts", "packages/strategy-lab/src/league/lean-training.ts",
+  "packages/strategy-lab/src/league/lean-experiment.ts", "scripts/run-v1-38-lean-experiment.ts",
+  "scripts/lib/v1-38-lean-child-cli-terminal.ts", "scripts/lib/v1-38-factory-supervised-runtime.ts",
+  "scripts/lib/v1-38-lean-container-match-session.ts", "scripts/lib/v1-38-league-prospective-lifetime.ts",
+], continuationOwnedPaths: [
+  "packages/strategy-lab/src/league/lean-experiment.ts", "scripts/lib/v1-38-lean-baseline-continuation.ts", "scripts/lib/v1-38-lean-baseline-continuation.test.ts",
+  "scripts/lib/v1-38-lean-experiment-authority.ts", "scripts/lib/v1-38-lean-baseline-authority.test.ts", "scripts/lib/v1-38-lean-baseline-match.ts", "scripts/lib/v1-38-lean-baseline-match.test.ts",
+  "scripts/run-v1-38-lean-baseline.ts", "scripts/lib/v1-38-lean-baseline-pipeline.ts", "scripts/lib/v1-38-lean-baseline-source.ts", "scripts/lib/v1-38-lean-baseline-pipeline.test.ts",
+  "scripts/lib/v1-38-lean-baseline-retained.ts", "scripts/lib/v1-38-lean-baseline-retained.test.ts", "scripts/run-v1-38-lean-baseline.test.ts", "scripts/lib/v1-38-lean-container-match-session.ts",], continuationExtraPaths: ["packages/strategy-lab/src/league/lean-training.test.ts", "scripts/lib/v1-38-lean-baseline-analysis.test.ts", "scripts/lib/v1-38-lean-baseline-source.test.ts", "scripts/lib/v1-38-lean-startup-supervisor-v8.mjs", "AGENTS.md"], continuationPlanningPaths: [
+  ".planning/PROJECT.md", ".planning/REQUIREMENTS.md", ".planning/ROADMAP.md", ".planning/STATE.md", ".planning/research/SUMMARY.md",
+  ".planning/debug/265-native-exit-reader-cost.md",
+  ...["265-16-PLAN.md", "265-15-PLAN.md", "265-15-PILOT-RETAINED-VERIFICATION-v2.md", "265-16-BASELINE-CONTINUATION-APPROVAL-20261012.md", "265-16-BASELINE-CONTINUATION-RESEARCH-20261012.md", "265-16-BASELINE-CONTINUATION-PLAN-20261012.md", "265-16-BASELINE-CONTINUATION-GATES-20261012.md"].map(name => `${CONTINUATION_PHASE}${name}`),
+  ".planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-EXPERIMENT-20261003.md",
+  ".planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/LEAN-REMAINING-PLAN-20261003.md",] }
+  const value = observations.readLeanContinuationExpectedObservations()
+  expect(value.sourcePaths).toEqual(expected.sourcePaths)
+  expect(value.continuationOwnedPaths).toEqual([...expected.continuationOwnedPaths, "scripts/lib/v1-38-lean-continuation-observations.ts"])
+  expect(value.continuationExtraPaths).toEqual(expected.continuationExtraPaths)
+  expect(value.continuationPlanningPaths).toEqual(expected.continuationPlanningPaths)
+  expect(parentApi.LEAN_BASELINE_CONTINUATION_OWNED_PATHS).toEqual(value.continuationOwnedPaths)
+  expect(parentApi.LEAN_BASELINE_CONTINUATION_PLANNING_PATHS).toEqual(value.continuationPlanningPaths)
+  const manifest = parentApi.leanBaselineContinuationSourceManifest()
+  expect(manifest.implementationEntries.find(row => row.path === "scripts/lib/v1-38-lean-continuation-observations.ts")?.root).toBe(leanBytesRoot(fs.readFileSync(resolve("scripts/lib/v1-38-lean-continuation-observations.ts"))))
+})
