@@ -16,6 +16,49 @@ import * as ledger from "../../packages/strategy-lab/src/league/lean-experiment.
 import * as continuation from "./v1-38-lean-baseline-continuation.js"
 import { readLeanContinuationExpectedObservations } from "./v1-38-lean-continuation-observations.js"
 
+export const continuationNextWindowFixtureV10 = () => {
+  const { root: _, ...old } = continuationWindowFixtureV2(), anchorMs = 1792241199001
+  const body = { ...old, routeNamespace: "20261017-v10" as const, approvedAtMs: 1792241199000, approvalEvidence: { ...old.approvalEvidence, humanDecisionId: "human-approval-observed-20261017T124639Z" }, anchorMs, carryMs: ledger.leanContinuationGlobalFloorV2(anchorMs), capMs: ledger.leanContinuationGlobalFloorV2(anchorMs) + 28800000, deadlineMs: anchorMs + 28800000 }
+  return ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })
+}
+export const continuationNextAllocationFixtureV10 = () => {
+  const old = continuationAllocationFixtureV2(), window = continuationNextWindowFixtureV10()
+  const { root: _, ...body } = { ...old, window, caps: { ...old.caps, elapsedMs: window.capMs }, windowBytesRoot: ledger.leanBytesRoot(ledger.leanCanonicalBytes(window)) }
+  return ledger.validateLeanBaselineContinuationAllocationV2({ ...body, root: labRoot(body.schemaVersion, body) })
+}
+describe("continuation-next-v10-policy", () => {
+  it("binds only the approved exact route, delayed A and unchanged legacy defaults", () => {
+    const w = continuationNextWindowFixtureV10(), p = ledger.LEAN_BASELINE_CONTINUATION_PATHS_V10
+    expect(ledger.leanBaselineContinuationPathsForWindowV2(w)).toBe(p)
+    expect(ledger.leanBaselineContinuationPathsForRequestV2(p.request)).toBe(p)
+    expect(Object.isFrozen(p)).toBe(true)
+    for (const delta of [{ approvedAtMs: w.approvedAtMs + 1 }, { anchorMs: w.approvedAtMs - 1 }, { anchorMs: Number.MAX_SAFE_INTEGER }, { carryMs: w.carryMs + 1, capMs: w.capMs + 1 }, { approvalEvidence: { ...w.approvalEvidence, humanDecisionId: "wrong" } }, { routeNamespace: "20261017-v10.other" }]) {
+      const { root: _, ...body } = { ...w, ...delta }; expect(() => ledger.validateLeanBaselineContinuationWindowV2({ ...body, root: labRoot(body.schemaVersion, body) })).toThrow()
+    }
+    expect(() => ledger.leanBaselineContinuationPathsForRequestV2(p.request + ".other")).toThrow()
+    expect(ledger.leanBaselineContinuationPathsForWindowV2(continuationWindowFixtureV2())).toBe(ledger.LEAN_BASELINE_CONTINUATION_PATHS_V2)
+  })
+  it.each([0, 1])("real durable charge at the next-cell frontier: +%ims", delta => {
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), "next-cell-policy-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir)
+    const a = continuationNextAllocationFixtureV10(), now = a.window.deadlineMs - 3060000 + delta, clock = vi.spyOn(Date, "now").mockReturnValue(now), mono = vi.spyOn(process.hrtime, "bigint").mockReturnValue(1000000n)
+    try {
+      const l = ledger.createLeanLedger(join(dir, "store"), a)
+      const entry = { schemaVersion: "lean-child-entry-v2", allocationRoot: a.root, sourceRoot: a.sourceRoot, requestBytesRoot: a.requestBytesRoot, head: a.sourceHead, parentPid: process.ppid, childPid: process.pid, handshakeRoot: r("synthetic-handshake"), wallStartMs: now, monotonicStartNs: "1000000" }
+      writeFileSync(join(l.directory, "entry.json"), ledger.leanCanonicalBytes(entry), { mode: 0o600 }); ledger.beginLeanInterval(l, "pilot-entry", now)
+      const sample = { nowMs: now, monotonicElapsedMs: now - a.window.anchorMs, remainingSlots: 36, charged: 50, retainedBytes: a.predecessor.allocatedDiskBytes, scratchBytes: 0, parentRssBytes: 100000000, childRssBytes: 0, arrayBuffersBytes: 0, availableMemoryBytes: 4000000000, freeBytes: 16000000000, live: true }
+      if (delta) {
+        expect(() => ledger.chargeLeanSlot(l, a.slots[0]!, { freeBytes: 100000000000, availableMemoryBytes: 4000000000 })).toThrow(/FRONTIER/)
+        expect(() => continuation.assertLeanBaselineContinuationFrontierV2(a, sample, l)).toThrow(/CAPACITY/)
+        expect(ledger.readLeanLedger(l).charged).toBe(50)
+      } else {
+        expect(continuation.assertLeanBaselineContinuationFrontierV2(a, sample, l)).toBe(a.window.capMs - 3060000)
+        expect(ledger.chargeLeanSlot(l, a.slots[0]!, { freeBytes: 100000000000, availableMemoryBytes: 4000000000 }).ordinal).toBe(0)
+        expect(ledger.readLeanLedger(l).charged).toBe(51)
+        expect(continuation.assertLeanBaselineContinuationFrontierV2(a, { ...sample, remainingSlots: 35, charged: 51 }, l)).toBe(a.window.capMs - 3060000)
+      }
+    } finally { mono.mockRestore(); clock.mockRestore(); cwd.mockRestore(); rmSync(dir, { recursive: true }) }
+  })
+})
 describe("continuation-route-v9", () => {
   const window = (delta: Record<string, unknown> = {}) => {
     const { root: _, ...old } = continuationWindowFixtureV2(), anchorMs = 1792198286001
