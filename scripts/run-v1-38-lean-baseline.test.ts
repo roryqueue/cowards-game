@@ -2071,7 +2071,7 @@ it("internal-observations-C actual CLI default importer claims before missing re
   const stages: string[] = [], reader = R.verifyLeanBaselineContinuationRetainedV2
   f.restored.push(vi.spyOn(R, "verifyLeanBaselineContinuationRetainedV2").mockImplementation((request: string, observe?: (s: string) => void) => reader(request, (s: string) => { stages.push(s); f.note(s); observe?.(s) })).mockRestore)
   let failure: unknown
-  try { await D.leanBaselineMain(["verify-continuation-v2", "--request", p.request]) } catch (error) { failure = error }
+  const actual = await D.leanBaselineMain(["verify-continuation-v2", "--request", p.request]).catch((error: unknown) => { failure = error })
   process.stdout.write(`INTERNAL_OBSERVATIONS_C_PROGRESS ${JSON.stringify({ stages, diagnostic: D.leanBaselineContinuationReaderFailureV2(failure).trim(), claimExists: fs.existsSync(resolve(p.store, "reader-claim.json")), resultExists: fs.existsSync(resolve(p.store, "result.json")), timeActive: L.readLeanTimeAccounting(ledger).active, verifierClosed: L.readLeanTimeAccounting(ledger).closed.has("continuation-retained-verifier-v2"), resourceSamples: resource.calls })}\n`)
   expect(fs.existsSync(resolve(p.store, "reader-claim.json")), `${stages.join("->")} ${D.leanBaselineContinuationReaderFailureV2(failure)}`).toBe(true)
   const claim = read(`${p.store}/reader-claim.json`); expect(claim.allocationRoot).toBe(ledger.allocation.root)
@@ -2080,8 +2080,9 @@ it("internal-observations-C actual CLI default importer claims before missing re
   const check = read(`${p.store}/retained-check.json`); expect(check.disposition).toBe("gaps_found"); expect(check.failure).toBe("CONTINUATION_READER_FAILURE"); expect(check.report).toBeNull()
   const ordered = ["IMPORT", "READER_INTERVAL", "CLAIM", "EVIDENCE_RESULT", "TERMINAL", "PUBLICATION"]
   for (let i = 1; i < ordered.length; i++) expect(stages.indexOf(ordered[i]!)).toBeGreaterThan(stages.indexOf(ordered[i - 1]!))
-  for (const value of [check, structuredClone(check), JSON.parse(JSON.stringify(check))]) expect(R.isLeanContinuationAcceptedPrivateCheckV6(value)).toBe(false)
-  process.stdout.write(`INTERNAL_OBSERVATIONS_C_NONACCEPTANCE ${JSON.stringify({ disposition: check.disposition, failure: check.failure, acceptedObject: R.isLeanContinuationAcceptedPrivateCheckV6(check), acceptedClone: R.isLeanContinuationAcceptedPrivateCheckV6(structuredClone(check)), acceptedDeserialized: R.isLeanContinuationAcceptedPrivateCheckV6(JSON.parse(JSON.stringify(check))) })}\n`)
+  expect(actual).toMatchObject({ disposition: "gaps_found", failure: "CONTINUATION_READER_FAILURE", report: null })
+  for (const value of [actual, structuredClone(actual), JSON.parse(JSON.stringify(actual))]) expect(R.isLeanContinuationAcceptedPrivateCheckV6(value)).toBe(false)
+  process.stdout.write(`INTERNAL_OBSERVATIONS_C_NONACCEPTANCE ${JSON.stringify({ disposition: actual.disposition, failure: actual.failure, acceptedObject: R.isLeanContinuationAcceptedPrivateCheckV6(actual), acceptedClone: R.isLeanContinuationAcceptedPrivateCheckV6(structuredClone(actual)), acceptedDeserialized: R.isLeanContinuationAcceptedPrivateCheckV6(JSON.parse(JSON.stringify(actual))) })}\n`)
   expect(resource.calls).toBeGreaterThan(10)
   expect(failure).toBeUndefined()
 }), 60000)
