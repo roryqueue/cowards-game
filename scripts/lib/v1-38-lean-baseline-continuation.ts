@@ -17,8 +17,45 @@ const integer = (v: unknown): v is number => Number.isSafeInteger(v) && Number(v
 const equal = (a: unknown, b: unknown) => Buffer.from(leanCanonicalBytes(a)).equals(Buffer.from(leanCanonicalBytes(b)))
 export type LeanContinuationGit = (args: readonly string[]) => Buffer
 /** Bounded descriptor reads reserve before allocation; no real caller can opt out. */
-export const readLeanContinuationBoundedBytesV2 = (name: string, maximum: number, mode: number, guard: (additionalBytes?: number) => void): Buffer => {
+export interface LeanContinuationReadObservation {
+  observationMode: LeanContinuationObservationMode
+  window: LeanBaselineContinuationWindowV2
+  authenticatedPrefix?: Buffer
+}
+export const readLeanContinuationBoundedBytesV2 = (name: string, maximum: number, mode: number, guard: (additionalBytes?: number) => void, observation?: LeanContinuationReadObservation): Buffer => {
   if (!integer(maximum) || maximum > 4194304 || /preimage|secret|sealed/iu.test(name) || typeof guard !== "function") return fail("V2_READ_SCOPE")
+  if (observation?.observationMode === "one-current-owned-overlap") {
+    const paths = leanBaselineContinuationPathsForWindowV2(validateLeanBaselineContinuationWindowV2(observation.window)), path = resolve(name)
+    if (!["ledger.ndjson", "time.ndjson"].some(leaf => path === resolve(paths.store, leaf)) || mode !== 0o600 || path === resolve(paths.store, "time.ndjson") && maximum > 65536) return fail("V2_READ_SCOPE")
+    const prefix = observation.authenticatedPrefix ?? Buffer.alloc(0)
+    guard(prefix.length)
+    const first = lstatSync(path)
+    let latest = first, grew = false
+    const hold = (s: Stats) => {
+      if (!s.isFile() || s.isSymbolicLink() || s.nlink !== 1 || s.uid !== process.getuid?.() || (s.mode & 0o7777) !== mode || !sameOwnedIdentity(first, s) || !integer(s.size) || !integer(s.blocks * 512) || s.size > maximum || s.size < latest.size || s.blocks < latest.blocks || s.size === latest.size && !sameOwnedStat(latest, s) || realpathSync(path) !== path) return fail("V2_FILE_CHANGED")
+      grew ||= s.size > first.size; latest = s
+    }
+    hold(first); guard(first.size + prefix.length)
+    const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW)
+    const custody = () => { hold(fstatSync(fd)); hold(lstatSync(path)) }
+    let bytes: Buffer
+    try {
+      custody(); bytes = Buffer.alloc(first.size)
+      for (let offset = 0; offset < bytes.length;) { guard(first.size + prefix.length); custody(); const n = readSync(fd, bytes, offset, Math.min(65536, bytes.length - offset), offset); if (!n) return fail("V2_TORN"); offset += n; custody() }
+      guard(first.size + prefix.length); custody()
+    } finally { closeSync(fd) }
+    if (grew) {
+      // This second read is deliberately strict. No retry or old-EOF result.
+      hold(lstatSync(path))
+      const fresh = readLeanContinuationBoundedBytesV2(path, maximum, mode, more => guard(bytes.length + prefix.length + (more ?? 0)))
+      hold(lstatSync(path))
+      if (fresh.length !== latest.size || !fresh.subarray(0, bytes.length).equals(bytes)) return fail("V2_FILE_CHANGED")
+      bytes = fresh
+    }
+    if (bytes.length < prefix.length || !bytes.subarray(0, prefix.length).equals(prefix)) return fail("V2_FILE_CHANGED")
+    return bytes
+  }
+  if (observation && observation.observationMode !== "strict") return fail("V2_READ_SCOPE")
   guard()
   const path = resolve(name), stat = lstatSync(path)
   if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.uid !== process.getuid?.() || realpathSync(path) !== path || (stat.mode & 0o7777) !== mode || stat.size > maximum || !integer(stat.size)) return fail("V2_FILE")
@@ -596,11 +633,111 @@ export const createLeanContinuationReservationAccountingV8 = (carriedDebitFloor:
 
 /** Bounded local ownership measurements only. No JSON, ledger, source, history
  * authenticator, capacity-basis callback or complete controller is reachable. */
-export const createLeanContinuationOwnedMeasurementV8 = (window: LeanBaselineContinuationWindowV2) => {
+export type LeanContinuationObservationMode = "strict" | "one-current-owned-overlap"
+const sameOwnedIdentity = (a: Stats, b: Stats, classifiedStoreDirectory = false) => a.dev === b.dev && a.ino === b.ino && a.mode === b.mode && a.uid === b.uid && (classifiedStoreDirectory || a.nlink === b.nlink) && a.isFile() === b.isFile() && a.isDirectory() === b.isDirectory()
+const sameOwnedStat = (a: Stats, b: Stats) => sameOwnedIdentity(a, b) && a.size === b.size && a.blocks === b.blocks && a.mtimeMs === b.mtimeMs && a.ctimeMs === b.ctimeMs
+/** Checking policy only; no caller receives route, runtime or reader authority. */
+const stabilizedOwnedMeasurement = (p: { window: string; request: string; allocation: string; store: string; temp: string }, names: ReadonlySet<string>) => {
+  type Pin = { stat: Stats; members?: readonly string[]; scratch: boolean }
+  let committed = new Map<string, Pin>(), invalid = false
+  const store = resolve(p.store), journals = new Set(["ledger.ndjson", "time.ndjson"].map(name => join(store, name)))
+  const allowed = (name: string, scratch: boolean) => scratch ? name === "window-claim.json" : names.has(name) || /^(?:(?:pair|observation)-\d{1,2}|(?:source|publication)-[a-z0-9-]+|diagnostic-[a-f0-9]{64})\.json$/u.test(name) || /^[a-f0-9]{64}\.gz$/u.test(name)
+  return () => {
+    if (invalid) return fail("V8_OWNED_CHANGED")
+    const pins = new Map(committed), absentPins = new Set<string>()
+    try {
+      const scan = (canNominate: boolean) => {
+        let nominated = false
+        const seen = new Set<string>(), inodes = new Map<string, string>(), absent = new Set<string>()
+        const observe = (path: string, mode: number, directory: boolean) => {
+          const s = lstatSync(path), prior = pins.get(path)?.stat, inode = `${s.dev}:${s.ino}`
+          if (s.isSymbolicLink() || realpathSync(path) !== path || s.uid !== process.getuid?.() || (s.mode & 0o7777) !== mode || (directory ? !s.isDirectory() : !s.isFile() || s.nlink !== 1) || !integer(s.size) || !integer(s.blocks * 512) || inodes.has(inode) && inodes.get(inode) !== path || prior && (!sameOwnedIdentity(prior, s, directory && path === store && canNominate) || s.size < prior.size || s.blocks < prior.blocks || s.nlink < prior.nlink || !canNominate && !sameOwnedStat(prior, s))) return fail("V8_OWNED_CHANGED")
+          if (prior && !directory && !journals.has(path) && !sameOwnedStat(prior, s)) return fail("V8_OWNED_CHANGED")
+          if (prior && journals.has(path) && s.size === prior.size && !sameOwnedStat(prior, s)) return fail("V8_OWNED_CHANGED")
+          inodes.set(inode, path); return s
+        }
+        const members = (path: string, scratch: boolean) => {
+          const values = readdirSync(path).sort()
+          if (values.length > 512 || values.some(name => !allowed(name, scratch))) return fail("V8_OWNED_MEMBERS")
+          const prior = pins.get(path)?.members
+          if (prior && (prior.some(name => !values.includes(name)) || !canNominate && prior.length !== values.length)) return fail("V8_OWNED_CHANGED")
+          return values
+        }
+        const directoryChange = (path: string, before: Stats, opening: readonly string[], after: Stats, closing: readonly string[]) => {
+          const added = closing.filter(name => !opening.includes(name))
+          if (opening.some(name => !closing.includes(name)) || path !== store || !added.length || after.nlink < before.nlink || after.nlink !== before.nlink && after.nlink - before.nlink !== added.length) return fail("V8_OWNED_CHANGED")
+        }
+        const nominate = () => { if (!canNominate) return fail("V8_OWNED_CHANGED"); nominated = true }
+        const leaf = (path: string, mode: number, scratch: boolean) => {
+          seen.add(path)
+          const before = observe(path, mode, false); pins.set(path, { stat: before, scratch })
+          const after = observe(path, mode, false)
+          if (!sameOwnedStat(before, after)) {
+            if (!journals.has(path) || after.size <= before.size) return fail("V8_OWNED_CHANGED")
+            nominate()
+          }
+          pins.set(path, { stat: after, scratch })
+        }
+        const directory = (path: string, scratch: boolean) => {
+          seen.add(path)
+          const before = observe(path, 0o700, true), opening = members(path, scratch)
+          const prior = pins.get(path)
+          const unsettledOpening = prior?.members && opening.length > prior.members.length && sameOwnedStat(prior.stat, before)
+          pins.set(path, { stat: before, members: opening, scratch })
+          for (const name of opening) leaf(join(path, name), 0o600, scratch)
+          const closing = members(path, scratch), after = observe(path, 0o700, true), added = closing.filter(name => !opening.includes(name))
+          if (prior?.members && (!sameOwnedStat(prior.stat, after) || prior.members.length !== closing.length)) directoryChange(path, prior.stat, prior.members, after, closing)
+          if (!sameOwnedStat(before, after) || added.length) {
+            if (!unsettledOpening) directoryChange(path, before, opening, after, closing)
+            nominate()
+          }
+          pins.set(path, { stat: after, members: closing, scratch })
+          for (const name of added) leaf(join(path, name), 0o600, scratch)
+        }
+        for (const [name, mode, dir, scratch] of [[p.window, 0o600, false, false], [p.request, 0o600, false, false], [p.allocation, 0o644, false, false], [p.store, 0o700, true, false], [p.temp, 0o700, true, true]] as const) {
+          const path = resolve(name)
+          try { lstatSync(path) } catch (error) { if (!pins.has(path) && (error as NodeJS.ErrnoException).code === "ENOENT") { absent.add(path); absentPins.add(path); continue }; throw error }
+          if (absentPins.has(path)) return fail("V8_OWNED_CHANGED")
+          if (dir) directory(path, scratch); else leaf(path, mode, scratch)
+        }
+        for (const path of pins.keys()) if (!seen.has(path)) return fail("V8_OWNED_CHANGED")
+        // Revalidate the complete candidate after every root was traversed.
+        // New members are pinned now too, not merely counted by the next scan.
+        for (const [path, pin] of pins) {
+          if (pin.members) {
+            const current = members(path, pin.scratch), added = current.filter(name => !pin.members!.includes(name)), after = observe(path, 0o700, true)
+            if (!sameOwnedStat(pin.stat, after) || added.length) {
+              directoryChange(path, pin.stat, pin.members, after, current)
+              nominate(); pins.set(path, { ...pin, stat: after, members: current })
+              for (const name of added) leaf(join(path, name), 0o600, pin.scratch)
+            }
+          } else {
+            const after = observe(path, pin.stat.mode & 0o7777, false)
+            if (!sameOwnedStat(pin.stat, after)) {
+              if (!journals.has(path) || after.size <= pin.stat.size) return fail("V8_OWNED_CHANGED")
+              nominate(); pins.set(path, { ...pin, stat: after })
+            }
+          }
+        }
+        for (const path of absent) { try { lstatSync(path) } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") continue; throw error }; return fail("V8_OWNED_CHANGED") }
+        return nominated
+      }
+      if (scan(true)) scan(false)
+      let retainedBytes = 0, scratchBytes = 0
+      for (const pin of pins.values()) { retainedBytes += pin.stat.blocks * 512; if (pin.scratch) scratchBytes += pin.stat.blocks * 512 }
+      if (!integer(retainedBytes) || !integer(scratchBytes) || retainedBytes > LEAN_CAPS.retainedBytes || scratchBytes > LEAN_CAPS.scratchBytes) return fail("V8_OWNED_CHANGED")
+      committed = pins
+      return { retainedBytes, scratchBytes }
+    } catch (error) { invalid = true; throw error }
+  }
+}
+export const createLeanContinuationOwnedMeasurementV8 = (window: LeanBaselineContinuationWindowV2, observationMode: LeanContinuationObservationMode = "strict") => {
   const p = leanBaselineContinuationPathsForWindowV2(window)
   if (p !== LEAN_BASELINE_CONTINUATION_PATHS_V8 && p !== LEAN_BASELINE_CONTINUATION_PATHS_V9 && p !== LEAN_BASELINE_CONTINUATION_PATHS_V10 && p !== LEAN_BASELINE_CONTINUATION_PATHS_V11) return fail("V8_SCOPE")
   const previous = new Map<string, { dev: number; ino: number; blocks: number; mode: number }>()
   const names = new Set(["allocation.json", "carry.json", "source-manifest.json", "source-hold.json", "ledger.ndjson", "time.ndjson", "entry.json", "child-terminal.json", "entry-failure.json", "parent-supervisor-reasons.json", "result.json", "run-claim.json", "reader-claim.json", "retained-check.json", "seal-metadata.json", "cold-corpus.json", "initial-proposals.json", "initial-selection.json", "initial-training.json", "response-training.json", "response-work.json", "response-node-receipts.json", "work-accounting.json", "initial-analysis.json", "current-analysis.json"])
+  if (observationMode === "one-current-owned-overlap") return stabilizedOwnedMeasurement(p, names)
+  if (observationMode !== "strict") return fail("V8_SCOPE")
   return () => {
     let retainedBytes = 0, scratchBytes = 0
     const inodes = new Set<string>(), seen = new Set<string>()

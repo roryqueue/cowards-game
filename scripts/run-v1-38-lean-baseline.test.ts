@@ -2345,6 +2345,86 @@ it("continuation-reservation-forward-v11 real preflight, rebound and opened guar
   } finally { factory.mockRestore() }
 }, "20261017-v11"), 45000)
 
+it("continuation-owned-stabilization actual context returns fresh creation and journal frontiers before effects", () => withInternalObservationTree(false, async f => {
+  const { D, L, p, ledger, w, allocation } = f, native: typeof fs = f.fs
+  f.note("stabilized actual context")
+  const context = D.openLeanBaselineContinuationContextV2(p.request, false, undefined, "one-current-owned-overlap"), first = context.fullSample()
+  let created = false, scans = 0, armed = false
+  const members = native.readdirSync, listing = vi.spyOn(native, "readdirSync").mockImplementation(((...args: Parameters<typeof fs.readdirSync>) => {
+    const values = Reflect.apply(members, native, args)
+    if (String(args[0]) === resolve(p.store)) { scans++; if (armed && !created) { created = true; native.writeFileSync(resolve(p.store, "cold-corpus.json"), "{}", { mode: 0o600, flag: "wx" }) } }
+    return values
+  }) as typeof fs.readdirSync)
+  try { context.guard(); const stableScans = scans; scans = 0; armed = true; context.guard(); expect(created).toBe(true); expect(scans).toBe(stableScans + 3) } finally { listing.mockRestore() }
+  expect(context.fullSample().retainedBytes).toBeGreaterThan(first.retainedBytes)
+  f.tick(2)
+  const row = (n: number) => Buffer.concat([L.leanCanonicalBytes({ kind: "resource", elapsedMs: w.carryMs + n, physicalBytes: 4096, bufferBytes: 0, scratchBytes: 0 }), Buffer.from("\n")])
+  native.appendFileSync(resolve(p.store, "ledger.ndjson"), row(1))
+  L.beginLeanInterval(ledger, "continuation-run-admission", Date.now())
+  for (const leaf of ["ledger.ndjson", "time.ndjson"]) {
+    const path = resolve(p.store, leaf), open = native.openSync, read = native.readSync, fds = new Set<number>()
+    let appended = false, reads = 0
+    const opened = vi.spyOn(native, "openSync").mockImplementation((name, flags, mode) => { const fd = open(name, flags, mode); if (String(name) === path) fds.add(fd); else fds.delete(fd); return fd })
+    const reading = vi.spyOn(native, "readSync").mockImplementation(((...args: Parameters<typeof fs.readSync>) => {
+      const n = Reflect.apply(read, native, args)
+      if (fds.has(args[0])) { reads++; if (!appended) { appended = true; native.appendFileSync(path, leaf === "ledger.ndjson" ? row(2) : Buffer.concat([L.leanCanonicalBytes({ kind: "close", id: "continuation-run-admission", atMs: Date.now() }), Buffer.from("\n")])) } }
+      return n
+    }) as typeof fs.readSync)
+    try { const fresh = context.guard(); expect(fresh.elapsedMs).toBeGreaterThanOrEqual(w.carryMs + 2); expect(appended).toBe(true); expect(reads).toBeLessThanOrEqual(2) } finally { reading.mockRestore(); opened.mockRestore() }
+  }
+  expect(L.readLeanLedger(ledger).events).toHaveLength(2)
+  expect(L.readLeanTimeAccounting(ledger).closes.has("continuation-run-admission")).toBe(true)
+  f.json(p.store + "/entry.json", { schemaVersion: "lean-child-entry-v2", allocationRoot: allocation.root, sourceRoot: allocation.sourceRoot, requestBytesRoot: allocation.requestBytesRoot, head: f.head.value, parentPid: process.ppid, childPid: process.pid, handshakeRoot: root("public-stabilized-handshake"), wallStartMs: Date.now(), monotonicStartNs: process.hrtime.bigint().toString() })
+  L.beginLeanInterval(ledger, "pilot-entry", Date.now())
+  context.stage("charge", () => L.chargeLeanSlot(ledger, allocation.slots[0], { freeBytes: 100000000000, availableMemoryBytes: 4000000000 }))
+  context.startCell(); context.finishCell()
+  expect(context.fullSample()).toMatchObject({ charged: 51, remainingSlots: 36 })
+  const effect = vi.fn(); f.tick(w.durationMs)
+  expect(() => { context.guard(); effect() }).toThrow(/CAPACITY/)
+  expect(() => context.stage("dispatch", effect)).toThrow(/V8_CONTEXT/); expect(effect).not.toHaveBeenCalled()
+}, "20261017-v11"), 45000)
+
+it.each(["fullSample", "dispatch"] as const)("continuation-owned-stabilization actual %s refuses changed legacy second-open bytes permanently", operation => withInternalObservationTree(false, async f => {
+  const { D, L, p, w } = f, native: typeof fs = f.fs
+  f.note("stabilized legacy second-open")
+  const context = D.openLeanBaselineContinuationContextV2(p.request, false, undefined, "one-current-owned-overlap"), target = resolve(p.store, "ledger.ndjson"), read = native.readFileSync, open = native.openSync, fds = new Set<number>()
+  let mutated = false
+  const opened = vi.spyOn(native, "openSync").mockImplementation((name, flags, mode) => { const fd = open(name, flags, mode); if (String(name) === target) fds.add(fd); else fds.delete(fd); return fd })
+  const reading = vi.spyOn(native, "readFileSync").mockImplementation(((...args: Parameters<typeof fs.readFileSync>) => {
+    const result = Reflect.apply(read, native, args)
+    if (!mutated && typeof args[0] === "number" && fds.has(args[0])) { mutated = true; native.appendFileSync(target, Buffer.concat([L.leanCanonicalBytes({ kind: "resource", elapsedMs: w.carryMs, physicalBytes: 4096, bufferBytes: 0, scratchBytes: 0 }), Buffer.from("\n")])) }
+    return result
+  }) as typeof fs.readFileSync)
+  const effect = vi.fn()
+  try {
+    if (operation === "fullSample") expect(() => { context.fullSample(); effect() }).toThrow(/V2_FILE_CHANGED/)
+    else {
+      const register = vi.fn(), dispatch = D.createLeanContinuationChildDispatchV2(f.ledger, context, { register, unregister: vi.fn() }, p, context.guard, [])
+      const source = { sourceRoot: root("public-never-dispatched") }
+      await expect(dispatch(f.allocation.slots[0], source, source).then(effect)).rejects.toThrow(/V2_FILE_CHANGED/)
+      expect(register).not.toHaveBeenCalled(); expect(native.existsSync(resolve(p.store, "pair-0.json"))).toBe(false)
+      expect(L.readLeanLedger(f.ledger).charged).toBe(50)
+    }
+    expect(mutated).toBe(true)
+  } finally { reading.mockRestore(); opened.mockRestore() }
+  expect(() => context.guard()).toThrow(/V8_CONTEXT/)
+  expect(() => context.stage("dispatch", effect)).toThrow(/V8_CONTEXT/); expect(effect).not.toHaveBeenCalled()
+}, "20261017-v11"), 45000)
+
+it("continuation-owned-stabilization actual reader closure rejects changed second-open time bytes", () => withInternalObservationTree(false, async f => {
+  const { D, L, p } = f, native: typeof fs = f.fs, target = resolve(p.store, "time.ndjson"), read = native.readFileSync, open = native.openSync, fds = new Set<number>()
+  f.note("stabilized reader closure second-open")
+  let mutated = false
+  const opened = vi.spyOn(native, "openSync").mockImplementation((name, flags, mode) => { const fd = open(name, flags, mode); if (String(name) === target) fds.add(fd); else fds.delete(fd); return fd })
+  const reading = vi.spyOn(native, "readFileSync").mockImplementation(((...args: Parameters<typeof fs.readFileSync>) => {
+    const result = Reflect.apply(read, native, args)
+    if (!mutated && typeof args[0] === "number" && fds.has(args[0])) { mutated = true; native.appendFileSync(target, Buffer.concat([L.leanCanonicalBytes({ kind: "start", id: "continuation-retained-verifier-v2", atMs: Date.now() }), Buffer.from("\n")])) }
+    return result
+  }) as typeof fs.readFileSync)
+  const effect = vi.fn()
+  try { expect(() => { D.openLeanBaselineContinuationContextV2(p.request, true, undefined, "one-current-owned-overlap"); effect() }).toThrow(/V2_FILE_CHANGED/); expect(mutated).toBe(true); expect(effect).not.toHaveBeenCalled() } finally { reading.mockRestore(); opened.mockRestore() }
+}, "20261017-v11"), 45000)
+
 it("continuation-guard-overlap-v11 stable valid journal append passes; descriptor-overlap permanently denies dependent effects", () => withInternalObservationTree(false, async f => {
   const { D, L, p, ledger, w } = f, native: typeof fs = f.fs
   f.note("journal overlap default context")
