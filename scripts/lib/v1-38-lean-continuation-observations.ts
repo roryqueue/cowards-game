@@ -417,6 +417,16 @@ const spentV11Absences = freezeLabValue([
   ".strategy-lab/lean-baseline-continuation-20261017-v11/initial-selection.json",
   ".strategy-lab/lean-baseline-continuation-20261017-v11/initial-training.json",
 ])
+/** Retired V12 binding only: no preparation or execution occurred. */
+const spentV12Metadata = freezeLabValue([
+  { path: ".strategy-lab/lean-baseline-continuation-window-20261017-v12.json", bytes: 941, allocatedBytes: 4096, mode: 0o600, maximum: 65536, rawRoot: "sha256:0d8ebb07b8c96b4d96da1e999e37c5d6f679e90bad27fe90efa55b8e9760f52c" as LabRoot },
+])
+const spentV12Absences = freezeLabValue([
+  ".strategy-lab/lean-baseline-continuation-request-20261017-v12.json",
+  ".planning/artifacts/v1.38-lean-baseline-continuation-allocation-20261017-v12.json",
+  ".strategy-lab/lean-baseline-continuation-20261017-v12",
+  ".strategy-lab/lean-baseline-continuation-20261017-v12-tmp",
+])
 const fixed = freezeLabValue({
   sourcePaths: SOURCE_PATHS,
   continuationOwnedPaths: LEAN_BASELINE_CONTINUATION_OWNED_PATHS,
@@ -425,6 +435,7 @@ const fixed = freezeLabValue({
   spentV3Metadata, spentV4Metadata, spentV4Directories, spentV5Metadata, spentV5Directories, spentV6Metadata, spentV7Metadata, spentV7Directories,
   spentV8Metadata, spentV8Directories, spentV9Metadata, spentV9Directories, spentV10Metadata,
   spentV11Metadata, spentV11Directories, spentV11Absences,
+  spentV12Metadata, spentV12Absences,
   closedCostV2: LEAN_CONTINUATION_CLOSED_COST_V2,
 })
 type DeepReadonly<T> = T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> } : T
