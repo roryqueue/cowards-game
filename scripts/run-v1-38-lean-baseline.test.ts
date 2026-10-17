@@ -1992,7 +1992,7 @@ it("internal-observations-default preserves ordered catalogs, legacy aliases and
 // Public synthetic external observations only. Every hash, descriptor, schema,
 // source collector, importer, controller, wrapper and failure publisher is real.
 // No success object substitutes for any of those production boundaries.
-const withInternalObservationTree = async (verify: boolean, run: (f: any) => Promise<void>, namespace: "20261015-v8" | "20261017-v9" | "20261017-v10" | "20261017-v11" | "20261017-v12" = "20261015-v8", pilotStartElapsedMs = 0, deviceNegative?: "missing-hash" | "wrong-hash" | "metadata" | "directory-members" | "sealed" | "empty-directory" | "logical-bound") => {
+const withInternalObservationTree = async (verify: boolean, run: (f: any) => Promise<void>, namespace: "20261015-v8" | "20261017-v9" | "20261017-v10" | "20261017-v11" | "20261017-v12" = "20261015-v8", pilotStartElapsedMs = 0, deviceNegative?: "missing-hash" | "wrong-hash" | "metadata" | "directory-members" | "sealed" | "empty-directory" | "logical-bound", historicalClockMismatch = false) => {
   // Prospective checked test-only harness. Earlier 10s attempts below remain
   // CENSORED; this changes no production admission, resource or runtime limit.
   const harness = "OBS3-HARNESS-45000", fixtureLimitMs = 45000
@@ -2043,7 +2043,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     }).mockRestore)
     restored.push(vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }).mockRestore)
     restored.push(vi.spyOn(H, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000).mockRestore)
-    let logicalMs = 0, anchor = (namespace === "20261017-v11" || namespace === "20261017-v12") ? 1792242843861 : namespace === "20261017-v10" ? 1792241199001 : namespace === "20261017-v9" ? 1792198286001 : 1792093334001
+    let logicalMs = 0, anchor = namespace === "20261017-v12" ? 1792279095345 : namespace === "20261017-v11" ? 1792242843861 : namespace === "20261017-v10" ? 1792241199001 : namespace === "20261017-v9" ? 1792198286001 : 1792093334001
     const tick = (ms: number) => { logicalMs += ms }
     restored.push(vi.spyOn(Date, "now").mockImplementation(() => anchor + logicalMs).mockRestore)
     restored.push(vi.spyOn(process.hrtime, "bigint").mockImplementation(() => 100000000000n + BigInt(logicalMs) * 1000000n).mockRestore)
@@ -2137,10 +2137,13 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     const base = D.leanBaselineContinuationSourceManifestV2(), sg = { schemaVersion: "lean-baseline-continuation-source-gate-v2", plan_check: "passed", source_review: "passed", root_validation: "passed", source_verification: "passed", commands_closed: true, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceAuthor: "inert-author", sourceReviewer: "inert-reviewer", sourceVerifier: "inert-verifier" }
     // Same approved V8 numeric contract as existing fixtures, never a new route.
     const carryMs = L.leanContinuationGlobalFloorV2(anchor)
-    const wb = { schemaVersion: "lean-baseline-continuation-window-v2", status: "approved", grantId: "public-internal-observations", approvalEvidence: { humanDecisionId: (namespace === "20261017-v10" || (namespace === "20261017-v11" || namespace === "20261017-v12")) ? "human-approval-observed-20261017T124639Z" : namespace === "20261017-v9" ? "human-approval-observed-20261017T005126Z" : "human-approval-observed-20261015T194214Z", recordedBy: "public-inert-root" }, approvedAtMs: (namespace === "20261017-v11" || namespace === "20261017-v12") ? 1792241199000 : anchor - 1, anchorMs: anchor, carryMs, capMs: carryMs + 28800000, deadlineMs: anchor + 28800000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: namespace, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: hash(sg.schemaVersion, sg), planRoot: base.planningEntries.find(row => row.path === plan)!.root, runOperator: "inert-runner", readerOperator: "inert-reader" }, w = rooted(wb)
+    const wb = { schemaVersion: "lean-baseline-continuation-window-v2", status: "approved", grantId: "public-internal-observations", approvalEvidence: { humanDecisionId: namespace === "20261017-v12" ? "human-approval-observed-20261017T231803Z" : (namespace === "20261017-v10" || namespace === "20261017-v11") ? "human-approval-observed-20261017T124639Z" : namespace === "20261017-v9" ? "human-approval-observed-20261017T005126Z" : "human-approval-observed-20261015T194214Z", recordedBy: "public-inert-root" }, approvedAtMs: namespace === "20261017-v12" ? 1792279083000 : namespace === "20261017-v11" ? 1792241199000 : anchor - 1, anchorMs: anchor, carryMs, capMs: carryMs + 28800000, deadlineMs: anchor + 28800000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: namespace, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: hash(sg.schemaVersion, sg), planRoot: base.planningEntries.find(row => row.path === plan)!.root, runOperator: "inert-runner", readerOperator: "inert-reader" }, w = rooted(wb)
     if ((namespace === "20261017-v11" || namespace === "20261017-v12")) {
-      const oldWindow = rooted({ ...w, routeNamespace: "20261017-v10" })
-      json(L.LEAN_BASELINE_CONTINUATION_PATHS_V10.window, oldWindow)
+      // Historical V10 is an independently constructed old allowance, never a
+      // spread of the prospective V12 grant. Public observation roots alone pin it.
+      const oldWindow = rooted({ schemaVersion: "lean-baseline-continuation-window-v2", status: "approved", grantId: "public-internal-observations", approvalEvidence: { humanDecisionId: "human-approval-observed-20261017T124639Z", recordedBy: "public-inert-root" }, approvedAtMs: 1792241199000, anchorMs: 1792242843861, carryMs: 894902764, capMs: 923702764, deadlineMs: 1792271643861, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261017-v10", reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: hash(sg.schemaVersion, sg), planRoot: base.planningEntries.find(row => row.path === plan)!.root, runOperator: "inert-runner", readerOperator: "inert-reader" })
+      const historical = historicalClockMismatch ? rooted({ ...oldWindow, anchorMs: oldWindow.anchorMs + 1, carryMs: oldWindow.carryMs + 1, capMs: oldWindow.capMs + 1, deadlineMs: oldWindow.deadlineMs + 1 }) : oldWindow
+      json(L.LEAN_BASELINE_CONTINUATION_PATHS_V10.window, historical)
       write(L.LEAN_BASELINE_CONTINUATION_PATHS_V10.request, "public opaque spent V10 request", 0o600)
       for (const name of [L.LEAN_BASELINE_CONTINUATION_PATHS_V10.window, L.LEAN_BASELINE_CONTINUATION_PATHS_V10.request]) {
         const s = fs.lstatSync(resolve(name))
@@ -2185,6 +2188,12 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     }
     if (deviceNegative && deviceNegative !== "empty-directory") {
       expect(() => C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)).toThrow(/V11_CONTINUITY_/)
+      status = "COMPLETE"; return
+    }
+    if (historicalClockMismatch) {
+      expect(namespace).toBe("20261017-v11")
+      expect(() => C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)).toThrow(/V11_ALLOWANCE_ANCHOR/)
+      for (const path of [p.store, p.claim, p.allocation]) expect(fs.existsSync(resolve(path))).toBe(false)
       status = "COMPLETE"; return
     }
     const imported = C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)
@@ -2282,7 +2291,7 @@ it("continuation-device-v11-driver-bind actual importer binds fresh device and s
   expect(() => context.guard()).toThrow()
 }, "20261017-v11"), 60000)
 
-for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "continuation-next-v10-reader-remaining-closure" }, { namespace: "20261017-v11" as const, tag: "continuation-device-v11-retained-default continuation-reader-precheck-v11" }]) it(`${tag} actual default reader admits40minutes, preserves31minute closure and refuses hard expiry (public synthetic history/resources)`, () => withInternalObservationTree(true, async f => {
+for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "continuation-next-v10-reader-remaining-closure" }, { namespace: "20261017-v11" as const, tag: "continuation-device-v11-retained-default continuation-reader-precheck-v11" }, { namespace: "20261017-v12" as const, tag: "continuation-fresh-window-v12-reader" }]) it(`${tag} actual default reader admits40minutes, preserves31minute closure and refuses hard expiry (public synthetic history/resources)`, () => withInternalObservationTree(true, async f => {
   const { D, L, R, p, ledger, w, tick, read, fs } = f, stages: string[] = []
   f.note("remaining reader closure at40minutes")
   expect(w.deadlineMs - Date.now()).toBe(2400000)
@@ -2305,7 +2314,7 @@ for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "co
   expect(fs.readFileSync(resolve(p.store, "time.ndjson"))).toEqual(timeBytes)
 }, namespace, 28800000 - 2400000 - 2), 60000)
 
-it("continuation-reservation-forward-v11 real preflight, rebound and opened guards forward fresh samples once", () => withInternalObservationTree(false, async f => {
+for (const { namespace, tag } of [{ namespace: "20261017-v11" as const, tag: "continuation-reservation-forward-v11" }, { namespace: "20261017-v12" as const, tag: "continuation-fresh-window-v12-preflight" }]) it(`${tag} real preflight, rebound and opened guards forward fresh samples once`, () => withInternalObservationTree(false, async f => {
   const { D, C, p, imported } = f, native: typeof fs = f.fs
   f.note("connected reservation forwarding")
   const create = C.createLeanContinuationBoundaryControllerV8, rows: { binding: object; controller: any; observer: ReturnType<typeof vi.fn> }[] = []
@@ -2343,7 +2352,45 @@ it("continuation-reservation-forward-v11 real preflight, rebound and opened guar
     expect(Object.keys(fullAfter).sort()).toEqual(Object.keys(fullBefore).sort())
     expect(fullAfter).toMatchObject({ charged: 50, remainingSlots: 36, parentRssBytes: 100000000, live: true })
   } finally { factory.mockRestore() }
-}, "20261017-v11"), 45000)
+}, namespace), 45000)
+
+it("continuation-fresh-window-v12-control V11 still rejects an authenticated different historical clock before publication", () => withInternalObservationTree(false, async () => { throw new Error("unexpected admission") }, "20261017-v11", 0, undefined, true), 45000)
+
+it("continuation-fresh-window-v12-auth authenticates old costs without inheriting old authority and denies stale joins", () => withInternalObservationTree(false, async f => {
+  const { C, D, L, w, imported, git, review, bounded, p, request, fs: native } = f
+  f.note("distinct old and new allowance authentication")
+  const historicalPath = L.LEAN_BASELINE_CONTINUATION_PATHS_V10.window, historical = f.read(historicalPath)
+  expect(historical).toMatchObject({ approvedAtMs: 1792241199000, anchorMs: 1792242843861, carryMs: 894902764, capMs: 923702764, deadlineMs: 1792271643861 })
+  expect(w).toMatchObject({ approvedAtMs: 1792279083000, anchorMs: 1792279095345 })
+  expect(w.anchorMs).toBeGreaterThan(historical.deadlineMs)
+  expect(imported.carry).toMatchObject({ chargedMatches: 50, qualifiedReaderAuthority: "cost_only", elapsedUpperBoundMs: 465187899 })
+  expect(imported.custody.records).toContainEqual({ name: historicalPath, rawRoot: L.leanBytesRoot(native.readFileSync(resolve(historicalPath))) })
+  const effects = [p.claim, p.allocation, p.store + "/ledger.ndjson", p.store + "/time.ndjson"]
+  const originalEffects = effects.map((name: string) => native.readFileSync(resolve(name)))
+  const authenticate = () => C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)
+  const original = native.readFileSync(resolve(historicalPath))
+  const reroot = (value: any) => { const { root: _, ...body } = value; return { ...body, root: labRoot(body.schemaVersion, body) } }
+  for (const mutation of ["missing", "bytes", "canonical-time", "canonical-decision"] as const) {
+    try {
+      if (mutation === "missing") native.unlinkSync(resolve(historicalPath))
+      else if (mutation === "bytes") native.writeFileSync(resolve(historicalPath), Buffer.alloc(original.length, 32))
+      else f.json(historicalPath, reroot(mutation === "canonical-time" ? { ...historical, anchorMs: historical.anchorMs + 1, carryMs: historical.carryMs + 1, capMs: historical.capMs + 1, deadlineMs: historical.deadlineMs + 1 } : { ...historical, approvalEvidence: w.approvalEvidence }))
+      expect(authenticate).toThrow(mutation === "missing" ? /ENOENT/ : /V11_ALLOWANCE_ANCHOR/)
+    } finally { native.writeFileSync(resolve(historicalPath), original, { mode: 0o600 }) }
+  }
+  for (const mutation of ["approval", "window", "request", "data"] as const) {
+    const path = mutation === "request" ? p.request : mutation === "data" ? p.gates : p.window
+    const before = native.readFileSync(resolve(path))
+    try {
+      if (mutation === "request") f.json(path, { ...request, windowRoot: historical.root })
+      else if (mutation === "data") native.writeFileSync(resolve(path), before.toString().replaceAll(w.root, historical.root))
+      else f.json(path, reroot(mutation === "approval" ? { ...w, approvalEvidence: historical.approvalEvidence } : { ...w, anchorMs: w.anchorMs + 1, carryMs: w.carryMs + 1, capMs: w.capMs + 1, deadlineMs: w.deadlineMs + 1 }))
+      expect(() => D.openLeanBaselineContinuationContextV2(p.request)).toThrow(/CONTINUATION_V2_WINDOW|V2_REQUEST|V2_DATA|V2_WINDOW/)
+    } finally { native.writeFileSync(resolve(path), before) }
+  }
+  for (const [index, name] of effects.entries()) expect(native.readFileSync(resolve(name))).toEqual(originalEffects[index])
+  for (const name of ["run-claim.json", "reader-claim.json", "result.json", "retained-check.json"]) expect(native.existsSync(resolve(p.store, name))).toBe(false)
+}, "20261017-v12"), 45000)
 
 it("continuation-route-v12 CLI selects only the exact request, never an observation policy switch", () => {
   const request = lean.LEAN_BASELINE_CONTINUATION_PATHS_V12.request
@@ -2526,9 +2573,12 @@ it("continuation-guard-overlap-v11 stable valid journal append passes; descripto
   expect(() => context.stage("dispatch", effect)).toThrow(/V8_CONTEXT/); expect(effect).not.toHaveBeenCalled()
 }, "20261017-v11"), 45000)
 
-it("continuation-next-v10-driver-sample actual default context fullSample uses truthful unfinished counts and journal floor (public synthetic history/resources)", () => withInternalObservationTree(false, async f => {
+for (const { namespace, tag } of [{ namespace: "20261017-v10" as const, tag: "continuation-next-v10-driver-sample" }, { namespace: "20261017-v12" as const, tag: "continuation-fresh-window-v12-sample" }]) it(`${tag} actual default context fullSample uses truthful unfinished counts and journal floor (public synthetic history/resources)`, () => withInternalObservationTree(false, async f => {
   const { D, L, p, ledger, allocation, w, tick, json, read } = f
   f.note("next-cell actual context")
+  expect(L.leanBaselineContinuationElapsedFloorV2(w, w.anchorMs)).toBe(w.carryMs)
+  expect(L.leanBaselineContinuationElapsedFloorV2(w, w.anchorMs + 123)).toBe(w.carryMs + 123)
+  expect(L.leanBaselineContinuationMatchReserveMsV2(w, 36) + w.closureMs + w.offlineOverheadMs).toBe(3060000)
   tick(w.durationMs - 3060000)
   const context = D.openLeanBaselineContinuationContextV2(p.request)
   const before = context.fullSample(); expect(before.remainingSlots).toBe(36); expect(before.charged).toBe(50)
@@ -2545,7 +2595,7 @@ it("continuation-next-v10-driver-sample actual default context fullSample uses t
   f.write(path, events.map((event: unknown) => Buffer.from(L.leanCanonicalBytes(event)).toString() + "\n").join("") + Buffer.from(L.leanCanonicalBytes({ kind: "resource", elapsedMs: w.capMs - 3060000 + 1, physicalBytes: 4096, bufferBytes: 0, scratchBytes: 0 })).toString() + "\n", 0o600)
   const provider = vi.fn(); expect(() => { context.fullSample(); provider() }).toThrow(/CAPACITY|FRONTIER/); expect(provider).not.toHaveBeenCalled()
   expect(L.readLeanLedger(ledger).charged).toBe(51); expect(read(p.store + "/allocation.json").slots).toHaveLength(36)
-}, "20261017-v10"), 60000)
+}, namespace), 60000)
 
 // CENSORED, not coverage: latest connected attempt stopped at IMPORT before
 // interval/claim. 1 implementation + 3 planning, 13 opaque metadata + 6 dirs,
@@ -2588,7 +2638,7 @@ it.each([{ namespace: "20261015-v8" as const, name: "internal-observations-C" },
 // Corrected attempt passed: 24859ms including cleanup, 1413892 bytes, 18881
 // resource samples; real closing HEAD at sample18733, denial at18734. Actual
 // failed terminal/pilot closure/observed exit/finite PARENT/nonacceptance pass.
-it.each([{ namespace: "20261015-v8" as const, name: "internal-observations-B" }, { namespace: "20261017-v9" as const, name: "continuation-route-v9-driver-B" }])("$name actual CLI wrapper reaches parent entry then owned closing denial with observed child exit", ({ namespace }) => withInternalObservationTree(false, async f => {
+it.each([{ namespace: "20261015-v8" as const, name: "internal-observations-B" }, { namespace: "20261017-v9" as const, name: "continuation-route-v9-driver-B" }, { namespace: "20261017-v12" as const, name: "continuation-fresh-window-v12-parent" }])("$name actual CLI wrapper reaches parent entry then owned closing denial with observed child exit", ({ namespace }) => withInternalObservationTree(false, async f => {
   const { D, L, R, CP, fs, p, ledger, resource, read, restored } = f
   const provider = vi.fn()
   const child = Object.assign(new EventEmitter(), { pid: 811113, connected: true, exitCode: null as number | null, signalCode: null as NodeJS.Signals | null,
