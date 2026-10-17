@@ -2,6 +2,10 @@
 
 ## Reader/guard source correction — checked 2026-10-17
 
+ROOT factory boundary63181/bddaba CLOSED0,1444files,violations[]; no scanner allowance change. No new imports/public surfaces or runtime/gameplay changes, so unchanged service/public scans are retained as historical evidence rather than repeated. Tasks1–4 qualifications complete; distinct source verification next. All ROOT tests/type/boundary commands closed.
+
+Tasks1–4 final source90824b9c is independently reviewed CLEAN by /root/review_265_reader_guard, seven explicit paths/basef0591c7c, findings[]/0BLOCKER0WARNING; final detailed section below. ROOT strict initially found six new type errors then author fixed precise annotations/spies without production result-type suppression. Final80478/f863e7 CLOSED2 full output exactly equals SIX-path pre19248/f5ec26 (six inherited diagnostics); configuredtypes4d5b9d CLOSED0. ROOT16481/0d8a42 43pass plus35600/2c684d 2pass =45 unique selected cases, not whole suite; actual caller/assertion mapping in VALIDATION. Source verifier remains next. Task5 directory stabilization is separately checked PASS by /root/check_265_reader_guard but planning-only/unwired; journal hazard unresolved and no fresh launch admitted.
+
 Author /root/execute_265_reader_guard additionally found the third V8 observer at bindArchive. ROOT amended Task4 to all THREE constructions; distinct /root/check_265_reader_guard re-read PASS/no remaining issue. Same forwarding contract and seven-file ownership, no new policy. All four author tasks CLOSED at2e93b269; ownership released. Actual author focused runs: Task1 fourteen unique cases (9 then overlapping13); Task2 twenty-three (seven new plus sixteen legacy); Task3 three; Task4 six. Largest public fixture4028965B/30.716s, below8MiB/45s,60s external watchdog. No private run/reader/provider/Match. Independent review and ROOT qualification remain owed; overlap refusal is demonstrated, not repaired.
 
 Task4 separate /root/check_265_reader_guard check initially found a real plan gap: BOTH V8 observer constructors must return their result, including preflight, not just opened context. RESEARCH corrected generic forwarding and connected tests for both; same distinct checker re-read PASS/no remaining findings, all commands closed. Helper continuation.ts is the sole added source owner; root SIX-path strict baseline already includes it transitively. Every logical guard and full sample stays fresh; only duplicate back-to-back reservation with no intervening effect is removed. Current observed duplicate supplies a return value, so void-return deletion is expressly forbidden. Source execution/qualification still owed; no measured runtime speedup or empirical admission asserted.
@@ -2198,3 +2202,26 @@ ONE inert collector: source52266d7b1826f8e26048f95ca5df2d09da46ea26114eab908eea2
 Exact grant lean-baseline-continuation-20261017-v11-same-window, original T1792241199000/A1792242843861/carry894902764/cap923702764/deadline1792271643861 unchanged. Binding after SOURCE does NOT mean new A or source before historical A. Request/allocation/store/temp ENOENT before+after; window unchanged. Earlier508ae7 CLOSED1 was reviewer extra-newline assertion error before collector; canonical serializer already supplies newline, corrected without file mutation.
 
 No source review/retest/private history/Strategy/holdout/old reader/provider/Match/capacity or empirical credit. V10 failure immutable; Plan16/265/all9LEAG pending. No DATA projection created. All commands CLOSED; sole GATES append ownership RELEASED to ROOT.
+
+## Independent reader/guard code review
+
+Reviewer /root/review_265_reader_guard; 2026-10-17T18:45Z; standard, source-only Plan16 tasks1-4. Exact base f0591c7c4088e69547eef32f4246640f9eb12a02 -> source 90824b9ce6437ae7cb12178742d2b46558454216; 189+/21-. **status: clean (scoped delta); BLOCKER: 0; WARNING: 0; findings: [].** Task5 excluded.
+
+Seven-file scope:
+
+- scripts/lib/v1-38-lean-baseline-retained.ts
+- scripts/lib/v1-38-lean-baseline-retained.test.ts
+- scripts/run-v1-38-lean-baseline.ts
+- scripts/run-v1-38-lean-baseline.test.ts
+- scripts/lib/v1-38-lean-baseline-continuation.test.ts
+- scripts/run-v1-38-lean-supervisor-exit-repro.test.ts
+- scripts/lib/v1-38-lean-baseline-continuation.ts
+
+Static adversarial delta/caller review:
+
+1. Retained723-730: V11-only necessary metadata rejection follows window/scope/deadline checks, precedes CONTEXT_OPEN/import/claim/journal effects, and cannot mint acceptance. Regular-file/owner/0600/single-link/size/canonical-path checks match later descriptor policy. Later guarded result read775, audit805, reader/terminal/publication closings remain authoritative. Tests cover absent/invalid metadata, late changed result, and real default opening with inert result content; older failure ordering remains.
+2. Driver46-89/612-622: allowlisted timer beforeRelease throw label coexists with resource_sampling_exception and unchanged uncertainty/SIGKILL. No error fields are serialized; cause stays unknown. Reason-v1 canonical ordering/root/4096B and retained599 custody joins remain. Public tests distinguish guard from RSS/accounting/kill throws and reject unaccompanied, reversed, duplicate and arbitrary reasons; legacy bytes remain accepted.
+3. Helper-test240-263 and driver-test2348-2366 deterministically inject allowed creation during readdir and valid append during descriptor read; completed-before controls pass, overlap refuses and permanently denies effects. This demonstrates an EXISTING UNFIXED conditional race, not actual V11 causation or a race repair.
+4. Helper662-680 forwards the exact fresh generic result only after unchanged context assertions; throw/reentry/drift invalidate. ALL THREE driver observers1282/1308/1513 return local reserve. Guard1515 removes only the second adjacent reservation; local resource/progress/time checks1062-1100 and stage checks remain. Checkpoint1621 forwards the sample; resourceBefore1585/resourceAfter1606 still use fullSample, not the three-field local result. Connected tests exercise all three constructors, exact identity/one call/additionalBytes/freshness, and full-sample shape.
+
+Evidence limits: author-reported CLOSED Task1 14 unique, Task2 23 including16 legacy, Task3 3, Task4 6, and final affected9 are attributed, overlapping counts not added. No reviewer tests or strict rerun. ROOT exact strict pre/post six inherited outside-scope comparison remains ROOT-owned; no global-green claim. Reviewer source-equality and diff checks passed. No source/private/history/actual-reader/Strategy/provider/Match mutation, namespace/allocation/time extension, commit or new report. All reviewer commands CLOSED; sole GATES section ownership RELEASED to ROOT. Consumed routes remain immutable; Plan16/265/all9LEAG empirical gates pending.

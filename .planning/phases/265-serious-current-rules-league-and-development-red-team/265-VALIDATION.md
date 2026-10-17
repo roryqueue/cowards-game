@@ -13,6 +13,21 @@ empirical_validation: v11-run-and-unique-retained-reader-closed-gaps-found-zero-
 
 # Phase265 — Validation Strategy
 
+## Reader/guard correction — scoped State-A, 2026-10-17
+
+Source90824b9c, tasks1–4 only; distinct code review clean/findings[]. ROOT inspected actual caller assertions rather than inferring coverage from counts. Task5 remains planning-only/unwired and outside this closure.
+
+| Task | Actual behavioral coverage | Disposition |
+|---|---|---|
+| 1 | retained.test261ff tests missing/symlink/type/owner/mode/link/parent-alias/size refusal before importer, content reads, claims or journals. V11 guarded reader modes503ff retain pass/opening/closing/denial/post-precheck content-change checks. Driver2285ff late default-opener fixture now has inert invalid content, preserving real later traversal. | Covered source-only; cheap necessary condition grants no success. |
+| 2 | supervisor test111ff executes actual timer guard/RSS/accounting/kill paths; only guard exception gains finite label. Retained428ff verifies legacy bytes, coexistence/order/root/privacy. | Covered; original V11 cause remains unknown. |
+| 3 | helper240ff deterministic allowed creation during readdir refuses, nonoverlap passes. Real default driver2348ff admits stable canonical ledger append, rejects append during descriptor read, permanently blocks later guard/stage and effect. | Hazard demonstrated, NOT fixed or attributed to historical failure. |
+| 4 | helper218ff tests exact fresh return and invalid context/reentry/throw/drift. Driver2308ff delegates to real controller/default context, exercises all THREE constructors including bindArchive, one ledger/time open per logical guard, additionalBytes, distinct fresh objects and unchanged fullSample receipt fields. | Covered; duplicate call removed, no measured end-to-end performance claim. |
+
+ROOT16481/0d8a42 CLOSED0:43selected/253filter-excluded/17.27s; ROOT35600/2c684d CLOSED0:2connected/265filter-excluded/23.56s, fixtures10807ms/4025569B and8045ms/4025764B. Thus45 unique ROOT tests, not a whole-suite pass. Author-only late default-reader case additionally passed30716ms/4028965B; attribution preserved, no duplicate count. All within existing45s/8MiB public-fixture and60s process-group watchdog; synthetic external observations, no real Match.
+
+ROOT strict74450/c408a3 initially found six NEW diagnostics, fixed90824b9c. Final same SIX-path80478/f863e7 CLOSED2 WHOLE output equals pre19248/f5ec26 byte-for-byte: six inherited diagnostics only, not compiler-global green. Configured lab/runtime types4d5b9d CLOSED0; diffchecka40a26 passed. DISTINCT source verification still owed. Whole phase remains partial/nyquistfalse/wave0false/all9LEAG pending; no new route, freeze or formation admission.
+
 ## V11 empirical closure — 2026-10-17
 
 Actual run33981 CLOSED1 and ONE retained reader94344 CLOSED0/gaps_found/issuedfalse/currentCharged0/total50/reportnull; sourceHoldFailure and failure CONTINUATION_READER_FAILURE. Independent postcheck b39c45 closed18:30:49.635UTC, all three PIDs absent and held source unchanged. Cold corpus exists/unopened, proposals/selection/training/result absent. No new Match or phase/LEAG/freeze credit; source hold released, every old attempt remains immutable. GATES contains attributed exact roots and limitations. Conditional overlap/source-cost hazards are unverified hypotheses about this failure, not empirical causes or resolved gaps. Earlier source-only coverage remains valid for its reviewed source, not proof of runtime feasibility.
