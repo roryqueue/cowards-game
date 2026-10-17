@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V9 source cycle CLOSED VERIFIED 3/3; SOURCE and approved actual window initialization next
+stopped_at: V9 SOURCE committed; actual approved eight-hour window initialized, independent DATA review next
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: V9 route implemented, reviewed clean, ROOT-qualified, State-A audited and distinctly source-verified; empirical setup next
+last_activity_desc: V9 SOURCE7fffeed4 and actual A01:37:12.312UTC initialized; DATA/request/one preparation remain before unique ROOT entry
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — fresh eight-hour private baseline window APPROVED
+
+ACTUAL V9 WINDOW initialized after all source closures and committed SOURCE7fffeed4dd9b9688a40bea013907369675b7b437. ROOT command10812/f71f8b observed A=1792201032312 (2026-10-17T01:37:12.312UTC), T1792198286000 unchanged; canonical private window938B/rootdb97fba9/raw9573d0da,0600/fsync complete70efc3. F(A)=853091215, cumulativecap881891215, deadline2026-10-17T09:37:12.312UTC. Whole36reserve24060000 yields inclusive latest entry02:56:12.312UTC. Prior50spent/V8zeroNEWcharges and all source/setup/idle costs carried continuously; no reset/refund/recredit. Actual run operator/root, planned future unique reader/root/verify_265_v9_retained; actual source author/reviewer/verifier distinct as canonical SOURCE. No private store/temp/request/allocation/prepare/run/Match yet. Independent actual DATA review/final request and ONE preparation/allocation-only direct-child commit/push precede unique ROOT run/fresh SAMEPROCESS whole36capacity; source/HEAD and pinned planning fixed through terminal/ONE actual retained verification. Current SOURCE/Data setup is not empirical success or fullphase completion.
 
 V9 source cycle is now CLOSED at bb5c2b830048ee8fdfb208d9c005af1f41edadc0: three serial RED/GREEN tasks, independent integrated review plus narrow old-fixture clock repair re-review clean, ROOT final qualification, scoped State-A audit and DISTINCT `/root/verify_265_v9_route` VERIFIED3/3/0blocker/0warning/gaps[]. All commands/ownership CLOSED. Actual ROOT new38small plus fullhelper150 overlap; connected V9B25.156s/V9C27.789s each complete within45s/8MiB inclusivecleanup; postrepair exact40legacycompatibility passed34.83s. SAME15strict13inherited7051B WHOLE-byte-equal reviewed final, not global strict green; configuredtypes/boundaries/factory/diffpassed. Old failed compatibility remains failed, shared positive reader fixture synthetic, original causes/runtime fit UNKNOWN. Existing GATES/VALIDATION retain exact assertions and attribution; no new numberedplan/report/SUMMARY.
 
