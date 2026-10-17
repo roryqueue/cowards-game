@@ -2155,7 +2155,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
       json(L.LEAN_BASELINE_CONTINUATION_PATHS_V12.window, retired)
       const s = fs.lstatSync(resolve(L.LEAN_BASELINE_CONTINUATION_PATHS_V12.window))
       obs.spentV12Metadata.push({ path: L.LEAN_BASELINE_CONTINUATION_PATHS_V12.window, bytes: s.size, allocatedBytes: s.blocks * 512, mode: 0o600, maximum: 65536, rawRoot: L.leanBytesRoot(fs.readFileSync(resolve(L.LEAN_BASELINE_CONTINUATION_PATHS_V12.window))) })
-      obs.spentV12Absences = [L.LEAN_BASELINE_CONTINUATION_PATHS_V12.request, L.LEAN_BASELINE_CONTINUATION_PATHS_V12.allocation, L.LEAN_BASELINE_CONTINUATION_PATHS_V12.store, L.LEAN_BASELINE_CONTINUATION_PATHS_V12.temp]
+      obs.spentV12Absences.push(L.LEAN_BASELINE_CONTINUATION_PATHS_V12.request, L.LEAN_BASELINE_CONTINUATION_PATHS_V12.allocation, L.LEAN_BASELINE_CONTINUATION_PATHS_V12.store, L.LEAN_BASELINE_CONTINUATION_PATHS_V12.temp)
     }
     const dg = { schemaVersion: "lean-baseline-continuation-data-gate-v2", status: "passed", grantId: w.grantId, windowRoot: w.root, windowBytesRoot: L.leanBytesRoot(L.leanCanonicalBytes(w)), reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: w.sourceGateRoot, planRoot: w.planRoot, approvalEvidence: w.approvalEvidence, runOperator: w.runOperator, readerOperator: w.readerOperator, dataReviewer: "inert-data-reviewer", commands_closed: true }
     write(p.gates, `\`\`\`json\n${Buffer.from(L.leanCanonicalBytes(sg))}\n\`\`\`\n\`\`\`json\n${Buffer.from(L.leanCanonicalBytes(dg))}\n\`\`\`\n`); json(p.window, w)
@@ -2411,6 +2411,12 @@ it("continuation-route-v13-cost authenticates one retired V12 leaf and refuses o
   const dirs = [...obs.spentV4Directories, ...obs.spentV5Directories, ...obs.spentV7Directories, ...obs.spentV8Directories, ...obs.spentV9Directories, ...obs.spentV11Directories].reduce((n: number, r: any) => n + native.lstatSync(resolve(r.path)).blocks * 512, 0)
   const early = [...obs.spentV3Metadata, ...obs.spentV4Metadata, ...obs.spentV5Metadata, ...obs.spentV6Metadata].reduce((n: number, r: any) => n + native.lstatSync(resolve(r.path)).blocks * 512, 0)
   expect(C.measureLeanContinuationKnownDisjointBytesV8(w)).toBe(dirs + early)
+  const owned = C.createLeanContinuationOwnedMeasurementV8(w)(), parseReserve = 2 * 7 * 4194304 + 4 * 3 * 262144
+  const additional = L.LEAN_CAPS.retainedBytes - C.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V12 - dirs - early - owned.retainedBytes - parseReserve
+  expect(C.LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V12 + dirs + early + owned.retainedBytes + parseReserve + additional).toBe(L.LEAN_CAPS.retainedBytes)
+  const nearCap = D.createLeanContinuationLocalReservationV8(w), capacityEffect = vi.fn()
+  expect(() => { nearCap.reserve(additional); capacityEffect() }).toThrow(/V8_RESERVATION_CAPACITY/)
+  expect(capacityEffect).not.toHaveBeenCalled()
   for (const mode of ["missing", "bytes", "size", "mode", "owner", "alias", "replacement", "clock"] as const) {
     let spy: ReturnType<typeof vi.spyOn> | undefined
     try {

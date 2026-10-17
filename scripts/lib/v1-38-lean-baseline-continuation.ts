@@ -7,7 +7,7 @@ import { labRoot, freezeLabValue, type LabRoot } from "../../packages/strategy-l
 import { LEAN_CAPS, LEAN_BASELINE_CONTINUATION_WINDOW as WINDOW, LEAN_BASELINE_CONTINUATION_PATHS, leanBytesRoot, leanCanonicalBytes, validateLeanBaselineContinuationAllocation, type LeanBaselineContinuationAllocation, type LeanBaselineContinuationCarry } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { LEAN_BASELINE_CONTINUATION_PATHS_V2, LEAN_BASELINE_CONTINUATION_PATHS_V4, LEAN_BASELINE_CONTINUATION_PATHS_V5, LEAN_BASELINE_CONTINUATION_POLICY_V2, validateLeanBaselineContinuationAllocationV2, readLeanAdmittedContinuationAllocationV2, leanAdmittedContinuationElapsedFloorV2, leanHostIsProxy, leanBaselineContinuationElapsedFloorV2, leanBaselineContinuationPathsForWindowV2, type LeanExperimentLedger, type LeanBaselineContinuationWindowV2, type LeanBaselineContinuationAllocationV2, type LeanBaselineContinuationCarryV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { exactLabKeys } from "../../packages/strategy-lab/src/contracts.js"
-import { LEAN_BASELINE_CONTINUATION_PATHS_V6, LEAN_BASELINE_CONTINUATION_PATHS_V7, LEAN_BASELINE_CONTINUATION_PATHS_V8, LEAN_BASELINE_CONTINUATION_PATHS_V9, LEAN_BASELINE_CONTINUATION_PATHS_V10, LEAN_BASELINE_CONTINUATION_PATHS_V11, LEAN_BASELINE_CONTINUATION_PATHS_V12, validateLeanBaselineContinuationWindowV2, leanBaselineContinuationMatchReserveMsV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
+import { LEAN_BASELINE_CONTINUATION_PATHS_V6, LEAN_BASELINE_CONTINUATION_PATHS_V7, LEAN_BASELINE_CONTINUATION_PATHS_V8, LEAN_BASELINE_CONTINUATION_PATHS_V9, LEAN_BASELINE_CONTINUATION_PATHS_V10, LEAN_BASELINE_CONTINUATION_PATHS_V11, LEAN_BASELINE_CONTINUATION_PATHS_V12, LEAN_BASELINE_CONTINUATION_PATHS_V13, validateLeanBaselineContinuationWindowV2, leanBaselineContinuationMatchReserveMsV2 } from "../../packages/strategy-lab/src/league/lean-experiment.js"
 import { LEAN_PRIVATE_MATCH_CARRY_V3, LEAN_PRIVATE_MATCH_CARRY_V2, LEAN_PRIVATE_MATCH_ARTIFACT_V3, LEAN_PRIVATE_PROBE_COST_ROOT, validateLeanPrivateMatchAllocationV3, validateLeanPrivateMatchAllocationV2, validateLeanPrivateMatchAllocationV1, authenticateLeanPrivateMatchProbeCarryV1 } from "./v1-38-lean-experiment-authority.js"
 
 export { LEAN_BASELINE_CONTINUATION_PATHS }
@@ -87,7 +87,7 @@ export const assertLeanBaselineContinuationFrontierV2 = (allocation: LeanBaselin
   const elapsed = ledger === undefined ? leanBaselineContinuationElapsedFloorV2(w, s.nowMs, a.predecessor.elapsedUpperBoundMs, s.monotonicElapsedMs) : leanAdmittedContinuationElapsedFloorV2(ledger, s.nowMs, a.predecessor.elapsedUpperBoundMs, s.monotonicElapsedMs)
   if (!integer(elapsed)) return fail("V2_CLOCK")
   const reserve = leanBaselineContinuationMatchReserveMsV2(w, s.remainingSlots) + (s.remainingClosureMs ?? w.closureMs) + (s.remainingOfflineMs ?? w.offlineOverheadMs), native = 2 * 268435456 + 512000000 + 335544320
-  if (!integer(s.nowMs + reserve) || !integer(elapsed + reserve) || (w.routeNamespace === "20261017-v10" || (w.routeNamespace === "20261017-v11" || w.routeNamespace === "20261017-v12")) && s.nowMs >= w.deadlineMs || s.nowMs + reserve > w.deadlineMs || elapsed + reserve > w.capMs || s.retainedBytes < a.predecessor.allocatedDiskBytes || s.retainedBytes > LEAN_CAPS.retainedBytes || s.scratchBytes > LEAN_CAPS.scratchBytes || s.retainedBytes + s.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || s.parentRssBytes + s.childRssBytes + s.arrayBuffersBytes + native > LEAN_BASELINE_CONTINUATION_POLICY_V2.memoryBytes || s.availableMemoryBytes < native || s.freeBytes < LEAN_CAPS.totalBytes - s.retainedBytes) return fail("V2_CAPACITY")
+  if (!integer(s.nowMs + reserve) || !integer(elapsed + reserve) || (w.routeNamespace === "20261017-v10" || (w.routeNamespace === "20261017-v11" || (w.routeNamespace === "20261017-v12" || w.routeNamespace === "20261017-v13"))) && s.nowMs >= w.deadlineMs || s.nowMs + reserve > w.deadlineMs || elapsed + reserve > w.capMs || s.retainedBytes < a.predecessor.allocatedDiskBytes || s.retainedBytes > LEAN_CAPS.retainedBytes || s.scratchBytes > LEAN_CAPS.scratchBytes || s.retainedBytes + s.scratchBytes + LEAN_CAPS.terminalBytes > LEAN_CAPS.totalBytes || s.parentRssBytes + s.childRssBytes + s.arrayBuffersBytes + native > LEAN_BASELINE_CONTINUATION_POLICY_V2.memoryBytes || s.availableMemoryBytes < native || s.freeBytes < LEAN_CAPS.totalBytes - s.retainedBytes) return fail("V2_CAPACITY")
   return elapsed
 }
 export const assertLeanContinuationDirectParent = (commit: string, sourceHead: string, parents: readonly string[], canonical: Uint8Array, committed: Uint8Array): void => {
@@ -244,12 +244,13 @@ export interface LeanContinuationReviewedRowV2 { path: string; root: LabRoot; co
 export interface LeanContinuationInventoryRowV2 extends LeanContinuationInventoryRow { members?: readonly string[] }
 const pathsForV2 = (window?: LeanBaselineContinuationWindowV2) => window === undefined ? LEAN_BASELINE_CONTINUATION_PATHS_V2 : leanBaselineContinuationPathsForWindowV2(window)
 const futureV2 = (path: string, p: ReturnType<typeof pathsForV2>) => [p.request, p.allocation, p.store, p.temp, p.window].some(root => path === root || path.startsWith(`${root}/`))
-const { spentV3Metadata, spentV4Metadata, spentV4Directories, spentV5Metadata, spentV5Directories, spentV6Metadata, spentV7Metadata, spentV7Directories, spentV8Metadata, spentV8Directories, spentV9Metadata, spentV9Directories, spentV10Metadata, spentV11Metadata, spentV11Directories, spentV11Absences } = readLeanContinuationExpectedObservations()
+const { spentV3Metadata, spentV4Metadata, spentV4Directories, spentV5Metadata, spentV5Directories, spentV6Metadata, spentV7Metadata, spentV7Directories, spentV8Metadata, spentV8Directories, spentV9Metadata, spentV9Directories, spentV10Metadata, spentV11Metadata, spentV11Directories, spentV11Absences, spentV12Metadata, spentV12Absences } = readLeanContinuationExpectedObservations()
 export const LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V8 = 88924160 + 1167360
 export const LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V9 = LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V8 + 1196032
 export const LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V10 = 92491776
 export const LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V11 = 92499968
 export const LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V12 = LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V11 + 1421312
+export const LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V13 = LEAN_CONTINUATION_KNOWN_FILE_FLOOR_V12 + 4096
 const sameIdentityV2 = (old: LeanContinuationInventoryRow, row: LeanContinuationInventoryRow) => ["path", "kind", "bytes", "allocatedBytes", "dev", "ino", "mode", "mtimeMs", "ctimeMs"].every(key => old[key as keyof LeanContinuationInventoryRow] === row[key as keyof LeanContinuationInventoryRow])
 /** Exact reviewed bytes may transition before freeze. Consumed evidence cannot. */
 export const reconcileLeanContinuationInventoryV2 = (prior: readonly LeanContinuationInventoryRow[], current: readonly LeanContinuationInventoryRowV2[], reviewed: readonly LeanContinuationReviewedRowV2[], window?: LeanBaselineContinuationWindowV2): void => {
@@ -265,7 +266,7 @@ if (prior.length > 4096 || current.length > 4096 || reviewed.length > 1024 || ne
     if (transition) { if (row.kind !== "file" || row.rawRoot !== transition.root) return fail("V2_UNREVIEWED_BYTES"); continue }
     // Only the authenticated importer owns this invocation-local exact pair.
     // Public rows, copied fingerprints and caller flags cannot produce it.
-    if ((selected === LEAN_BASELINE_CONTINUATION_PATHS_V11 || selected === LEAN_BASELINE_CONTINUATION_PATHS_V12) && continuity.get(old) === row) continue
+    if ((selected === LEAN_BASELINE_CONTINUATION_PATHS_V11 || (selected === LEAN_BASELINE_CONTINUATION_PATHS_V12 || selected === LEAN_BASELINE_CONTINUATION_PATHS_V13)) && continuity.get(old) === row) continue
     if (old.kind === "directory") {
       const ancestor = reviewed.some(r => r.path.startsWith(`${old.path}/`))
       if (!ancestor) { if (!sameIdentityV2(old, row)) return fail("V2_IMMUTABLE_CHANGED") }
@@ -286,7 +287,7 @@ const inventoryContinuationSurvivors = (prior: readonly LeanContinuationInventor
   const old = new Map(prior.map(row => [row.path, row])), review = new Map(reviewed.map(row => [row.path, row])), reviewedPaths = new Set(review.keys()), names = new Set([...old.keys(), ...review.keys()])
   if (old.size !== prior.length || review.size !== reviewed.length || prior.length > 4096 || reviewed.length > 1024) return fail("V2_INVENTORY_BOUND")
   if (retainV3) for (const row of spentV3Metadata) names.add(row.path)
-  const retainV10 = (selected === LEAN_BASELINE_CONTINUATION_PATHS_V11 || selected === LEAN_BASELINE_CONTINUATION_PATHS_V12)
+  const retainV10 = (selected === LEAN_BASELINE_CONTINUATION_PATHS_V11 || (selected === LEAN_BASELINE_CONTINUATION_PATHS_V12 || selected === LEAN_BASELINE_CONTINUATION_PATHS_V13))
   const retainV9 = selected === LEAN_BASELINE_CONTINUATION_PATHS_V10 || retainV10
   const continuity = new Map<LeanContinuationInventoryRow, LeanContinuationInventoryRowV2>()
   let readBytes = 0
@@ -299,13 +300,20 @@ const inventoryContinuationSurvivors = (prior: readonly LeanContinuationInventor
     }
   }
   spentV10Absent()
-  const retainV11 = selected === LEAN_BASELINE_CONTINUATION_PATHS_V12
+  const retainV11 = (selected === LEAN_BASELINE_CONTINUATION_PATHS_V12 || selected === LEAN_BASELINE_CONTINUATION_PATHS_V13)
   const spentV11Absent = () => {
     if (!retainV11) return
     for (const name of spentV11Absences) { guard(); try { lstatSync(resolve(name)) } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") continue; throw error }; return fail("V12_SPENT_ABSENCE") }
   }
   spentV11Absent()
   if (retainV11) for (const row of [...spentV11Metadata, ...spentV11Directories]) names.add(row.path)
+  const retainV12 = selected === LEAN_BASELINE_CONTINUATION_PATHS_V13
+  const spentV12Absent = () => {
+    if (!retainV12) return
+    for (const name of spentV12Absences) { guard(); try { lstatSync(resolve(name)) } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") continue; throw error }; return fail("V13_SPENT_ABSENCE") }
+  }
+  spentV12Absent()
+  if (retainV12) for (const row of spentV12Metadata) names.add(row.path)
   if (retainV10) for (const row of spentV10Metadata) names.add(row.path)
   const retainV8 = selected === LEAN_BASELINE_CONTINUATION_PATHS_V9 || retainV9
   const retainV7 = selected === LEAN_BASELINE_CONTINUATION_PATHS_V8 || retainV8
@@ -371,6 +379,12 @@ const inventoryContinuationSurvivors = (prior: readonly LeanContinuationInventor
     if (spentDirectoryV8 && (!s.isDirectory() || s.uid !== 501 || (s.mode & 0o7777) !== 0o700 || !equal(readdirSync(path).sort(), spentDirectoryV8.members))) return fail("V9_SPENT_DIRECTORY")
     const spentV9 = retainV9 ? spentV9Metadata.find(row => row.path === name) : undefined, spentDirectoryV9 = retainV9 ? spentV9Directories.find(row => row.path === name) : undefined
     const spentV10 = retainV10 ? spentV10Metadata.find(row => row.path === name) : undefined
+    const spentV12 = retainV12 ? spentV12Metadata.find(row => row.path === name) : undefined
+    if (spentV12) {
+      if (!s.isFile() || s.uid !== 501 || s.size !== spentV12.bytes || s.blocks * 512 !== spentV12.allocatedBytes || (s.mode & 0o7777) !== spentV12.mode) return fail("V13_SPENT_METADATA")
+      rawRoot = leanBytesRoot(readLeanContinuationBoundedBytesV2(name, spentV12.maximum, spentV12.mode, guard))
+      if (rawRoot !== spentV12.rawRoot) return fail("V13_SPENT_METADATA")
+    }
     const spentV11 = retainV11 ? spentV11Metadata.find(row => row.path === name) : undefined, spentDirectoryV11 = retainV11 ? spentV11Directories.find(row => row.path === name) : undefined
     if (spentV11) {
       if (!s.isFile() || s.uid !== 501 || s.size !== spentV11.bytes || s.blocks * 512 !== spentV11.allocatedBytes || (s.mode & 0o7777) !== spentV11.mode) return fail("V12_SPENT_METADATA")
@@ -472,6 +486,7 @@ const inventoryContinuationSurvivors = (prior: readonly LeanContinuationInventor
     if (spentV8 && (after.mode !== s.mode || after.uid !== s.uid || !after.isFile() || after.isSymbolicLink() || after.nlink !== 1 || realpathSync(path) !== path) || spentDirectoryV8 && (after.mode !== s.mode || after.uid !== s.uid || !after.isDirectory() || after.isSymbolicLink() || realpathSync(path) !== path || !equal(readdirSync(path).sort(), spentDirectoryV8.members))) return fail("V9_SPENT_CHANGED")
     if (spentV9 && (after.mode !== s.mode || after.uid !== s.uid || !after.isFile() || after.isSymbolicLink() || after.nlink !== 1 || realpathSync(path) !== path) || spentDirectoryV9 && (after.mode !== s.mode || after.uid !== s.uid || !after.isDirectory() || after.isSymbolicLink() || realpathSync(path) !== path || !equal(readdirSync(path).sort(), spentDirectoryV9.members))) return fail("V10_SPENT_CHANGED")
     if (spentV11 && (after.mode !== s.mode || after.uid !== s.uid || !after.isFile() || after.isSymbolicLink() || after.nlink !== 1 || realpathSync(path) !== path) || spentDirectoryV11 && (after.mode !== s.mode || after.uid !== s.uid || !after.isDirectory() || after.isSymbolicLink() || realpathSync(path) !== path || !equal(readdirSync(path).sort(), spentDirectoryV11.members))) return fail("V12_SPENT_CHANGED")
+    if (spentV12 && (after.mode !== s.mode || after.uid !== s.uid || !after.isFile() || after.isSymbolicLink() || after.nlink !== 1 || realpathSync(path) !== path)) return fail("V13_SPENT_CHANGED")
   }
   // V7's two observed V6 files are checked once before the older opaque tree.
   // All predecessor rows still authenticate; no root substitution or credit.
@@ -484,6 +499,7 @@ const inventoryContinuationSurvivors = (prior: readonly LeanContinuationInventor
   spentV6Absent()
   spentV10Absent()
   spentV11Absent()
+  spentV12Absent()
   rows.sort((a, b) => a.path.localeCompare(b.path)); reconcileContinuationInventory(prior, rows, reviewed, window, continuity)
   guard(); return freezeLabValue(rows)
 }
@@ -752,7 +768,7 @@ const stabilizedOwnedMeasurement = (p: { window: string; request: string; alloca
 }
 export const createLeanContinuationOwnedMeasurementV8 = (window: LeanBaselineContinuationWindowV2, observationMode: LeanContinuationObservationMode = "strict") => {
   const p = leanBaselineContinuationPathsForWindowV2(window)
-  if (p !== LEAN_BASELINE_CONTINUATION_PATHS_V8 && p !== LEAN_BASELINE_CONTINUATION_PATHS_V9 && p !== LEAN_BASELINE_CONTINUATION_PATHS_V10 && (p !== LEAN_BASELINE_CONTINUATION_PATHS_V11 && p !== LEAN_BASELINE_CONTINUATION_PATHS_V12)) return fail("V8_SCOPE")
+  if (p !== LEAN_BASELINE_CONTINUATION_PATHS_V8 && p !== LEAN_BASELINE_CONTINUATION_PATHS_V9 && p !== LEAN_BASELINE_CONTINUATION_PATHS_V10 && (p !== LEAN_BASELINE_CONTINUATION_PATHS_V11 && (p !== LEAN_BASELINE_CONTINUATION_PATHS_V12 && p !== LEAN_BASELINE_CONTINUATION_PATHS_V13))) return fail("V8_SCOPE")
   const previous = new Map<string, { dev: number; ino: number; blocks: number; mode: number }>()
   const names = new Set(["allocation.json", "carry.json", "source-manifest.json", "source-hold.json", "ledger.ndjson", "time.ndjson", "entry.json", "child-terminal.json", "entry-failure.json", "parent-supervisor-reasons.json", "result.json", "run-claim.json", "reader-claim.json", "retained-check.json", "seal-metadata.json", "cold-corpus.json", "initial-proposals.json", "initial-selection.json", "initial-training.json", "response-training.json", "response-work.json", "response-node-receipts.json", "work-accounting.json", "initial-analysis.json", "current-analysis.json"])
   if (observationMode === "one-current-owned-overlap") return stabilizedOwnedMeasurement(p, names)
@@ -790,18 +806,19 @@ export const createLeanContinuationOwnedMeasurementV8 = (window: LeanBaselineCon
  * of these files. V7 file blocks are already in the lower bound, not stacked. */
 export const measureLeanContinuationKnownDisjointBytesV8 = (window?: LeanBaselineContinuationWindowV2): number => {
   const selected = window === undefined ? LEAN_BASELINE_CONTINUATION_PATHS_V8 : pathsForV2(window)
-  if (selected !== LEAN_BASELINE_CONTINUATION_PATHS_V8 && selected !== LEAN_BASELINE_CONTINUATION_PATHS_V9 && selected !== LEAN_BASELINE_CONTINUATION_PATHS_V10 && (selected !== LEAN_BASELINE_CONTINUATION_PATHS_V11 && selected !== LEAN_BASELINE_CONTINUATION_PATHS_V12)) return fail("V8_SCOPE")
-  const retainV10 = (selected === LEAN_BASELINE_CONTINUATION_PATHS_V11 || selected === LEAN_BASELINE_CONTINUATION_PATHS_V12)
-  const retainV11 = selected === LEAN_BASELINE_CONTINUATION_PATHS_V12
+  if (selected !== LEAN_BASELINE_CONTINUATION_PATHS_V8 && selected !== LEAN_BASELINE_CONTINUATION_PATHS_V9 && selected !== LEAN_BASELINE_CONTINUATION_PATHS_V10 && (selected !== LEAN_BASELINE_CONTINUATION_PATHS_V11 && (selected !== LEAN_BASELINE_CONTINUATION_PATHS_V12 && selected !== LEAN_BASELINE_CONTINUATION_PATHS_V13))) return fail("V8_SCOPE")
+  const retainV10 = (selected === LEAN_BASELINE_CONTINUATION_PATHS_V11 || (selected === LEAN_BASELINE_CONTINUATION_PATHS_V12 || selected === LEAN_BASELINE_CONTINUATION_PATHS_V13))
+  const retainV11 = (selected === LEAN_BASELINE_CONTINUATION_PATHS_V12 || selected === LEAN_BASELINE_CONTINUATION_PATHS_V13)
+  const retainedV12 = selected === LEAN_BASELINE_CONTINUATION_PATHS_V13 ? spentV12Metadata : []
   const retainV9 = selected === LEAN_BASELINE_CONTINUATION_PATHS_V10 || retainV10, retainV8 = selected === LEAN_BASELINE_CONTINUATION_PATHS_V9 || retainV9
   const retainedV8 = retainV8 ? spentV8Metadata : [], directoriesV8 = retainV8 ? spentV8Directories : [], retainedV9 = retainV9 ? spentV9Metadata : [], directoriesV9 = retainV9 ? spentV9Directories : []
   let bytes = 0
   const inodes = new Set<string>()
-  for (const row of [...spentV3Metadata.map(row => ({ ...row, mode: 0o600 })), ...spentV4Metadata, ...spentV5Metadata, ...spentV6Metadata, ...spentV7Metadata, ...retainedV8, ...retainedV9, ...(retainV10 ? spentV10Metadata : []), ...(retainV11 ? spentV11Metadata : [])]) {
+  for (const row of [...spentV3Metadata.map(row => ({ ...row, mode: 0o600 })), ...spentV4Metadata, ...spentV5Metadata, ...spentV6Metadata, ...spentV7Metadata, ...retainedV8, ...retainedV9, ...(retainV10 ? spentV10Metadata : []), ...(retainV11 ? spentV11Metadata : []), ...retainedV12]) {
     const path = resolve(row.path), s = lstatSync(path), key = `${s.dev}:${s.ino}`
     if (!s.isFile() || s.nlink !== 1 || s.uid !== process.getuid?.() || s.isSymbolicLink() || realpathSync(path) !== path || (s.mode & 0o7777) !== row.mode || row.bytes !== null && s.size !== row.bytes || !integer(s.blocks * 512) || inodes.has(key)) return fail("V8_KNOWN_COST")
     inodes.add(key)
-    const included = [...spentV7Metadata, ...retainedV8, ...retainedV9, ...(retainV10 ? spentV10Metadata : []), ...(retainV11 ? spentV11Metadata : [])].find(r => r.path === row.path)?.allocatedBytes ?? 0
+    const included = [...spentV7Metadata, ...retainedV8, ...retainedV9, ...(retainV10 ? spentV10Metadata : []), ...(retainV11 ? spentV11Metadata : []), ...retainedV12].find(r => r.path === row.path)?.allocatedBytes ?? 0
     if (s.blocks * 512 < included) return fail("V8_KNOWN_COST")
     bytes += s.blocks * 512 - included
   }
@@ -811,6 +828,7 @@ export const measureLeanContinuationKnownDisjointBytesV8 = (window?: LeanBaselin
     inodes.add(key); bytes += s.blocks * 512
   }
   if (retainV11) for (const path of spentV11Absences) { try { lstatSync(resolve(path)) } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") continue; throw error }; return fail("V12_SPENT_ABSENCE") }
+  if (selected === LEAN_BASELINE_CONTINUATION_PATHS_V13) for (const path of spentV12Absences) { try { lstatSync(resolve(path)) } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") continue; throw error }; return fail("V13_SPENT_ABSENCE") }
   return integer(bytes) ? bytes : fail("V8_KNOWN_COST")
 }
 
@@ -904,15 +922,22 @@ export const authenticateLeanBaselineContinuationCarryV2 = (git: LeanContinuatio
   if (check.root !== anchor.checkRoot || result.head !== anchor.allocationCommit || leanBytesRoot(read(old.request, 0o600, 65536)) !== a.requestBytesRoot) return fail("V2_CLOSED_ANCHOR")
   const lines = (name: string) => { const b = read(`${old.store}/${name}`), t = b.toString("utf8"); if (!t.endsWith("\n")) return fail("V2_CLOSED_LINES"); return t.slice(0, -1).split("\n").map(line => parse(Buffer.from(line))) }
   const events = lines("ledger.ndjson"), intervals = lines("time.ndjson"), closed = validateLeanContinuationClosedCapsuleV2(a, { carry, result, check, entry, terminal, parent, events, intervals })
-  if ((window?.routeNamespace === "20261017-v11" || window?.routeNamespace === "20261017-v12")) {
+  if ((window?.routeNamespace === "20261017-v11" || (window?.routeNamespace === "20261017-v12" || window?.routeNamespace === "20261017-v13"))) {
     const expected = spentV10Metadata.find(row => row.path === LEAN_BASELINE_CONTINUATION_PATHS_V10.window)
     const anchorBytes = read(LEAN_BASELINE_CONTINUATION_PATHS_V10.window, 0o600, 65536)
     if (!expected || leanBytesRoot(anchorBytes) !== expected.rawRoot) return fail("V11_ALLOWANCE_ANCHOR")
     const allowance = validateLeanBaselineContinuationWindowV2(parse(anchorBytes))
     // V12 has its own prospective approval; authenticated V10 remains lineage
     // and cost evidence only. V11 retains the entire original allowance join.
-    const allowanceKeys = window.routeNamespace === "20261017-v12" ? ["durationMs", "closureMs", "offlineOverheadMs"] : ["approvedAtMs", "anchorMs", "carryMs", "capMs", "deadlineMs", "durationMs", "closureMs", "offlineOverheadMs"]
+    const allowanceKeys = (window.routeNamespace === "20261017-v12" || window.routeNamespace === "20261017-v13") ? ["durationMs", "closureMs", "offlineOverheadMs"] : ["approvedAtMs", "anchorMs", "carryMs", "capMs", "deadlineMs", "durationMs", "closureMs", "offlineOverheadMs"]
     if (allowance.routeNamespace !== "20261017-v10" || allowanceKeys.some(key => allowance[key as keyof typeof allowance] !== window[key as keyof typeof window]) || (window.routeNamespace === "20261017-v11" && !equal(allowance.approvalEvidence, window.approvalEvidence))) return fail("V11_ALLOWANCE_ANCHOR")
+  }
+  if (window?.routeNamespace === "20261017-v13") {
+    const expected = spentV12Metadata.find(row => row.path === LEAN_BASELINE_CONTINUATION_PATHS_V12.window)
+    const anchorBytes = read(LEAN_BASELINE_CONTINUATION_PATHS_V12.window, 0o600, 65536)
+    if (!expected || leanBytesRoot(anchorBytes) !== expected.rawRoot) return fail("V13_ALLOWANCE_ANCHOR")
+    const allowance = validateLeanBaselineContinuationWindowV2(parse(anchorBytes))
+    if (allowance.routeNamespace !== "20261017-v12" || ["approvedAtMs", "anchorMs", "carryMs", "capMs", "deadlineMs", "durationMs", "closureMs", "offlineOverheadMs"].some(key => allowance[key as keyof typeof allowance] !== window[key as keyof typeof window]) || !equal(allowance.approvalEvidence, window.approvalEvidence)) return fail("V13_ALLOWANCE_ANCHOR")
   }
   const inventory = inventoryContinuationSurvivors(carry.inventory as LeanContinuationInventoryRow[], pinnedPaths, git, guard, window, true)
   const originalSum = (carry.inventory as LeanContinuationInventoryRow[]).reduce((n, row) => n + row.allocatedBytes, 0), residualDiskBytes = a.predecessor.allocatedDiskBytes - originalSum
