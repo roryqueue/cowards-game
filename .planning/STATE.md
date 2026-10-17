@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V9 SOURCE committed; actual approved eight-hour window initialized, independent DATA review next
+stopped_at: V9 SOURCE and independent actual DATA PASS; final request, ONE preparation and unique ROOT entry next
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: V9 SOURCE7fffeed4 and actual A01:37:12.312UTC initialized; DATA/request/one preparation remain before unique ROOT entry
+last_activity_desc: V9 actual DATA independently passed; final request/allocation-only commit then unique ROOT entry, source and planning hold applies
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — fresh eight-hour private baseline window APPROVED
+
+INDEPENDENT ACTUAL DATA `/root/review_265_v9_data` PASS/0blocker/0warning, all commands CLOSED/ownership RELEASED. Sole canonical DATAroot9d18fe1c33fbd501da6de9aa06b63eeef2cf1ee8dd1f43824b8dd0695146e65e now in GATES; actual window stable NOFOLLOW custody/raw/domain joins, source698members/plan/source-gate, approvedT/actualA chronology/actual roles and four future-path absences passed. Reviewer initial wrong guessed grantId assertion was setup noise, corrected against actual approved one-window id; no artifact mutation. SOURCE and DATA are NOT capacity or empirical success. ROOT will construct exact final request from committed current manifest, ONE prepare, commit/push ONLY newly prepared canonical allocation as direct child, then ONE ROOT entry under fixed source/HEAD/pinned planning and fresh SAMEPROCESS whole36capacity. Do not duplicate preparation, entry or reader. If actualentry/head exists, planned unique ordinary reader `/root/verify_265_v9_retained` runs once after terminal; otherwise terminal-only. Preserve all old bytes/charges and current rules/privacy/freeze order. This top note is the pre-entry hold checkpoint; actual processes/private markers supersede it until safe terminal/reader closure permits updates.
 
 ACTUAL V9 WINDOW initialized after all source closures and committed SOURCE7fffeed4dd9b9688a40bea013907369675b7b437. ROOT command10812/f71f8b observed A=1792201032312 (2026-10-17T01:37:12.312UTC), T1792198286000 unchanged; canonical private window938B/rootdb97fba9/raw9573d0da,0600/fsync complete70efc3. F(A)=853091215, cumulativecap881891215, deadline2026-10-17T09:37:12.312UTC. Whole36reserve24060000 yields inclusive latest entry02:56:12.312UTC. Prior50spent/V8zeroNEWcharges and all source/setup/idle costs carried continuously; no reset/refund/recredit. Actual run operator/root, planned future unique reader/root/verify_265_v9_retained; actual source author/reviewer/verifier distinct as canonical SOURCE. No private store/temp/request/allocation/prepare/run/Match yet. Independent actual DATA review/final request and ONE preparation/allocation-only direct-child commit/push precede unique ROOT run/fresh SAMEPROCESS whole36capacity; source/HEAD and pinned planning fixed through terminal/ONE actual retained verification. Current SOURCE/Data setup is not empirical success or fullphase completion.
 
