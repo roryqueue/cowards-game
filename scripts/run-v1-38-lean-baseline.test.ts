@@ -2388,6 +2388,39 @@ it("continuation-route-v12 authenticates every opaque V11 row and rejects metada
   expect(observer).not.toHaveBeenCalled()
 }, "20261017-v12"), 45000)
 
+it("continuation-owned-stabilization CR-OWNED-OPENING-01 actual V12 context refuses unexplained opening links before later creation", () => withInternalObservationTree(false, async f => {
+  const { D, p } = f, native: typeof fs = f.fs, store = resolve(p.store), stat = native.lstatSync, members = native.readdirSync
+  f.note("unexplained opening links before creation")
+  let drift = false, created = false, opening: string[] | undefined
+  const baseline = members(store).sort(), effect = vi.fn()
+  const metadata = vi.spyOn(native, "lstatSync").mockImplementation(((...args: Parameters<typeof fs.lstatSync>) => {
+    const value = Reflect.apply(stat, native, args)
+    return value !== undefined && String(args[0]) === store ? Object.assign(value, { nlink: drift ? 3 : 2 }) : value
+  }) as typeof fs.lstatSync)
+  let listing: ReturnType<typeof vi.spyOn> | undefined
+  try {
+    const context = D.openLeanBaselineContinuationContextV2(p.request)
+    context.guard() // Commit nlink2 with the unchanged authenticated store members.
+    drift = true
+    listing = vi.spyOn(native, "readdirSync").mockImplementation(((...args: Parameters<typeof fs.readdirSync>) => {
+      const values = Reflect.apply(members, native, args)
+      if (String(args[0]) === store && !created) {
+        opening = members(store).sort(); created = true
+        native.writeFileSync(resolve(store, "cold-corpus.json"), "{}", { mode: 0o600, flag: "wx" })
+      }
+      return values
+    }) as typeof fs.readdirSync)
+    let failure: unknown
+    try { context.guard(); effect() } catch (error) { failure = error }
+    expect(created).toBe(true); expect(opening).toEqual(baseline)
+    expect(members(store).sort()).toEqual([...baseline, "cold-corpus.json"].sort())
+    expect(failure).toBeInstanceOf(TypeError); expect(String(failure)).toMatch(/V8_OWNED_CHANGED/)
+    listing.mockRestore(); listing = undefined; metadata.mockRestore()
+    expect(() => context.guard()).toThrow(/V8_CONTEXT|V8_RESERVATION_SCOPE/)
+    expect(() => context.stage("dispatch", effect)).toThrow(/V8_CONTEXT/); expect(effect).not.toHaveBeenCalled()
+  } finally { listing?.mockRestore(); metadata.mockRestore() }
+}, "20261017-v12"), 45000)
+
 for (const namespace of ["20261017-v11", "20261017-v12"] as const) {
 const observationTag = namespace === "20261017-v12" ? "continuation-route-v12" : "continuation-owned-stabilization"
 const checkingMode = namespace === "20261017-v11" ? "one-current-owned-overlap" as const : undefined
