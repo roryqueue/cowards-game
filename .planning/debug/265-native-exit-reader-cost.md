@@ -1,5 +1,5 @@
 ---
-status: awaiting_resource_decision
+status: investigating
 trigger: Continue v1.38 autonomously after the approved baseline window
 created: 2026-10-12
 updated: 2026-10-17
@@ -9,6 +9,10 @@ mode: source_only
 # Phase 265 native exit and retained-reader cost
 
 ## Symptoms and actual closed evidence
+
+CURRENT V10: approved next-Match time policy source478061b6 independently verified3/3; actual window13:14:03.861–21:14:03.861UTC, same15GB/other bounds. ONE preparation ROOT45298/05a923 CLOSED1 CARRY/DETAILS_WITHHELD before allocation/store/temp existed. Independent terminal-only `/root/review_265_v10_data` baf0e0 CLOSED0 at13:20:18.933UTC: unchangedHEAD02c828af, request/window raw roots unchanged, three target absences and zero exact V10 process matches. No ordinary reader/actual entry/head/new retained Match charge; cause UNKNOWN. Hold released after closures, all old bytes/failure preserved. Expected preparation should authenticate cost-only carried records then publish a fresh allocation; actual failure is inside CARRY (importer, reconciliation or archive binding), before publication. Do not rerun preparation or infer historical unrecorded work absence.
+
+Current diagnosis: isolate the earliest demonstrable CARRY predicate using bounded source/metadata-only observations, not another importer/reader/Match launch. Preserve old failures, current window deadline and all resource/rules/privacy limits. Routine source diagnosis/repair is authorized; no new resource allowance is implied. Earlier frontiers below are historical.
 
 LATEST V9 frontier: source amendmentbb5c2b83 reviewed/ROOT-qualified/State-A audited/DISTINCTverified3/3; actualprepare77295 passed, allocationONLY3bcb2126 direct childc785ac85 pushed; unique ROOT6972/PID876/child68790 CLOSED1 by02:56:29UTC, PARENT_TERMINAL/DETAILS_WITHHELD/observedSIGKILL. ONE ordinary reader53683/PID6269 CLOSED1/IMPORT, no claim/check/result/reader interval. Independent bounded current ledger = ONEstop/failure/ZEROnewcharges; all50oldspent. Parent resource_sampling_exception/final_identity_exception/uncertaintrue, initiating causeUNKNOWN. All three PIDs absent, actual hold released afterclosures. No secondreader/retry or oldbyte mutation. Existing GATES exact retained-verifier note holds raw roots/custody joins; no new diagnosis/heavyhistory pass occurred.
 
