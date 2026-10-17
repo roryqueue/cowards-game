@@ -2169,11 +2169,11 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
       let fdTarget = -1, targetOpens = 0, targetReads = 0, targetAllocations = 0
       const spies = [
         vi.spyOn(fs, "lstatSync").mockImplementation(((path: string, ...args: any[]) => { const s = lstat(path, ...args); return String(path) === targetPath ? Object.assign(s, { size: target.bytes }) : s }) as any),
-        vi.spyOn(fs, "openSync").mockImplementation(((path: string, ...args: any[]) => { const fd = open(path, ...args); if (String(path) === targetPath) { fdTarget = fd; targetOpens++ }; return fd }) as any),
+        vi.spyOn(fs, "openSync").mockImplementation(((path: string, ...args: any[]) => { const fd = Reflect.apply(open, fs, [path, ...args]); if (String(path) === targetPath) { fdTarget = fd; targetOpens++ }; return fd }) as any),
         vi.spyOn(fs, "closeSync").mockImplementation((fd: number) => { if (fd === fdTarget) fdTarget = -1; return close(fd) }),
         vi.spyOn(fs, "fstatSync").mockImplementation(((fd: number, ...args: any[]) => { const s = fstat(fd, ...args); return fd === fdTarget ? Object.assign(s, { size: target.bytes }) : s }) as any),
-        vi.spyOn(fs, "readSync").mockImplementation(((fd: number, ...args: any[]) => { if (fd === fdTarget) targetReads++; return read(fd, ...args) }) as any),
-        vi.spyOn(Buffer, "alloc").mockImplementation(((...args: any[]) => { if (fdTarget !== -1) targetAllocations++; return alloc(...args) }) as any),
+        vi.spyOn(fs, "readSync").mockImplementation(((fd: number, ...args: any[]) => { if (fd === fdTarget) targetReads++; return Reflect.apply(read, fs, [fd, ...args]) }) as any),
+        vi.spyOn(Buffer, "alloc").mockImplementation(((...args: any[]) => { if (fdTarget !== -1) targetAllocations++; return Reflect.apply(alloc, Buffer, args) }) as any),
       ]
       try {
         expect(originalInventory.filter(row => row.kind === "file").reduce((sum, row) => sum + row.bytes, 0)).toBe(L.LEAN_CAPS.totalBytes + 1)
@@ -2228,8 +2228,8 @@ it("continuation-device-v11-review authenticates empty directory without seriali
   const { C, fs: native, imported, originalInventory, review, git, w, bounded } = f
   const path = ".strategy-lab/lean-public-history/empty", original = originalInventory.find((row: any) => row.path === path), current = imported.inventory.find((row: any) => row.path === path)
   expect(original.members).toBeUndefined(); expect(current.members).toEqual([]); expect(current.dev).not.toBe(original.dev)
-  expect(() => C.reconcileLeanContinuationInventoryV2(originalInventory, imported.inventory, review, w)).toThrow(/IMMUTABLE_CHANGED/)
-  expect(() => C.reconcileLeanContinuationInventoryV2(originalInventory, structuredClone(imported.inventory), review, w)).toThrow(/IMMUTABLE_CHANGED/)
+  expect(() => C.reconcileLeanContinuationInventoryV2([original], [current], [], w)).toThrow(/IMMUTABLE_CHANGED/)
+  expect(() => C.reconcileLeanContinuationInventoryV2([original], [structuredClone(current)], [], w)).toThrow(/IMMUTABLE_CHANGED/)
   const before = native.lstatSync(resolve(path)), lstat = native.lstatSync.bind(native), fstat = native.fstatSync.bind(native)
   native.writeFileSync(resolve(path, "unexpected.bin"), "public unreviewed child", { mode: 0o600 })
   // Retain the authenticated directory's other metadata so the exact direct

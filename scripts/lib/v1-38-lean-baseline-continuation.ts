@@ -404,7 +404,7 @@ const inventoryContinuationSurvivors = (prior: readonly LeanContinuationInventor
           // the existing reviewed-ancestor allowance. No guessed public set.
           const known = new Set([...prior.map(r => r.path), ...(ancestor ? reviewed.map(r => r.path) : [])].filter(p => p.startsWith(`${name}/`)).map(p => p.slice(name.length + 1).split("/")[0]!))
           const originalMembers = (priorRow as LeanContinuationInventoryRowV2).members
-          if (!originalMembers && known.size === 0 || originalMembers && !ancestor && !equal([...known].sort(), originalMembers) || !members || !equal([...known].sort(), members) || !equal(readdirSync(path).sort(), members)) return fail("V11_CONTINUITY_MEMBERS")
+          if (originalMembers && !ancestor && !equal([...known].sort(), originalMembers) || !members || !equal([...known].sort(), members) || !equal(readdirSync(path).sort(), members)) return fail("V11_CONTINUITY_MEMBERS")
         } else return fail("V11_CONTINUITY_METADATA")
         guard(65536); hold(); continuity.set(priorRow, row)
       } finally { closeSync(fd) }
