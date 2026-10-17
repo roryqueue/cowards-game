@@ -2142,7 +2142,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
       // Historical V10 is an independently constructed old allowance, never a
       // spread of the prospective V12 grant. Public observation roots alone pin it.
       const oldWindow = rooted({ schemaVersion: "lean-baseline-continuation-window-v2", status: "approved", grantId: "public-internal-observations", approvalEvidence: { humanDecisionId: "human-approval-observed-20261017T124639Z", recordedBy: "public-inert-root" }, approvedAtMs: 1792241199000, anchorMs: 1792242843861, carryMs: 894902764, capMs: 923702764, deadlineMs: 1792271643861, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261017-v10", reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: hash(sg.schemaVersion, sg), planRoot: base.planningEntries.find(row => row.path === plan)!.root, runOperator: "inert-runner", readerOperator: "inert-reader" })
-      const historical = historicalClockMismatch ? rooted({ ...oldWindow, anchorMs: oldWindow.anchorMs + 1, carryMs: oldWindow.carryMs + 1, capMs: oldWindow.capMs + 1, deadlineMs: oldWindow.deadlineMs + 1 }) : oldWindow
+      const historical = historicalClockMismatch && namespace === "20261017-v11" ? rooted({ ...oldWindow, anchorMs: oldWindow.anchorMs + 1, carryMs: oldWindow.carryMs + 1, capMs: oldWindow.capMs + 1, deadlineMs: oldWindow.deadlineMs + 1 }) : oldWindow
       json(L.LEAN_BASELINE_CONTINUATION_PATHS_V10.window, historical)
       write(L.LEAN_BASELINE_CONTINUATION_PATHS_V10.request, "public opaque spent V10 request", 0o600)
       for (const name of [L.LEAN_BASELINE_CONTINUATION_PATHS_V10.window, L.LEAN_BASELINE_CONTINUATION_PATHS_V10.request]) {
@@ -2151,7 +2151,8 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
       }
     }
     if (namespace === "20261017-v13") {
-      const retired = rooted({ ...w, routeNamespace: "20261017-v12", sourceRoot: root("retired-source"), planRoot: root("retired-plan"), sourceGateRoot: root("retired-source-gate"), runOperator: "retired-runner", readerOperator: "retired-reader" })
+      const offset = historicalClockMismatch ? 1 : 0
+      const retired = rooted({ ...w, anchorMs: w.anchorMs + offset, carryMs: w.carryMs + offset, capMs: w.capMs + offset, deadlineMs: w.deadlineMs + offset, routeNamespace: "20261017-v12", sourceRoot: root("retired-source"), planRoot: root("retired-plan"), sourceGateRoot: root("retired-source-gate"), runOperator: "retired-runner", readerOperator: "retired-reader" })
       json(L.LEAN_BASELINE_CONTINUATION_PATHS_V12.window, retired)
       const s = fs.lstatSync(resolve(L.LEAN_BASELINE_CONTINUATION_PATHS_V12.window))
       obs.spentV12Metadata.push({ path: L.LEAN_BASELINE_CONTINUATION_PATHS_V12.window, bytes: s.size, allocatedBytes: s.blocks * 512, mode: 0o600, maximum: 65536, rawRoot: L.leanBytesRoot(fs.readFileSync(resolve(L.LEAN_BASELINE_CONTINUATION_PATHS_V12.window))) })
@@ -2198,8 +2199,8 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
       status = "COMPLETE"; return
     }
     if (historicalClockMismatch) {
-      expect(namespace).toBe("20261017-v11")
-      expect(() => C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)).toThrow(/V11_ALLOWANCE_ANCHOR/)
+      expect(["20261017-v11", "20261017-v13"]).toContain(namespace)
+      expect(() => C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)).toThrow(namespace === "20261017-v13" ? /V13_ALLOWANCE_ANCHOR/ : /V11_ALLOWANCE_ANCHOR/)
       for (const path of [p.store, p.claim, p.allocation]) expect(fs.existsSync(resolve(path))).toBe(false)
       status = "COMPLETE"; return
     }
@@ -2404,9 +2405,11 @@ it("continuation-fresh-window-v12-auth authenticates old costs without inheritin
   for (const name of ["run-claim.json", "reader-claim.json", "result.json", "retained-check.json"]) expect(native.existsSync(resolve(p.store, name))).toBe(false)
 }, "20261017-v12"), 45000)
 
+it("continuation-route-v13-clock refuses authenticated canonical retired V12 timing drift before allocation", () => withInternalObservationTree(false, async () => { throw new Error("MUST_NOT_ALLOCATE") }, "20261017-v13", 0, undefined, true), 45000)
+
 it("continuation-route-v13-cost authenticates one retired V12 leaf and refuses old-path or current admission drift", () => withInternalObservationTree(false, async f => {
   const { C, D, L, p, w, imported, obs, git, review, bounded, fs: native, resource } = f
-  const old = L.LEAN_BASELINE_CONTINUATION_PATHS_V12, path = resolve(old.window), bytes = native.readFileSync(path), row = obs.spentV12Metadata[0], originalRawRoot = row.rawRoot
+  const old = L.LEAN_BASELINE_CONTINUATION_PATHS_V12, path = resolve(old.window), bytes = native.readFileSync(path), row = obs.spentV12Metadata[0]
   const authenticate = () => C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)
   expect(imported.inventory.filter((r: any) => r.path === old.window)).toHaveLength(1)
   expect(imported.custody.records).toContainEqual({ name: old.window, rawRoot: L.leanBytesRoot(bytes) })
@@ -2431,9 +2434,9 @@ it("continuation-route-v13-cost authenticates one retired V12 leaf and refuses o
       else if (mode === "alias") { native.unlinkSync(path); native.symlinkSync(resolve(old.request), path) }
       else if (mode === "owner") { const stat = native.lstatSync; spy = vi.spyOn(native, "lstatSync").mockImplementation(((name: any, ...args: any[]) => { const s = stat(name, ...args); return String(name) === path ? Object.assign(s, { uid: 999 }) : s }) as any) }
       else if (mode === "replacement") { const stat = native.fstatSync; spy = vi.spyOn(native, "fstatSync").mockImplementation(((...args: any[]) => { const s = Reflect.apply(stat, native, args); return s.size === row.bytes ? Object.assign(s, { ino: s.ino + 1 }) : s }) as any) }
-      else { const oldW = JSON.parse(bytes.toString()), { root: _, ...b } = { ...oldW, anchorMs: oldW.anchorMs + 1, carryMs: oldW.carryMs + 1, capMs: oldW.capMs + 1, deadlineMs: oldW.deadlineMs + 1 }; f.json(old.window, { ...b, root: labRoot(b.schemaVersion, b) }); row.rawRoot = L.leanBytesRoot(native.readFileSync(path)) }
-      if (mode === "clock") expect(authenticate).toThrow(/V13_ALLOWANCE_ANCHOR/); else expect(authenticate).toThrow()
-    } finally { spy?.mockRestore(); row.rawRoot = originalRawRoot; if (mode === "alias") native.unlinkSync(path); native.writeFileSync(path, bytes, { mode: 0o600 }); native.chmodSync(path, 0o600) }
+      else { const oldW = JSON.parse(bytes.toString()), { root: _, ...b } = { ...oldW, anchorMs: oldW.anchorMs + 1, carryMs: oldW.carryMs + 1, capMs: oldW.capMs + 1, deadlineMs: oldW.deadlineMs + 1 }; f.json(old.window, { ...b, root: labRoot(b.schemaVersion, b) }) }
+      expect(authenticate).toThrow()
+    } finally { spy?.mockRestore(); if (mode === "alias") native.unlinkSync(path); native.writeFileSync(path, bytes, { mode: 0o600 }); native.chmodSync(path, 0o600) }
   }
   for (const name of obs.spentV12Absences) { f.write(name, "public unexpected", 0o600); try { expect(authenticate).toThrow(/V13_SPENT_ABSENCE/) } finally { native.unlinkSync(resolve(name)) } }
   const before = native.readFileSync(resolve(p.request)); f.json(p.request, { ...f.request, windowRoot: root("stale-window") })
