@@ -23,8 +23,8 @@ import * as continuationIO from "./v1-38-lean-baseline-continuation.js"
 import * as fs from "node:fs"
 import { resolve, dirname } from "node:path"
 
-const retained = vi.hoisted(() => ({ state: {} as unknown }))
-vi.mock("../../packages/strategy-lab/src/league/lean-experiment.js", async importOriginal => ({ ...await importOriginal<object>(), readLeanLedger: () => retained.state }))
+const retained = vi.hoisted(() => ({ state: {} as unknown, real: false }))
+vi.mock("../../packages/strategy-lab/src/league/lean-experiment.js", async importOriginal => { const original = await importOriginal<typeof import("../../packages/strategy-lab/src/league/lean-experiment.js")>(); return { ...original, readLeanLedger: (ledger: leanIO.LeanExperimentLedger) => retained.real ? original.readLeanLedger(ledger) : retained.state } })
 const dirs: string[] = []
 afterEach(() => dirs.splice(0).forEach(directory => rmSync(directory, { recursive: true, force: true })))
 let index = 0
@@ -52,19 +52,21 @@ const fixture = () => {
   const binding = { budgetRoot: allocationRoot, attemptRoot: charge.root, matchId: `lean-${charge.root.slice(7, 31)}`, containerName: `lean-${charge.root.slice(7, 25)}-bottom`, ownershipLabel: `lean-${allocationRoot.slice(7, 25)}`, seat: "bottom" as const, runtime }
   return { ledger, charge, source, pair, pairPath, journal, binding }
 }
-const authorityWindow = (a: { sourceRoot: leanIO.LeanBaselineContinuationWindowV2["sourceRoot"]; planRoot?: leanIO.LeanBaselineContinuationWindowV2["planRoot"]; sourceGateRoot?: leanIO.LeanBaselineContinuationWindowV2["sourceGateRoot"] }, routeNamespace: "20261012-v3" | "20261012-v4" = "20261012-v3") => {
+const authorityWindow = (a: { sourceRoot: leanIO.LeanBaselineContinuationWindowV2["sourceRoot"]; planRoot?: leanIO.LeanBaselineContinuationWindowV2["planRoot"]; sourceGateRoot?: leanIO.LeanBaselineContinuationWindowV2["sourceGateRoot"] }, routeNamespace: "20261012-v3" | "20261012-v4" | "20261017-v9" = "20261012-v3") => {
   const r = (s: string) => labRoot("inert-authority-window", s)
   const body = { schemaVersion: "lean-baseline-continuation-window-v2" as const, status: "approved" as const, grantId: "inert-grant", approvalEvidence: { humanDecisionId: "inert-human", recordedBy: "inert-root" }, approvedAtMs: 1791840227000, anchorMs: 1791840227000, carryMs: 492285903, capMs: 521085903, deadlineMs: 1791869027000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace, reviewedSourceHead: "a".repeat(40), sourceRoot: a.sourceRoot, sourceGateRoot: a.sourceGateRoot ?? r("source-gate"), planRoot: a.planRoot ?? r("plan"), runOperator: "inert-runner", readerOperator: "inert-reader" }
-  return { ...body, root: labRoot(body.schemaVersion, body) }
+  const selected = routeNamespace === "20261017-v9" ? { ...body, approvedAtMs: 1792198286000, anchorMs: 1792198286001, carryMs: leanIO.leanContinuationGlobalFloorV2(1792198286001), capMs: leanIO.leanContinuationGlobalFloorV2(1792198286001) + 28800000, deadlineMs: 1792198286001 + 28800000, approvalEvidence: { ...body.approvalEvidence, humanDecisionId: "human-approval-observed-20261017T005126Z" } } : body
+  return { ...selected, root: labRoot(selected.schemaVersion, selected) }
 }
 describe("[continuation-v4] connected opaque issuer with actual descriptors", () => {
-  const connected = (namespace: "20261012-v3" | "20261012-v4", run: (f: ReturnType<typeof fixture>, a: leanIO.LeanBaselineContinuationAllocationV2, claimPath: string, guard: () => void) => void) => {
+  const connected = (namespace: "20261012-v3" | "20261012-v4" | "20261017-v9", run: (f: ReturnType<typeof fixture>, a: leanIO.LeanBaselineContinuationAllocationV2, claimPath: string, guard: () => void) => void) => {
     const f = fixture(), cwd = vi.spyOn(process, "cwd").mockReturnValue(f.ledger.directory)
     try {
       const r = (s: unknown) => labRoot("inert-connected-authority", [f.charge.root, s]), w = authorityWindow(f.ledger.allocation, namespace)
       const predecessorBody = { schemaVersion: "lean-baseline-continuation-carry-v2" as const, chargedMatches: 50 as const, elapsedUpperBoundMs: 465187899, allocatedDiskBytes: 88924160, residualDiskBytes: 4096, historicalPeakDiskBytes: "unknown" as const, historicalPeakRssBytes: "unknown" as const, originalCarryRoot: r("original"), closedCapsuleRoot: r("closed"), custodyRoot: r("custody"), inventoryRoot: r("inventory"), qualifiedReaderAuthority: "cost_only" as const }
       const a = leanIO.createLeanBaselineContinuationAllocationV2({ sourceRoot: f.ledger.allocation.sourceRoot, reviewRoot: r("review"), coldRoot: (f.ledger.allocation as any).coldRoot, planRoot: w.planRoot, candidateRoots: [r("candidate-a"), r("candidate-b")], requestRoots: Array.from({ length: 36 }, (_, i) => r(i)), seed: "inert-authority-route", sourceHead: "b".repeat(40), planningRoot: r("planning"), manifestRoot: r("manifest"), requestBytesRoot: r("request"), window: w, windowBytesRoot: leanBytesRoot(leanCanonicalBytes(w)), sourceGateRoot: w.sourceGateRoot, dataReviewRoot: r("data"), predecessor: { ...predecessorBody, root: labRoot(predecessorBody.schemaVersion, predecessorBody) } })
       f.ledger.allocation = a
+      if (namespace === "20261017-v9") { retained.real = true; writeFileSync(join(f.ledger.directory, "allocation.json"), leanCanonicalBytes(a), { mode: 0o600 }) }
       const slot = a.slots[0]!, chargeBody = { schemaVersion: "lean-slot-charge-v1" as const, allocationRoot: a.root, slotRoot: slot.root, ordinal: 0 }
       f.charge = { ...chargeBody, root: labRoot(chargeBody.schemaVersion, chargeBody) }
       f.binding = { ...f.binding, budgetRoot: a.root, attemptRoot: f.charge.root, matchId: `lean-${f.charge.root.slice(7, 31)}`, containerName: `lean-${f.charge.root.slice(7, 25)}-bottom`, ownershipLabel: `lean-${a.root.slice(7, 25)}` }
@@ -82,8 +84,27 @@ describe("[continuation-v4] connected opaque issuer with actual descriptors", ()
       writeFileSync(claimPath, leanCanonicalBytes({ ...body, root: labRoot(body.schemaVersion, body) }), { mode: 0o600 })
       const guard = vi.fn()
       run(f, a, claimPath, guard)
-    } finally { cwd.mockRestore() }
+    } finally { retained.real = false; cwd.mockRestore() }
   }
+  it.each(["valid", "legacy", "factory", "planner", "session"] as const)("continuation-route-v9-authority real descriptors/ledger wireV8 and per-layer irreversible burn: %s", mode => connected("20261017-v9", (f, a, path, guard) => {
+    expect(a.window.routeNamespace).toBe("20261017-v9")
+    if (mode === "legacy") {
+      const old = resolve(leanIO.LEAN_BASELINE_CONTINUATION_PATHS_V8.claim); fs.mkdirSync(dirname(old), { recursive: true, mode: 0o700 }); fs.renameSync(path, old)
+      expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)).toThrow()
+      fs.renameSync(old, path); expect(() => authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)).toThrow(); return
+    }
+    const auth = authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)
+    expect(() => JSON.stringify(auth)).toThrow(); expect(() => authorityIO.claimLeanStartupAuthorityV8({ ...auth }, f.binding, "factory")).toThrow()
+    for (const layer of ["factory", "planner", "session"] as const) {
+      if (mode === layer) {
+        vi.mocked(guard).mockImplementationOnce(() => { throw new Error("fresh resource denial") })
+        expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, layer)).toThrow("fresh resource denial")
+        expect(() => authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, layer)).toThrow(); break
+      }
+      const grant = authorityIO.claimLeanStartupAuthorityV8(auth, f.binding, layer)
+      expect(grant.startup).toMatchObject({ version: 8, allocationRoot: a.root, chargeRoot: f.charge.root })
+    }
+  }))
   it.each(["20261012-v3", "20261012-v4"] as const)("issues only the actual %s claim and reobserves every ordered opaque seat", namespace => connected(namespace, (f, _a, _path, guard) => {
     const auth = authorityIO.issueLeanBaselineContinuationRuntimeAuthorityV2(f.ledger, f.charge, f.source, f.binding, guard)
     expect(() => JSON.stringify(auth)).toThrow()

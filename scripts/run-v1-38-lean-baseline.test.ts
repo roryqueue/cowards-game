@@ -108,7 +108,7 @@ it.each(["release", "disconnect", "absolute-expiry"] as const)("continuation-sta
     }
   } finally { parent.close(); for (const timer of timers) clearTimeout(timer); host.emit("disconnect"); await token.catch(() => {}); clock.mockRestore() }
 })
-it("continuation-startup-repair-A child arms once after slow staging and expires at exactly 30000ms", async () => {
+it.each(["continuation-startup-repair-A", "continuation-route-v9-driver-startup"])("%s child arms once after slow staging and expires at exactly 30000ms", async () => {
   vi.useFakeTimers()
   const host = Object.assign(new EventEmitter(), { pid: 123, ppid: 122, connected: true, send: vi.fn() })
   const check = vi.fn()
@@ -126,7 +126,7 @@ it("continuation-startup-repair-A child arms once after slow staging and expires
     expect(host.listenerCount("message")).toBe(0); expect(host.listenerCount("disconnect")).toBe(0)
   } finally { vi.useRealTimers() }
 })
-it.each(["duplicate", "release-before-arm", "extra", "getter", "proxy", "disconnect", "expired", "valid"] as const)("continuation-startup-repair-A finite control state and absolute frontier: %s", async mode => {
+it.each(["duplicate", "release-before-arm", "extra", "getter", "proxy", "disconnect", "expired", "valid"].flatMap(mode => ["continuation-startup-repair-A", "continuation-route-v9-driver-startup"].map(tag => ({ mode, tag }))))("$tag finite control state and absolute frontier: $mode", async ({ mode }) => {
   vi.useFakeTimers()
   const host = Object.assign(new EventEmitter(), { pid: 123, ppid: 122, connected: true, send: vi.fn() }), getter = vi.fn(() => "secret"), trap = vi.fn(), nonce = "b".repeat(64)
   let expired = false
@@ -443,6 +443,11 @@ const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWind
       },
     })
   })
+  const actualBoundary = continuationHelper.createLeanContinuationBoundaryControllerV8, boundary = vi.spyOn(continuationHelper, "createLeanContinuationBoundaryControllerV8").mockImplementation((pins, rows, roles, binding, current, reserve, policy) => {
+    const c = actualBoundary(pins, rows, roles, binding, () => { bounded(); onCurrent.value?.(); current() }, reserve, policy)
+    assertInvalid = () => { expect(() => c.reserve(binding)).toThrow(/V8_CONTEXT/); expect(() => c.withStage(binding, "bootstrap", () => {})).toThrow(/V8_CONTEXT/) }
+    return c
+  })
   let clock: ReturnType<typeof vi.spyOn> | undefined
   try {
     Object.defineProperty(process, "connected", { value: false, configurable: true }); process.execArgv = ["--import", "tsx"]
@@ -464,18 +469,20 @@ const preledgerFixtureV6 = (run: (f: { window: lean.LeanBaselineContinuationWind
     const moveCwd = () => { const nested = join(dir, "nested-repository-directory"); fs.mkdirSync(nested, { recursive: true }); cwd.mockReturnValue(nested) }
     const initialization = { ...detail, ...counts }
     run({ window, counts, detail, initialization, callbacks, onCurrent, absent, assertInvalid: () => assertInvalid(), moveCwd }); absent()
-  } finally { clock?.mockRestore(); controllers.mockRestore(); git.mockRestore(); descriptors.mockRestore(); hashes.mockRestore(); disk.mockRestore(); available.mockRestore(); usage.mockRestore(); factory.mockRestore(); physical.mockRestore(); scopes.mockRestore(); raw.mockRestore(); chunks.mockRestore(); opens.mockRestore(); fstats.mockRestore(); realpaths.mockRestore(); stats.mockRestore(); exists.mockRestore(); vi.unstubAllEnvs(); process.execArgv = originalArgs; if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(15000) }
+  } finally { clock?.mockRestore(); boundary.mockRestore(); controllers.mockRestore(); git.mockRestore(); descriptors.mockRestore(); hashes.mockRestore(); disk.mockRestore(); available.mockRestore(); usage.mockRestore(); factory.mockRestore(); physical.mockRestore(); scopes.mockRestore(); raw.mockRestore(); chunks.mockRestore(); opens.mockRestore(); fstats.mockRestore(); realpaths.mockRestore(); stats.mockRestore(); exists.mockRestore(); vi.unstubAllEnvs(); process.execArgv = originalArgs; if (connected) Object.defineProperty(process, "connected", connected); else Reflect.deleteProperty(process, "connected"); cwd.mockRestore(); fs.rmSync(dir, { recursive: true }); expect(performance.now() - began).toBeLessThan(15000) }
 }
 describe("continuation-route-v9-driver-preflight", () => {
   const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V9
   it("connects finite CLI discovery and known-unselected allocation denial", () => {
     for (const mode of ["prepare-continuation-v2", "run-continuation-v2", "verify-continuation-v2"]) expect(parentApi.parseLeanBaselineCommand([mode, "--request", p.request])).toEqual({ mode, request: p.request })
     expect(() => parentApi.parseLeanBaselineCommand(["run-continuation-v2", "--request", p.request + ".other"])).toThrow()
-    const w = { ...({} as lean.LeanBaselineContinuationWindowV2), ...lean.LEAN_BASELINE_CONTINUATION_POLICY_V2 }
     // A manifest-listed V9 allocation cannot become a legacy selected route.
-    expect(() => continuationGit.readLeanBaselineContinuationGitV2(["show", `${"a".repeat(40)}:${p.allocation}`], [{ path: p.allocation, root: root("wrong-route") }], w)).toThrow()
+    expect(() => continuationGit.readLeanBaselineContinuationGitV2(["show", `${"a".repeat(40)}:${p.allocation}`], [{ path: p.allocation, root: root("wrong-route") }])).toThrow(/METADATA/)
   })
-  it.each(["head", "window", "request", "source", "resource"] as const)("real current %s drift invalidates before importer/write", mode => preledgerFixtureV6(f => {
+  it.each(["head", "window", "request", "source", "resource"] as const)("real current %s drift invalidates before importer/write", mode => {
+    const known = vi.spyOn(continuationHelper, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096), send = Object.getOwnPropertyDescriptor(process, "send")
+    Object.defineProperty(process, "send", { value: undefined, configurable: true })
+    try { preledgerFixtureV6(f => {
     let injected = false
     f.onCurrent.value = () => {
       if (injected) return; injected = true
@@ -484,8 +491,21 @@ describe("continuation-route-v9-driver-preflight", () => {
       if (mode === "source") fs.writeFileSync(resolve("scripts/run-v1-38-lean-baseline.ts"), "changed")
       if (mode === "resource") vi.mocked(process.memoryUsage).mockReturnValue({ ...process.memoryUsage(), rss: 3000000001 })
     }
-    expect(() => parentApi.prepareLeanBaselineContinuationV2(p.request)).toThrow(); expect(injected).toBe(true); f.assertInvalid(); f.absent()
-  }, 0, false, "20261017-v9"))
+    let error: unknown; try { parentApi.prepareLeanBaselineContinuationV2(p.request) } catch (e) { error = e }
+    expect(error).toBeInstanceOf(Error); expect(injected, String(error)).toBe(true); f.assertInvalid(); f.absent()
+    }, 0, false, "20261017-v9") } finally { known.mockRestore(); if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send") }
+  })
+  it("selected local reservation uses the 3GB current-memory edge, not generic 2GB", () => {
+    const known = vi.spyOn(continuationHelper, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096), send = Object.getOwnPropertyDescriptor(process, "send")
+    Object.defineProperty(process, "send", { value: undefined, configurable: true })
+    try { preledgerFixtureV6(f => {
+      const local = parentApi.createLeanContinuationLocalReservationV8(f.window), parseReserve = 2 * 7 * 4194304 + 4 * 3 * 262144 + 2 * 268435456 + 512000000 + 335544320
+      vi.mocked(process.memoryUsage).mockReturnValue({ ...process.memoryUsage(), rss: 3000000000 - parseReserve, arrayBuffers: 0 })
+      expect(() => local.reserve()).not.toThrow()
+      vi.mocked(process.memoryUsage).mockReturnValue({ ...process.memoryUsage(), rss: 3000000001 - parseReserve, arrayBuffers: 0 })
+      expect(() => local.reserve()).toThrow(/CAPACITY/); expect(() => local.reserve()).toThrow(/SCOPE/)
+    }, 0, false, "20261017-v9") } finally { known.mockRestore(); if (send) Object.defineProperty(process, "send", send); else Reflect.deleteProperty(process, "send") }
+  })
 })
 describe("[continuation-ready-v7-N] actual V7 callers (synthetic A / Git resources clock catalog mocked)", () => {
   const p = lean.LEAN_BASELINE_CONTINUATION_PATHS_V7
@@ -1903,7 +1923,7 @@ it("internal-observations-default preserves ordered catalogs, legacy aliases and
 // Public synthetic external observations only. Every hash, descriptor, schema,
 // source collector, importer, controller, wrapper and failure publisher is real.
 // No success object substitutes for any of those production boundaries.
-const withInternalObservationTree = async (verify: boolean, run: (f: any) => Promise<void>) => {
+const withInternalObservationTree = async (verify: boolean, run: (f: any) => Promise<void>, namespace: "20261015-v8" | "20261017-v9" = "20261015-v8") => {
   // Prospective checked test-only harness. Earlier 10s attempts below remain
   // CENSORED; this changes no production admission, resource or runtime limit.
   const harness = "OBS3-HARNESS-45000", fixtureLimitMs = 45000
@@ -1927,11 +1947,11 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     vi.resetModules()
     const defaults = await vi.importActual<typeof import("./lib/v1-38-lean-continuation-observations.js")>("./lib/v1-38-lean-continuation-observations.js")
     const phase = ".planning/phases/265-serious-current-rules-league-and-development-red-team/", plan = `${phase}265-16-BASELINE-CONTINUATION-PLAN-20261012.md`
-    const obs: any = { ...defaults.LEAN_CONTINUATION_EXPECTED_OBSERVATIONS, sourcePaths: [], continuationOwnedPaths: ["scripts/lib/v1-38-lean-continuation-observations.ts"], continuationExtraPaths: [], continuationPlanningPaths: [plan, `${phase}265-16-BASELINE-CONTINUATION-GATES-20261012.md`], closedCostV2: {}, spentV3Metadata: [], spentV4Metadata: [], spentV4Directories: [], spentV5Metadata: [], spentV5Directories: [], spentV6Metadata: [], spentV7Metadata: [], spentV7Directories: [] }
+    const obs: any = { ...defaults.LEAN_CONTINUATION_EXPECTED_OBSERVATIONS, sourcePaths: [], continuationOwnedPaths: ["scripts/lib/v1-38-lean-continuation-observations.ts"], continuationExtraPaths: [], continuationPlanningPaths: [plan, `${phase}265-16-BASELINE-CONTINUATION-GATES-20261012.md`], closedCostV2: {}, spentV3Metadata: [], spentV4Metadata: [], spentV4Directories: [], spentV5Metadata: [], spentV5Directories: [], spentV6Metadata: [], spentV7Metadata: [], spentV7Directories: [], spentV8Metadata: [], spentV8Directories: [] }
     vi.doMock("./lib/v1-38-lean-continuation-observations.js", () => ({ ...defaults, readLeanContinuationExpectedObservations: () => obs }))
     const D = await import("./run-v1-38-lean-baseline.js"), L = await import("../packages/strategy-lab/src/league/lean-experiment.js"), C = await import("./lib/v1-38-lean-baseline-continuation.js"), R = await import("./lib/v1-38-lean-baseline-retained.js"), G = await import("./lib/v1-38-lean-container-match-session.js"), F = await import("./v1-38-factory-implementation.js"), H = await import("./run-v1-38-serious-league.js")
     const { labRoot: hash, freezeLabValue } = await import("../packages/strategy-lab/src/contracts.js"), { leanColdProcedureRoot: cold } = await import("./lib/v1-38-lean-baseline-pipeline.js")
-    const p = L.LEAN_BASELINE_CONTINUATION_PATHS_V8, old = L.LEAN_BASELINE_CONTINUATION_PATHS, sourceHead = "c".repeat(40), head = { value: "d".repeat(40) }, reviewedHead = "e".repeat(40)
+    const p = namespace === "20261017-v9" ? L.LEAN_BASELINE_CONTINUATION_PATHS_V9 : L.LEAN_BASELINE_CONTINUATION_PATHS_V8, old = L.LEAN_BASELINE_CONTINUATION_PATHS, sourceHead = "c".repeat(40), head = { value: "d".repeat(40) }, reviewedHead = "e".repeat(40)
     const originalCwd = process.cwd(); process.chdir(dir); restored.push(() => process.chdir(originalCwd))
     const write = (name: string, value: string | Uint8Array, mode = 0o644) => { bounded(); const target = resolve(name); fs.mkdirSync(resolve(target, ".."), { recursive: true }); fs.writeFileSync(target, value, { mode }); fs.chmodSync(target, mode); written += Buffer.byteLength(value); bounded() }
     const json = (name: string, value: unknown, mode = 0o600) => write(name, L.leanCanonicalBytes(value), mode)
@@ -1954,7 +1974,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     }).mockRestore)
     restored.push(vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }).mockRestore)
     restored.push(vi.spyOn(H, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000).mockRestore)
-    let logicalMs = 0, anchor = 1792093334001
+    let logicalMs = 0, anchor = namespace === "20261017-v9" ? 1792198286001 : 1792093334001
     const tick = (ms: number) => { logicalMs += ms }
     restored.push(vi.spyOn(Date, "now").mockImplementation(() => anchor + logicalMs).mockRestore)
     restored.push(vi.spyOn(process.hrtime, "bigint").mockImplementation(() => 100000000000n + BigInt(logicalMs) * 1000000n).mockRestore)
@@ -1992,7 +2012,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     // production large carry/hold/catalog history. Unmocked defaults separately
     // pin every production member; these leaf-only synthetic catalogs exercise
     // the same actual descriptor/membership/absence validators on fewer rows.
-    for (const key of ["spentV3Metadata", "spentV4Metadata", "spentV5Metadata", "spentV6Metadata", "spentV7Metadata"] as const) {
+    for (const key of ["spentV3Metadata", "spentV4Metadata", "spentV5Metadata", "spentV6Metadata", "spentV7Metadata", ...(namespace === "20261017-v9" ? ["spentV8Metadata" as const] : [])] as const) {
       const selected = defaults.LEAN_CONTINUATION_EXPECTED_OBSERVATIONS[key].filter(row => /(?:window-|request-)|\/window-claim\.json$/u.test(row.path))
       for (const [i, row] of selected.entries()) {
         const bytes = Buffer.alloc(0), mode = "mode" in row ? row.mode : 0o600
@@ -2000,7 +2020,7 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
         obs[key].push({ ...row, bytes: bytes.length, rawRoot: L.leanBytesRoot(bytes), ...("allocatedBytes" in row ? { allocatedBytes: fs.lstatSync(resolve(row.path)).blocks * 512 } : {}) })
       }
     }
-    for (const key of ["spentV4Directories", "spentV5Directories", "spentV7Directories"] as const) {
+    for (const key of ["spentV4Directories", "spentV5Directories", "spentV7Directories", ...(namespace === "20261017-v9" ? ["spentV8Directories" as const] : [])] as const) {
       const metadata = obs[key.replace("Directories", "Metadata")]
       for (const original of defaults.LEAN_CONTINUATION_EXPECTED_OBSERVATIONS[key]) {
         const row = { path: original.path, members: metadata.filter((item: any) => item.path.startsWith(original.path + "/")).map((item: any) => item.path.slice(original.path.length + 1)).sort() }
@@ -2029,20 +2049,20 @@ const withInternalObservationTree = async (verify: boolean, run: (f: any) => Pro
     const base = D.leanBaselineContinuationSourceManifestV2(), sg = { schemaVersion: "lean-baseline-continuation-source-gate-v2", plan_check: "passed", source_review: "passed", root_validation: "passed", source_verification: "passed", commands_closed: true, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceAuthor: "inert-author", sourceReviewer: "inert-reviewer", sourceVerifier: "inert-verifier" }
     // Same approved V8 numeric contract as existing fixtures, never a new route.
     const carryMs = L.leanContinuationGlobalFloorV2(anchor)
-    const wb = { schemaVersion: "lean-baseline-continuation-window-v2", status: "approved", grantId: "public-internal-observations", approvalEvidence: { humanDecisionId: "human-approval-observed-20261015T194214Z", recordedBy: "public-inert-root" }, approvedAtMs: anchor - 1, anchorMs: anchor, carryMs, capMs: carryMs + 28800000, deadlineMs: anchor + 28800000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: "20261015-v8", reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: hash(sg.schemaVersion, sg), planRoot: base.planningEntries.find(row => row.path === plan)!.root, runOperator: "inert-runner", readerOperator: "inert-reader" }, w = rooted(wb)
+    const wb = { schemaVersion: "lean-baseline-continuation-window-v2", status: "approved", grantId: "public-internal-observations", approvalEvidence: { humanDecisionId: namespace === "20261017-v9" ? "human-approval-observed-20261017T005126Z" : "human-approval-observed-20261015T194214Z", recordedBy: "public-inert-root" }, approvedAtMs: anchor - 1, anchorMs: anchor, carryMs, capMs: carryMs + 28800000, deadlineMs: anchor + 28800000, durationMs: 28800000, closureMs: 1860000, offlineOverheadMs: 600000, routeNamespace: namespace, reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: hash(sg.schemaVersion, sg), planRoot: base.planningEntries.find(row => row.path === plan)!.root, runOperator: "inert-runner", readerOperator: "inert-reader" }, w = rooted(wb)
     const dg = { schemaVersion: "lean-baseline-continuation-data-gate-v2", status: "passed", grantId: w.grantId, windowRoot: w.root, windowBytesRoot: L.leanBytesRoot(L.leanCanonicalBytes(w)), reviewedSourceHead: reviewedHead, sourceRoot: base.root, sourceGateRoot: w.sourceGateRoot, planRoot: w.planRoot, approvalEvidence: w.approvalEvidence, runOperator: w.runOperator, readerOperator: w.readerOperator, dataReviewer: "inert-data-reviewer", commands_closed: true }
     write(p.gates, `\`\`\`json\n${Buffer.from(L.leanCanonicalBytes(sg))}\n\`\`\`\n\`\`\`json\n${Buffer.from(L.leanCanonicalBytes(dg))}\n\`\`\`\n`); json(p.window, w)
     const manifest = D.leanBaselineContinuationDataManifestV2(w, D.leanBaselineContinuationSourceManifestV2()), seed = "public-internal-observations", coldRoot = cold(seed)
     expect(manifest.implementationEntries.map(row => row.path)).toEqual([...obs.sourcePaths, ...obs.continuationOwnedPaths].sort((a, b) => a.localeCompare(b)))
     expect(D.LEAN_BASELINE_CONTINUATION_OWNED_PATHS).toHaveLength(1)
-    counts = { implementation: manifest.implementationEntries.length, planning: manifest.planningEntries.length, spentMetadata: ["spentV3Metadata", "spentV4Metadata", "spentV5Metadata", "spentV6Metadata", "spentV7Metadata"].reduce((sum, key) => sum + obs[key].length, 0), spentDirectories: obs.spentV4Directories.length + obs.spentV5Directories.length + obs.spentV7Directories.length }
+    counts = { implementation: manifest.implementationEntries.length, planning: manifest.planningEntries.length, spentMetadata: ["spentV3Metadata", "spentV4Metadata", "spentV5Metadata", "spentV6Metadata", "spentV7Metadata", ...(namespace === "20261017-v9" ? ["spentV8Metadata" as const] : [])].reduce((sum, key) => sum + obs[key].length, 0), spentDirectories: obs.spentV4Directories.length + obs.spentV5Directories.length + obs.spentV7Directories.length + obs.spentV8Directories.length }
     const request = { schemaVersion: "lean-baseline-continuation-request-v2", seed, sourceHead, sourceRoot: base.root, planningRoot: manifest.planningRoot, planRoot: w.planRoot, reviewRoot: w.sourceGateRoot, coldRoot, candidateRoots: D.deriveLeanBaselineCandidateRoots(coldRoot), requestRoots: D.deriveLeanBaselineRequestRoots({ seed, coldRoot, planRoot: w.planRoot, sourceRoot: base.root }), offlineOverheadMs: w.offlineOverheadMs, sourceAuthor: sg.sourceAuthor, runOperator: w.runOperator, readerOperator: w.readerOperator, windowRoot: w.root, windowBytesRoot: manifest.windowBytesRoot, sourceGateRoot: w.sourceGateRoot, dataReviewRoot: manifest.dataReviewRoot, manifestRoot: manifest.manifestRoot }
     json(p.request, request)
     stage = "real initial import"
     // Actual bounded public allocated bytes cover the unchanged known-file
     // lower bound. This is real no-refund disk accounting, not a sampler stub
     // or a 90 MB imitation of historical artifacts.
-    write(".strategy-lab/lean-public-accounted-extra.bin", Buffer.alloc(1310720), 0o600)
+    write(".strategy-lab/lean-public-accounted-extra.bin", Buffer.alloc(namespace === "20261017-v9" ? 2621440 : 1310720), 0o600)
     const review = manifest.entries.filter(row => row.path !== p.window).map(row => ({ ...row, commit: manifest.implementationEntries.some(s => s.path === row.path) ? reviewedHead : sourceHead, kind: manifest.implementationEntries.some(s => s.path === row.path) ? "reviewed_source" as const : "active_planning" as const }))
     const imported = C.authenticateLeanBaselineContinuationCarryV2(git, review, bounded, w)
     counts.inventory = imported.inventory.length
@@ -2120,7 +2140,7 @@ it("internal-observations-C actual CLI default importer claims before missing re
 // Corrected attempt passed: 24859ms including cleanup, 1413892 bytes, 18881
 // resource samples; real closing HEAD at sample18733, denial at18734. Actual
 // failed terminal/pilot closure/observed exit/finite PARENT/nonacceptance pass.
-it("internal-observations-B actual CLI wrapper reaches parent entry then owned closing denial with observed child exit", () => withInternalObservationTree(false, async f => {
+it.each([{ namespace: "20261015-v8" as const, name: "internal-observations-B" }, { namespace: "20261017-v9" as const, name: "continuation-route-v9-driver-B" }])("$name actual CLI wrapper reaches parent entry then owned closing denial with observed child exit", ({ namespace }) => withInternalObservationTree(false, async f => {
   const { D, L, R, CP, fs, p, ledger, resource, read, restored } = f
   const provider = vi.fn()
   const child = Object.assign(new EventEmitter(), { pid: 811113, connected: true, exitCode: null as number | null, signalCode: null as NodeJS.Signals | null,
@@ -2157,4 +2177,4 @@ it("internal-observations-B actual CLI wrapper reaches parent entry then owned c
   expect(R.isLeanContinuationAcceptedPrivateCheckV6(reason)).toBe(false)
   expect(resource.calls).toBeGreaterThan(10)
   for (const event of ["message", "disconnect"]) expect(child.listenerCount(event)).toBe(0)
-}), 60000)
+}, namespace), 60000)
