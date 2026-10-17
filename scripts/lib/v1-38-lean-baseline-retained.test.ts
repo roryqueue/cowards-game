@@ -461,7 +461,9 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
   })
   it.each(["pass", "opening", "closing", "reader-denial", "failure-resource", "identity-pass", "identity-closing"] as const)("continuation-boundary-v8-R-identity real reader enrollment, ledger, descriptor/claim/terminal/publisher: %s (synthetic context; complete audit ONLY for identity modes; external resources/PID mocked)", mode => {
     const s = partialV2Snapshot("20261015-v8"), dir = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "public-v8-ordinary-reader-"))), cwd = vi.spyOn(process, "cwd").mockReturnValue(dir), p = continuationLedger.LEAN_BASELINE_CONTINUATION_PATHS_V8
-    const clock = vi.spyOn(Date, "now").mockReturnValue(s.window.anchorMs + 1200), disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000), known = vi.spyOn(continuationFiles, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096)
+    // Wall and monotonic observations must agree: real fixture work is timed
+    // by performance.now, not charged against an otherwise frozen wall clock.
+    const monotonic = vi.spyOn(process.hrtime, "bigint").mockReturnValue(100000000000n), clock = vi.spyOn(Date, "now").mockReturnValue(s.window.anchorMs + 1200), disk = vi.spyOn(fs, "statfsSync").mockReturnValue({ bavail: 100000000000n, bsize: 1n } as never), usage = vi.spyOn(process, "memoryUsage").mockReturnValue({ ...process.memoryUsage(), rss: 100000000, arrayBuffers: 0 }), available = vi.spyOn(leagueHost, "observeLeagueAvailableMemoryBytes").mockReturnValue(4000000000), known = vi.spyOn(continuationFiles, "measureLeanContinuationKnownDisjointBytesV8").mockReturnValue(4096)
     const ipc = { send: Object.getOwnPropertyDescriptor(process, "send"), connected: Object.getOwnPropertyDescriptor(process, "connected") }
     Object.defineProperty(process, "send", { value: undefined, configurable: true }); Object.defineProperty(process, "connected", { value: false, configurable: true })
     const spies: { mockRestore(): void }[] = []
@@ -533,13 +535,14 @@ describe("continuation-v2 retained audit (inert schema fixtures only)", () => {
           for (const copy of [JSON.parse(JSON.stringify(result)), structuredClone(result), { ...result }, Object.freeze({ ...result })]) expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(copy)).toBe(false)
         }
         expect(Object.isFrozen(result)).toBe(true); expect(continuationLedger.readLeanTimeAccounting(ledger).closed.has("continuation-retained-verifier-v2")).toBe(true)
+        expect(continuationLedger.readLeanTimeAccounting(ledger).closes.get("continuation-retained-verifier-v2")).toBeLessThanOrEqual(Date.now())
         const durableBytes = fs.readFileSync(join(ledger.directory, "retained-check.json")), durable = JSON.parse(durableBytes.toString("utf8"))
         expect(durable).toMatchObject({ disposition: "pending_closing", report: null, issued: false })
         expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(durable)).toBe(false); expect(continuationReader.isLeanContinuationAcceptedPrivateCheckV6(durableBytes)).toBe(false)
       }
       if (mode.startsWith("identity-")) expect(syntheticAuditReports).toBe(1)
       expect(continuationLedger.readLeanLedger(ledger).charged).toBe(51)
-    } finally { for (const spy of [...spies, clock, disk, usage, available, known]) spy.mockRestore(); for (const [key, descriptor] of Object.entries(ipc)) { if (descriptor) Object.defineProperty(process, key, descriptor); else Reflect.deleteProperty(process, key) }; cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
+    } finally { for (const spy of [...spies, monotonic, clock, disk, usage, available, known]) spy.mockRestore(); for (const [key, descriptor] of Object.entries(ipc)) { if (descriptor) Object.defineProperty(process, key, descriptor); else Reflect.deleteProperty(process, key) }; cwd.mockRestore(); fs.rmSync(dir, { recursive: true }) }
   }, 15000)
   it.each(["pass", "closing", "uncertain", "foreign"] as const)("[WR-CAD-02] [continuation-stage-cadence-I] actual V6 publisher closes full acceptance and never writes issued credit: %s", mode => publisherSeam(mode, "20261014-v6"))
   it.each(["pass", "closing", "uncertain", "foreign"] as const)("[continuation-ready-v7-O] actual V7 publisher pending closing/private identity: %s (inert external observations)", mode => publisherSeam(mode, "20261014-v7"))
