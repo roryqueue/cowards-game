@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V10 preparation closed before allocation; carried-record diagnosis
+stopped_at: V11 source qualification closed; distinct source verification next
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: V10 CARRY failure terminal checked; no new Match; source diagnosis continuing
+last_activity_desc: V11 device continuity review fixes and 23 ROOT tests pass; same original window; no new Match
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — next-Match time admission APPROVED
+
+V11 source author/review/fix and ROOT qualification are CLOSED at bfad7431d3fe6cc5fdda65dafbe523d0c2de40e3. Independent review CR-DEVICE-01/WR-DEVICE-01 both closed, findings[]. ROOT final23 unique selected cases pass (21+2; earlier overlapping executions not added); SAME15 strict13inherited7051B whole-output exactly equals pre-change, not global strict green. Scoped State-A mapping in VALIDATION covers authenticated historical continuity, empty-directory/membership and cumulative-read limits, strict live rebinding, parent policy and retained nonacceptance. DISTINCT source verification remains next; no actual V11 window/request/allocation/prepare/run yet. Standing fresh-route consent applies only within SAME original T/A/deadline/carry/cap; original deadline21:14:03.861UTC never resets. All V10/older failures and charges remain immutable. All9LEAG/265 pending,266 planning-only/no freeze or formation admission.
 
 Device-continuity source amendment is CHECKED PASS/issues[] by distinct `/root/check_265_device_continuity` after explicit directory-proof and resource-buffer corrections. Existing Plan16/RESEARCH only, no new plan. ROOT resolves direct standing fresh-route consent for a DISTINCT V11 within SAME original T/A/deadline/cap; no V10 retry or new allowance. Actual source author/review/fix/validation/distinct verification and new SOURCE/DATA/allocation/capacity are still owed. Source tasks will verify changed-device historical content against authenticated old fingerprints, preserve directory/live identity checks, and adopt independently observed8192B V10 cost once. Prior conditional-authority wording below is superseded only by this bounded same-window interpretation.
 

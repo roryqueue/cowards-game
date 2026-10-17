@@ -6,12 +6,25 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-17
-source_reviewed: 478061b636d633c503ca7f87af8792c17ed6cd33
-source_gate: v10-next-cell-source-reviewed-validated-distinct-verification-passed
-empirical_validation: v9-preparation-passed-run-failed-one-reader-import-refusal-zero-new-charge-no-acceptance
+source_reviewed: bfad7431d3fe6cc5fdda65dafbe523d0c2de40e3
+source_gate: v11-device-continuity-reviewed-root-validated-distinct-verification-pending
+empirical_validation: v10-preparation-failed-before-allocation-terminal-only-closed-zero-new-retained-charge
 ---
 
 # Phase265 — Validation Strategy
+
+## Current V11 scoped State-A audit — 2026-10-17
+
+ROOT maps actual source/caller assertions to checked N1–N3 device-continuity amendment, not a whole-phase completion audit. Source bfad7431; author /root/execute_265_device_continuity, independent reviewer /root/review_265_next_cell; final findings[] after empty-directory and cumulative-read regression fixes. Prior V10 and older dispositions below remain historical.
+
+| Scope | Actual assertion and evidence | Disposition |
+|---|---|---|
+| N1 same-window and authenticated continuity | Helper tests34–64 reroot changed T/A/carry/cap/deadline and deny; exact spentV10 8192B/floor checks. Driver anchored public importer tests2199+ prove changed-dev FILE/directory acceptance only after old anchors and fresh SHA256, with missing/wrong hash, other metadata, directory members, sealed path, corrupt read, fd race and old-window mutation refused. Public/copied inventory cannot supply the invocation-local proof. | Covered source behavior; no real custody or original-failure-cause assertion. |
+| N1 review gaps | Driver new review cases2226+ admit authenticated empty directory with no serialized members, specifically reject extra member with other metadata held stable, deny public/copy proof. Two individual sub15GB logical files summing15GB+1 refuse before target buffer allocation/read, both counters0. Public fixtures only, no huge payload. | CR-DEVICE-01/WR-DEVICE-01 filled; ROOT19488/2281cf CLOSED0 two pass,7.11s. |
+| N2 real driver and strict post-bind identity | Actual default importer→bindArchive→fullSample fixture75338/d789c1 passed12.079s/4025560B inclusivecleanup, 60s externalwatchdog/group absent. Guard polling opens no historical content; later device drift refuses. Parent forward-clock next-cell admission remains covered; no replacement success context. | Covered, author-attributed connected execution; no production capacity or Match proof. |
+| N3 retained closure/private nonacceptance | Actual default reader98132/ba9313 passed28.310s/4028964B inclusivecleanup,60s watchdog/group absent: real claim, absent result, failed publication, original/structured/deserialized nonacceptance, deadline expiry. Small retained cases preserve incomplete/unused/failure/exhaustion refusal and legacy behavior. | Covered source behavior; actual empirical reader has NOT run. |
+
+Final ROOT36806/995645 CLOSED0:21pass/498filter-excluded/21.79s across helper/driver/retained; plus review2 above =23 unique selected tests, not whole-suite pass or sum of repeated author/ROOT runs. ROOT75823/a5bed8 SAME15 strict CLOSED2:13inherited diagnostics7051B WHOLE-output byte-identical pre70319/94827f; zero NEW, not global strict green. Earlier configuredtypes/service/public/factory qualification at f0289a1e precedes the final one-clause source fix and test additions; attributed in GATES, not falsely rerun. No test asserts real36-cell completion or engine/rule change. Scoped coverage filled; DISTINCT source verifier still owed. Whole phase partial,nyquistfalse,wave0false,all9LEAGpending; same original eight-hour allowance and15GB cap, no new empirical authority or frozen-baseline credit.
 
 ## Current V10 State-A source audit — 2026-10-17
 
