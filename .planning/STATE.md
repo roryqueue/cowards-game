@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Source correction CLOSED VERIFIED; fresh empirical time allowance requires human decision
+stopped_at: Fresh eight-hour window approved; narrow prospective timing amendment in planning
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: b7124d9d independently verified5/5; expired window prevents new experiment
+last_activity_desc: New human allowance observed23:18:03UTC; unused V12 timing amendment only
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,10 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V11 closed; bounded source correction
+
+APPROVED prospective allowance: latest human `yes, approved` accepts ONE fresh eight-hour private experiment window with the same15GB and all other bounds. First ROOT observation T=2026-10-17T23:18:03UTC/1792279083000, decision `human-approval-observed-20261017T231803Z`. Actual A remains uninitialized until checked source/setup gates close; carry F(A) continuously, cap=F(A)+28800000 and deadline=A+28800000. Prior failures, elapsed/setup/idle costs,50spent,15GB/3GB/global300/36planned/fourunopened and all runtime/privacy/rules bounds remain unchanged. Earlier pending-decision text below is historical and superseded only for this allowance. No old authority revived.
+
+ROOT b92d98 observed all FIVE exact V12 window/request/allocation/store/temp destinations absent; no active experiment/verifier agents, no source hold. Reuse of this unused source namespace is under a narrow checked Plan16 timing amendment, NOT reuse of any consumed route. Existing Tasks5+6 remain verified. No new numbered plan, heavy history scan, canonical artifact or Match yet. Research/planner/checker precede source delta, independent review/fix/validation/verification and actual SOURCE/DATA/allocation/capacity gates. Current-rules freeze-before-formation and unopened holdout/no public/counting/production stay fixed.
 
 SOURCE CYCLE CLOSED: b7124d9d independently VERIFIED5/5 Task5+6 truths by /root/verify_265_owned_source,0BLOCKER0WARNING,gaps[], all commands/ownership closed. Independent integrated and correction reviews clean after fixes; ROOT30unique focused tests/configured build/factory1446 passed, exact12strict retains six inherited diagnostics only. ROOT10d53e at22:29:03.587UTC observed exact V12 window/request/allocation/store/temp ALL absent. No actual V12 preparation, run, reader or Match.
 
