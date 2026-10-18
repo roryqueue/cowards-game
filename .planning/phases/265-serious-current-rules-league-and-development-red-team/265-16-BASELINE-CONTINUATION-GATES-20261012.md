@@ -2507,3 +2507,7 @@ Only this <=3500B GATES append after author release. No tests/private reads/actu
 ### Task8 narrow fixture type correction — CLOSED
 
 Author6d460588 changes only R2436: native fstat Parameters/signature and fs.Stats assertion replace inferred unknown; same inode-replacement mutation, no suppression/production edit. ROOT reported3 new strict diagnostics; ROOT strict rerun and independent rereview remain owed. `pnpm exec vitest run scripts/run-v1-38-lean-baseline.test.ts -t continuation-route-v13-cost`,60s process-group watchdog:22055/9a3697 CLOSED0,7914ms,1 PASS; public fixture1958ms/5608088B including cleanup (45s/8MiB bounds), inventory86/50spent unchanged. diff --check passes; no private reads/artifacts/actual run. All commands CLOSED; test/GATES ownership RELEASED to ROOT after this evidence commit.
+
+### Task8 test typing re-review — CLOSED
+
+/root/review_265_opening_fix: clean, 0 BLOCKER/0 WARNING at 6d460588a4dfd4aec2dc10706119c5a706d87075 vs 13f19a43. Only R2436 types change; native call, inode mutation, assertions and cleanup unchanged. Prior Task8 findings preserved. Author 22055/9a3697 PASS1 attributed, not rerun; ROOT strict rerun owed. No production/private/test/commit action. Only this <=600B GATES append. All reviewer commands CLOSED; ownership RELEASED to ROOT.
