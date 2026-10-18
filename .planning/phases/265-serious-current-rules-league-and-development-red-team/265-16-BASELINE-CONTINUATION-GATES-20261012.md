@@ -1,10 +1,18 @@
 # Baseline continuation gates
 
-## Current SOURCE — fresh V12 allowance
+## Current SOURCE — V13 within the same actual allowance
+
+Task8 source6aaf0762 independently VERIFIED3/3 by /root/verify_265_owned_source; review/root qualification closed. Manifest698/rootcc1bceaed9 excludes no discovered rows; generated sidecars were recoverably archived before this source. Full reviewed-Git membership and stable HEAD/five-absence checks must pass BEFORE actual V13 window creation, then independent DATA. SAME actual T/A/deadline, no empirical authority from SOURCE alone.
+
+```json
+{"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"6aaf07624e3747a5b16a7d6f94edc07f914d6f40","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_fresh_window","sourceReviewer":"/root/review_265_opening_fix","sourceRoot":"sha256:cc1bceaed9716f0b4f5cf08ba6ffd6167f4306057e19a3bb251efe2434d5f0fc","sourceVerifier":"/root/verify_265_owned_source","source_review":"passed","source_verification":"passed"}
+```
+
+## Historical SOURCE — retired V12 binding
 
 Task7 source2631c6b7 independently VERIFIED2/2 by /root/verify_265_owned_source,0BLOCKER0WARNING,gaps[], all commands closed. Tasks5+6 remain verified. ROOT inert source53031/ed4d5d confirms700 implementation entries/root below; no actual A or authority yet. This sole canonical SOURCE projection records actual closed roles, not empirical acceptance.
 
-```json
+```text
 {"commands_closed":true,"plan_check":"passed","reviewedSourceHead":"2631c6b776821a4ad4104caf74e5c94e5539bb30","root_validation":"passed","schemaVersion":"lean-baseline-continuation-source-gate-v2","sourceAuthor":"/root/execute_265_fresh_window","sourceReviewer":"/root/review_265_opening_fix","sourceRoot":"sha256:d064cf721ae1cf03317e5b6b9b2c77df6fdb82a2648e7c86e1577303a46e9597","sourceVerifier":"/root/verify_265_owned_source","source_review":"passed","source_verification":"passed"}
 ```
 
@@ -2523,3 +2531,15 @@ Author6d460588 changes only R2436: native fstat Parameters/signature and fs.Stat
 ### ROOT Task8 qualification — CLOSED
 
 Exact source6aaf0762, production13f19a43. ROOT8021/a109a7 serial four-file13selected PASS/9.88s; ROOT28787/eefce8 driver V13 preflight/cost/clock3selected PASS/30.62s, maxfixture22440ms/5608081B,60s outer watchdog. Sixteen unique ROOT cases; author overlapping runs not summed. Configured lab/runtime build90926/bc542e CLOSED0; source sidecars .js/.d.ts remain absent909a22. Factory45297/8e724f CLOSED0,1444files,violations[]. Exact twelve-entry TypeScript comparison uses unchanged compiler-host/options, eleven Git overlays at2631c6b7 versus current plus supervisor test. Baseline38033/27e4ad and final77060/c006a7 whole formatted output byte-equal: six inherited diagnostics, no new errors. Intermediate58382/779bc9 had3new fixture errors;28188/fe38d7 had1; both corrected by author and independently rereviewed, not suppressed or counted green. Harness exit0 is not global strict green. Source metadata98644/15bed1 has698members/rootcc1bceaed9716f0b4f5cf08ba6ffd6167f4306057e19a3bb251efe2434d5f0fc; full reviewed-Git prewindow proof remains owed. Scoped State-A coverage updated, distinct verification next. All ROOT commands CLOSED; no actual V13 artifact/prepare/run/reader/Match. SAME actual window and immutable old costs, no empirical credit.
+
+## Distinct Task8 source verification — CLOSED
+
+/root/verify_265_owned_source: **SOURCE-ONLY VERIFIED3/3;0BLOCKER/0WARNING;gaps[]**. Source6aaf07624e3747a5b16a7d6f94edc07f914d6f40, base2631c6b7; HEADd5384b00. All11 files match; Tasks5–7 closed.
+
+1. **VERIFIED fixed V13 allowance.** Domain845/858-896 adds exact paths/namespace and pins T1792279083000/A1792280297748/carry932356651/cap961156651/deadline1792309097748/decision231803Z; common arithmetic/root/bounds/next-cell checks remain. Domain test686-705 rejects re-rooted tuple/bounds/aliases; older policy unchanged.
+2. **VERIFIED immutable cost once.** Observation419-429 freezes only941B/4096B/raw0d8ebb07 V12window plus four absences. Helper253/308-503/808-831 adds93925376 floor, strict custody/hash/size/owner/mode/identity and before/after absences, subtracting included4096 from extra cost. Helper924-942 retains V10 lineage/V11 full equality and authenticates canonical V12 ENTIRE timing/approval before inventory/custody. Driver tests2408-2448 assert one inventory row,50/cost_only, no double debit, near-cap4096 denial, missing/tamper/alias/replacement/absence/stale-current/capacity refusal; authenticated different clock rejects before allocation.
+3. **VERIFIED connected checks.** Driver185/493/671/1012-1075/1241-1293/1597-1713 extends finite positive AND negative sets, retaining guards/reservation return values/current joins/charge ordering. Retained722/743/883/916-918 and container104 preserve guarded admission, failure/nonacceptance/closing and unselected allocation denial. Tests2329ff/2611ff/2651ff cover preflight/rebinding/fullSample/local reserve, permanent second-open denial and unfinished-cell/journal limits;2302ff checks default reader ordering, null report/nonacceptance, interval close and expiry. Helper test31-58 uses real pinned-Git authentication for every synthetic row; missing generated/changed blobs, local/HEAD drift prevent window callback.
+
+Attributed, not rerun: ROOT16unique passes, configuredbuild/factory1444; exact12strict38033/27e4ad vs77060/c006a7 WHOLE output equal, six inherited only. Synthetic seams are not real capacity/runtime/Match proof.
+
+Only this append. Commands CLOSED/ownership RELEASED; no tests/private reads/window/importer/run/provider/reader/Match/commit. Actual full reviewed-Git membership/SOURCE/HEAD/five-absence prewindow, DATA/allocation/live-capacity gates remain owed. SAME window; consumed evidence immutable;265/all9LEAG pending/no empirical credit.
