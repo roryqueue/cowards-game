@@ -2511,3 +2511,7 @@ Author6d460588 changes only R2436: native fstat Parameters/signature and fs.Stat
 ### Task8 test typing re-review — CLOSED
 
 /root/review_265_opening_fix: clean, 0 BLOCKER/0 WARNING at 6d460588a4dfd4aec2dc10706119c5a706d87075 vs 13f19a43. Only R2436 types change; native call, inode mutation, assertions and cleanup unchanged. Prior Task8 findings preserved. Author 22055/9a3697 PASS1 attributed, not rerun; ROOT strict rerun owed. No production/private/test/commit action. Only this <=600B GATES append. All reviewer commands CLOSED; ownership RELEASED to ROOT.
+
+### Task8 mock signature correction — CLOSED
+
+6aaf0762 replaces only R2436 overloaded callback cast with unknown[] args; native result remains fs.Stats, mutation unchanged. Prior6d460588 left one strict error (ROOT28188/fe38d7); not a strict pass. Own noEmit TypeScript createProgram, tsconfig.base options plus types:[node], affected R root:56421/e903e9 CLOSED0,11232ms, ZERO affected-file diagnostics including2436. Initial98507 omitted node types and is excluded. Same bounded V13-cost command as above71217/239296 CLOSED0,7783ms,1 PASS; fixture1987ms/5608090B,45s/8MiB and60s watchdog respected. No production/private/artifact change. All commands CLOSED; test/GATES released after commit. ROOT exact12 delta/rereview owed.
