@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V12 DATA refused untracked generated sidecars; same-window distinct binding repair
+stopped_at: Task8 source reviewed and ROOT qualified; distinct source verification next
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
-last_activity_desc: Task7 source2631c6b7 clean review, ROOT34focused/types/factory pass; A uninitialized
+last_activity_desc: Task8 source6aaf0762 clean review, focused tests/build/factory and exact strict delta pass; same actual window
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V11 closed; bounded source correction
+
+Task8 SOURCE author/review/ROOT qualification CLOSED at6aaf07624e3747a5b16a7d6f94edc07f914d6f40. Independent integrated review and final type-only rereview clean; ROOT16unique focused tests, configured build, factory1444 and exact12 strict comparison pass with only six unchanged inherited diagnostics. Two intermediate test typing corrections are retained honestly in GATES. Scoped State-A validation updated; DISTINCT source verification next, not empirical admission. Both generated sidecars remain absent after build; actual manifest698/rootcc1bceaed9, full reviewed-Git prewindow check still owed. No actual V13 artifact or Match. SAME T/A/carry/cap/deadline07:38:17.748UTC; all prior costs/evidence immutable, all9LEAG pending,266 planning-only.
 
 Actual V12 DATA review CLOSED1BLOCKER0WARNING/no projection: manifest700includes untracked generated scripts/lib/v1-38-lean-continuation-observations.js and .d.ts, absent from reviewed2631c6b7; driver1320/1563 requires every implementation row at that reviewed commit. A later request commit cannot repair immutable window binding. V12window/raw0d8ebb07 unchanged; four futurepathsabsent, no request/prepare/allocation/entry/reader/Match. V12binding is retired, not mutated or retried. All review commands closed/hold absent.
 

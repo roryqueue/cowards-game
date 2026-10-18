@@ -6,12 +6,24 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-17
-source_reviewed: 2631c6b776821a4ad4104caf74e5c94e5539bb30
-source_gate: task7-reviewed-root-validated-distinct-verification-passed
+source_reviewed: 6aaf07624e3747a5b16a7d6f94edc07f914d6f40
+source_gate: task8-reviewed-root-validated-distinct-verification-pending
 empirical_validation: v11-run-and-unique-retained-reader-closed-gaps-found-zero-new-charge
 ---
 
 # Phase265 — Validation Strategy
+
+## Task8 scoped State-A — distinct binding, same actual allowance
+
+Checked Task8 source and independent review close the finite V13 route; no algorithm, clock or resource extension. ROOT13small cases8021/a109a7 plus3connected28787/eefce8 pass; maximum ROOT fixture22440ms/5608081B. Author-attributed actual reader/fullSample/second-open controls and negative custody tests remain in GATES, maximum44321ms/5611481B; overlapping executions are not additional unique coverage.
+
+| Task | Behavioral coverage | Disposition |
+|---|---|---|
+| 8a | Exact V13 namespace and entire existing T/A/carry/cap/deadline; old routes unchanged; one immutable941B/4096B V12 window and four absences. | COVERED source-only. |
+| 8b | Authenticated historical clock and cost once; actual importer/preflight/rebinding/reservation/guard; stale source, capacity and custody failures; complete pinned-Git membership before synthetic window write. | COVERED source-only; actual ROOT prewindow and independent DATA checks still owed. |
+| 8c | Missing-result refusal, actual guarded reader/failure/closing/expiry and unselected-allocation denial. | COVERED source-only; no actual reader invoked. |
+
+Configured build90926/bc542e PASS with sidecars still absent; factory45297/8e724f PASS1444/violations[]. ROOT exact12 strict baseline2631c6b7 session38033/27e4ad and final77060/c006a7 WHOLE output byte-equal, six inherited diagnostics only. Intermediate new fixture errors were corrected and independently rereviewed; author final affected cost71217/239296 passed. Harness exit0 is not global strict green. Distinct source verification next; no new scoped test gap. Whole phase remains partial/nyquistfalse/wave0false/all9LEAG pending, no freeze/formation/holdout/public/counted/production authority.
 
 ## Task7 scoped State-A — fresh allowance, 2026-10-17
 
