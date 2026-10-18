@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: V13 same-window binding created after full source check; independent DATA next
+stopped_at: V13 actual DATA passed; final request and one preparation next
 last_updated: "2026-10-17"
 last_activity: 2026-10-17
 last_activity_desc: Task8 source6aaf0762 clean review, focused tests/build/factory and exact strict delta pass; same actual window
@@ -22,6 +22,8 @@ total_plans_in_phase: 16
 # State: Coward's Game
 
 ## Current continuation — V11 closed; bounded source correction
+
+Actual V13 DATA99506/24d39f CLOSED PASS0blocker0warning, reviewer/root/review_265_opening_fix checked all698 implementation rows against reviewedGit and stable canonical window/roots/custody/roles/ancestry/chronology/fourabsences; ownership released. Sole canonical DATA published. ROOT final request and ONE preparation next; if admitted, ONLY allocation committed/pushed as direct child of request.sourceHead, then ONE ROOT run with fresh SAME-PROCESS capacity. Hold source/HEAD/pinnedplanning from preparation through terminal and ONE unique retained verifier except allocation-only commit. Planned reader/root/verify_265_owned_source, no actual reader invoked. No repeat approval, newclock, oldartifactreuse or empiricalcredit.
 
 ROOT actual prewindow82651/ee6433 PASS: all698 implementation rows authenticated against reviewed6aaf0762 via existing pinned-Git function, complete membership, stable manifest/HEADb9a9fd18/SOURCE/Plan and allfive V13 destinations absent,15836ms. Actual V13 binding0f3459 at2026-10-18T00:05:37.212UTC is942canonicalbytes0600/uid501/nlink1/fsync, window6be00992/raw29b4b080. This is NOT a new clock: SAME A1792280297748/T1792279083000/carry932356651/cap961156651/deadline07:38:17.748UTC. Independent actual DATA/full reviewed-tree check next; no request/preparation/allocation/entry/reader/Match. Source6aaf0762/rootcc1bceae, SOURCEead6867f, Plan7a794b6d. Run/root, planned unique reader/root/verify_265_owned_source. Alloldcosts/evidence immutable; no empirical credit.
 

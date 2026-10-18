@@ -1,5 +1,13 @@
 # Baseline continuation gates
 
+## Current DATA — V13 same-window actual binding
+
+Independent actual DATA99506/24d39f PASS0blocker0warning; all698 source rows checked against reviewed Git, canonical custody/roots/roles/ancestry/chronology/stability and four future absences verified. Commands closed/ownership released. No actual request/allocation/entry/Match yet; same window and all limits, old evidence immutable.
+
+```json
+{"approvalEvidence":{"humanDecisionId":"human-approval-observed-20261017T231803Z","recordedBy":"/root"},"commands_closed":true,"dataReviewer":"/root/review_265_opening_fix","grantId":"lean-baseline-continuation-20261017-v13-same-window","planRoot":"sha256:7a794b6db14ba8c463f628ffb3c398ea01ee360a079f0e7fc5c753152c3f4cf6","readerOperator":"/root/verify_265_owned_source","reviewedSourceHead":"6aaf07624e3747a5b16a7d6f94edc07f914d6f40","runOperator":"/root","schemaVersion":"lean-baseline-continuation-data-gate-v2","sourceGateRoot":"sha256:ead6867f05dfb63c18a75d372c801022c3e20bfec49b37f5bdec1c9c9a8ba75c","sourceRoot":"sha256:cc1bceaed9716f0b4f5cf08ba6ffd6167f4306057e19a3bb251efe2434d5f0fc","status":"passed","windowBytesRoot":"sha256:29b4b080784cd7994018790d430339b8e797f34965f2f2c054c2db29c88fa211","windowRoot":"sha256:6be009922ffc98a9dfef554ceaa35106021ff6f23ef8e81fc6949421f3978924"}
+```
+
 ## Current SOURCE — V13 within the same actual allowance
 
 Task8 source6aaf0762 independently VERIFIED3/3 by /root/verify_265_owned_source; review/root qualification closed. Manifest698/rootcc1bceaed9 excludes no discovered rows; generated sidecars were recoverably archived before this source. Full reviewed-Git membership and stable HEAD/five-absence checks must pass BEFORE actual V13 window creation, then independent DATA. SAME actual T/A/deadline, no empirical authority from SOURCE alone.
@@ -2543,3 +2551,11 @@ Exact source6aaf0762, production13f19a43. ROOT8021/a109a7 serial four-file13sele
 Attributed, not rerun: ROOT16unique passes, configuredbuild/factory1444; exact12strict38033/27e4ad vs77060/c006a7 WHOLE output equal, six inherited only. Synthetic seams are not real capacity/runtime/Match proof.
 
 Only this append. Commands CLOSED/ownership RELEASED; no tests/private reads/window/importer/run/provider/reader/Match/commit. Actual full reviewed-Git membership/SOURCE/HEAD/five-absence prewindow, DATA/allocation/live-capacity gates remain owed. SAME window; consumed evidence immutable;265/all9LEAG pending/no empirical credit.
+
+## Independent actual V13 DATA review — CLOSED
+
+/root/review_265_opening_fix: PASS, 0 BLOCKER/0 WARNING. Actual read-only check99506/24d39f CLOSED0,15785ms; HEAD e4cea5c89ba458e247b6a420024ee696228d18de, reviewed source6aaf07624e3747a5b16a7d6f94edc07f914d6f40. Existing pinned-source authenticator checked ALL698 implementation rows, no filtering; complete source manifest and HEAD unchanged across check. Source cc1bceaed9716f0b4f5cf08ba6ffd6167f4306057e19a3bb251efe2434d5f0fc; canonical SOURCE ead6867f05dfb63c18a75d372c801022c3e20bfec49b37f5bdec1c9c9a8ba75c; Plan7a794b6d joins checked.
+
+Exact V13 window942B canonical, NOFOLLOW descriptor/path identities stable,0600/uid501/nlink1; root6be009922ffc98a9dfef554ceaa35106021ff6f23ef8e81fc6949421f3978924/raw29b4b080784cd7994018790d430339b8e797f34965f2f2c054c2db29c88fa211. Filesystem birth00:05:36.968UTC follows committed SOURCE b9a9fd18 at00:04:55UTC; reviewed/SOURCE ancestry to HEAD verified. SAME approved T1792279083000/A1792280297748/carry932356651/cap961156651/deadline1792309097748 validated; no renewed clock. Actual author/reviewer/verifier/run/reader roles checked. Four exact future V13 request/allocation/store/temp paths absent by lstat before/after, parents non-symlink/canonical.
+
+Finite DATA projection passes validateLeanContinuationDataGateV2 and is returned to ROOT, NOT published here. No dataManifest call, private history/content, importer, preparation, ordinary reader, tests, Match or source/artifact/commit action. No empirical/capacity admission claim. Only this <=1800B append; all commands CLOSED and ownership RELEASED to ROOT.
